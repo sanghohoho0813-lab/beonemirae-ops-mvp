@@ -42,13 +42,13 @@ export function CompanyOverview() {
         <div className="mt-3">
           <RatioBar
             segments={[
-              { value: MEDICAL_TON, className: 'bg-rose-400', label: 'medical' },
+              { value: MEDICAL_TON, className: 'bg-navy-400', label: 'medical' },
               { value: DIAPER_TON, className: 'bg-teal-500', label: 'diaper' },
             ]}
           />
           <div className="mt-2 flex justify-between text-xs font-medium">
             <span className="flex items-center gap-1.5 text-navy-500">
-              <span className="h-2 w-2 rounded-full bg-rose-400" /> 의료폐기물 {MEDICAL_TON}톤
+              <span className="h-2 w-2 rounded-full bg-navy-400" /> 의료폐기물 {MEDICAL_TON}톤
             </span>
             <span className="flex items-center gap-1.5 text-navy-500">
               <span className="h-2 w-2 rounded-full bg-teal-500" /> 일회용기저귀 {DIAPER_TON}톤

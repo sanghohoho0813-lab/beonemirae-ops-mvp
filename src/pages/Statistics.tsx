@@ -67,19 +67,19 @@ export function Statistics() {
         <h2 className="mb-2 text-sm font-semibold text-navy-500">폐기물 구분 비중</h2>
         <div className="card p-4">
           <div className="mb-2 flex h-5 overflow-hidden rounded-full bg-navy-50">
-            <div className="flex items-center justify-center bg-rose-500 text-[10px] font-bold text-white" style={{ width: `${medicalPct}%` }}>
+            <div className="flex items-center justify-center bg-navy-500 text-[10px] font-bold text-white" style={{ width: `${medicalPct}%` }}>
               {medicalPct >= 12 ? `${medicalPct}%` : ''}
             </div>
-            <div className="flex items-center justify-center bg-teal-600 text-[10px] font-bold text-white" style={{ width: `${diaperPct}%` }}>
+            <div className="flex items-center justify-center bg-teal-500 text-[10px] font-bold text-white" style={{ width: `${diaperPct}%` }}>
               {diaperPct >= 12 ? `${diaperPct}%` : ''}
             </div>
           </div>
           <div className="flex justify-between text-xs">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> 의료폐기물 {medicalPct}%
+              <span className="h-2.5 w-2.5 rounded-full bg-navy-500" /> 의료폐기물 {medicalPct}%
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-teal-600" /> 일회용기저귀 {diaperPct}%
+              <span className="h-2.5 w-2.5 rounded-full bg-teal-500" /> 일회용기저귀 {diaperPct}%
             </span>
           </div>
         </div>
@@ -115,7 +115,7 @@ export function Statistics() {
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-navy-50">
                 <div
-                  className={`h-full rounded-full ${vehicle.wasteType === '의료폐기물' ? 'bg-rose-400' : 'bg-teal-500'}`}
+                  className={`h-full rounded-full ${vehicle.wasteType === '의료폐기물' ? 'bg-navy-400' : 'bg-teal-500'}`}
                   style={{ width: `${(count / maxVehicleCount) * 100}%` }}
                 />
               </div>

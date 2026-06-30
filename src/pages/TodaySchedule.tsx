@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { StatusBadge, WasteBadge } from '../components/Badge'
@@ -82,10 +82,12 @@ export function TodaySchedule() {
             const done = s.status === '완료'
             const urgent = s.status === '긴급'
             return (
-              <StaggerItem key={s.id} className={`card overflow-hidden ${done ? 'opacity-[0.92]' : ''}`}>
-                {/* 긴급: 상단 우선 방문 안내 */}
+              <StaggerItem key={s.id} className="card overflow-hidden">
+                {/* 긴급: 상단 우선 방문 안내 (작은 배너) */}
                 {urgent && (
-                  <div className="bg-rose-50 px-4 py-2 text-xs font-bold text-rose-500">⚠ 우선 방문 요청</div>
+                  <div className="flex items-center gap-1.5 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-500">
+                    <AlertTriangle size={13} strokeWidth={2.6} /> 우선 방문 요청
+                  </div>
                 )}
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">

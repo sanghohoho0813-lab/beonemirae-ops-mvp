@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
-import { motion } from 'framer-motion'
-import type { LucideIcon } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 토스 스타일 공용 UI 키트
@@ -204,6 +204,106 @@ export function EmptyState({ icon = '🗂️', title, subtitle }: { icon?: strin
       <span className="text-3xl">{icon}</span>
       <p className="mt-3 font-bold text-navy-700">{title}</p>
       {subtitle && <p className="mt-1 text-sm text-navy-400">{subtitle}</p>}
+    </div>
+  )
+}
+
+const featureTone: Record<IconTone, string> = iconToneStyle
+
+/** 기능 목차 카드 — 아이콘 + 기능명 + 한 줄 설명 + 작은 상태 숫자 */
+export function FeatureCard({
+  icon: Icon,
+  title,
+  desc,
+  badge,
+  tone = 'navy',
+  onClick,
+}: {
+  icon: LucideIcon
+  title: string
+  desc: string
+  badge?: string
+  tone?: IconTone
+  onClick: () => void
+}) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.15 }}
+      className="card flex w-full items-center gap-3 p-4 text-left"
+    >
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${featureTone[tone]}`}>
+        <Icon size={19} strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-bold text-navy-900">{title}</p>
+        <p className="truncate text-xs text-navy-400">{desc}</p>
+      </div>
+      {badge && <span className="shrink-0 rounded-full bg-navy-50 px-2 py-0.5 text-xs font-bold text-navy-500">{badge}</span>}
+      <ChevronRight size={16} className="shrink-0 text-navy-300" />
+    </motion.button>
+  )
+}
+
+/** 접기/펼치기 섹션 */
+export function ExpandableSection({
+  label,
+  openLabel,
+  children,
+  defaultOpen = false,
+}: {
+  label: string
+  openLabel?: string
+  children: ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-center gap-1 rounded-2xl bg-navy-50 px-4 py-2.5 text-sm font-bold text-navy-600 transition active:scale-[0.99]"
+      >
+        {open ? openLabel ?? '접기' : label}
+        <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="pt-3">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/** 섹션 탭/스텝퍼 — 클릭 시 해당 섹션으로 스크롤 (가로 스크롤) */
+export function SectionTabs({ items }: { items: { id: string; label: string }[] }) {
+  const go = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  return (
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      {items.map((it, i) => (
+        <button
+          key={it.id}
+          onClick={() => go(it.id)}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-navy-600 shadow-card"
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[11px] font-extrabold text-teal-600">
+            {i + 1}
+          </span>
+          {it.label}
+        </button>
+      ))}
     </div>
   )
 }

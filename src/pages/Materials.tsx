@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { MetricCard, EmptyState } from '../components/ui'
+import { MetricCard, EmptyState, SectionTitle } from '../components/ui'
+import { MaterialRiskCard } from '../components/ops'
 import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
 import { num, prettyDate, thisMonth, today } from '../lib/format'
@@ -74,6 +75,12 @@ export function Materials() {
         <MetricCard label="비닐 공급" value={num(totals.vinyl)} unit="개" tone="navy" />
         <MetricCard label="바늘통 공급" value={num(totals.needle)} unit="개" tone="navy" />
       </div>
+
+      {/* 자재 소진 위험 */}
+      <section className="mb-5">
+        <SectionTitle>자재 소진 위험</SectionTitle>
+        <MaterialRiskCard />
+      </section>
 
       <h2 className="mb-2.5 px-1 text-[15px] font-bold text-navy-700">공급 내역</h2>
       {sorted.length === 0 ? (

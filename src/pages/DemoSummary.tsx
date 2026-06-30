@@ -13,7 +13,7 @@ import {
   SelfCheckCard,
   FuturePlanCard,
 } from '../components/ops'
-import { PageShell, SectionTitle, MetricCard } from '../components/ui'
+import { PageShell, SectionTitle, MetricCard, SectionTabs, ExpandableSection } from '../components/ui'
 import { dispatchPlans } from '../lib/ops'
 import { monthlyCollected } from '../lib/selectors'
 import { weight } from '../lib/format'
@@ -64,6 +64,19 @@ export function DemoSummary() {
         </button>
       </div>
 
+      {/* 심사관 시연 흐름 stepper */}
+      <SectionTabs
+        items={[
+          { id: 'step-1', label: '회사 규모' },
+          { id: 'step-2', label: '현장 문제' },
+          { id: 'step-3', label: '개발 중 시스템' },
+          { id: 'step-4', label: '배차 시뮬' },
+          { id: 'step-5', label: '특허 매핑' },
+          { id: 'step-6', label: '사업계획 정합성' },
+          { id: 'step-7', label: '향후 고도화' },
+        ]}
+      />
+
       {/* 1. 회사 운영 규모 (히어로) */}
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-6 text-white shadow-lg">
         <div className="flex items-center gap-1.5 text-teal-300">
@@ -86,14 +99,14 @@ export function DemoSummary() {
         </div>
       </div>
 
-      <section>
+      <section id="step-1" className="scroll-mt-4">
         <SectionTitle>1. 회사 운영 규모</SectionTitle>
         <CompanyOverview />
       </section>
 
       {/* 2. 현장 문제 + 3. 개발 중인 시스템 */}
       <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
-        <section>
+        <section id="step-2" className="scroll-mt-4">
           <SectionTitle>2. 현장 문제</SectionTitle>
           <div className="card p-5">
             <div className="flex items-center gap-2">
@@ -111,7 +124,7 @@ export function DemoSummary() {
           </div>
         </section>
 
-        <section>
+        <section id="step-3" className="scroll-mt-4">
           <SectionTitle>3. 개발 중인 시스템</SectionTitle>
           <div className="card p-5">
             <div className="flex items-center gap-2">
@@ -131,7 +144,7 @@ export function DemoSummary() {
       </div>
 
       {/* 4. 배차·경로 추천 시뮬레이션 */}
-      <section>
+      <section id="step-4" className="scroll-mt-4">
         <SectionTitle action={<button onClick={() => navigate('/dispatch')} className="text-[13px] font-bold text-teal-600">자세히 →</button>}>
           4. 배차·경로 추천 시뮬레이션
         </SectionTitle>
@@ -158,22 +171,31 @@ export function DemoSummary() {
         <div className="mt-3">
           <SeparationNotice />
         </div>
-        <div className="mt-3 grid gap-3 lg:grid-cols-2 lg:items-start">
-          <VehicleFleetCard />
-          <FacilityCard />
+        <div className="mt-3">
+          <ExpandableSection label="차량·처리장 정보 자세히 보기">
+            <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+              <VehicleFleetCard />
+              <FacilityCard />
+            </div>
+          </ExpandableSection>
         </div>
       </section>
 
       {/* 5. 특허 구성요소 매핑 */}
-      <section>
+      <section id="step-5" className="scroll-mt-4">
         <SectionTitle>5. 특허 구성요소 매핑</SectionTitle>
-        <PatentMappingCard />
+        <p className="mb-2 px-1 text-sm text-navy-500">의료폐기물 수거·운반 경로 최적화 시스템 · 10-2026-0101187</p>
+        <ExpandableSection label="구성요소 ↔ 앱 기능 매핑 보기">
+          <PatentMappingCard />
+        </ExpandableSection>
       </section>
 
       {/* 6. 사업계획서 정합성 */}
-      <section>
+      <section id="step-6" className="scroll-mt-4">
         <SectionTitle>6. 사업계획서와 MVP 정합성</SectionTitle>
-        <BusinessPlanCard />
+        <ExpandableSection label="사업계획 방향 ↔ 앱 기능 보기">
+          <BusinessPlanCard />
+        </ExpandableSection>
       </section>
 
       {/* 7. 사무업무 개선 + 이번 달 실적 */}
@@ -190,7 +212,7 @@ export function DemoSummary() {
       </section>
 
       {/* 8. 향후 고도화 + 현장실사 셀프체크 */}
-      <section>
+      <section id="step-7" className="scroll-mt-4">
         <SectionTitle>8. 향후 고도화</SectionTitle>
         <FuturePlanCard />
       </section>
