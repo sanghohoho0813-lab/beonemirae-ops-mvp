@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Check } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { MetricCard, FilterChip, EmptyState } from '../components/ui'
+import { FilterChip, EmptyState } from '../components/ui'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PaymentBadge } from '../components/Badge'
 import { outstandingTotal } from '../lib/selectors'
@@ -39,10 +40,21 @@ export function Receivables() {
     <div>
       <PageHeader title="미수금 관리" subtitle="거래처별 청구 · 입금 현황" />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <MetricCard label="미수금 합계" value={won(outstanding)} tone="rose" hint="입금완료 외 전체 청구" />
-        <MetricCard label="입금 완료" value={won(collected)} tone="emerald" />
-        <MetricCard label="총 청구액" value={won(billedTotal)} tone="navy" />
+      {/* 미수금 요약 — 하나의 카드로 압축 */}
+      <div className="card mb-5 p-5">
+        <p className="text-[13px] font-semibold text-navy-400">미수금 합계</p>
+        <p className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-rose-500">{won(outstanding)}</p>
+        <p className="mt-1.5 text-xs text-navy-400">입금완료 외 전체 청구</p>
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-3">
+          <div>
+            <p className="text-xs font-semibold text-navy-400">입금 완료</p>
+            <p className="mt-0.5 text-base font-extrabold text-emerald-600">{won(collected)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-navy-400">총 청구액</p>
+            <p className="mt-0.5 text-base font-extrabold text-navy-800">{won(billedTotal)}</p>
+          </div>
+        </div>
       </div>
 
       {/* 상태 필터 칩 */}
@@ -88,15 +100,21 @@ export function Receivables() {
                 </div>
 
                 {p.status !== '입금완료' && (
-                  <div className="mt-3 flex gap-2">
-                    <button className="btn-primary flex-1 py-3.5" onClick={() => markPaid(p.id)}>
-                      ✓ 입금완료 처리
-                    </button>
+                  <div className="mt-3 flex items-center justify-end gap-2">
                     {p.status === '미수금' && (
-                      <button className="btn-ghost" onClick={() => updatePayment(p.id, { status: '확인필요' })}>
+                      <button
+                        className="rounded-full bg-navy-50 px-4 py-2 text-sm font-bold text-navy-500 transition active:scale-95"
+                        onClick={() => updatePayment(p.id, { status: '확인필요' })}
+                      >
                         확인필요
                       </button>
                     )}
+                    <button
+                      className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition active:scale-95"
+                      onClick={() => markPaid(p.id)}
+                    >
+                      <Check size={16} strokeWidth={2.6} /> 입금완료 처리
+                    </button>
                   </div>
                 )}
               </StaggerItem>

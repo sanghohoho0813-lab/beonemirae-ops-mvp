@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Siren, Clock, CreditCard, ChevronRight, type LucideIcon } from 'lucide-react'
+import { Siren, Clock, CreditCard, ChevronRight, Sparkles, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { InfoBanner } from '../components/InfoBanner'
@@ -61,6 +61,21 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* 시연용 핵심 요약 진입 */}
+      <Link
+        to="/demo"
+        className="pressable flex items-center gap-3 rounded-2xl bg-gradient-to-br from-navy-800 to-navy-900 px-4 py-3.5 text-white shadow-lg"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+          <Sparkles size={18} className="text-teal-300" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold">시연용 핵심 요약</p>
+          <p className="text-[11px] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허 한눈에</p>
+        </div>
+        <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
+      </Link>
+
       {/* 오늘 먼저 확인할 일 — 밝은 카드 + 강조 뱃지 */}
       <section>
         <div className="card p-5">
@@ -97,7 +112,7 @@ export function Dashboard() {
       {/* 오늘 수거 현황 — 2x2 */}
       <section>
         <SectionTitle>오늘 수거 현황</SectionTitle>
-        <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stagger className="grid grid-cols-2 gap-3">
           <StaggerItem>
             <MetricCard label="오늘 예정" value={summary.total} unit="건" tone="navy" size="lg" />
           </StaggerItem>
@@ -116,7 +131,7 @@ export function Dashboard() {
       {/* 이번 달 수거량 */}
       <section>
         <SectionTitle>이번 달 수거량</SectionTitle>
-        <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Stagger className="grid grid-cols-1 gap-3">
           <StaggerItem>
             <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" size="lg" hint="누적 실수거량" />
           </StaggerItem>
@@ -132,7 +147,7 @@ export function Dashboard() {
       {/* 정산 · 자재 */}
       <section>
         <SectionTitle>정산 · 자재</SectionTitle>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           <MetricCard label="미수금 합계" value={won(outstanding)} tone="amber" hint="미수금 관리 →" onClick={() => navigate('/receivables')} />
           <MetricCard label="이번 달 자재 추가요청" value={addMaterials} unit="건" tone="navy" hint="자재 관리 →" onClick={() => navigate('/materials')} />
         </div>

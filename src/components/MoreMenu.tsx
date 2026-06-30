@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Download, Upload, RotateCcw, ChevronRight, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Download, Upload, RotateCcw, ChevronRight, Sparkles, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { FontSizeControl } from './FontSizeControl'
 import { InfoBanner } from './InfoBanner'
@@ -63,6 +63,22 @@ export function MoreMenu({ onNavigate }: { onNavigate?: () => void }) {
           {msg.text}
         </div>
       )}
+
+      {/* 시연용 핵심 요약 */}
+      <Tappable
+        as="div"
+        onClick={() => go('/demo')}
+        className="flex cursor-pointer items-center gap-3 rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-4 text-white shadow-lg"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
+          <Sparkles size={20} className="text-teal-300" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-bold">시연용 핵심 요약</p>
+          <p className="text-[11px] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
+        </div>
+        <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
+      </Tappable>
 
       {/* 바로가기 */}
       <section>

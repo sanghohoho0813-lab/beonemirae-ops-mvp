@@ -9,6 +9,7 @@ import { Materials } from './pages/Materials'
 import { Receivables } from './pages/Receivables'
 import { Statistics } from './pages/Statistics'
 import { More } from './pages/More'
+import { DemoSummary } from './pages/DemoSummary'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="receivables" element={<Receivables />} />
         <Route path="stats" element={<Statistics />} />
         <Route path="more" element={<More />} />
+        <Route path="demo" element={<DemoSummary />} />
         <Route path="*" element={<Dashboard />} />
       </Route>
       </Routes>

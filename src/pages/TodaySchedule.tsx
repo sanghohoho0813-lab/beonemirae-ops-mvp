@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { StatusBadge, WasteBadge } from '../components/Badge'
@@ -21,7 +22,7 @@ function shiftDate(iso: string, days: number): string {
 }
 
 export function TodaySchedule() {
-  const { data, clientById, completeSchedule, updateSchedule } = useData()
+  const { data, clientById, completeSchedule } = useData()
   const [date, setDate] = useState(today())
   const [target, setTarget] = useState<Schedule | null>(null)
   const [amount, setAmount] = useState('')
@@ -54,7 +55,7 @@ export function TodaySchedule() {
           onClick={() => setDate((d) => shiftDate(d, -1))}
           aria-label="이전 날짜"
         >
-          ‹
+          <ChevronLeft size={20} />
         </button>
         <div className="text-center">
           <p className="text-[15px] font-extrabold text-navy-900">{prettyDate(date)}</p>
@@ -67,7 +68,7 @@ export function TodaySchedule() {
           onClick={() => setDate((d) => shiftDate(d, 1))}
           aria-label="다음 날짜"
         >
-          ›
+          <ChevronRight size={20} />
         </button>
       </div>
 
@@ -87,12 +88,12 @@ export function TodaySchedule() {
                   <div className="bg-rose-50 px-4 py-2 text-xs font-bold text-rose-500">⚠ 우선 방문 요청</div>
                 )}
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="tabular-nums text-lg font-extrabold text-navy-900">{s.scheduledTime}</span>
                         <WasteBadge type={s.wasteType} />
-                        <StatusBadge status={s.status} />
+                        {!done && <StatusBadge status={s.status} />}
                       </div>
                       <p className="mt-1.5 truncate text-xl font-extrabold text-navy-900">
                         {client?.name ?? '알 수 없는 거래처'}
@@ -103,31 +104,33 @@ export function TodaySchedule() {
                       {s.memo && <p className="mt-1.5 text-sm font-medium text-amber-600">📌 {s.memo}</p>}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="t-caption">예상 {weight(s.expectedAmount)}</p>
-                      {s.actualAmount != null && (
-                        <p className="mt-0.5 text-base font-extrabold text-teal-600">실수거 {weight(s.actualAmount)}</p>
+                      {s.actualAmount != null ? (
+                        <>
+                          <p className="t-caption">실수거</p>
+                          <p className="text-lg font-extrabold text-teal-600">{weight(s.actualAmount)}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="t-caption">예상</p>
+                          <p className="text-base font-bold text-navy-500">{weight(s.expectedAmount)}</p>
+                        </>
+                      )}
+                      {done && (
+                        <button
+                          className="mt-1.5 rounded-full bg-navy-50 px-3 py-1 text-xs font-bold text-navy-500 transition active:scale-95"
+                          onClick={() => openComplete(s)}
+                        >
+                          수정
+                        </button>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-3 flex gap-2">
-                    {done ? (
-                      <button className="btn-ghost flex-1 py-3.5" onClick={() => openComplete(s)}>
-                        ✎ 수거량 수정
-                      </button>
-                    ) : (
-                      <>
-                        <button className="btn-primary flex-1 py-4 text-base" onClick={() => openComplete(s)}>
-                          ✓ 수거 완료 처리
-                        </button>
-                        {!urgent && (
-                          <button className="btn-ghost px-4" onClick={() => updateSchedule(s.id, { status: '긴급' })}>
-                            긴급
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                  {!done && (
+                    <button className="btn-primary mt-3 w-full py-3.5" onClick={() => openComplete(s)}>
+                      <Check size={18} strokeWidth={2.6} /> 수거 완료 처리
+                    </button>
+                  )}
                 </div>
               </StaggerItem>
             )

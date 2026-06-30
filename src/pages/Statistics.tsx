@@ -55,7 +55,7 @@ export function Statistics() {
       {/* 월별 수거량 요약 */}
       <section className="mb-5">
         <h2 className="mb-2 text-sm font-semibold text-navy-500">이번 달 수거량</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3">
           <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" />
           <MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" />
           <MetricCard label="총 수거량" value={weight(total)} tone="navy" hint="월평균 목표 105톤" />
@@ -88,7 +88,7 @@ export function Statistics() {
       {/* 거래처 유형별 개수 */}
       <section className="mb-5">
         <h2 className="mb-2 text-sm font-semibold text-navy-500">거래처 유형별 ({data.clients.length}곳)</h2>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2">
           {CLIENT_TYPES.map((t) => (
             <div key={t} className="card flex items-center justify-between p-3">
               <span className="text-sm text-navy-500">{t}</span>
