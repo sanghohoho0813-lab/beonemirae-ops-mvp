@@ -88,7 +88,7 @@ export function Statistics() {
       {/* 거래처 유형별 개수 */}
       <section className="mb-5">
         <h2 className="mb-2 text-sm font-semibold text-navy-500">거래처 유형별 ({data.clients.length}곳)</h2>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {CLIENT_TYPES.map((t) => (
             <div key={t} className="card flex items-center justify-between p-3">
               <span className="text-sm text-navy-500">{t}</span>

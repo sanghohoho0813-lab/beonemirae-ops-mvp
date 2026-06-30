@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Sparkles } from 'lucide-react'
+import { ArrowLeft, Sparkles, Smartphone } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { CompanyOverview } from '../components/CompanyOverview'
 import { RnDCard } from '../components/RnDCard'
@@ -30,6 +30,12 @@ export function DemoSummary() {
           <ArrowLeft size={18} />
         </button>
         <span className="text-sm font-bold text-navy-500">시연용 핵심 요약</span>
+        <button
+          onClick={() => navigate('/mobile-preview')}
+          className="ml-auto hidden items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-bold text-navy-600 shadow-card transition hover:bg-navy-50 lg:inline-flex"
+        >
+          <Smartphone size={16} /> 모바일 프레임으로 보기
+        </button>
       </div>
 
       {/* 히어로 */}
@@ -54,12 +60,6 @@ export function DemoSummary() {
         </div>
       </div>
 
-      {/* 회사 운영 규모 */}
-      <section>
-        <SectionTitle>회사 운영 규모</SectionTitle>
-        <CompanyOverview />
-      </section>
-
       {/* 이번 달 수거 실적 */}
       <section>
         <SectionTitle>이번 달 수거 실적</SectionTitle>
@@ -70,11 +70,17 @@ export function DemoSummary() {
         </div>
       </section>
 
-      {/* 기술개발 현황 */}
-      <section>
-        <SectionTitle>기술개발 현황 · 특허</SectionTitle>
-        <RnDCard />
-      </section>
+      {/* 회사 운영 규모 + 기술개발 현황 */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <section>
+          <SectionTitle>회사 운영 규모</SectionTitle>
+          <CompanyOverview />
+        </section>
+        <section>
+          <SectionTitle>기술개발 현황 · 특허</SectionTitle>
+          <RnDCard />
+        </section>
+      </div>
 
       <p className="pb-2 text-center text-xs text-navy-300">
         데이터 기반 의료폐기물 수거·운반 운영관리 시스템 · ㈜비원미래

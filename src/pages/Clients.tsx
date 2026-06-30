@@ -111,7 +111,7 @@ export function Clients() {
       {filtered.length === 0 ? (
         <EmptyState icon="🏥" title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {filtered.map((c) => (
             <li key={c.id}>
               <button

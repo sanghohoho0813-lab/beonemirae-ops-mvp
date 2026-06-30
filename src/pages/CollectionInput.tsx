@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { FramePortal } from '../components/FramePortal'
 import { today, weight } from '../lib/format'
 import type { WasteType } from '../types'
 
@@ -165,28 +164,26 @@ export function CollectionInput() {
         </button>
       </div>
 
-      {/* 저장 완료 토스트 — 프레임 하단(탭 위)에 contained */}
-      <FramePortal>
-        <AnimatePresence>
-          {saved && (
-            <motion.div
-              className="absolute inset-x-0 bottom-[84px] z-40 flex justify-center px-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 30 }}
-            >
-              <div className="flex items-center gap-2.5 rounded-2xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
-                <CheckCircle2 size={18} className="text-emerald-400" />
-                수거 내역이 저장되었습니다
-                <Link to="/today" className="ml-1 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-bold text-teal-200">
-                  오늘 일정 보기
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </FramePortal>
+      {/* 저장 완료 토스트 — 모바일은 하단 탭 위, 데스크톱은 화면 하단 */}
+      <AnimatePresence>
+        {saved && (
+          <motion.div
+            className="fixed inset-x-0 bottom-[84px] z-40 flex justify-center px-4 lg:bottom-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+          >
+            <div className="flex items-center gap-2.5 rounded-2xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+              <CheckCircle2 size={18} className="text-emerald-400" />
+              수거 내역이 저장되었습니다
+              <Link to="/today" className="ml-1 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-bold text-teal-200">
+                오늘 일정 보기
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

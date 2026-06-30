@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   LayoutGrid,
@@ -7,6 +7,10 @@ import {
   Building2,
   PlusCircle,
   MoreHorizontal,
+  Boxes,
+  Wallet,
+  PieChart,
+  Smartphone,
   type LucideIcon,
 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
@@ -14,9 +18,10 @@ import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 앱 전체 레이아웃 — "폰 프레임" 구조
-//  데스크톱에서도 중앙에 모바일 앱(최대 420px)처럼 보이도록 프레임을 적용.
-//  프레임 = 헤더(고정) + 본문(내부 스크롤) + 하단 탭. 사이드바는 제거.
+// 앱 전체 레이아웃 — 반응형
+//  · 데스크톱(lg↑): 좌측 사이드바 + 넓은 본문(웹 운영관리 대시보드)
+//  · 모바일(lg 미만): 상단 헤더 + 본문 + 하단 탭바(앱형)
+//  ※ 모바일 폰 프레임은 /mobile-preview 시연 모드에서만 사용
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface NavItem {
@@ -24,6 +29,18 @@ interface NavItem {
   label: string
   icon: LucideIcon
 }
+
+/** 데스크톱 사이드바 전체 메뉴 */
+const FULL_NAV: NavItem[] = [
+  { to: '/', label: '대시보드', icon: LayoutGrid },
+  { to: '/today', label: '오늘 일정', icon: CalendarClock },
+  { to: '/clients', label: '거래처', icon: Building2 },
+  { to: '/collection', label: '수거 입력', icon: PlusCircle },
+  { to: '/materials', label: '자재 관리', icon: Boxes },
+  { to: '/receivables', label: '미수금 관리', icon: Wallet },
+  { to: '/stats', label: '통계', icon: PieChart },
+  { to: '/more', label: '더보기', icon: MoreHorizontal },
+]
 
 /** 모바일 하단 고정 메뉴 — 핵심 4개 (+ 더보기는 별도 버튼) */
 const BOTTOM_NAV: NavItem[] = [
@@ -35,9 +52,58 @@ const BOTTOM_NAV: NavItem[] = [
 
 const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo']
 
-function BrandHeader() {
+// ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
+function Sidebar() {
+  const navigate = useNavigate()
   return (
-    <header className="z-20 shrink-0 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg">
+    <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-navy-100 bg-white lg:flex">
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
+          비
+        </div>
+        <div className="leading-none">
+          <p className="text-[15px] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="mt-1 text-[11px] font-medium text-navy-400">통합 운영관리</p>
+        </div>
+      </div>
+      <nav className="flex-1 space-y-1 px-3">
+        {FULL_NAV.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-bold transition ${
+                  isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-50'
+                }`
+              }
+            >
+              <Icon size={18} strokeWidth={2.2} />
+              {item.label}
+            </NavLink>
+          )
+        })}
+      </nav>
+      <div className="px-3 pb-4">
+        <button
+          onClick={() => navigate('/mobile-preview')}
+          className="flex w-full items-center gap-2.5 rounded-2xl bg-navy-50 px-3 py-2.5 text-sm font-bold text-navy-600 transition hover:bg-navy-100"
+        >
+          <Smartphone size={18} strokeWidth={2.2} />
+          모바일 미리보기
+        </button>
+        <p className="mt-3 px-1 text-[11px] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
+      </div>
+    </aside>
+  )
+}
+
+// ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
+function MobileHeader() {
+  return (
+    <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg lg:hidden">
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
           비
@@ -52,6 +118,7 @@ function BrandHeader() {
   )
 }
 
+// ── 모바일 하단 탭바 ─────────────────────────────────────────────────────────
 function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void }) {
   return (
     <button
@@ -84,22 +151,18 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
 
   return (
     <nav
-      className="z-20 flex shrink-0 bg-white/95 shadow-nav backdrop-blur-lg"
+      className="fixed inset-x-0 bottom-0 z-30 flex bg-white/95 shadow-nav backdrop-blur-lg lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {BOTTOM_NAV.map((item) => {
-        const active = !moreActive && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))
-        return (
-          <NavTab
-            key={item.to}
-            active={active}
-            icon={item.icon}
-            label={item.label}
-            onClick={() => navigate(item.to)}
-          />
-        )
-      })}
-      <NavTab active={moreActive} icon={MoreHorizontal} label="더보기" onClick={onMore} />
+      <div className="mx-auto flex w-full max-w-2xl">
+        {BOTTOM_NAV.map((item) => {
+          const active = !moreActive && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))
+          return (
+            <NavTab key={item.to} active={active} icon={item.icon} label={item.label} onClick={() => navigate(item.to)} />
+          )
+        })}
+        <NavTab active={moreActive} icon={MoreHorizontal} label="더보기" onClick={onMore} />
+      </div>
     </nav>
   )
 }
@@ -107,33 +170,26 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
 export function Layout() {
   const { pathname } = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  // 경로 변경 시 본문 스크롤 컨테이너를 항상 최상단으로
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-  }, [pathname])
 
   return (
-    <div className="flex min-h-[100dvh] justify-center bg-[#f5f7fa] sm:items-center sm:bg-gradient-to-br sm:from-navy-100 sm:via-[#eef2f8] sm:to-teal-50 sm:p-6">
-      {/* 폰 프레임 */}
-      <div
-        id="app-frame"
-        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#f5f7fa] sm:h-[min(900px,94vh)] sm:w-[420px] sm:rounded-[44px] sm:shadow-2xl sm:ring-1 sm:ring-navy-900/5"
-      >
-        <BrandHeader />
-        <main ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-3">
-          <PageMotion key={pathname}>
-            <Outlet />
-          </PageMotion>
-        </main>
-        <BottomNav onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
-
-        {/* 더보기 바텀시트 — 프레임 내부에 contained */}
-        <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
-          <MoreMenu onNavigate={() => setMoreOpen(false)} />
-        </BottomSheet>
+    <div className="min-h-[100dvh] bg-[#f5f7fa]">
+      <div className="mx-auto flex w-full max-w-[1280px]">
+        <Sidebar />
+        <div className="min-w-0 flex-1">
+          <MobileHeader />
+          <main className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-4 lg:px-8 lg:pb-10 lg:pt-7">
+            <PageMotion key={pathname}>
+              <Outlet />
+            </PageMotion>
+          </main>
+        </div>
       </div>
+
+      {/* 모바일 하단 탭 + 더보기 바텀시트 */}
+      <BottomNav onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
+        <MoreMenu onNavigate={() => setMoreOpen(false)} />
+      </BottomSheet>
     </div>
   )
 }

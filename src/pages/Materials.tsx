@@ -68,7 +68,7 @@ export function Materials() {
       />
 
       {/* 이번 달 통계 */}
-      <div className="mb-5 grid grid-cols-2 gap-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="이번 달 추가공급" value={addCount} unit="건" tone="amber" hint="월평균 4~5회" />
         <MetricCard label="박스 공급" value={num(totals.box)} unit="개" tone="navy" />
         <MetricCard label="비닐 공급" value={num(totals.vinyl)} unit="개" tone="navy" />
@@ -79,7 +79,7 @@ export function Materials() {
       {sorted.length === 0 ? (
         <EmptyState icon="📦" title="자재공급 내역이 없어요" subtitle="우측 상단에서 공급을 등록해 보세요." />
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {sorted.map((m) => {
             const client = clientById(m.clientId)
             return (

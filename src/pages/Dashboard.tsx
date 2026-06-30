@@ -17,7 +17,7 @@ import {
 import { prettyDate, today, weight, won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 대시보드 — "대표님이 휴대폰으로 한눈에 보는 화면"
+// 대시보드 — 모바일 앱 / 데스크톱 웹 대시보드 반응형
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
@@ -33,7 +33,6 @@ export function Dashboard() {
   const vehicles = vehicleTodaySummary(data)
   const confirmNeeded = data.payments.filter((p) => p.status === '확인필요').length
 
-  // "오늘 먼저 확인할 일" — 조치가 필요한 항목만
   const alerts: { icon: LucideIcon; label: string; count: number; tone: string; iconTone: string; to: string }[] = []
   if (summary.긴급 > 0)
     alerts.push({ icon: Siren, label: '긴급 수거', count: summary.긴급, tone: 'text-rose-500', iconTone: 'bg-rose-50 text-rose-500', to: '/today' })
@@ -44,165 +43,145 @@ export function Dashboard() {
 
   return (
     <PageShell>
-      {/* 인사 영역 */}
-      <div>
-        <p className="flex items-center gap-1 text-[13px] font-medium text-navy-400">
-          📍 {prettyDate(t)} · 오늘의 운영 현황
-        </p>
-        <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-navy-900">
-          대표님 한눈에 보기
-        </h1>
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {[`거래처 ${data.clients.length}곳`, `차량 ${data.vehicles.length}대`, '월평균 105톤'].map((chip) => (
-            <span key={chip} className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-navy-500 shadow-card">
-              {chip}
-            </span>
-          ))}
+      {/* 인사 + 시연용 요약 진입 */}
+      <div className="lg:flex lg:items-end lg:justify-between lg:gap-4">
+        <div>
+          <p className="flex items-center gap-1 text-[13px] font-medium text-navy-400">
+            📍 {prettyDate(t)} · 오늘의 운영 현황
+          </p>
+          <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-navy-900 lg:text-3xl">
+            대표님 한눈에 보기
+          </h1>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {[`거래처 ${data.clients.length}곳`, `차량 ${data.vehicles.length}대`, '월평균 105톤'].map((chip) => (
+              <span key={chip} className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-navy-500 shadow-card">
+                {chip}
+              </span>
+            ))}
+          </div>
         </div>
+
+        <Link
+          to="/demo"
+          className="pressable mt-4 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-navy-800 to-navy-900 px-4 py-3.5 text-white shadow-lg lg:mt-0 lg:w-80 lg:shrink-0"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+            <Sparkles size={18} className="text-teal-300" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[15px] font-bold">시연용 핵심 요약</p>
+            <p className="text-[11px] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
+          </div>
+          <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
+        </Link>
       </div>
 
-      {/* 시연용 핵심 요약 진입 */}
-      <Link
-        to="/demo"
-        className="pressable flex items-center gap-3 rounded-2xl bg-gradient-to-br from-navy-800 to-navy-900 px-4 py-3.5 text-white shadow-lg"
-      >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-          <Sparkles size={18} className="text-teal-300" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[15px] font-bold">시연용 핵심 요약</p>
-          <p className="text-[11px] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허 한눈에</p>
-        </div>
-        <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
-      </Link>
-
-      {/* 오늘 먼저 확인할 일 — 밝은 카드 + 강조 뱃지 */}
-      <section>
-        <div className="card p-5">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-teal-500" />
-            <p className="text-[15px] font-bold text-navy-700">오늘 먼저 확인할 일</p>
+      {/* 오늘 먼저 확인할 일 + 오늘 수거 현황 */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <section>
+          <SectionTitle>오늘 먼저 확인할 일</SectionTitle>
+          <div className="card p-5">
+            {alerts.length === 0 ? (
+              <p className="text-[15px] font-semibold text-navy-400">오늘은 급히 확인할 항목이 없어요 ✅</p>
+            ) : (
+              <div className="space-y-2">
+                {alerts.map((a) => {
+                  const Icon = a.icon
+                  return (
+                    <Link key={a.label} to={a.to} className="pressable flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.iconTone}`}>
+                        <Icon size={18} strokeWidth={2.3} />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-navy-800">{a.label}</span>
+                      <span className={`shrink-0 whitespace-nowrap text-lg font-extrabold ${a.tone}`}>{a.count}건</span>
+                      <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
-          {alerts.length === 0 ? (
-            <p className="mt-3 text-[15px] font-semibold text-navy-400">오늘은 급히 확인할 항목이 없어요 ✅</p>
-          ) : (
-            <div className="mt-3 space-y-2">
-              {alerts.map((a) => {
-                const Icon = a.icon
-                return (
-                  <Link
-                    key={a.label}
-                    to={a.to}
-                    className="pressable flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5"
-                  >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.iconTone}`}>
-                      <Icon size={18} strokeWidth={2.3} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-navy-800">{a.label}</span>
-                    <span className={`shrink-0 whitespace-nowrap text-lg font-extrabold ${a.tone}`}>{a.count}건</span>
-                    <ChevronRight size={18} className="shrink-0 text-navy-300" />
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
 
-      {/* 오늘 수거 현황 — 2x2 */}
-      <section>
-        <SectionTitle>오늘 수거 현황</SectionTitle>
-        <Stagger className="grid grid-cols-2 gap-3">
-          <StaggerItem>
-            <MetricCard label="오늘 예정" value={summary.total} unit="건" tone="navy" size="lg" />
-          </StaggerItem>
-          <StaggerItem>
-            <MetricCard label="완료" value={summary.완료} unit="건" tone="emerald" size="lg" />
-          </StaggerItem>
-          <StaggerItem>
-            <MetricCard label="지연" value={summary.지연} unit="건" tone="amber" size="lg" />
-          </StaggerItem>
-          <StaggerItem>
-            <MetricCard label="긴급" value={summary.긴급} unit="건" tone="rose" size="lg" />
-          </StaggerItem>
-        </Stagger>
-      </section>
+        <section>
+          <SectionTitle>오늘 수거 현황</SectionTitle>
+          <Stagger className="grid grid-cols-2 gap-3">
+            <StaggerItem><MetricCard label="오늘 예정" value={summary.total} unit="건" tone="navy" size="lg" /></StaggerItem>
+            <StaggerItem><MetricCard label="완료" value={summary.완료} unit="건" tone="emerald" size="lg" /></StaggerItem>
+            <StaggerItem><MetricCard label="지연" value={summary.지연} unit="건" tone="amber" size="lg" /></StaggerItem>
+            <StaggerItem><MetricCard label="긴급" value={summary.긴급} unit="건" tone="rose" size="lg" /></StaggerItem>
+          </Stagger>
+        </section>
+      </div>
 
       {/* 이번 달 수거량 */}
       <section>
         <SectionTitle>이번 달 수거량</SectionTitle>
-        <Stagger className="grid grid-cols-1 gap-3">
-          <StaggerItem>
-            <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" size="lg" hint="누적 실수거량" />
-          </StaggerItem>
-          <StaggerItem>
-            <MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" size="lg" hint="누적 실수거량" />
-          </StaggerItem>
-          <StaggerItem>
-            <MetricCard label="총 수거량" value={weight(totalMonthly)} tone="navy" size="lg" hint="월평균 목표 105톤" />
-          </StaggerItem>
+        <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <StaggerItem><MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" size="lg" hint="누적 실수거량" /></StaggerItem>
+          <StaggerItem><MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" size="lg" hint="누적 실수거량" /></StaggerItem>
+          <StaggerItem><MetricCard label="총 수거량" value={weight(totalMonthly)} tone="navy" size="lg" hint="월평균 목표 105톤" /></StaggerItem>
         </Stagger>
       </section>
 
-      {/* 정산 · 자재 */}
-      <section>
-        <SectionTitle>정산 · 자재</SectionTitle>
-        <div className="grid grid-cols-1 gap-3">
-          <MetricCard label="미수금 합계" value={won(outstanding)} tone="amber" hint="미수금 관리 →" onClick={() => navigate('/receivables')} />
-          <MetricCard label="이번 달 자재 추가요청" value={addMaterials} unit="건" tone="navy" hint="자재 관리 →" onClick={() => navigate('/materials')} />
-        </div>
-      </section>
+      {/* 정산·자재 + 차량별 오늘 일정 */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <section>
+          <SectionTitle>정산 · 자재</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <MetricCard label="미수금 합계" value={won(outstanding)} tone="amber" hint="미수금 관리 →" onClick={() => navigate('/receivables')} />
+            <MetricCard label="자재 추가요청" value={addMaterials} unit="건" tone="navy" hint="자재 관리 →" onClick={() => navigate('/materials')} />
+          </div>
+        </section>
 
-      {/* 차량별 오늘 일정 */}
-      <section>
-        <SectionTitle action={<Link to="/today" className="text-[13px] font-bold text-teal-600">전체 일정 →</Link>}>
-          차량별 오늘 일정
-        </SectionTitle>
-        <Stagger className="space-y-3">
-          {vehicles.map(({ vehicle, total, done, items }) => (
-            <StaggerItem key={vehicle.id}>
-              <div className="card p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <WasteBadge type={vehicle.wasteType} />
-                    <span className="truncate font-bold text-navy-800">{vehicle.name}</span>
+        <section>
+          <SectionTitle action={<Link to="/today" className="text-[13px] font-bold text-teal-600">전체 일정 →</Link>}>
+            차량별 오늘 일정
+          </SectionTitle>
+          <Stagger className="space-y-3">
+            {vehicles.map(({ vehicle, total, done, items }) => (
+              <StaggerItem key={vehicle.id}>
+                <div className="card p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <WasteBadge type={vehicle.wasteType} />
+                      <span className="truncate font-bold text-navy-800">{vehicle.name}</span>
+                    </div>
+                    <span className="shrink-0 whitespace-nowrap text-sm font-bold text-navy-500">{done}/{total}건</span>
                   </div>
-                  <span className="shrink-0 whitespace-nowrap text-sm font-bold text-navy-500">
-                    {done}/{total}건
-                  </span>
+                  {items.length === 0 ? (
+                    <p className="mt-2 text-sm text-navy-300">오늘 배정된 일정이 없습니다.</p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {items.map((s) => (
+                        <li key={s.id} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 font-medium text-navy-600">
+                            <span className="tabular-nums text-navy-400">{s.scheduledTime}</span>
+                            {clientById(s.clientId)?.name ?? '알 수 없음'}
+                          </span>
+                          <StatusBadge status={s.status} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                {items.length === 0 ? (
-                  <p className="mt-2 text-sm text-navy-300">오늘 배정된 일정이 없습니다.</p>
-                ) : (
-                  <ul className="mt-3 space-y-2">
-                    {items.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 font-medium text-navy-600">
-                          <span className="tabular-nums text-navy-400">{s.scheduledTime}</span>
-                          {clientById(s.clientId)?.name ?? '알 수 없음'}
-                        </span>
-                        <StatusBadge status={s.status} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </section>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </section>
+      </div>
 
-      {/* 회사 운영 규모 — 인포그래픽 */}
-      <section>
-        <SectionTitle>회사 운영 규모</SectionTitle>
-        <CompanyOverview />
-      </section>
-
-      {/* 기술개발 현황 — 심사관 시연용 */}
-      <section>
-        <SectionTitle>기술개발 현황</SectionTitle>
-        <RnDCard />
-      </section>
+      {/* 회사 운영 규모 + 기술개발 현황 */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <section>
+          <SectionTitle>회사 운영 규모</SectionTitle>
+          <CompanyOverview />
+        </section>
+        <section>
+          <SectionTitle>기술개발 현황</SectionTitle>
+          <RnDCard />
+        </section>
+      </div>
 
       <InfoBanner />
     </PageShell>
