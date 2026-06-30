@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-navy-50 text-navy-900 antialiased;
+    font-feature-settings: 'tnum' 1;
+  }
+  /* iOS 안전영역 대응 */
+  #root {
+    min-height: 100dvh;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white shadow-sm ring-1 ring-navy-100;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-teal-600 text-white hover:bg-teal-700;
+  }
+  .btn-navy {
+    @apply btn bg-navy-700 text-white hover:bg-navy-800;
+  }
+  .btn-ghost {
+    @apply btn bg-navy-50 text-navy-700 hover:bg-navy-100;
+  }
+  .btn-danger {
+    @apply btn bg-rose-50 text-rose-600 hover:bg-rose-100;
+  }
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-navy-700;
+  }
+  .field-input {
+    @apply w-full rounded-xl border border-navy-200 bg-white px-3.5 py-2.5 text-[15px] text-navy-900 outline-none transition placeholder:text-navy-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100;
+  }
+}
