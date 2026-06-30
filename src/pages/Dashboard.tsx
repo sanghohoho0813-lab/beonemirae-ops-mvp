@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { StatCard } from '../components/StatCard'
 import { StatusBadge, WasteBadge } from '../components/Badge'
+import { InfoBanner } from '../components/InfoBanner'
 import {
   additionalMaterialCount,
   monthlyCollected,
@@ -30,17 +31,26 @@ export function Dashboard() {
     <div>
       <div className="mb-4">
         <p className="text-sm text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
-        <h1 className="text-xl font-bold tracking-tight text-navy-900">대표님 한눈에 보기</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-navy-900 sm:text-3xl">
+          대표님 한눈에 보기
+        </h1>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {[`거래처 ${data.clients.length}곳`, `차량 ${data.vehicles.length}대`, '월평균 105톤'].map((chip) => (
+            <span key={chip} className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-navy-500 ring-1 ring-navy-100">
+              {chip}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* 오늘 수거 현황 */}
+      {/* 오늘 수거 현황 — 핵심 숫자를 크게 */}
       <section className="mb-5">
         <h2 className="mb-2 text-sm font-semibold text-navy-500">오늘 수거 현황</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="오늘 예정" value={summary.total} unit="건" tone="navy" />
-          <StatCard label="완료" value={summary.완료} unit="건" tone="emerald" />
-          <StatCard label="지연" value={summary.지연} unit="건" tone="amber" />
-          <StatCard label="긴급" value={summary.긴급} unit="건" tone="red" />
+          <StatCard label="오늘 예정" value={summary.total} unit="건" tone="navy" size="lg" />
+          <StatCard label="완료" value={summary.완료} unit="건" tone="emerald" size="lg" />
+          <StatCard label="지연" value={summary.지연} unit="건" tone="amber" size="lg" />
+          <StatCard label="긴급" value={summary.긴급} unit="건" tone="red" size="lg" />
         </div>
       </section>
 
@@ -48,9 +58,9 @@ export function Dashboard() {
       <section className="mb-5">
         <h2 className="mb-2 text-sm font-semibold text-navy-500">이번 달 수거량</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="red" hint="이번 달 누적 실수거량" />
-          <StatCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" hint="이번 달 누적 실수거량" />
-          <StatCard label="총 수거량" value={weight(totalMonthly)} tone="navy" hint="월평균 목표 105톤" />
+          <StatCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="red" size="lg" hint="이번 달 누적 실수거량" />
+          <StatCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" size="lg" hint="이번 달 누적 실수거량" />
+          <StatCard label="총 수거량" value={weight(totalMonthly)} tone="navy" size="lg" hint="월평균 목표 105톤" />
         </div>
       </section>
 
@@ -106,6 +116,11 @@ export function Dashboard() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* 시연용 안내 */}
+      <section className="mb-2">
+        <InfoBanner />
       </section>
     </div>
   )

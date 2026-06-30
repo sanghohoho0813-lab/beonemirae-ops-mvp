@@ -23,7 +23,7 @@ const CLIENT_TYPES: ClientType[] = [
 ]
 
 export function Statistics() {
-  const { data, reset } = useData()
+  const { data } = useData()
 
   const monthly = monthlyCollected(data)
   const total = monthly.의료폐기물 + monthly.일회용기저귀
@@ -133,23 +133,9 @@ export function Statistics() {
         </div>
       </section>
 
-      {/* 데이터 초기화 */}
-      <section className="mb-5">
-        <div className="card flex items-center justify-between p-4">
-          <div>
-            <p className="text-sm font-semibold text-navy-700">샘플 데이터 초기화</p>
-            <p className="text-xs text-navy-400">모든 변경 내용을 지우고 초기 샘플로 되돌립니다.</p>
-          </div>
-          <button
-            className="btn-danger"
-            onClick={() => {
-              if (window.confirm('모든 데이터를 초기 샘플 상태로 되돌릴까요?')) reset()
-            }}
-          >
-            초기화
-          </button>
-        </div>
-      </section>
+      <p className="pb-2 text-center text-xs text-navy-300">
+        데이터 백업·초기화는 <b className="text-navy-400">더보기</b> 메뉴에서 할 수 있습니다.
+      </p>
     </div>
   )
 }

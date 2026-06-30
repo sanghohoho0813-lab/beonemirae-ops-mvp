@@ -70,43 +70,48 @@ export function TodaySchedule() {
             const vehicle = data.vehicles.find((v) => v.id === s.vehicleId)
             const done = s.status === '완료'
             return (
-              <li key={s.id} className="card p-4">
+              <li
+                key={s.id}
+                className={`card p-4 ${
+                  s.status === '긴급' ? 'border-l-4 border-l-red-500 bg-red-50/40 ring-red-100' : ''
+                }`}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="tabular-nums text-sm font-bold text-navy-700">{s.scheduledTime}</span>
+                      <span className="tabular-nums text-base font-bold text-navy-700">{s.scheduledTime}</span>
                       <WasteBadge type={s.wasteType} />
                       <StatusBadge status={s.status} />
                     </div>
-                    <p className="mt-1.5 truncate text-base font-semibold text-navy-900">
+                    <p className="mt-1.5 truncate text-lg font-bold text-navy-900">
                       {client?.name ?? '알 수 없는 거래처'}
                     </p>
-                    <p className="truncate text-xs text-navy-400">
+                    <p className="truncate text-sm text-navy-400">
                       {client?.address} · {vehicle?.name ?? '미배정'}
                     </p>
-                    {s.memo && <p className="mt-1 text-xs text-amber-600">📌 {s.memo}</p>}
+                    {s.memo && <p className="mt-1 text-sm font-medium text-amber-600">📌 {s.memo}</p>}
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-xs text-navy-400">예상 {weight(s.expectedAmount)}</p>
                     {s.actualAmount != null && (
-                      <p className="text-sm font-bold text-teal-700">실수거 {weight(s.actualAmount)}</p>
+                      <p className="text-base font-bold text-teal-700">실수거 {weight(s.actualAmount)}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="mt-3 flex gap-2">
                   {done ? (
-                    <button className="btn-ghost flex-1" onClick={() => openComplete(s)}>
-                      수거량 수정
+                    <button className="btn-ghost flex-1 py-3.5" onClick={() => openComplete(s)}>
+                      ✎ 수거량 수정
                     </button>
                   ) : (
                     <>
-                      <button className="btn-primary flex-1" onClick={() => openComplete(s)}>
+                      <button className="btn-primary flex-1 py-3.5 text-base" onClick={() => openComplete(s)}>
                         ✓ 수거 완료 처리
                       </button>
                       {s.status !== '긴급' && (
                         <button
-                          className="btn-ghost"
+                          className="btn-ghost px-4"
                           onClick={() => updateSchedule(s.id, { status: '긴급' })}
                         >
                           긴급

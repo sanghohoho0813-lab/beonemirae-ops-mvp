@@ -9,8 +9,10 @@ export function WasteBadge({ type }: { type: WasteType }) {
     type === '의료폐기물'
       ? 'bg-rose-50 text-rose-600 ring-rose-100'
       : 'bg-teal-50 text-teal-700 ring-teal-100'
+  const dot = type === '의료폐기물' ? 'bg-rose-500' : 'bg-teal-500'
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${styles}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${styles}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
       {type}
     </span>
   )
@@ -25,7 +27,7 @@ const statusStyles: Record<ScheduleStatus, string> = {
 
 export function StatusBadge({ status }: { status: ScheduleStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${statusStyles[status]}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusStyles[status]}`}>
       {status}
     </span>
   )
@@ -39,7 +41,7 @@ const paymentStyles: Record<PaymentStatus, string> = {
 
 export function PaymentBadge({ status }: { status: PaymentStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${paymentStyles[status]}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${paymentStyles[status]}`}>
       {status}
     </span>
   )

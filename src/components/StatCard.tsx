@@ -21,19 +21,23 @@ interface StatCardProps {
   hint?: string
   tone?: Tone
   icon?: ReactNode
+  /** 'lg' 는 대표자 시연용으로 핵심 숫자를 더 크게 표시 */
+  size?: 'md' | 'lg'
 }
 
-export function StatCard({ label, value, unit, hint, tone = 'navy', icon }: StatCardProps) {
+export function StatCard({ label, value, unit, hint, tone = 'navy', icon, size = 'md' }: StatCardProps) {
   const t = toneStyles[tone]
+  const valueSize = size === 'lg' ? 'text-3xl sm:text-4xl' : 'text-2xl'
+  const labelSize = size === 'lg' ? 'text-sm' : 'text-xs'
   return (
     <div className="card p-4">
       <div className="flex items-start justify-between">
-        <p className={`text-xs font-medium ${t.label}`}>{label}</p>
+        <p className={`font-semibold ${labelSize} ${t.label}`}>{label}</p>
         {icon && <span className="text-navy-300">{icon}</span>}
       </div>
-      <p className={`mt-2 text-2xl font-bold tracking-tight ${t.value}`}>
+      <p className={`mt-2 font-bold tracking-tight ${valueSize} ${t.value}`}>
         {value}
-        {unit && <span className="ml-1 text-sm font-medium text-navy-400">{unit}</span>}
+        {unit && <span className="ml-1 text-base font-medium text-navy-400">{unit}</span>}
       </p>
       {hint && <p className="mt-1 text-xs text-navy-400">{hint}</p>}
     </div>

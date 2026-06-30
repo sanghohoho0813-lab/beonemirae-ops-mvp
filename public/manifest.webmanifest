@@ -1,0 +1,26 @@
+{
+  "name": "비원미래 운영관리",
+  "short_name": "비원미래",
+  "description": "㈜비원미래 의료폐기물 수거·운반 통합 운영관리 MVP",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0f1a2e",
+  "background_color": "#eef2f7",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

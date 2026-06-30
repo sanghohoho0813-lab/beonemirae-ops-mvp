@@ -45,6 +45,8 @@ interface DataContextValue {
   clientById: (id: string) => Client | undefined
   // 데이터 초기화
   reset: () => void
+  // 전체 데이터 교체 (JSON 가져오기 등)
+  replaceAll: (data: AppData) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -148,6 +150,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData(resetData())
   }, [])
 
+  const replaceAll = useCallback((next: AppData) => {
+    setData(next)
+  }, [])
+
   const clientById = useCallback(
     (id: string) => data.clients.find((c) => c.id === id),
     [data.clients],
@@ -170,6 +176,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       markPaid,
       clientById,
       reset,
+      replaceAll,
     }),
     [
       data,
@@ -187,6 +194,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       markPaid,
       clientById,
       reset,
+      replaceAll,
     ],
   )
 
