@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
+import { Stagger, StaggerItem } from '../components/motion'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import type { Schedule } from '../types'
@@ -64,16 +65,16 @@ export function TodaySchedule() {
       {list.length === 0 ? (
         <div className="card p-8 text-center text-navy-400">해당 날짜에 등록된 일정이 없습니다.</div>
       ) : (
-        <ul className="space-y-3">
+        <Stagger className="space-y-3">
           {list.map((s) => {
             const client = clientById(s.clientId)
             const vehicle = data.vehicles.find((v) => v.id === s.vehicleId)
             const done = s.status === '완료'
             return (
-              <li
+              <StaggerItem
                 key={s.id}
                 className={`card p-4 ${
-                  s.status === '긴급' ? 'border-l-4 border-l-red-500 bg-red-50/40 ring-red-100' : ''
+                  s.status === '긴급' ? 'border-l-4 border-l-red-500 bg-red-50/50' : ''
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -120,10 +121,10 @@ export function TodaySchedule() {
                     </>
                   )}
                 </div>
-              </li>
+              </StaggerItem>
             )
           })}
-        </ul>
+        </Stagger>
       )}
 
       {/* 완료/수거량 입력 모달 */}

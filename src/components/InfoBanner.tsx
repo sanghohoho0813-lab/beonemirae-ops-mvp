@@ -4,7 +4,7 @@
 
 export function InfoBanner() {
   return (
-    <div className="rounded-2xl border border-navy-100 bg-navy-50/70 p-4">
+    <div className="rounded-2xl bg-navy-50 p-4">
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 shrink-0 text-base">ℹ️</span>
         <p className="text-sm leading-relaxed text-navy-500">

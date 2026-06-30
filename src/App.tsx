@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import { ScrollToTop } from './components/ScrollToTop'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { TodaySchedule } from './pages/TodaySchedule'
@@ -11,7 +12,9 @@ import { More } from './pages/More'
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="today" element={<TodaySchedule />} />
@@ -23,6 +26,7 @@ export default function App() {
         <Route path="more" element={<More />} />
         <Route path="*" element={<Dashboard />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }

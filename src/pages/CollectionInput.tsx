@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { today, weight } from '../lib/format'
@@ -52,7 +54,7 @@ export function CollectionInput() {
     setMemo('')
     setTime(nowTime())
     setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    setTimeout(() => setSaved(false), 4000)
   }
 
   const canSubmit = clientId && amount && Number(amount) > 0
@@ -60,12 +62,6 @@ export function CollectionInput() {
   return (
     <div>
       <PageHeader title="수거 입력" subtitle="현장에서 바로 입력하세요" />
-
-      {saved && (
-        <div className="mb-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
-          ✓ 수거 내역이 저장되었습니다.
-        </div>
-      )}
 
       <div className="card space-y-4 p-5">
         <div>
@@ -87,11 +83,11 @@ export function CollectionInput() {
               <button
                 key={w}
                 onClick={() => setWasteType(w)}
-                className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                className={`rounded-2xl px-4 py-3.5 text-[15px] font-bold transition-transform duration-150 active:scale-[0.97] ${
                   wasteType === w
                     ? w === '의료폐기물'
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-teal-600 text-white'
+                      ? 'bg-rose-500 text-white shadow-sm'
+                      : 'bg-teal-600 text-white shadow-sm'
                     : 'bg-navy-50 text-navy-500'
                 }`}
               >
@@ -136,15 +132,36 @@ export function CollectionInput() {
         </div>
 
         {client && (
-          <div className="rounded-xl bg-navy-50 p-3 text-xs text-navy-500">
+          <div className="rounded-2xl bg-navy-50 p-3 text-xs text-navy-500">
             {client.address} · {client.manager} · {client.phone}
           </div>
         )}
 
-        <button className="btn-primary w-full py-3.5 text-base" disabled={!canSubmit} onClick={submit}>
+        <button className="btn-primary w-full py-4 text-base" disabled={!canSubmit} onClick={submit}>
           저장하기
         </button>
       </div>
+
+      {/* 저장 완료 토스트 */}
+      <AnimatePresence>
+        {saved && (
+          <motion.div
+            className="fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 sm:bottom-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+          >
+            <div className="flex items-center gap-3 rounded-2xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+              <span className="text-emerald-400">✓</span>
+              수거 내역이 저장되었습니다
+              <Link to="/today" className="ml-1 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-bold text-teal-200">
+                오늘 일정 보기
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

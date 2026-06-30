@@ -117,7 +117,7 @@ export function Clients() {
           <li key={c.id}>
             <button
               onClick={() => setDetail(c)}
-              className="card flex w-full items-center justify-between p-4 text-left transition hover:ring-teal-200"
+              className="card pressable flex w-full items-center justify-between p-4 text-left"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

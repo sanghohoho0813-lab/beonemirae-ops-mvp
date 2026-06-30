@@ -1,10 +1,15 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { BottomSheet } from './BottomSheet'
+import { MoreMenu } from './MoreMenu'
+import { PageMotion } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 앱 전체 레이아웃
 //  - 상단: 브랜드 헤더
 //  - 데스크탑(sm↑): 좌측 사이드 네비 (전체 메뉴)
-//  - 모바일: 하단 탭 네비 — 핵심 5개 + '더보기'
+//  - 모바일: 하단 탭 네비 — 핵심 4개 + '더보기'(바텀시트)
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface NavItem {
@@ -25,23 +30,21 @@ const FULL_NAV: NavItem[] = [
   { to: '/more', label: '더보기', icon: '⋯' },
 ]
 
-/** 모바일 하단 고정 메뉴 — 핵심 5개 */
+/** 모바일 하단 고정 메뉴 — 핵심 4개 (+ 더보기는 별도 버튼) */
 const BOTTOM_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: '▦' },
   { to: '/today', label: '오늘 일정', icon: '◷' },
   { to: '/clients', label: '거래처', icon: '☰' },
   { to: '/collection', label: '수거 입력', icon: '＋' },
-  { to: '/more', label: '더보기', icon: '⋯' },
 ]
 
-/** '더보기'에 묶이는 하위 경로 — 해당 경로에서도 더보기 탭을 활성 표시 */
 const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats']
 
 function BrandHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-navy-100 bg-navy-900 text-white">
+    <header className="sticky top-0 z-30 bg-navy-900 text-white">
       <div className="mx-auto flex max-w-5xl items-center gap-2.5 px-4 py-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-400 text-lg font-black text-navy-900">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-400 text-lg font-black text-navy-900">
           비
         </div>
         <div className="leading-tight">
@@ -54,74 +57,115 @@ function BrandHeader() {
   )
 }
 
-function SideNav() {
+function SideNav({ onMore }: { onMore: () => void }) {
   return (
     <nav className="hidden w-52 shrink-0 sm:block">
       <div className="sticky top-[68px] space-y-1 p-3">
-        {FULL_NAV.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-                isActive ? 'bg-teal-600 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-100'
-              }`
-            }
-          >
-            <span className="text-base">{item.icon}</span>
-            {item.label}
-          </NavLink>
-        ))}
+        {FULL_NAV.map((item) =>
+          item.to === '/more' ? (
+            <button
+              key={item.to}
+              onClick={onMore}
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-navy-600 transition hover:bg-navy-100"
+            >
+              <span className="text-base">{item.icon}</span>
+              {item.label}
+            </button>
+          ) : (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                  isActive ? 'bg-teal-600 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-100'
+                }`
+              }
+            >
+              <span className="text-base">{item.icon}</span>
+              {item.label}
+            </NavLink>
+          ),
+        )}
       </div>
     </nav>
   )
 }
 
-function BottomNav() {
+function NavTab({ active, icon, label, onClick }: { active: boolean; icon: string; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex min-h-[56px] flex-col items-center justify-center gap-1 py-1.5"
+    >
+      {active && (
+        <motion.span
+          layoutId="nav-pill"
+          className="absolute inset-x-2 inset-y-1 rounded-2xl bg-teal-50"
+          transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+        />
+      )}
+      <span className={`relative z-10 text-2xl leading-none transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}>
+        {icon}
+      </span>
+      <span className={`relative z-10 text-[11px] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+        {label}
+      </span>
+    </button>
+  )
+}
+
+function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const moreActive = moreOpen || MORE_PATHS.includes(pathname)
+
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-navy-100 bg-white/95 backdrop-blur sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-navy-100/70 bg-white/90 backdrop-blur-lg sm:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto grid max-w-5xl grid-cols-5">
         {BOTTOM_NAV.map((item) => {
           const active =
-            item.to === '/more'
-              ? MORE_PATHS.includes(pathname)
-              : item.to === '/'
-                ? pathname === '/'
-                : pathname.startsWith(item.to)
+            !moreActive && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))
           return (
-            <NavLink
+            <NavTab
               key={item.to}
-              to={item.to}
-              className={`flex min-h-[60px] flex-col items-center justify-center gap-1 py-2 font-semibold transition ${
-                active ? 'text-teal-600' : 'text-navy-400'
-              }`}
-            >
-              <span className="text-2xl leading-none">{item.icon}</span>
-              <span className="text-xs leading-none">{item.label}</span>
-            </NavLink>
+              active={active}
+              icon={item.icon}
+              label={item.label}
+              onClick={() => navigate(item.to)}
+            />
           )
         })}
+        <NavTab active={moreActive} icon="⋯" label="더보기" onClick={onMore} />
       </div>
     </nav>
   )
 }
 
 export function Layout() {
+  const { pathname } = useLocation()
+  const [moreOpen, setMoreOpen] = useState(false)
+
   return (
     <div className="min-h-[100dvh]">
       <BrandHeader />
       <div className="mx-auto flex max-w-5xl">
-        <SideNav />
+        <SideNav onMore={() => setMoreOpen(true)} />
         <main className="min-w-0 flex-1 px-4 pb-28 pt-4 sm:pb-8">
-          <Outlet />
+          <PageMotion key={pathname}>
+            <Outlet />
+          </PageMotion>
         </main>
       </div>
-      <BottomNav />
+
+      <BottomNav onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+
+      <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
+        <MoreMenu onNavigate={() => setMoreOpen(false)} />
+      </BottomSheet>
     </div>
   )
 }
