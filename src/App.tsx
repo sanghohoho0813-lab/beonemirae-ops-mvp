@@ -3,7 +3,9 @@ import { ScrollToTop } from './components/ScrollToTop'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { TodaySchedule } from './pages/TodaySchedule'
+import { Dispatch } from './pages/Dispatch'
 import { Clients } from './pages/Clients'
+import { ClientDetail } from './pages/ClientDetail'
 import { CollectionInput } from './pages/CollectionInput'
 import { Materials } from './pages/Materials'
 import { Receivables } from './pages/Receivables'
@@ -23,7 +25,9 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="today" element={<TodaySchedule />} />
+          <Route path="dispatch" element={<Dispatch />} />
           <Route path="clients" element={<Clients />} />
+          <Route path="clients/:id" element={<ClientDetail />} />
           <Route path="collection" element={<CollectionInput />} />
           <Route path="materials" element={<Materials />} />
           <Route path="receivables" element={<Receivables />} />

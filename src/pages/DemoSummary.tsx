@@ -1,22 +1,48 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Sparkles, Smartphone } from 'lucide-react'
+import { ArrowLeft, Sparkles, Smartphone, Route, Target, AlertTriangle, Layers } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { WasteBadge } from '../components/Badge'
 import { CompanyOverview } from '../components/CompanyOverview'
-import { RnDCard } from '../components/RnDCard'
+import {
+  SeparationNotice,
+  VehicleFleetCard,
+  FacilityCard,
+  PatentMappingCard,
+  BusinessPlanCard,
+  OfficeSavingsCard,
+  SelfCheckCard,
+  FuturePlanCard,
+} from '../components/ops'
 import { PageShell, SectionTitle, MetricCard } from '../components/ui'
+import { dispatchPlans } from '../lib/ops'
 import { monthlyCollected } from '../lib/selectors'
 import { weight } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 시연용 핵심 요약 — 벤처기업확인 심사관 대상 한 화면 흐름
-//  회사 규모 → 수거 실적 → 기술개발·특허 순으로 배치
+// 시연용 핵심 요약 (/demo) — 벤처기업확인 현장실사 시연 순서
+//  회사규모 → 현장문제 → 개발중 시스템 → 배차시뮬 → 특허매핑 → 사업계획정합성
+//  → 사무업무 개선 → 향후 고도화 → 현장실사 셀프체크
 // ─────────────────────────────────────────────────────────────────────────────
+
+const FIELD_PROBLEMS = [
+  '병원·요양병원별 수거주기 차이',
+  '자재(박스·비닐·바늘통) 추가요청 수시 발생',
+  '격리의료폐기물 보관기한(1주일) 및 긴급수거 대응',
+  '의료폐기물 / 일회용기저귀 분리 운행 (차량·처리장·지자체 분리)',
+]
+
+const SYSTEM_SCOPE = [
+  '거래처·수거조건·차량·처리장·수거이력 통합관리',
+  '권역·수거량·보관기한 기반 배차·경로 추천 시뮬레이션 (개발 중)',
+  '수거대장·자재공급·미수금을 운영관리 보조기능으로 통합',
+]
 
 export function DemoSummary() {
   const navigate = useNavigate()
   const { data } = useData()
   const monthly = monthlyCollected(data)
   const total = monthly.의료폐기물 + monthly.일회용기저귀
+  const plans = dispatchPlans(data).filter((p) => p.stops.length > 0).slice(0, 2)
 
   return (
     <PageShell>
@@ -38,18 +64,18 @@ export function DemoSummary() {
         </button>
       </div>
 
-      {/* 히어로 */}
+      {/* 1. 회사 운영 규모 (히어로) */}
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-6 text-white shadow-lg">
         <div className="flex items-center gap-1.5 text-teal-300">
           <Sparkles size={16} />
           <span className="text-xs font-bold">beonemirae ops</span>
         </div>
         <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight">
-          ㈜비원미래
+          데이터 기반 의료폐기물
           <br />
-          의료폐기물 수거·운반
+          수거·운반 경로 최적화 및
           <br />
-          통합 운영관리
+          통합 운영관리 시스템
         </h1>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {[`거래처 ${data.clients.length}곳`, `차량 ${data.vehicles.length}대`, '월평균 105톤'].map((c) => (
@@ -60,27 +86,119 @@ export function DemoSummary() {
         </div>
       </div>
 
-      {/* 이번 달 수거 실적 */}
       <section>
-        <SectionTitle>이번 달 수거 실적</SectionTitle>
+        <SectionTitle>1. 회사 운영 규모</SectionTitle>
+        <CompanyOverview />
+      </section>
+
+      {/* 2. 현장 문제 + 3. 개발 중인 시스템 */}
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+        <section>
+          <SectionTitle>2. 현장 문제</SectionTitle>
+          <div className="card p-5">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-amber-500" />
+              <p className="text-[15px] font-bold text-navy-800">의료기관 폐기물 운영의 현장 과제</p>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {FIELD_PROBLEMS.map((p) => (
+                <li key={p} className="flex gap-2 text-sm leading-snug text-navy-600">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <SectionTitle>3. 개발 중인 시스템</SectionTitle>
+          <div className="card p-5">
+            <div className="flex items-center gap-2">
+              <Layers size={18} className="text-teal-600" />
+              <p className="text-[15px] font-bold text-navy-800">통합 운영관리 시스템 (개발 중)</p>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {SYSTEM_SCOPE.map((p) => (
+                <li key={p} className="flex gap-2 text-sm leading-snug text-navy-600">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      {/* 4. 배차·경로 추천 시뮬레이션 */}
+      <section>
+        <SectionTitle action={<button onClick={() => navigate('/dispatch')} className="text-[13px] font-bold text-teal-600">자세히 →</button>}>
+          4. 배차·경로 추천 시뮬레이션
+        </SectionTitle>
+        <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+          {plans.map((p) => (
+            <div key={p.vehicleId} className="card p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <WasteBadge type={p.wasteType} />
+                  <span className="truncate font-bold text-navy-900">{p.vehicleName}</span>
+                </div>
+                <span className="shrink-0 text-lg font-extrabold text-teal-600">{p.loadRate}%</span>
+              </div>
+              <p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-navy-500">
+                <Route size={14} /> 권장 순서
+              </p>
+              <p className="mt-1 text-sm font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-navy-500">
+                <Target size={13} /> {p.facilityName} 인계 {p.handoverTime} · 예상 운행 {p.simDistanceKm}km (시뮬레이션)
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3">
+          <SeparationNotice />
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2 lg:items-start">
+          <VehicleFleetCard />
+          <FacilityCard />
+        </div>
+      </section>
+
+      {/* 5. 특허 구성요소 매핑 */}
+      <section>
+        <SectionTitle>5. 특허 구성요소 매핑</SectionTitle>
+        <PatentMappingCard />
+      </section>
+
+      {/* 6. 사업계획서 정합성 */}
+      <section>
+        <SectionTitle>6. 사업계획서와 MVP 정합성</SectionTitle>
+        <BusinessPlanCard />
+      </section>
+
+      {/* 7. 사무업무 개선 + 이번 달 실적 */}
+      <section>
+        <SectionTitle>7. 실제 사무업무 개선 포인트</SectionTitle>
         <div className="grid grid-cols-3 gap-3">
           <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" />
           <MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" />
           <MetricCard label="총 수거량" value={weight(total)} tone="navy" />
         </div>
+        <div className="mt-3">
+          <OfficeSavingsCard />
+        </div>
       </section>
 
-      {/* 회사 운영 규모 + 기술개발 현황 */}
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
-        <section>
-          <SectionTitle>회사 운영 규모</SectionTitle>
-          <CompanyOverview />
-        </section>
-        <section>
-          <SectionTitle>기술개발 현황 · 특허</SectionTitle>
-          <RnDCard />
-        </section>
-      </div>
+      {/* 8. 향후 고도화 + 현장실사 셀프체크 */}
+      <section>
+        <SectionTitle>8. 향후 고도화</SectionTitle>
+        <FuturePlanCard />
+      </section>
+
+      <section>
+        <SectionTitle>현장실사 셀프 체크</SectionTitle>
+        <SelfCheckCard />
+      </section>
 
       <p className="pb-2 text-center text-xs text-navy-300">
         데이터 기반 의료폐기물 수거·운반 운영관리 시스템 · ㈜비원미래

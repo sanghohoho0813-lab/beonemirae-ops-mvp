@@ -1,24 +1,27 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Siren, Clock, CreditCard, ChevronRight, Sparkles, type LucideIcon } from 'lucide-react'
+import { Sparkles, ChevronRight, AlertTriangle, AlertCircle, Circle, CheckCircle2, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { InfoBanner } from '../components/InfoBanner'
 import { CompanyOverview } from '../components/CompanyOverview'
 import { RnDCard } from '../components/RnDCard'
+import { SeparationNotice, IsolationCard, MaterialRiskCard } from '../components/ops'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PageShell, SectionTitle, MetricCard } from '../components/ui'
-import {
-  additionalMaterialCount,
-  monthlyCollected,
-  outstandingTotal,
-  todaySummary,
-  vehicleTodaySummary,
-} from '../lib/selectors'
+import { monthlyCollected, outstandingTotal, todaySummary, additionalMaterialCount, vehicleTodaySummary } from '../lib/selectors'
+import { todayChecklist, type CheckStatus } from '../lib/ops'
 import { prettyDate, today, weight, won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 대시보드 — 모바일 앱 / 데스크톱 웹 대시보드 반응형
 // ─────────────────────────────────────────────────────────────────────────────
+
+const statusMeta: Record<CheckStatus, { icon: LucideIcon; color: string; chip: string }> = {
+  긴급: { icon: AlertTriangle, color: 'text-rose-500', chip: 'bg-rose-50 text-rose-500' },
+  주의: { icon: AlertCircle, color: 'text-amber-600', chip: 'bg-amber-50 text-amber-600' },
+  정보: { icon: Circle, color: 'text-navy-500', chip: 'bg-navy-50 text-navy-500' },
+  완료: { icon: CheckCircle2, color: 'text-emerald-600', chip: 'bg-emerald-50 text-emerald-600' },
+}
 
 export function Dashboard() {
   const { data, clientById } = useData()
@@ -31,15 +34,7 @@ export function Dashboard() {
   const outstanding = outstandingTotal(data)
   const addMaterials = additionalMaterialCount(data)
   const vehicles = vehicleTodaySummary(data)
-  const confirmNeeded = data.payments.filter((p) => p.status === '확인필요').length
-
-  const alerts: { icon: LucideIcon; label: string; count: number; tone: string; iconTone: string; to: string }[] = []
-  if (summary.긴급 > 0)
-    alerts.push({ icon: Siren, label: '긴급 수거', count: summary.긴급, tone: 'text-rose-500', iconTone: 'bg-rose-50 text-rose-500', to: '/today' })
-  if (summary.지연 > 0)
-    alerts.push({ icon: Clock, label: '지연', count: summary.지연, tone: 'text-amber-500', iconTone: 'bg-amber-50 text-amber-600', to: '/today' })
-  if (confirmNeeded > 0)
-    alerts.push({ icon: CreditCard, label: '입금 확인 필요', count: confirmNeeded, tone: 'text-amber-500', iconTone: 'bg-amber-50 text-amber-600', to: '/receivables' })
+  const checklist = todayChecklist(data)
 
   return (
     <PageShell>
@@ -76,30 +71,25 @@ export function Dashboard() {
         </Link>
       </div>
 
-      {/* 오늘 먼저 확인할 일 + 오늘 수거 현황 */}
+      {/* 오늘 할 일 체크리스트 + 오늘 수거 현황 */}
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         <section>
-          <SectionTitle>오늘 먼저 확인할 일</SectionTitle>
-          <div className="card p-5">
-            {alerts.length === 0 ? (
-              <p className="text-[15px] font-semibold text-navy-400">오늘은 급히 확인할 항목이 없어요 ✅</p>
-            ) : (
-              <div className="space-y-2">
-                {alerts.map((a) => {
-                  const Icon = a.icon
-                  return (
-                    <Link key={a.label} to={a.to} className="pressable flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.iconTone}`}>
-                        <Icon size={18} strokeWidth={2.3} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-navy-800">{a.label}</span>
-                      <span className={`shrink-0 whitespace-nowrap text-lg font-extrabold ${a.tone}`}>{a.count}건</span>
-                      <ChevronRight size={18} className="shrink-0 text-navy-300" />
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
+          <SectionTitle>오늘 할 일</SectionTitle>
+          <div className="card p-2">
+            {checklist.map((item) => {
+              const m = statusMeta[item.status]
+              const Icon = m.icon
+              return (
+                <Link key={item.key} to={item.to} className="pressable flex items-center gap-3 rounded-2xl px-3 py-2.5 hover:bg-navy-50">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${m.chip}`}>
+                    <Icon size={16} strokeWidth={2.4} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold text-navy-700">{item.label}</span>
+                  <span className={`shrink-0 whitespace-nowrap text-sm font-extrabold ${m.color}`}>{item.count}건</span>
+                  <ChevronRight size={16} className="shrink-0 text-navy-300" />
+                </Link>
+              )
+            })}
           </div>
         </section>
 
@@ -124,8 +114,20 @@ export function Dashboard() {
         </Stagger>
       </section>
 
-      {/* 정산·자재 + 차량별 오늘 일정 */}
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+      {/* 분리 운행 + 격리/긴급 */}
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+        <section>
+          <SectionTitle>분리 운행 필요</SectionTitle>
+          <SeparationNotice />
+        </section>
+        <section>
+          <SectionTitle>격리 / 긴급 수거</SectionTitle>
+          <IsolationCard />
+        </section>
+      </div>
+
+      {/* 정산·자재 + 자재 소진 위험 */}
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
         <section>
           <SectionTitle>정산 · 자재</SectionTitle>
           <div className="grid grid-cols-2 gap-3">
@@ -133,46 +135,51 @@ export function Dashboard() {
             <MetricCard label="자재 추가요청" value={addMaterials} unit="건" tone="navy" hint="자재 관리 →" onClick={() => navigate('/materials')} />
           </div>
         </section>
-
         <section>
-          <SectionTitle action={<Link to="/today" className="text-[13px] font-bold text-teal-600">전체 일정 →</Link>}>
-            차량별 오늘 일정
-          </SectionTitle>
-          <Stagger className="space-y-3">
-            {vehicles.map(({ vehicle, total, done, items }) => (
-              <StaggerItem key={vehicle.id}>
-                <div className="card p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <WasteBadge type={vehicle.wasteType} />
-                      <span className="truncate font-bold text-navy-800">{vehicle.name}</span>
-                    </div>
-                    <span className="shrink-0 whitespace-nowrap text-sm font-bold text-navy-500">{done}/{total}건</span>
-                  </div>
-                  {items.length === 0 ? (
-                    <p className="mt-2 text-sm text-navy-300">오늘 배정된 일정이 없습니다.</p>
-                  ) : (
-                    <ul className="mt-3 space-y-2">
-                      {items.map((s) => (
-                        <li key={s.id} className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2 font-medium text-navy-600">
-                            <span className="tabular-nums text-navy-400">{s.scheduledTime}</span>
-                            {clientById(s.clientId)?.name ?? '알 수 없음'}
-                          </span>
-                          <StatusBadge status={s.status} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          <SectionTitle>자재 소진 위험</SectionTitle>
+          <MaterialRiskCard />
         </section>
       </div>
 
+      {/* 차량별 오늘 일정 */}
+      <section>
+        <SectionTitle action={<Link to="/dispatch" className="text-[13px] font-bold text-teal-600">배차·경로 →</Link>}>
+          차량별 오늘 일정
+        </SectionTitle>
+        <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
+          {vehicles.map(({ vehicle, total, done, items }) => (
+            <StaggerItem key={vehicle.id}>
+              <div className="card p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <WasteBadge type={vehicle.wasteType} />
+                    <span className="truncate font-bold text-navy-800">{vehicle.name}</span>
+                  </div>
+                  <span className="shrink-0 whitespace-nowrap text-sm font-bold text-navy-500">{done}/{total}건</span>
+                </div>
+                {items.length === 0 ? (
+                  <p className="mt-2 text-sm text-navy-300">오늘 배정된 일정이 없습니다.</p>
+                ) : (
+                  <ul className="mt-3 space-y-2">
+                    {items.map((s) => (
+                      <li key={s.id} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 font-medium text-navy-600">
+                          <span className="tabular-nums text-navy-400">{s.scheduledTime}</span>
+                          {clientById(s.clientId)?.name ?? '알 수 없음'}
+                        </span>
+                        <StatusBadge status={s.status} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </section>
+
       {/* 회사 운영 규모 + 기술개발 현황 */}
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
         <section>
           <SectionTitle>회사 운영 규모</SectionTitle>
           <CompanyOverview />

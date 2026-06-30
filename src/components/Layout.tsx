@@ -11,6 +11,7 @@ import {
   Wallet,
   PieChart,
   Smartphone,
+  Truck,
   type LucideIcon,
 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
@@ -34,6 +35,7 @@ interface NavItem {
 const FULL_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: LayoutGrid },
   { to: '/today', label: '오늘 일정', icon: CalendarClock },
+  { to: '/dispatch', label: '배차·경로', icon: Truck },
   { to: '/clients', label: '거래처', icon: Building2 },
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
   { to: '/materials', label: '자재 관리', icon: Boxes },
@@ -50,7 +52,7 @@ const BOTTOM_NAV: NavItem[] = [
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
 ]
 
-const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo']
+const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch']
 
 // ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
 function Sidebar() {
@@ -188,7 +190,7 @@ export function Layout() {
       {/* 모바일 하단 탭 + 더보기 바텀시트 */}
       <BottomNav onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
       <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
-        <MoreMenu onNavigate={() => setMoreOpen(false)} />
+        <MoreMenu variant="mobile" onNavigate={() => setMoreOpen(false)} />
       </BottomSheet>
     </div>
   )

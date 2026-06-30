@@ -38,7 +38,7 @@ export const seedVehicles: Vehicle[] = [
     wasteType: '의료폐기물',
     tonnage: 1,
     nominalCapacity: 1000,
-    expectedCapacity: 700,
+    expectedCapacity: 670, // 부피 문제로 명목 적재량의 약 2/3
     driver: '김현수',
   },
   {
@@ -47,7 +47,7 @@ export const seedVehicles: Vehicle[] = [
     wasteType: '의료폐기물',
     tonnage: 1,
     nominalCapacity: 1000,
-    expectedCapacity: 700,
+    expectedCapacity: 670,
     driver: '박정민',
   },
   {
@@ -55,8 +55,8 @@ export const seedVehicles: Vehicle[] = [
     name: '의료폐기물 3.5톤',
     wasteType: '의료폐기물',
     tonnage: 3.5,
-    nominalCapacity: 3500,
-    expectedCapacity: 2600,
+    nominalCapacity: 2500, // 적재 가능량(명목)
+    expectedCapacity: 1670, // 부피 문제로 약 2/3
     driver: '이상호',
   },
   {

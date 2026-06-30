@@ -9,7 +9,7 @@ export function More() {
   return (
     <div>
       <PageHeader title="더보기" subtitle="부가 메뉴 및 설정" />
-      <MoreMenu />
+      <MoreMenu variant="desktop" />
     </div>
   )
 }
