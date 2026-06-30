@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
+import { FilterChip, EmptyState } from '../components/ui'
 import type { Client, ClientType, StorageSize } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,58 +98,50 @@ export function Clients() {
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      {/* 유형 필터 */}
-      <div className="mb-4 flex flex-wrap gap-1.5">
+      {/* 유형 필터 칩 (가로 스크롤) */}
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {(['전체', ...CLIENT_TYPES] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setFilter(t)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-              filter === t ? 'bg-navy-700 text-white' : 'bg-white text-navy-500 ring-1 ring-navy-100'
-            }`}
-          >
-            {t} {counts[t] ? `(${counts[t]})` : ''}
-          </button>
+          <FilterChip key={t} active={filter === t} onClick={() => setFilter(t)}>
+            {t}
+            {counts[t] ? ` ${counts[t]}` : ''}
+          </FilterChip>
         ))}
       </div>
 
-      <ul className="space-y-2.5">
-        {filtered.map((c) => (
-          <li key={c.id}>
-            <button
-              onClick={() => setDetail(c)}
-              className="card pressable flex w-full items-center justify-between p-4 text-left"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-semibold text-navy-900">{c.name}</span>
-                  <span className="rounded-md bg-navy-50 px-1.5 py-0.5 text-[11px] font-medium text-navy-500">
-                    {c.type}
-                  </span>
+      {filtered.length === 0 ? (
+        <EmptyState icon="🏥" title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
+      ) : (
+        <ul className="space-y-2.5">
+          {filtered.map((c) => (
+            <li key={c.id}>
+              <button
+                onClick={() => setDetail(c)}
+                className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-[15px] font-bold text-navy-900">{c.name}</span>
+                    <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[11px] font-bold text-navy-500">
+                      {c.type}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate t-caption">
+                    {c.manager} · {c.phone} · {c.collectionCycle}
+                  </p>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-navy-400">
-                  {c.manager} · {c.phone} · {c.collectionCycle}
-                </p>
-              </div>
-              <div className="flex shrink-0 gap-1">
-                {c.collectsMedicalWaste && (
-                  <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">
-                    의료
-                  </span>
-                )}
-                {c.collectsDiaper && (
-                  <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-700">
-                    기저귀
-                  </span>
-                )}
-              </div>
-            </button>
-          </li>
-        ))}
-        {filtered.length === 0 && (
-          <li className="card p-8 text-center text-navy-400">조건에 맞는 거래처가 없습니다.</li>
-        )}
-      </ul>
+                <div className="flex shrink-0 gap-1">
+                  {c.collectsMedicalWaste && (
+                    <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-500">의료</span>
+                  )}
+                  {c.collectsDiaper && (
+                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-600">기저귀</span>
+                  )}
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/* 상세 보기 모달 */}
       <Modal

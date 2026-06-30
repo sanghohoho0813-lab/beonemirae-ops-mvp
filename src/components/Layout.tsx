@@ -42,16 +42,16 @@ const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats']
 
 function BrandHeader() {
   return (
-    <header className="sticky top-0 z-30 bg-navy-900 text-white">
-      <div className="mx-auto flex max-w-5xl items-center gap-2.5 px-4 py-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-400 text-lg font-black text-navy-900">
+    <header className="sticky top-0 z-30 bg-[#f5f7fa]/85 backdrop-blur-lg">
+      <div className="mx-auto flex max-w-5xl items-center gap-2.5 px-4 py-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
           비
         </div>
-        <div className="leading-tight">
-          <p className="text-base font-bold">㈜비원미래</p>
-          <p className="text-xs text-navy-300">의료폐기물 수거·운반 통합 운영관리</p>
+        <div className="leading-none">
+          <p className="text-[15px] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="mt-1 text-[11px] font-medium text-navy-400">의료폐기물 수거·운반 통합 운영관리</p>
         </div>
-        <span className="ml-auto hidden text-xs text-navy-300 sm:inline">beonemirae ops</span>
+        <span className="ml-auto hidden text-xs font-medium text-navy-300 sm:inline">beonemirae ops</span>
       </div>
     </header>
   )
@@ -122,7 +122,7 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-navy-100/70 bg-white/90 backdrop-blur-lg sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 bg-white/95 shadow-nav backdrop-blur-lg sm:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto grid max-w-5xl grid-cols-5">

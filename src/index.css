@@ -17,7 +17,6 @@
   html.scale-xl {
     font-size: 22px; /* 약 +40% */
   }
-  /* 데스크탑은 과도한 확대를 막아 레이아웃 안정성 확보 */
   @media (min-width: 640px) {
     html.scale-lg {
       font-size: 17.5px;
@@ -29,14 +28,13 @@
 
   body {
     /* 토스풍의 아주 밝은 블루그레이 배경 */
-    @apply bg-[#f3f6fb] text-navy-900 antialiased;
+    @apply bg-[#f5f7fa] text-navy-900 antialiased;
     font-feature-settings: 'tnum' 1;
+    line-height: 1.45;
   }
-  /* iOS 안전영역 대응 */
   #root {
     min-height: 100dvh;
   }
-  /* 부드러운 스크롤/터치 하이라이트 제거 */
   * {
     -webkit-tap-highlight-color: transparent;
   }
@@ -45,20 +43,18 @@
 @layer components {
   /* 카드 — 테두리 대신 여백과 은은한 그림자로 구분 */
   .card {
-    @apply rounded-3xl bg-white;
-    box-shadow:
-      0 1px 2px rgba(15, 26, 46, 0.04),
-      0 6px 20px -8px rgba(15, 26, 46, 0.08);
+    @apply rounded-3xl bg-white shadow-card;
   }
-  /* 누를 수 있는 카드/요소의 터치 피드백 */
   .pressable {
-    @apply transition-transform duration-150 active:scale-[0.98];
+    @apply transition-transform duration-200 active:scale-[0.98];
   }
+
+  /* 버튼 ---------------------------------------------------------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-[15px] font-semibold transition-transform duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-[15px] font-bold transition-transform duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-primary {
-    @apply btn bg-teal-600 text-white shadow-sm hover:bg-teal-700;
+    @apply btn bg-teal-500 text-white shadow-sm hover:bg-teal-600;
   }
   .btn-navy {
     @apply btn bg-navy-800 text-white shadow-sm hover:bg-navy-900;
@@ -67,16 +63,27 @@
     @apply btn bg-navy-50 text-navy-700 hover:bg-navy-100;
   }
   .btn-danger {
-    @apply btn bg-rose-50 text-rose-600 hover:bg-rose-100;
+    @apply btn bg-rose-50 text-rose-500 hover:bg-rose-100;
   }
+
+  /* 입력 ---------------------------------------------------------------- */
   .field-label {
-    @apply mb-1.5 block text-[15px] font-medium text-navy-600;
+    @apply mb-1.5 block text-sm font-semibold text-navy-500;
   }
   .field-input {
-    @apply w-full rounded-2xl border-0 bg-navy-50/70 px-4 py-3.5 text-base text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400;
+    @apply w-full rounded-2xl border-0 bg-navy-50 px-4 py-3.5 text-base font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:font-normal placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400;
   }
+
+  /* 텍스트 위계 -------------------------------------------------------- */
+  .t-caption {
+    @apply text-xs font-medium text-navy-400;
+  }
+  .t-sub {
+    @apply text-sm text-navy-400;
+  }
+
   /* pill 형태 뱃지 공통 */
   .pill {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1;
+    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold;
   }
 }

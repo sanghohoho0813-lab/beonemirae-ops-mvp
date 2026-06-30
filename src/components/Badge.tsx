@@ -1,17 +1,17 @@
 import type { ScheduleStatus, WasteType, PaymentStatus } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 상태/구분 뱃지 모음
+// 상태/구분 뱃지 — pale, 차분한 pill 형태
+//  · 의료폐기물: pale red / 일회용기저귀: teal
+//  · 지연/긴급은 과하지 않게 상태만 명확히
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function WasteBadge({ type }: { type: WasteType }) {
   const styles =
-    type === '의료폐기물'
-      ? 'bg-rose-50 text-rose-600 ring-rose-100'
-      : 'bg-teal-50 text-teal-700 ring-teal-100'
-  const dot = type === '의료폐기물' ? 'bg-rose-500' : 'bg-teal-500'
+    type === '의료폐기물' ? 'bg-rose-50 text-rose-500' : 'bg-teal-50 text-teal-600'
+  const dot = type === '의료폐기물' ? 'bg-rose-400' : 'bg-teal-500'
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${styles}`}>
+    <span className={`pill ${styles}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
       {type}
     </span>
@@ -19,30 +19,22 @@ export function WasteBadge({ type }: { type: WasteType }) {
 }
 
 const statusStyles: Record<ScheduleStatus, string> = {
-  예정: 'bg-navy-50 text-navy-600 ring-navy-100',
-  완료: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
-  지연: 'bg-amber-50 text-amber-600 ring-amber-100',
-  긴급: 'bg-red-50 text-red-600 ring-red-100',
+  예정: 'bg-navy-100 text-navy-500',
+  완료: 'bg-emerald-50 text-emerald-600',
+  지연: 'bg-amber-50 text-amber-600',
+  긴급: 'bg-rose-50 text-rose-500',
 }
 
 export function StatusBadge({ status }: { status: ScheduleStatus }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusStyles[status]}`}>
-      {status}
-    </span>
-  )
+  return <span className={`pill ${statusStyles[status]}`}>{status}</span>
 }
 
 const paymentStyles: Record<PaymentStatus, string> = {
-  입금완료: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
-  미수금: 'bg-red-50 text-red-600 ring-red-100',
-  확인필요: 'bg-amber-50 text-amber-600 ring-amber-100',
+  입금완료: 'bg-emerald-50 text-emerald-600',
+  미수금: 'bg-rose-50 text-rose-500',
+  확인필요: 'bg-amber-50 text-amber-600',
 }
 
 export function PaymentBadge({ status }: { status: PaymentStatus }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${paymentStyles[status]}`}>
-      {status}
-    </span>
-  )
+  return <span className={`pill ${paymentStyles[status]}`}>{status}</span>
 }

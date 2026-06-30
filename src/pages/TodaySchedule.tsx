@@ -4,6 +4,7 @@ import { PageHeader } from '../components/PageHeader'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
+import { EmptyState } from '../components/ui'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import type { Schedule } from '../types'
@@ -48,78 +49,85 @@ export function TodaySchedule() {
 
       {/* 날짜 네비게이션 */}
       <div className="card mb-4 flex items-center justify-between p-2">
-        <button className="btn-ghost" onClick={() => setDate((d) => shiftDate(d, -1))}>
-          ← 이전
+        <button
+          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-navy-50 text-navy-500 transition active:scale-95"
+          onClick={() => setDate((d) => shiftDate(d, -1))}
+          aria-label="이전 날짜"
+        >
+          ‹
         </button>
         <div className="text-center">
-          <p className="text-sm font-bold text-navy-900">{prettyDate(date)}</p>
-          <button className="text-xs text-teal-600" onClick={() => setDate(today())}>
+          <p className="text-[15px] font-extrabold text-navy-900">{prettyDate(date)}</p>
+          <button className="text-xs font-bold text-teal-600" onClick={() => setDate(today())}>
             오늘로 이동
           </button>
         </div>
-        <button className="btn-ghost" onClick={() => setDate((d) => shiftDate(d, 1))}>
-          다음 →
+        <button
+          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-navy-50 text-navy-500 transition active:scale-95"
+          onClick={() => setDate((d) => shiftDate(d, 1))}
+          aria-label="다음 날짜"
+        >
+          ›
         </button>
       </div>
 
       {list.length === 0 ? (
-        <div className="card p-8 text-center text-navy-400">해당 날짜에 등록된 일정이 없습니다.</div>
+        <EmptyState icon="🗓️" title="등록된 일정이 없어요" subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요." />
       ) : (
         <Stagger className="space-y-3">
           {list.map((s) => {
             const client = clientById(s.clientId)
             const vehicle = data.vehicles.find((v) => v.id === s.vehicleId)
             const done = s.status === '완료'
+            const urgent = s.status === '긴급'
             return (
-              <StaggerItem
-                key={s.id}
-                className={`card p-4 ${
-                  s.status === '긴급' ? 'border-l-4 border-l-red-500 bg-red-50/50' : ''
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="tabular-nums text-base font-bold text-navy-700">{s.scheduledTime}</span>
-                      <WasteBadge type={s.wasteType} />
-                      <StatusBadge status={s.status} />
+              <StaggerItem key={s.id} className={`card overflow-hidden ${done ? 'opacity-[0.92]' : ''}`}>
+                {/* 긴급: 상단 우선 방문 안내 */}
+                {urgent && (
+                  <div className="bg-rose-50 px-4 py-2 text-xs font-bold text-rose-500">⚠ 우선 방문 요청</div>
+                )}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="tabular-nums text-lg font-extrabold text-navy-900">{s.scheduledTime}</span>
+                        <WasteBadge type={s.wasteType} />
+                        <StatusBadge status={s.status} />
+                      </div>
+                      <p className="mt-1.5 truncate text-xl font-extrabold text-navy-900">
+                        {client?.name ?? '알 수 없는 거래처'}
+                      </p>
+                      <p className="mt-0.5 truncate t-caption">
+                        {client?.address} · {vehicle?.name ?? '미배정'}
+                      </p>
+                      {s.memo && <p className="mt-1.5 text-sm font-medium text-amber-600">📌 {s.memo}</p>}
                     </div>
-                    <p className="mt-1.5 truncate text-lg font-bold text-navy-900">
-                      {client?.name ?? '알 수 없는 거래처'}
-                    </p>
-                    <p className="truncate text-sm text-navy-400">
-                      {client?.address} · {vehicle?.name ?? '미배정'}
-                    </p>
-                    {s.memo && <p className="mt-1 text-sm font-medium text-amber-600">📌 {s.memo}</p>}
+                    <div className="shrink-0 text-right">
+                      <p className="t-caption">예상 {weight(s.expectedAmount)}</p>
+                      {s.actualAmount != null && (
+                        <p className="mt-0.5 text-base font-extrabold text-teal-600">실수거 {weight(s.actualAmount)}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-xs text-navy-400">예상 {weight(s.expectedAmount)}</p>
-                    {s.actualAmount != null && (
-                      <p className="text-base font-bold text-teal-700">실수거 {weight(s.actualAmount)}</p>
+
+                  <div className="mt-3 flex gap-2">
+                    {done ? (
+                      <button className="btn-ghost flex-1 py-3.5" onClick={() => openComplete(s)}>
+                        ✎ 수거량 수정
+                      </button>
+                    ) : (
+                      <>
+                        <button className="btn-primary flex-1 py-4 text-base" onClick={() => openComplete(s)}>
+                          ✓ 수거 완료 처리
+                        </button>
+                        {!urgent && (
+                          <button className="btn-ghost px-4" onClick={() => updateSchedule(s.id, { status: '긴급' })}>
+                            긴급
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                  {done ? (
-                    <button className="btn-ghost flex-1 py-3.5" onClick={() => openComplete(s)}>
-                      ✎ 수거량 수정
-                    </button>
-                  ) : (
-                    <>
-                      <button className="btn-primary flex-1 py-3.5 text-base" onClick={() => openComplete(s)}>
-                        ✓ 수거 완료 처리
-                      </button>
-                      {s.status !== '긴급' && (
-                        <button
-                          className="btn-ghost px-4"
-                          onClick={() => updateSchedule(s.id, { status: '긴급' })}
-                        >
-                          긴급
-                        </button>
-                      )}
-                    </>
-                  )}
                 </div>
               </StaggerItem>
             )

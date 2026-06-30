@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { StatCard } from '../components/StatCard'
+import { MetricCard, EmptyState } from '../components/ui'
 import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
 import { num, prettyDate, thisMonth, today } from '../lib/format'
@@ -69,48 +69,46 @@ export function Materials() {
 
       {/* 이번 달 통계 */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="이번 달 추가공급" value={addCount} unit="건" tone="amber" hint="월평균 4~5회" />
-        <StatCard label="박스 공급" value={num(totals.box)} unit="개" tone="navy" />
-        <StatCard label="비닐 공급" value={num(totals.vinyl)} unit="개" tone="navy" />
-        <StatCard label="바늘통 공급" value={num(totals.needle)} unit="개" tone="navy" />
+        <MetricCard label="이번 달 추가공급" value={addCount} unit="건" tone="amber" hint="월평균 4~5회" />
+        <MetricCard label="박스 공급" value={num(totals.box)} unit="개" tone="navy" />
+        <MetricCard label="비닐 공급" value={num(totals.vinyl)} unit="개" tone="navy" />
+        <MetricCard label="바늘통 공급" value={num(totals.needle)} unit="개" tone="navy" />
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold text-navy-500">공급 내역</h2>
-      <ul className="space-y-2.5">
-        {sorted.map((m) => {
-          const client = clientById(m.clientId)
-          return (
-            <li key={m.id} className="card p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-navy-900">{client?.name ?? '알 수 없음'}</span>
-                    {m.isAdditionalRequest && (
-                      <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
-                        추가요청
-                      </span>
-                    )}
+      <h2 className="mb-2.5 px-1 text-[15px] font-bold text-navy-700">공급 내역</h2>
+      {sorted.length === 0 ? (
+        <EmptyState icon="📦" title="자재공급 내역이 없어요" subtitle="우측 상단에서 공급을 등록해 보세요." />
+      ) : (
+        <ul className="space-y-2.5">
+          {sorted.map((m) => {
+            const client = clientById(m.clientId)
+            return (
+              <li key={m.id} className="card p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px] font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
+                      {m.isAdditionalRequest && (
+                        <span className="pill bg-amber-50 text-amber-600">추가요청</span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 t-caption">{prettyDate(m.date)}</p>
                   </div>
-                  <p className="text-xs text-navy-400">{prettyDate(m.date)}</p>
+                  <button className="text-xs font-medium text-navy-300 hover:text-rose-500" onClick={() => removeMaterial(m.id)}>
+                    삭제
+                  </button>
                 </div>
-                <button
-                  className="text-xs text-navy-300 hover:text-rose-500"
-                  onClick={() => removeMaterial(m.id)}
-                >
-                  삭제
-                </button>
-              </div>
-              <div className="mt-2 flex gap-4 text-sm text-navy-600">
-                <span>박스 <b className="text-navy-900">{m.boxCount}</b></span>
-                <span>비닐 <b className="text-navy-900">{m.vinylCount}</b></span>
-                <span>바늘통 <b className="text-navy-900">{m.needleBoxCount}</b></span>
-              </div>
-              {m.memo && <p className="mt-1 text-xs text-navy-400">{m.memo}</p>}
-            </li>
-          )
-        })}
-        {sorted.length === 0 && <li className="card p-8 text-center text-navy-400">자재공급 내역이 없습니다.</li>}
-      </ul>
+                <div className="mt-2.5 flex gap-4 text-sm font-medium text-navy-500">
+                  <span>박스 <b className="text-navy-900">{m.boxCount}</b></span>
+                  <span>비닐 <b className="text-navy-900">{m.vinylCount}</b></span>
+                  <span>바늘통 <b className="text-navy-900">{m.needleBoxCount}</b></span>
+                </div>
+                {m.memo && <p className="mt-1.5 t-caption">{m.memo}</p>}
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
       <Modal
         open={open}

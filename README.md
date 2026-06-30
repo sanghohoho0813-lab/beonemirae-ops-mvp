@@ -106,13 +106,14 @@ src/
 │   ├── DataContext.tsx   # 전역 데이터 + CRUD (변경 시 자동 영속화)
 │   └── SettingsContext.tsx  # UI 설정 (글자 크기 모드)
 ├── components/
-│   ├── Layout.tsx        # 헤더 + 사이드/하단 네비(4개+더보기 바텀시트) + 페이지 전환
+│   ├── ui.tsx            # 토스 스타일 UI 키트 (PageShell/SectionTitle/MetricCard/
+│   │                     #   AppCard/FilterChip/PrimaryButton/SecondaryButton/EmptyState)
+│   ├── Layout.tsx        # 경량 헤더 + 사이드/하단 네비(4개+더보기 바텀시트) + 페이지 전환
 │   ├── motion.tsx        # 공용 모션 프리미티브 (PageMotion/Stagger/Tappable)
 │   ├── ScrollToTop.tsx   # 경로 변경 시 스크롤 최상단 이동
 │   ├── BottomSheet.tsx   # 아래에서 올라오는 바텀시트
 │   ├── MoreMenu.tsx      # 더보기 콘텐츠 (바텀시트·/more 공용)
-│   ├── Badge.tsx         # 상태·폐기물·결제 뱃지 (pill)
-│   ├── StatCard.tsx      # 지표 카드 (md/lg 크기)
+│   ├── Badge.tsx         # 상태·폐기물·결제 뱃지 (pale pill)
 │   ├── FontSizeControl.tsx  # 글자 크기 선택 컨트롤
 │   ├── InfoBanner.tsx    # 시연용 localStorage 안내 배너
 │   ├── PageHeader.tsx    # 페이지 헤더
@@ -202,6 +203,15 @@ src/
   - framer-motion 모션(페이지 전환·카드 stagger·터치 피드백)
   - 대시보드 "오늘 먼저 확인할 것" 요약 카드, 수거 입력 저장 토스트
   - PWA 강화 및 README 보강, Vercel 자동배포 흐름 정리
+- **4차 (진짜 앱 같은 토스풍 고도화)**
+  - **공용 디자인 시스템 컴포넌트**(`src/components/ui.tsx`): PageShell · SectionTitle ·
+    MetricCard · AppCard · FilterChip · PrimaryButton · SecondaryButton · EmptyState
+  - **뉴트럴 블루그레이 팔레트**로 재조정(배경 `#f5f7fa`, 캡션 뮤트 그레이), 포인트는 청록 1개
+  - **상단 헤더 경량화** — 어두운 네이비 바 제거, 밝은 반투명 sticky 헤더 + 작은 앱 아이콘
+  - 카드 `rounded-3xl`·`shadow-card` 통일, 테두리 최소화·여백 중심
+  - 의료폐기물=pale red / 일회용기저귀=teal, 지연·긴급은 과하지 않게 상태만 명확히
+  - 필터를 `FilterChip`(청록 active)로 통일, 청구월은 가로 스크롤 칩
+  - 빈 목록은 `EmptyState`, 긴급 일정은 "우선 방문 요청" 상단 배너
 
 ---
 
