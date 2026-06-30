@@ -14,6 +14,7 @@ import {
   Wallet,
   PieChart,
   Lightbulb,
+  PlayCircle,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -88,6 +89,18 @@ export function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* 대표님 시연 시작 */}
+      <button onClick={() => navigate('/presentation')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50">
+          <PlayCircle size={22} strokeWidth={2.2} className="text-teal-600" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-bold text-navy-900">대표님 시연 시작</p>
+          <p className="truncate text-xs text-navy-400">현황 → 배차 → 거래처 → 수거대장 → 특허·사업계획</p>
+        </div>
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-500 px-3 py-1.5 text-xs font-bold text-white">3분 시연</span>
+      </button>
 
       {/* 핵심 요약 3 */}
       <div className="grid grid-cols-3 gap-3">

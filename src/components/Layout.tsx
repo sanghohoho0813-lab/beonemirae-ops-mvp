@@ -52,7 +52,7 @@ const BOTTOM_NAV: NavItem[] = [
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
 ]
 
-const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch']
+const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation']
 
 // ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
 function Sidebar() {

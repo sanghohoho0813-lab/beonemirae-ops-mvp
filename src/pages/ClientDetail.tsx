@@ -10,6 +10,7 @@ import {
   Printer,
   Trash2,
   Pencil,
+  Truck,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { WasteBadge } from '../components/Badge'
@@ -108,12 +109,21 @@ export function ClientDetail() {
         </div>
         {client.note && <p className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium text-amber-700">📌 {client.note}</p>}
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex items-center gap-2">
           <button className="btn-primary flex-1" onClick={() => setLogOpen(true)}>
             <FileText size={17} strokeWidth={2.4} /> 수거대장 보기
           </button>
-          <button className="btn-ghost" onClick={() => setEditing(true)} aria-label="수정"><Pencil size={16} /></button>
-          <button className="btn-danger" onClick={confirmRemove} aria-label="삭제"><Trash2 size={16} /></button>
+          <button className="btn-ghost" onClick={() => navigate('/dispatch')}>
+            <Truck size={16} /> 배차 반영
+          </button>
+        </div>
+        <div className="mt-2 flex items-center justify-end gap-3">
+          <button className="flex items-center gap-1 text-sm font-bold text-navy-400 transition hover:text-navy-600" onClick={() => setEditing(true)}>
+            <Pencil size={14} /> 수정
+          </button>
+          <button className="flex items-center gap-1 text-sm font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
+            <Trash2 size={14} /> 삭제
+          </button>
         </div>
       </div>
 

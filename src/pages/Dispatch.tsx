@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Route, Siren, Package, Target, FlaskConical, ChevronDown, Factory } from 'lucide-react'
+import { Route, Siren, Package, Target, FlaskConical, ChevronDown } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { WasteBadge } from '../components/Badge'
@@ -93,37 +93,51 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
 export function Dispatch() {
   const { data } = useData()
   const plans = dispatchPlans(data).filter((p) => p.stops.length > 0)
-  const medCount = plans.filter((p) => p.wasteType === '의료폐기물').length
-  const diaperCount = plans.filter((p) => p.wasteType === '일회용기저귀').length
+  const stopCount = plans.reduce((s, p) => s + p.stops.length, 0)
+  const urgentCount = plans.reduce((s, p) => s + p.urgentCount, 0)
+  const materialCount = plans.reduce((s, p) => s + p.materialCount, 0)
   const [open, setOpen] = useState<string | null>(plans[0]?.vehicleId ?? null)
 
   return (
     <PageShell>
-      <PageHeader title="배차·경로 추천" subtitle="오늘 차량별 권장 수거 순서 · 처리장 인계" />
+      <PageHeader title="배차·경로 추천" subtitle="차량 적재율·긴급수거·처리장 인계 고려" />
 
-      {/* 요약 */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">의료폐기물 차량</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{medCount}<span className="ml-0.5 text-base text-navy-300">대</span></p>
+      {/* 히어로 */}
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-5 text-white shadow-lg">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10">
+            <FlaskConical size={18} className="text-teal-300" />
+          </span>
+          <p className="text-[15px] font-bold">오늘 배차 추천 시뮬레이션</p>
         </div>
-        <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">일회용기저귀 차량</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{diaperCount}<span className="ml-0.5 text-base text-navy-300">대</span></p>
-        </div>
-        <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">처리장 인계</p>
-          <p className="mt-1.5 flex items-center gap-1 text-2xl font-extrabold text-navy-900"><Factory size={18} className="text-navy-400" />2<span className="ml-0.5 text-base text-navy-300">곳</span></p>
+        <p className="mt-2.5 text-sm leading-relaxed text-navy-200">
+          차량 적재율·긴급수거·처리장 인계시간을 함께 고려합니다.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {['개발 중', '시뮬레이션', '실증 예정'].map((b) => (
+            <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-teal-200">{b}</span>
+          ))}
         </div>
       </div>
 
-      {/* 개발 중 안내 */}
-      <div className="flex items-start gap-2.5 rounded-2xl bg-navy-50 p-4">
-        <FlaskConical size={18} strokeWidth={2.2} className="mt-0.5 shrink-0 text-teal-600" />
-        <p className="text-sm leading-relaxed text-navy-500">
-          수거조건·차량·처리장·이력 데이터를 통합한 <b className="text-navy-700">배차·경로 추천 로직을 개발 중</b>입니다.
-          운행거리·시간은 <b className="text-navy-700">시뮬레이션 값</b>이며 실증 데이터로 검증 예정입니다.
-        </p>
+      {/* 핵심 숫자 */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="card p-4">
+          <p className="text-[13px] font-semibold text-navy-400">추천 차량</p>
+          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{plans.length}<span className="ml-0.5 text-base text-navy-300">대</span></p>
+        </div>
+        <div className="card p-4">
+          <p className="text-[13px] font-semibold text-navy-400">반영 거래처</p>
+          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{stopCount}<span className="ml-0.5 text-base text-navy-300">곳</span></p>
+        </div>
+        <div className="card p-4">
+          <p className="text-[13px] font-semibold text-navy-400">긴급</p>
+          <p className="mt-1.5 text-2xl font-extrabold text-rose-500">{urgentCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+        </div>
+        <div className="card p-4">
+          <p className="text-[13px] font-semibold text-navy-400">자재 동시공급</p>
+          <p className="mt-1.5 text-2xl font-extrabold text-amber-600">{materialCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+        </div>
       </div>
 
       {/* 차량별 추천 (아코디언) */}

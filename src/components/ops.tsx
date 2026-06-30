@@ -106,8 +106,7 @@ export function VehicleFleetCard() {
         })}
       </div>
       <p className="mt-3 text-xs leading-snug text-navy-400">
-        의료폐기물과 의료기관 일회용기저귀는 법적으로 차량·관리체계·처리장·지자체 관리가 분리되어야 하므로,
-        차량도 폐기물 종류별로 분리하여 운영합니다.
+        법적으로 차량·처리장·지자체 관리가 분리되어, 차량도 종류별로 분리 운영합니다.
       </p>
     </div>
   )
@@ -149,8 +148,7 @@ export function FacilityCard() {
         })}
       </div>
       <p className="mt-3 text-xs leading-snug text-navy-400">
-        실제 운영용 버전에서는 처리장별 위치·인계 가능 시간·차량별 도착 예정 시간을 연동하여 경로 산출 기준으로
-        활용 예정입니다.
+        실제 버전에서는 처리장 위치·인계시간을 연동해 경로 산출에 활용 예정.
       </p>
     </div>
   )

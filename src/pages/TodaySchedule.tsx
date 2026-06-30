@@ -129,9 +129,14 @@ export function TodaySchedule() {
                   </div>
 
                   {!done && (
-                    <button className="btn-primary mt-3 w-full py-3.5" onClick={() => openComplete(s)}>
-                      <Check size={18} strokeWidth={2.6} /> 수거 완료 처리
-                    </button>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition active:scale-95"
+                        onClick={() => openComplete(s)}
+                      >
+                        <Check size={16} strokeWidth={2.6} /> 수거 완료
+                      </button>
+                    </div>
                   )}
                 </div>
               </StaggerItem>
