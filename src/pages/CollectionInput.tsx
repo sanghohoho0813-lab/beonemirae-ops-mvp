@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { today, weight } from '../lib/format'
@@ -24,6 +25,7 @@ export function CollectionInput() {
   const [time, setTime] = useState(nowTime())
   const [memo, setMemo] = useState('')
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   const client = data.clients.find((c) => c.id === clientId)
 
@@ -34,7 +36,16 @@ export function CollectionInput() {
   )
 
   function submit() {
-    if (!clientId || !amount) return
+    // 필수 입력값 검증 — 부드러운 안내
+    if (!clientId) {
+      setError('거래처를 선택해 주세요.')
+      return
+    }
+    if (!amount || Number(amount) <= 0) {
+      setError('실제 수거량을 입력해 주세요.')
+      return
+    }
+    setError('')
     const t = today()
     addSchedule({
       date: t,
@@ -57,8 +68,6 @@ export function CollectionInput() {
     setTimeout(() => setSaved(false), 4000)
   }
 
-  const canSubmit = clientId && amount && Number(amount) > 0
-
   return (
     <div>
       <PageHeader title="수거 입력" subtitle="현장에서 바로 입력하세요" />
@@ -66,7 +75,7 @@ export function CollectionInput() {
       <div className="card space-y-4 p-5">
         <div>
           <label className="field-label">거래처 *</label>
-          <select className="field-input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+          <select className="field-input" value={clientId} onChange={(e) => { setClientId(e.target.value); setError('') }}>
             <option value="">거래처를 선택하세요</option>
             {data.clients.map((c) => (
               <option key={c.id} value={c.id}>
@@ -110,7 +119,7 @@ export function CollectionInput() {
               inputMode="numeric"
               className="field-input"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => { setAmount(e.target.value); setError('') }}
               placeholder="예: 320"
             />
           </div>
@@ -137,7 +146,20 @@ export function CollectionInput() {
           </div>
         )}
 
-        <button className="btn-primary w-full py-4 text-base" disabled={!canSubmit} onClick={submit}>
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              className="flex items-center gap-1.5 text-sm font-semibold text-rose-500"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <AlertCircle size={16} strokeWidth={2.3} /> {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <button className="btn-primary w-full py-4 text-base" onClick={submit}>
           저장하기
         </button>
       </div>
@@ -152,8 +174,8 @@ export function CollectionInput() {
             exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 360, damping: 30 }}
           >
-            <div className="flex items-center gap-3 rounded-2xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
-              <span className="text-emerald-400">✓</span>
+            <div className="flex items-center gap-2.5 rounded-2xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+              <CheckCircle2 size={18} className="text-emerald-400" />
               수거 내역이 저장되었습니다
               <Link to="/today" className="ml-1 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-bold text-teal-200">
                 오늘 일정 보기

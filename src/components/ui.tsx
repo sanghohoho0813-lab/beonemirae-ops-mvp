@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import type { LucideIcon } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 토스 스타일 공용 UI 키트
@@ -160,6 +161,39 @@ export function SecondaryButton({
     <button onClick={onClick} disabled={disabled} className={`btn-ghost ${className}`}>
       {children}
     </button>
+  )
+}
+
+type IconTone = 'navy' | 'teal' | 'rose' | 'amber' | 'emerald'
+const iconToneStyle: Record<IconTone, string> = {
+  navy: 'bg-navy-50 text-navy-600',
+  teal: 'bg-teal-50 text-teal-600',
+  rose: 'bg-rose-50 text-rose-500',
+  amber: 'bg-amber-50 text-amber-600',
+  emerald: 'bg-emerald-50 text-emerald-600',
+}
+
+/** 둥근 사각형 아이콘 칩 */
+export function IconChip({ icon: Icon, tone = 'navy', size = 44 }: { icon: LucideIcon; tone?: IconTone; size?: number }) {
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-2xl ${iconToneStyle[tone]}`}
+      style={{ width: size, height: size }}
+    >
+      <Icon size={size * 0.5} strokeWidth={2.2} />
+    </span>
+  )
+}
+
+/** 두 구간 비율 바 (예: 의료폐기물 vs 일회용기저귀) */
+export function RatioBar({ segments }: { segments: { value: number; className: string; label: string }[] }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1
+  return (
+    <div className="flex h-2.5 overflow-hidden rounded-full bg-navy-100">
+      {segments.map((s) => (
+        <div key={s.label} className={s.className} style={{ width: `${(s.value / total) * 100}%` }} />
+      ))}
+    </div>
   )
 }
 

@@ -1,21 +1,24 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Boxes, Wallet, PieChart, Download, Upload, RotateCcw, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { FontSizeControl } from './FontSizeControl'
 import { InfoBanner } from './InfoBanner'
+import { RnDCard } from './RnDCard'
+import { IconChip } from './ui'
 import { Tappable } from './motion'
 import { exportData, parseImportFile } from '../lib/backup'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 콘텐츠 — 바텀시트(모바일)와 /more 페이지(데스크탑)에서 공용
 //  · 자재 관리 / 미수금 관리 / 통계 바로가기
-//  · 글자 크기 설정 / 데이터 백업·복원 / 샘플 초기화 / 시연 안내
+//  · 글자 크기 설정 / 데이터 백업·복원 / 샘플 초기화 / 기술개발 / 시연 안내
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SHORTCUTS = [
-  { to: '/materials', label: '자재 관리', icon: '⬚', desc: '박스·비닐·바늘통 공급 내역' },
-  { to: '/receivables', label: '미수금 관리', icon: '₩', desc: '청구·입금 현황 및 미수금' },
-  { to: '/stats', label: '통계', icon: '◔', desc: '수거량·거래처·차량 실적' },
+const SHORTCUTS: { to: string; label: string; icon: LucideIcon; desc: string }[] = [
+  { to: '/materials', label: '자재 관리', icon: Boxes, desc: '박스·비닐·바늘통 공급 내역' },
+  { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구·입금 현황 및 미수금' },
+  { to: '/stats', label: '통계', icon: PieChart, desc: '수거량·거래처·차량 실적' },
 ]
 
 export function MoreMenu({ onNavigate }: { onNavigate?: () => void }) {
@@ -72,14 +75,12 @@ export function MoreMenu({ onNavigate }: { onNavigate?: () => void }) {
               onClick={() => go(s.to)}
               className="card flex cursor-pointer items-center gap-3 p-4"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-navy-50 text-xl text-navy-600">
-                {s.icon}
-              </span>
+              <IconChip icon={s.icon} tone="navy" />
               <div className="min-w-0">
                 <p className="font-bold text-navy-900">{s.label}</p>
                 <p className="text-xs text-navy-400">{s.desc}</p>
               </div>
-              <span className="ml-auto text-lg text-navy-300">›</span>
+              <ChevronRight size={18} className="ml-auto text-navy-300" />
             </Tappable>
           ))}
         </div>
@@ -99,10 +100,10 @@ export function MoreMenu({ onNavigate }: { onNavigate?: () => void }) {
         <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">데이터 백업 / 복원</h3>
         <div className="card space-y-3 p-4">
           <button className="btn-navy w-full" onClick={() => exportData(data)}>
-            ⬇ 전체 데이터 JSON 내보내기
+            <Download size={17} strokeWidth={2.4} /> 전체 데이터 JSON 내보내기
           </button>
           <button className="btn-ghost w-full" onClick={() => fileRef.current?.click()}>
-            ⬆ JSON 파일 가져오기
+            <Upload size={17} strokeWidth={2.4} /> JSON 파일 가져오기
           </button>
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
           <p className="text-xs text-navy-400">Supabase 연동 전까지 시연 데이터를 JSON 파일로 보관·복원할 수 있습니다.</p>
@@ -126,9 +127,15 @@ export function MoreMenu({ onNavigate }: { onNavigate?: () => void }) {
               }
             }}
           >
-            초기화
+            <RotateCcw size={16} strokeWidth={2.4} /> 초기화
           </button>
         </div>
+      </section>
+
+      {/* 기술개발 현황 */}
+      <section>
+        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">기술개발 현황</h3>
+        <RnDCard />
       </section>
 
       <InfoBanner />

@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import {
+  LayoutGrid,
+  CalendarClock,
+  Building2,
+  PlusCircle,
+  MoreHorizontal,
+  Boxes,
+  Wallet,
+  PieChart,
+  type LucideIcon,
+} from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
@@ -15,27 +26,27 @@ import { PageMotion } from './motion'
 interface NavItem {
   to: string
   label: string
-  icon: string
+  icon: LucideIcon
 }
 
 /** 데스크탑 사이드바 전체 메뉴 */
 const FULL_NAV: NavItem[] = [
-  { to: '/', label: '대시보드', icon: '▦' },
-  { to: '/today', label: '오늘 일정', icon: '◷' },
-  { to: '/clients', label: '거래처', icon: '☰' },
-  { to: '/collection', label: '수거 입력', icon: '＋' },
-  { to: '/materials', label: '자재 관리', icon: '⬚' },
-  { to: '/receivables', label: '미수금 관리', icon: '₩' },
-  { to: '/stats', label: '통계', icon: '◔' },
-  { to: '/more', label: '더보기', icon: '⋯' },
+  { to: '/', label: '대시보드', icon: LayoutGrid },
+  { to: '/today', label: '오늘 일정', icon: CalendarClock },
+  { to: '/clients', label: '거래처', icon: Building2 },
+  { to: '/collection', label: '수거 입력', icon: PlusCircle },
+  { to: '/materials', label: '자재 관리', icon: Boxes },
+  { to: '/receivables', label: '미수금 관리', icon: Wallet },
+  { to: '/stats', label: '통계', icon: PieChart },
+  { to: '/more', label: '더보기', icon: MoreHorizontal },
 ]
 
 /** 모바일 하단 고정 메뉴 — 핵심 4개 (+ 더보기는 별도 버튼) */
 const BOTTOM_NAV: NavItem[] = [
-  { to: '/', label: '대시보드', icon: '▦' },
-  { to: '/today', label: '오늘 일정', icon: '◷' },
-  { to: '/clients', label: '거래처', icon: '☰' },
-  { to: '/collection', label: '수거 입력', icon: '＋' },
+  { to: '/', label: '대시보드', icon: LayoutGrid },
+  { to: '/today', label: '오늘 일정', icon: CalendarClock },
+  { to: '/clients', label: '거래처', icon: Building2 },
+  { to: '/collection', label: '수거 입력', icon: PlusCircle },
 ]
 
 const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats']
@@ -61,14 +72,15 @@ function SideNav({ onMore }: { onMore: () => void }) {
   return (
     <nav className="hidden w-52 shrink-0 sm:block">
       <div className="sticky top-[68px] space-y-1 p-3">
-        {FULL_NAV.map((item) =>
-          item.to === '/more' ? (
+        {FULL_NAV.map((item) => {
+          const Icon = item.icon
+          return item.to === '/more' ? (
             <button
               key={item.to}
               onClick={onMore}
               className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-navy-600 transition hover:bg-navy-100"
             >
-              <span className="text-base">{item.icon}</span>
+              <Icon size={18} strokeWidth={2.2} />
               {item.label}
             </button>
           ) : (
@@ -78,25 +90,25 @@ function SideNav({ onMore }: { onMore: () => void }) {
               end={item.to === '/'}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
-                  isActive ? 'bg-teal-600 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-100'
+                  isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-100'
                 }`
               }
             >
-              <span className="text-base">{item.icon}</span>
+              <Icon size={18} strokeWidth={2.2} />
               {item.label}
             </NavLink>
-          ),
-        )}
+          )
+        })}
       </div>
     </nav>
   )
 }
 
-function NavTab({ active, icon, label, onClick }: { active: boolean; icon: string; label: string; onClick: () => void }) {
+function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="relative flex min-h-[56px] flex-col items-center justify-center gap-1 py-1.5"
+      className="relative flex min-h-[58px] flex-col items-center justify-center gap-1 py-1.5"
     >
       {active && (
         <motion.span
@@ -105,9 +117,11 @@ function NavTab({ active, icon, label, onClick }: { active: boolean; icon: strin
           transition={{ type: 'spring', stiffness: 420, damping: 32 }}
         />
       )}
-      <span className={`relative z-10 text-2xl leading-none transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}>
-        {icon}
-      </span>
+      <Icon
+        size={24}
+        strokeWidth={active ? 2.4 : 2}
+        className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
+      />
       <span className={`relative z-10 text-[11px] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
@@ -139,7 +153,7 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
             />
           )
         })}
-        <NavTab active={moreActive} icon="⋯" label="더보기" onClick={onMore} />
+        <NavTab active={moreActive} icon={MoreHorizontal} label="더보기" onClick={onMore} />
       </div>
     </nav>
   )

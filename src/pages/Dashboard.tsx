@@ -1,7 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { Siren, Clock, CreditCard, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { InfoBanner } from '../components/InfoBanner'
+import { CompanyOverview } from '../components/CompanyOverview'
+import { RnDCard } from '../components/RnDCard'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PageShell, SectionTitle, MetricCard } from '../components/ui'
 import {
@@ -31,19 +34,21 @@ export function Dashboard() {
   const confirmNeeded = data.payments.filter((p) => p.status === '확인필요').length
 
   // "오늘 먼저 확인할 일" — 조치가 필요한 항목만
-  const alerts: { icon: string; label: string; count: number; tone: string; to: string }[] = []
+  const alerts: { icon: LucideIcon; label: string; count: number; tone: string; iconTone: string; to: string }[] = []
   if (summary.긴급 > 0)
-    alerts.push({ icon: '🚨', label: '긴급 수거', count: summary.긴급, tone: 'text-rose-500', to: '/today' })
+    alerts.push({ icon: Siren, label: '긴급 수거', count: summary.긴급, tone: 'text-rose-500', iconTone: 'bg-rose-50 text-rose-500', to: '/today' })
   if (summary.지연 > 0)
-    alerts.push({ icon: '⏰', label: '지연', count: summary.지연, tone: 'text-amber-500', to: '/today' })
+    alerts.push({ icon: Clock, label: '지연', count: summary.지연, tone: 'text-amber-500', iconTone: 'bg-amber-50 text-amber-600', to: '/today' })
   if (confirmNeeded > 0)
-    alerts.push({ icon: '💳', label: '입금 확인 필요', count: confirmNeeded, tone: 'text-amber-500', to: '/receivables' })
+    alerts.push({ icon: CreditCard, label: '입금 확인 필요', count: confirmNeeded, tone: 'text-amber-500', iconTone: 'bg-amber-50 text-amber-600', to: '/receivables' })
 
   return (
     <PageShell>
       {/* 인사 영역 */}
       <div>
-        <p className="text-[13px] font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
+        <p className="flex items-center gap-1 text-[13px] font-medium text-navy-400">
+          📍 {prettyDate(t)} · 오늘의 운영 현황
+        </p>
         <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-navy-900">
           대표님 한눈에 보기
         </h1>
@@ -67,18 +72,23 @@ export function Dashboard() {
             <p className="mt-3 text-[15px] font-semibold text-navy-400">오늘은 급히 확인할 항목이 없어요 ✅</p>
           ) : (
             <div className="mt-3 space-y-2">
-              {alerts.map((a) => (
-                <Link
-                  key={a.label}
-                  to={a.to}
-                  className="pressable flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5"
-                >
-                  <span className="text-xl">{a.icon}</span>
-                  <span className="font-bold text-navy-800">{a.label}</span>
-                  <span className={`ml-auto text-lg font-extrabold ${a.tone}`}>{a.count}건</span>
-                  <span className="text-navy-300">›</span>
-                </Link>
-              ))}
+              {alerts.map((a) => {
+                const Icon = a.icon
+                return (
+                  <Link
+                    key={a.label}
+                    to={a.to}
+                    className="pressable flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5"
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${a.iconTone}`}>
+                      <Icon size={18} strokeWidth={2.3} />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-navy-800">{a.label}</span>
+                    <span className={`shrink-0 whitespace-nowrap text-lg font-extrabold ${a.tone}`}>{a.count}건</span>
+                    <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
@@ -137,14 +147,13 @@ export function Dashboard() {
           {vehicles.map(({ vehicle, total, done, items }) => (
             <StaggerItem key={vehicle.id}>
               <div className="card p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <WasteBadge type={vehicle.wasteType} />
-                    <span className="font-bold text-navy-800">{vehicle.name}</span>
-                    <span className="t-caption">· {vehicle.driver}</span>
+                    <span className="truncate font-bold text-navy-800">{vehicle.name}</span>
                   </div>
-                  <span className="text-sm font-bold text-navy-500">
-                    {done}/{total}건 완료
+                  <span className="shrink-0 whitespace-nowrap text-sm font-bold text-navy-500">
+                    {done}/{total}건
                   </span>
                 </div>
                 {items.length === 0 ? (
@@ -166,6 +175,18 @@ export function Dashboard() {
             </StaggerItem>
           ))}
         </Stagger>
+      </section>
+
+      {/* 회사 운영 규모 — 인포그래픽 */}
+      <section>
+        <SectionTitle>회사 운영 규모</SectionTitle>
+        <CompanyOverview />
+      </section>
+
+      {/* 기술개발 현황 — 심사관 시연용 */}
+      <section>
+        <SectionTitle>기술개발 현황</SectionTitle>
+        <RnDCard />
       </section>
 
       <InfoBanner />
