@@ -114,19 +114,19 @@ export function Clients() {
                 <button onClick={() => navigate(`/clients/${c.id}`)} className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-[15px] font-bold text-navy-900">{c.name}</span>
-                      <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[11px] font-bold text-navy-500">{c.type}</span>
+                      <span className="truncate text-[0.9375rem] font-bold text-navy-900">{c.name}</span>
+                      <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.6875rem] font-bold text-navy-500">{c.type}</span>
                       {c.isDemoGenerated ? (
-                        <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[10px] font-bold text-navy-500">시연용</span>
+                        <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[0.625rem] font-bold text-navy-500">시연용</span>
                       ) : (
-                        <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-600">주요거래처</span>
+                        <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.625rem] font-bold text-teal-600">주요거래처</span>
                       )}
                     </div>
                     <p className="mt-1 truncate t-caption">{c.manager} · {c.collectionCycle}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-500">의료</span>}
-                      {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-bold text-teal-600">기저귀</span>}
-                      {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">미수금</span>}
+                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-rose-500">의료</span>}
+                      {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-teal-600">기저귀</span>}
+                      {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-amber-600">미수금</span>}
                     </div>
                   </div>
                   <ChevronRight size={16} className="shrink-0 text-navy-300" />
