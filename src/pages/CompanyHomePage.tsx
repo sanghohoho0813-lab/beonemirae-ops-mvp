@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
@@ -23,8 +23,6 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
-  Siren,
-  Printer,
   Navigation,
   type LucideIcon,
 } from 'lucide-react'
@@ -47,7 +45,15 @@ const NAV = [
   { label: '문의', href: '#contact' },
 ]
 
-const HERO_BADGES = ['의료폐기물 수거·운반', '의료기관 일회용기저귀 분리 운행', '서울·경기권 운영', '특허출원 기반 시스템 개발']
+const HERO_BADGES = ['병원·요양병원 정기 수거', '의료폐기물 수거·운반', '일회용기저귀 분리 운행', '자재공급·수거대장 관리', '서울·경기권 운영']
+
+// 서비스 대상(고객 상황) — 서비스 섹션 상단에 "이런 기관과 함께합니다"로 노출
+const SERVICE_FITS = [
+  '정기 수거가 필요한 병원·요양병원',
+  '의료폐기물과 일회용기저귀를 함께 관리해야 하는 기관',
+  '수거대장·자재공급·미수금 관리까지 필요한 거래처',
+  '실사·인증 전 추가 수거 요청이 잦은 기관',
+]
 
 // 현장 이미지 슬롯 — 실제 사진이 들어오면 src만 채우면 교체되는 구조
 type FieldFrame = { icon: LucideIcon; title: string; alt: string; src?: string }
@@ -261,101 +267,39 @@ function CountNumber({ to, run }: { to: number; run: boolean }) {
   return <>{val}</>
 }
 
-// ── 히어로 콕핏 목업 (홈페이지 전용 정적 UI) ─────────────────────────────────
-//  · 진입/플로팅은 순수 CSS 애니메이션 — 최종 상태(보임)를 항상 보장(프레이머 스케줄러 비의존)
-function CockpitMockup() {
+// ── 히어로 플로팅 운영현황 카드 (컴팩트) ─────────────────────────────────────
+//  · 큰 현장 이미지 위에 겹쳐지는 작은 카드 — 핵심만 선명하게
+function HeroStatusCard() {
   const reduced = useReducedMotion()
-  const enter = (i: number): CSSProperties =>
-    reduced ? {} : { animation: 'bmFadeUp 0.5s ease-out both', animationDelay: `${0.12 + i * 0.1}s` }
-  const schedule = [
-    { t: '09:00', name: '다산365의원', kind: '의료', status: '완료', done: true },
-    { t: '09:40', name: '별내우리요양병원', kind: '기저귀', status: '진행', done: false },
-    { t: '10:10', name: '구리중앙내과의원', kind: '의료', status: '예정', done: false },
-  ]
   return (
-    <div className="w-full" style={reduced ? undefined : { animation: 'bmFloat 6.5s ease-in-out infinite' }}>
-      <style>{`
-        @keyframes bmFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes bmFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-        @keyframes bmGrow { from { width: 0; } to { width: 67%; } }
-      `}</style>
-      <div className="rounded-2xl bg-white p-5 shadow-[0_24px_60px_-24px_rgba(15,26,46,0.35)] ring-1 ring-navy-100 sm:p-6">
-        {/* 상단 바 */}
-        <div style={enter(0)} className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <BrandMark size={34} />
-            <div className="leading-tight">
-              <p className="text-[16px] font-extrabold text-navy-900">오늘 운영 현황</p>
-              <p className="text-[12px] font-semibold text-navy-400">beonemirae ops</p>
-            </div>
+    <div style={reduced ? undefined : { animation: 'bmFloat 6.5s ease-in-out infinite' }}>
+      <style>{`@keyframes bmFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }`}</style>
+      <div className="w-[15.5rem] rounded-2xl bg-white p-4 shadow-[0_24px_60px_-18px_rgba(15,26,46,0.5)] ring-1 ring-navy-100 sm:w-[18rem] sm:p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BrandMark size={30} />
+            <p className="text-[15px] font-extrabold text-navy-900">오늘 운영 현황</p>
           </div>
-          <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[12px] font-bold text-navy-500">예시 운영 현황</span>
+          <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[11px] font-bold text-navy-500">예시</span>
         </div>
-
-        {/* 미니 지표 */}
-        <div style={enter(1)} className="mt-4 grid grid-cols-3 gap-2.5">
-          {[
-            { k: '오늘 수거', v: '10건', tone: 'text-navy-900' },
-            { k: '긴급', v: '1건', tone: 'text-rose-500' },
-            { k: '자재요청', v: '4건', tone: 'text-amber-600' },
-          ].map((m) => (
-            <div key={m.k} className="rounded-xl bg-navy-50 p-3">
-              <p className="text-[12px] font-semibold text-navy-500">{m.k}</p>
-              <p className={`mt-0.5 text-2xl font-extrabold ${m.tone}`}>{m.v}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* 오늘 수거 일정 */}
-        <div style={enter(2)} className="mt-4">
-          <p className="mb-2 text-[13px] font-bold text-navy-600">오늘 수거 일정</p>
-          <div className="space-y-2">
-            {schedule.map((s) => (
-              <div key={s.name} className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 ring-1 ring-navy-100">
-                <span className="text-[13px] font-bold tabular-nums text-navy-500">{s.t}</span>
-                <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-navy-900">{s.name}</span>
-                <span className={`rounded-md px-2 py-1 text-[12px] font-bold ${s.kind === '의료' ? 'bg-rose-50 text-rose-500' : 'bg-teal-50 text-teal-600'}`}>
-                  {s.kind}
-                </span>
-                <span className={`rounded-md px-2 py-1 text-[12px] font-bold ${s.done ? 'bg-emerald-50 text-emerald-600' : 'bg-navy-100 text-navy-500'}`}>
-                  {s.status}
-                </span>
-              </div>
-            ))}
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          <div className="rounded-xl bg-navy-50 p-3">
+            <p className="text-[12px] font-semibold text-navy-500">오늘 수거</p>
+            <p className="mt-0.5 text-2xl font-extrabold text-navy-900">10건</p>
+          </div>
+          <div className="rounded-xl bg-rose-50 p-3">
+            <p className="text-[12px] font-semibold text-rose-500">긴급 수거</p>
+            <p className="mt-0.5 text-2xl font-extrabold text-rose-500">1건</p>
           </div>
         </div>
-
-        {/* 배차 상태 */}
-        <div style={enter(3)} className="mt-4 rounded-xl bg-navy-900 p-4 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Truck size={17} className="text-teal-300" />
-              <span className="text-[14px] font-bold">1톤 A · 남양주 권역</span>
-            </div>
-            <span className="text-[14px] font-extrabold text-teal-300">적재율 67%</span>
-          </div>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white/15">
-            <div
-              className="h-full rounded-full bg-teal-400"
-              style={reduced ? { width: '67%' } : { width: '67%', animation: 'bmGrow 1.1s ease-out both', animationDelay: '0.7s' }}
-            />
-          </div>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-rose-500/25 px-2.5 py-1 text-[12px] font-bold text-rose-100">의료폐기물 분리</span>
-            <span className="rounded-full bg-teal-500/25 px-2.5 py-1 text-[12px] font-bold text-teal-100">일회용기저귀 분리</span>
-          </div>
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-white p-2.5 ring-1 ring-navy-100">
+          <span className="text-[13px] font-bold tabular-nums text-navy-500">09:40</span>
+          <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-navy-900">별내우리요양병원</span>
+          <span className="shrink-0 rounded-md bg-teal-50 px-2 py-0.5 text-[12px] font-bold text-teal-600">기저귀</span>
         </div>
-
-        {/* 알림 + 수거대장 */}
-        <div style={enter(4)} className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <div className="flex items-center gap-2.5 rounded-xl bg-rose-50 p-3">
-            <Siren size={18} className="shrink-0 text-rose-500" />
-            <p className="text-[13px] font-bold leading-tight text-rose-600">격리의료폐기물 보관기한 임박 · 긴급수거</p>
-          </div>
-          <div className="flex items-center gap-2.5 rounded-xl bg-teal-50 p-3">
-            <Printer size={18} className="shrink-0 text-teal-600" />
-            <p className="text-[13px] font-bold leading-tight text-teal-700">수거대장 출력 예정</p>
-          </div>
+        <div className="mt-2.5 flex gap-1.5">
+          <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[12px] font-bold text-rose-500">의료폐기물 분리</span>
+          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-[12px] font-bold text-teal-600">기저귀 분리</span>
         </div>
       </div>
     </div>
@@ -515,7 +459,7 @@ function ConsultForm() {
         type="submit"
         className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-6 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 sm:w-auto"
       >
-        상담 문의 남기기 <ArrowRight size={19} strokeWidth={2.4} />
+        상담 내용 확인하기 <ArrowRight size={19} strokeWidth={2.4} />
       </button>
       <p className="mt-3 text-[13px] leading-relaxed text-navy-400">
         입력하신 정보는 상담 연동 준비를 위한 화면 구성 용도로만 사용되며, 현재는 외부로 전송되지 않습니다.
@@ -581,7 +525,7 @@ export function CompanyHomePage() {
               href="#contact"
               className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-base font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
             >
-              상담 문의 <ArrowRight size={18} strokeWidth={2.4} />
+              수거 상담 <ArrowRight size={18} strokeWidth={2.4} />
             </a>
           </div>
 
@@ -622,7 +566,7 @@ export function CompanyHomePage() {
                   onClick={() => setMenuOpen(false)}
                   className="mb-3 mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-4 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-teal-600"
                 >
-                  상담 문의 <ArrowRight size={18} strokeWidth={2.4} />
+                  수거 상담 <ArrowRight size={18} strokeWidth={2.4} />
                 </a>
               </nav>
             </motion.div>
@@ -653,28 +597,27 @@ export function CompanyHomePage() {
               transition={{ duration: 0.6, ease: EASE }}
             >
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-teal-600 shadow-card ring-1 ring-navy-100">
-                <Recycle size={16} /> 의료폐기물 수거·운반 · 운영관리 전문기업
+                <Recycle size={16} /> 서울·경기권 의료폐기물 수거·운반 전문기업
               </div>
-              <h1 className="mt-5 text-[1.6rem] font-extrabold leading-[1.16] tracking-tight text-navy-900 sm:text-[2.3rem] lg:text-[2.8rem]">
-                <span className="block">의료폐기물 수거·운반,</span>
-                <span className="block">현장 운영까지</span>
-                <span className="block"><span className="text-teal-600">데이터로 관리</span>합니다</span>
+              <h1 className="mt-5 text-[1.75rem] font-extrabold leading-[1.16] tracking-tight text-navy-900 sm:text-[2.4rem] lg:text-[3rem]">
+                <span className="block">병원 의료폐기물 수거·운반,</span>
+                <span className="block"><span className="text-teal-600">비원미래</span>가 현장부터 관리합니다</span>
               </h1>
               <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-navy-600 sm:text-lg">
-                주식회사 비원미래는 서울·경기권 병원·요양병원·의원 등 배출기관의 의료폐기물과 의료기관 일회용기저귀
-                수거·운반을 수행하며, 수거조건·차량·자재·이력 데이터를 통합 관리하는 운영관리 시스템을 개발하고 있습니다.
+                서울·경기권 병원·요양병원·의원 등 배출기관의 의료폐기물과 의료기관 일회용기저귀 수거·운반을 수행하며,
+                자재공급·수거이력·수거대장·배차 데이터를 함께 관리하는 운영관리 시스템을 개발하고 있습니다.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#contact"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-6 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-7 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
                 >
-                  상담 문의하기 <ArrowRight size={19} strokeWidth={2.4} />
+                  정기 수거 상담하기 <ArrowRight size={19} strokeWidth={2.4} />
                 </a>
                 <button
                   onClick={goSystem}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-6 py-4 text-[17px] font-bold text-navy-700 ring-1 ring-navy-200 transition hover:-translate-y-0.5 hover:bg-navy-50"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-7 py-4 text-[17px] font-bold text-navy-700 ring-1 ring-navy-200 transition hover:-translate-y-0.5 hover:bg-navy-50"
                 >
                   운영관리 시스템 보기 <ArrowRight size={19} strokeWidth={2.4} />
                 </button>
@@ -689,16 +632,16 @@ export function CompanyHomePage() {
               </div>
             </motion.div>
 
-            {/* 현장 이미지 + 운영 현황 목업 */}
-            <div className="space-y-5">
-              <ImageSlot frame={HERO_FIELD} className="aspect-[16/10]" />
-              <CockpitMockup />
-              <div className="flex flex-wrap gap-2">
-                {['서울·경기권 수거 운행', '폐기물 종류별 분리 운행', '수거이력 관리'].map((b) => (
-                  <span key={b} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-navy-600 shadow-card ring-1 ring-navy-100">
-                    {b}
-                  </span>
-                ))}
+            {/* 큰 현장 이미지 + 겹치는 운영 현황 카드 */}
+            <div className="relative">
+              <ImageSlot frame={HERO_FIELD} hideCaption className="aspect-[4/5] shadow-xl sm:aspect-[4/3] lg:aspect-[5/6]" />
+              {/* 좌하단 겹침 상태 카드 */}
+              <div className="absolute -bottom-5 left-3 z-10 sm:-bottom-6 sm:left-5">
+                <HeroStatusCard />
+              </div>
+              {/* 우상단 캡션 칩 */}
+              <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-navy-900/85 px-3 py-1.5 text-[12px] font-bold text-white backdrop-blur-sm sm:left-4 sm:top-4">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-400" /> 의료폐기물 전용 수거 차량 · 수거 준비
               </div>
             </div>
           </div>
@@ -730,17 +673,17 @@ export function CompanyHomePage() {
           </div>
         </Section>
 
-        {/* ── 중간 CTA 밴드 ─────────────────────────────────────────────────── */}
-        <div className="border-y border-navy-100 bg-navy-50">
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-5 px-5 py-10 sm:px-6 lg:flex-row lg:px-8">
-            <p className="text-center text-[19px] font-bold leading-snug text-navy-900 sm:text-xl lg:text-left">
-              병원·요양병원·의원 수거 조건에 맞춘 운영 상담이 필요하신가요?
+        {/* ── 중간 CTA 밴드 (진한 배경) ─────────────────────────────────────── */}
+        <div className="bg-navy-900">
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-5 px-5 py-12 sm:px-6 lg:flex-row lg:px-8">
+            <p className="text-center text-[20px] font-extrabold leading-snug text-white sm:text-2xl lg:text-left">
+              우리 병원 수거 조건에 맞는 정기 수거가 필요하신가요?
             </p>
             <a
               href="#contact"
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-6 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-7 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
             >
-              상담 문의하기 <ArrowRight size={19} strokeWidth={2.4} />
+              수거 가능 여부 문의 <ArrowRight size={19} strokeWidth={2.4} />
             </a>
           </div>
         </div>
@@ -835,11 +778,53 @@ export function CompanyHomePage() {
           </Section>
         </div>
 
+        {/* ── 대표 현장 이미지 밴드 ─────────────────────────────────────────── */}
+        <div className="bg-white">
+          <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-6 lg:px-8 lg:py-20">
+            <Reveal>
+              <figure className="relative overflow-hidden rounded-3xl shadow-xl ring-1 ring-navy-100">
+                <ImageSlot
+                  frame={{ icon: Route, title: '', alt: '작업자가 태블릿으로 수거·경로 데이터를 확인하는 현장', src: '/company/field-pickup-tablet.webp' }}
+                  hideCaption
+                  className="aspect-[3/4] rounded-none ring-0 shadow-none sm:aspect-[16/9] lg:aspect-[21/9]"
+                />
+                <figcaption className="absolute inset-0 flex items-end bg-gradient-to-t from-navy-950/85 via-navy-950/25 to-transparent p-6 sm:p-9 lg:p-12">
+                  <div className="max-w-2xl">
+                    <p className="text-[13px] font-bold uppercase tracking-wide text-teal-300">현장 → 데이터</p>
+                    <h2 className="mt-2 text-[1.65rem] font-extrabold leading-[1.18] tracking-tight text-white sm:text-[2.2rem] lg:text-[2.5rem]">
+                      수거 현장에서 시작해, 운영 데이터로 연결합니다
+                    </h2>
+                    <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-navy-100 sm:text-[17px]">
+                      비원미래는 의료기관별 수거주기, 폐기물 종류, 자재 요청, 차량 운행, 수거이력을 현장에서 확인하고 이를
+                      운영관리 데이터로 구조화하고 있습니다.
+                    </p>
+                  </div>
+                </figcaption>
+              </figure>
+            </Reveal>
+          </div>
+        </div>
+
         {/* ── 서비스 ────────────────────────────────────────────────────────── */}
         <Section id="services">
           <Reveal>
             <Eyebrow>서비스</Eyebrow>
-            <Heading>비원미래의 주요 서비스</Heading>
+            <Heading>이런 의료기관과 함께합니다</Heading>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
+              정기 수거부터 분리 운행, 자재공급·수거대장·미수금 관리까지 — 의료기관의 폐기물 운영을 한 곳에서 지원합니다.
+            </p>
+          </Reveal>
+
+          {/* 대상 고객(상황) 칩 */}
+          <Reveal className="mt-6">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {SERVICE_FITS.map((t) => (
+                <div key={t} className="flex items-center gap-3 rounded-xl bg-navy-50 px-5 py-4 ring-1 ring-navy-100">
+                  <CheckCircle2 size={20} className="shrink-0 text-teal-500" strokeWidth={2.2} />
+                  <p className="text-[16px] font-semibold text-navy-800">{t}</p>
+                </div>
+              ))}
+            </div>
           </Reveal>
 
           {/* 이미지 + 서비스 요약 */}
@@ -1111,7 +1096,7 @@ export function CompanyHomePage() {
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
             <Reveal>
               <Eyebrow>상담 문의</Eyebrow>
-              <Heading>의료폐기물 수거·운반 상담을 남겨주세요</Heading>
+              <Heading>의료폐기물 정기 수거 상담을 남겨주세요</Heading>
               <p className="mt-4 text-[17px] leading-relaxed text-navy-600 sm:text-lg">
                 배출기관 유형, 수거 주기, 폐기물 종류, 자재공급 필요 여부를 남겨주시면 상담에 필요한 정보를 정리해 확인할 수
                 있습니다.
