@@ -115,7 +115,7 @@ export function FilterChip({
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.15, ease: EASE }}
-      className={`rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
+      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
         active ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
       }`}
     >

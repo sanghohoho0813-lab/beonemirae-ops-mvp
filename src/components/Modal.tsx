@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useHistoryDismiss } from '../lib/useHistoryDismiss'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 바텀시트형 모달 — 모바일은 하단에서, 데스크톱은 중앙 정렬로 표시
@@ -15,6 +16,9 @@ interface ModalProps {
 }
 
 export function Modal({ open, title, onClose, children, footer }: ModalProps) {
+  // 뒤로 가기(기기/브라우저)로 모달이 닫힙니다.
+  useHistoryDismiss(open, onClose)
+
   return (
     <AnimatePresence>
       {open && (
