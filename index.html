@@ -7,7 +7,11 @@
     <meta name="theme-color" content="#0f1a2e" />
     <meta
       name="description"
-      content="㈜비원미래 의료폐기물 수거·운반 통합 운영관리 MVP"
+      content="주식회사 비원미래는 서울·경기권 병원, 요양병원, 의원, 요양시설을 대상으로 의료폐기물 수거·운반, 의료기관 폐기물 운영관리, 자재공급, 수거이력 관리를 수행하는 전문기업입니다."
+    />
+    <meta
+      name="keywords"
+      content="비원미래, 의료폐기물, 의료폐기물 수거, 의료폐기물 운반, 병원 폐기물, 요양병원 폐기물, 남양주 의료폐기물, 서울 경기 의료폐기물"
     />
 
     <!-- PWA: 설치형 앱 설정 -->
@@ -24,7 +28,45 @@
       crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
     />
-    <title>㈜비원미래 운영관리</title>
+    <title>주식회사 비원미래 | 서울·경기 의료폐기물 수거·운반</title>
+
+    <!--
+      SEO / 소셜 공유 태그
+      TODO: 실제 도메인 연결 후 아래 canonical / og:url / og:image / JSON-LD url 의
+            https://www.beonemirae.co.kr 부분을 실제 배포 도메인으로 수정할 것.
+            (현재 홈페이지 경로는 /company 기준)
+    -->
+    <link rel="canonical" href="https://www.beonemirae.co.kr/company" />
+    <meta property="og:title" content="주식회사 비원미래 | 서울·경기 의료폐기물 수거·운반" />
+    <meta
+      property="og:description"
+      content="서울·경기권 병원·요양병원·의원·요양시설 대상 의료폐기물 수거·운반, 의료기관 폐기물 운영관리, 자재공급, 수거이력 관리 전문기업."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.beonemirae.co.kr/company" />
+    <meta property="og:image" content="https://www.beonemirae.co.kr/company/medical-campus-wide-pickup.webp" />
+    <meta property="og:site_name" content="주식회사 비원미래" />
+    <meta property="og:locale" content="ko_KR" />
+
+    <!-- 구조화 데이터 (Organization) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "주식회사 비원미래",
+        "alternateName": "BEONE MIRAE CO.",
+        "url": "https://www.beonemirae.co.kr/company",
+        "description": "의료폐기물 수거·운반 및 의료기관 폐기물 운영관리 전문기업",
+        "areaServed": "서울·경기권",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "오남읍 양지로 47-35, 바동 1층",
+          "addressLocality": "남양주시",
+          "addressRegion": "경기도",
+          "addressCountry": "KR"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

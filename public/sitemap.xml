@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TODO: 실제 도메인 연결 후 loc 의 https://www.beonemirae.co.kr 를 실제 배포 도메인으로 수정할 것.
+  공개 홈페이지는 /company 경로이며, 시연/심사용 페이지(/demo, /presentation, /mobile-preview)는 포함하지 않음.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.beonemirae.co.kr/company</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

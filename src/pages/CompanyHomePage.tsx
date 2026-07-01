@@ -283,29 +283,91 @@ function HeroStatusCard() {
   )
 }
 
-// ── 상담 문의 폼 (프론트 전용 — 백엔드 미연동) ───────────────────────────────
+// ── 상담 문의 폼 (/api/contact 로 전송 — 이메일 발송) ─────────────────────────
 const CLIENT_TYPE_OPTIONS = ['병원', '요양병원', '의원', '치과', '한의원·한방병원', '요양시설', '장례식장', '기타']
-const INQUIRY_TYPES = ['정기 수거 상담', '추가 수거 문의', '자재공급 문의', '수거대장·이력 문의', '실사·인증 전 자료 문의']
+// 문의유형 — 이메일 제목([비원미래 홈페이지 문의] {기관명} - {문의유형})에 사용
+const INQUIRY_TYPES = ['의료폐기물 수거·운반', '의료기관 폐기물 운영관리', '자재공급', '기타']
 
 function ConsultForm() {
-  const [form, setForm] = useState({ inquiry: '정기 수거 상담', org: '', manager: '', contact: '', region: '', type: '', message: '' })
-  const [status, setStatus] = useState<'idle' | 'invalid' | 'done'>('idle')
+  const [form, setForm] = useState({
+    inquiry: INQUIRY_TYPES[0],
+    org: '',
+    manager: '',
+    contact: '',
+    email: '',
+    region: '',
+    type: '',
+    message: '',
+    agree: false,
+    company: '', // honeypot (숨김) — 스팸봇이 채우면 서버에서 무시
+  })
+  const [status, setStatus] = useState<'idle' | 'invalid' | 'sending' | 'success' | 'error'>('idle')
+  const [invalidMsg, setInvalidMsg] = useState('')
+  const sending = status === 'sending'
+
   const upd = (k: keyof typeof form) => (e: { target: { value: string } }) => {
     setForm((f) => ({ ...f, [k]: e.target.value }))
-    setStatus((s) => (s === 'idle' ? s : 'idle'))
+    setStatus((s) => (s === 'invalid' || s === 'error' ? 'idle' : s))
   }
-  const submit = (e: React.FormEvent) => {
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.org.trim() || !form.manager.trim() || !form.contact.trim() || !form.type) {
+    if (sending) return
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+    if (!form.org.trim() || !form.manager.trim() || !form.contact.trim() || !form.email.trim()) {
+      setInvalidMsg('기관명·담당자명·연락처·이메일을 입력해 주세요.')
       setStatus('invalid')
       return
     }
-    setStatus('done')
+    if (!emailOk) {
+      setInvalidMsg('이메일 형식을 다시 확인해 주세요.')
+      setStatus('invalid')
+      return
+    }
+    if (!form.agree) {
+      setInvalidMsg('개인정보 수집·이용에 동의해 주세요.')
+      setStatus('invalid')
+      return
+    }
+    setStatus('sending')
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = (await res.json().catch(() => null)) as { ok?: boolean } | null
+      setStatus(res.ok && data?.ok ? 'success' : 'error')
+    } catch {
+      setStatus('error')
+    }
   }
+
   const field = 'w-full rounded-lg bg-navy-50 px-4 py-3 text-[15px] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:font-normal placeholder:text-navy-400 focus:bg-white focus:ring-2 focus:ring-teal-400'
   const label = 'mb-1.5 block text-[14px] font-bold text-navy-700'
+
+  if (status === 'success') {
+    return (
+      <div className="flex flex-col items-center rounded-2xl bg-white p-8 text-center shadow-card ring-1 ring-navy-100 sm:p-10">
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+          <CheckCircle2 size={34} strokeWidth={2.2} />
+        </span>
+        <p className="mt-5 text-xl font-extrabold text-navy-900">문의가 접수되었습니다.</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-navy-600">
+          담당자가 확인 후 연락드리겠습니다. 감사합니다.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={submit} className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-navy-100 sm:p-8" noValidate>
+      {/* honeypot — 사람에게는 보이지 않는 필드 */}
+      <div className="pointer-events-none absolute left-[-9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+        <label htmlFor="cf-company">회사 웹사이트</label>
+        <input id="cf-company" name="company" tabIndex={-1} autoComplete="off" value={form.company} onChange={upd('company')} />
+      </div>
+
       {/* 문의 유형 칩 */}
       <p className={label}>문의 유형</p>
       <div className="mb-5 flex flex-wrap gap-2">
@@ -335,14 +397,18 @@ function ConsultForm() {
         </div>
         <div>
           <label className={label} htmlFor="cf-contact">연락처 <span className="text-rose-500">*</span></label>
-          <input id="cf-contact" className={field} value={form.contact} onChange={upd('contact')} placeholder="연락 가능한 전화 또는 이메일" />
+          <input id="cf-contact" className={field} value={form.contact} onChange={upd('contact')} placeholder="연락 가능한 전화번호" />
+        </div>
+        <div>
+          <label className={label} htmlFor="cf-email">이메일 <span className="text-rose-500">*</span></label>
+          <input id="cf-email" type="email" className={field} value={form.email} onChange={upd('email')} placeholder="example@hospital.com" />
         </div>
         <div>
           <label className={label} htmlFor="cf-region">지역</label>
           <input id="cf-region" className={field} value={form.region} onChange={upd('region')} placeholder="예: 경기 남양주시" />
         </div>
-        <div className="sm:col-span-2">
-          <label className={label} htmlFor="cf-type">배출기관 유형 <span className="text-rose-500">*</span></label>
+        <div>
+          <label className={label} htmlFor="cf-type">배출기관 유형</label>
           <select id="cf-type" className={field} value={form.type} onChange={upd('type')}>
             <option value="">선택해 주세요</option>
             {CLIENT_TYPE_OPTIONS.map((o) => (
@@ -356,25 +422,42 @@ function ConsultForm() {
         </div>
       </div>
 
+      {/* 개인정보 수집·이용 동의 */}
+      <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl bg-navy-50 p-4">
+        <input
+          type="checkbox"
+          checked={form.agree}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, agree: e.target.checked }))
+            setStatus((s) => (s === 'invalid' ? 'idle' : s))
+          }}
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border-navy-300 text-teal-500 focus:ring-teal-400"
+        />
+        <span className="text-[14px] leading-relaxed text-navy-600">
+          <span className="font-bold text-navy-800">개인정보 수집·이용에 동의합니다. <span className="text-rose-500">*</span></span>
+          <br />
+          수집 항목: 기관명·담당자명·연락처·이메일·문의내용 / 이용 목적: 상담 응대 및 회신 / 상담 처리 후 파기됩니다.
+        </span>
+      </label>
+
       {status === 'invalid' && (
-        <p className="mt-4 rounded-lg bg-rose-50 px-4 py-3 text-[14px] font-semibold text-rose-600">
-          기관명·담당자명·연락처·배출기관 유형을 입력해 주세요.
-        </p>
+        <p className="mt-4 rounded-lg bg-rose-50 px-4 py-3 text-[14px] font-semibold text-rose-600">{invalidMsg}</p>
       )}
-      {status === 'done' && (
-        <p className="mt-4 rounded-lg bg-teal-50 px-4 py-3 text-[14px] font-semibold text-teal-700">
-          문의 연동 준비 중입니다. 입력하신 내용은 실제 문의 기능 연동 시 상담 항목으로 활용될 수 있도록 구성되었습니다.
+      {status === 'error' && (
+        <p className="mt-4 rounded-lg bg-rose-50 px-4 py-3 text-[14px] font-semibold text-rose-600">
+          일시적으로 문의 접수가 원활하지 않습니다. 잠시 후 다시 시도해주세요.
         </p>
       )}
 
       <button
         type="submit"
-        className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-6 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 sm:w-auto"
+        disabled={sending}
+        className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-6 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
       >
-        상담 내용 확인하기 <ArrowRight size={19} strokeWidth={2.4} />
+        {sending ? '전송 중...' : <>상담 문의 보내기 <ArrowRight size={19} strokeWidth={2.4} /></>}
       </button>
       <p className="mt-3 text-[13px] leading-relaxed text-navy-400">
-        입력하신 정보는 상담 연동 준비를 위한 화면 구성 용도로만 사용되며, 현재는 외부로 전송되지 않습니다.
+        입력하신 정보는 상담 응대 목적에 한해 사용되며, 담당자 확인 후 회신드립니다.
       </p>
     </form>
   )
@@ -392,12 +475,12 @@ export function CompanyHomePage() {
   // SEO — 홈페이지 진입 시 문서 타이틀/설명 지정, 이탈 시 복원
   useEffect(() => {
     const prevTitle = document.title
-    document.title = '주식회사 비원미래 | 의료폐기물 수거·운반 통합 운영관리'
+    document.title = '주식회사 비원미래 | 서울·경기 의료폐기물 수거·운반'
     const meta = document.querySelector('meta[name="description"]')
     const prevDesc = meta?.getAttribute('content') ?? ''
     meta?.setAttribute(
       'content',
-      '주식회사 비원미래(BEONE MIRAE CO.)는 서울·경기권 의료폐기물 수거·운반과 데이터 기반 통합 운영관리 시스템을 개발하는 의료폐기물 운영관리 전문기업입니다.',
+      '주식회사 비원미래는 서울·경기권 병원, 요양병원, 의원, 요양시설을 대상으로 의료폐기물 수거·운반, 의료기관 폐기물 운영관리, 자재공급, 수거이력 관리를 수행하는 전문기업입니다.',
     )
     return () => {
       document.title = prevTitle
