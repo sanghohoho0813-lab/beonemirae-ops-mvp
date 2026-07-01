@@ -12,16 +12,14 @@ import {
   Route,
   FileText,
   Container,
-  Syringe,
   ClipboardList,
-  Boxes,
   ShieldCheck,
   FlaskConical,
   Layers,
   Database,
   Clock,
   CheckCircle2,
-  Navigation,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -38,29 +36,27 @@ const EASE = [0.22, 1, 0.36, 1] as const
 const NAV = [
   { label: '회사소개', href: '#about' },
   { label: '서비스', href: '#services' },
-  { label: '운영관리 시스템', href: '#system' },
-  { label: '기술개발', href: '#tech' },
+  { label: '개발 현황', href: '#tech' },
   { label: '문의', href: '#contact' },
 ]
 
 const HERO_BADGES = ['의료폐기물 수거·운반', '병원·요양병원·의원 정기 수거', '보관기한·추가수거 대응', '자재공급·수거대장 관리', '서울·경기권 운영']
 
-// 신뢰 체크 — 의료기관이 수거업체를 선택할 때 확인하는 핵심 기준
+// 핵심 신뢰 포인트 — 수거만 하지 않고 관리 부담까지 줄이는 4가지
 const TRUST_CHECKS: { icon: LucideIcon; tone: 'teal' | 'emerald' | 'amber' | 'navy'; title: string; desc: string }[] = [
-  { icon: Clock, tone: 'teal', title: '정기 수거 일정', desc: '병원별 수거주기와 보관기한에 맞춰 정기 수거 일정을 관리합니다.' },
-  { icon: ShieldCheck, tone: 'amber', title: '추가 수거 대응', desc: '격리의료폐기물, 실사·인증 전 요청 등 추가 수거 상황을 확인합니다.' },
-  { icon: Container, tone: 'emerald', title: '자재공급 관리', desc: '전용 용기, 봉투, 박스 등 필요한 자재 요청과 공급 이력을 함께 관리합니다.' },
-  { icon: FileText, tone: 'navy', title: '수거대장·이력 확인', desc: '병원 요청 시 수거이력과 대장 확인이 쉽도록 거래처 단위로 정리합니다.' },
-  { icon: Layers, tone: 'teal', title: '폐기물 종류별 관리', desc: '의료폐기물과 별도 관리가 필요한 배출물의 수거조건과 운행 흐름을 구분합니다.' },
+  { icon: Clock, tone: 'teal', title: '정기 수거', desc: '병원별 수거주기와 보관기한에 맞춰 정기 수거 일정을 관리합니다.' },
+  { icon: ShieldCheck, tone: 'amber', title: '추가 수거', desc: '격리의료폐기물, 실사·인증 전 요청 등 추가 수거에도 대응합니다.' },
+  { icon: Container, tone: 'emerald', title: '자재공급', desc: '전용 용기·봉투·박스 등 자재 요청과 공급 이력을 함께 관리합니다.' },
+  { icon: FileText, tone: 'navy', title: '수거대장 관리', desc: '수거이력과 대장 확인이 쉽도록 거래처 단위로 정리합니다.' },
 ]
 
-// 법정·실무 관리 체크리스트 — "놓치지 않도록" 섹션
+// 수거 관리 방식 체크리스트 — 이미지 1장 + 체크리스트
 const LEGAL_CHECKS = [
-  '정기 수거 일정 관리',
-  '보관기한 및 추가수거 요청 확인',
+  '수거주기·보관기한 관리',
   '전용 용기·자재 공급 이력 관리',
-  '수거완료 내역 및 수거대장 확인',
-  '병원 인증·실사 전 자료 요청 대응',
+  '수거완료 내역·수거대장 확인',
+  '의료폐기물·관련 배출물 분리 관리',
+  '실사·인증 전 자료 요청 대응',
 ]
 
 // 보조색 톤 — 아이콘 배경 (teal 위생·안정 / emerald 완료·관리 / amber 현장 대응 / navy 기본)
@@ -109,66 +105,15 @@ const STATS: { icon: LucideIcon; prefix: string; count: number | null; text?: st
   { icon: Clock, prefix: '', count: null, text: '정기·추가', suffix: ' 수거', label: '수거 대응 체계', desc: '정기 수거, 추가·긴급 수거, 자재공급 요청 관리', tone: 'amber' },
 ]
 
-// 서비스 — 고객(의료기관 담당자) 문제 해결형 카드
-const SERVICES: { icon: LucideIcon; title: string; desc: string; soon?: boolean }[] = [
-  { icon: Clock, title: '정기 수거가 필요한 의료기관', desc: '병원·요양병원·의원의 수거주기와 보관기한에 맞춰 정기 수거 일정을 관리합니다.' },
-  { icon: ShieldCheck, title: '추가 수거 요청이 발생하는 기관', desc: '격리의료폐기물이나 실사·인증 전 요청 등 추가 수거 상황에도 누락 없이 대응합니다.' },
-  { icon: Container, title: '자재공급까지 함께 관리해야 하는 기관', desc: '전용 용기·봉투·박스 등 자재 요청과 공급 이력을 수거 흐름에 포함해 별도 방문을 줄입니다.' },
-  { icon: FileText, title: '수거대장·이력 확인이 필요한 기관', desc: '수거완료 내역과 자재공급 기록을 거래처 단위로 정리해 병원의 대장 요청에 바로 대응합니다.' },
-  { icon: Layers, title: '폐기물 종류별 분리 관리가 필요한 기관', desc: '의료폐기물과 일회용기저귀 등 관련 배출물의 수거조건과 운행 흐름을 구분해 관리합니다.' },
-  { icon: Route, title: '권역별 수거 동선 관리가 필요한 기관', desc: '서울·경기권 분산형 거래처의 수거 조건을 권역별로 정리해 방문 동선을 관리합니다.' },
+// 접이식 개발 현황 — 신규 고객에겐 요약만, 관심 있는 사람만 펼쳐보는 근거 카드
+const TECH_DETAILS: { icon: LucideIcon; title: string; desc: string }[] = [
+  { icon: FlaskConical, title: '특허출원', desc: '의료폐기물 수거·운반 경로 최적화 시스템 · 출원번호 10-2026-0101187' },
+  { icon: Database, title: '연구개발전담부서 운영', desc: '수거·운반 및 자재·이력 통합관리를 위한 연구개발전담부서를 운영하고 있습니다.' },
+  { icon: Layers, title: 'MVP 시연 화면 보유', desc: '거래처·배차·수거이력·자재·미수금 관리 화면을 구현했습니다.' },
+  { icon: Route, title: '배차·경로 추천 시뮬레이션', desc: '운영 데이터 기반 배차·경로 추천 로직을 개발 중입니다.' },
+  { icon: FileText, title: '수거대장 출력·이력관리 고도화', desc: '수거대장 출력과 수거이력 관리 기능을 고도화할 예정입니다.' },
+  { icon: CheckCircle2, title: '개선효과 검증 예정', desc: '실제 운행데이터 축적 후 개선효과를 실증지표로 검증할 예정입니다.' },
 ]
-
-const FLOW: { icon: LucideIcon; step: string; title: string; desc: string; part: string }[] = [
-  { icon: Building2, step: '01', title: '거래처 정보', desc: '병원별 주소·폐기물 종류·수거주기·요청사항을 관리합니다.', part: '110' },
-  { icon: Clock, step: '02', title: '수거조건', desc: '보관기한·수거 가능 시간·긴급수거 조건을 반영합니다.', part: '120' },
-  { icon: Truck, step: '03', title: '차량·처리장 정보', desc: '차량별 적재가능량과 처리장 인계시간을 고려합니다.', part: '130·140' },
-  { icon: Route, step: '04', title: '배차·경로 추천', desc: '운영 데이터 기반 추천 로직을 개발 중입니다.', part: '150·160' },
-  { icon: FileText, step: '05', title: '수거이력·출력', desc: '수거대장 미리보기 및 출력 기능을 고도화할 예정입니다.', part: '170·180' },
-]
-
-const TIMELINE: { icon: LucideIcon; tag: string; title: string; desc: string }[] = [
-  {
-    icon: FlaskConical,
-    tag: '특허출원 기반 기술개발',
-    title: '의료폐기물 수거·운반 경로 최적화 시스템',
-    desc: '출원번호 10-2026-0101187 · 출원일 2026.06.04 · 출원인 주식회사 비원미래',
-  },
-  {
-    icon: Database,
-    tag: '연구개발전담부서 운영',
-    title: '데이터 기반 통합관리 시스템 개발',
-    desc: '2026.04.20 설립 · 연구전담요원 1명 운영 · 수거·운반 및 자재·이력 통합관리 연구',
-  },
-  {
-    icon: Layers,
-    tag: 'MVP 시연 화면 보유',
-    title: '운영관리 화면 구현',
-    desc: '거래처 관리 · 배차·경로 · 수거이력 · 자재관리 · 미수금 관리 화면을 구현했습니다.',
-  },
-  {
-    icon: Route,
-    tag: '고도화 예정',
-    title: '배차·경로 추천 시뮬레이션 고도화',
-    desc: '운영 데이터를 축적하며 배차·경로 추천 로직을 개발 중이며, 단계적으로 고도화할 예정입니다.',
-  },
-  {
-    icon: FileText,
-    tag: '고도화 예정',
-    title: '수거대장 출력·이력관리 고도화',
-    desc: '수거대장 미리보기·출력과 수거이력 관리 기능을 고도화하고, 개선효과는 실증지표로 검증할 예정입니다.',
-  },
-]
-
-const GROWTH = [
-  '기존 거래처 운영 데이터 축적',
-  '서울·경기권 병원·요양병원·의원·요양시설 신규 거래처 확대',
-  '병원 소모품 공급 및 자재관리 고도화',
-  '배출자 교육·수거대장 제공·운영 리포트 등 부가 서비스 확대',
-  '장기적으로 의료기관 폐기물 운영관리 전문기업으로 성장',
-]
-
-const ROUTE_STOPS = ['남양주', '구리', '서울 노원', '서울 중랑', '처리장 인계']
 
 // ── 공용 소섹션 ──────────────────────────────────────────────────────────────
 function Section({ id, children, className = '' }: { id?: string; children: ReactNode; className?: string }) {
@@ -338,90 +283,6 @@ function HeroStatusCard() {
   )
 }
 
-// ── 배차·경로 시뮬레이션 그래픽 (SVG) ────────────────────────────────────────
-function RouteGraphic() {
-  const reduced = useReducedMotion()
-  const pts = [
-    { x: 60, y: 72 },
-    { x: 230, y: 50 },
-    { x: 400, y: 82 },
-    { x: 570, y: 52 },
-    { x: 740, y: 72 },
-  ]
-  const d = `M ${pts.map((p) => `${p.x} ${p.y}`).join(' L ')}`
-  return (
-    <div className="rounded-2xl bg-white p-5 shadow-card ring-1 ring-navy-100 sm:p-7">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-            <Navigation size={18} strokeWidth={2.2} />
-          </span>
-          <div>
-            <p className="text-sm font-extrabold text-navy-900">배차·경로 추천 시뮬레이션</p>
-            <p className="text-[12px] text-navy-400">서울·경기권 권역 · 운영 데이터 기반 추천 로직 개발 중</p>
-          </div>
-        </div>
-        <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[11px] font-bold text-navy-500">개발 중</span>
-      </div>
-
-      <svg viewBox="0 0 800 140" className="h-auto w-full" role="img" aria-label="남양주에서 서울·경기권을 거쳐 처리장으로 인계되는 수거 동선 시뮬레이션">
-        <defs>
-          <pattern id="hpgrid" width="32" height="32" patternUnits="userSpaceOnUse">
-            <path d="M32 0H0V32" fill="none" stroke="rgba(15,26,46,0.05)" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect x="0" y="0" width="800" height="140" fill="url(#hpgrid)" />
-
-        {/* 경로 베이스 라인 */}
-        <path d={d} fill="none" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {/* 그려지는 라인 */}
-        <motion.path
-          id="routePath"
-          d={d}
-          fill="none"
-          stroke="#3182f6"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          initial={reduced ? false : { pathLength: 0 }}
-          whileInView={reduced ? undefined : { pathLength: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.8, ease: EASE }}
-        />
-
-        {/* 노드 */}
-        {pts.map((p, i) => (
-          <g key={i}>
-            <motion.circle
-              cx={p.x}
-              cy={p.y}
-              r="7"
-              fill="#ffffff"
-              stroke={i === pts.length - 1 ? '#0f1a2e' : '#3182f6'}
-              strokeWidth="3"
-              initial={reduced ? false : { scale: 0, opacity: 0 }}
-              whileInView={reduced ? undefined : { scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.35, ease: EASE, delay: 0.2 + i * 0.28 }}
-              style={{ transformOrigin: `${p.x}px ${p.y}px` }}
-            />
-            <text x={p.x} y={128} textAnchor="middle" style={{ fontSize: 13, fontWeight: 700, fill: '#5b6677' }}>
-              {ROUTE_STOPS[i]}
-            </text>
-          </g>
-        ))}
-
-        {/* 이동 점 (reduced motion 시 생략) */}
-        {!reduced && (
-          <circle r="6" fill="#2563eb">
-            <animateMotion dur="5s" repeatCount="indefinite" rotate="auto" path={d} />
-          </circle>
-        )}
-      </svg>
-    </div>
-  )
-}
-
 // ── 상담 문의 폼 (프론트 전용 — 백엔드 미연동) ───────────────────────────────
 const CLIENT_TYPE_OPTIONS = ['병원', '요양병원', '의원', '치과', '한의원·한방병원', '요양시설', '장례식장', '기타']
 const INQUIRY_TYPES = ['정기 수거 상담', '추가 수거 문의', '자재공급 문의', '수거대장·이력 문의', '실사·인증 전 자료 문의']
@@ -525,6 +386,7 @@ export function CompanyHomePage() {
   const reduced = useReducedMotion()
   const [menuOpen, setMenuOpen] = useState(false)
   const [statsRun, setStatsRun] = useState(false)
+  const [techOpen, setTechOpen] = useState(false)
   const statsRef = useRef(false)
 
   // SEO — 홈페이지 진입 시 문서 타이틀/설명 지정, 이탈 시 복원
@@ -703,19 +565,18 @@ export function CompanyHomePage() {
           </div>
         </section>
 
-        {/* ── 신뢰 체크: 수거업체 선택 기준 (흰 배경 · 큰 아이콘 카드) ────────── */}
+        {/* ── 핵심 신뢰 포인트 (흰 배경 · 큰 아이콘 카드 4개) ─────────────────── */}
         <Section>
           <Reveal>
             <div className="max-w-3xl">
-              <Eyebrow>수거업체 선택 기준</Eyebrow>
-              <Heading>의료기관이 수거업체를 선택할 때 확인해야 할 것</Heading>
+              <Eyebrow>핵심 신뢰 포인트</Eyebrow>
+              <Heading>수거만 하지 않습니다, 관리 부담까지 줄입니다</Heading>
               <p className="mt-4 text-[17px] leading-relaxed text-navy-700 sm:text-lg">
-                의료폐기물 수거·운반은 일정만 맞추면 되는 일이 아닙니다. 아래 다섯 가지를 함께 챙길 수 있는 업체인지가
-                의료기관의 관리 부담을 좌우합니다.
+                정기 수거부터 추가 수거, 자재공급, 수거대장까지 — 의료기관 담당자가 챙겨야 할 일을 함께 관리합니다.
               </p>
             </div>
           </Reveal>
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {TRUST_CHECKS.map((c, i) => {
               const Icon = c.icon
               return (
@@ -730,68 +591,12 @@ export function CompanyHomePage() {
                 </Reveal>
               )
             })}
-            <Reveal delay={0.36}>
-              <a
-                href="#contact"
-                className="group flex h-full flex-col justify-center rounded-2xl bg-navy-900 p-7 text-white shadow-card ring-1 ring-navy-800 transition duration-300 hover:-translate-y-1 hover:bg-navy-800"
-              >
-                <p className="text-xl font-extrabold">우리 기관은 어떻게 관리될까요?</p>
-                <p className="mt-2.5 text-base leading-relaxed text-navy-200 sm:text-[17px]">
-                  기관 유형과 수거 조건을 알려주시면 관리 방식을 함께 확인해 드립니다.
-                </p>
-                <span className="mt-5 inline-flex items-center gap-1.5 text-[15px] font-bold text-teal-300">
-                  수거 상담하기 <ArrowRight size={17} strokeWidth={2.4} className="transition group-hover:translate-x-0.5" />
-                </span>
-              </a>
-            </Reveal>
           </div>
         </Section>
 
-        {/* ── 법정·실무 관리 신뢰 (light slate · 체크리스트 + 사진) ──────────── */}
-        <div className="bg-slate-50">
-          <Section>
-            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
-              <Reveal>
-                <ImageSlot frame={IMG.record} hideCaption className="aspect-[4/3] shadow-lg" />
-              </Reveal>
-              <Reveal delay={0.05}>
-                <Eyebrow>실무 관리</Eyebrow>
-                <Heading>보관기한, 수거대장, 자재 요청까지 놓치지 않도록</Heading>
-                <p className="mt-5 text-[17px] leading-relaxed text-navy-700 sm:text-lg">
-                  의료폐기물은 배출기관별 보관기한, 폐기물 종류, 전용 용기 사용, 처리장 인계 흐름을 함께 확인해야 합니다.
-                  비원미래는 수거 현장에서 발생하는 요청과 이력을 정리해 의료기관의 관리 부담을 줄이는 방향으로 운영하고
-                  있습니다.
-                </p>
-                <ul className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {LEGAL_CHECKS.map((t) => (
-                    <li key={t} className="flex items-start gap-3 rounded-xl bg-white px-4 py-4 shadow-card ring-1 ring-navy-100">
-                      <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-500" strokeWidth={2.3} />
-                      <span className="text-base font-semibold leading-snug text-navy-800">{t}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            </div>
-          </Section>
-        </div>
-
-        {/* ── 중간 CTA 밴드 (진한 배경) ─────────────────────────────────────── */}
-        <div className="bg-navy-900">
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-5 px-5 py-12 sm:px-6 lg:flex-row lg:px-8">
-            <p className="text-center text-[20px] font-extrabold leading-snug text-white sm:text-2xl lg:text-left">
-              우리 병원 수거 조건에 맞는 정기 수거가 필요하신가요?
-            </p>
-            <a
-              href="#contact"
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-7 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
-            >
-              수거 가능 여부 문의 <ArrowRight size={19} strokeWidth={2.4} />
-            </a>
-          </div>
-        </div>
-
         {/* ── 운영 기반 숫자 (거래처·권역) ──────────────────────────────────── */}
-        <Section id="about" className="pt-16 sm:pt-20">
+        <div className="bg-slate-50">
+        <Section id="about">
           <Reveal>
             <div className="max-w-3xl">
               <Eyebrow>거래처·권역</Eyebrow>
@@ -833,71 +638,18 @@ export function CompanyHomePage() {
             })}
           </motion.div>
 
-          <Reveal className="mt-4">
-            <p className="rounded-2xl bg-navy-50 px-5 py-4 text-[15px] leading-relaxed text-navy-600 sm:text-base">
-              현재 폐기물 종류별 차량을 운영하며, 향후 거래처 확대에 맞춰 운행 체계와 운영관리 데이터를 고도화할 계획입니다.
+          <Reveal className="mt-5">
+            <p className="text-[15px] leading-relaxed text-navy-500 sm:text-base">
+              폐기물 종류와 수거 조건에 맞춰 차량을 구분해 운영하며, 거래처 확대에 맞춰 운행 체계를 고도화하고 있습니다.
             </p>
           </Reveal>
-
-          {/* 신뢰 요소 스트립 */}
-          <Reveal className="mt-4">
-            <div className="flex flex-wrap gap-2.5">
-              {[
-                { icon: FlaskConical, t: '특허출원 기반 시스템 개발' },
-                { icon: Database, t: '연구개발전담부서 운영' },
-                { icon: Route, t: '배차·경로 추천 로직 개발 중' },
-              ].map(({ icon: Ico, t }) => (
-                <span key={t} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[15px] font-bold text-navy-700 shadow-card ring-1 ring-navy-100">
-                  <Ico size={17} className="text-teal-600" strokeWidth={2.2} /> {t}
-                </span>
-              ))}
-            </div>
-          </Reveal>
-
-          {/* 배차·경로 시뮬레이션 그래픽 */}
-          <Reveal className="mt-6">
-            <RouteGraphic />
-          </Reveal>
         </Section>
-
-        {/* ── 대표 현장 이미지 밴드 (이미지 + 별도 텍스트 카드) ─────────────── */}
-        <div className="bg-white">
-          <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-6 lg:px-8 lg:py-20">
-            <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-8">
-              <Reveal>
-                <ImageSlot
-                  frame={IMG.band}
-                  hideCaption
-                  className="aspect-[16/10] h-full shadow-xl lg:aspect-auto"
-                />
-              </Reveal>
-              <Reveal delay={0.05}>
-                <div className="flex h-full flex-col justify-center rounded-3xl bg-navy-900 p-8 shadow-xl sm:p-10">
-                  <p className="text-[13px] font-bold uppercase tracking-wide text-teal-300">현장 → 데이터</p>
-                  <h2 className="mt-3 text-[1.65rem] font-extrabold leading-[1.18] tracking-tight text-white sm:text-[2.1rem]">
-                    수거 현장에서 시작해, 운영 데이터로 연결합니다
-                  </h2>
-                  <p className="mt-4 text-[16px] leading-relaxed text-navy-100 sm:text-[17px]">
-                    비원미래는 의료기관별 수거주기, 폐기물 종류, 자재 요청, 차량 운행, 수거이력을 현장에서 확인하고
-                    이를 운영관리 데이터로 구조화하고 있습니다.
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {['권역별 배차', '전용 차량 운행', '수거이력 데이터화'].map((t) => (
-                      <span key={t} className="rounded-full bg-white/10 px-3.5 py-1.5 text-[13px] font-bold text-teal-200">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
         </div>
 
-        {/* ── 대상별(기관 유형) 수거 운영 ───────────────────────────────────── */}
-        <Section>
+        {/* ── 대상별 서비스 (기관 유형) ─────────────────────────────────────── */}
+        <Section id="services">
           <Reveal>
-            <Eyebrow>대상별 수거</Eyebrow>
+            <Eyebrow>대상별 서비스</Eyebrow>
             <Heading>기관 유형에 따라 수거 방식도 달라집니다</Heading>
             <p className="mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
               같은 의료폐기물이라도 병원·의원·요양시설마다 배출량과 수거 주기, 현장 여건이 다릅니다. 비원미래는 기관 유형에
@@ -919,42 +671,48 @@ export function CompanyHomePage() {
           </div>
         </Section>
 
-        {/* ── 서비스 ────────────────────────────────────────────────────────── */}
-        <Section id="services">
-          <Reveal>
-            <Eyebrow>서비스</Eyebrow>
-            <Heading>이런 상황의 의료기관과 함께합니다</Heading>
-            <p className="mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
-              정기 수거, 추가 수거, 자재공급, 수거대장 확인, 폐기물 종류별 분리 관리까지 — 의료기관 담당자가 마주하는
-              상황에 맞춰 수거·운반을 지원합니다.
+        {/* ── 수거 관리 방식 (light slate · 사진 1장 + 체크리스트) ──────────── */}
+        <div className="bg-slate-50">
+          <Section>
+            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
+              <Reveal>
+                <ImageSlot frame={IMG.record} hideCaption className="aspect-[4/3] shadow-lg" />
+              </Reveal>
+              <Reveal delay={0.05}>
+                <Eyebrow>수거 관리 방식</Eyebrow>
+                <Heading>보관기한부터 수거대장까지 함께 챙깁니다</Heading>
+                <p className="mt-5 text-[17px] leading-relaxed text-navy-700 sm:text-lg">
+                  보관기한, 전용 용기, 자재 요청, 수거이력을 현장에서 확인하고 정리해 의료기관의 관리 부담을 줄입니다.
+                </p>
+                <ul className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {LEGAL_CHECKS.map((t) => (
+                    <li key={t} className="flex items-start gap-3 rounded-xl bg-white px-4 py-4 shadow-card ring-1 ring-navy-100">
+                      <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-500" strokeWidth={2.3} />
+                      <span className="text-base font-semibold leading-snug text-navy-800">{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Reveal>
+            </div>
+          </Section>
+        </div>
+
+        {/* ── 중간 CTA 밴드 (진한 배경) ─────────────────────────────────────── */}
+        <div className="bg-navy-900">
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-5 px-5 py-12 sm:px-6 lg:flex-row lg:px-8">
+            <p className="text-center text-[20px] font-extrabold leading-snug text-white sm:text-2xl lg:text-left">
+              우리 기관 수거 조건에 맞는 정기 수거가 필요하신가요?
             </p>
-          </Reveal>
-
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICES.map((s, i) => {
-              const Icon = s.icon
-              const sTone = ['teal', 'teal', 'amber', 'emerald', 'navy', 'teal'][i] ?? 'teal'
-              return (
-                <Reveal key={s.title} delay={i * 0.05}>
-                  <div className="group flex h-full flex-col rounded-2xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
-                    <span className={`flex h-12 w-12 items-center justify-center rounded-lg transition ${TONE_CHIP[sTone]}`}>
-                      <Icon size={24} strokeWidth={2.2} />
-                    </span>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <p className="text-xl font-bold text-navy-900">{s.title}</p>
-                      {s.soon && (
-                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[12px] font-bold text-amber-600">개발 중</span>
-                      )}
-                    </div>
-                    <p className="mt-2 text-base leading-relaxed text-navy-600">{s.desc}</p>
-                  </div>
-                </Reveal>
-              )
-            })}
+            <a
+              href="#contact"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-7 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
+            >
+              수거 상담하기 <ArrowRight size={19} strokeWidth={2.4} />
+            </a>
           </div>
-        </Section>
+        </div>
 
-        {/* ── 통합 운영관리 시스템 흐름 ─────────────────────────────────────── */}
+        {/* ── 접이식 개발 현황 (운영관리 시스템 · 특허 · MVP 통합) ───────────── */}
         <div className="relative overflow-hidden bg-navy-900 text-white">
           <div
             aria-hidden
@@ -967,213 +725,73 @@ export function CompanyHomePage() {
               WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 0%, black 30%, transparent 100%)',
             }}
           />
-          <Section id="system" className="relative">
+          <Section id="tech" className="relative">
             <Reveal>
-              <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-                <div>
-                  <Eyebrow light>운영 근거</Eyebrow>
-                  <Heading light>현장 관리를 더 정확하게 하기 위한 운영관리 시스템 개발</Heading>
-                  <p className="mt-4 text-[17px] leading-relaxed text-navy-100 sm:text-lg">
-                    비원미래는 실제 수거·운반 현장에서 발생하는 거래처 정보, 수거조건, 차량 운행, 처리장 인계시간, 자재 요청,
-                    수거이력 데이터를 체계적으로 관리하기 위해 운영관리 시스템을 개발하고 있습니다. 이는 새로운 기술을
-                    앞세우기 위함이 아니라, 현장 수거·운반을 더 정확하게 관리하기 위한 근거입니다.
-                  </p>
-                  <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-teal-500/20 px-4 py-2 text-[15px] font-bold text-teal-200 ring-1 ring-teal-400/30">
-                    <Navigation size={17} strokeWidth={2.3} /> 배차·경로 추천 시뮬레이션 개발 중
-                  </span>
-                </div>
-                <ImageSlot
-                  frame={IMG.route}
-                  hideCaption
-                  className="aspect-[16/10] ring-white/10"
-                />
+              <div className="mx-auto max-w-3xl text-center">
+                <Eyebrow light>개발 현황</Eyebrow>
+                <Heading light>운영관리 시스템 개발 현황이 궁금하신가요?</Heading>
+                <p className="mt-4 text-[16px] leading-relaxed text-navy-100 sm:text-[17px]">
+                  비원미래는 실제 수거·운반 현장에서 발생하는 거래처 정보, 수거조건, 차량 운행, 자재 요청, 수거이력을
+                  체계적으로 관리하기 위한 운영관리 시스템을 개발하고 있습니다.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTechOpen((v) => !v)}
+                  aria-expanded={techOpen}
+                  className="mt-7 inline-flex items-center gap-2 rounded-lg bg-white/10 px-6 py-3.5 text-[16px] font-bold text-white ring-1 ring-white/15 transition hover:bg-white/15"
+                >
+                  {techOpen ? '접기' : '자세히 보기'}
+                  <ChevronDown size={18} strokeWidth={2.4} className={`transition-transform ${techOpen ? 'rotate-180' : ''}`} />
+                </button>
               </div>
             </Reveal>
 
-            <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3">
-              {FLOW.map((f, i) => {
-                const Icon = f.icon
-                const active = f.step === '04'
-                return (
-                  <Reveal key={f.step} delay={i * 0.1}>
-                    <div className={`relative h-full rounded-xl p-5 ring-1 transition duration-300 hover:-translate-y-1 ${active ? 'bg-teal-500/[0.12] ring-teal-400/40' : 'bg-white/[0.05] ring-white/10 hover:bg-white/[0.08]'}`}>
-                      <div className="flex items-center justify-between">
-                        <span className={`relative flex h-10 w-10 items-center justify-center rounded-lg ${active ? 'bg-teal-500 text-white' : 'bg-white/10 text-teal-300'}`}>
-                          <Icon size={20} strokeWidth={2.2} />
-                          {active && !reduced && (
-                            <motion.span
-                              className="absolute inset-0 rounded-lg ring-2 ring-teal-400"
-                              animate={{ scale: [1, 1.35], opacity: [0.6, 0] }}
-                              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
-                            />
-                          )}
-                        </span>
-                        <span className="text-base font-black text-white/30">{f.step}</span>
-                      </div>
-                      <p className="mt-4 text-lg font-bold text-white">{f.title}</p>
-                      <p className="mt-2 text-[15px] leading-relaxed text-navy-100">{f.desc}</p>
-                      <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[12px] font-bold text-teal-200">
-                        구성요소 {f.part}
-                      </span>
-                      {/* 연결선 (데스크톱) */}
-                      {i < FLOW.length - 1 && (
-                        <ArrowRight size={18} className="absolute -right-[11px] top-9 z-10 hidden text-teal-400/50 lg:block" />
-                      )}
-                    </div>
-                  </Reveal>
-                )
-              })}
-            </div>
-
-            <p className="mt-6 text-sm text-navy-200">
-              ※ 배차·경로 추천은 운영 데이터 기반 추천 로직을 개발 중이며, 개선효과는 실증지표로 검증할 예정입니다.
-            </p>
-
-            <div className="mt-8">
-              <button
-                onClick={goSystem}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-6 py-3.5 text-base font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
-              >
-                운영관리 시스템 보기 <ArrowRight size={18} strokeWidth={2.4} />
-              </button>
-            </div>
-          </Section>
-        </div>
-
-        {/* ── 분리 운행 차별화 (split panel) ────────────────────────────────── */}
-        <Section>
-          <Reveal>
-            <div className="text-center">
-              <Eyebrow>차별화</Eyebrow>
-              <Heading>폐기물 종류에 따라 운행과 관리 방식이 달라집니다</Heading>
-              <p className="mx-auto mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
-                의료기관에서는 의료폐기물 외에도 별도 관리가 필요한 배출물이 함께 발생할 수 있습니다. 특히 의료기관
-                일회용기저귀는 의료폐기물과 차량·관리체계·처리 흐름이 달라 분리 운행과 이력관리가 필요합니다. 비원미래는
-                이러한 현장 특수성을 반영해 폐기물 종류별 수거조건과 운행 흐름을 구분해 관리합니다.
-              </p>
-            </div>
-          </Reveal>
-
-          <Reveal className="mt-10">
-            <ImageSlot frame={IMG.separated} hideCaption className="aspect-[21/9]" />
-          </Reveal>
-
-          <Reveal className="mt-6" delay={0.05}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* 의료폐기물 */}
-              <div className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-rose-100 sm:p-7">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-rose-50 text-rose-500">
-                    <Syringe size={22} strokeWidth={2.2} />
-                  </span>
-                  <div>
-                    <p className="text-xl font-extrabold text-navy-900">의료폐기물</p>
-                    <p className="text-[14px] font-medium text-navy-600">전용 관리체계</p>
-                  </div>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  {['보관기한 관리', '전용 용기', '수거대장', '처리장 인계'].map((t) => (
-                    <li key={t} className="flex items-center gap-2 rounded-lg bg-rose-50/60 px-3.5 py-3 text-base font-semibold text-navy-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> {t}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* 관련 배출물 */}
-              <div className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-teal-100 sm:p-7">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                    <Boxes size={22} strokeWidth={2.2} />
-                  </span>
-                  <div>
-                    <p className="text-xl font-extrabold text-navy-900">관련 배출물</p>
-                    <p className="text-[14px] font-medium text-navy-600">의료기관 일회용기저귀 등 별도 관리</p>
-                  </div>
-                </div>
-                <ul className="mt-4 space-y-2">
-                  {['별도 차량', '별도 관리체계', '기관 요청 대응', '자재공급 연계'].map((t) => (
-                    <li key={t} className="flex items-center gap-2 rounded-lg bg-teal-50/60 px-3.5 py-3 text-base font-semibold text-navy-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-teal-400" /> {t}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl bg-navy-900 px-6 py-6 text-center">
-              <p className="text-xl font-bold text-white sm:text-2xl">
-                같은 병원에서 발생해도 차량·관리체계·처리 흐름은 <span className="text-teal-300">분리</span>됩니다
-              </p>
-              <p className="mx-auto mt-3 max-w-3xl text-base leading-relaxed text-navy-100 sm:text-[17px]">
-                비원미래는 한 업체가 여러 흐름을 함께 관리하되, 폐기물 종류별 차량·수거조건·자재공급·처리장 정보를 분리해
-                관리하는 구조를 개발하고 있습니다.
-              </p>
-            </div>
-          </Reveal>
-        </Section>
-
-        {/* ── 기술개발/특허/연구조직 (timeline) ─────────────────────────────── */}
-        <div className="bg-navy-50">
-          <Section id="tech">
-            <Reveal>
-              <Eyebrow>신뢰 근거</Eyebrow>
-              <Heading>현장 운영을 더 체계적으로 관리하기 위한 근거</Heading>
-              <p className="mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
-                기술을 앞세우기보다, 현장 수거·운반을 더 정확하게 관리하기 위해 특허출원과 연구개발전담부서를 기반으로
-                운영관리 시스템을 단계적으로 개발하고 있습니다. 실제 운행 데이터를 축적하며 현장 관리 정확도를 높여가고
-                있습니다.
-              </p>
-            </Reveal>
-
-            <div className="relative mt-10">
-              {/* 세로 타임라인 라인 */}
-              <div aria-hidden className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-navy-200 sm:left-[23px]" />
-              <div className="space-y-4">
-                {TIMELINE.map((t, i) => {
-                  const Icon = t.icon
-                  return (
-                    <Reveal key={t.tag} delay={i * 0.08}>
-                      <div className="relative flex gap-4 sm:gap-5">
-                        <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-teal-600 shadow-card ring-1 ring-navy-100 sm:h-12 sm:w-12">
-                          <Icon size={20} strokeWidth={2.2} />
-                        </span>
-                        <div className="flex-1 rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                          <span className="inline-block rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-600">{t.tag}</span>
-                          <p className="mt-2.5 text-[17px] font-bold text-navy-900">{t.title}</p>
-                          <p className="mt-1.5 text-[15px] leading-relaxed text-navy-600">{t.desc}</p>
+            <AnimatePresence initial={false}>
+              {techOpen && (
+                <motion.div
+                  key="tech-panel"
+                  initial={reduced ? false : { height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={reduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: EASE }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {TECH_DETAILS.map((d) => {
+                      const Icon = d.icon
+                      return (
+                        <div key={d.title} className="rounded-xl bg-white/[0.05] p-6 ring-1 ring-white/10">
+                          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-teal-300">
+                            <Icon size={22} strokeWidth={2.2} />
+                          </span>
+                          <p className="mt-4 text-lg font-bold text-white">{d.title}</p>
+                          <p className="mt-2 text-[15px] leading-relaxed text-navy-100">{d.desc}</p>
                         </div>
-                      </div>
-                    </Reveal>
-                  )
-                })}
-              </div>
-            </div>
+                      )
+                    })}
+                  </div>
 
-            <p className="mt-6 text-sm leading-relaxed text-navy-500">
-              ※ 개선효과는 실제 운행데이터 축적 후 실증지표로 검증할 예정이며, 확정된 수치가 아닙니다.
-            </p>
+                  <div className="mt-6 flex flex-col items-start gap-4 rounded-xl bg-white/[0.05] p-6 ring-1 ring-white/10 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-[15px] leading-relaxed text-navy-100">
+                      기술개발 성과를 정리해 벤처기업확인 등 성장 기반을 준비하고 있습니다. 개선효과는 실제 운행데이터
+                      축적 후 실증지표로 검증할 예정입니다.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={goSystem}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-[15px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
+                    >
+                      운영관리 시스템 화면 보기 <ArrowRight size={17} strokeWidth={2.4} />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Section>
         </div>
 
-        {/* ── 성장 방향 ─────────────────────────────────────────────────────── */}
-        <Section>
-          <Reveal>
-            <Eyebrow>성장 방향</Eyebrow>
-            <Heading>서울·경기권 의료기관 운영지원 서비스로 확장합니다</Heading>
-          </Reveal>
-          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {GROWTH.map((g, i) => (
-              <Reveal key={g} delay={i * 0.05}>
-                <div className="flex items-start gap-3 rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-0.5 hover:ring-teal-200">
-                  <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-teal-500" strokeWidth={2.2} />
-                  <p className="text-base leading-relaxed text-navy-700 sm:text-[17px]">{g}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </Section>
-
+        {/* ── (제거) 분리 운행 차별화 → 수거 관리 방식 체크리스트로 통합 ─────── */}
+        {/* ── (제거) 기술개발 timeline → 접이식 개발 현황으로 통합 ───────────── */}
         {/* ── 상담 문의 ─────────────────────────────────────────────────────── */}
         <Section id="contact">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
