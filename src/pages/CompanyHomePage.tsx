@@ -144,14 +144,32 @@ function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; 
 }
 
 function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
-  return <p className={`text-sm font-bold uppercase tracking-wide ${light ? 'text-teal-300' : 'text-teal-600'}`}>{children}</p>
+  return <p className={`text-[15px] font-bold uppercase tracking-wide ${light ? 'text-teal-300' : 'text-teal-600'}`}>{children}</p>
 }
 
 function Heading({ children, light = false }: { children: ReactNode; light?: boolean }) {
   return (
-    <h2 className={`mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl ${light ? 'text-white' : 'text-navy-900'}`}>
+    <h2 className={`mt-3 text-[1.7rem] font-extrabold leading-[1.15] tracking-tight sm:text-[2.1rem] lg:text-[2.4rem] ${light ? 'text-white' : 'text-navy-900'}`}>
       {children}
     </h2>
+  )
+}
+
+/** 문자 없는 추상 브랜드 마크 — 데이터/운송 흐름(점·선) */
+function BrandMark({ size = 40, className = '' }: { size?: number; className?: string }) {
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-xl bg-teal-50 ring-1 ring-teal-100 ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <svg viewBox="0 0 40 40" width={size * 0.62} height={size * 0.62} fill="none">
+        <path d="M11 24 L20 13 L29 20" stroke="#93c5fd" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="11" cy="24" r="3.6" fill="#3182f6" />
+        <circle cx="20" cy="13" r="3.6" fill="#2563eb" />
+        <circle cx="29" cy="20" r="3" fill="#0f1a2e" />
+      </svg>
+    </span>
   )
 }
 
@@ -185,9 +203,9 @@ function CockpitMockup() {
   const enter = (i: number): CSSProperties =>
     reduced ? {} : { animation: 'bmFadeUp 0.5s ease-out both', animationDelay: `${0.12 + i * 0.1}s` }
   const schedule = [
-    { t: '09:00', name: '의료법인한양의료재단', kind: '의료', status: '완료', done: true },
-    { t: '09:40', name: '센트럴서울요양병원', kind: '기저귀', status: '진행', done: false },
-    { t: '10:10', name: '에이스병원', kind: '의료', status: '예정', done: false },
+    { t: '09:00', name: '다산365의원', kind: '의료', status: '완료', done: true },
+    { t: '09:40', name: '별내우리요양병원', kind: '기저귀', status: '진행', done: false },
+    { t: '10:10', name: '구리중앙내과의원', kind: '의료', status: '예정', done: false },
   ]
   return (
     <div className="w-full" style={reduced ? undefined : { animation: 'bmFloat 6.5s ease-in-out infinite' }}>
@@ -196,45 +214,45 @@ function CockpitMockup() {
         @keyframes bmFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
         @keyframes bmGrow { from { width: 0; } to { width: 67%; } }
       `}</style>
-      <div className="rounded-2xl bg-white p-4 shadow-[0_24px_60px_-24px_rgba(15,26,46,0.35)] ring-1 ring-navy-100 sm:p-5">
+      <div className="rounded-2xl bg-white p-5 shadow-[0_24px_60px_-24px_rgba(15,26,46,0.35)] ring-1 ring-navy-100 sm:p-6">
         {/* 상단 바 */}
         <div style={enter(0)} className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-navy-900 text-[11px] font-black text-teal-300">비</span>
+          <div className="flex items-center gap-2.5">
+            <BrandMark size={34} />
             <div className="leading-tight">
-              <p className="text-[13px] font-extrabold text-navy-900">오늘 운영 현황</p>
-              <p className="text-[10px] font-semibold text-navy-400">beonemirae ops</p>
+              <p className="text-[16px] font-extrabold text-navy-900">오늘 운영 현황</p>
+              <p className="text-[12px] font-semibold text-navy-400">beonemirae ops</p>
             </div>
           </div>
-          <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-bold text-teal-600">실시간 시뮬레이션</span>
+          <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[12px] font-bold text-navy-500">예시 운영 현황</span>
         </div>
 
         {/* 미니 지표 */}
-        <div style={enter(1)} className="mt-3 grid grid-cols-3 gap-2">
+        <div style={enter(1)} className="mt-4 grid grid-cols-3 gap-2.5">
           {[
             { k: '오늘 수거', v: '10건', tone: 'text-navy-900' },
             { k: '긴급', v: '1건', tone: 'text-rose-500' },
             { k: '자재요청', v: '4건', tone: 'text-amber-600' },
           ].map((m) => (
-            <div key={m.k} className="rounded-lg bg-navy-50 p-2.5">
-              <p className="text-[10px] font-semibold text-navy-400">{m.k}</p>
-              <p className={`mt-0.5 text-base font-extrabold ${m.tone}`}>{m.v}</p>
+            <div key={m.k} className="rounded-xl bg-navy-50 p-3">
+              <p className="text-[12px] font-semibold text-navy-500">{m.k}</p>
+              <p className={`mt-0.5 text-2xl font-extrabold ${m.tone}`}>{m.v}</p>
             </div>
           ))}
         </div>
 
         {/* 오늘 수거 일정 */}
-        <div style={enter(2)} className="mt-3">
-          <p className="mb-1.5 text-[11px] font-bold text-navy-500">오늘 수거 일정</p>
-          <div className="space-y-1.5">
+        <div style={enter(2)} className="mt-4">
+          <p className="mb-2 text-[13px] font-bold text-navy-600">오늘 수거 일정</p>
+          <div className="space-y-2">
             {schedule.map((s) => (
-              <div key={s.name} className="flex items-center gap-2 rounded-lg bg-white p-2 ring-1 ring-navy-100">
-                <span className="text-[11px] font-bold tabular-nums text-navy-500">{s.t}</span>
-                <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-navy-900">{s.name}</span>
-                <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${s.kind === '의료' ? 'bg-rose-50 text-rose-500' : 'bg-teal-50 text-teal-600'}`}>
+              <div key={s.name} className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 ring-1 ring-navy-100">
+                <span className="text-[13px] font-bold tabular-nums text-navy-500">{s.t}</span>
+                <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-navy-900">{s.name}</span>
+                <span className={`rounded-md px-2 py-1 text-[12px] font-bold ${s.kind === '의료' ? 'bg-rose-50 text-rose-500' : 'bg-teal-50 text-teal-600'}`}>
                   {s.kind}
                 </span>
-                <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${s.done ? 'bg-emerald-50 text-emerald-600' : 'bg-navy-100 text-navy-500'}`}>
+                <span className={`rounded-md px-2 py-1 text-[12px] font-bold ${s.done ? 'bg-emerald-50 text-emerald-600' : 'bg-navy-100 text-navy-500'}`}>
                   {s.status}
                 </span>
               </div>
@@ -243,35 +261,35 @@ function CockpitMockup() {
         </div>
 
         {/* 배차 상태 */}
-        <div style={enter(3)} className="mt-3 rounded-lg bg-navy-900 p-3 text-white">
+        <div style={enter(3)} className="mt-4 rounded-xl bg-navy-900 p-4 text-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Truck size={14} className="text-teal-300" />
-              <span className="text-[11px] font-bold">1톤 A · 남양주 권역</span>
+            <div className="flex items-center gap-2">
+              <Truck size={17} className="text-teal-300" />
+              <span className="text-[14px] font-bold">1톤 A · 남양주 권역</span>
             </div>
-            <span className="text-[11px] font-extrabold text-teal-300">적재율 67%</span>
+            <span className="text-[14px] font-extrabold text-teal-300">적재율 67%</span>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
+          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white/15">
             <div
               className="h-full rounded-full bg-teal-400"
               style={reduced ? { width: '67%' } : { width: '67%', animation: 'bmGrow 1.1s ease-out both', animationDelay: '0.7s' }}
             />
           </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-200">의료폐기물 분리</span>
-            <span className="rounded-full bg-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-200">일회용기저귀 분리</span>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <span className="rounded-full bg-rose-500/25 px-2.5 py-1 text-[12px] font-bold text-rose-100">의료폐기물 분리</span>
+            <span className="rounded-full bg-teal-500/25 px-2.5 py-1 text-[12px] font-bold text-teal-100">일회용기저귀 분리</span>
           </div>
         </div>
 
         {/* 알림 + 수거대장 */}
-        <div style={enter(4)} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2.5">
-            <Siren size={15} className="shrink-0 text-rose-500" />
-            <p className="text-[11px] font-bold leading-tight text-rose-600">격리의료폐기물 보관기한 임박 · 긴급수거</p>
+        <div style={enter(4)} className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="flex items-center gap-2.5 rounded-xl bg-rose-50 p-3">
+            <Siren size={18} className="shrink-0 text-rose-500" />
+            <p className="text-[13px] font-bold leading-tight text-rose-600">격리의료폐기물 보관기한 임박 · 긴급수거</p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-teal-50 p-2.5">
-            <Printer size={15} className="shrink-0 text-teal-600" />
-            <p className="text-[11px] font-bold leading-tight text-teal-700">수거대장 출력 예정</p>
+          <div className="flex items-center gap-2.5 rounded-xl bg-teal-50 p-3">
+            <Printer size={18} className="shrink-0 text-teal-600" />
+            <p className="text-[13px] font-bold leading-tight text-teal-700">수거대장 출력 예정</p>
           </div>
         </div>
       </div>
@@ -394,14 +412,12 @@ export function CompanyHomePage() {
     <div className="min-h-[100dvh] bg-white font-sans text-navy-700">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-navy-100 bg-white/85 backdrop-blur-lg">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
           <a href="#top" className="flex items-center gap-2.5" aria-label="주식회사 비원미래 홈">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-sm font-black text-teal-300">
-              비
-            </span>
+            <BrandMark size={40} />
             <span className="leading-tight">
-              <span className="block text-[15px] font-extrabold tracking-tight text-navy-900">주식회사 비원미래</span>
-              <span className="block text-[11px] font-semibold tracking-wide text-navy-400">BEONE MIRAE CO.</span>
+              <span className="block text-[17px] font-extrabold tracking-tight text-navy-900">주식회사 비원미래</span>
+              <span className="block text-[12px] font-semibold tracking-wide text-navy-400">BEONE MIRAE CO.</span>
             </span>
           </a>
 
@@ -411,7 +427,7 @@ export function CompanyHomePage() {
               <a
                 key={n.href}
                 href={n.href}
-                className="rounded-lg px-3 py-2 text-sm font-bold text-navy-600 transition-colors hover:bg-navy-50 hover:text-teal-600"
+                className="rounded-lg px-3 py-2 text-[15px] font-bold text-navy-600 transition-colors hover:bg-navy-50 hover:text-teal-600"
               >
                 {n.label}
               </a>
@@ -421,9 +437,9 @@ export function CompanyHomePage() {
           <div className="hidden items-center gap-2 lg:flex">
             <button
               onClick={goDemo}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-[15px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
             >
-              시스템 시연 보기 <ArrowRight size={16} strokeWidth={2.4} />
+              시스템 시연 보기 <ArrowRight size={17} strokeWidth={2.4} />
             </button>
           </div>
 
@@ -461,9 +477,9 @@ export function CompanyHomePage() {
                 ))}
                 <button
                   onClick={() => { setMenuOpen(false); goDemo() }}
-                  className="mb-3 mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-600"
+                  className="mb-3 mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-4 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:bg-teal-600"
                 >
-                  시스템 시연 보기 <ArrowRight size={16} strokeWidth={2.4} />
+                  시스템 시연 보기 <ArrowRight size={17} strokeWidth={2.4} />
                 </button>
               </nav>
             </motion.div>
@@ -486,36 +502,37 @@ export function CompanyHomePage() {
               WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 70% 10%, black 40%, transparent 100%)',
             }}
           />
-          <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-10 lg:px-8 lg:py-24">
+          <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.12fr_1fr] lg:gap-10 lg:px-8 lg:py-24">
             <motion.div
               initial={reduced ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE }}
             >
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-teal-600 shadow-card ring-1 ring-navy-100">
-                <Recycle size={14} /> 의료폐기물 운영관리 전문기업
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-teal-600 shadow-card ring-1 ring-navy-100">
+                <Recycle size={15} /> 의료폐기물 운영관리 전문기업
               </div>
-              <h1 className="mt-5 text-3xl font-extrabold leading-[1.2] tracking-tight text-navy-900 sm:text-4xl lg:text-[2.9rem]">
-                의료폐기물 수거·운반을
-                <br />
-                <span className="text-teal-600">데이터 기반 운영관리</span>로
-                <br className="hidden sm:block" /> 전환합니다
+              <h1 className="mt-5 text-[1.7rem] font-extrabold leading-[1.15] tracking-tight text-navy-900 sm:text-[2.1rem] lg:text-[2.5rem]">
+                <span className="block">의료폐기물 수거·운반을</span>
+                <span className="block">
+                  <span className="text-teal-600">데이터 기반 운영관리</span>로
+                </span>
+                <span className="block">전환합니다</span>
               </h1>
-              <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-navy-500 sm:text-base">
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
                 주식회사 비원미래는 병원·요양병원·의원 등 다양한 의료폐기물 배출기관의 수거조건, 차량, 처리장, 자재공급,
                 수거이력 데이터를 통합 관리하는 운영관리 시스템을 개발하고 있습니다.
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={goSystem}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-[15px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-6 py-3.5 text-base font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
                 >
-                  운영관리 시스템 보기 <ArrowRight size={17} strokeWidth={2.4} />
+                  운영관리 시스템 보기 <ArrowRight size={18} strokeWidth={2.4} />
                 </button>
                 <a
                   href="#services"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-5 py-3 text-[15px] font-bold text-navy-700 ring-1 ring-navy-200 transition hover:-translate-y-0.5 hover:bg-navy-50"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-6 py-3.5 text-base font-bold text-navy-700 ring-1 ring-navy-200 transition hover:-translate-y-0.5 hover:bg-navy-50"
                 >
                   서비스 살펴보기
                 </a>
@@ -523,7 +540,7 @@ export function CompanyHomePage() {
 
               <div className="mt-8 flex flex-wrap gap-2">
                 {HERO_BADGES.map((b) => (
-                  <span key={b} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-navy-600 shadow-card ring-1 ring-navy-100">
+                  <span key={b} className="rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-navy-600 shadow-card ring-1 ring-navy-100">
                     {b}
                   </span>
                 ))}
@@ -531,7 +548,7 @@ export function CompanyHomePage() {
             </motion.div>
 
             {/* 콕핏 목업 */}
-            <div className="lg:pl-4">
+            <div className="lg:pl-2">
               <CockpitMockup />
             </div>
           </div>
@@ -542,7 +559,7 @@ export function CompanyHomePage() {
           <Reveal>
             <Eyebrow>운영 기반</Eyebrow>
             <Heading>현장 데이터로 운영되는 회사입니다</Heading>
-            <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-navy-500">
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
               경기 남양주에 기반을 두고 서울·경기권 의료기관을 대상으로 실제 수거·운반을 운영하고 있습니다.
             </p>
           </Reveal>
@@ -560,17 +577,17 @@ export function CompanyHomePage() {
               const Icon = s.icon
               return (
                 <Reveal key={s.label} delay={i * 0.08}>
-                  <div className="group h-full rounded-xl bg-white p-5 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-teal-600 transition group-hover:bg-teal-500 group-hover:text-white">
-                      <Icon size={22} strokeWidth={2.2} />
+                  <div className="group h-full rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-50 text-teal-600 transition group-hover:bg-teal-500 group-hover:text-white">
+                      <Icon size={24} strokeWidth={2.2} />
                     </span>
-                    <p className="mt-4 text-xl font-extrabold tracking-tight text-navy-900">
+                    <p className="mt-4 text-[1.7rem] font-extrabold tracking-tight text-navy-900">
                       {s.prefix}
                       {s.count !== null ? <CountNumber to={s.count} run={statsRun} /> : s.text}
                       {s.suffix}
                     </p>
-                    <p className="mt-1 text-sm font-bold text-navy-600">{s.label}</p>
-                    <p className="mt-1 text-[13px] leading-snug text-navy-400">{s.desc}</p>
+                    <p className="mt-1.5 text-base font-bold text-navy-700">{s.label}</p>
+                    <p className="mt-1 text-sm leading-snug text-navy-500">{s.desc}</p>
                   </div>
                 </Reveal>
               )
@@ -589,7 +606,7 @@ export function CompanyHomePage() {
             <Reveal>
               <Eyebrow>현장 특수성</Eyebrow>
               <Heading>의료폐기물 수거·운반은 단순 일정관리로 해결되지 않습니다</Heading>
-              <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-navy-500">
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
                 배출기관마다 조건이 다르고, 폐기물 종류와 처리 흐름이 달라 현장 특수성을 반영한 운영관리가 필요합니다.
               </p>
             </Reveal>
@@ -602,8 +619,8 @@ export function CompanyHomePage() {
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-100 text-navy-700 transition group-hover:bg-navy-900 group-hover:text-teal-300">
                         <Icon size={20} strokeWidth={2.2} />
                       </span>
-                      <p className="mt-4 font-bold text-navy-900">{p.title}</p>
-                      <p className="mt-1.5 text-sm leading-relaxed text-navy-500">{p.desc}</p>
+                      <p className="mt-4 text-[17px] font-bold text-navy-900">{p.title}</p>
+                      <p className="mt-2 text-[15px] leading-relaxed text-navy-600">{p.desc}</p>
                     </div>
                   </Reveal>
                 )
@@ -628,12 +645,12 @@ export function CompanyHomePage() {
                       <Icon size={22} strokeWidth={2.2} />
                     </span>
                     <div className="mt-4 flex items-center gap-2">
-                      <p className="font-bold text-navy-900">{s.title}</p>
+                      <p className="text-[17px] font-bold text-navy-900">{s.title}</p>
                       {s.soon && (
                         <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[11px] font-bold text-navy-500">확장 예정</span>
                       )}
                     </div>
-                    <p className="mt-1.5 text-sm leading-relaxed text-navy-500">{s.desc}</p>
+                    <p className="mt-2 text-[15px] leading-relaxed text-navy-600">{s.desc}</p>
                   </div>
                 </Reveal>
               )
@@ -658,7 +675,7 @@ export function CompanyHomePage() {
             <Reveal>
               <Eyebrow light>운영관리 시스템</Eyebrow>
               <Heading light>현장 데이터를 하나의 운영 흐름으로 연결합니다</Heading>
-              <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-navy-200">
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-navy-100 sm:text-[17px]">
                 거래처 정보부터 수거이력·출력까지, 의료폐기물 운영 데이터를 통합관리하는 흐름을 개발하고 있습니다. 각
                 단계는 특허 구성요소와 연결됩니다.
               </p>
@@ -682,11 +699,11 @@ export function CompanyHomePage() {
                             />
                           )}
                         </span>
-                        <span className="text-sm font-black text-white/25">{f.step}</span>
+                        <span className="text-base font-black text-white/30">{f.step}</span>
                       </div>
-                      <p className="mt-4 font-bold text-white">{f.title}</p>
-                      <p className="mt-1.5 text-[13px] leading-relaxed text-navy-200">{f.desc}</p>
-                      <span className="mt-3 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-teal-200">
+                      <p className="mt-4 text-[17px] font-bold text-white">{f.title}</p>
+                      <p className="mt-2 text-[14px] leading-relaxed text-navy-100">{f.desc}</p>
+                      <span className="mt-3 inline-block rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-teal-200">
                         구성요소 {f.part}
                       </span>
                       {/* 연결선 (데스크톱) */}
@@ -699,16 +716,16 @@ export function CompanyHomePage() {
               })}
             </div>
 
-            <p className="mt-6 text-[13px] text-navy-300">
+            <p className="mt-6 text-sm text-navy-200">
               ※ 배차·경로 추천은 운영 데이터 기반 추천 로직을 개발 중이며, 개선효과는 실증지표로 검증할 예정입니다.
             </p>
 
             <div className="mt-8">
               <button
                 onClick={goSystem}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-[15px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-6 py-3.5 text-base font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
               >
-                운영관리 시스템 보기 <ArrowRight size={17} strokeWidth={2.4} />
+                운영관리 시스템 보기 <ArrowRight size={18} strokeWidth={2.4} />
               </button>
             </div>
           </Section>
@@ -720,7 +737,7 @@ export function CompanyHomePage() {
             <div className="text-center">
               <Eyebrow>차별화</Eyebrow>
               <Heading>같은 병원에서 나와도, 운영관리는 분리되어야 합니다</Heading>
-              <p className="mx-auto mt-3 max-w-2xl text-[15px] leading-relaxed text-navy-500">
+              <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
                 의료폐기물과 의료기관 일회용기저귀는 동일 의료기관에서 함께 발생할 수 있지만, 수거차량·관리체계·처리
                 흐름이 달라 별도 운행과 이력관리가 필요합니다.
               </p>
@@ -736,13 +753,13 @@ export function CompanyHomePage() {
                     <Syringe size={22} strokeWidth={2.2} />
                   </span>
                   <div>
-                    <p className="font-extrabold text-navy-900">의료폐기물</p>
-                    <p className="text-[12px] text-navy-400">전용 관리체계</p>
+                    <p className="text-lg font-extrabold text-navy-900">의료폐기물</p>
+                    <p className="text-[13px] font-medium text-navy-500">전용 관리체계</p>
                   </div>
                 </div>
                 <ul className="mt-4 space-y-2">
                   {['전용 수거차량', '전용 처리장 인계', '보관기한·격리 조건 관리'].map((t) => (
-                    <li key={t} className="flex items-center gap-2 rounded-lg bg-rose-50/60 px-3 py-2 text-sm font-semibold text-navy-700">
+                    <li key={t} className="flex items-center gap-2 rounded-lg bg-rose-50/60 px-3.5 py-2.5 text-[15px] font-semibold text-navy-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> {t}
                     </li>
                   ))}
@@ -756,13 +773,13 @@ export function CompanyHomePage() {
                     <Boxes size={22} strokeWidth={2.2} />
                   </span>
                   <div>
-                    <p className="font-extrabold text-navy-900">의료기관 일회용기저귀</p>
-                    <p className="text-[12px] text-navy-400">별도 관리체계</p>
+                    <p className="text-lg font-extrabold text-navy-900">의료기관 일회용기저귀</p>
+                    <p className="text-[13px] font-medium text-navy-500">별도 관리체계</p>
                   </div>
                 </div>
                 <ul className="mt-4 space-y-2">
                   {['별도 수거차량', '별도 처리 흐름', '분리 수거이력 관리'].map((t) => (
-                    <li key={t} className="flex items-center gap-2 rounded-lg bg-teal-50/60 px-3 py-2 text-sm font-semibold text-navy-700">
+                    <li key={t} className="flex items-center gap-2 rounded-lg bg-teal-50/60 px-3.5 py-2.5 text-[15px] font-semibold text-navy-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-teal-400" /> {t}
                     </li>
                   ))}
@@ -771,10 +788,10 @@ export function CompanyHomePage() {
             </div>
 
             <div className="mt-4 rounded-2xl bg-navy-900 px-6 py-5 text-center">
-              <p className="text-[15px] font-bold text-white">
+              <p className="text-[17px] font-bold text-white sm:text-xl">
                 같은 병원에서 발생해도 차량·관리체계·처리 흐름은 <span className="text-teal-300">분리</span>됩니다
               </p>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-navy-200">
+              <p className="mt-2 text-sm leading-relaxed text-navy-100 sm:text-[15px]">
                 비원미래는 한 업체가 두 흐름을 함께 관리하되, 폐기물 종류별 차량·수거조건·자재공급·처리장 정보를 분리
                 관리하는 구조를 개발하고 있습니다.
               </p>
@@ -788,7 +805,7 @@ export function CompanyHomePage() {
             <Reveal>
               <Eyebrow>기술개발</Eyebrow>
               <Heading>특허출원과 연구개발전담부서를 기반으로 고도화하고 있습니다</Heading>
-              <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-navy-500">
+              <p className="mt-3 max-w-2xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
                 작은 연구개발전담부서가 실제 현장 문제를 하나씩 구조화하며 운영관리 시스템을 단계적으로 개발하고 있습니다.
               </p>
             </Reveal>
@@ -805,10 +822,10 @@ export function CompanyHomePage() {
                         <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-teal-600 shadow-card ring-1 ring-navy-100 sm:h-12 sm:w-12">
                           <Icon size={20} strokeWidth={2.2} />
                         </span>
-                        <div className="flex-1 rounded-xl bg-white p-5 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-                          <span className="inline-block rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-bold text-teal-600">{t.tag}</span>
-                          <p className="mt-2 font-bold text-navy-900">{t.title}</p>
-                          <p className="mt-1 text-sm leading-relaxed text-navy-500">{t.desc}</p>
+                        <div className="flex-1 rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                          <span className="inline-block rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-600">{t.tag}</span>
+                          <p className="mt-2.5 text-[17px] font-bold text-navy-900">{t.title}</p>
+                          <p className="mt-1.5 text-[15px] leading-relaxed text-navy-600">{t.desc}</p>
                         </div>
                       </div>
                     </Reveal>
@@ -817,7 +834,7 @@ export function CompanyHomePage() {
               </div>
             </div>
 
-            <p className="mt-6 text-[13px] leading-relaxed text-navy-400">
+            <p className="mt-6 text-sm leading-relaxed text-navy-500">
               ※ 개선효과는 실제 운행데이터 축적 후 실증지표로 검증할 예정이며, 확정된 수치가 아닙니다.
             </p>
           </Section>
@@ -832,9 +849,9 @@ export function CompanyHomePage() {
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {GROWTH.map((g, i) => (
               <Reveal key={g} delay={i * 0.05}>
-                <div className="flex items-start gap-3 rounded-xl bg-white p-5 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-0.5 hover:ring-teal-200">
-                  <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-500" strokeWidth={2.2} />
-                  <p className="text-[15px] leading-relaxed text-navy-700">{g}</p>
+                <div className="flex items-start gap-3 rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-0.5 hover:ring-teal-200">
+                  <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-teal-500" strokeWidth={2.2} />
+                  <p className="text-base leading-relaxed text-navy-700 sm:text-[17px]">{g}</p>
                 </div>
               </Reveal>
             ))}
@@ -844,7 +861,7 @@ export function CompanyHomePage() {
         {/* ── 문의 CTA ──────────────────────────────────────────────────────── */}
         <Section id="contact">
           <Reveal>
-            <div className="relative overflow-hidden rounded-2xl bg-navy-900 px-6 py-12 text-center sm:px-10 sm:py-16">
+            <div className="relative overflow-hidden rounded-2xl bg-navy-900 px-6 py-14 text-center sm:px-10 sm:py-20">
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 opacity-40"
@@ -857,22 +874,22 @@ export function CompanyHomePage() {
                 }}
               />
               <div className="relative">
-                <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                <h2 className="mx-auto max-w-3xl text-[1.9rem] font-extrabold leading-[1.18] tracking-tight text-white sm:text-[2.4rem]">
                   의료폐기물 수거·운반과 운영관리, 비원미래가 함께합니다
                 </h2>
-                <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-navy-200">
+                <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-navy-100">
                   서울·경기권 병원·요양병원·의원 등 의료기관의 폐기물 수거·운반과 운영관리 상담을 받고 있습니다.
                 </p>
-                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
                   <button
                     onClick={goSystem}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-[15px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-7 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600"
                   >
-                    운영관리 시스템 보기 <ArrowRight size={17} strokeWidth={2.4} />
+                    운영관리 시스템 보기 <ArrowRight size={19} strokeWidth={2.4} />
                   </button>
                   <a
                     href="#contact-info"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/10 px-5 py-3 text-[15px] font-bold text-white ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:bg-white/20"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white/10 px-7 py-4 text-[17px] font-bold text-white ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:bg-white/20"
                   >
                     문의하기
                   </a>
@@ -889,20 +906,18 @@ export function CompanyHomePage() {
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-sm font-black text-teal-300">
-                  비
-                </span>
+                <BrandMark size={40} />
                 <span className="leading-tight">
-                  <span className="block text-[15px] font-extrabold tracking-tight text-navy-900">주식회사 비원미래</span>
-                  <span className="block text-[11px] font-semibold tracking-wide text-navy-400">BEONE MIRAE CO.</span>
+                  <span className="block text-[17px] font-extrabold tracking-tight text-navy-900">주식회사 비원미래</span>
+                  <span className="block text-[12px] font-semibold tracking-wide text-navy-400">BEONE MIRAE CO.</span>
                 </span>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-navy-500">
+              <p className="mt-4 text-[15px] leading-relaxed text-navy-500">
                 데이터 기반 의료폐기물 수거·운반 및 통합 운영관리 시스템을 개발하는 의료폐기물 운영관리 전문기업입니다.
               </p>
             </div>
 
-            <div className="text-sm">
+            <div className="text-[15px]">
               <p className="font-bold text-navy-900">회사 정보</p>
               <dl className="mt-3 space-y-2 text-navy-500">
                 <div className="flex gap-2"><dt className="w-16 shrink-0 font-semibold text-navy-400">대표자</dt><dd>송명근</dd></div>
@@ -912,7 +927,7 @@ export function CompanyHomePage() {
               </dl>
             </div>
 
-            <div className="text-sm">
+            <div className="text-[15px]">
               <p className="font-bold text-navy-900">주요 서비스</p>
               <ul className="mt-3 space-y-2 text-navy-500">
                 <li>의료폐기물 수거·운반</li>
@@ -921,14 +936,14 @@ export function CompanyHomePage() {
               </ul>
               <button
                 onClick={goDemo}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-navy-50 px-4 py-2.5 text-sm font-bold text-navy-700 transition hover:bg-navy-100"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-navy-50 px-4 py-3 text-[15px] font-bold text-navy-700 transition hover:bg-navy-100"
               >
                 시스템 시연 보기 <ArrowRight size={16} strokeWidth={2.4} />
               </button>
             </div>
           </div>
 
-          <div className="mt-10 border-t border-navy-100 pt-6 text-xs text-navy-400">
+          <div className="mt-10 border-t border-navy-100 pt-6 text-[13px] text-navy-400">
             © {2026} 주식회사 비원미래 (BEONE MIRAE CO.) · 서울·경기권 의료폐기물 수거·운반 운영관리
           </div>
         </div>
