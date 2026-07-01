@@ -85,17 +85,17 @@ export function Receivables() {
             const client = clientById(p.clientId)
             return (
               <StaggerItem key={p.id} className="card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
-                      <PaymentBadge status={p.status} />
-                    </div>
-                    <p className="mt-1 t-caption">
-                      {p.billingMonth} 청구 · {p.method}
-                      {p.memo && ` · ${p.memo}`}
-                    </p>
-                  </div>
+                {/* 업체명 — 항상 최우선, 첫 줄 전체를 사용해 잘리지 않게 */}
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 flex-1 font-extrabold text-navy-900">{client?.name ?? '알 수 없음'}</span>
+                  <PaymentBadge status={p.status} />
+                </div>
+                {/* 금액 + 청구 정보 */}
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <p className="t-caption">
+                    {p.billingMonth} 청구 · {p.method}
+                    {p.memo && ` · ${p.memo}`}
+                  </p>
                   <p className="shrink-0 text-right text-lg font-extrabold text-navy-900">{won(p.amount)}</p>
                 </div>
 

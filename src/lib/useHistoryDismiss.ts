@@ -29,8 +29,12 @@ export function useHistoryDismiss(open: boolean, onClose: () => void) {
 
     return () => {
       window.removeEventListener('popstate', onPop)
-      // 뒤로 가기가 아니라 프로그램적으로 닫힌 경우(✕·배경 탭·스와이프) 쌓아둔 항목 정리
-      if (!consumedByBack) window.history.back()
+      // 뒤로 가기로 닫힌 경우: 이미 항목이 소비됨 → 아무것도 안 함.
+      // 화면 이동(navigate)으로 닫힌 경우: 새 라우트가 위에 쌓여 우리 항목이 최상단이 아님
+      //   → history.state.overlay 가 사라짐 → back() 하면 방금 이동을 취소하므로 하지 않음.
+      // ✕·배경 탭·스와이프로 닫힌 경우: 우리 항목이 그대로 최상단 → 정리 목적으로 back().
+      const stillTop = (window.history.state as { overlay?: boolean } | null)?.overlay === true
+      if (!consumedByBack && stillTop) window.history.back()
     }
   }, [open])
 }
