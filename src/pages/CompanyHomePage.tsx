@@ -11,7 +11,7 @@ import {
   MapPin,
   Route,
   FileText,
-  Package,
+  Container,
   Wallet,
   Syringe,
   ClipboardList,
@@ -47,7 +47,16 @@ const NAV = [
   { label: '문의', href: '#contact' },
 ]
 
-const HERO_BADGES = ['서울·경기권 운영', '의료폐기물 수거·운반', '일회용기저귀 분리 운행', '특허출원 기반 시스템 개발']
+const HERO_BADGES = ['의료폐기물 수거·운반', '의료기관 일회용기저귀 분리 운행', '병원·요양병원 정기 수거', '서울·경기권 운영', '운영관리 시스템 개발 중']
+
+// 현장 이미지 슬롯 — 실제 사진이 들어오면 src만 채우면 교체되는 구조
+type FieldFrame = { icon: LucideIcon; title: string; alt: string; src?: string }
+const HERO_FIELD: FieldFrame = { icon: Truck, title: '의료폐기물 전용 수거 차량', alt: '의료폐기물 전용 수거 차량 이미지' }
+const FIELD_CARDS: { icon: LucideIcon; title: string; alt: string; desc: string; src?: string }[] = [
+  { icon: Building2, title: '병원·요양병원·의원 수거 현장', alt: '병원 의료폐기물 수거 현장 이미지', desc: '병원별 수거주기와 보관기한을 고려해 정기적으로 의료폐기물을 수거·운반합니다.' },
+  { icon: Truck, title: '의료폐기물·일회용기저귀 분리 운행', alt: '폐기물 종류별 분리 운행 이미지', desc: '폐기물 종류에 따라 차량·관리체계·처리 흐름을 분리해 운행합니다.' },
+  { icon: Container, title: '자재공급·수거대장·미수금 관리', alt: '의료폐기물 전용 용기·자재 관리 이미지', desc: '전용 용기·봉투·박스 공급부터 수거대장·미수금까지 현장 운영을 함께 관리합니다.' },
+]
 
 const STATS: { icon: LucideIcon; prefix: string; count: number | null; text?: string; suffix: string; label: string; desc: string }[] = [
   { icon: Building2, prefix: '거래처 ', count: 49, suffix: '곳', label: '의료기관 배출기관', desc: '병원·요양병원·의원·요양시설 등' },
@@ -65,12 +74,12 @@ const PROBLEMS: { icon: LucideIcon; title: string; desc: string }[] = [
 ]
 
 const SERVICES: { icon: LucideIcon; title: string; desc: string; soon?: boolean }[] = [
-  { icon: Syringe, title: '의료폐기물 수거·운반', desc: '병원·요양병원·의원 등 배출기관의 의료폐기물을 수거조건에 맞춰 수집·운반합니다.' },
-  { icon: Boxes, title: '일회용기저귀 수거·운반', desc: '의료기관 일회용기저귀를 의료폐기물과 분리된 차량·체계로 수집·운반합니다.' },
-  { icon: Package, title: '병원 자재공급·입출고 관리', desc: '거래처별 박스·비닐·바늘통 등 자재공급과 입출고 내역을 관리합니다.' },
-  { icon: FileText, title: '수거이력·수거대장 관리', desc: '수거이력과 자재공급을 통합해 월간 수거대장으로 정리·출력합니다.' },
-  { icon: Wallet, title: '결제·미수금 관리 지원', desc: '거래처별 청구·입금 현황과 미수금을 한 흐름에서 관리하도록 지원합니다.' },
-  { icon: TrendingUp, title: '배출기관 운영지원 확장', desc: '수거대장 제공, 운영 리포트 등 부가 운영지원 서비스로 확장할 예정입니다.', soon: true },
+  { icon: Syringe, title: '의료폐기물 수거·운반', desc: '병원별 수거주기와 보관기한을 고려해 정기 수거를 수행합니다.' },
+  { icon: Boxes, title: '의료기관 일회용기저귀 수거·운반', desc: '의료폐기물과 의료기관 일회용기저귀를 차량·관리체계별로 분리 운행합니다.' },
+  { icon: Container, title: '전용 용기·자재 공급', desc: '전용 용기·봉투·박스 등 자재 요청과 공급 이력을 함께 관리합니다.' },
+  { icon: FileText, title: '수거이력 및 수거대장 관리', desc: '수거이력과 자재공급을 통합해 월간 수거대장으로 정리·출력합니다.' },
+  { icon: Wallet, title: '거래처별 결제·미수금 관리', desc: '거래처별 청구·입금 현황과 미수금을 한 흐름에서 관리합니다.' },
+  { icon: Route, title: '배차·경로 추천 시뮬레이션', desc: '운영 데이터 기반 배차·경로 추천 로직을 개발하고 있습니다.', soon: true },
 ]
 
 const FLOW: { icon: LucideIcon; step: string; title: string; desc: string; part: string }[] = [
@@ -170,6 +179,48 @@ function BrandMark({ size = 40, className = '' }: { size?: number; className?: s
         <circle cx="29" cy="20" r="3" fill="#0f1a2e" />
       </svg>
     </span>
+  )
+}
+
+/**
+ * 현장 이미지 슬롯 — 실제 사진(frame.src)이 있으면 사진을, 없으면 실사형 placeholder 프레임을 렌더.
+ * 추후 public 또는 src/assets 이미지를 frame.src 로 넣으면 그대로 교체됩니다.
+ */
+function ImageSlot({ frame, className = '' }: { frame: FieldFrame; className?: string }) {
+  const Icon = frame.icon
+  return (
+    <figure className={`group relative overflow-hidden rounded-2xl bg-navy-900 shadow-card ring-1 ring-navy-100 ${className}`}>
+      {frame.src ? (
+        <img src={frame.src} alt={frame.alt} loading="lazy" className="h-full w-full object-cover" />
+      ) : (
+        <div className="absolute inset-0" role="img" aria-label={frame.alt}>
+          {/* 실사형 프레임 — 어두운 navy 그라데이션 + 은은한 그리드 */}
+          <div className="absolute inset-0 bg-gradient-to-br from-navy-700 via-navy-800 to-navy-950" />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.18]"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.5) 1px, transparent 1px)',
+              backgroundSize: '30px 30px',
+              maskImage: 'radial-gradient(ellipse 70% 70% at 50% 40%, black 30%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 50% 40%, black 30%, transparent 100%)',
+            }}
+          />
+          {/* 중앙 대형 아이콘 */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-teal-300 ring-1 ring-white/15 transition group-hover:scale-105">
+              <Icon size={30} strokeWidth={1.9} />
+            </span>
+          </div>
+        </div>
+      )}
+      {/* 하단 캡션 바 */}
+      <figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-navy-950/85 to-transparent p-4 pt-10">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-400" />
+        <span className="text-[13px] font-bold text-white sm:text-sm">{frame.title}</span>
+      </figcaption>
+    </figure>
   )
 }
 
@@ -502,25 +553,24 @@ export function CompanyHomePage() {
               WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 70% 10%, black 40%, transparent 100%)',
             }}
           />
-          <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.12fr_1fr] lg:gap-10 lg:px-8 lg:py-24">
+          <div className="relative mx-auto grid w-full max-w-6xl items-start gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:py-24">
             <motion.div
+              className="lg:pt-6"
               initial={reduced ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE }}
             >
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-teal-600 shadow-card ring-1 ring-navy-100">
-                <Recycle size={15} /> 의료폐기물 운영관리 전문기업
+                <Recycle size={15} /> 의료폐기물 수거·운반 · 운영관리 전문기업
               </div>
               <h1 className="mt-5 text-[1.7rem] font-extrabold leading-[1.15] tracking-tight text-navy-900 sm:text-[2.1rem] lg:text-[2.5rem]">
-                <span className="block">의료폐기물 수거·운반을</span>
-                <span className="block">
-                  <span className="text-teal-600">데이터 기반 운영관리</span>로
-                </span>
-                <span className="block">전환합니다</span>
+                <span className="block">의료폐기물 수거·운반,</span>
+                <span className="block">현장 운영까지</span>
+                <span className="block"><span className="text-teal-600">데이터로 관리</span>합니다</span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
-                주식회사 비원미래는 병원·요양병원·의원 등 다양한 의료폐기물 배출기관의 수거조건, 차량, 처리장, 자재공급,
-                수거이력 데이터를 통합 관리하는 운영관리 시스템을 개발하고 있습니다.
+                주식회사 비원미래는 서울·경기권 병원·요양병원·의원 등 배출기관의 의료폐기물과 의료기관 일회용기저귀
+                수거·운반을 수행하며, 수거조건·차량·자재·이력 데이터를 통합 관리하는 운영관리 시스템을 개발하고 있습니다.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -547,12 +597,45 @@ export function CompanyHomePage() {
               </div>
             </motion.div>
 
-            {/* 콕핏 목업 */}
-            <div className="lg:pl-2">
+            {/* 현장 이미지 + 운영 현황 목업 */}
+            <div className="space-y-5">
+              <ImageSlot frame={HERO_FIELD} className="aspect-[16/9]" />
               <CockpitMockup />
+              <div className="flex flex-wrap gap-2">
+                {['서울·경기권 수거 운행', '폐기물 종류별 분리 운행', '수거이력 관리'].map((b) => (
+                  <span key={b} className="rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-navy-600 shadow-card ring-1 ring-navy-100">
+                    {b}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </section>
+
+        {/* ── 현장에서 시작한 운영관리 ──────────────────────────────────────── */}
+        <Section>
+          <Reveal>
+            <Eyebrow>현장 기반</Eyebrow>
+            <Heading>현장에서 시작한 의료폐기물 운영관리</Heading>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
+              의료폐기물 수거·운반은 단순 배송 업무가 아니라, 배출기관별 보관기한·수거주기·폐기물 종류·전용 용기·차량
+              적재량·처리장 인계시간을 함께 관리해야 하는 현장 운영 업무입니다. 비원미래는 실제 수거·운반 현장에서 발생하는
+              요청과 이력을 데이터로 구조화하고 있습니다.
+            </p>
+          </Reveal>
+          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {FIELD_CARDS.map((f, i) => (
+              <Reveal key={f.title} delay={i * 0.08}>
+                <div className="group h-full overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
+                  <ImageSlot frame={f} className="aspect-[16/10] rounded-b-none ring-0 shadow-none" />
+                  <div className="p-6">
+                    <p className="text-[15px] leading-relaxed text-navy-600">{f.desc}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Section>
 
         {/* ── 운영 기반 숫자 ────────────────────────────────────────────────── */}
         <Section id="about" className="pt-16 sm:pt-20">
