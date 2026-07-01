@@ -82,7 +82,7 @@ export function Materials() {
         <MaterialRiskCard />
       </section>
 
-      <h2 className="mb-2.5 px-1 text-[15px] font-bold text-navy-700">공급 내역</h2>
+      <h2 className="mb-2.5 px-1 text-[0.9375rem] font-bold text-navy-700">공급 내역</h2>
       {sorted.length === 0 ? (
         <EmptyState icon="📦" title="자재공급 내역이 없어요" subtitle="우측 상단에서 공급을 등록해 보세요." />
       ) : (
@@ -94,7 +94,7 @@ export function Materials() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
+                      <span className="text-[0.9375rem] font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
                       {m.isAdditionalRequest && (
                         <span className="pill bg-amber-50 text-amber-600">추가요청</span>
                       )}

@@ -70,8 +70,8 @@ export function Clients() {
       {/* 거래처 데이터 세트 — segmented control */}
       <div className="mb-4">
         <div className="mb-1.5 flex items-center justify-between px-1">
-          <p className="text-[13px] font-bold text-navy-700">거래처 데이터 세트</p>
-          {clientSet > 0 && <span className="text-[11px] font-medium text-navy-400">현재 시연 데이터 기준</span>}
+          <p className="text-[0.8125rem] font-bold text-navy-700">거래처 데이터 세트</p>
+          {clientSet > 0 && <span className="text-[0.6875rem] font-medium text-navy-400">현재 시연 데이터 기준</span>}
         </div>
         <div className="flex gap-1 rounded-2xl bg-navy-50 p-1">
           {CLIENT_SETS.map((s) => {
@@ -89,7 +89,7 @@ export function Clients() {
             )
           })}
         </div>
-        <p className="mt-1.5 px-1 text-[11px] leading-snug text-navy-400">
+        <p className="mt-1.5 px-1 text-[0.6875rem] leading-snug text-navy-400">
           기본 5곳은 실제 주요거래처, 확장(+10/20/30)은 서울·경기권 시연용 데이터입니다.
         </p>
       </div>

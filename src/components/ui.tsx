@@ -21,7 +21,7 @@ export function PageShell({ children, className = '' }: { children: ReactNode; c
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-2.5 flex items-center justify-between px-1">
-      <h2 className="text-[15px] font-bold text-navy-700">{children}</h2>
+      <h2 className="text-[0.9375rem] font-bold text-navy-700">{children}</h2>
       {action}
     </div>
   )
@@ -54,7 +54,7 @@ export function MetricCard({
   size?: 'md' | 'lg'
   onClick?: () => void
 }) {
-  const numberSize = size === 'lg' ? 'text-[30px] sm:text-[34px]' : 'text-[26px]'
+  const numberSize = size === 'lg' ? 'text-[1.875rem] sm:text-[2.125rem]' : 'text-[1.625rem]'
   return (
     <motion.div
       onClick={onClick}
@@ -63,7 +63,7 @@ export function MetricCard({
       role={onClick ? 'button' : undefined}
       className={`card flex w-full flex-col p-4 text-left ${onClick ? 'cursor-pointer' : ''}`}
     >
-      <span className="text-[13px] font-semibold text-navy-400">{label}</span>
+      <span className="text-[0.8125rem] font-semibold text-navy-400">{label}</span>
       <span className={`mt-1.5 font-extrabold leading-none tracking-tight ${numberSize} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-base font-bold text-navy-300">{unit}</span>}
@@ -115,7 +115,7 @@ export function FilterChip({
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.15, ease: EASE }}
-      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
+      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[0.8125rem] font-bold transition-colors ${
         active ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
       }`}
     >
@@ -237,7 +237,7 @@ export function FeatureCard({
         <Icon size={19} strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold text-navy-900">{title}</p>
+        <p className="truncate text-[0.9375rem] font-bold text-navy-900">{title}</p>
         <p className="truncate text-xs text-navy-400">{desc}</p>
       </div>
       {badge && <span className="shrink-0 rounded-full bg-navy-50 px-2 py-0.5 text-xs font-bold text-navy-500">{badge}</span>}
@@ -296,9 +296,9 @@ export function SectionTabs({ items }: { items: { id: string; label: string }[] 
         <button
           key={it.id}
           onClick={() => go(it.id)}
-          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-bold text-navy-600 shadow-card"
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.8125rem] font-bold text-navy-600 shadow-card"
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[11px] font-extrabold text-teal-600">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[0.6875rem] font-extrabold text-teal-600">
             {i + 1}
           </span>
           {it.label}

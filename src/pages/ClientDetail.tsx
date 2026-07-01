@@ -93,7 +93,7 @@ export function ClientDetail() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate text-xl font-extrabold text-navy-900">{client.name}</h1>
-              <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[11px] font-bold text-navy-500">{client.type}</span>
+              <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.6875rem] font-bold text-navy-500">{client.type}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {client.collectsMedicalWaste && <WasteBadge type="의료폐기물" />}
@@ -132,11 +132,11 @@ export function ClientDetail() {
         <MetricCard label="월평균 수거량" value={weight(avg)} tone="navy" />
         <MetricCard label="미수금" value={outstanding > 0 ? won(outstanding) : '없음'} tone={outstanding > 0 ? 'rose' : 'emerald'} />
         <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">최근 수거일</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">최근 수거일</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{last ? prettyDate(last.date) : '—'}</p>
         </div>
         <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">다음 예정 수거</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">다음 예정 수거</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{next ? prettyDate(next.date) : '—'}</p>
         </div>
       </div>

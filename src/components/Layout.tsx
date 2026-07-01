@@ -64,8 +64,8 @@ function Sidebar() {
           비
         </div>
         <div className="leading-none">
-          <p className="text-[15px] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-          <p className="mt-1 text-[11px] font-medium text-navy-400">통합 운영관리</p>
+          <p className="text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="mt-1 text-[0.6875rem] font-medium text-navy-400">통합 운영관리</p>
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3">
@@ -96,7 +96,7 @@ function Sidebar() {
           <Smartphone size={18} strokeWidth={2.2} />
           모바일 미리보기
         </button>
-        <p className="mt-3 px-1 text-[11px] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
+        <p className="mt-3 px-1 text-[0.6875rem] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
       </div>
     </aside>
   )
@@ -111,10 +111,10 @@ function MobileHeader() {
           비
         </div>
         <div className="leading-none">
-          <p className="text-[15px] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-          <p className="mt-1 text-[11px] font-medium text-navy-400">의료폐기물 수거·운반 통합 운영관리</p>
+          <p className="text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="mt-1 text-[0.6875rem] font-medium text-navy-400">의료폐기물 수거·운반 통합 운영관리</p>
         </div>
-        <span className="ml-auto text-[10px] font-semibold tracking-wide text-navy-300">beonemirae ops</span>
+        <span className="ml-auto text-[0.625rem] font-semibold tracking-wide text-navy-300">beonemirae ops</span>
       </div>
     </header>
   )
@@ -139,7 +139,7 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
         strokeWidth={active ? 2.4 : 2}
         className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
       />
-      <span className={`relative z-10 text-[11px] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+      <span className={`relative z-10 text-[0.6875rem] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
     </button>

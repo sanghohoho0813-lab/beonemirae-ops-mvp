@@ -77,8 +77,8 @@ export function Dashboard() {
     <PageShell>
       {/* 인사 */}
       <div>
-        <p className="text-[13px] font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
-        <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-navy-900 lg:text-3xl">
+        <p className="text-[0.8125rem] font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
+        <h1 className="mt-1 text-[1.625rem] font-extrabold leading-tight tracking-tight text-navy-900 lg:text-3xl">
           대표님 한눈에 보기
         </h1>
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -87,7 +87,7 @@ export function Dashboard() {
               {chip}
             </span>
           ))}
-          {clientSet > 0 && <span className="text-[11px] font-medium text-navy-400">· 현재 시연 데이터 기준</span>}
+          {clientSet > 0 && <span className="text-[0.6875rem] font-medium text-navy-400">· 현재 시연 데이터 기준</span>}
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export function Dashboard() {
           <PlayCircle size={22} strokeWidth={2.2} className="text-teal-600" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold text-navy-900">대표님 시연 시작</p>
+          <p className="text-[0.9375rem] font-bold text-navy-900">대표님 시연 시작</p>
           <p className="truncate text-xs text-navy-400">현황 → 배차 → 거래처 → 수거대장 → 특허·사업계획</p>
         </div>
         <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-500 px-3 py-1.5 text-xs font-bold text-white">3분 시연</span>
@@ -148,8 +148,8 @@ export function Dashboard() {
           <Lightbulb size={19} className="text-teal-300" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold">기술개발 현황 · 특허출원</p>
-          <p className="truncate text-[11px] text-navy-300">10-2026-0101187 · 데이터 기반 경로 최적화(개발 중)</p>
+          <p className="text-[0.9375rem] font-bold">기술개발 현황 · 특허출원</p>
+          <p className="truncate text-[0.6875rem] text-navy-300">10-2026-0101187 · 데이터 기반 경로 최적화(개발 중)</p>
         </div>
         <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-teal-200">시연용 요약</span>
       </Link>

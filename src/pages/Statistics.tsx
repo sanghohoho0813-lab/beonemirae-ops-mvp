@@ -67,10 +67,10 @@ export function Statistics() {
         <h2 className="mb-2 text-sm font-semibold text-navy-500">폐기물 구분 비중</h2>
         <div className="card p-4">
           <div className="mb-2 flex h-5 overflow-hidden rounded-full bg-navy-50">
-            <div className="flex items-center justify-center bg-navy-500 text-[10px] font-bold text-white" style={{ width: `${medicalPct}%` }}>
+            <div className="flex items-center justify-center bg-navy-500 text-[0.625rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
               {medicalPct >= 12 ? `${medicalPct}%` : ''}
             </div>
-            <div className="flex items-center justify-center bg-teal-500 text-[10px] font-bold text-white" style={{ width: `${diaperPct}%` }}>
+            <div className="flex items-center justify-center bg-teal-500 text-[0.625rem] font-bold text-white" style={{ width: `${diaperPct}%` }}>
               {diaperPct >= 12 ? `${diaperPct}%` : ''}
             </div>
           </div>

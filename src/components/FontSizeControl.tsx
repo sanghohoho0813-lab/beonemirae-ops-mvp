@@ -23,7 +23,7 @@ export function FontSizeControl({ compact = false }: { compact?: boolean }) {
               가
             </span>
             <span className="mt-0.5 block text-xs font-semibold">{opt.label}</span>
-            {!compact && <span className={`mt-0.5 block text-[11px] ${active ? 'text-teal-50' : 'text-navy-400'}`}>{opt.hint}</span>}
+            {!compact && <span className={`mt-0.5 block text-[0.6875rem] ${active ? 'text-teal-50' : 'text-navy-400'}`}>{opt.hint}</span>}
           </button>
         )
       })}

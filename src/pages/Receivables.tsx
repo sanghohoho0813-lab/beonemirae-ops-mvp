@@ -42,8 +42,8 @@ export function Receivables() {
 
       {/* 미수금 요약 — 하나의 카드로 압축 */}
       <div className="card mb-5 p-5">
-        <p className="text-[13px] font-semibold text-navy-400">미수금 합계</p>
-        <p className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-rose-500">{won(outstanding)}</p>
+        <p className="text-[0.8125rem] font-semibold text-navy-400">미수금 합계</p>
+        <p className="mt-1 text-[1.75rem] font-extrabold leading-none tracking-tight text-rose-500">{won(outstanding)}</p>
         <p className="mt-1.5 text-xs text-navy-400">입금완료 외 전체 청구</p>
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-3">
           <div>

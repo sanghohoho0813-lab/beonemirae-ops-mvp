@@ -46,7 +46,7 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
           >
             <div className="space-y-3 border-t border-navy-100 p-4">
               <div>
-                <div className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-navy-500">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-navy-500">
                   <Route size={15} /> 권장 수거 순서
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -108,14 +108,14 @@ export function Dispatch() {
           <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/10">
             <FlaskConical size={18} className="text-teal-300" />
           </span>
-          <p className="text-[15px] font-bold">오늘 배차 추천 시뮬레이션</p>
+          <p className="text-[0.9375rem] font-bold">오늘 배차 추천 시뮬레이션</p>
         </div>
         <p className="mt-2.5 text-sm leading-relaxed text-navy-200">
           경기 남양주시 출발 · 서울·경기권 권역 배차. 적재율·긴급수거·처리장 인계를 함께 고려합니다.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {['남양주 출발', '개발 중', '시뮬레이션', '실증 예정'].map((b) => (
-            <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-teal-200">{b}</span>
+            <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[0.6875rem] font-bold text-teal-200">{b}</span>
           ))}
         </div>
       </div>
@@ -123,19 +123,19 @@ export function Dispatch() {
       {/* 핵심 숫자 */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">추천 차량</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">추천 차량</p>
           <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{plans.length}<span className="ml-0.5 text-base text-navy-300">대</span></p>
         </div>
         <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">반영 거래처</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">반영 거래처</p>
           <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{stopCount}<span className="ml-0.5 text-base text-navy-300">곳</span></p>
         </div>
         <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">긴급</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">긴급</p>
           <p className="mt-1.5 text-2xl font-extrabold text-rose-500">{urgentCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
         </div>
         <div className="card p-4">
-          <p className="text-[13px] font-semibold text-navy-400">자재 동시공급</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">자재 동시공급</p>
           <p className="mt-1.5 text-2xl font-extrabold text-amber-600">{materialCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
         </div>
       </div>

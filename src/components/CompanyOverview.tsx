@@ -35,7 +35,7 @@ export function CompanyOverview() {
         <div className="flex items-center gap-3">
           <IconChip icon={Recycle} tone="teal" />
           <div>
-            <p className="text-[13px] font-semibold text-navy-400">월평균 수거량</p>
+            <p className="text-[0.8125rem] font-semibold text-navy-400">월평균 수거량</p>
             <p className="text-xl font-extrabold tracking-tight text-navy-900">총 105톤</p>
           </div>
         </div>
@@ -62,7 +62,7 @@ export function CompanyOverview() {
         <div className="flex items-center gap-3">
           <IconChip icon={Building2} tone="navy" />
           <div>
-            <p className="text-[13px] font-semibold text-navy-400">거래처 구성</p>
+            <p className="text-[0.8125rem] font-semibold text-navy-400">거래처 구성</p>
             <p className="text-xl font-extrabold tracking-tight text-navy-900">총 {data.clients.length}곳</p>
           </div>
         </div>
@@ -80,7 +80,7 @@ export function CompanyOverview() {
         <div className="flex items-center gap-3">
           <IconChip icon={Truck} tone="navy" />
           <div>
-            <p className="text-[13px] font-semibold text-navy-400">차량 구성</p>
+            <p className="text-[0.8125rem] font-semibold text-navy-400">차량 구성</p>
             <p className="text-xl font-extrabold tracking-tight text-navy-900">총 {data.vehicles.length}대</p>
           </div>
         </div>
@@ -98,7 +98,7 @@ export function CompanyOverview() {
       <div className="flex items-center gap-3 p-4">
         <IconChip icon={Boxes} tone="amber" />
         <div>
-          <p className="text-[13px] font-semibold text-navy-400">자재 추가공급</p>
+          <p className="text-[0.8125rem] font-semibold text-navy-400">자재 추가공급</p>
           <p className="text-xl font-extrabold tracking-tight text-navy-900">월 4~5회 발생</p>
         </div>
       </div>

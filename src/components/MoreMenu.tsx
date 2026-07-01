@@ -77,7 +77,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
         </span>
         <div className="min-w-0">
           <p className="font-bold">시연용 핵심 요약</p>
-          <p className="text-[11px] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
+          <p className="text-[0.6875rem] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
       </Tappable>

@@ -91,7 +91,7 @@ export function Presentation() {
       {/* 상단 */}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-bold text-teal-600">대표님 시연 · 3분</p>
+          <p className="text-[0.8125rem] font-bold text-teal-600">대표님 시연 · 3분</p>
           <h1 className="text-xl font-extrabold text-navy-900">단계별로 보기</h1>
         </div>
         <button
@@ -130,7 +130,7 @@ export function Presentation() {
             <span className="text-sm font-bold">STEP {i + 1} / {steps.length}</span>
           </div>
           <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-navy-900">{step.title}</h2>
-          <p className="mt-2 text-[15px] leading-relaxed text-navy-500">{step.line}</p>
+          <p className="mt-2 text-[0.9375rem] leading-relaxed text-navy-500">{step.line}</p>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             {step.stats.map((s) => (

@@ -58,7 +58,7 @@ export function TodaySchedule() {
           <ChevronLeft size={20} />
         </button>
         <div className="text-center">
-          <p className="text-[15px] font-extrabold text-navy-900">{prettyDate(date)}</p>
+          <p className="text-[0.9375rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
           <button className="text-xs font-bold text-teal-600" onClick={() => setDate(today())}>
             오늘로 이동
           </button>

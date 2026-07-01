@@ -46,7 +46,7 @@ export function SeparationNotice() {
     <div className="card p-5">
       <div className="flex items-center gap-2">
         <IconChip icon={Recycle} tone="teal" size={36} />
-        <p className="text-[15px] font-bold text-navy-800">{SEPARATION_NOTICE.title}</p>
+        <p className="text-[0.9375rem] font-bold text-navy-800">{SEPARATION_NOTICE.title}</p>
       </div>
       <div className="mt-3 flex gap-2">
         <WasteBadge type="의료폐기물" />
@@ -78,8 +78,8 @@ export function VehicleFleetCard() {
       <div className="flex items-center gap-2">
         <IconChip icon={Truck} tone="navy" size={36} />
         <div>
-          <p className="text-[15px] font-bold text-navy-800">차량 정보 관리</p>
-          <p className="text-[11px] font-medium text-navy-400">특허 구성요소 130 · 폐기물 종류별 차량 분리</p>
+          <p className="text-[0.9375rem] font-bold text-navy-800">차량 정보 관리</p>
+          <p className="text-[0.6875rem] font-medium text-navy-400">특허 구성요소 130 · 폐기물 종류별 차량 분리</p>
         </div>
       </div>
       <div className="mt-3 space-y-2.5">
@@ -120,8 +120,8 @@ export function FacilityCard() {
       <div className="flex items-center gap-2">
         <IconChip icon={Factory} tone="navy" size={36} />
         <div>
-          <p className="text-[15px] font-bold text-navy-800">처리장 / 소각장 정보</p>
-          <p className="text-[11px] font-medium text-navy-400">특허 구성요소 140 · 인계 가능 시간</p>
+          <p className="text-[0.9375rem] font-bold text-navy-800">처리장 / 소각장 정보</p>
+          <p className="text-[0.6875rem] font-medium text-navy-400">특허 구성요소 140 · 인계 가능 시간</p>
         </div>
       </div>
       <div className="mt-3 space-y-2.5">
@@ -168,8 +168,8 @@ export function MaterialRiskCard() {
       <div className="flex items-center gap-2">
         <IconChip icon={Package} tone="amber" size={36} />
         <div>
-          <p className="text-[15px] font-bold text-navy-800">자재 소진 위험</p>
-          <p className="text-[11px] font-medium text-navy-400">입고·출고·추가요청 기반 시뮬레이션</p>
+          <p className="text-[0.9375rem] font-bold text-navy-800">자재 소진 위험</p>
+          <p className="text-[0.6875rem] font-medium text-navy-400">입고·출고·추가요청 기반 시뮬레이션</p>
         </div>
       </div>
       {risks.length === 0 ? (
@@ -203,8 +203,8 @@ export function IsolationCard() {
       <div className="flex items-center gap-2">
         <IconChip icon={ShieldAlert} tone="rose" size={36} />
         <div>
-          <p className="text-[15px] font-bold text-navy-800">격리 / 긴급 수거 확인</p>
-          <p className="text-[11px] font-medium text-navy-400">격리의료폐기물 보관기한 대응</p>
+          <p className="text-[0.9375rem] font-bold text-navy-800">격리 / 긴급 수거 확인</p>
+          <p className="text-[0.6875rem] font-medium text-navy-400">격리의료폐기물 보관기한 대응</p>
         </div>
       </div>
       <ul className="mt-3 space-y-2">
@@ -239,8 +239,8 @@ export function PatentMappingCard() {
       <div className="flex items-center gap-2">
         <IconChip icon={FileBadge} tone="navy" size={36} />
         <div>
-          <p className="text-[15px] font-bold text-navy-800">특허 구성요소 매핑</p>
-          <p className="text-[11px] font-medium text-navy-400">
+          <p className="text-[0.9375rem] font-bold text-navy-800">특허 구성요소 매핑</p>
+          <p className="text-[0.6875rem] font-medium text-navy-400">
             {PATENT.title} · {PATENT.number}
           </p>
         </div>
@@ -249,7 +249,7 @@ export function PatentMappingCard() {
         {PATENT.components.map((c) => (
           <div key={c.code} className="flex flex-col gap-1 rounded-2xl bg-navy-50 p-3.5 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex shrink-0 items-center gap-2 sm:w-52">
-              <span className="rounded-lg bg-white px-2 py-0.5 text-[11px] font-extrabold text-navy-400">{c.code}</span>
+              <span className="rounded-lg bg-white px-2 py-0.5 text-[0.6875rem] font-extrabold text-navy-400">{c.code}</span>
               <span className="text-sm font-bold text-navy-800">{c.name}</span>
             </div>
             <span className="text-sm text-navy-500">{c.feature}</span>
@@ -267,8 +267,8 @@ export function BusinessPlanCard() {
       <div className="flex items-center gap-2">
         <IconChip icon={ClipboardList} tone="teal" size={36} />
         <div>
-          <p className="text-[15px] font-bold text-navy-800">사업계획서와 MVP 정합성</p>
-          <p className="text-[11px] font-medium text-navy-400">사업계획서 방향 ↔ 앱 기능</p>
+          <p className="text-[0.9375rem] font-bold text-navy-800">사업계획서와 MVP 정합성</p>
+          <p className="text-[0.6875rem] font-medium text-navy-400">사업계획서 방향 ↔ 앱 기능</p>
         </div>
       </div>
       <div className="mt-3 space-y-2">
@@ -288,8 +288,8 @@ export function BusinessPlanCard() {
 export function OfficeSavingsCard() {
   return (
     <div className="card p-5">
-      <p className="text-[15px] font-bold text-navy-800">이 프로그램이 줄여주는 사무업무</p>
-      <p className="mt-0.5 text-[11px] font-medium text-navy-400">관리 부담 완화 · 효과는 실증 후 검증 예정</p>
+      <p className="text-[0.9375rem] font-bold text-navy-800">이 프로그램이 줄여주는 사무업무</p>
+      <p className="mt-0.5 text-[0.6875rem] font-medium text-navy-400">관리 부담 완화 · 효과는 실증 후 검증 예정</p>
       <ul className="mt-3 grid gap-2 sm:grid-cols-2">
         {OFFICE_SAVINGS.map((t) => (
           <li key={t} className="flex items-start gap-2 text-sm font-medium text-navy-600">
@@ -306,8 +306,8 @@ export function OfficeSavingsCard() {
 export function SelfCheckCard() {
   return (
     <div className="card p-5">
-      <p className="text-[15px] font-bold text-navy-800">현장실사 셀프 체크</p>
-      <p className="mt-0.5 text-[11px] font-medium text-navy-400">사업계획서·특허·MVP 정합성 점검</p>
+      <p className="text-[0.9375rem] font-bold text-navy-800">현장실사 셀프 체크</p>
+      <p className="mt-0.5 text-[0.6875rem] font-medium text-navy-400">사업계획서·특허·MVP 정합성 점검</p>
       <ul className="mt-3 space-y-2">
         {SELF_CHECK.map((t) => (
           <li key={t} className="flex items-start gap-2.5">
@@ -326,7 +326,7 @@ export function SelfCheckCard() {
 export function FuturePlanCard() {
   return (
     <div className="card p-5">
-      <p className="text-[15px] font-bold text-navy-800">향후 고도화</p>
+      <p className="text-[0.9375rem] font-bold text-navy-800">향후 고도화</p>
       <ul className="mt-3 flex flex-wrap gap-2">
         {FUTURE_PLAN.map((t) => (
           <li key={t} className="rounded-full bg-navy-50 px-3 py-1.5 text-xs font-bold text-navy-600">

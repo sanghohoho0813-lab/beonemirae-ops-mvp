@@ -91,7 +91,7 @@ export function DemoSummary() {
             <button key={f.id} onClick={() => scrollTo(f.id)} className="card pressable flex items-center gap-3 p-4 text-left">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-sm font-extrabold text-teal-600">{f.n}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-bold text-navy-900">{f.title}</p>
+                <p className="truncate text-[0.9375rem] font-bold text-navy-900">{f.title}</p>
                 <p className="truncate text-xs text-navy-400">{f.line}</p>
               </div>
               <ChevronRight size={16} className="shrink-0 text-navy-300" />
@@ -117,7 +117,7 @@ export function DemoSummary() {
           <div className="card p-5">
             <div className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-amber-500" />
-              <p className="text-[15px] font-bold text-navy-800">의료기관 폐기물 운영 과제</p>
+              <p className="text-[0.9375rem] font-bold text-navy-800">의료기관 폐기물 운영 과제</p>
             </div>
             <ul className="mt-3 space-y-1.5">
               {FIELD_PROBLEMS.map((p) => (
@@ -133,7 +133,7 @@ export function DemoSummary() {
           <div className="card p-5">
             <div className="flex items-center gap-2">
               <Layers size={18} className="text-teal-600" />
-              <p className="text-[15px] font-bold text-navy-800">통합 운영관리 시스템 (개발 중)</p>
+              <p className="text-[0.9375rem] font-bold text-navy-800">통합 운영관리 시스템 (개발 중)</p>
             </div>
             <ul className="mt-3 space-y-1.5">
               {SYSTEM_SCOPE.map((p) => (
@@ -148,7 +148,7 @@ export function DemoSummary() {
 
       {/* 3. 배차·경로 추천 */}
       <section id="d-3" className="scroll-mt-4">
-        <SectionTitle action={<button onClick={() => navigate('/dispatch')} className="text-[13px] font-bold text-teal-600">자세히 →</button>}>
+        <SectionTitle action={<button onClick={() => navigate('/dispatch')} className="text-[0.8125rem] font-bold text-teal-600">자세히 →</button>}>
           3. 배차·경로 추천 시뮬레이션
         </SectionTitle>
         <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
@@ -161,7 +161,7 @@ export function DemoSummary() {
                 </div>
                 <span className="shrink-0 text-lg font-extrabold text-teal-600">{p.loadRate}%</span>
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-navy-500"><Route size={14} /> 권장 순서</p>
+              <p className="mt-2 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-navy-500"><Route size={14} /> 권장 순서</p>
               <p className="mt-1 text-sm font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
               <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-navy-500"><Target size={13} /> {p.facilityName} 인계 {p.handoverTime} · 운행 {p.simDistanceKm}km (시뮬)</p>
             </div>

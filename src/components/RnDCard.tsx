@@ -19,8 +19,8 @@ export function RnDCard() {
           <Lightbulb size={18} strokeWidth={2.2} className="text-teal-300" />
         </span>
         <div className="leading-tight">
-          <p className="text-[15px] font-bold">기술개발 현황</p>
-          <p className="text-[11px] font-medium text-navy-300">R&amp;D · 데이터 기반 운영 시스템</p>
+          <p className="text-[0.9375rem] font-bold">기술개발 현황</p>
+          <p className="text-[0.6875rem] font-medium text-navy-300">R&amp;D · 데이터 기반 운영 시스템</p>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ export function RnDCard() {
         <div className="mt-4 flex items-center gap-2.5 rounded-2xl bg-navy-50 px-4 py-3">
           <FileBadge size={20} strokeWidth={2.2} className="shrink-0 text-navy-500" />
           <div className="leading-tight">
-            <p className="text-[11px] font-semibold text-navy-400">특허출원번호</p>
+            <p className="text-[0.6875rem] font-semibold text-navy-400">특허출원번호</p>
             <p className="text-sm font-extrabold tracking-tight text-navy-900">10-2026-0101187</p>
           </div>
         </div>

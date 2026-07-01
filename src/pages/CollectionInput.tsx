@@ -92,7 +92,7 @@ export function CollectionInput() {
               <button
                 key={w}
                 onClick={() => setWasteType(w)}
-                className={`rounded-2xl px-4 py-3.5 text-[15px] font-bold transition-transform duration-150 active:scale-[0.97] ${
+                className={`rounded-2xl px-4 py-3.5 text-[0.9375rem] font-bold transition-transform duration-150 active:scale-[0.97] ${
                   wasteType === w
                     ? w === '의료폐기물'
                       ? 'bg-rose-500 text-white shadow-sm'
