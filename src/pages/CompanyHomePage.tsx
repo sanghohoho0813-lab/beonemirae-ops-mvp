@@ -45,7 +45,15 @@ const NAV = [
   { label: '문의', href: '#contact' },
 ]
 
-const HERO_BADGES = ['병원·요양병원 정기 수거', '의료폐기물 수거·운반', '일회용기저귀 분리 운행', '자재공급·수거대장 관리', '서울·경기권 운영']
+const HERO_BADGES = ['병원·요양병원 정기 수거', '의료폐기물 수거·운반', '폐기물 종류별 분리 운행', '자재공급·수거대장 관리', '서울·경기권 운영']
+
+// 보조색 톤 — 아이콘 배경 (teal 위생·안정 / emerald 완료·관리 / amber 현장 대응 / navy 기본)
+const TONE_CHIP: Record<string, string> = {
+  teal: 'bg-teal-50 text-teal-600 group-hover:bg-teal-500 group-hover:text-white',
+  emerald: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white',
+  amber: 'bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white',
+  navy: 'bg-navy-100 text-navy-700 group-hover:bg-navy-900 group-hover:text-teal-300',
+}
 
 // 서비스 대상(고객 상황) — 서비스 섹션 상단에 "이런 기관과 함께합니다"로 노출
 const SERVICE_FITS = [
@@ -63,17 +71,22 @@ const HERO_FIELD: FieldFrame = {
   alt: '병원 앞에서 의료폐기물 전용 용기와 수거 차량을 두고 수거를 준비하는 현장',
   src: '/company/field-truck-hospital.webp',
 }
-const FIELD_CARDS: { icon: LucideIcon; title: string; alt: string; desc: string; src?: string }[] = [
-  { icon: Building2, title: '병원·요양병원·의원 수거 현장', alt: '전용 차량에 의료폐기물 용기를 적재하는 수거·운반 현장', desc: '병원별 수거주기와 보관기한을 고려해 정기적으로 의료폐기물을 수거·운반합니다.', src: '/company/loading-collection-truck.webp' },
-  { icon: Truck, title: '의료폐기물·일회용기저귀 분리 운행', alt: '의료폐기물과 의료기관 일회용기저귀를 각각 다른 차량으로 분리 운행하는 현장', desc: '폐기물 종류에 따라 차량·관리체계·처리 흐름을 분리해 운행합니다.', src: '/company/separated-transport-flows.webp' },
-  { icon: Container, title: '자재공급·수거대장·미수금 관리', alt: '전용 용기와 자재를 보관·관리하는 현장', desc: '전용 용기·봉투·박스 공급부터 수거대장·미수금까지 현장 운영을 함께 관리합니다.', src: '/company/material-container-management.webp' },
-]
+// 섹션별 현장 이미지 — 같은 사진을 2회 이상 재사용하지 않도록 용도별로 분리
+const IMG: Record<string, FieldFrame> = {
+  consultation: { icon: ClipboardList, title: '병원 담당자와 수거 조건 상담', alt: '병원 담당자와 수거 조건·자재 요청을 함께 확인하는 상담 장면', src: '/company/consultation-hospital-admin.webp' },
+  band: { icon: Truck, title: '', alt: '전용 차량에 의료폐기물 용기를 적재하고 운송을 준비하는 수거 현장', src: '/company/loading-collection-truck.webp' },
+  smallClinic: { icon: Building2, title: '의원급 정기 수거 포인트', alt: '의원급 수거 포인트에서 밀봉 용기와 라벨을 확인하는 장면', src: '/company/small-clinic-pickup-point.webp' },
+  supply: { icon: Container, title: '자재·전용 용기 공급 준비', alt: '자재 재고를 확인하고 전용 용기·자재 공급을 준비하는 장면', src: '/company/supply-inventory-prep.webp' },
+  record: { icon: FileText, title: '수거대장·이력 관리', alt: '태블릿과 수기 대장으로 수거이력을 함께 관리하는 장면', src: '/company/pickup-record-management.webp' },
+  route: { icon: Route, title: '배차·경로 · 수거 데이터 운영', alt: '운행 경로와 수거 데이터를 확인하는 운영관리 장면', src: '/company/route-operations-desk.webp' },
+  separated: { icon: Truck, title: '폐기물 종류별 분리 운행 현장', alt: '의료폐기물과 관련 배출물을 두 대의 차량으로 분리 운행하는 현장', src: '/company/separated-transport-flows.webp' },
+}
 
-const STATS: { icon: LucideIcon; prefix: string; count: number | null; text?: string; suffix: string; label: string; desc: string }[] = [
-  { icon: Building2, prefix: '거래처 ', count: 49, suffix: '곳', label: '의료기관 배출기관', desc: '병원·요양병원·의원·요양시설 등' },
-  { icon: Recycle, prefix: '월평균 ', count: 105, suffix: '톤', label: '수거·운반 규모', desc: '의료폐기물 40톤 + 일회용기저귀 65톤' },
-  { icon: Truck, prefix: '차량 ', count: 5, suffix: '대', label: '폐기물 종류별 분리 운행', desc: '의료폐기물 3대 · 일회용기저귀 2대' },
-  { icon: MapPin, prefix: '', count: null, text: '서울·경기권', suffix: '', label: '광역 운영', desc: '경기 남양주 기반 권역 운영' },
+const STATS: { icon: LucideIcon; prefix: string; count: number | null; text?: string; suffix: string; label: string; desc: string; tone: 'teal' | 'emerald' | 'amber' | 'navy' }[] = [
+  { icon: Building2, prefix: '', count: 50, suffix: '곳+', label: '관리 거래처', desc: '병원·요양병원·의원 등 서울·경기권 배출기관', tone: 'navy' },
+  { icon: Recycle, prefix: '월 ', count: 100, suffix: '톤+', label: '수거·운반 규모', desc: '의료폐기물 및 관련 배출물 수거·운반', tone: 'teal' },
+  { icon: MapPin, prefix: '', count: null, text: '서울·경기권', suffix: '', label: '광역 수거 운영', desc: '남양주 기반 권역 정기 수거', tone: 'emerald' },
+  { icon: Clock, prefix: '', count: null, text: '정기·긴급', suffix: ' 대응', label: '수거 대응 체계', desc: '정기 수거, 추가 수거, 자재공급 요청 관리', tone: 'amber' },
 ]
 
 const PROBLEMS: { icon: LucideIcon; title: string; desc: string }[] = [
@@ -392,9 +405,10 @@ function RouteGraphic() {
 
 // ── 상담 문의 폼 (프론트 전용 — 백엔드 미연동) ───────────────────────────────
 const CLIENT_TYPE_OPTIONS = ['병원', '요양병원', '의원', '치과', '한의원·한방병원', '요양시설', '장례식장', '기타']
+const INQUIRY_TYPES = ['정기 수거 상담', '추가 수거 문의', '자재공급 문의', '수거대장·이력 문의', '기타']
 
 function ConsultForm() {
-  const [form, setForm] = useState({ org: '', manager: '', contact: '', region: '', type: '', message: '' })
+  const [form, setForm] = useState({ inquiry: '정기 수거 상담', org: '', manager: '', contact: '', region: '', type: '', message: '' })
   const [status, setStatus] = useState<'idle' | 'invalid' | 'done'>('idle')
   const upd = (k: keyof typeof form) => (e: { target: { value: string } }) => {
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -412,6 +426,24 @@ function ConsultForm() {
   const label = 'mb-1.5 block text-[14px] font-bold text-navy-700'
   return (
     <form onSubmit={submit} className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-navy-100 sm:p-8" noValidate>
+      {/* 문의 유형 칩 */}
+      <p className={label}>문의 유형</p>
+      <div className="mb-5 flex flex-wrap gap-2">
+        {INQUIRY_TYPES.map((t) => {
+          const on = form.inquiry === t
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, inquiry: t }))}
+              className={`rounded-full px-4 py-2 text-[14px] font-bold transition ${on ? 'bg-teal-500 text-white shadow-sm' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'}`}
+            >
+              {t}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className={label} htmlFor="cf-org">기관명 <span className="text-rose-500">*</span></label>
@@ -604,8 +636,8 @@ export function CompanyHomePage() {
                 <span className="block"><span className="text-teal-600">비원미래</span>가 현장부터 관리합니다</span>
               </h1>
               <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-navy-600 sm:text-lg">
-                서울·경기권 병원·요양병원·의원 등 배출기관의 의료폐기물과 의료기관 일회용기저귀 수거·운반을 수행하며,
-                자재공급·수거이력·수거대장·배차 데이터를 함께 관리하는 운영관리 시스템을 개발하고 있습니다.
+                서울·경기권 병원·요양병원·의원 등 배출기관의 의료폐기물 수거·운반을 수행하며, 폐기물 종류별 분리 운행부터
+                자재공급·수거이력·수거대장·배차 데이터까지 함께 관리하는 운영관리 시스템을 개발하고 있습니다.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -647,29 +679,36 @@ export function CompanyHomePage() {
           </div>
         </section>
 
-        {/* ── 현장에서 시작한 운영관리 ──────────────────────────────────────── */}
+        {/* ── 고객 편익: 맡기면 편해지는 일 (상담) ────────────────────────────── */}
         <Section>
-          <Reveal>
-            <Eyebrow>현장 기반</Eyebrow>
-            <Heading>현장에서 시작한 의료폐기물 운영관리</Heading>
-            <p className="mt-4 max-w-3xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
-              의료폐기물 수거·운반은 단순 배송 업무가 아니라, 배출기관별 보관기한·수거주기·폐기물 종류·전용 용기·차량
-              적재량·처리장 인계시간을 함께 관리해야 하는 현장 운영 업무입니다. 비원미래는 실제 수거·운반 현장에서 발생하는
-              요청과 이력을 데이터로 구조화하고 있습니다.
-            </p>
-          </Reveal>
-          <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {FIELD_CARDS.map((f, i) => (
-              <Reveal key={f.title} delay={i * 0.08}>
-                <div className="group h-full overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
-                  <ImageSlot frame={f} hideCaption className="aspect-[16/10] rounded-b-none ring-0 shadow-none" />
-                  <div className="p-6">
-                    <p className="text-xl font-bold text-navy-900">{f.title}</p>
-                    <p className="mt-2 text-base leading-relaxed text-navy-600">{f.desc}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
+            <Reveal>
+              <ImageSlot frame={IMG.consultation} hideCaption className="aspect-[4/3] shadow-lg" />
+            </Reveal>
+            <Reveal delay={0.05}>
+              <Eyebrow>의료기관이 맡기면 편해지는 일</Eyebrow>
+              <Heading>수거 조건부터 자재 요청까지 함께 확인합니다</Heading>
+              <p className="mt-5 text-[17px] leading-relaxed text-navy-700 sm:text-lg">
+                기관 유형, 수거 주기, 배출량, 자재공급 필요 여부를 확인해 의료기관별 운영 조건에 맞춰 상담합니다.
+              </p>
+              <ul className="mt-7 space-y-3">
+                {[
+                  { t: '정기 수거 주기 설계', d: '병원·요양병원·의원 유형과 배출량에 맞춰 방문 주기를 정합니다.', tone: 'bg-emerald-50 text-emerald-600' },
+                  { t: '자재공급까지 함께', d: '전용 용기·봉투·박스 공급을 수거 흐름에 포함해 별도 방문을 줄입니다.', tone: 'bg-teal-50 text-teal-600' },
+                  { t: '추가·긴급 수거 대응', d: '실사·인증 전 추가 수거 요청도 누락 없이 관리합니다.', tone: 'bg-amber-50 text-amber-600' },
+                ].map((it) => (
+                  <li key={it.t} className="flex items-start gap-3.5 rounded-2xl bg-white p-5 shadow-card ring-1 ring-navy-100">
+                    <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${it.tone}`}>
+                      <CheckCircle2 size={20} strokeWidth={2.3} />
+                    </span>
+                    <div>
+                      <p className="text-lg font-bold text-navy-900">{it.t}</p>
+                      <p className="mt-1 text-base leading-relaxed text-navy-600">{it.d}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
           </div>
         </Section>
 
@@ -693,8 +732,9 @@ export function CompanyHomePage() {
           <Reveal>
             <Eyebrow>운영 기반</Eyebrow>
             <Heading>현장 데이터로 운영되는 회사입니다</Heading>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
-              경기 남양주에 기반을 두고 서울·경기권 의료기관을 대상으로 실제 수거·운반을 운영하고 있습니다.
+            <p className="mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
+              남양주를 기반으로 서울·경기권 의료기관을 중심으로 운영하고 있습니다. 현재 권역 내 정기 수거 체계를 안정적으로
+              운영하며, 거래처 확대에 맞춰 운행 데이터를 축적하고 있습니다.
             </p>
           </Reveal>
           <motion.div
@@ -711,22 +751,28 @@ export function CompanyHomePage() {
               const Icon = s.icon
               return (
                 <Reveal key={s.label} delay={i * 0.08}>
-                  <div className="group h-full rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-50 text-teal-600 transition group-hover:bg-teal-500 group-hover:text-white">
+                  <div className="group h-full rounded-2xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-lg transition ${TONE_CHIP[s.tone]}`}>
                       <Icon size={24} strokeWidth={2.2} />
                     </span>
-                    <p className="mt-4 text-[2rem] font-extrabold tracking-tight text-navy-900">
+                    <p className="mt-4 text-[2.1rem] font-extrabold tracking-tight text-navy-900">
                       {s.prefix}
                       {s.count !== null ? <CountNumber to={s.count} run={statsRun} /> : s.text}
                       {s.suffix}
                     </p>
-                    <p className="mt-1.5 text-lg font-bold text-navy-700">{s.label}</p>
-                    <p className="mt-1 text-base leading-snug text-navy-500">{s.desc}</p>
+                    <p className="mt-1.5 text-lg font-bold text-navy-800">{s.label}</p>
+                    <p className="mt-1 text-base leading-snug text-navy-600">{s.desc}</p>
                   </div>
                 </Reveal>
               )
             })}
           </motion.div>
+
+          <Reveal className="mt-4">
+            <p className="rounded-2xl bg-navy-50 px-5 py-4 text-[15px] leading-relaxed text-navy-600 sm:text-base">
+              현재 폐기물 종류별 차량을 운영하며, 향후 거래처 확대에 맞춰 운행 체계와 운영관리 데이터를 고도화할 계획입니다.
+            </p>
+          </Reveal>
 
           {/* 신뢰 요소 스트립 */}
           <Reveal className="mt-4">
@@ -784,7 +830,7 @@ export function CompanyHomePage() {
             <Reveal>
               <figure className="relative overflow-hidden rounded-3xl shadow-xl ring-1 ring-navy-100">
                 <ImageSlot
-                  frame={{ icon: Route, title: '', alt: '작업자가 태블릿으로 수거·경로 데이터를 확인하는 현장', src: '/company/field-pickup-tablet.webp' }}
+                  frame={IMG.band}
                   hideCaption
                   className="aspect-[3/4] rounded-none ring-0 shadow-none sm:aspect-[16/9] lg:aspect-[21/9]"
                 />
@@ -827,45 +873,62 @@ export function CompanyHomePage() {
             </div>
           </Reveal>
 
-          {/* 이미지 + 서비스 요약 */}
-          <Reveal className="mt-8">
-            <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
-              <ImageSlot
-                frame={{ icon: Truck, title: '전용 차량 적재 · 운송 준비', alt: '전용 차량에 의료폐기물 용기를 적재하고 운송을 준비하는 현장', src: '/company/loading-collection-truck.webp' }}
-                className="aspect-[16/10]"
-              />
-              <ul className="space-y-3">
-                {[
-                  ['의료폐기물 정기 수거', '병원별 수거주기와 보관기한을 고려해 정기적으로 수거합니다.'],
-                  ['의료기관 일회용기저귀 분리 운행', '의료폐기물과 차량·관리체계를 분리해 운행합니다.'],
-                  ['전용 용기·자재 공급', '전용 용기·봉투·박스 등 자재 요청과 공급 이력을 관리합니다.'],
-                  ['수거이력·수거대장 관리', '수거이력과 자재공급을 통합해 월간 수거대장으로 정리합니다.'],
-                ].map(([t, d]) => (
-                  <li key={t} className="flex items-start gap-3 rounded-xl bg-white p-4 shadow-card ring-1 ring-navy-100">
-                    <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-teal-500" strokeWidth={2.2} />
-                    <div>
-                      <p className="text-lg font-bold text-navy-900">{t}</p>
-                      <p className="mt-0.5 text-base leading-relaxed text-navy-600">{d}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Reveal>
+          {/* 이미지 + 텍스트 좌우 split 3종 (좌우 교차) */}
+          <div className="mt-12 space-y-12 sm:space-y-16">
+            {[
+              {
+                img: IMG.smallClinic,
+                tag: '의원급 정기 수거',
+                tone: 'bg-teal-50 text-teal-600',
+                title: '의원급 의료기관도 정기 수거 기준에 맞춰 관리합니다',
+                desc: '격주 수거가 많은 의원급 거래처도 보관기한, 전용 용기, 방문 일정이 누락되지 않도록 관리합니다.',
+              },
+              {
+                img: IMG.supply,
+                tag: '자재·전용 용기 공급',
+                tone: 'bg-amber-50 text-amber-600',
+                title: '전용 용기와 자재 공급도 운영 흐름에 포함합니다',
+                desc: '전용 용기, 봉투, 박스 등 자재 요청과 공급 주기를 함께 확인해 별도 방문과 누락을 줄이는 방향으로 관리합니다.',
+              },
+              {
+                img: IMG.record,
+                tag: '수거대장·이력 관리',
+                tone: 'bg-emerald-50 text-emerald-600',
+                title: '수거이력과 대장 요청도 더 쉽게 확인할 수 있도록',
+                desc: '수거 완료 내역, 자재공급 기록, 병원 요청 자료를 거래처 단위로 정리하는 구조를 고도화하고 있습니다.',
+              },
+            ].map((f, i) => (
+              <Reveal key={f.title}>
+                <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-14">
+                  <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+                    <ImageSlot frame={f.img} hideCaption className="aspect-[16/10] shadow-lg" />
+                  </div>
+                  <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
+                    <span className={`inline-block rounded-full px-3.5 py-1.5 text-sm font-bold ${f.tone}`}>{f.tag}</span>
+                    <h3 className="mt-3 text-[1.5rem] font-extrabold leading-snug tracking-tight text-navy-900 sm:text-[1.85rem]">
+                      {f.title}
+                    </h3>
+                    <p className="mt-4 text-[17px] leading-relaxed text-navy-700 sm:text-lg">{f.desc}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
 
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-16 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {SERVICES.map((s, i) => {
               const Icon = s.icon
+              const sTone = ['teal', 'teal', 'amber', 'emerald', 'navy', 'teal'][i] ?? 'teal'
               return (
                 <Reveal key={s.title} delay={i * 0.05}>
-                  <div className="group flex h-full flex-col rounded-xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-50 text-teal-600 transition group-hover:bg-teal-500 group-hover:text-white">
+                  <div className="group flex h-full flex-col rounded-2xl bg-white p-6 shadow-card ring-1 ring-navy-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:ring-teal-200">
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-lg transition ${TONE_CHIP[sTone]}`}>
                       <Icon size={24} strokeWidth={2.2} />
                     </span>
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <p className="text-xl font-bold text-navy-900">{s.title}</p>
                       {s.soon && (
-                        <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[12px] font-bold text-navy-500">개발 중</span>
+                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[12px] font-bold text-amber-600">개발 중</span>
                       )}
                     </div>
                     <p className="mt-2 text-base leading-relaxed text-navy-600">{s.desc}</p>
@@ -894,14 +957,19 @@ export function CompanyHomePage() {
               <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
                 <div>
                   <Eyebrow light>운영관리 시스템</Eyebrow>
-                  <Heading light>현장 데이터를 하나의 운영 흐름으로 연결합니다</Heading>
+                  <Heading light>현장 관리를 더 정확하게 하기 위한 운영관리 시스템</Heading>
                   <p className="mt-4 text-[17px] leading-relaxed text-navy-100 sm:text-lg">
-                    수거조건, 차량 정보, 처리장 인계시간, 자재 요청, 수거이력은 각각 따로 관리되면 누락이 발생하기 쉽습니다.
-                    비원미래는 실제 현장 데이터를 하나의 운영 흐름으로 연결하는 시스템을 개발하고 있습니다.
+                    비원미래는 수거조건, 차량 운행, 처리장 인계시간, 자재 요청, 수거이력 데이터를 체계적으로 관리하기 위해
+                    운영관리 시스템을 개발하고 있습니다. 실제 운행 데이터를 축적하며 배차·경로 추천 로직과 수거대장 출력
+                    기능을 고도화할 계획입니다.
                   </p>
+                  <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-teal-500/20 px-4 py-2 text-[15px] font-bold text-teal-200 ring-1 ring-teal-400/30">
+                    <Navigation size={17} strokeWidth={2.3} /> 배차·경로 추천 시뮬레이션 개발 중
+                  </span>
                 </div>
                 <ImageSlot
-                  frame={{ icon: Route, title: '현장에서 수거·경로 데이터 확인', alt: '작업자가 태블릿으로 수거·경로 데이터를 확인하는 현장', src: '/company/field-pickup-tablet.webp' }}
+                  frame={IMG.route}
+                  hideCaption
                   className="aspect-[16/10] ring-white/10"
                 />
               </div>
@@ -962,19 +1030,17 @@ export function CompanyHomePage() {
           <Reveal>
             <div className="text-center">
               <Eyebrow>차별화</Eyebrow>
-              <Heading>같은 병원에서 발생해도, 운행과 관리는 분리되어야 합니다</Heading>
-              <p className="mx-auto mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-600 sm:text-lg">
-                의료폐기물과 의료기관 일회용기저귀는 동일 의료기관에서 함께 발생할 수 있지만, 차량·관리체계·처리 흐름이
-                달라 별도 운행과 이력관리가 필요합니다. 비원미래는 이 현장 특수성을 운영관리 구조에 반영하고 있습니다.
+              <Heading>폐기물 종류에 따라 운행과 관리 방식이 달라집니다</Heading>
+              <p className="mx-auto mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
+                의료기관에서는 의료폐기물 외에도 별도 관리가 필요한 배출물이 함께 발생할 수 있습니다. 특히 의료기관
+                일회용기저귀는 의료폐기물과 차량·관리체계·처리 흐름이 달라 분리 운행과 이력관리가 필요합니다. 비원미래는
+                이러한 현장 특수성을 반영해 폐기물 종류별 수거조건과 운행 흐름을 구분해 관리합니다.
               </p>
             </div>
           </Reveal>
 
           <Reveal className="mt-10">
-            <ImageSlot
-              frame={{ icon: Truck, title: '의료폐기물 · 일회용기저귀 분리 운행 현장', alt: '의료폐기물과 의료기관 일회용기저귀를 두 대의 차량으로 분리 운행하는 현장', src: '/company/separated-transport-flows.webp' }}
-              className="aspect-[21/9]"
-            />
+            <ImageSlot frame={IMG.separated} hideCaption className="aspect-[21/9]" />
           </Reveal>
 
           <Reveal className="mt-6" delay={0.05}>
@@ -986,33 +1052,33 @@ export function CompanyHomePage() {
                     <Syringe size={22} strokeWidth={2.2} />
                   </span>
                   <div>
-                    <p className="text-lg font-extrabold text-navy-900">의료폐기물</p>
-                    <p className="text-[13px] font-medium text-navy-500">전용 관리체계</p>
+                    <p className="text-xl font-extrabold text-navy-900">의료폐기물</p>
+                    <p className="text-[14px] font-medium text-navy-600">전용 관리체계</p>
                   </div>
                 </div>
                 <ul className="mt-4 space-y-2">
-                  {['전용 수거차량', '전용 처리장 인계', '보관기한·격리 조건 관리'].map((t) => (
-                    <li key={t} className="flex items-center gap-2 rounded-lg bg-rose-50/60 px-3.5 py-2.5 text-[15px] font-semibold text-navy-700">
+                  {['보관기한 관리', '전용 용기', '수거대장', '처리장 인계'].map((t) => (
+                    <li key={t} className="flex items-center gap-2 rounded-lg bg-rose-50/60 px-3.5 py-3 text-base font-semibold text-navy-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> {t}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* 일회용기저귀 */}
+              {/* 관련 배출물 */}
               <div className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-teal-100 sm:p-7">
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
                     <Boxes size={22} strokeWidth={2.2} />
                   </span>
                   <div>
-                    <p className="text-lg font-extrabold text-navy-900">의료기관 일회용기저귀</p>
-                    <p className="text-[13px] font-medium text-navy-500">별도 관리체계</p>
+                    <p className="text-xl font-extrabold text-navy-900">관련 배출물</p>
+                    <p className="text-[14px] font-medium text-navy-600">의료기관 일회용기저귀 등 별도 관리</p>
                   </div>
                 </div>
                 <ul className="mt-4 space-y-2">
-                  {['별도 수거차량', '별도 처리 흐름', '분리 수거이력 관리'].map((t) => (
-                    <li key={t} className="flex items-center gap-2 rounded-lg bg-teal-50/60 px-3.5 py-2.5 text-[15px] font-semibold text-navy-700">
+                  {['별도 차량', '별도 관리체계', '기관 요청 대응', '자재공급 연계'].map((t) => (
+                    <li key={t} className="flex items-center gap-2 rounded-lg bg-teal-50/60 px-3.5 py-3 text-base font-semibold text-navy-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-teal-400" /> {t}
                     </li>
                   ))}
@@ -1020,12 +1086,12 @@ export function CompanyHomePage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl bg-navy-900 px-6 py-5 text-center">
-              <p className="text-[17px] font-bold text-white sm:text-xl">
+            <div className="mt-4 rounded-2xl bg-navy-900 px-6 py-6 text-center">
+              <p className="text-xl font-bold text-white sm:text-2xl">
                 같은 병원에서 발생해도 차량·관리체계·처리 흐름은 <span className="text-teal-300">분리</span>됩니다
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-navy-100 sm:text-[15px]">
-                비원미래는 한 업체가 두 흐름을 함께 관리하되, 폐기물 종류별 차량·수거조건·자재공급·처리장 정보를 분리
+              <p className="mx-auto mt-3 max-w-3xl text-base leading-relaxed text-navy-100 sm:text-[17px]">
+                비원미래는 한 업체가 여러 흐름을 함께 관리하되, 폐기물 종류별 차량·수거조건·자재공급·처리장 정보를 분리해
                 관리하는 구조를 개발하고 있습니다.
               </p>
             </div>
@@ -1037,9 +1103,10 @@ export function CompanyHomePage() {
           <Section id="tech">
             <Reveal>
               <Eyebrow>기술개발</Eyebrow>
-              <Heading>특허출원과 연구개발전담부서를 기반으로 고도화하고 있습니다</Heading>
-              <p className="mt-3 max-w-2xl text-base leading-relaxed text-navy-600 sm:text-[17px]">
-                작은 연구개발전담부서가 실제 현장 문제를 하나씩 구조화하며 운영관리 시스템을 단계적으로 개발하고 있습니다.
+              <Heading>더 정확한 수거·운영관리를 위한 기술개발</Heading>
+              <p className="mt-4 max-w-3xl text-[17px] leading-relaxed text-navy-700 sm:text-lg">
+                고객에게 더 정확한 수거·운영관리를 제공하기 위해, 특허출원과 연구개발전담부서를 기반으로 운영관리 시스템을
+                단계적으로 개발하고 있습니다. 실제 운행 데이터를 축적하며 현장 관리 정확도를 높여가고 있습니다.
               </p>
             </Reveal>
 
