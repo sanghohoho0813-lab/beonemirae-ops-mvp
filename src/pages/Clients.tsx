@@ -5,34 +5,48 @@ import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { FilterChip, EmptyState } from '../components/ui'
-import { ClientForm, CLIENT_TYPES, emptyClientForm } from '../components/ClientForm'
-import type { Client, ClientType } from '../types'
+import { ClientForm, emptyClientForm } from '../components/ClientForm'
+import { clientOutstanding } from '../lib/ops'
+import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
+import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 거래처 관리 — 목록 / 유형 필터 / 추가 / 상세 페이지 이동
+// 거래처 관리 — 데이터 세트 선택 + 실제/시연용 구분 + 필터
 // ─────────────────────────────────────────────────────────────────────────────
+
+type Filter = '전체' | '실제' | '시연용' | '병원' | '요양병원' | '의원' | '기타'
+const FILTERS: Filter[] = ['전체', '실제', '시연용', '병원', '요양병원', '의원', '기타']
+
+function matchFilter(c: Client, f: Filter): boolean {
+  switch (f) {
+    case '전체': return true
+    case '실제': return !c.isDemoGenerated
+    case '시연용': return c.isDemoGenerated
+    case '병원': return c.type === '병원'
+    case '요양병원': return c.type === '요양병원'
+    case '의원': return c.type === '의원'
+    case '기타': return !['병원', '요양병원', '의원'].includes(c.type)
+  }
+}
 
 export function Clients() {
-  const { data, addClient } = useData()
+  const { data, addClient, clientSet, setClientSet } = useData()
   const navigate = useNavigate()
-  const [filter, setFilter] = useState<ClientType | '전체'>('전체')
+  const [filter, setFilter] = useState<Filter>('전체')
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<Omit<Client, 'id'>>(emptyClientForm)
 
   const filtered = useMemo(() => {
     return data.clients.filter((c) => {
-      if (filter !== '전체' && c.type !== filter) return false
+      if (!matchFilter(c, filter)) return false
       if (query && !c.name.includes(query) && !c.address.includes(query)) return false
       return true
     })
   }, [data.clients, filter, query])
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = { 전체: data.clients.length }
-    for (const c of data.clients) map[c.type] = (map[c.type] ?? 0) + 1
-    return map
-  }, [data.clients])
+  const realCount = data.clients.filter((c) => !c.isDemoGenerated).length
+  const demoCount = data.clients.length - realCount
 
   function save() {
     if (!form.name.trim()) return
@@ -45,28 +59,47 @@ export function Clients() {
     <div>
       <PageHeader
         title="거래처 관리"
-        subtitle={`총 ${data.clients.length}곳`}
+        subtitle={`총 ${data.clients.length}곳 · 실제 ${realCount} / 시연용 ${demoCount}`}
         action={
           <button className="btn-primary" onClick={() => { setForm(emptyClientForm); setAdding(true) }}>
-            ＋ 거래처 추가
+            ＋ 추가
           </button>
         }
       />
 
-      <input
-        className="field-input mb-3"
-        placeholder="거래처명 · 주소 검색"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      {/* 거래처 데이터 세트 선택 */}
+      <div className="card mb-4 p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[13px] font-bold text-navy-700">거래처 데이터 세트</p>
+          {clientSet > 0 && <span className="text-[11px] font-medium text-navy-400">현재 시연 데이터 기준</span>}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {CLIENT_SETS.map((s) => {
+            const active = clientSet === s.demoCount
+            return (
+              <button
+                key={s.demoCount}
+                onClick={() => setClientSet(s.demoCount as ClientSetSize)}
+                className={`rounded-2xl px-2 py-2.5 text-center transition active:scale-[0.98] ${
+                  active ? 'bg-teal-500 text-white shadow-sm' : 'bg-navy-50 text-navy-600'
+                }`}
+              >
+                <span className="block text-base font-extrabold">{s.total}곳</span>
+                <span className={`mt-0.5 block text-[11px] font-semibold ${active ? 'text-teal-50' : 'text-navy-400'}`}>
+                  {s.demoCount === 0 ? '실제 5곳' : `실제+시연 ${s.demoCount}`}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      {/* 유형 필터 칩 (가로 스크롤) */}
+      <input className="field-input mb-3" placeholder="거래처명 · 주소 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+
+      {/* 필터 칩 (가로 스크롤) */}
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {(['전체', ...CLIENT_TYPES] as const).map((t) => (
-          <FilterChip key={t} active={filter === t} onClick={() => setFilter(t)}>
-            {t}
-            {counts[t] ? ` ${counts[t]}` : ''}
-          </FilterChip>
+        {FILTERS.map((f) => (
+          <FilterChip key={f} active={filter === f} onClick={() => setFilter(f)}>{f}</FilterChip>
         ))}
       </div>
 
@@ -74,35 +107,33 @@ export function Clients() {
         <EmptyState icon="🏥" title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-          {filtered.map((c) => (
-            <li key={c.id}>
-              <button
-                onClick={() => navigate(`/clients/${c.id}`)}
-                className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-[15px] font-bold text-navy-900">{c.name}</span>
-                    <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[11px] font-bold text-navy-500">
-                      {c.type}
-                    </span>
+          {filtered.map((c) => {
+            const unpaid = clientOutstanding(data, c.id) > 0
+            return (
+              <li key={c.id}>
+                <button onClick={() => navigate(`/clients/${c.id}`)} className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-[15px] font-bold text-navy-900">{c.name}</span>
+                      <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[11px] font-bold text-navy-500">{c.type}</span>
+                      {c.isDemoGenerated ? (
+                        <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[10px] font-bold text-navy-500">시연용</span>
+                      ) : (
+                        <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-600">주요거래처</span>
+                      )}
+                    </div>
+                    <p className="mt-1 truncate t-caption">{c.manager} · {c.collectionCycle}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-500">의료</span>}
+                      {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-bold text-teal-600">기저귀</span>}
+                      {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">미수금</span>}
+                    </div>
                   </div>
-                  <p className="mt-1 truncate t-caption">
-                    {c.manager} · {c.phone} · {c.collectionCycle}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {c.collectsMedicalWaste && (
-                    <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-500">의료</span>
-                  )}
-                  {c.collectsDiaper && (
-                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-600">기저귀</span>
-                  )}
-                  <ChevronRight size={16} className="text-navy-300" />
-                </div>
-              </button>
-            </li>
-          ))}
+                  <ChevronRight size={16} className="shrink-0 text-navy-300" />
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
 
@@ -113,12 +144,8 @@ export function Clients() {
         onClose={() => setAdding(false)}
         footer={
           <>
-            <button className="btn-ghost flex-1" onClick={() => setAdding(false)}>
-              취소
-            </button>
-            <button className="btn-primary flex-1" onClick={save}>
-              저장
-            </button>
+            <button className="btn-ghost flex-1" onClick={() => setAdding(false)}>취소</button>
+            <button className="btn-primary flex-1" onClick={save}>저장</button>
           </>
         }
       >

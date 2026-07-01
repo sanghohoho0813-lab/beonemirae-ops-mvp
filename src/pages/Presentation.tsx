@@ -56,7 +56,7 @@ export function Presentation() {
     {
       icon: Building2,
       title: '거래처 상세관리',
-      line: '거래처별 수거조건·이력·자재·미수금을 한눈에 봅니다.',
+      line: '주요거래처 5곳 기반 · 시연용으로 15/25/35곳까지 확장 확인.',
       stats: [
         { k: '관리 거래처', v: `${data.clients.length}곳` },
         { k: '차량', v: `${data.vehicles.length}대` },

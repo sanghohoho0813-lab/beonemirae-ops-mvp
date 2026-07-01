@@ -14,7 +14,7 @@ import type {
   Payment,
   Schedule,
 } from '../types'
-import { loadData, resetData, saveData, uid } from '../lib/storage'
+import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전역 데이터 컨텍스트
@@ -47,12 +47,16 @@ interface DataContextValue {
   reset: () => void
   // 전체 데이터 교체 (JSON 가져오기 등)
   replaceAll: (data: AppData) => void
+  // 거래처 데이터 세트 (0=실제 5곳, 10/20/30=실제+시연)
+  clientSet: ClientSetSize
+  setClientSet: (demoCount: ClientSetSize) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => loadData())
+  const [clientSet, setClientSetState] = useState<ClientSetSize>(() => loadClientSet())
 
   // 변경 시 영속화
   useEffect(() => {
@@ -147,11 +151,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const reset = useCallback(() => {
-    setData(resetData())
+    setData(resetData(loadClientSet()))
   }, [])
 
   const replaceAll = useCallback((next: AppData) => {
     setData(next)
+  }, [])
+
+  // 거래처 세트 전환 — 해당 세트 기준으로 데이터 재생성
+  const setClientSet = useCallback((demoCount: ClientSetSize) => {
+    saveClientSet(demoCount)
+    setClientSetState(demoCount)
+    setData(resetData(demoCount))
   }, [])
 
   const clientById = useCallback(
@@ -177,6 +188,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       clientById,
       reset,
       replaceAll,
+      clientSet,
+      setClientSet,
     }),
     [
       data,
@@ -195,6 +208,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       clientById,
       reset,
       replaceAll,
+      clientSet,
+      setClientSet,
     ],
   )
 

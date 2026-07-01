@@ -50,7 +50,7 @@ function ChecklistRow({ item }: { item: ReturnType<typeof todayChecklist>[number
 }
 
 export function Dashboard() {
-  const { data } = useData()
+  const { data, clientSet } = useData()
   const navigate = useNavigate()
   const t = today()
 
@@ -81,12 +81,13 @@ export function Dashboard() {
         <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-navy-900 lg:text-3xl">
           대표님 한눈에 보기
         </h1>
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {[`거래처 ${data.clients.length}곳`, `차량 ${data.vehicles.length}대`, '월 105톤'].map((chip) => (
             <span key={chip} className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-navy-500 shadow-card">
               {chip}
             </span>
           ))}
+          {clientSet > 0 && <span className="text-[11px] font-medium text-navy-400">· 현재 시연 데이터 기준</span>}
         </div>
       </div>
 

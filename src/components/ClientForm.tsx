@@ -20,13 +20,14 @@ export const emptyClientForm: Omit<Client, 'id'> = {
   name: '',
   type: '병원',
   address: '',
-  manager: '',
+  manager: '관리팀',
   phone: '',
   collectionCycle: '주 1회',
   collectsMedicalWaste: true,
   collectsDiaper: false,
   storageSize: '보통',
   note: '',
+  isDemoGenerated: false,
 }
 
 export function ClientForm({

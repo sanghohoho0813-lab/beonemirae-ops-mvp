@@ -44,6 +44,7 @@ export interface Client {
   collectsDiaper: boolean // 일회용기저귀 수거 여부
   storageSize: StorageSize // 자재 보관창고 크기
   note: string // 특이사항
+  isDemoGenerated: boolean // true=시연용 확장 거래처, false=실제 주요거래처
 }
 
 // ── 차량 ─────────────────────────────────────────────────────────────────────

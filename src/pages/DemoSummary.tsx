@@ -187,6 +187,10 @@ export function DemoSummary() {
           <p className="text-sm leading-relaxed text-navy-600">
             거래처별 수거조건·이력·자재·미수금을 통합 관리하고, 수거이력과 자재공급을 합쳐 월간 수거대장으로 출력(예정)합니다.
           </p>
+          <p className="mt-2 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-xs leading-snug text-navy-500">
+            기본 데이터는 <b className="text-navy-700">사업계획서 주요거래처 5곳</b> 기준이며, 시연용 확장으로 거래처가
+            15·25·35곳으로 늘어난 관리 화면도 확인할 수 있습니다. 운영 데이터 누적 시 배차·경로 추천 고도화 예정.
+          </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             <MetricCard label="관리 거래처" value={data.clients.length} unit="곳" tone="navy" />
             <MetricCard label="이번 달 수거" value={weight(total)} tone="navy" />

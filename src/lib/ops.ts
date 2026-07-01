@@ -123,21 +123,25 @@ export interface IsolationAlert {
   message: string
 }
 
-function findClient(data: AppData, name: string): Client | undefined {
-  return data.clients.find((c) => c.name === name)
-}
-
 export function isolationAlerts(data: AppData): IsolationAlert[] {
-  const plan: { name: string; kind: IsolationKind; message: string }[] = [
-    { name: '사랑채요양원', kind: '격리', message: '격리환자 발생 가능 — 보관기한(1주일) 확인 및 추가수거 검토' },
-    { name: '하나요양병원', kind: '추가수거', message: '병원 인증기간 추가수거 요청 확인 필요' },
-    { name: '미소요양병원', kind: '자재동시공급', message: '보관창고 협소 — 자재 동시공급 권장' },
+  // 요양병원·요양원 우선, 없으면 임의 거래처 — 세트 크기와 무관하게 동작
+  const seen = new Set<string>()
+  const pool: Client[] = []
+  for (const c of [
+    ...data.clients.filter((c) => c.type === '요양병원' || c.type === '요양원'),
+    ...data.clients,
+  ]) {
+    if (seen.has(c.id)) continue
+    seen.add(c.id)
+    pool.push(c)
+  }
+  const kinds: { kind: IsolationKind; message: string }[] = [
+    { kind: '격리', message: '격리환자 발생 가능 — 보관기한(1주일) 확인 및 추가수거 검토' },
+    { kind: '추가수거', message: '인증기간 추가수거 요청 확인 필요' },
+    { kind: '자재동시공급', message: '보관창고 협소 — 자재 동시공급 권장' },
   ]
-  return plan
-    .map((p) => {
-      const c = findClient(data, p.name)
-      return c ? { clientId: c.id, clientName: c.name, kind: p.kind, message: p.message } : null
-    })
+  return kinds
+    .map((k, i) => (pool[i] ? { clientId: pool[i].id, clientName: pool[i].name, kind: k.kind, message: k.message } : null))
     .filter((x): x is IsolationAlert => x !== null)
 }
 

@@ -8,23 +8,58 @@ import { buildSeedData } from '../data/seed'
 // 바꾸면 되도록 데이터 접근을 한 곳에 모았습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'beonemirae-ops:v1'
+const STORAGE_KEY = 'beonemirae-ops:v2'
+const CLIENT_SET_KEY = 'beonemirae-ops:client-set'
 
-/** localStorage 에서 데이터를 읽어옵니다. 없으면 시드 데이터를 생성·저장 후 반환합니다. */
+/** 시연용 확장 거래처 수 (0=실제 5곳만, 10/20/30=실제+시연) */
+export type ClientSetSize = 0 | 10 | 20 | 30
+export const CLIENT_SETS: { demoCount: ClientSetSize; total: number; label: string }[] = [
+  { demoCount: 0, total: 5, label: '실제 주요거래처 5곳' },
+  { demoCount: 10, total: 15, label: '실제 + 시연용 10곳' },
+  { demoCount: 20, total: 25, label: '실제 + 시연용 20곳' },
+  { demoCount: 30, total: 35, label: '실제 + 시연용 30곳' },
+]
+
+/** 선택된 거래처 세트(시연용 확장 수)를 읽습니다. 기본 0(실제 5곳). */
+export function loadClientSet(): ClientSetSize {
+  try {
+    const raw = localStorage.getItem(CLIENT_SET_KEY)
+    const n = Number(raw)
+    if (n === 0 || n === 10 || n === 20 || n === 30) return n
+  } catch {
+    /* noop */
+  }
+  return 0
+}
+
+export function saveClientSet(demoCount: ClientSetSize): void {
+  try {
+    localStorage.setItem(CLIENT_SET_KEY, String(demoCount))
+  } catch {
+    /* noop */
+  }
+}
+
+/** localStorage 에서 데이터를 읽어옵니다. 없거나 구버전이면 현재 세트로 생성·저장 후 반환. */
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as AppData
-      // 최소 무결성 검사 — 손상 시 시드로 복구
-      if (parsed && Array.isArray(parsed.clients) && Array.isArray(parsed.schedules)) {
+      // 무결성 + 스키마(신규 isDemoGenerated) 검사 — 손상/구버전 시 시드로 복구
+      if (
+        parsed &&
+        Array.isArray(parsed.clients) &&
+        Array.isArray(parsed.schedules) &&
+        (parsed.clients.length === 0 || 'isDemoGenerated' in parsed.clients[0])
+      ) {
         return parsed
       }
     }
   } catch (err) {
     console.warn('[storage] 데이터 로드 실패, 시드 데이터로 초기화합니다.', err)
   }
-  const seed = buildSeedData()
+  const seed = buildSeedData(loadClientSet())
   saveData(seed)
   return seed
 }
@@ -38,9 +73,10 @@ export function saveData(data: AppData): void {
   }
 }
 
-/** 모든 데이터를 초기 시드 상태로 되돌립니다. */
-export function resetData(): AppData {
-  const seed = buildSeedData()
+/** 현재(또는 지정한) 거래처 세트 기준으로 데이터를 새로 생성·저장합니다. */
+export function resetData(demoCount: ClientSetSize = loadClientSet()): AppData {
+  saveClientSet(demoCount)
+  const seed = buildSeedData(demoCount)
   saveData(seed)
   return seed
 }
