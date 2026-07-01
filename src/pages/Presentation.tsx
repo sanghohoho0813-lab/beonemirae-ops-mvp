@@ -56,7 +56,7 @@ export function Presentation() {
     {
       icon: Building2,
       title: '거래처 상세관리',
-      line: '주요거래처 5곳 기반 · 시연용으로 15/25/35곳까지 확장 확인.',
+      line: '주요거래처 5곳 기반 · 서울·경기권 시연용으로 15/25/35곳 확장.',
       stats: [
         { k: '관리 거래처', v: `${data.clients.length}곳` },
         { k: '차량', v: `${data.vehicles.length}대` },

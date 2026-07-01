@@ -8,7 +8,7 @@ import { buildSeedData } from '../data/seed'
 // 바꾸면 되도록 데이터 접근을 한 곳에 모았습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'beonemirae-ops:v2'
+const STORAGE_KEY = 'beonemirae-ops:v3'
 const CLIENT_SET_KEY = 'beonemirae-ops:client-set'
 
 /** 시연용 확장 거래처 수 (0=실제 5곳만, 10/20/30=실제+시연) */

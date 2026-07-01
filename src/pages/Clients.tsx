@@ -67,31 +67,31 @@ export function Clients() {
         }
       />
 
-      {/* 거래처 데이터 세트 선택 */}
-      <div className="card mb-4 p-4">
-        <div className="mb-2 flex items-center justify-between">
+      {/* 거래처 데이터 세트 — segmented control */}
+      <div className="mb-4">
+        <div className="mb-1.5 flex items-center justify-between px-1">
           <p className="text-[13px] font-bold text-navy-700">거래처 데이터 세트</p>
           {clientSet > 0 && <span className="text-[11px] font-medium text-navy-400">현재 시연 데이터 기준</span>}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="flex gap-1 rounded-2xl bg-navy-50 p-1">
           {CLIENT_SETS.map((s) => {
             const active = clientSet === s.demoCount
             return (
               <button
                 key={s.demoCount}
                 onClick={() => setClientSet(s.demoCount as ClientSetSize)}
-                className={`rounded-2xl px-2 py-2.5 text-center transition active:scale-[0.98] ${
-                  active ? 'bg-teal-500 text-white shadow-sm' : 'bg-navy-50 text-navy-600'
+                className={`flex-1 rounded-xl py-2 text-center text-sm font-extrabold transition active:scale-[0.98] ${
+                  active ? 'bg-white text-teal-600 shadow-sm' : 'text-navy-500'
                 }`}
               >
-                <span className="block text-base font-extrabold">{s.total}곳</span>
-                <span className={`mt-0.5 block text-[11px] font-semibold ${active ? 'text-teal-50' : 'text-navy-400'}`}>
-                  {s.demoCount === 0 ? '실제 5곳' : `실제+시연 ${s.demoCount}`}
-                </span>
+                {s.total}곳
               </button>
             )
           })}
         </div>
+        <p className="mt-1.5 px-1 text-[11px] leading-snug text-navy-400">
+          기본 5곳은 실제 주요거래처, 확장(+10/20/30)은 서울·경기권 시연용 데이터입니다.
+        </p>
       </div>
 
       <input className="field-input mb-3" placeholder="거래처명 · 주소 검색" value={query} onChange={(e) => setQuery(e.target.value)} />

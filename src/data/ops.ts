@@ -22,18 +22,18 @@ export interface Facility {
 export const FACILITIES: Facility[] = [
   {
     id: 'f-med-a',
-    name: '의료폐기물 처리장 A',
+    name: '수도권 의료폐기물 처리장 A',
     wasteType: '의료폐기물',
-    region: '부산권역',
+    region: '경기권 동부 처리권역',
     handoverWindow: '09:00 ~ 17:00',
     vehicleIds: ['v1', 'v2', 'v3'],
     targetTime: '16:30',
   },
   {
     id: 'f-diaper-b',
-    name: '일회용기저귀 처리장 B',
+    name: '수도권 일회용기저귀 처리장 B',
     wasteType: '일회용기저귀',
-    region: '부산권역',
+    region: '수도권 북부 처리권역',
     handoverWindow: '10:00 ~ 18:00',
     vehicleIds: ['v4', 'v5'],
     targetTime: '17:10',

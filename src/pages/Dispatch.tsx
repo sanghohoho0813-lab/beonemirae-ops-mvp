@@ -111,10 +111,10 @@ export function Dispatch() {
           <p className="text-[15px] font-bold">오늘 배차 추천 시뮬레이션</p>
         </div>
         <p className="mt-2.5 text-sm leading-relaxed text-navy-200">
-          차량 적재율·긴급수거·처리장 인계시간을 함께 고려합니다.
+          경기 남양주시 출발 · 서울·경기권 권역 배차. 적재율·긴급수거·처리장 인계를 함께 고려합니다.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {['개발 중', '시뮬레이션', '실증 예정'].map((b) => (
+          {['남양주 출발', '개발 중', '시뮬레이션', '실증 예정'].map((b) => (
             <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-teal-200">{b}</span>
           ))}
         </div>
