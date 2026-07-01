@@ -12,6 +12,7 @@ import {
   PieChart,
   Smartphone,
   Truck,
+  Globe,
   type LucideIcon,
 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
@@ -88,7 +89,14 @@ function Sidebar() {
           )
         })}
       </nav>
-      <div className="px-3 pb-4">
+      <div className="space-y-2 px-3 pb-4">
+        <button
+          onClick={() => navigate('/company')}
+          className="flex w-full items-center gap-2.5 rounded-2xl bg-navy-900 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-navy-800"
+        >
+          <Globe size={18} strokeWidth={2.2} />
+          회사 홈페이지
+        </button>
         <button
           onClick={() => navigate('/mobile-preview')}
           className="flex w-full items-center gap-2.5 rounded-2xl bg-navy-50 px-3 py-2.5 text-sm font-bold text-navy-600 transition hover:bg-navy-100"
@@ -96,7 +104,7 @@ function Sidebar() {
           <Smartphone size={18} strokeWidth={2.2} />
           모바일 미리보기
         </button>
-        <p className="mt-3 px-1 text-[0.6875rem] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
+        <p className="px-1 pt-1 text-[0.6875rem] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
       </div>
     </aside>
   )

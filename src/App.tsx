@@ -14,6 +14,7 @@ import { More } from './pages/More'
 import { DemoSummary } from './pages/DemoSummary'
 import { Presentation } from './pages/Presentation'
 import { MobilePreview } from './pages/MobilePreview'
+import { CompanyHomePage } from './pages/CompanyHomePage'
 
 export default function App() {
   return (
@@ -22,6 +23,8 @@ export default function App() {
       <Routes>
         {/* 시연 전용 — Layout(사이드바/탭) 바깥의 독립 전체화면 라우트 */}
         <Route path="mobile-preview" element={<MobilePreview />} />
+        {/* 공개용 회사 홈페이지 — Layout 바깥의 독립 전체화면 라우트 */}
+        <Route path="company" element={<CompanyHomePage />} />
 
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />

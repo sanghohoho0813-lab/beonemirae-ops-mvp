@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { FontSizeControl } from './FontSizeControl'
 import { InfoBanner } from './InfoBanner'
@@ -86,6 +86,14 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
       <section>
         <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">메뉴</h3>
         <div className="space-y-2.5">
+          <Tappable as="div" onClick={() => go('/company')} className="card flex cursor-pointer items-center gap-3 p-4">
+            <IconChip icon={Globe} tone="navy" />
+            <div className="min-w-0">
+              <p className="font-bold text-navy-900">회사 홈페이지</p>
+              <p className="text-xs text-navy-400">주식회사 비원미래 공식 홈페이지</p>
+            </div>
+            <ChevronRight size={18} className="ml-auto text-navy-300" />
+          </Tappable>
           {variant === 'mobile' &&
             MOBILE_SHORTCUTS.map((s) => (
               <Tappable key={s.to} as="div" onClick={() => go(s.to)} className="card flex cursor-pointer items-center gap-3 p-4">
