@@ -229,6 +229,21 @@ export function DemoSummary() {
         </div>
       </section>
 
+      {/* 향후 활용 계획으로 연결 */}
+      <button
+        onClick={() => navigate('/roadmap')}
+        className="card pressable flex w-full items-center gap-3 p-5 text-left"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+          <Route size={20} strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-navy-900">향후 활용 계획 · 업무흐름도 보기</p>
+          <p className="text-xs text-navy-400">일일 업무 흐름과 단계별 고도화 로드맵을 한눈에</p>
+        </div>
+        <ChevronRight size={18} className="shrink-0 text-navy-300" />
+      </button>
+
       <p className="pb-2 text-center text-xs text-navy-300">데이터 기반 의료폐기물 운영관리 시스템 · ㈜비원미래</p>
     </PageShell>
   )

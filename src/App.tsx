@@ -12,6 +12,7 @@ import { Receivables } from './pages/Receivables'
 import { Statistics } from './pages/Statistics'
 import { More } from './pages/More'
 import { DemoSummary } from './pages/DemoSummary'
+import { Roadmap } from './pages/Roadmap'
 import { Presentation } from './pages/Presentation'
 import { MobilePreview } from './pages/MobilePreview'
 import { CompanyHomePage } from './pages/CompanyHomePage'
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="stats" element={<Statistics />} />
           <Route path="more" element={<More />} />
           <Route path="demo" element={<DemoSummary />} />
+          <Route path="roadmap" element={<Roadmap />} />
           <Route path="presentation" element={<Presentation />} />
           <Route path="*" element={<Dashboard />} />
         </Route>

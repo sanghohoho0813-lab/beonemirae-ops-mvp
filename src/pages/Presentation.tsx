@@ -10,6 +10,7 @@ import {
   Building2,
   FileText,
   FileBadge,
+  Workflow,
   ArrowRight,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -79,6 +80,17 @@ export function Presentation() {
       stats: [{ k: '특허출원', v: '10-2026-0101187' }],
       cta: '심사관 시연 요약 보기',
       to: '/demo',
+    },
+    {
+      icon: Workflow,
+      title: '향후 활용 계획',
+      line: '일일 업무흐름도와 단계별 고도화 로드맵을 한 화면에서 봅니다.',
+      stats: [
+        { k: '현재', v: '1단계 · MVP 운영' },
+        { k: '다음', v: '실데이터 · 경로 최적화' },
+      ],
+      cta: '활용 계획·업무흐름도 보기',
+      to: '/roadmap',
     },
   ]
 

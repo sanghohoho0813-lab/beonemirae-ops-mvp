@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, Workflow, type LucideIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { FontSizeControl } from './FontSizeControl'
 import { InfoBanner } from './InfoBanner'
@@ -80,6 +80,22 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
           <p className="text-[0.6875rem] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
+      </Tappable>
+
+      {/* 활용 계획·업무흐름도 — 대표·실사용 한눈에 보기 */}
+      <Tappable
+        as="div"
+        onClick={() => go('/roadmap')}
+        className="flex cursor-pointer items-center gap-3 rounded-3xl bg-teal-500 p-4 text-white shadow-lg"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15">
+          <Workflow size={20} className="text-white" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-bold">활용 계획 · 업무흐름도</p>
+          <p className="text-[0.6875rem] text-teal-100">일일 업무 흐름 · 단계별 활용 로드맵</p>
+        </div>
+        <ChevronRight size={18} className="ml-auto shrink-0 text-white/70" />
       </Tappable>
 
       {/* 바로가기 — 모바일: 배차·경로/자재/미수금/통계, 데스크톱: 모바일 미리보기 */}

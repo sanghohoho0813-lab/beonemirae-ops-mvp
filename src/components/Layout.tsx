@@ -13,6 +13,7 @@ import {
   Smartphone,
   Truck,
   Globe,
+  Workflow,
   type LucideIcon,
 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
@@ -42,6 +43,7 @@ const FULL_NAV: NavItem[] = [
   { to: '/materials', label: '자재 관리', icon: Boxes },
   { to: '/receivables', label: '미수금 관리', icon: Wallet },
   { to: '/stats', label: '통계', icon: PieChart },
+  { to: '/roadmap', label: '활용 계획', icon: Workflow },
   { to: '/more', label: '더보기', icon: MoreHorizontal },
 ]
 
@@ -53,7 +55,7 @@ const BOTTOM_NAV: NavItem[] = [
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
 ]
 
-const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation']
+const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation', '/roadmap']
 
 // ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
 function Sidebar() {
