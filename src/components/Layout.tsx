@@ -36,6 +36,7 @@ interface NavItem {
 /** 데스크톱 사이드바 전체 메뉴 */
 const FULL_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: LayoutGrid },
+  { to: '/roadmap', label: '활용 계획', icon: Workflow },
   { to: '/today', label: '오늘 일정', icon: CalendarClock },
   { to: '/dispatch', label: '배차·경로', icon: Truck },
   { to: '/clients', label: '거래처', icon: Building2 },
@@ -43,7 +44,6 @@ const FULL_NAV: NavItem[] = [
   { to: '/materials', label: '자재 관리', icon: Boxes },
   { to: '/receivables', label: '미수금 관리', icon: Wallet },
   { to: '/stats', label: '통계', icon: PieChart },
-  { to: '/roadmap', label: '활용 계획', icon: Workflow },
   { to: '/more', label: '더보기', icon: MoreHorizontal },
 ]
 

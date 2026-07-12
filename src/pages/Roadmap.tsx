@@ -1,8 +1,11 @@
+import { Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
   ArrowDown,
+  ArrowUp,
+  Truck,
   Building2,
   CalendarClock,
   Route,
@@ -112,6 +115,75 @@ function StatusBadge({ status }: { status: StepStatus }) {
   return <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.6875rem] font-bold ${STATUS_STYLE[status]}`}>{status}</span>
 }
 
+// ── 한눈에 보는 활용 구조 인포그래픽 ─────────────────────────────────────────
+//  8단계를 4개 국면(준비→운행→정리→축적)으로 묶고, 축적된 데이터가 다시
+//  "② 운행(배차·경로)"으로 돌아가는 환류 루프를 화살표로 그립니다.
+const PHASES_VIS: {
+  no: string
+  title: string
+  desc: string
+  steps: string
+  icons: LucideIcon[]
+  chip: string
+  ring: string
+}[] = [
+  { no: '①', title: '준비', desc: '거래처·수거조건 등록\n오늘 일정 확인', steps: 'STEP 1–2', icons: [Building2, CalendarClock], chip: 'bg-navy-100 text-navy-700', ring: 'ring-navy-100' },
+  { no: '②', title: '운행', desc: '배차·경로 추천\n현장 수거 입력', steps: 'STEP 3–4', icons: [Truck, PlusCircle], chip: 'bg-teal-50 text-teal-600', ring: 'ring-teal-200' },
+  { no: '③', title: '정리', desc: '자재공급·수거대장\n청구·미수금', steps: 'STEP 5–7', icons: [Boxes, FileText, Wallet], chip: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-100' },
+  { no: '④', title: '축적', desc: '통계·운영 데이터\n축적', steps: 'STEP 8', icons: [PieChart, Database], chip: 'bg-amber-50 text-amber-600', ring: 'ring-amber-100' },
+]
+
+function FlowInfographic() {
+  return (
+    <div className="card p-4 sm:p-5">
+      {/* 4개 국면 카드 + 사이 화살표 */}
+      <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-stretch sm:gap-0">
+        {PHASES_VIS.map((p, i) => (
+          <Fragment key={p.title}>
+            <div className={`flex flex-1 flex-col items-center rounded-2xl bg-white p-4 text-center ring-2 ${p.ring}`}>
+              <div className="flex items-center gap-1.5">
+                {p.icons.map((Icon, k) => (
+                  <span key={k} className={`flex h-9 w-9 items-center justify-center rounded-xl ${p.chip}`}>
+                    <Icon size={18} strokeWidth={2.2} />
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2.5 text-[0.9375rem] font-extrabold text-navy-900">
+                {p.no} {p.title}
+              </p>
+              <p className="mt-1 whitespace-pre-line text-xs leading-snug text-navy-500">{p.desc}</p>
+              <span className="mt-2 rounded-full bg-navy-50 px-2.5 py-0.5 text-[0.6875rem] font-bold text-navy-500">{p.steps}</span>
+            </div>
+            {i < PHASES_VIS.length - 1 && (
+              <div className="hidden items-center px-1 sm:flex">
+                <ArrowRight size={18} className="shrink-0 text-navy-300" strokeWidth={2.6} />
+              </div>
+            )}
+          </Fragment>
+        ))}
+      </div>
+
+      {/* 환류 루프 화살표 (데스크톱) — ④ 축적 → ② 운행 */}
+      <div className="relative mt-1 hidden h-16 sm:block" aria-hidden>
+        <div className="absolute bottom-4 left-[37%] right-[13%] top-0 rounded-b-2xl border-b-2 border-l-2 border-r-2 border-dashed border-teal-400" />
+        <span className="absolute left-[37%] top-[-4px] -translate-x-1/2 text-teal-500">
+          <ArrowUp size={18} strokeWidth={2.8} />
+        </span>
+        <span className="absolute bottom-4 left-1/2 -translate-x-1/2 translate-y-1/2 whitespace-nowrap rounded-full bg-teal-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm">
+          <RefreshCw size={12} className="mr-1 inline -translate-y-px" strokeWidth={2.8} />
+          운영 데이터 환류 — 쓸수록 배차·경로가 정교해집니다
+        </span>
+      </div>
+
+      {/* 환류 안내 (모바일) */}
+      <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-teal-50 px-3.5 py-2.5 sm:hidden">
+        <RefreshCw size={15} className="shrink-0 text-teal-600" strokeWidth={2.6} />
+        <p className="text-xs font-bold leading-snug text-teal-700">④ 축적된 데이터가 ② 배차·경로를 다시 정교하게 만듭니다</p>
+      </div>
+    </div>
+  )
+}
+
 export function Roadmap() {
   const navigate = useNavigate()
   const { data } = useData()
@@ -158,9 +230,15 @@ export function Roadmap() {
         </div>
       </div>
 
+      {/* 한눈에 보는 활용 구조 — 인포그래픽 */}
+      <section>
+        <SectionTitle>한눈에 보는 활용 구조</SectionTitle>
+        <FlowInfographic />
+      </section>
+
       {/* 업무흐름도 — 각 단계에서 실제 화면으로 이동 */}
       <section>
-        <SectionTitle>일일 업무흐름도 — 단계를 누르면 실제 화면으로 이동</SectionTitle>
+        <SectionTitle>상세 업무흐름 — 단계를 누르면 실제 화면으로 이동</SectionTitle>
         <div className="relative">
           {/* 세로 연결선 */}
           <div aria-hidden className="absolute bottom-5 left-[21px] top-5 w-0.5 bg-navy-100 lg:hidden" />
@@ -191,17 +269,6 @@ export function Roadmap() {
           </div>
         </div>
 
-        {/* 데이터 환류 표시 */}
-        <div className="mt-3 flex items-start gap-3 rounded-2xl bg-teal-50 p-4">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-teal-600 shadow-sm">
-            <RefreshCw size={17} strokeWidth={2.3} />
-          </span>
-          <p className="text-sm leading-relaxed text-navy-700">
-            <b className="text-navy-900">데이터 환류:</b> STEP 4~8에서 쌓인 수거·자재·운행 데이터가 다시{' '}
-            <b className="text-teal-700">STEP 3 배차·경로 추천</b>의 정확도를 높이는 구조입니다. 쓰면 쓸수록 배차가
-            정교해지는 것이 이 시스템의 핵심 활용 방식입니다.
-          </p>
-        </div>
       </section>
 
       {/* 단계별 활용 로드맵 */}
