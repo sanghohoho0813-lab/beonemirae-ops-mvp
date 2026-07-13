@@ -10,7 +10,6 @@ import {
   PatentMappingCard,
   BusinessPlanCard,
   OfficeSavingsCard,
-  SelfCheckCard,
   FuturePlanCard,
 } from '../components/ops'
 import { PageShell, SectionTitle, MetricCard, ExpandableSection } from '../components/ui'
@@ -219,11 +218,10 @@ export function DemoSummary() {
           <ExpandableSection label="사업계획 방향 ↔ 앱 기능 보기">
             <BusinessPlanCard />
           </ExpandableSection>
-          <ExpandableSection label="사무업무 개선 · 향후 고도화 · 셀프체크 보기">
+          <ExpandableSection label="사무업무 개선 · 향후 고도화 보기">
             <div className="space-y-3">
               <OfficeSavingsCard />
               <FuturePlanCard />
-              <SelfCheckCard />
             </div>
           </ExpandableSection>
         </div>

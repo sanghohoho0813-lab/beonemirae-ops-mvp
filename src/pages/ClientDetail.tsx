@@ -130,7 +130,13 @@ export function ClientDetail() {
       {/* 핵심 지표 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="월평균 수거량" value={weight(avg)} tone="navy" />
-        <MetricCard label="미수금" value={outstanding > 0 ? won(outstanding) : '없음'} tone={outstanding > 0 ? 'rose' : 'emerald'} />
+        <MetricCard
+          label="미수금"
+          value={outstanding > 0 ? won(outstanding) : '없음'}
+          tone={outstanding > 0 ? 'rose' : 'emerald'}
+          hint="미수금 관리 →"
+          onClick={() => navigate('/receivables')}
+        />
         <div className="card p-4">
           <p className="text-[0.8125rem] font-semibold text-navy-400">최근 수거일</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{last ? prettyDate(last.date) : '—'}</p>

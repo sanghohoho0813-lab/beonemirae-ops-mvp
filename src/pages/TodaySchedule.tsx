@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
@@ -23,6 +24,7 @@ function shiftDate(iso: string, days: number): string {
 
 export function TodaySchedule() {
   const { data, clientById, completeSchedule } = useData()
+  const navigate = useNavigate()
   const [date, setDate] = useState(today())
   const [target, setTarget] = useState<Schedule | null>(null)
   const [amount, setAmount] = useState('')
@@ -97,9 +99,15 @@ export function TodaySchedule() {
                         <WasteBadge type={s.wasteType} />
                         {!done && <StatusBadge status={s.status} />}
                       </div>
-                      <p className="mt-1.5 truncate text-xl font-extrabold text-navy-900">
-                        {client?.name ?? '알 수 없는 거래처'}
-                      </p>
+                      <button
+                        onClick={() => client && navigate(`/clients/${client.id}`)}
+                        className="mt-1.5 flex max-w-full items-center gap-1 text-left"
+                      >
+                        <span className="truncate text-xl font-extrabold text-navy-900">
+                          {client?.name ?? '알 수 없는 거래처'}
+                        </span>
+                        <ChevronRight size={16} className="shrink-0 text-navy-300" />
+                      </button>
                       <p className="mt-0.5 truncate t-caption">
                         {client?.address} · {vehicle?.name ?? '미배정'}
                       </p>

@@ -44,6 +44,7 @@ export function MetricCard({
   hint,
   tone = 'navy',
   size = 'md',
+  nowrap = false,
   onClick,
 }: {
   label: string
@@ -52,6 +53,7 @@ export function MetricCard({
   hint?: string
   tone?: Tone
   size?: 'md' | 'lg'
+  nowrap?: boolean
   onClick?: () => void
 }) {
   const numberSize = size === 'lg' ? 'text-[1.875rem] sm:text-[2.125rem]' : 'text-[1.625rem]'
@@ -64,7 +66,7 @@ export function MetricCard({
       className={`card flex w-full flex-col p-4 text-left ${onClick ? 'cursor-pointer' : ''}`}
     >
       <span className="text-[0.8125rem] font-semibold text-navy-400">{label}</span>
-      <span className={`mt-1.5 font-extrabold leading-none tracking-tight ${numberSize} ${numberTone[tone]}`}>
+      <span className={`mt-1.5 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-base font-bold text-navy-300">{unit}</span>}
       </span>

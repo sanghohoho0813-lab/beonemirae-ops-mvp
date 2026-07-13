@@ -37,6 +37,13 @@ export function won(n: number): string {
   return `${n.toLocaleString('ko-KR')}원`
 }
 
+/** 원화 축약: 46500000 → "4,650만원", 120000000 → "1.2억" (작은 카드용) */
+export function wonShort(n: number): string {
+  if (n >= 100_000_000) return `${(n / 100_000_000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}억`
+  if (n >= 10_000) return `${Math.round(n / 10_000).toLocaleString('ko-KR')}만원`
+  return `${n.toLocaleString('ko-KR')}원`
+}
+
 /** kg → 보기 좋은 톤/킬로 표기: 105000 → "105.0톤", 350 → "350kg" */
 export function weight(kg: number): string {
   if (kg >= 1000) return `${(kg / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })}톤`

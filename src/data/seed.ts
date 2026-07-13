@@ -164,14 +164,17 @@ function buildSchedules(clients: Client[], today: Date): Schedule[] {
     }
   }
 
-  // 오늘 일정 — 상태 다양화 (거래처 수에 맞게 최대 10건)
-  const todayCount = Math.min(10, Math.max(3, len * 2))
-  const statuses: Schedule['status'][] = ['완료', '완료', '긴급', '지연', '예정', '예정', '예정', '예정', '예정', '예정']
-  const times = ['09:00', '09:40', '10:10', '10:30', '11:00', '11:40', '13:10', '13:50', '14:30', '15:10']
+  // 오늘 일정 — 시연 신뢰성을 위해 항상 완료 3 + 격리 긴급 1 + 지연 1 + 예정 다수로 채움
+  const todayCount = Math.min(10, Math.max(6, len * 2))
+  // 앞쪽 상태를 고정해 대시보드·오늘 일정·배차가 언제 열어도 풍부하게 보이도록 함
+  const statuses: Schedule['status'][] = ['완료', '완료', '긴급', '완료', '지연', '예정', '예정', '예정', '예정', '예정']
+  const times = ['08:50', '09:30', '10:00', '10:40', '11:20', '13:00', '13:40', '14:20', '15:00', '15:40']
   for (let k = 0; k < todayCount; k++) {
     const client = clients[k % len]
     const status = statuses[k % statuses.length]
-    const wasteType = wasteFor(client, k % 3 === 2)
+    const isolation = status === '긴급'
+    // 격리 긴급수거는 의료폐기물로 고정, 그 외는 거래처 배출물 기준
+    const wasteType = isolation ? '의료폐기물' : wasteFor(client, k % 3 === 2)
     const vehicle = pickVehicle(wasteType, n)
     const expected = wasteType === '의료폐기물' ? 150 + ((n * 13) % 160) : 260 + ((n * 19) % 240)
     const done = status === '완료'
@@ -187,7 +190,7 @@ function buildSchedules(clients: Client[], today: Date): Schedule[] {
       expectedAmount: expected,
       actualAmount: done ? Math.round(expected * 0.96) : null,
       completedAt: done ? new Date(today.getFullYear(), today.getMonth(), today.getDate(), Number(time.slice(0, 2)), 25).toISOString() : null,
-      memo: status === '긴급' ? '보관량 초과 — 우선 방문 요청' : status === '지연' ? '도로 통제로 지연' : '',
+      memo: isolation ? '격리의료폐기물 보관기한 임박 — 우선 수거 요청' : status === '지연' ? '도로 통제로 지연' : '',
     })
     n++
   }
@@ -225,9 +228,10 @@ function buildMaterials(clients: Client[], today: Date): MaterialSupply[] {
   const materials: MaterialSupply[] = []
   const len = clients.length
   if (len === 0) return materials
-  const count = Math.min(11, Math.max(4, len))
-  const offsets = [-20, -18, -15, -12, -10, -8, -6, -4, -2, 0, 0]
-  const addFlags = [false, false, true, false, true, false, true, false, true, true, false]
+  // 시연 신뢰성: 이번 달(오늘 포함) 자재공급이 항상 보이도록 최근일 위주로 생성
+  const count = Math.min(12, Math.max(6, len))
+  const offsets = [0, 0, -1, -3, -6, -9, -12, -15, -18, -21, -24, -27]
+  const addFlags = [true, false, true, false, true, false, false, true, false, true, false, false]
   for (let i = 0; i < count; i++) {
     const client = clients[(i * 3) % len]
     const date = addDays(today, offsets[i % offsets.length])
@@ -290,6 +294,21 @@ function buildPayments(clients: Client[], today: Date): Payment[] {
 export function buildSeedData(demoCount = 0, today = new Date()): AppData {
   const base = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const clients = buildClients(demoCount)
+  return {
+    clients,
+    vehicles: seedVehicles,
+    schedules: buildSchedules(clients, base),
+    materials: buildMaterials(clients, base),
+    payments: buildPayments(clients, base),
+  }
+}
+
+/**
+ * 저장된 거래처는 그대로 유지하면서 일정/자재/결제만 "오늘" 기준으로 다시 생성합니다.
+ * 과거에 저장된 시연 데이터의 '오늘 일정'이 비어 보이는 문제를 방지하기 위한 자가복구용.
+ */
+export function rebuildForToday(clients: Client[], today = new Date()): AppData {
+  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   return {
     clients,
     vehicles: seedVehicles,

@@ -1,5 +1,12 @@
 import type { AppData } from '../types'
-import { buildSeedData } from '../data/seed'
+import { buildSeedData, rebuildForToday } from '../data/seed'
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+/** 오늘 날짜 문자열 (YYYY-MM-DD) */
+function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // localStorage 영속화 레이어
@@ -53,7 +60,14 @@ export function loadData(): AppData {
         Array.isArray(parsed.schedules) &&
         (parsed.clients.length === 0 || 'isDemoGenerated' in parsed.clients[0])
       ) {
-        return parsed
+        // 시연 신뢰성 자가복구: 저장 데이터의 '오늘 일정'이 없으면(과거 날짜 기준으로 저장됨)
+        // 거래처는 유지한 채 일정/자재/결제만 오늘 기준으로 다시 생성해 빈 화면을 방지합니다.
+        const hasToday = parsed.schedules.some((s) => s.date === todayStr())
+        if (hasToday) return parsed
+        const clients = parsed.clients.length ? parsed.clients : buildSeedData(loadClientSet()).clients
+        const refreshed = rebuildForToday(clients)
+        saveData(refreshed)
+        return refreshed
       }
     }
   } catch (err) {

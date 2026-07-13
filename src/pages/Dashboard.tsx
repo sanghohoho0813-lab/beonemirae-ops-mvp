@@ -19,9 +19,9 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, MetricCard, FeatureCard, ExpandableSection } from '../components/ui'
-import { todaySummary, additionalMaterialCount } from '../lib/selectors'
+import { todaySummary, additionalMaterialCount, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, type CheckStatus } from '../lib/ops'
-import { prettyDate, today } from '../lib/format'
+import { prettyDate, today, weight, wonShort } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 대시보드 — 요약 + 기능 목차(관문). 세부는 각 화면으로 진입.
@@ -61,6 +61,14 @@ export function Dashboard() {
   const primary = checklist.filter((c) => ['urgent', 'delay', 'unpaid'].includes(c.key))
   const rest = checklist.filter((c) => !['urgent', 'delay', 'unpaid'].includes(c.key))
   const activePlans = dispatchPlans(data).filter((p) => p.stops.length > 0).length
+
+  // KPI — 오늘 수거량 / 이번 달 수거량 / 미수금
+  const todayCollectedKg = schedulesOn(data, t)
+    .filter((s) => s.status === '완료' && s.actualAmount != null)
+    .reduce((sum, s) => sum + (s.actualAmount ?? 0), 0)
+  const monthly = monthlyCollected(data)
+  const monthTotalKg = monthly.의료폐기물 + monthly.일회용기저귀
+  const outstanding = outstandingTotal(data)
 
   const features: { icon: LucideIcon; title: string; desc: string; to: string; badge?: string; tone: 'navy' | 'teal' | 'rose' | 'amber' }[] = [
     { icon: Truck, title: '배차·경로', desc: '차량별 배차·경로 추천', to: '/dispatch', badge: `${activePlans}대`, tone: 'teal' },
@@ -103,11 +111,13 @@ export function Dashboard() {
         <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-500 px-3 py-1.5 text-xs font-bold text-white">3분 시연</span>
       </button>
 
-      {/* 핵심 요약 3 */}
-      <div className="grid grid-cols-3 gap-3">
-        <MetricCard label="오늘 수거 예정" value={summary.total} unit="건" tone="navy" size="lg" />
-        <MetricCard label="확인 필요" value={confirmNeeded} unit="건" tone="amber" size="lg" />
-        <MetricCard label="긴급·지연" value={summary.긴급 + summary.지연} unit="건" tone="rose" size="lg" />
+      {/* 핵심 KPI — 오늘/이번 달 운영 지표 */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <MetricCard label="오늘 수거건수" value={summary.total} unit="건" tone="navy" size="lg" nowrap onClick={() => navigate('/today')} />
+        <MetricCard label="오늘 수거량" value={weight(todayCollectedKg)} tone="teal" size="lg" nowrap />
+        <MetricCard label="이번 달 수거량" value={weight(monthTotalKg)} tone="navy" size="lg" nowrap hint="목표 105톤" onClick={() => navigate('/stats')} />
+        <MetricCard label="미수금" value={wonShort(outstanding)} tone="rose" size="lg" nowrap onClick={() => navigate('/receivables')} />
+        <MetricCard label="차량 운행" value={`${activePlans}/${data.vehicles.length}`} unit="대" tone="navy" size="lg" nowrap onClick={() => navigate('/dispatch')} />
       </div>
 
       {/* 오늘 먼저 확인할 일 (3) + 전체 보기 */}

@@ -22,7 +22,6 @@ import {
   PATENT,
   BUSINESS_PLAN,
   OFFICE_SAVINGS,
-  SELF_CHECK,
   FUTURE_PLAN,
 } from '../data/ops'
 import { weight } from '../lib/format'
@@ -295,26 +294,6 @@ export function OfficeSavingsCard() {
           <li key={t} className="flex items-start gap-2 text-sm font-medium text-navy-600">
             <Check size={16} strokeWidth={3} className="mt-0.5 shrink-0 text-teal-600" />
             {t}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-// ── 현장실사 셀프 체크 ───────────────────────────────────────────────────────
-export function SelfCheckCard() {
-  return (
-    <div className="card p-5">
-      <p className="text-[0.9375rem] font-bold text-navy-800">현장실사 셀프 체크</p>
-      <p className="mt-0.5 text-[0.6875rem] font-medium text-navy-400">사업계획서·특허·MVP 정합성 점검</p>
-      <ul className="mt-3 space-y-2">
-        {SELF_CHECK.map((t) => (
-          <li key={t} className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-50">
-              <Check size={13} strokeWidth={3} className="text-teal-600" />
-            </span>
-            <span className="text-sm font-medium leading-snug text-navy-700">{t}</span>
           </li>
         ))}
       </ul>

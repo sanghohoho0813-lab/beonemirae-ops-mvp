@@ -62,14 +62,19 @@ function Sidebar() {
   const navigate = useNavigate()
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-navy-100 bg-white lg:flex">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
-          비
+      <div className="px-5 py-5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
+            비
+          </div>
+          <div className="leading-none">
+            <p className="whitespace-nowrap text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+            <p className="mt-1 whitespace-nowrap text-[0.6875rem] font-medium text-navy-400">통합 운영관리</p>
+          </div>
         </div>
-        <div className="leading-none">
-          <p className="text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-          <p className="mt-1 text-[0.6875rem] font-medium text-navy-400">통합 운영관리</p>
-        </div>
+        <span className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[0.625rem] font-bold text-amber-600 ring-1 ring-amber-100">
+          시연용 데이터 · Demo
+        </span>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {FULL_NAV.map((item) => {
@@ -124,7 +129,9 @@ function MobileHeader() {
           <p className="text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
           <p className="mt-1 text-[0.6875rem] font-medium text-navy-400">의료폐기물 수거·운반 통합 운영관리</p>
         </div>
-        <span className="ml-auto text-[0.625rem] font-semibold tracking-wide text-navy-300">beonemirae ops</span>
+        <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.625rem] font-bold text-amber-600 ring-1 ring-amber-100">
+          시연용 데이터
+        </span>
       </div>
     </header>
   )
