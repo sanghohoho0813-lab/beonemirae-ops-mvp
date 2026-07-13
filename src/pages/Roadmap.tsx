@@ -65,6 +65,7 @@ interface Phase {
   tag: string
   period: string
   title: string
+  purpose: string
   points: string[]
   current?: boolean
 }
@@ -73,27 +74,38 @@ const PHASES: Phase[] = [
   {
     tag: '1단계',
     period: '현재',
-    title: 'MVP 구축 · 운영 흐름 정리',
-    points: ['거래처·일정·수거입력·자재·미수금·통계 화면 구현', '실제 운영 조건(수거주기·보관기한·분리 운행) 반영', '대표·심사용 시연 흐름 구성'],
+    title: '기존 거래처 시범 적용',
+    purpose: '실제 주요거래처를 대상으로 오늘 일정·수거입력·수거대장을 현장에서 사용합니다.',
+    points: ['거래처·수거조건·차량·처리장 데이터 등록', '오늘 일정 → 수거 완료 → 수거대장 흐름 운영', '분리 운행·격리 보관기한 등 현장 조건 반영'],
     current: true,
   },
   {
     tag: '2단계',
     period: '단기',
-    title: '실데이터 운영 전환',
-    points: ['현장 수거·자재·청구 데이터를 실데이터로 입력 전환', '수거대장 PDF 출력·거래처 제공', '데이터 백업·서버 연동(Supabase 등)'],
+    title: '실제 운영 데이터 축적',
+    purpose: '시범 운영에서 나온 수거·자재·청구 데이터를 실데이터로 전환해 쌓습니다.',
+    points: ['현장 수거·자재·청구 실데이터 입력 전환', '수거대장 PDF 출력·거래처 제공', '거래처별 수거이력·미수금 누적 관리'],
   },
   {
     tag: '3단계',
     period: '중기',
-    title: '배차·경로 최적화 실증',
-    points: ['특허출원(10-2026-0101187) 기반 경로 추천 고도화', '운행거리·유류비·수거대장 작성시간 등 실증지표 검증', '긴급수거·처리장 인계시간 반영 자동 배차'],
+    title: '배차·경로 추천 고도화',
+    purpose: '축적된 운영 데이터로 특허 기반 배차·경로 추천 정확도를 높입니다.',
+    points: ['특허출원(10-2026-0101187) 기반 경로 추천 고도화', '적재율·긴급수거·처리장 인계시간 반영 자동 배차', '운행거리·유류비 등 실증지표 검증'],
   },
   {
     tag: '4단계',
+    period: '중장기',
+    title: '서버·DB 연동',
+    purpose: '로컬 저장을 서버 DB로 전환해 PC·모바일 간 실시간 공유 기반을 만듭니다.',
+    points: ['Supabase 등 서버 DB 연동', 'PC·모바일 실시간 데이터 공유', '데이터 백업·권한·이력 관리 체계화'],
+  },
+  {
+    tag: '5단계',
     period: '장기',
-    title: '서비스 확장',
-    points: ['서울·경기권 거래처 확대에 맞춘 권역 운영', '의료기관 대상 수거이력·대장 조회 제공 검토', '동종 수거·운반 업체 대상 SaaS형 확장 검토'],
+    title: 'SaaS · 플랫폼 확장',
+    purpose: '동종 수거·운반 업체가 함께 쓰는 운영관리 플랫폼으로 확장합니다.',
+    points: ['서울·경기권 거래처 확대에 맞춘 권역 운영', '의료기관 대상 수거이력·대장 조회 제공', '동종 수거·운반 업체 대상 SaaS형 제공 검토'],
   },
 ]
 
@@ -286,21 +298,25 @@ export function Roadmap() {
                 >
                   {p.tag.replace('단계', '')}
                 </span>
-                <div className={`card flex-1 p-4 ${p.current ? 'ring-2 ring-teal-400' : ''}`}>
+                <div className={`card flex-1 p-4 sm:p-5 ${p.current ? 'ring-2 ring-teal-400' : ''}`}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-bold text-navy-900">{p.title}</p>
+                    <p className="text-base font-extrabold text-navy-900 sm:text-[1.0625rem]">{p.title}</p>
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-[0.6875rem] font-bold ${
-                        p.current ? 'bg-teal-50 text-teal-600' : 'bg-navy-50 text-navy-500'
+                      className={`rounded-full px-2.5 py-1 text-[0.6875rem] font-bold ${
+                        p.current ? 'bg-teal-500 text-white' : 'bg-amber-50 text-amber-600'
                       }`}
                     >
+                      {p.current ? '현재' : '예정'}
+                    </span>
+                    <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.6875rem] font-bold text-navy-500">
                       {p.tag} · {p.period}
                     </span>
                   </div>
-                  <ul className="mt-2 space-y-1">
+                  <p className="mt-1.5 text-[0.8125rem] font-semibold leading-snug text-navy-600 sm:text-sm">{p.purpose}</p>
+                  <ul className="mt-2.5 space-y-1.5">
                     {p.points.map((pt) => (
-                      <li key={pt} className="flex gap-2 text-[0.8125rem] leading-snug text-navy-600">
-                        <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-teal-500" />
+                      <li key={pt} className="flex gap-2 text-[0.8125rem] leading-snug text-navy-700 sm:text-sm">
+                        <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-teal-500" />
                         {pt}
                       </li>
                     ))}

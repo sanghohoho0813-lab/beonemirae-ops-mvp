@@ -20,8 +20,8 @@ export function PageShell({ children, className = '' }: { children: ReactNode; c
 /** 섹션 제목 (+ 우측 액션) */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-2.5 flex items-center justify-between px-1">
-      <h2 className="text-[0.9375rem] font-bold text-navy-700">{children}</h2>
+    <div className="mb-3 flex items-center justify-between gap-2 px-1">
+      <h2 className="text-[1.0625rem] font-extrabold tracking-tight text-navy-800 sm:text-[1.1875rem]">{children}</h2>
       {action}
     </div>
   )
@@ -63,14 +63,19 @@ export function MetricCard({
       whileTap={onClick ? { scale: 0.98 } : undefined}
       transition={{ duration: 0.15, ease: EASE }}
       role={onClick ? 'button' : undefined}
-      className={`card flex w-full flex-col p-4 text-left ${onClick ? 'cursor-pointer' : ''}`}
+      tabIndex={onClick ? 0 : undefined}
+      className={`card flex w-full flex-col p-4 text-left transition sm:p-5 ${
+        onClick
+          ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400'
+          : ''
+      }`}
     >
-      <span className="text-[0.8125rem] font-semibold text-navy-400">{label}</span>
-      <span className={`mt-1.5 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
+      <span className={`order-2 mt-2 font-semibold text-navy-400 ${size === 'lg' ? 'text-sm' : 'text-[0.8125rem]'}`}>{label}</span>
+      <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
-        {unit && <span className="ml-1 text-base font-bold text-navy-300">{unit}</span>}
+        {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-300">{unit}</span>}
       </span>
-      {hint && <span className="mt-1.5 text-xs text-navy-400">{hint}</span>}
+      {hint && <span className="order-3 mt-1.5 text-xs text-navy-400 sm:text-[0.8125rem]">{hint}</span>}
     </motion.div>
   )
 }

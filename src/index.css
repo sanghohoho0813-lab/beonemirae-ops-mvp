@@ -5,11 +5,12 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    font-size: 16px;
+    font-size: 17px;
   }
   /* 글자 크기 모드 — root font-size 를 키워 rem 기반 텍스트·여백을 함께 확대 */
+  /* 모바일(<640px) 기본을 17px 로 상향해 본문/보조문구 가독성 확보 */
   html.scale-normal {
-    font-size: 16px;
+    font-size: 17px;
   }
   html.scale-lg {
     font-size: 19px; /* 약 +20% */
@@ -31,10 +32,10 @@
   }
 
   body {
-    /* 토스풍의 아주 밝은 블루그레이 배경 */
-    @apply bg-[#f5f7fa] text-navy-900 antialiased;
+    /* 토스풍의 아주 밝은 블루그레이 배경 · Pretendard→시스템 폰트 fallback */
+    @apply bg-[#f5f7fa] font-sans text-navy-900 antialiased;
     font-feature-settings: 'tnum' 1;
-    line-height: 1.45;
+    line-height: 1.5;
   }
   #root {
     min-height: 100dvh;
@@ -55,7 +56,7 @@
 
   /* 버튼 ---------------------------------------------------------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-[0.9375rem] font-bold transition-transform duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-2xl px-4 py-3 text-base font-bold transition duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-primary {
     @apply btn bg-teal-500 text-white shadow-sm hover:bg-teal-600;
@@ -72,7 +73,7 @@
 
   /* 입력 ---------------------------------------------------------------- */
   .field-label {
-    @apply mb-1.5 block text-sm font-semibold text-navy-500;
+    @apply mb-1.5 block text-[0.9375rem] font-semibold text-navy-500;
   }
   .field-input {
     @apply w-full rounded-2xl border-0 bg-navy-50 px-4 py-3.5 text-base font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:font-normal placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400;
@@ -80,7 +81,7 @@
 
   /* 텍스트 위계 -------------------------------------------------------- */
   .t-caption {
-    @apply text-xs font-medium text-navy-400;
+    @apply text-[0.8125rem] font-medium leading-snug text-navy-400;
   }
   .t-sub {
     @apply text-sm text-navy-400;

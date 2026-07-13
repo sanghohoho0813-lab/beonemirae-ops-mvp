@@ -17,9 +17,9 @@ import { exportData, parseImportFile } from '../lib/backup'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOBILE_SHORTCUTS: { to: string; label: string; icon: LucideIcon; desc: string }[] = [
-  { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '차량별 배차·경로 추천' },
   { to: '/materials', label: '자재 관리', icon: Boxes, desc: '박스·비닐·바늘통 공급 내역' },
   { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구·입금 현황 및 미수금' },
+  { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '차량별 배차·경로 추천' },
   { to: '/stats', label: '통계', icon: PieChart, desc: '수거량·거래처·차량 실적' },
 ]
 

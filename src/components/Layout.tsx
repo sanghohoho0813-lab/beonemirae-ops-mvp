@@ -47,15 +47,17 @@ const FULL_NAV: NavItem[] = [
   { to: '/more', label: '더보기', icon: MoreHorizontal },
 ]
 
-/** 모바일 하단 고정 메뉴 — 핵심 4개 (+ 더보기는 별도 버튼) */
+/** 모바일 하단 고정 메뉴 — 대시보드 바로 옆에 활용계획 배치 (+ 더보기는 별도 버튼) */
 const BOTTOM_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: LayoutGrid },
-  { to: '/today', label: '오늘 일정', icon: CalendarClock },
+  { to: '/roadmap', label: '활용계획', icon: Workflow },
+  { to: '/today', label: '오늘일정', icon: CalendarClock },
   { to: '/clients', label: '거래처', icon: Building2 },
-  { to: '/collection', label: '수거 입력', icon: PlusCircle },
+  { to: '/collection', label: '수거입력', icon: PlusCircle },
 ]
 
-const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation', '/roadmap']
+// /roadmap 은 하단 탭으로 노출되므로 '더보기' 활성 경로에서 제외
+const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation']
 
 // ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
 function Sidebar() {
@@ -152,11 +154,11 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
         />
       )}
       <Icon
-        size={24}
+        size={22}
         strokeWidth={active ? 2.4 : 2}
         className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
       />
-      <span className={`relative z-10 text-[0.6875rem] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+      <span className={`relative z-10 whitespace-nowrap text-[0.6875rem] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
     </button>
