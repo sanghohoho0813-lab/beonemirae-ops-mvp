@@ -13,6 +13,7 @@ import { Statistics } from './pages/Statistics'
 import { More } from './pages/More'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
+import { CollectionHistory } from './pages/CollectionHistory'
 import { Presentation } from './pages/Presentation'
 import { MobilePreview } from './pages/MobilePreview'
 import { CompanyHomePage } from './pages/CompanyHomePage'
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="dispatch" element={<Dispatch />} />
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
+          <Route path="history" element={<CollectionHistory />} />
           <Route path="collection" element={<CollectionInput />} />
           <Route path="materials" element={<Materials />} />
           <Route path="receivables" element={<Receivables />} />

@@ -61,30 +61,39 @@ const WORKFLOW: FlowStep[] = [
   { n: 8, icon: PieChart, title: '통계·데이터 축적', desc: '수거량·거래처·차량 실적이 쌓여 최적화의 재료가 됩니다.', status: '운영 중', to: '/stats' },
 ]
 
+type PhaseState = '완료' | '준비 중' | '예정'
 interface Phase {
   tag: string
   period: string
   title: string
   purpose: string
   points: string[]
+  state: PhaseState
   current?: boolean
+}
+const phaseStateStyle: Record<PhaseState, string> = {
+  완료: 'bg-emerald-500 text-white',
+  '준비 중': 'bg-teal-500 text-white',
+  예정: 'bg-amber-50 text-amber-600',
 }
 
 const PHASES: Phase[] = [
   {
     tag: '1단계',
-    period: '진행 중',
+    period: '완료',
     title: '현재 MVP 안정화',
-    purpose: '실제 거래처 조건과 현장 특수성을 반영해 핵심 구조를 검증하는 단계입니다.',
+    purpose: '실제 거래처 조건과 현장 특수성을 반영해 핵심 구조를 검증했습니다.',
     points: ['실제 거래처 수거조건·분리 운행 반영', '자재·수거이력·긴급요청 구조 검증', '기존 거래처 일부 시범 적용'],
-    current: true,
+    state: '완료',
   },
   {
     tag: '2단계',
-    period: '단기',
+    period: '준비 중',
     title: '반복입력 자동화',
-    purpose: '한 번의 수거 입력이 이력·자재·대장으로 이어지도록 반복 입력을 줄입니다.',
+    purpose: '현장 직원이 수거정보를 한 번 입력하면, 수거이력·자재·수거대장·월간 명세·통계에 연결되는 구조를 구현할 예정입니다.',
     points: ['수거 입력 1회 → 수거이력 자동 생성', '자재 사용 자동 반영', '수거대장·월간 명세 자동화'],
+    state: '준비 중',
+    current: true,
   },
   {
     tag: '3단계',
@@ -92,6 +101,7 @@ const PHASES: Phase[] = [
     title: '서버·DB 및 권한',
     purpose: '로컬 저장을 서버 DB로 전환하고 역할별 권한 체계를 만듭니다.',
     points: ['PC·모바일 실시간 연동', '관리자·직원·병원 권한 구분', '수정이력·백업 관리'],
+    state: '예정',
   },
   {
     tag: '4단계',
@@ -99,6 +109,7 @@ const PHASES: Phase[] = [
     title: '병원 요청·알림',
     purpose: '병원 요청과 인증·실사 대응을 알림으로 연결합니다.',
     points: ['추가수거·자재 요청 접수', '인증·실사 알림', '수거대장·월간 명세 요청 대응'],
+    state: '예정',
   },
   {
     tag: '5단계',
@@ -106,6 +117,7 @@ const PHASES: Phase[] = [
     title: '배차 추천·SaaS 확장',
     purpose: '운행데이터 기반 추천을 고도화하고 업종 특화 SaaS로 확장합니다.',
     points: ['운행데이터 기반 배차·경로 추천 고도화', '동종업계 제공 검토', '업종 특화 운영관리 SaaS'],
+    state: '예정',
   },
 ]
 
@@ -301,12 +313,8 @@ export function Roadmap() {
                 <div className={`card flex-1 p-4 sm:p-5 ${p.current ? 'ring-2 ring-teal-400' : ''}`}>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-base font-extrabold text-navy-900 sm:text-[1.0625rem]">{p.title}</p>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[0.6875rem] font-bold ${
-                        p.current ? 'bg-teal-500 text-white' : 'bg-amber-50 text-amber-600'
-                      }`}
-                    >
-                      {p.current ? '현재' : '예정'}
+                    <span className={`rounded-full px-2.5 py-1 text-[0.6875rem] font-bold ${phaseStateStyle[p.state]}`}>
+                      {p.state}
                     </span>
                     <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.6875rem] font-bold text-navy-500">
                       {p.tag} · {p.period}

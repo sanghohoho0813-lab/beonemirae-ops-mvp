@@ -33,6 +33,18 @@ const SYSTEM_SCOPE = [
   '수거대장·자재·미수금 운영관리 통합',
 ]
 
+// 하루 운영 시나리오 (심사 담당자용 · 아이콘+시간+한 문장)
+const DAY_SCENARIO = [
+  { time: '08:30', text: '오늘 일정과 긴급요청 확인' },
+  { time: '09:00', text: '차량별 수거 시작' },
+  { time: '11:30', text: '병원 자재 요청 접수' },
+  { time: '12:30', text: '처리장 이동 및 인계' },
+  { time: '14:00', text: '병원 인증자료 요청 확인' },
+  { time: '15:30', text: '추가수거 일정 반영' },
+  { time: '17:30', text: '수거 완료 및 이력 확인' },
+  { time: '18:00', text: '수거대장·월간 명세 반영 예정' },
+]
+
 const FLOW = [
   { n: 1, title: '회사 운영 규모', line: '거래처 49곳 · 차량 5대 · 월 105톤', id: 'd-1' },
   { n: 2, title: '현장 문제', line: '수거주기 차이 · 격리 · 분리 운행', id: 'd-2' },
@@ -96,6 +108,28 @@ export function DemoSummary() {
               <ChevronRight size={16} className="shrink-0 text-navy-300" />
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* 하루 운영 시나리오 */}
+      <section>
+        <SectionTitle>하루 운영 시나리오</SectionTitle>
+        <div className="card p-4 sm:p-5">
+          <div className="relative">
+            <div aria-hidden className="absolute bottom-2 left-[43px] top-2 w-0.5 bg-navy-100 sm:left-[51px]" />
+            <div className="space-y-3">
+              {DAY_SCENARIO.map((s) => (
+                <div key={s.time} className="relative flex items-center gap-3">
+                  <span className="w-[38px] shrink-0 text-right text-[0.8125rem] font-extrabold tabular-nums text-teal-600 sm:w-[46px]">{s.time}</span>
+                  <span className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-50 ring-4 ring-white">
+                    <span className="h-2 w-2 rounded-full bg-teal-500" />
+                  </span>
+                  <p className="text-sm font-semibold leading-snug text-navy-700">{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-[0.75rem] leading-snug text-navy-400">※ 수거대장·월간 명세 자동 반영은 향후 고도화 예정입니다.</p>
         </div>
       </section>
 

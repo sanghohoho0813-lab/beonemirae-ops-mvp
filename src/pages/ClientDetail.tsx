@@ -11,6 +11,7 @@ import {
   Trash2,
   Pencil,
   Truck,
+  ChevronRight,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { WasteBadge } from '../components/Badge'
@@ -18,8 +19,6 @@ import { Modal } from '../components/Modal'
 import { PageShell, SectionTitle, MetricCard, EmptyState } from '../components/ui'
 import { ClientForm } from '../components/ClientForm'
 import {
-  clientSchedules,
-  clientMaterials,
   lastCollection,
   nextSchedule,
   clientMonthlyAvg,
@@ -27,13 +26,21 @@ import {
   collectionLog,
   clientInspection,
   requestsForClient,
+  clientProfile,
+  collectionHistory,
+  collectionHistorySummary,
+  clientMaterialSummary,
+  clientPaymentRows,
   type RequestStatus,
+  type UsageStatus,
+  type BillStatus,
 } from '../lib/ops'
 import { prettyDate, weight, won } from '../lib/format'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 거래처 상세 (/clients/:id) — 수거조건·이력·자재·미수금·수거대장 통합
+// 거래처 상세 (/clients/:id) — 실제 거래처 운영관리 화면
+//  헤더 + 핵심지표 + 인증·실사 대응(상시) + 탭(운영조건/수거이력/자재/요청·알림/결제·미수금)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const reqStatusStyle: Record<RequestStatus, string> = {
@@ -42,6 +49,26 @@ const reqStatusStyle: Record<RequestStatus, string> = {
   '일정 반영': 'bg-teal-50 text-teal-700',
   '처리 완료': 'bg-emerald-50 text-emerald-600',
 }
+const usageStyle: Record<UsageStatus, string> = {
+  정상: 'bg-emerald-50 text-emerald-600',
+  '확인 필요': 'bg-amber-50 text-amber-600',
+  '점검 필요': 'bg-rose-50 text-rose-500',
+}
+const billStyle: Record<BillStatus, string> = {
+  정상: 'bg-emerald-50 text-emerald-600',
+  '입금 예정': 'bg-navy-100 text-navy-600',
+  '확인 필요': 'bg-amber-50 text-amber-600',
+  '장기 미수': 'bg-rose-50 text-rose-500',
+}
+
+const TABS = [
+  { id: 'ops', label: '운영조건' },
+  { id: 'history', label: '수거이력' },
+  { id: 'materials', label: '자재관리' },
+  { id: 'requests', label: '요청·알림' },
+  { id: 'billing', label: '결제·미수금' },
+] as const
+type TabId = (typeof TABS)[number]['id']
 
 export function ClientDetail() {
   const { id = '' } = useParams()
@@ -56,6 +83,7 @@ export function ClientDetail() {
     return rest
   })
   const [logOpen, setLogOpen] = useState(false)
+  const [tab, setTab] = useState<TabId>('ops')
 
   if (!client) {
     return (
@@ -68,8 +96,6 @@ export function ClientDetail() {
     )
   }
 
-  const schedules = clientSchedules(data, id)
-  const materials = clientMaterials(data, id)
   const last = lastCollection(data, id)
   const next = nextSchedule(data, id)
   const avg = clientMonthlyAvg(data, id)
@@ -77,6 +103,11 @@ export function ClientDetail() {
   const logRows = collectionLog(data, id)
   const inspection = clientInspection(data, id)
   const requests = requestsForClient(data, id)
+  const profile = clientProfile(client)
+  const history = collectionHistory(data, id, 10)
+  const histSummary = collectionHistorySummary(data, id)
+  const matSummary = clientMaterialSummary(data, id)
+  const bills = clientPaymentRows(data, id)
 
   function saveEdit() {
     if (!form.name.trim()) return
@@ -92,10 +123,7 @@ export function ClientDetail() {
 
   return (
     <PageShell>
-      <button
-        onClick={() => navigate('/clients')}
-        className="flex items-center gap-1.5 text-sm font-bold text-navy-500"
-      >
+      <button onClick={() => navigate('/clients')} className="flex items-center gap-1.5 text-sm font-bold text-navy-500">
         <ArrowLeft size={16} /> 거래처 목록
       </button>
 
@@ -103,9 +131,12 @@ export function ClientDetail() {
       <div className="card p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="truncate text-xl font-extrabold text-navy-900">{client.name}</h1>
               <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.6875rem] font-bold text-navy-500">{client.type}</span>
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[0.625rem] font-bold ${client.isDemoGenerated ? 'bg-navy-100 text-navy-500' : 'bg-teal-50 text-teal-600'}`}>
+                {client.isDemoGenerated ? '시연용' : '주요거래처'}
+              </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {client.collectsMedicalWaste && <WasteBadge type="의료폐기물" />}
@@ -115,7 +146,7 @@ export function ClientDetail() {
         </div>
         <div className="mt-3 space-y-1.5 text-sm text-navy-600">
           <p className="flex items-center gap-2"><MapPin size={15} className="shrink-0 text-navy-400" /> {client.address}</p>
-          <p className="flex items-center gap-2"><Phone size={15} className="shrink-0 text-navy-400" /> {client.manager} · {client.phone}</p>
+          <p className="flex items-center gap-2"><Phone size={15} className="shrink-0 text-navy-400" /> {profile.roleManager} · {client.phone}</p>
           <p className="flex items-center gap-2"><RefreshCw size={15} className="shrink-0 text-navy-400" /> 수거주기 {client.collectionCycle}</p>
           <p className="flex items-center gap-2"><Recycle size={15} className="shrink-0 text-navy-400" /> 자재 보관창고 {client.storageSize}</p>
         </div>
@@ -141,7 +172,7 @@ export function ClientDetail() {
 
       {/* 핵심 지표 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="월평균 수거량" value={weight(avg)} tone="navy" />
+        <MetricCard label="월평균 수거량" value={weight(avg)} tone="navy" nowrap />
         <MetricCard
           label="미수금"
           value={outstanding > 0 ? won(outstanding) : '없음'}
@@ -159,101 +190,213 @@ export function ClientDetail() {
         </div>
       </div>
 
-      {/* 배차·경로 반영 수거조건 */}
-      <section>
-        <SectionTitle>배차·경로 추천 반영 수거조건</SectionTitle>
-        <div className="card flex flex-wrap gap-2 p-4">
-          <Cond label={`수거주기 ${client.collectionCycle}`} />
-          {client.collectsMedicalWaste && <Cond label="의료폐기물 차량" tone="rose" />}
-          {client.collectsDiaper && <Cond label="일회용기저귀 차량" tone="teal" />}
-          <Cond label={`보관창고 ${client.storageSize}`} />
-          {client.storageSize === '작음' && <Cond label="자재 동시공급 권장" tone="amber" />}
-        </div>
-      </section>
-
-      {/* 이력 */}
-      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
-        <section>
-          <SectionTitle>최근 수거 이력</SectionTitle>
-          <div className="card divide-y divide-navy-100 p-1">
-            {schedules.slice(0, 3).map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-2 p-3.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <WasteBadge type={s.wasteType} />
-                  <span className="truncate text-sm font-semibold text-navy-700">{prettyDate(s.date)} {s.scheduledTime}</span>
-                </div>
-                <span className="shrink-0 text-sm font-bold text-navy-800">
-                  {s.actualAmount != null ? weight(s.actualAmount) : s.status}
-                </span>
-              </div>
-            ))}
-            {schedules.length === 0 && <p className="p-4 text-sm text-navy-400">수거 이력이 없습니다.</p>}
-          </div>
-        </section>
-
-        <section>
-          <SectionTitle>최근 자재 공급 이력</SectionTitle>
-          <div className="card divide-y divide-navy-100 p-1">
-            {materials.slice(0, 3).map((m) => (
-              <div key={m.id} className="p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-navy-700">{prettyDate(m.date)}</span>
-                  {m.isAdditionalRequest && <span className="pill bg-amber-50 text-amber-600">추가요청</span>}
-                </div>
-                <p className="mt-1 text-xs font-medium text-navy-500">
-                  박스 {m.boxCount} · 비닐 {m.vinylCount} · 바늘통 {m.needleBoxCount}
-                </p>
-              </div>
-            ))}
-            {materials.length === 0 && <p className="p-4 text-sm text-navy-400">자재 공급 이력이 없습니다.</p>}
-          </div>
-        </section>
-      </div>
-
-      {/* 인증·실사 대응 */}
+      {/* 인증·실사 대응 (상시 노출) */}
       {inspection && (
         <section>
-          <SectionTitle>인증·실사 대응</SectionTitle>
+          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>인증·실사 대응</SectionTitle>
           <div className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-navy-800 px-2.5 py-1 text-[0.75rem] font-bold text-white">{inspection.type}</span>
               <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.75rem] font-bold text-amber-600">인증 D-{inspection.dday}</span>
               <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.75rem] font-bold text-amber-600">{inspection.status}</span>
             </div>
-            <p className="mt-3 text-sm font-semibold text-navy-700">필요 자료</p>
+            <p className="mt-3 text-sm font-semibold text-navy-700">필요 자료 체크리스트</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {inspection.needs.map((n) => (
+              {[...new Set(['올바로 자료', ...inspection.needs, '전용 용기', '표시라벨'])].map((n) => (
                 <span key={n} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">{n}</span>
               ))}
             </div>
             <p className="mt-3 rounded-xl bg-amber-50/70 px-3.5 py-2.5 text-xs leading-snug text-amber-700">
-              사전 확인 필요 · 전용 용기 재고와 최근 수거대장을 미리 준비합니다. (문자·카카오 알림 연동은 향후 고도화 예정)
+              사전 확인 필요 · 전용 용기 재고와 최근 수거대장을 미리 준비합니다. 체크리스트는 시연용이며, 문자·카카오 알림
+              연동은 향후 고도화 예정입니다.
             </p>
           </div>
         </section>
       )}
 
-      {/* 요청·알림 */}
-      {requests.length > 0 && (
-        <section>
-          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>요청·알림</SectionTitle>
-          <div className="card divide-y divide-navy-100 p-1">
-            {requests.map((r) => (
-              <div key={r.id} className="p-3.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.75rem] font-bold text-teal-700">{r.type}</span>
-                  {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.75rem] font-bold text-rose-500">긴급</span>}
-                  <span className={`rounded-lg px-2 py-0.5 text-[0.75rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
-                  <span className="ml-auto text-xs text-navy-400">{r.when}</span>
+      {/* 탭 */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
+              tab === t.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 운영조건 ── */}
+      {tab === 'ops' && (
+        <div className="space-y-3">
+          <div className="card flex flex-wrap gap-2 p-4">
+            <Cond label={`수거주기 ${client.collectionCycle}`} />
+            {client.collectsMedicalWaste && <Cond label="의료폐기물 차량" tone="rose" />}
+            {client.collectsDiaper && <Cond label="일회용기저귀 차량" tone="teal" />}
+            <Cond label={`보관창고 ${client.storageSize}`} />
+            {client.storageSize === '작음' && <Cond label="자재 동시공급 권장" tone="amber" />}
+          </div>
+          <div className="card p-4 sm:p-5">
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              {[
+                ['거래 시작일', profile.startDate],
+                ['계약 상태', profile.contractStatus],
+                ['결제조건', profile.paymentTerm],
+                ['담당 역할', profile.roleManager],
+                ['의료폐기물 수거주기', profile.medicalCycle],
+                ['일회용기저귀 수거주기', profile.diaperCycle],
+                ['수거 가능시간', profile.pickupWindow],
+                ['평균 수거량', weight(avg)],
+                ['처리장', profile.facility],
+                ['보관창고', client.storageSize],
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-start justify-between gap-3 border-b border-navy-50 pb-2.5">
+                  <dt className="shrink-0 text-sm font-semibold text-navy-400">{k}</dt>
+                  <dd className="text-right text-sm font-bold text-navy-800">{v}</dd>
                 </div>
-                <p className="mt-1.5 text-sm leading-snug text-navy-700">{r.content}</p>
+              ))}
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {/* ── 수거이력 ── */}
+      {tab === 'history' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricCard label="이번 달 수거횟수" value={histSummary.count} unit="회" tone="navy" nowrap />
+            <MetricCard label="이번 달 총 수거량" value={weight(histSummary.totalKg)} tone="teal" nowrap />
+            <MetricCard label="긴급수거" value={histSummary.urgent} unit="건" tone="rose" nowrap />
+            <MetricCard label="자재 동시공급" value={histSummary.sameDayMaterial} unit="건" tone="amber" nowrap />
+          </div>
+          <div className="card overflow-x-auto p-1">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr className="bg-navy-50 text-navy-500">
+                  {['날짜', '구분', '성상', '수거량', '용기', '기사', '차량', '인계', '유형', '대장'].map((h) => (
+                    <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((r) => (
+                  <tr key={r.id} className="border-t border-navy-100 text-navy-700">
+                    <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.date.slice(5)} {r.scheduledTime}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.wasteType === '의료폐기물' ? '의료' : '기저귀'}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.form}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2 font-bold">{r.amountKg != null ? `${r.amountKg}kg` : '-'}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.containerType} {r.containerCount}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.driver}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.vehicleName}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.handedOver ? `${r.handoverTime} 완료` : '예정'}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.kind}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.inLedger ? '반영' : '-'}</td>
+                  </tr>
+                ))}
+                {history.length === 0 && (
+                  <tr><td colSpan={10} className="px-3 py-4 text-center text-navy-400">수거 이력이 없습니다.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <button onClick={() => navigate('/history')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+              <FileText size={19} strokeWidth={2.2} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-navy-900">전체 수거이력 보기</p>
+              <p className="text-xs text-navy-400">기간·차량·폐기물 구분 필터로 전체 이력을 확인합니다</p>
+            </div>
+            <ChevronRight size={18} className="shrink-0 text-navy-300" />
+          </button>
+        </div>
+      )}
+
+      {/* ── 자재관리 ── */}
+      {tab === 'materials' && (
+        <div className="space-y-3">
+          <div className="card p-1">
+            {matSummary.map((m) => (
+              <div key={m.type} className="flex items-center justify-between gap-3 border-b border-navy-50 p-3.5 last:border-0">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-navy-800">{m.type}</p>
+                  <p className="mt-0.5 text-xs font-medium text-navy-500">
+                    이번 달 공급 {m.suppliedMonth} · 추정 잔량 {m.estRemain} · 최근 {m.lastDate ? prettyDate(m.lastDate) : '-'}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.75rem] font-bold ${usageStyle[m.status]}`}>{m.status}</span>
               </div>
             ))}
           </div>
-          <p className="mt-2 px-1 text-xs leading-snug text-navy-400">
-            관리자·이사가 전화·카카오로 받은 요청을 기록하는 구조입니다. 병원 직접 접수 포털은 향후 고도화 예정입니다.
+          <p className="px-1 text-xs leading-snug text-navy-400">
+            자재 공급량과 실제 배출량 비교는 <b className="text-navy-500">자재 관리</b> 화면에서 확인합니다. 확정 판단이 아닌
+            점검용 지표입니다.
           </p>
-        </section>
+          <button onClick={() => navigate('/materials')} className="btn-ghost w-full">자재 관리에서 보기</button>
+        </div>
+      )}
+
+      {/* ── 요청·알림 ── */}
+      {tab === 'requests' && (
+        <div className="space-y-3">
+          {requests.length === 0 ? (
+            <p className="card p-4 text-sm text-navy-400">등록된 요청이 없습니다.</p>
+          ) : (
+            <div className="card divide-y divide-navy-100 p-1">
+              {requests.map((r) => (
+                <div key={r.id} className="p-3.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.75rem] font-bold text-teal-700">{r.type}</span>
+                    {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.75rem] font-bold text-rose-500">긴급</span>}
+                    <span className={`rounded-lg px-2 py-0.5 text-[0.75rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
+                    <span className="ml-auto text-xs text-navy-400">{r.when}</span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-snug text-navy-700">{r.content}</p>
+                  <p className="mt-1 text-xs text-navy-400">담당 {profile.roleManager} 접수 · 전화·카카오 기록</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="px-1 text-xs leading-snug text-navy-400">
+            현재는 관리자·이사가 전화·카톡 요청을 기록하는 MVP이며, 병원 담당자 직접 요청 기능은 향후 고도화 예정입니다.
+          </p>
+        </div>
+      )}
+
+      {/* ── 결제·미수금 ── */}
+      {tab === 'billing' && (
+        <div className="space-y-3">
+          <div className="card overflow-x-auto p-1">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead>
+                <tr className="bg-navy-50 text-navy-500">
+                  {['청구월', '청구금액', '입금', '미수금', '계산서', '상태'].map((h) => (
+                    <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bills.map((b) => (
+                  <tr key={b.id} className="border-t border-navy-100 text-navy-700">
+                    <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{b.month}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{b.amount.toLocaleString('ko-KR')}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{b.paid.toLocaleString('ko-KR')}</td>
+                    <td className={`whitespace-nowrap px-2.5 py-2 font-bold ${b.outstanding > 0 ? 'text-rose-500' : 'text-navy-500'}`}>{b.outstanding.toLocaleString('ko-KR')}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">{b.invoiceIssued ? '발행' : '-'}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2"><span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${billStyle[b.status]}`}>{b.status}</span></td>
+                  </tr>
+                ))}
+                {bills.length === 0 && (
+                  <tr><td colSpan={6} className="px-3 py-4 text-center text-navy-400">청구 내역이 없습니다.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <button onClick={() => navigate('/receivables')} className="btn-ghost w-full">미수금 관리에서 보기</button>
+        </div>
       )}
 
       {/* 수정 모달 */}

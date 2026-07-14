@@ -61,7 +61,7 @@ const BOTTOM_NAV: NavItem[] = [
 ]
 
 // /roadmap 은 하단 탭으로 노출되므로 '더보기' 활성 경로에서 제외
-const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation']
+const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation', '/history']
 
 // ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
 function Sidebar() {

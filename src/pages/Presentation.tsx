@@ -12,6 +12,7 @@ import {
   FileBadge,
   Workflow,
   ArrowRight,
+  CheckCircle2,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { todaySummary } from '../lib/selectors'
@@ -182,7 +183,31 @@ export function Presentation() {
         )}
       </div>
 
-      <p className="mt-3 text-center text-xs text-navy-300">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
+      {/* 업무가 어떻게 달라지는가 (Before / After) */}
+      <div className="mt-6">
+        <p className="mb-2 px-1 text-[0.9375rem] font-extrabold text-navy-800">업무가 어떻게 달라지는가</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card p-4">
+            <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[0.6875rem] font-bold text-navy-500">Before</span>
+            <ul className="mt-2.5 space-y-1.5 text-[0.8125rem] leading-snug text-navy-600">
+              {['여러 개의 엑셀', '전화·카톡 요청', '수기대장', '담당자별 중복 입력', '자재·수거·정산 분산', '인증 직전 긴급 대응'].map((t) => (
+                <li key={t} className="flex gap-1.5"><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />{t}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="card p-4 ring-1 ring-teal-200">
+            <span className="rounded-full bg-teal-500 px-2.5 py-1 text-[0.6875rem] font-bold text-white">After</span>
+            <ul className="mt-2.5 space-y-1.5 text-[0.8125rem] leading-snug text-navy-700">
+              {['하나의 운영 시스템', 'PC·모바일 동일 데이터', '수거·자재·이력 통합', '요청사항 기록', '월간 자료 자동화(예정)', '배차·경로 추천'].map((t) => (
+                <li key={t} className="flex gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-teal-500" />{t}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <p className="mt-2 px-1 text-[0.75rem] text-navy-400">※ 월간 자료 자동화·실시간 공유는 향후 고도화 예정입니다.</p>
+      </div>
+
+      <p className="mt-4 text-center text-xs text-navy-300">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
     </div>
   )
 }

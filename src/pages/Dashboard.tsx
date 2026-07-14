@@ -20,7 +20,7 @@ import {
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, MetricCard, FeatureCard, ExpandableSection } from '../components/ui'
 import { todaySummary, additionalMaterialCount, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
-import { todayChecklist, dispatchPlans, type CheckStatus } from '../lib/ops'
+import { todayChecklist, dispatchPlans, todayProgress, clientRequests, type CheckStatus } from '../lib/ops'
 import { prettyDate, today, weight, wonShort } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,6 +71,8 @@ export function Dashboard() {
   const monthly = monthlyCollected(data)
   const monthTotalKg = monthly.의료폐기물 + monthly.일회용기저귀
   const outstanding = outstandingTotal(data)
+  const progress = todayProgress(data)
+  const recentRequests = clientRequests(data).slice(0, 5)
 
   const features: { icon: LucideIcon; title: string; desc: string; to: string; badge?: string; tone: 'navy' | 'teal' | 'rose' | 'amber' }[] = [
     { icon: Truck, title: '배차·경로', desc: '차량별 배차·경로 추천', to: '/dispatch', badge: `${activePlans}대`, tone: 'teal' },
@@ -140,6 +142,49 @@ export function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* 오늘 업무 진행 현황 */}
+      <section>
+        <SectionTitle>오늘 업무 진행 현황</SectionTitle>
+        <div className="card p-4 sm:p-5">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-3">
+            {[
+              { n: '1', label: '일정 확인', v: progress.planned, u: '건' },
+              { n: '2', label: '수거 진행', v: progress.inProgress, u: '건' },
+              { n: '3', label: '수거 완료', v: progress.done, u: '건' },
+              { n: '4', label: '처리장 인계', v: progress.handover, u: '곳' },
+              { n: '5', label: '입력·정산', v: progress.pendingInput, u: '건' },
+            ].map((step, i) => (
+              <div key={step.n} className="relative flex flex-col items-center text-center">
+                {i < 4 && <span aria-hidden className="absolute right-[-4px] top-4 hidden h-0.5 w-[calc(100%-2rem)] translate-x-1/2 bg-navy-100 sm:block" />}
+                <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-teal-50 text-[0.75rem] font-extrabold text-teal-600">{step.n}</span>
+                <span className="mt-1.5 text-lg font-extrabold text-navy-900">{step.v}<span className="text-[0.6875rem] font-bold text-navy-300">{step.u}</span></span>
+                <span className="text-[0.6875rem] font-semibold leading-tight text-navy-500">{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 최근 병원 요청 */}
+      {recentRequests.length > 0 && (
+        <section>
+          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>최근 병원 요청</SectionTitle>
+          <div className="card divide-y divide-navy-100 p-1">
+            {recentRequests.map((r) => (
+              <button key={r.id} onClick={() => navigate(`/clients/${r.clientId}`)} className="pressable flex w-full items-center gap-3 p-3 text-left hover:bg-navy-50">
+                <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.6875rem] font-bold text-teal-700">{r.type}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-navy-800">{r.clientName}</p>
+                  <p className="truncate text-xs text-navy-400">{r.content}</p>
+                </div>
+                {r.urgent && <span className="shrink-0 rounded-lg bg-rose-50 px-2 py-0.5 text-[0.6875rem] font-bold text-rose-500">긴급</span>}
+                <ChevronRight size={16} className="shrink-0 text-navy-300" />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 기능 목차 */}
       <section>

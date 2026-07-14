@@ -77,11 +77,31 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
                 </span>
               </div>
 
-              <div className="flex gap-4 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-xs font-medium text-navy-500">
+              {/* 추천 이유 */}
+              <div>
+                <p className="mb-1.5 text-[0.8125rem] font-semibold text-navy-500">추천 이유</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    '같은 권역 거래처 우선 묶음',
+                    '수거 가능시간 반영',
+                    `${p.wasteType} 전용 차량 분리`,
+                    ...(p.urgentCount > 0 ? ['보관기한 임박·긴급수거 우선'] : []),
+                    ...(p.materialCount > 0 ? ['자재 동시공급 필요'] : []),
+                    '차량 적재율 고려',
+                    '처리장 인계시간 고려',
+                    '기사 근무시간 고려',
+                  ].map((r) => (
+                    <span key={r} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">{r}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-xs font-medium text-navy-500">
                 <span>실적재 약 {p.capacity.toLocaleString('ko-KR')}kg</span>
                 <span>운행거리 <b className="text-navy-700">{p.simDistanceKm}km</b> <span className="text-navy-300">(시뮬레이션)</span></span>
                 <span>운행시간 <b className="text-navy-700">{p.simMinutes}분</b> <span className="text-navy-300">(시뮬레이션)</span></span>
               </div>
+              <p className="text-[0.75rem] text-navy-400">업무보조 추천 · 관리자 최종 확인 필요</p>
             </div>
           </motion.div>
         )}
