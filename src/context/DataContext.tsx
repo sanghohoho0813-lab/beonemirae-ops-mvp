@@ -15,6 +15,12 @@ import type {
   Schedule,
 } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
+import {
+  applyCollectionCompletion,
+  rollbackCollectionCompletion,
+  type CollectionCompletionInput,
+  type CommandResult,
+} from '../lib/collection'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전역 데이터 컨텍스트
@@ -34,6 +40,9 @@ interface DataContextValue {
   updateSchedule: (id: string, patch: Partial<Schedule>) => void
   removeSchedule: (id: string) => void
   completeSchedule: (id: string, actualAmount: number, memo?: string) => void
+  // 수거 완료 통합 커맨드 (3단계) — 입력 한 번으로 일정/이력/자재/재고/요청/감사기록 연결
+  completeCollection: (input: CollectionCompletionInput) => CommandResult
+  revertCollection: (eventId: string) => CommandResult
   // 자재공급
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
@@ -116,6 +125,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  // ── 수거 완료 통합 커맨드 (3단계) ───────────────────────────────────────
+  // 검증→적용→저장을 한 번에 수행. 현재 커밋된 data 기준으로 계산(원자적)합니다.
+  const completeCollection = useCallback(
+    (input: CollectionCompletionInput): CommandResult => {
+      const result = applyCollectionCompletion(data, input)
+      if (result.ok && result.data) setData(result.data)
+      return result
+    },
+    [data],
+  )
+
+  const revertCollection = useCallback(
+    (eventId: string): CommandResult => {
+      const result = rollbackCollectionCompletion(data, eventId)
+      if (result.ok && result.data) setData(result.data)
+      return result
+    },
+    [data],
+  )
+
   // ── 자재공급 ────────────────────────────────────────────────────────────
   const addMaterial = useCallback((m: Omit<MaterialSupply, 'id'>) => {
     const material: MaterialSupply = { ...m, id: uid('m') }
@@ -180,6 +209,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateSchedule,
       removeSchedule,
       completeSchedule,
+      completeCollection,
+      revertCollection,
       addMaterial,
       removeMaterial,
       addPayment,
@@ -200,6 +231,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateSchedule,
       removeSchedule,
       completeSchedule,
+      completeCollection,
+      revertCollection,
       addMaterial,
       removeMaterial,
       addPayment,

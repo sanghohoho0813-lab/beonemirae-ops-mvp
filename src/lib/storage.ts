@@ -1,4 +1,5 @@
-import type { AppData } from '../types'
+import type { AppData, CollectionEvent } from '../types'
+import { DEFAULT_OFFICE_STOCK, SCHEMA_VERSION } from '../types'
 import { buildSeedData, rebuildForToday } from '../data/seed'
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
@@ -17,6 +18,82 @@ function todayStr(): string {
 
 const STORAGE_KEY = 'beonemirae-ops:v3'
 const CLIENT_SET_KEY = 'beonemirae-ops:client-set'
+const SCHEMA_VERSION_KEY = 'beonemirae-ops:schema-version'
+const BACKUP_KEY = 'beonemirae-ops:v3:backup-before-schema2'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 스키마 v2 마이그레이션 (3단계)
+//  · 기존 저장 데이터(clients/schedules/materials/payments)는 그대로 두고
+//    누락된 필드(officeStock/events/requestOverrides, Schedule.origin/eventId 등)만 채웁니다.
+//  · 멱등(idempotent): 이미 v2 형태면 그대로 통과. 최초 1회만 백업 생성.
+// ─────────────────────────────────────────────────────────────────────────────
+type LegacyData = AppData & { officeStock?: unknown; events?: unknown; requestOverrides?: unknown }
+
+function needsMigration(d: LegacyData): boolean {
+  return (
+    !d.officeStock ||
+    !Array.isArray(d.events) ||
+    !Array.isArray(d.requestOverrides) ||
+    d.schedules.some((s) => s.origin === undefined)
+  )
+}
+
+export function migrateToV2(parsed: LegacyData): AppData {
+  if (!needsMigration(parsed)) return parsed as AppData
+  // 최초 마이그레이션 시 원본 백업 (한 번만)
+  try {
+    if (!localStorage.getItem(BACKUP_KEY)) {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(parsed))
+    }
+  } catch {
+    /* noop */
+  }
+  const schedules = parsed.schedules.map((s) => ({
+    ...s,
+    // 기존 완료 건은 인계 완료로 간주, 그 외는 상태 없음. 현장 입력 여부는 seed 로 취급.
+    handoverStatus: s.handoverStatus ?? (s.status === '완료' ? ('인계 완료' as const) : undefined),
+    handoverAt: s.handoverAt ?? null,
+    eventId: s.eventId ?? null,
+    origin: s.origin ?? ('seed' as const),
+  }))
+  const migrated: AppData = {
+    ...parsed,
+    schedules,
+    officeStock: parsed.officeStock ? (parsed.officeStock as AppData['officeStock']) : { ...DEFAULT_OFFICE_STOCK },
+    events: Array.isArray(parsed.events) ? (parsed.events as CollectionEvent[]) : [],
+    requestOverrides: Array.isArray(parsed.requestOverrides)
+      ? (parsed.requestOverrides as AppData['requestOverrides'])
+      : [],
+  }
+  try {
+    localStorage.setItem(SCHEMA_VERSION_KEY, String(SCHEMA_VERSION))
+  } catch {
+    /* noop */
+  }
+  return migrated
+}
+
+/**
+ * 하루가 바뀌어 오늘 일정이 비어 있을 때, 시드 기반 오늘 데이터를 다시 만들되
+ * 현장에서 직접 입력(origin='field')한 수거 기록과 감사기록/재고는 보존합니다.
+ * (오늘 입력이 있으면 loadData 가 rebuild 를 타지 않으므로 오늘분은 항상 안전합니다.)
+ */
+export function rebuildPreserving(prev: AppData): AppData {
+  const clients = prev.clients.length ? prev.clients : buildSeedData(loadClientSet()).clients
+  const regen = rebuildForToday(clients)
+  const fieldSchedules = prev.schedules.filter((s) => s.origin === 'field')
+  const keepMaterialIds = new Set(prev.events.flatMap((e) => e.materialIds))
+  const fieldMaterials = prev.materials.filter((m) => keepMaterialIds.has(m.id))
+  return {
+    ...regen,
+    schedules: [...regen.schedules, ...fieldSchedules],
+    materials: [...regen.materials, ...fieldMaterials],
+    // 감사기록·사무실 재고는 물리적으로 이어지므로 보존, 요청 오버라이드는 새 날이므로 초기화
+    events: prev.events,
+    officeStock: prev.officeStock,
+    requestOverrides: [],
+  }
+}
 
 /** 시연용 확장 거래처 수 (0=실제 5곳만, 10/20/30=실제+시연) */
 export type ClientSetSize = 0 | 10 | 20 | 30
@@ -60,12 +137,16 @@ export function loadData(): AppData {
         Array.isArray(parsed.schedules) &&
         (parsed.clients.length === 0 || 'isDemoGenerated' in parsed.clients[0])
       ) {
+        // v1 → v2 스키마 마이그레이션 (누락 필드만 채움, 멱등)
+        const migrated = migrateToV2(parsed as AppData)
         // 시연 신뢰성 자가복구: 저장 데이터의 '오늘 일정'이 없으면(과거 날짜 기준으로 저장됨)
-        // 거래처는 유지한 채 일정/자재/결제만 오늘 기준으로 다시 생성해 빈 화면을 방지합니다.
-        const hasToday = parsed.schedules.some((s) => s.date === todayStr())
-        if (hasToday) return parsed
-        const clients = parsed.clients.length ? parsed.clients : buildSeedData(loadClientSet()).clients
-        const refreshed = rebuildForToday(clients)
+        // 거래처·현장 입력 기록은 유지한 채 오늘 기준 시드 데이터만 다시 생성합니다.
+        const hasToday = migrated.schedules.some((s) => s.date === todayStr())
+        if (hasToday) {
+          if (migrated !== parsed) saveData(migrated)
+          return migrated
+        }
+        const refreshed = rebuildPreserving(migrated)
         saveData(refreshed)
         return refreshed
       }

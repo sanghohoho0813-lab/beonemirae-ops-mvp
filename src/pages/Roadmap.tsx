@@ -61,7 +61,7 @@ const WORKFLOW: FlowStep[] = [
   { n: 8, icon: PieChart, title: '통계·데이터 축적', desc: '수거량·거래처·차량 실적이 쌓여 최적화의 재료가 됩니다.', status: '운영 중', to: '/stats' },
 ]
 
-type PhaseState = '완료' | '준비 중' | '예정'
+type PhaseState = '완료' | 'MVP 구현' | '준비 중' | '예정'
 interface Phase {
   tag: string
   period: string
@@ -73,6 +73,7 @@ interface Phase {
 }
 const phaseStateStyle: Record<PhaseState, string> = {
   완료: 'bg-emerald-500 text-white',
+  'MVP 구현': 'bg-teal-500 text-white',
   '준비 중': 'bg-teal-500 text-white',
   예정: 'bg-amber-50 text-amber-600',
 }
@@ -88,11 +89,12 @@ const PHASES: Phase[] = [
   },
   {
     tag: '2단계',
-    period: '준비 중',
+    period: 'MVP 구현',
     title: '반복입력 자동화',
-    purpose: '현장 직원이 수거정보를 한 번 입력하면, 수거이력·자재·수거대장·월간 명세·통계에 연결되는 구조를 구현할 예정입니다.',
-    points: ['수거 입력 1회 → 수거이력 자동 생성', '자재 사용 자동 반영', '수거대장·월간 명세 자동화'],
-    state: '준비 중',
+    purpose:
+      '현장 직원이 수거정보를 한 번 입력하면 오늘 일정·수거이력·자재·재고·통계·수거대장 초안까지 자동으로 연결됩니다. (수거대장·명세의 PDF 출력은 향후 고도화 예정)',
+    points: ['수거 입력 1회 → 수거이력 자동 생성', '자재 동시공급 → 사무실 재고 자동 차감', '수거대장·월간 명세 초안 자동 생성'],
+    state: 'MVP 구현',
     current: true,
   },
   {

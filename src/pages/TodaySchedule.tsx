@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { StatusBadge, WasteBadge } from '../components/Badge'
@@ -8,11 +8,14 @@ import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
 import { schedulesOn } from '../lib/selectors'
+import { EMPTY_SUPPLIED } from '../lib/collection'
 import { prettyDate, today, weight } from '../lib/format'
-import type { Schedule } from '../types'
+import type { ContainerBreakdown, Schedule, WasteType } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 오늘 일정 — 날짜별 수거 일정 리스트 + 완료 처리 + 수거량 입력
+// 오늘 일정 — 날짜별 수거 일정 + 완료 처리
+//  · 수거정보 입력: 프리필된 수거 입력 화면으로 이동 (용기·자재까지 상세 입력)
+//  · 빠른 완료: 기본값으로 통합 커맨드 실행 (일정·이력·자재·통계 자동 연결)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -22,26 +25,72 @@ function shiftDate(iso: string, days: number): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+// 빠른 완료 시 용기별 배출 수량 기본값 (결정적)
+function defaultContainers(wasteType: WasteType, amount: number): ContainerBreakdown {
+  if (wasteType === '일회용기저귀') return { corrugated: 0, plastic: 0, bag: Math.max(2, Math.round(amount / 30)), etc: 0 }
+  return { corrugated: Math.max(1, Math.round(amount / 45)), plastic: 1, bag: 0, etc: 0 }
+}
+
 export function TodaySchedule() {
-  const { data, clientById, completeSchedule } = useData()
+  const { data, clientById, completeSchedule, completeCollection } = useData()
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
-  const [target, setTarget] = useState<Schedule | null>(null)
-  const [amount, setAmount] = useState('')
-  const [memo, setMemo] = useState('')
+
+  // 완료된 건 수정 (기존 동작 유지)
+  const [editTarget, setEditTarget] = useState<Schedule | null>(null)
+  const [editAmount, setEditAmount] = useState('')
+  const [editMemo, setEditMemo] = useState('')
+
+  // 빠른 완료
+  const [quick, setQuick] = useState<Schedule | null>(null)
+  const [quickAmount, setQuickAmount] = useState('')
+  const [quickMemo, setQuickMemo] = useState('')
+  const [quickError, setQuickError] = useState('')
 
   const list = useMemo(() => schedulesOn(data, date), [data, date])
 
-  function openComplete(s: Schedule) {
-    setTarget(s)
-    setAmount(s.actualAmount != null ? String(s.actualAmount) : String(s.expectedAmount))
-    setMemo(s.memo)
+  function openEdit(s: Schedule) {
+    setEditTarget(s)
+    setEditAmount(s.actualAmount != null ? String(s.actualAmount) : String(s.expectedAmount))
+    setEditMemo(s.memo)
+  }
+  function submitEdit() {
+    if (!editTarget) return
+    completeSchedule(editTarget.id, Number(editAmount) || 0, editMemo)
+    setEditTarget(null)
   }
 
-  function submitComplete() {
-    if (!target) return
-    completeSchedule(target.id, Number(amount) || 0, memo)
-    setTarget(null)
+  function openQuick(s: Schedule) {
+    setQuick(s)
+    setQuickAmount(String(s.expectedAmount))
+    setQuickMemo(s.memo)
+    setQuickError('')
+  }
+  function submitQuick() {
+    if (!quick) return
+    const amt = Number(quickAmount) || quick.expectedAmount
+    const vehicle = data.vehicles.find((v) => v.id === quick.vehicleId)
+    const result = completeCollection({
+      scheduleId: quick.id,
+      clientId: quick.clientId,
+      wasteType: quick.wasteType,
+      vehicleId: quick.vehicleId,
+      driverName: vehicle?.driver ?? '',
+      actualAmount: amt,
+      actualTime: quick.scheduledTime,
+      containers: defaultContainers(quick.wasteType, amt),
+      handoverStatus: '수거 완료',
+      supplied: { ...EMPTY_SUPPLIED },
+      isAdditional: false,
+      memo: quickMemo,
+      role: '현장 담당자',
+      screen: '오늘 일정 · 빠른 완료',
+    })
+    if (!result.ok) {
+      setQuickError(result.errors.join(' '))
+      return
+    }
+    setQuick(null)
   }
 
   const doneCount = list.filter((s) => s.status === '완료').length
@@ -85,7 +134,6 @@ export function TodaySchedule() {
             const urgent = s.status === '긴급'
             return (
               <StaggerItem key={s.id} className="card overflow-hidden">
-                {/* 긴급: 상단 우선 방문 안내 (작은 배너) */}
                 {urgent && (
                   <div className="flex items-center gap-1.5 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-500">
                     <AlertTriangle size={13} strokeWidth={2.6} /> 우선 방문 요청
@@ -98,6 +146,11 @@ export function TodaySchedule() {
                         <span className="tabular-nums text-lg font-extrabold text-navy-900">{s.scheduledTime}</span>
                         <WasteBadge type={s.wasteType} />
                         {!done && <StatusBadge status={s.status} />}
+                        {done && s.handoverStatus && (
+                          <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[0.625rem] font-bold text-navy-500">
+                            {s.handoverStatus}
+                          </span>
+                        )}
                       </div>
                       <button
                         onClick={() => client && navigate(`/clients/${client.id}`)}
@@ -128,7 +181,7 @@ export function TodaySchedule() {
                       {done && (
                         <button
                           className="mt-1.5 rounded-full bg-navy-50 px-3 py-1 text-xs font-bold text-navy-500 transition active:scale-95"
-                          onClick={() => openComplete(s)}
+                          onClick={() => openEdit(s)}
                         >
                           수정
                         </button>
@@ -137,12 +190,18 @@ export function TodaySchedule() {
                   </div>
 
                   {!done && (
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
-                        className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition active:scale-95"
-                        onClick={() => openComplete(s)}
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-navy-50 px-3 py-2.5 text-sm font-bold text-navy-700 transition active:scale-95"
+                        onClick={() => navigate(`/collection?schedule=${s.id}`)}
                       >
-                        <Check size={16} strokeWidth={2.6} /> 수거 완료
+                        <ClipboardEdit size={15} strokeWidth={2.4} /> 수거정보 입력
+                      </button>
+                      <button
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-teal-500 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95"
+                        onClick={() => openQuick(s)}
+                      >
+                        <Zap size={15} strokeWidth={2.6} /> 빠른 완료
                       </button>
                     </div>
                   )}
@@ -153,28 +212,29 @@ export function TodaySchedule() {
         </Stagger>
       )}
 
-      {/* 완료/수거량 입력 모달 */}
+      {/* 빠른 완료 확인 모달 (통합 커맨드 사용) */}
       <Modal
-        open={target !== null}
-        title="수거 완료 처리"
-        onClose={() => setTarget(null)}
+        open={quick !== null}
+        title="빠른 완료"
+        onClose={() => setQuick(null)}
         footer={
           <>
-            <button className="btn-ghost flex-1" onClick={() => setTarget(null)}>
+            <button className="btn-ghost flex-1" onClick={() => setQuick(null)}>
               취소
             </button>
-            <button className="btn-primary flex-1" onClick={submitComplete}>
-              저장
+            <button className="btn-primary flex-1" onClick={submitQuick}>
+              <Check size={16} strokeWidth={2.6} /> 완료 처리
             </button>
           </>
         }
       >
-        {target && (
+        {quick && (
           <>
             <div className="rounded-xl bg-navy-50 p-3 text-sm">
-              <p className="font-semibold text-navy-900">{clientById(target.clientId)?.name}</p>
+              <p className="font-semibold text-navy-900">{clientById(quick.clientId)?.name}</p>
               <p className="text-navy-400">
-                {target.scheduledTime} · {target.wasteType}
+                {quick.scheduledTime} · {quick.wasteType} ·{' '}
+                {data.vehicles.find((v) => v.id === quick.vehicleId)?.driver ?? '기사 미지정'}
               </p>
             </div>
             <div>
@@ -183,8 +243,11 @@ export function TodaySchedule() {
                 type="number"
                 inputMode="numeric"
                 className="field-input"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                value={quickAmount}
+                onChange={(e) => {
+                  setQuickAmount(e.target.value)
+                  setQuickError('')
+                }}
                 placeholder="예: 320"
               />
             </div>
@@ -193,8 +256,66 @@ export function TodaySchedule() {
               <textarea
                 className="field-input"
                 rows={2}
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
+                value={quickMemo}
+                onChange={(e) => setQuickMemo(e.target.value)}
+                placeholder="현장 특이사항 (선택)"
+              />
+            </div>
+            <p className="text-[0.6875rem] text-navy-400">
+              용기·자재까지 상세 입력하려면 <b>수거정보 입력</b>을 사용하세요. 빠른 완료도 동일하게 일정·이력·통계에
+              연결됩니다.
+            </p>
+            {quickError && (
+              <p className="flex items-start gap-1.5 text-sm font-semibold text-rose-500">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" /> {quickError}
+              </p>
+            )}
+          </>
+        )}
+      </Modal>
+
+      {/* 완료 건 수정 모달 */}
+      <Modal
+        open={editTarget !== null}
+        title="수거 내역 수정"
+        onClose={() => setEditTarget(null)}
+        footer={
+          <>
+            <button className="btn-ghost flex-1" onClick={() => setEditTarget(null)}>
+              취소
+            </button>
+            <button className="btn-primary flex-1" onClick={submitEdit}>
+              저장
+            </button>
+          </>
+        }
+      >
+        {editTarget && (
+          <>
+            <div className="rounded-xl bg-navy-50 p-3 text-sm">
+              <p className="font-semibold text-navy-900">{clientById(editTarget.clientId)?.name}</p>
+              <p className="text-navy-400">
+                {editTarget.scheduledTime} · {editTarget.wasteType}
+              </p>
+            </div>
+            <div>
+              <label className="field-label">실제 수거량 (kg)</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                className="field-input"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                placeholder="예: 320"
+              />
+            </div>
+            <div>
+              <label className="field-label">메모</label>
+              <textarea
+                className="field-input"
+                rows={2}
+                value={editMemo}
+                onChange={(e) => setEditMemo(e.target.value)}
                 placeholder="현장 특이사항을 입력하세요"
               />
             </div>

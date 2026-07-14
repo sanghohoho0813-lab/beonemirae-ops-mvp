@@ -183,6 +183,17 @@ export function Presentation() {
         )}
       </div>
 
+      {/* 한 번 입력 → 자동 연결 (3단계 핵심) */}
+      <div className="mt-6 rounded-2xl bg-navy-900 p-4 text-white">
+        <p className="flex items-center gap-2 text-[0.9375rem] font-extrabold">
+          <Workflow size={17} className="text-teal-300" /> 한 번 입력, 여러 화면 자동 연결
+        </p>
+        <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-navy-100">
+          현장 담당자가 수거정보를 한 번 입력하면 오늘 일정, 수거이력, 자재와 통계에 연결됩니다. 여러 엑셀·수기대장에
+          반복 입력할 필요가 없습니다.
+        </p>
+      </div>
+
       {/* 업무가 어떻게 달라지는가 (Before / After) */}
       <div className="mt-6">
         <p className="mb-2 px-1 text-[0.9375rem] font-extrabold text-navy-800">업무가 어떻게 달라지는가</p>

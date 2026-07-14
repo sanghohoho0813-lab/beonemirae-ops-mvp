@@ -1,4 +1,4 @@
-import type { AppData, Client, WasteType } from '../types'
+import type { AppData, Client, HandoverStatus, RequestStatus, WasteType } from '../types'
 import { facilityByWaste } from '../data/ops'
 import { schedulesOn, todaySummary, additionalMaterialCount } from './selectors'
 import { today, thisMonth } from './format'
@@ -243,14 +243,15 @@ export function collectionLog(data: AppData, clientId: string, month = thisMonth
   const rows: LogRow[] = []
   for (const s of data.schedules) {
     if (s.clientId !== clientId || s.status !== '완료' || !s.date.startsWith(month)) continue
-    const driver = data.vehicles.find((v) => v.id === s.vehicleId)?.driver ?? '-'
+    const driver = s.driverName ?? data.vehicles.find((v) => v.id === s.vehicleId)?.driver ?? '-'
+    const c = s.containers
     rows.push({
       date: s.date,
       wasteType: s.wasteType,
       amount: s.actualAmount,
-      box: 0,
-      vinyl: 0,
-      needle: 0,
+      box: c?.corrugated ?? 0,
+      vinyl: c?.bag ?? 0,
+      needle: c?.plastic ?? 0,
       manager: driver,
       note: s.memo ? s.memo : '정상수거',
     })
@@ -307,7 +308,7 @@ export function clientInspection(data: AppData, clientId: string): InspectionIte
 }
 
 // ── 병원 요청사항 ─────────────────────────────────────────────────────────────
-export type RequestStatus = '접수' | '확인 중' | '일정 반영' | '처리 완료'
+export type { RequestStatus }
 export interface RequestItem {
   id: string
   clientId: string
@@ -317,6 +318,8 @@ export interface RequestItem {
   when: string
   urgent: boolean
   status: RequestStatus
+  autoProcessed?: boolean // 수거 완료로 자동 처리됨
+  processedAt?: string // 자동 처리 시각
 }
 
 /** 최근 병원 요청사항 (관리자·이사가 전화·카톡으로 받은 요청을 기록한 구조, 시연 데이터) */
@@ -335,7 +338,19 @@ export function clientRequests(data: AppData): RequestItem[] {
     { type: '수거대장 요청', content: '월말 통합 명세와 수거대장 이메일 발송 요청', when: `${yday} 14:10`, urgent: false, status: '접수' },
     { type: '담당자 변경', content: '폐기물 담당 부서 변경 — 연락 채널 업데이트 요청', when: `${yday} 11:30`, urgent: false, status: '처리 완료' },
   ]
-  return defs.map((d, i) => ({ id: `req${i + 1}`, clientId: pick(i * 2).id, clientName: pick(i * 2).name, ...d }))
+  return defs.map((d, i) => {
+    const id = `req${i + 1}`
+    const override = data.requestOverrides.find((o) => o.requestId === id)
+    return {
+      id,
+      clientId: pick(i * 2).id,
+      clientName: pick(i * 2).name,
+      ...d,
+      status: override ? override.status : d.status,
+      autoProcessed: !!override,
+      processedAt: override?.changedAt,
+    }
+  })
 }
 
 /** 특정 거래처의 요청사항 */
@@ -475,10 +490,12 @@ export interface HistoryRow {
   driver: string
   vehicleName: string
   handoverTime: string
+  handoverStatus: HandoverStatus | null
   handedOver: boolean
   kind: '정기' | '추가' | '긴급'
   note: string
   inLedger: boolean
+  fromField: boolean // 현장에서 직접 입력된 기록
 }
 export function collectionHistory(data: AppData, clientId: string, limit = 10): HistoryRow[] {
   return clientSchedules(data, clientId)
@@ -490,24 +507,30 @@ export function collectionHistory(data: AppData, clientId: string, limit = 10): 
       const seed = [...s.id].reduce((a, ch) => a + ch.charCodeAt(0), 0)
       const kind: HistoryRow['kind'] = s.status === '긴급' ? '긴급' : s.memo.includes('추가') ? '추가' : '정기'
       const form = s.wasteType === '일회용기저귀' ? '고상(기저귀)' : ['위해성(고상)', '손상성', '병리계'][seed % 3]
+      // 저장된 용기별 배출 수량이 있으면 사용, 없으면 결정적 파생값
+      const c = s.containers
       const containerType = s.wasteType === '일회용기저귀' ? '전용 봉투' : ['골판지 전용박스', '합성수지 전용용기'][seed % 2]
+      const containerCount = c ? c.corrugated + c.plastic + c.bag + c.etc : 2 + (seed % 8)
+      const handoverStatus = s.handoverStatus ?? (done ? '인계 완료' : null)
       return {
         id: s.id,
         date: s.date,
         scheduledTime: s.scheduledTime,
-        actualTime: done ? s.scheduledTime : '-',
+        actualTime: s.actualTime ?? (done ? s.scheduledTime : '-'),
         wasteType: s.wasteType,
         form,
         amountKg: s.actualAmount,
         containerType,
-        containerCount: 2 + (seed % 8),
-        driver: v?.driver ?? '-',
+        containerCount,
+        driver: s.driverName ?? v?.driver ?? '-',
         vehicleName: v?.name ?? '-',
         handoverTime: facility?.targetTime ?? '-',
-        handedOver: done,
+        handoverStatus,
+        handedOver: handoverStatus === '인계 완료',
         kind,
         note: s.memo || (done ? '정상수거' : ''),
         inLedger: done,
+        fromField: s.origin === 'field',
       }
     })
 }

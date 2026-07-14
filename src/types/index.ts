@@ -31,6 +31,31 @@ export type PaymentStatus = '입금완료' | '미수금' | '확인필요'
 /** 결제방식 */
 export type PaymentMethod = '무통장' | '카드요청' | '기타'
 
+/** 처리장 인계 상태 (수거 완료 → 인계 대기 → 인계 완료) */
+export type HandoverStatus = '수거 완료' | '인계 대기' | '인계 완료'
+
+/** 병원 요청 처리 상태 */
+export type RequestStatus = '접수' | '확인 중' | '일정 반영' | '처리 완료'
+
+/** 수거 이벤트 작업 주체 (Demo — 실제 적용 시 사용자별 계정 연동 예정) */
+export type EventRole = '관리자' | '현장 담당자' | '대표자(Demo)'
+
+/** 용기별 배출 수량 — 한 번의 수거에서 배출된 전용 용기 집계 */
+export interface ContainerBreakdown {
+  corrugated: number // 골판지 전용박스
+  plastic: number // 합성수지 전용용기
+  bag: number // 전용 봉투
+  etc: number // 기타
+}
+
+/** 사무실(창고) 자재 재고 — 자재 동시공급 시 차감되는 물리 재고 */
+export interface OfficeStock {
+  corrugatedBox: number // 골판지 전용박스
+  plasticContainer: number // 합성수지 전용용기
+  bag: number // 전용 봉투(비닐)
+  needleBox: number // 합성수지 바늘통
+}
+
 // ── 거래처 ───────────────────────────────────────────────────────────────────
 export interface Client {
   id: string
@@ -71,6 +96,14 @@ export interface Schedule {
   actualAmount: number | null // 실제 수거량 (kg) — 미입력 시 null
   completedAt: string | null // 수거 완료 시간 (ISO) — 미완료 시 null
   memo: string // 메모
+  // ── v2: 현장 입력 연결(3단계) 필드 — 기존 데이터는 마이그레이션에서 기본값으로 채움 ──
+  actualTime?: string // 실제 수거 시간 (HH:mm) — 예정시간과 별도
+  containers?: ContainerBreakdown // 용기별 배출 수량
+  driverName?: string // 실제 수거 기사 (차량 기본 기사와 다를 수 있음)
+  handoverStatus?: HandoverStatus // 처리장 인계 상태
+  handoverAt?: string | null // 처리장 인계 완료 시간 (ISO)
+  eventId?: string | null // 이 완료를 생성/처리한 수거 이벤트 id
+  origin?: 'seed' | 'field' // seed=시드·자동생성, field=현장 입력
 }
 
 // ── 자재공급 ─────────────────────────────────────────────────────────────────
@@ -97,6 +130,42 @@ export interface Payment {
   memo: string // 메모
 }
 
+// ── 병원 요청 상태 오버라이드 (자동 처리 결과 영속화) ────────────────────────
+export interface RequestOverride {
+  requestId: string // clientRequests 파생 id (req1..)
+  status: RequestStatus
+  changedAt: string // ISO
+  by: string // 처리 근거 (예: '수거 완료 자동 반영')
+}
+
+// ── 수거 이벤트 (감사기록 + 되돌리기 원장) ───────────────────────────────────
+// 한 번의 수거 완료 입력이 어떤 데이터를 바꿨는지 기록해 취소(rollback)와
+// 입력 이력(audit)에 사용합니다. 실제 적용 시 사용자별 계정·수정이력과 연동 예정.
+export interface CollectionEvent {
+  id: string // collectionEventId
+  at: string // ISO 처리 시각
+  role: EventRole // 작업 주체 (Demo)
+  screen: string // 입력 화면 (수거 입력 / 오늘 일정 등)
+  action: '수거 완료' | '완료 취소'
+  scheduleId: string // 연결된 수거일정
+  createdSchedule: boolean // true=직접 입력으로 새 일정 생성 / false=기존 예정 완료
+  clientId: string
+  clientName: string
+  wasteType: WasteType
+  amountKg: number
+  before: {
+    status: ScheduleStatus
+    actualAmount: number | null
+    handoverStatus: HandoverStatus | null
+  }
+  materialIds: string[] // 이 이벤트로 생성된 자재공급 id (취소 시 제거)
+  stockBefore: OfficeStock // 차감 전 재고 (취소 시 복원)
+  requestUpdates: { requestId: string; from: RequestStatus; to: RequestStatus }[]
+  note: string
+  reverted: boolean // 취소됨 여부 (기록은 유지)
+  revertedAt?: string | null
+}
+
 // ── 전체 데이터 컨테이너 (localStorage 직렬화 단위) ──────────────────────────
 export interface AppData {
   clients: Client[]
@@ -104,4 +173,19 @@ export interface AppData {
   schedules: Schedule[]
   materials: MaterialSupply[]
   payments: Payment[]
+  // ── v2 (3단계) ──
+  officeStock: OfficeStock // 사무실 자재 재고
+  events: CollectionEvent[] // 수거 입력 이벤트/감사기록
+  requestOverrides: RequestOverride[] // 병원 요청 자동 처리 결과
+}
+
+/** 저장 스키마 버전 (마이그레이션 판단용) */
+export const SCHEMA_VERSION = 2
+
+/** v2 초기 사무실 재고 (시연용 기본값 — 자재 동시공급 시 차감) */
+export const DEFAULT_OFFICE_STOCK: OfficeStock = {
+  corrugatedBox: 480,
+  plasticContainer: 360,
+  bag: 900,
+  needleBox: 300,
 }

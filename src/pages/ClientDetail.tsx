@@ -291,7 +291,9 @@ export function ClientDetail() {
                     <td className="whitespace-nowrap px-2.5 py-2">{r.containerType} {r.containerCount}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.driver}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.vehicleName}</td>
-                    <td className="whitespace-nowrap px-2.5 py-2">{r.handedOver ? `${r.handoverTime} 완료` : '예정'}</td>
+                    <td className="whitespace-nowrap px-2.5 py-2">
+                      {r.handedOver ? `${r.handoverTime} 완료` : (r.handoverStatus ?? '예정')}
+                    </td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.kind}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.inLedger ? '반영' : '-'}</td>
                   </tr>

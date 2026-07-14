@@ -42,19 +42,23 @@ export function CollectionHistory() {
         const v = data.vehicles.find((x) => x.id === s.vehicleId)
         const facility = facilityByWaste(s.wasteType)
         const done = s.status === '완료'
+        const handoverStatus = s.handoverStatus ?? (done ? '인계 완료' : null)
         const k: KindFilter = s.status === '긴급' ? '긴급' : s.memo.includes('추가') ? '추가' : '정기'
         return {
           id: s.id,
           date: s.date,
-          time: s.scheduledTime,
+          time: s.actualTime ?? s.scheduledTime,
           clientName: client?.name ?? '거래처',
           clientType: client?.type ?? '',
           wasteType: s.wasteType,
           amount: s.actualAmount,
-          driver: v?.driver ?? '-',
+          driver: s.driverName ?? v?.driver ?? '-',
           vehicleName: v?.name ?? '-',
           facility: facility?.name ?? '처리장',
-          handedOver: done,
+          completed: done,
+          handoverStatus,
+          handedOver: handoverStatus === '인계 완료',
+          fromField: s.origin === 'field',
           kind: k,
           note: s.memo || (done ? '정상수거' : ''),
         }
@@ -66,10 +70,12 @@ export function CollectionHistory() {
       .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
   }, [data, waste, kind, period, query])
 
-  const doneRows = rows.filter((r) => r.handedOver)
-  const totalKg = doneRows.reduce((s, r) => s + (r.amount ?? 0), 0)
+  const completedRows = rows.filter((r) => r.completed)
+  const totalKg = completedRows.reduce((s, r) => s + (r.amount ?? 0), 0)
   const urgent = rows.filter((r) => r.kind === '긴급').length
-  const handoverRate = rows.length ? Math.round((doneRows.length / rows.length) * 100) : 0
+  const handoverRate = completedRows.length
+    ? Math.round((completedRows.filter((r) => r.handedOver).length / completedRows.length) * 100)
+    : 0
 
   return (
     <div>
@@ -130,14 +136,17 @@ export function CollectionHistory() {
             {rows.slice(0, 60).map((r) => (
               <tr key={r.id} className="border-t border-navy-100 text-navy-700">
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.date.slice(5)} {r.time}</td>
-                <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.clientName}</td>
+                <td className="whitespace-nowrap px-2.5 py-2 font-semibold">
+                  {r.clientName}
+                  {r.fromField && <span className="ml-1 rounded bg-teal-50 px-1 py-0.5 text-[0.5625rem] font-bold text-teal-600">현장입력</span>}
+                </td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.clientType}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.wasteType === '의료폐기물' ? '의료' : '기저귀'} · {r.kind}</td>
                 <td className="whitespace-nowrap px-2.5 py-2 font-bold">{r.amount != null ? `${r.amount}kg` : '-'}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.driver}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.vehicleName}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.facility}</td>
-                <td className="whitespace-nowrap px-2.5 py-2">{r.handedOver ? '완료' : '예정'}</td>
+                <td className="whitespace-nowrap px-2.5 py-2">{r.handoverStatus ?? '예정'}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.note}</td>
               </tr>
             ))}

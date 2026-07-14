@@ -2,6 +2,7 @@ import type {
   AppData,
   Client,
   ClientType,
+  ContainerBreakdown,
   MaterialSupply,
   Payment,
   Schedule,
@@ -9,6 +10,21 @@ import type {
   Vehicle,
   WasteType,
 } from '../types'
+import { DEFAULT_OFFICE_STOCK } from '../types'
+
+// 완료 일정의 용기별 배출 수량을 결정적으로 산출 (시드 시연용)
+function seedContainers(wasteType: WasteType, amount: number, seed: number): ContainerBreakdown {
+  if (wasteType === '일회용기저귀') {
+    return { corrugated: 0, plastic: 0, bag: Math.max(2, Math.round(amount / 30)), etc: 0 }
+  }
+  const primary = Math.max(1, Math.round(amount / 45))
+  return {
+    corrugated: primary,
+    plastic: 1 + (seed % 3),
+    bag: seed % 2,
+    etc: 0,
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 초기 샘플 데이터
@@ -147,18 +163,27 @@ function buildSchedules(clients: Client[], today: Date): Schedule[] {
       const wasteType = wasteFor(client, k % 2 === 1)
       const vehicle = pickVehicle(wasteType, n)
       const expected = wasteType === '의료폐기물' ? 120 + ((n * 17) % 180) : 220 + ((n * 23) % 260)
+      const actual = Math.round(expected * (0.9 + ((n % 5) * 0.04)))
+      const stime = `${pad(9 + (k % 7))}:${k % 2 === 0 ? '00' : '30'}`
       schedules.push({
         id: `s${pad(n + 1)}`,
         date: toDateStr(date),
         clientId: client.id,
         wasteType,
         vehicleId: vehicle.id,
-        scheduledTime: `${pad(9 + (k % 7))}:${k % 2 === 0 ? '00' : '30'}`,
+        scheduledTime: stime,
         status: '완료',
         expectedAmount: expected,
-        actualAmount: Math.round(expected * (0.9 + ((n % 5) * 0.04))),
+        actualAmount: actual,
         completedAt: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9 + (k % 7), 20).toISOString(),
         memo: '',
+        actualTime: stime,
+        containers: seedContainers(wasteType, actual, n),
+        driverName: vehicle.driver,
+        handoverStatus: '인계 완료',
+        handoverAt: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 16, 30).toISOString(),
+        eventId: null,
+        origin: 'seed',
       })
       n++
     }
@@ -179,6 +204,9 @@ function buildSchedules(clients: Client[], today: Date): Schedule[] {
     const expected = wasteType === '의료폐기물' ? 150 + ((n * 13) % 160) : 260 + ((n * 19) % 240)
     const done = status === '완료'
     const time = times[k % times.length]
+    const actual = done ? Math.round(expected * 0.96) : null
+    // 오늘 완료분: 일부는 인계 완료, 일부는 인계 대기로 두어 인계 흐름이 보이게 함
+    const handoverStatus = done ? (k % 2 === 0 ? '인계 완료' : '인계 대기') : undefined
     schedules.push({
       id: `s${pad(n + 1)}`,
       date: toDateStr(today),
@@ -188,9 +216,19 @@ function buildSchedules(clients: Client[], today: Date): Schedule[] {
       scheduledTime: time,
       status,
       expectedAmount: expected,
-      actualAmount: done ? Math.round(expected * 0.96) : null,
+      actualAmount: actual,
       completedAt: done ? new Date(today.getFullYear(), today.getMonth(), today.getDate(), Number(time.slice(0, 2)), 25).toISOString() : null,
       memo: isolation ? '격리의료폐기물 보관기한 임박 — 우선 수거 요청' : status === '지연' ? '도로 통제로 지연' : '',
+      actualTime: done ? time : undefined,
+      containers: done && actual != null ? seedContainers(wasteType, actual, n) : undefined,
+      driverName: done ? vehicle.driver : undefined,
+      handoverStatus,
+      handoverAt:
+        handoverStatus === '인계 완료'
+          ? new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 30).toISOString()
+          : null,
+      eventId: null,
+      origin: 'seed',
     })
     n++
   }
@@ -216,6 +254,8 @@ function buildSchedules(clients: Client[], today: Date): Schedule[] {
         actualAmount: null,
         completedAt: null,
         memo: '',
+        eventId: null,
+        origin: 'seed',
       })
       n++
     }
@@ -300,6 +340,9 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
     schedules: buildSchedules(clients, base),
     materials: buildMaterials(clients, base),
     payments: buildPayments(clients, base),
+    officeStock: { ...DEFAULT_OFFICE_STOCK },
+    events: [],
+    requestOverrides: [],
   }
 }
 
@@ -315,5 +358,8 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
     schedules: buildSchedules(clients, base),
     materials: buildMaterials(clients, base),
     payments: buildPayments(clients, base),
+    officeStock: { ...DEFAULT_OFFICE_STOCK },
+    events: [],
+    requestOverrides: [],
   }
 }

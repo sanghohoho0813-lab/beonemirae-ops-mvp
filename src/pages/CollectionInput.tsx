@@ -1,15 +1,32 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
+  Package,
+  RotateCcw,
+  Truck,
+} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { today, weight } from '../lib/format'
-import type { WasteType } from '../types'
+import { schedulesOn } from '../lib/selectors'
+import { prettyDate, today, weight } from '../lib/format'
+import {
+  EMPTY_CONTAINERS,
+  EMPTY_SUPPLIED,
+  containerTotal,
+  suppliedTotal,
+  type CollectionCompletionInput,
+} from '../lib/collection'
+import type { ContainerBreakdown, HandoverStatus, OfficeStock, WasteType } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 수거 입력 — 현장 담당자가 모바일에서 빠르게 입력하는 단순 화면
-// 거래처/폐기물 구분/실제 수거량/완료 시간/메모 → 완료 상태의 수거일정으로 저장
+// 수거 입력 (3단계) — 현장 담당자가 한 번 입력하면 일정·이력·자재·통계로 자동 연결
+//   오늘 일정 선택 → 거래처·폐기물 자동 → 실제시간·수거량 → 용기별 배출 →
+//   자재 동시공급(재고 차감) → 차량·기사 → 처리장 인계 → 특이사항 → 요약 → 완료
 // ─────────────────────────────────────────────────────────────────────────────
 
 function nowTime(): string {
@@ -17,173 +34,592 @@ function nowTime(): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+const HANDOVERS: HandoverStatus[] = ['수거 완료', '인계 대기', '인계 완료']
+
+const SUPPLY_KEYS: { key: keyof OfficeStock; label: string }[] = [
+  { key: 'corrugatedBox', label: '골판지 전용박스' },
+  { key: 'plasticContainer', label: '합성수지 전용용기' },
+  { key: 'bag', label: '전용 봉투' },
+  { key: 'needleBox', label: '합성수지 바늘통' },
+]
+
+const CONTAINER_KEYS: { key: keyof ContainerBreakdown; label: string }[] = [
+  { key: 'corrugated', label: '골판지 전용박스' },
+  { key: 'plastic', label: '합성수지 전용용기' },
+  { key: 'bag', label: '전용 봉투' },
+  { key: 'etc', label: '기타' },
+]
+
+/** 라벨 + 숫자 입력 (모바일 숫자 키패드) */
+function NumField({
+  label,
+  value,
+  onChange,
+  suffix,
+  hint,
+  danger,
+}: {
+  label: string
+  value: number
+  onChange: (n: number) => void
+  suffix?: string
+  hint?: string
+  danger?: boolean
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-[0.8125rem] font-semibold text-navy-500">{label}</label>
+      <div className="relative">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          className={`field-input ${danger ? 'ring-1 ring-rose-300' : ''}`}
+          value={value === 0 ? '' : value}
+          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+          placeholder="0"
+        />
+        {suffix && (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-navy-300">
+            {suffix}
+          </span>
+        )}
+      </div>
+      {hint && <p className={`mt-1 text-[0.6875rem] ${danger ? 'text-rose-500' : 'text-navy-400'}`}>{hint}</p>}
+    </div>
+  )
+}
+
+function Section({ n, title, desc, children }: { n: number; title: string; desc?: string; children: React.ReactNode }) {
+  return (
+    <div className="card p-5">
+      <div className="mb-3 flex items-start gap-2.5">
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-xs font-extrabold text-teal-600">
+          {n}
+        </span>
+        <div>
+          <h2 className="text-[1.0625rem] font-extrabold text-navy-900">{title}</h2>
+          {desc && <p className="mt-0.5 text-xs text-navy-400">{desc}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 export function CollectionInput() {
-  const { data, addSchedule } = useData()
-  const [clientId, setClientId] = useState('')
-  const [wasteType, setWasteType] = useState<WasteType>('의료폐기물')
-  const [amount, setAmount] = useState('')
-  const [time, setTime] = useState(nowTime())
-  const [memo, setMemo] = useState('')
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
+  const { data, completeCollection, revertCollection } = useData()
+  const [params] = useSearchParams()
 
-  const client = data.clients.find((c) => c.id === clientId)
-
-  // 선택된 폐기물 구분에 맞는 차량 후보
-  const vehicle = useMemo(
-    () => data.vehicles.find((v) => v.wasteType === wasteType),
-    [data.vehicles, wasteType],
+  // 오늘 미완료 일정 (선택 대상)
+  const todayPending = useMemo(
+    () => schedulesOn(data, today()).filter((s) => s.status !== '완료'),
+    [data],
   )
 
-  function submit() {
-    // 필수 입력값 검증 — 부드러운 안내
-    if (!clientId) {
-      setError('거래처를 선택해 주세요.')
-      return
+  const [scheduleId, setScheduleId] = useState<string>('') // '' = 직접 입력
+  const [clientId, setClientId] = useState('')
+  const [wasteType, setWasteType] = useState<WasteType>('의료폐기물')
+  const [vehicleId, setVehicleId] = useState('')
+  const [driverName, setDriverName] = useState('')
+  const [amount, setAmount] = useState('')
+  const [time, setTime] = useState(nowTime())
+  const [containers, setContainers] = useState<ContainerBreakdown>({ ...EMPTY_CONTAINERS })
+  const [supplied, setSupplied] = useState({ ...EMPTY_SUPPLIED })
+  const [isAdditional, setIsAdditional] = useState(false)
+  const [handover, setHandover] = useState<HandoverStatus>('수거 완료')
+  const [memo, setMemo] = useState('')
+
+  const [errors, setErrors] = useState<string[]>([])
+  const [warnings, setWarnings] = useState<string[]>([])
+  const [success, setSuccess] = useState<null | { client: string; amount: number; supplied: number; created: boolean }>(
+    null,
+  )
+
+  const client = data.clients.find((c) => c.id === clientId)
+  const vehicles = useMemo(() => data.vehicles.filter((v) => v.wasteType === wasteType), [data.vehicles, wasteType])
+
+  // 일정 선택 시 거래처/폐기물/차량/기사/시간/수거량 자동 채움
+  function applySchedule(id: string) {
+    setScheduleId(id)
+    setErrors([])
+    setWarnings([])
+    if (!id) return
+    const s = data.schedules.find((x) => x.id === id)
+    if (!s) return
+    setClientId(s.clientId)
+    setWasteType(s.wasteType)
+    setVehicleId(s.vehicleId)
+    const v = data.vehicles.find((x) => x.id === s.vehicleId)
+    setDriverName(v?.driver ?? '')
+    setTime(s.scheduledTime || nowTime())
+    setAmount(String(s.expectedAmount))
+  }
+
+  // 최초 진입 시 ?schedule= 프리필 (오늘 일정 '수거 완료'에서 넘어옴)
+  useEffect(() => {
+    const pre = params.get('schedule')
+    if (pre && data.schedules.some((s) => s.id === pre && s.status !== '완료')) {
+      applySchedule(pre)
     }
-    if (!amount || Number(amount) <= 0) {
-      setError('실제 수거량을 입력해 주세요.')
-      return
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 폐기물 구분이 바뀌면 해당 구분 차량으로 기본 배차
+  useEffect(() => {
+    if (vehicles.length && !vehicles.some((v) => v.id === vehicleId)) {
+      setVehicleId(vehicles[0].id)
+      setDriverName(vehicles[0].driver)
     }
-    setError('')
-    const t = today()
-    addSchedule({
-      date: t,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wasteType])
+
+  const stock = data.officeStock
+  const overStock = SUPPLY_KEYS.some(({ key }) => supplied[key] > stock[key])
+  const suppliedSum = suppliedTotal(supplied)
+  const containerSum = containerTotal(containers)
+
+  function buildInput(): CollectionCompletionInput {
+    return {
+      scheduleId: scheduleId || null,
       clientId,
       wasteType,
-      vehicleId: vehicle?.id ?? '',
-      scheduledTime: time,
-      status: '완료',
-      expectedAmount: Number(amount),
-      actualAmount: Number(amount),
-      completedAt: new Date().toISOString(),
+      vehicleId,
+      driverName,
+      actualAmount: Number(amount) || 0,
+      actualTime: time,
+      containers,
+      handoverStatus: handover,
+      supplied,
+      isAdditional,
       memo,
+      role: '현장 담당자',
+      screen: '수거 입력',
+    }
+  }
+
+  function submit() {
+    const result = completeCollection(buildInput())
+    setWarnings(result.warnings)
+    if (!result.ok) {
+      setErrors(result.errors)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    setErrors([])
+    setSuccess({
+      client: client?.name ?? '거래처',
+      amount: Number(amount) || 0,
+      supplied: suppliedSum,
+      created: !scheduleId,
     })
     // 폼 초기화
+    setScheduleId('')
     setClientId('')
     setAmount('')
+    setContainers({ ...EMPTY_CONTAINERS })
+    setSupplied({ ...EMPTY_SUPPLIED })
+    setIsAdditional(false)
+    setHandover('수거 완료')
     setMemo('')
     setTime(nowTime())
-    setSaved(true)
-    setTimeout(() => setSaved(false), 4000)
+  }
+
+  const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock
+
+  const recentEvents = data.events.slice(0, 4)
+
+  // ── 성공 화면 ──
+  if (success) {
+    return (
+      <div className="mx-auto max-w-lg">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card mt-6 p-7 text-center"
+        >
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+            <CheckCircle2 size={34} className="text-emerald-500" strokeWidth={2.2} />
+          </span>
+          <h2 className="mt-4 text-2xl font-extrabold text-navy-900">수거 완료가 반영되었습니다</h2>
+          <p className="mt-1.5 text-[0.9375rem] text-navy-500">
+            {success.client} · {weight(success.amount)}
+            {success.supplied > 0 && ` · 자재 ${success.supplied}점 동시공급`}
+          </p>
+
+          <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-sm">
+            <p className="mb-1 text-xs font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
+            {[
+              '오늘 일정 완료 처리 · 수거이력 생성',
+              '거래처 최근 활동 · 월간 수거량 반영',
+              success.supplied > 0 ? '자재 공급 이력 기록 · 사무실 재고 차감' : '대시보드·통계 수거량 반영',
+              '처리장 인계 상태 · 수거대장/월간 명세 초안 반영',
+            ].map((t) => (
+              <p key={t} className="flex items-center gap-2 text-navy-700">
+                <CheckCircle2 size={15} className="shrink-0 text-teal-500" /> {t}
+              </p>
+            ))}
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2.5">
+            <Link to="/today" className="btn-navy">
+              오늘 일정
+            </Link>
+            <Link to="/history" className="btn-primary">
+              수거이력 보기
+            </Link>
+          </div>
+          <button className="mt-3 text-sm font-bold text-teal-600" onClick={() => setSuccess(null)}>
+            + 이어서 다른 수거 입력
+          </button>
+        </motion.div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <PageHeader title="수거 입력" subtitle="현장에서 바로 입력하세요" />
+    <div className="mx-auto max-w-lg pb-4">
+      <PageHeader title="수거 입력" subtitle="한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다" />
 
-      <div className="card space-y-4 p-5">
-        <div>
-          <label className="field-label">거래처 *</label>
-          <select className="field-input" value={clientId} onChange={(e) => { setClientId(e.target.value); setError('') }}>
-            <option value="">거래처를 선택하세요</option>
-            {data.clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.type})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="field-label">폐기물 구분 *</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(['의료폐기물', '일회용기저귀'] as WasteType[]).map((w) => (
-              <button
-                key={w}
-                onClick={() => setWasteType(w)}
-                className={`rounded-2xl px-4 py-3.5 text-[0.9375rem] font-bold transition-transform duration-150 active:scale-[0.97] ${
-                  wasteType === w
-                    ? w === '의료폐기물'
-                      ? 'bg-rose-500 text-white shadow-sm'
-                      : 'bg-teal-600 text-white shadow-sm'
-                    : 'bg-navy-50 text-navy-500'
-                }`}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-          {vehicle && (
-            <p className="mt-1.5 text-xs text-navy-400">
-              배정 차량: {vehicle.name} ({vehicle.driver}) · 예상 적재 {weight(vehicle.expectedCapacity)}
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="field-label">실제 수거량 (kg) *</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              className="field-input"
-              value={amount}
-              onChange={(e) => { setAmount(e.target.value); setError('') }}
-              placeholder="예: 320"
-            />
-          </div>
-          <div>
-            <label className="field-label">수거 완료 시간</label>
-            <input type="time" className="field-input" value={time} onChange={(e) => setTime(e.target.value)} />
-          </div>
-        </div>
-
-        <div>
-          <label className="field-label">메모</label>
-          <textarea
-            className="field-input"
-            rows={3}
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder="현장 특이사항을 입력하세요"
-          />
-        </div>
-
-        {client && (
-          <div className="rounded-2xl bg-navy-50 p-3 text-xs text-navy-500">
-            {client.address} · {client.manager} · {client.phone}
-          </div>
-        )}
-
-        <AnimatePresence>
-          {error && (
-            <motion.p
-              className="flex items-center gap-1.5 text-sm font-semibold text-rose-500"
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-            >
-              <AlertCircle size={16} strokeWidth={2.3} /> {error}
-            </motion.p>
-          )}
-        </AnimatePresence>
-
-        <button className="btn-primary w-full py-4 text-base" onClick={submit}>
-          저장하기
-        </button>
-      </div>
-
-      {/* 저장 완료 토스트 — 모바일은 하단 탭 위, 데스크톱은 화면 하단 */}
+      {/* 검증 오류 */}
       <AnimatePresence>
-        {saved && (
+        {errors.length > 0 && (
           <motion.div
-            className="fixed inset-x-0 bottom-[84px] z-40 flex justify-center px-4 lg:bottom-8"
-            initial={{ opacity: 0, y: 20 }}
+            className="card mb-4 border border-rose-200 bg-rose-50 p-4"
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+            exit={{ opacity: 0 }}
           >
-            <div className="flex items-center gap-2.5 rounded-2xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white shadow-xl">
-              <CheckCircle2 size={18} className="text-emerald-400" />
-              수거 내역이 저장되었습니다
-              <Link to="/today" className="ml-1 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-bold text-teal-200">
-                오늘 일정 보기
-              </Link>
-            </div>
+            {errors.map((e) => (
+              <p key={e} className="flex items-start gap-1.5 text-sm font-semibold text-rose-600">
+                <AlertCircle size={16} strokeWidth={2.3} className="mt-0.5 shrink-0" /> {e}
+              </p>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="space-y-3.5">
+        {/* 1. 오늘 일정 선택 */}
+        <Section n={1} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setScheduleId('')
+                setErrors([])
+              }}
+              className={`rounded-xl px-3.5 py-2.5 text-sm font-bold transition active:scale-[0.97] ${
+                scheduleId === '' ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
+              }`}
+            >
+              직접 입력
+            </button>
+            {todayPending.map((s) => {
+              const c = data.clients.find((x) => x.id === s.clientId)
+              const active = scheduleId === s.id
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => applySchedule(s.id)}
+                  className={`rounded-xl px-3.5 py-2.5 text-left text-sm font-bold transition active:scale-[0.97] ${
+                    active ? 'bg-teal-500 text-white' : 'bg-navy-50 text-navy-700'
+                  }`}
+                >
+                  <span className="tabular-nums">{s.scheduledTime}</span> · {c?.name ?? '거래처'}
+                  {s.status === '긴급' && <span className="ml-1 text-[0.625rem] font-extrabold text-rose-400">긴급</span>}
+                </button>
+              )
+            })}
+            {todayPending.length === 0 && (
+              <p className="text-sm text-navy-400">오늘 남은 예정 수거가 없습니다. 직접 입력으로 등록하세요.</p>
+            )}
+          </div>
+        </Section>
+
+        {/* 2. 거래처 · 폐기물 구분 */}
+        <Section n={2} title="거래처 · 폐기물 구분">
+          <div className="space-y-3">
+            <div>
+              <label className="field-label">거래처 *</label>
+              <select
+                className="field-input"
+                value={clientId}
+                disabled={!!scheduleId}
+                onChange={(e) => {
+                  setClientId(e.target.value)
+                  setErrors([])
+                }}
+              >
+                <option value="">거래처를 선택하세요</option>
+                {data.clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.type})
+                  </option>
+                ))}
+              </select>
+              {scheduleId && <p className="mt-1 text-[0.6875rem] text-navy-400">선택한 일정에서 자동 지정됨</p>}
+            </div>
+            <div>
+              <label className="field-label">폐기물 구분 *</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['의료폐기물', '일회용기저귀'] as WasteType[]).map((w) => (
+                  <button
+                    key={w}
+                    disabled={!!scheduleId}
+                    onClick={() => setWasteType(w)}
+                    className={`rounded-2xl px-4 py-3 text-[0.9375rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
+                      wasteType === w
+                        ? w === '의료폐기물'
+                          ? 'bg-rose-500 text-white shadow-sm'
+                          : 'bg-teal-600 text-white shadow-sm'
+                        : 'bg-navy-50 text-navy-500'
+                    }`}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {client && (
+              <div className="rounded-2xl bg-navy-50 p-3 text-xs text-navy-500">
+                {client.address} · {client.manager} · {client.phone}
+              </div>
+            )}
+          </div>
+        </Section>
+
+        {/* 3. 실제 수거 시간 · 수거량 */}
+        <Section n={3} title="실제 수거 시간 · 수거량">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">실제 수거 시간</label>
+              <input type="time" className="field-input" value={time} onChange={(e) => setTime(e.target.value)} />
+            </div>
+            <div>
+              <label className="field-label">실제 수거량 (kg) *</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                className="field-input"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value)
+                  setErrors([])
+                }}
+                placeholder="예: 320"
+              />
+            </div>
+          </div>
+        </Section>
+
+        {/* 4. 용기별 배출 수량 */}
+        <Section n={4} title="용기별 배출 수량" desc="수거대장 초안에 그대로 반영됩니다">
+          <div className="grid grid-cols-2 gap-3">
+            {CONTAINER_KEYS.map(({ key, label }) => (
+              <NumField
+                key={key}
+                label={label}
+                value={containers[key]}
+                suffix="개"
+                onChange={(v) => setContainers((c) => ({ ...c, [key]: v }))}
+              />
+            ))}
+          </div>
+          {containerSum > 0 && <p className="mt-2 text-xs font-semibold text-navy-500">합계 {containerSum}개</p>}
+        </Section>
+
+        {/* 5. 자재 동시공급 */}
+        <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
+          <div className="grid grid-cols-2 gap-3">
+            {SUPPLY_KEYS.map(({ key, label }) => {
+              const over = supplied[key] > stock[key]
+              return (
+                <NumField
+                  key={key}
+                  label={label}
+                  value={supplied[key]}
+                  suffix="개"
+                  danger={over}
+                  hint={over ? `재고 ${stock[key]} 초과` : `재고 ${stock[key]}`}
+                  onChange={(v) => setSupplied((s) => ({ ...s, [key]: v }))}
+                />
+              )
+            })}
+          </div>
+          {suppliedSum > 0 && (
+            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-navy-600">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-teal-500"
+                checked={isAdditional}
+                onChange={(e) => setIsAdditional(e.target.checked)}
+              />
+              추가요청 공급 (정기 외)
+            </label>
+          )}
+          {overStock && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-rose-500">
+              <AlertTriangle size={13} /> 사무실 재고를 초과한 공급은 저장할 수 없습니다.
+            </p>
+          )}
+        </Section>
+
+        {/* 6. 차량 · 기사 */}
+        <Section n={6} title="차량 · 기사">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">배차 차량 *</label>
+              <select
+                className="field-input"
+                value={vehicleId}
+                onChange={(e) => {
+                  setVehicleId(e.target.value)
+                  const v = data.vehicles.find((x) => x.id === e.target.value)
+                  if (v) setDriverName(v.driver)
+                }}
+              >
+                <option value="">차량 선택</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="field-label">수거 기사</label>
+              <input
+                className="field-input"
+                value={driverName}
+                onChange={(e) => setDriverName(e.target.value)}
+                placeholder="기사명"
+              />
+            </div>
+          </div>
+          <p className="mt-1.5 text-[0.6875rem] text-navy-400">
+            {wasteType} 전용 차량만 배차할 수 있습니다 (구분 불일치 시 저장 차단).
+          </p>
+        </Section>
+
+        {/* 7. 처리장 인계 상태 */}
+        <Section n={7} title="처리장 인계 상태">
+          <div className="grid grid-cols-3 gap-2">
+            {HANDOVERS.map((h) => (
+              <button
+                key={h}
+                onClick={() => setHandover(h)}
+                className={`rounded-xl px-2 py-3 text-[0.8125rem] font-bold transition active:scale-[0.97] ${
+                  handover === h ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
+                }`}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        {/* 8. 특이사항 */}
+        <Section n={8} title="특이사항">
+          <textarea
+            className="field-input"
+            rows={2}
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="현장 특이사항을 입력하세요 (선택)"
+          />
+        </Section>
+
+        {/* 경고 (진행 가능) */}
+        {warnings.length > 0 && (
+          <div className="card border border-amber-200 bg-amber-50 p-4">
+            {warnings.map((w) => (
+              <p key={w} className="flex items-start gap-1.5 text-sm font-semibold text-amber-700">
+                <AlertTriangle size={15} className="mt-0.5 shrink-0" /> {w}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* 저장 전 요약 */}
+        {canSubmit && (
+          <div className="card border border-teal-100 bg-teal-50/50 p-4">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-teal-700">
+              <ClipboardList size={14} /> 저장 전 확인
+            </p>
+            <div className="grid grid-cols-2 gap-y-1 text-sm text-navy-700">
+              <span className="text-navy-400">거래처</span>
+              <span className="text-right font-bold">{client?.name}</span>
+              <span className="text-navy-400">수거량</span>
+              <span className="text-right font-bold">{weight(Number(amount) || 0)}</span>
+              <span className="text-navy-400">용기 합계</span>
+              <span className="text-right font-bold">{containerSum}개</span>
+              <span className="text-navy-400">자재 동시공급</span>
+              <span className="text-right font-bold">{suppliedSum > 0 ? `${suppliedSum}점` : '없음'}</span>
+              <span className="text-navy-400">처리장 인계</span>
+              <span className="text-right font-bold">{handover}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 완료 버튼 (48px) */}
+        <button
+          className="btn-primary w-full py-4 text-base disabled:opacity-50"
+          style={{ minHeight: 48 }}
+          onClick={submit}
+          disabled={!canSubmit}
+        >
+          <CheckCircle2 size={18} strokeWidth={2.4} /> 수거 완료 저장
+        </button>
+        <p className="text-center text-[0.6875rem] text-navy-400">
+          작업 주체: 현장 담당자 (Demo) · 실제 적용 시 사용자별 계정·수정이력과 연동 예정
+        </p>
+      </div>
+
+      {/* 최근 입력 이력 (감사기록) */}
+      {recentEvents.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2 px-1 text-[0.9375rem] font-extrabold text-navy-800">최근 입력 이력</p>
+          <div className="card divide-y divide-navy-50">
+            {recentEvents.map((e) => (
+              <div key={e.id} className="flex items-center gap-3 p-3.5">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                    e.reverted ? 'bg-navy-100 text-navy-400' : 'bg-teal-50 text-teal-600'
+                  }`}
+                >
+                  {e.materialIds.length ? <Package size={16} /> : <Truck size={16} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-navy-900">
+                    {e.clientName} · {weight(e.amountKg)}
+                    {e.reverted && <span className="ml-1.5 text-xs font-bold text-navy-400">취소됨</span>}
+                  </p>
+                  <p className="truncate text-[0.6875rem] text-navy-400">
+                    {e.at.slice(5, 16).replace('T', ' ')} · {e.role} · {e.screen}
+                    {e.requestUpdates.length > 0 && ` · 요청 ${e.requestUpdates.length}건 자동처리`}
+                  </p>
+                </div>
+                {!e.reverted && (
+                  <button
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1.5 text-xs font-bold text-navy-500 transition active:scale-95"
+                    onClick={() => {
+                      const r = revertCollection(e.id)
+                      if (!r.ok) setErrors(r.errors)
+                    }}
+                  >
+                    <RotateCcw size={12} /> 취소
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-1.5 px-1 text-[0.6875rem] text-navy-400">
+            취소 시 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
+          </p>
+        </div>
+      )}
+
+      <p className="mt-6 text-center text-xs text-navy-300">{prettyDate(today())} 기준</p>
     </div>
   )
 }
