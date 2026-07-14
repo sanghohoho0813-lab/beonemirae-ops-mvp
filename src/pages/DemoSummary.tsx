@@ -13,6 +13,7 @@ import {
   FuturePlanCard,
 } from '../components/ops'
 import { PageShell, SectionTitle, MetricCard, ExpandableSection } from '../components/ui'
+import { DemoResetButton } from '../components/DemoControls'
 import { dispatchPlans } from '../lib/ops'
 import { monthlyCollected } from '../lib/selectors'
 import { weight } from '../lib/format'
@@ -66,14 +67,17 @@ export function DemoSummary() {
   return (
     <PageShell>
       {/* 상단 바 */}
-      <div className="flex items-center gap-2">
-        <button onClick={() => navigate('/')} className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-navy-500 shadow-card transition active:scale-95" aria-label="뒤로">
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => navigate('/')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-navy-500 shadow-card transition active:scale-95" aria-label="뒤로">
           <ArrowLeft size={18} />
         </button>
         <span className="text-sm font-bold text-navy-500">심사관 시연 요약</span>
-        <button onClick={() => navigate('/mobile-preview')} className="ml-auto hidden items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-bold text-navy-600 shadow-card transition hover:bg-navy-50 lg:inline-flex">
-          <Smartphone size={16} /> 모바일 프레임으로 보기
-        </button>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <DemoResetButton />
+          <button onClick={() => navigate('/mobile-preview')} className="hidden items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-bold text-navy-600 shadow-card transition hover:bg-navy-50 lg:inline-flex">
+            <Smartphone size={16} /> 모바일 프레임으로 보기
+          </button>
+        </div>
       </div>
 
       {/* 히어로 */}
@@ -186,7 +190,7 @@ export function DemoSummary() {
         </SectionTitle>
         <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
           {plans.map((p) => (
-            <div key={p.vehicleId} className="card p-5">
+            <div key={p.vehicleId} className="card min-w-0 p-5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <WasteBadge type={p.wasteType} />
@@ -194,9 +198,9 @@ export function DemoSummary() {
                 </div>
                 <span className="shrink-0 text-lg font-extrabold text-teal-600">{p.loadRate}%</span>
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-navy-500"><Route size={14} /> 권장 순서</p>
-              <p className="mt-1 text-sm font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
-              <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-navy-500"><Target size={13} /> {p.facilityName} 인계 {p.handoverTime} · 운행 {p.simDistanceKm}km (시뮬)</p>
+              <p className="mt-2 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-navy-500"><Route size={14} className="shrink-0" /> 권장 순서</p>
+              <p className="mt-1 break-words text-sm font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
+              <p className="mt-2 flex items-start gap-1.5 break-words text-xs font-bold text-navy-500"><Target size={13} className="mt-0.5 shrink-0" /> <span className="min-w-0">{p.facilityName} 인계 {p.handoverTime} · 운행 {p.simDistanceKm}km (시뮬)</span></p>
             </div>
           ))}
         </div>

@@ -54,6 +54,7 @@ export interface CollectionCompletionInput {
   memo: string
   role: EventRole
   screen: string
+  demoSessionId?: string | null // 시연 세션 중 입력이면 세션 id (없으면 실사용 field 로 기록)
 }
 
 export interface CommandResult {
@@ -148,7 +149,8 @@ function completedFields(input: CollectionCompletionInput, eventId: string, nowI
     wasteType: input.wasteType,
     vehicleId: input.vehicleId,
     eventId,
-    origin: 'field' as const,
+    // 시연 세션 입력은 'demo'(초기화 대상), 실사용 입력은 'field'(보존)
+    origin: (input.demoSessionId ? 'demo' : 'field') as 'demo' | 'field',
   }
 }
 
@@ -256,6 +258,7 @@ export function applyCollectionCompletion(data: AppData, input: CollectionComple
     note: input.memo,
     reverted: false,
     revertedAt: null,
+    demoSessionId: input.demoSessionId ?? null,
   }
 
   const nextData: AppData = {

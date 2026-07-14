@@ -23,6 +23,7 @@ const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
+import { DemoSettingsPanel } from './DemoControls'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 앱 전체 레이아웃 — 반응형
@@ -126,6 +127,7 @@ function Sidebar() {
           <ExternalLink size={18} strokeWidth={2.2} />
           올바로 시스템
         </a>
+        <DemoSettingsPanel />
         <p className="px-1 pt-1 text-[0.6875rem] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
       </div>
     </aside>

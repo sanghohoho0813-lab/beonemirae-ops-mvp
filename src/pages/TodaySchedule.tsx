@@ -46,6 +46,9 @@ export function TodaySchedule() {
   const [quickAmount, setQuickAmount] = useState('')
   const [quickMemo, setQuickMemo] = useState('')
   const [quickError, setQuickError] = useState('')
+  // null = 입력 단계, 값 = 완료 성공 단계(같은 모달 안에서 전환)
+  const [quickResult, setQuickResult] = useState<{ clientId: string; name: string; amount: number } | null>(null)
+  const [flash, setFlash] = useState(false)
 
   const list = useMemo(() => schedulesOn(data, date), [data, date])
 
@@ -65,6 +68,11 @@ export function TodaySchedule() {
     setQuickAmount(String(s.expectedAmount))
     setQuickMemo(s.memo)
     setQuickError('')
+    setQuickResult(null)
+  }
+  function closeQuick() {
+    setQuick(null)
+    setQuickResult(null)
   }
   function submitQuick() {
     if (!quick) return
@@ -90,14 +98,20 @@ export function TodaySchedule() {
       setQuickError(result.errors.join(' '))
       return
     }
-    setQuick(null)
+    const name = clientById(quick.clientId)?.name ?? '거래처'
+    // 같은 모달을 성공 단계로 전환 (모달 중첩으로 인한 히스토리 경합 방지)
+    setQuickResult({ clientId: quick.clientId, name, amount: amt })
+    setFlash(true)
+    setTimeout(() => setFlash(false), 1600)
   }
 
   const doneCount = list.filter((s) => s.status === '완료').length
 
   return (
     <div>
-      <PageHeader title="오늘 일정" subtitle={`완료 ${doneCount} / 전체 ${list.length}건`} />
+      <div className={flash ? 'rounded-2xl bg-teal-50/70 transition-colors duration-700' : 'transition-colors duration-700'}>
+        <PageHeader title="오늘 일정" subtitle={`완료 ${doneCount} / 전체 ${list.length}건`} />
+      </div>
 
       {/* 날짜 네비게이션 */}
       <div className="card mb-4 flex items-center justify-between p-2">
@@ -212,23 +226,29 @@ export function TodaySchedule() {
         </Stagger>
       )}
 
-      {/* 빠른 완료 확인 모달 (통합 커맨드 사용) */}
+      {/* 빠른 완료 모달 — 입력 → 성공을 한 모달 안에서 전환 (통합 커맨드 사용) */}
       <Modal
         open={quick !== null}
-        title="빠른 완료"
-        onClose={() => setQuick(null)}
+        title={quickResult ? '수거 완료 반영됨' : '빠른 완료'}
+        onClose={closeQuick}
         footer={
-          <>
-            <button className="btn-ghost flex-1" onClick={() => setQuick(null)}>
-              취소
+          quickResult ? (
+            <button className="btn-ghost w-full" onClick={closeQuick}>
+              시연 계속하기
             </button>
-            <button className="btn-primary flex-1" onClick={submitQuick}>
-              <Check size={16} strokeWidth={2.6} /> 완료 처리
-            </button>
-          </>
+          ) : (
+            <>
+              <button className="btn-ghost flex-1" onClick={closeQuick}>
+                취소
+              </button>
+              <button className="btn-primary flex-1" onClick={submitQuick}>
+                <Check size={16} strokeWidth={2.6} /> 완료 처리
+              </button>
+            </>
+          )
         }
       >
-        {quick && (
+        {quick && !quickResult && (
           <>
             <div className="rounded-xl bg-navy-50 p-3 text-sm">
               <p className="font-semibold text-navy-900">{clientById(quick.clientId)?.name}</p>
@@ -261,6 +281,18 @@ export function TodaySchedule() {
                 placeholder="현장 특이사항 (선택)"
               />
             </div>
+            <div className="rounded-xl bg-navy-50 p-3">
+              <p className="text-[0.6875rem] font-bold text-navy-400">완료 시 자동 반영</p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {['오늘 일정 완료', '수거이력', '거래처 최근 활동', '대시보드 KPI', '통계', '수거대장 초안', '월간 명세 초안'].map(
+                  (t) => (
+                    <span key={t} className="rounded-full bg-white px-2 py-0.5 text-[0.625rem] font-semibold text-navy-500">
+                      {t}
+                    </span>
+                  ),
+                )}
+              </div>
+            </div>
             <p className="text-[0.6875rem] text-navy-400">
               용기·자재까지 상세 입력하려면 <b>수거정보 입력</b>을 사용하세요. 빠른 완료도 동일하게 일정·이력·통계에
               연결됩니다.
@@ -270,6 +302,37 @@ export function TodaySchedule() {
                 <AlertCircle size={15} className="mt-0.5 shrink-0" /> {quickError}
               </p>
             )}
+          </>
+        )}
+        {quickResult && (
+          <>
+            <div className="rounded-xl bg-emerald-50 p-3.5 text-center">
+              <Check size={22} className="mx-auto text-emerald-500" strokeWidth={2.6} />
+              <p className="mt-1.5 text-sm font-bold text-navy-900">
+                {quickResult.name} · {weight(quickResult.amount)}
+              </p>
+              <p className="text-[0.75rem] text-navy-500">수거정보가 여러 운영 화면에 자동 반영되었습니다.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-sm font-bold text-navy-700 transition active:scale-[0.98]"
+                onClick={() => navigate(`/clients/${quickResult.clientId}`)}
+              >
+                거래처 상세에서 확인 <ChevronRight size={16} className="text-navy-300" />
+              </button>
+              <button
+                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-sm font-bold text-navy-700 transition active:scale-[0.98]"
+                onClick={() => navigate('/materials')}
+              >
+                자재관리에서 확인 <ChevronRight size={16} className="text-navy-300" />
+              </button>
+              <button
+                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-sm font-bold text-navy-700 transition active:scale-[0.98]"
+                onClick={() => navigate('/history')}
+              >
+                전체 수거이력에서 확인 <ChevronRight size={16} className="text-navy-300" />
+              </button>
+            </div>
           </>
         )}
       </Modal>

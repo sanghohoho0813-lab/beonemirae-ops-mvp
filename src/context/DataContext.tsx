@@ -21,6 +21,7 @@ import {
   type CollectionCompletionInput,
   type CommandResult,
 } from '../lib/collection'
+import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전역 데이터 컨텍스트
@@ -43,6 +44,10 @@ interface DataContextValue {
   // 수거 완료 통합 커맨드 (3단계) — 입력 한 번으로 일정/이력/자재/재고/요청/감사기록 연결
   completeCollection: (input: CollectionCompletionInput) => CommandResult
   revertCollection: (eventId: string) => CommandResult
+  // 시연 안정화 (3.5단계)
+  resetDemo: () => void // 시연용 변경만 기준 상태로 복원
+  startDemo: () => void // 기준 복원 + 새 시연 세션 시작
+  restoreToday: () => void // 오늘 일정만 기준 복원 (비상)
   // 자재공급
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
@@ -129,7 +134,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // 검증→적용→저장을 한 번에 수행. 현재 커밋된 data 기준으로 계산(원자적)합니다.
   const completeCollection = useCallback(
     (input: CollectionCompletionInput): CommandResult => {
-      const result = applyCollectionCompletion(data, input)
+      // 시연 세션이 활성화되어 있으면 입력을 시연 기록으로 태깅(초기화 대상 구분)
+      const demoSessionId = data.demoSession?.active ? data.demoSession.id : null
+      const result = applyCollectionCompletion(data, { ...input, demoSessionId })
       if (result.ok && result.data) setData(result.data)
       return result
     },
@@ -144,6 +151,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     [data],
   )
+
+  // ── 시연 안정화 ─────────────────────────────────────────────────────────
+  const resetDemo = useCallback(() => setData((d) => resetDemoSession(d)), [])
+  const startDemo = useCallback(() => setData((d) => startDemoSession(d)), [])
+  const restoreToday = useCallback(() => setData((d) => restoreTodayOnly(d)), [])
 
   // ── 자재공급 ────────────────────────────────────────────────────────────
   const addMaterial = useCallback((m: Omit<MaterialSupply, 'id'>) => {
@@ -211,6 +223,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       completeSchedule,
       completeCollection,
       revertCollection,
+      resetDemo,
+      startDemo,
+      restoreToday,
       addMaterial,
       removeMaterial,
       addPayment,
@@ -233,6 +248,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       completeSchedule,
       completeCollection,
       revertCollection,
+      resetDemo,
+      startDemo,
+      restoreToday,
       addMaterial,
       removeMaterial,
       addPayment,

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
+import { Modal } from '../components/Modal'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import {
@@ -132,6 +133,7 @@ export function CollectionInput() {
 
   const [errors, setErrors] = useState<string[]>([])
   const [warnings, setWarnings] = useState<string[]>([])
+  const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
   const [success, setSuccess] = useState<null | { client: string; amount: number; supplied: number; created: boolean }>(
     null,
   )
@@ -602,10 +604,7 @@ export function CollectionInput() {
                 {!e.reverted && (
                   <button
                     className="flex shrink-0 items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1.5 text-xs font-bold text-navy-500 transition active:scale-95"
-                    onClick={() => {
-                      const r = revertCollection(e.id)
-                      if (!r.ok) setErrors(r.errors)
-                    }}
+                    onClick={() => setConfirmRevert(e.id)}
                   >
                     <RotateCcw size={12} /> 취소
                   </button>
@@ -620,6 +619,36 @@ export function CollectionInput() {
       )}
 
       <p className="mt-6 text-center text-xs text-navy-300">{prettyDate(today())} 기준</p>
+
+      {/* 완료 취소 확인 모달 (시연 중 실수 방지) */}
+      <Modal
+        open={confirmRevert !== null}
+        title="수거 완료 취소"
+        onClose={() => setConfirmRevert(null)}
+        footer={
+          <>
+            <button className="btn-ghost flex-1" onClick={() => setConfirmRevert(null)}>
+              닫기
+            </button>
+            <button
+              className="btn-primary flex-1"
+              onClick={() => {
+                if (confirmRevert) {
+                  const r = revertCollection(confirmRevert)
+                  if (!r.ok) setErrors(r.errors)
+                }
+                setConfirmRevert(null)
+              }}
+            >
+              완료 취소
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed text-navy-700">
+          이 수거 완료 입력을 취소하면 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
+        </p>
+      </Modal>
     </div>
   )
 }

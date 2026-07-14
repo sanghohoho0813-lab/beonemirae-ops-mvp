@@ -103,8 +103,11 @@ export interface Schedule {
   handoverStatus?: HandoverStatus // 처리장 인계 상태
   handoverAt?: string | null // 처리장 인계 완료 시간 (ISO)
   eventId?: string | null // 이 완료를 생성/처리한 수거 이벤트 id
-  origin?: 'seed' | 'field' // seed=시드·자동생성, field=현장 입력
+  origin?: RecordOrigin // 데이터 출처 (seed/field/demo/migrated/system)
 }
+
+/** 데이터 출처 구분 — 시연 초기화 시 보존/정리 대상을 구분하는 데 사용 */
+export type RecordOrigin = 'seed' | 'field' | 'demo' | 'migrated' | 'system'
 
 // ── 자재공급 ─────────────────────────────────────────────────────────────────
 export interface MaterialSupply {
@@ -164,6 +167,14 @@ export interface CollectionEvent {
   note: string
   reverted: boolean // 취소됨 여부 (기록은 유지)
   revertedAt?: string | null
+  demoSessionId?: string | null // 시연 세션 중 생성된 기록이면 세션 id (초기화 대상 구분)
+}
+
+// ── 시연 세션 (실사 당일 동일 초기 상태 복원용) ──────────────────────────────
+export interface DemoSession {
+  id: string
+  startedAt: string // ISO
+  active: boolean
 }
 
 // ── 전체 데이터 컨테이너 (localStorage 직렬화 단위) ──────────────────────────
@@ -177,6 +188,8 @@ export interface AppData {
   officeStock: OfficeStock // 사무실 자재 재고
   events: CollectionEvent[] // 수거 입력 이벤트/감사기록
   requestOverrides: RequestOverride[] // 병원 요청 자동 처리 결과
+  // ── v2.5 (3.5단계 시연 안정화) ──
+  demoSession?: DemoSession | null // 현재 시연 세션 (초기화 기준)
 }
 
 /** 저장 스키마 버전 (마이그레이션 판단용) */

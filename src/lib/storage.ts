@@ -1,4 +1,4 @@
-import type { AppData, CollectionEvent } from '../types'
+import type { AppData, CollectionEvent, DemoSession } from '../types'
 import { DEFAULT_OFFICE_STOCK, SCHEMA_VERSION } from '../types'
 import { buildSeedData, rebuildForToday } from '../data/seed'
 
@@ -143,10 +143,11 @@ export function loadData(): AppData {
         // 거래처·현장 입력 기록은 유지한 채 오늘 기준 시드 데이터만 다시 생성합니다.
         const hasToday = migrated.schedules.some((s) => s.date === todayStr())
         if (hasToday) {
-          if (migrated !== parsed) saveData(migrated)
-          return migrated
+          const ensured = ensureDemoSession(migrated)
+          if (ensured !== parsed) saveData(ensured)
+          return ensured
         }
-        const refreshed = rebuildPreserving(migrated)
+        const refreshed = ensureDemoSession(rebuildPreserving(migrated))
         saveData(refreshed)
         return refreshed
       }
@@ -154,7 +155,7 @@ export function loadData(): AppData {
   } catch (err) {
     console.warn('[storage] 데이터 로드 실패, 시드 데이터로 초기화합니다.', err)
   }
-  const seed = buildSeedData(loadClientSet())
+  const seed = ensureDemoSession(buildSeedData(loadClientSet()))
   saveData(seed)
   return seed
 }
@@ -171,7 +172,7 @@ export function saveData(data: AppData): void {
 /** 현재(또는 지정한) 거래처 세트 기준으로 데이터를 새로 생성·저장합니다. */
 export function resetData(demoCount: ClientSetSize = loadClientSet()): AppData {
   saveClientSet(demoCount)
-  const seed = buildSeedData(demoCount)
+  const seed = ensureDemoSession(buildSeedData(demoCount))
   saveData(seed)
   return seed
 }
@@ -182,4 +183,15 @@ export function uid(prefix = 'id'): string {
     return `${prefix}_${crypto.randomUUID()}`
   }
   return `${prefix}_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`
+}
+
+/** 새 시연 세션 생성 (실사 당일 기준 상태 추적용) */
+export function newDemoSession(): DemoSession {
+  return { id: uid('demo'), startedAt: new Date().toISOString(), active: true }
+}
+
+/** 시연 세션이 없으면 부여 (기존 세션은 유지) */
+export function ensureDemoSession(data: AppData): AppData {
+  if (data.demoSession && data.demoSession.id) return data
+  return { ...data, demoSession: newDemoSession() }
 }
