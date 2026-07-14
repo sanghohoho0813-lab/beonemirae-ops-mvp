@@ -25,6 +25,9 @@ import {
   clientMonthlyAvg,
   clientOutstanding,
   collectionLog,
+  clientInspection,
+  requestsForClient,
+  type RequestStatus,
 } from '../lib/ops'
 import { prettyDate, weight, won } from '../lib/format'
 import type { Client } from '../types'
@@ -32,6 +35,13 @@ import type { Client } from '../types'
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 상세 (/clients/:id) — 수거조건·이력·자재·미수금·수거대장 통합
 // ─────────────────────────────────────────────────────────────────────────────
+
+const reqStatusStyle: Record<RequestStatus, string> = {
+  접수: 'bg-navy-100 text-navy-600',
+  '확인 중': 'bg-amber-50 text-amber-600',
+  '일정 반영': 'bg-teal-50 text-teal-700',
+  '처리 완료': 'bg-emerald-50 text-emerald-600',
+}
 
 export function ClientDetail() {
   const { id = '' } = useParams()
@@ -65,6 +75,8 @@ export function ClientDetail() {
   const avg = clientMonthlyAvg(data, id)
   const outstanding = clientOutstanding(data, id)
   const logRows = collectionLog(data, id)
+  const inspection = clientInspection(data, id)
+  const requests = requestsForClient(data, id)
 
   function saveEdit() {
     if (!form.name.trim()) return
@@ -197,6 +209,52 @@ export function ClientDetail() {
           </div>
         </section>
       </div>
+
+      {/* 인증·실사 대응 */}
+      {inspection && (
+        <section>
+          <SectionTitle>인증·실사 대응</SectionTitle>
+          <div className="card p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-navy-800 px-2.5 py-1 text-[0.75rem] font-bold text-white">{inspection.type}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.75rem] font-bold text-amber-600">인증 D-{inspection.dday}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.75rem] font-bold text-amber-600">{inspection.status}</span>
+            </div>
+            <p className="mt-3 text-sm font-semibold text-navy-700">필요 자료</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {inspection.needs.map((n) => (
+                <span key={n} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">{n}</span>
+              ))}
+            </div>
+            <p className="mt-3 rounded-xl bg-amber-50/70 px-3.5 py-2.5 text-xs leading-snug text-amber-700">
+              사전 확인 필요 · 전용 용기 재고와 최근 수거대장을 미리 준비합니다. (문자·카카오 알림 연동은 향후 고도화 예정)
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* 요청·알림 */}
+      {requests.length > 0 && (
+        <section>
+          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>요청·알림</SectionTitle>
+          <div className="card divide-y divide-navy-100 p-1">
+            {requests.map((r) => (
+              <div key={r.id} className="p-3.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.75rem] font-bold text-teal-700">{r.type}</span>
+                  {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.75rem] font-bold text-rose-500">긴급</span>}
+                  <span className={`rounded-lg px-2 py-0.5 text-[0.75rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
+                  <span className="ml-auto text-xs text-navy-400">{r.when}</span>
+                </div>
+                <p className="mt-1.5 text-sm leading-snug text-navy-700">{r.content}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 px-1 text-xs leading-snug text-navy-400">
+            관리자·이사가 전화·카카오로 받은 요청을 기록하는 구조입니다. 병원 직접 접수 포털은 향후 고도화 예정입니다.
+          </p>
+        </section>
+      )}
 
       {/* 수정 모달 */}
       <Modal

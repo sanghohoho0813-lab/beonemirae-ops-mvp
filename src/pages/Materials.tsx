@@ -5,7 +5,8 @@ import { MetricCard, EmptyState, SectionTitle } from '../components/ui'
 import { MaterialRiskCard } from '../components/ops'
 import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
-import { num, prettyDate, thisMonth, today } from '../lib/format'
+import { materialUsage, type UsageStatus } from '../lib/ops'
+import { num, prettyDate, thisMonth, today, weight } from '../lib/format'
 import type { MaterialSupply } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,6 +23,12 @@ const emptyForm = {
   memo: '',
 }
 
+const usageStyle: Record<UsageStatus, string> = {
+  정상: 'bg-emerald-50 text-emerald-600',
+  '확인 필요': 'bg-amber-50 text-amber-600',
+  '점검 필요': 'bg-rose-50 text-rose-500',
+}
+
 export function Materials() {
   const { data, addMaterial, removeMaterial, clientById } = useData()
   const [open, setOpen] = useState(false)
@@ -35,6 +42,7 @@ export function Materials() {
   const month = thisMonth()
   const monthList = sorted.filter((m) => m.date.startsWith(month))
   const addCount = additionalMaterialCount(data)
+  const usage = useMemo(() => materialUsage(data), [data])
   const totals = monthList.reduce(
     (acc, m) => ({
       box: acc.box + m.boxCount,
@@ -80,6 +88,34 @@ export function Materials() {
       <section className="mb-5">
         <SectionTitle>자재 소진 위험</SectionTitle>
         <MaterialRiskCard />
+      </section>
+
+      {/* 자재 공급 대비 배출 비교 (원가·관리 점검) */}
+      <section className="mb-5">
+        <SectionTitle>자재 공급 대비 배출 비교</SectionTitle>
+        <div className="card p-4 sm:p-5">
+          <p className="mb-3 text-[0.8125rem] leading-snug text-navy-400">
+            자재 공급량과 실제 배출량(수거량)을 비교하여 과다 사용 또는 관리 누락 가능성을 확인합니다. 확정적 판단이 아닌
+            <b className="text-navy-500"> 점검용 지표</b>입니다.
+          </p>
+          {usage.length === 0 ? (
+            <p className="rounded-xl bg-navy-50 px-3.5 py-3 text-sm text-navy-400">이번 달 공급 내역이 쌓이면 비교가 표시됩니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {usage.map((u) => (
+                <div key={u.clientId} className="flex items-center justify-between gap-3 rounded-xl bg-navy-50 px-3.5 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-navy-800">{u.clientName}</p>
+                    <p className="mt-0.5 text-xs font-medium text-navy-500">
+                      공급 {u.suppliedUnits}단위 · 배출 {weight(u.dischargedKg)}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.75rem] font-bold ${usageStyle[u.status]}`}>{u.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <h2 className="mb-2.5 px-1 text-[0.9375rem] font-bold text-navy-700">공급 내역</h2>

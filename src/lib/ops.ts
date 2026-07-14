@@ -169,10 +169,19 @@ export function todayChecklist(data: AppData): CheckItem[] {
       .map((s) => s.clientId),
   ).size
   const isolation = isolationAlerts(data).filter((a) => a.kind === '격리').length
+  // 현장 운영 파생 항목
+  const inspection = inspectionAlerts(data).length
+  const sameDayMaterial = dispatchPlans(data).reduce((s, p) => s + p.materialCount, 0)
+  const pendingInput = pendingInputSchedules(data).length
+  const handover = handoverToday(data).length
 
   return [
     { key: 'today', label: '오늘 수거 예정', count: summary.total, status: '정보', to: '/today' },
-    { key: 'urgent', label: '긴급 수거', count: summary.긴급, status: summary.긴급 ? '긴급' : '완료', to: '/dispatch' },
+    { key: 'urgent', label: '격리의료폐기물 긴급수거', count: summary.긴급, status: summary.긴급 ? '긴급' : '완료', to: '/dispatch' },
+    { key: 'inspection', label: '인증·실사 전 확인', count: inspection, status: inspection ? '주의' : '완료', to: '/clients' },
+    { key: 'pending', label: '수거 완료 후 입력 대기', count: pendingInput, status: pendingInput ? '주의' : '완료', to: '/today' },
+    { key: 'sameday', label: '자재 동시공급', count: sameDayMaterial, status: sameDayMaterial ? '정보' : '완료', to: '/materials' },
+    { key: 'handover', label: '처리장 인계 예정', count: handover, status: '정보', to: '/dispatch' },
     { key: 'delay', label: '지연 확인', count: summary.지연, status: summary.지연 ? '주의' : '완료', to: '/today' },
     { key: 'material', label: '자재 추가공급 확인', count: addMaterials, status: addMaterials ? '주의' : '완료', to: '/materials' },
     { key: 'unpaid', label: '미수금 확인 필요', count: confirmNeeded, status: confirmNeeded ? '주의' : '완료', to: '/receivables' },
@@ -260,4 +269,150 @@ export function collectionLog(data: AppData, clientId: string, month = thisMonth
     })
   }
   return rows.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 현장 운영 파생 데이터 (시연용) — AppData 스키마를 바꾸지 않고 거래처/일정에서 규칙 기반 산출
+//  ※ localStorage self-heal(rebuildForToday)과 충돌하지 않도록 저장하지 않고 계산만 함
+// ─────────────────────────────────────────────────────────────────────────────
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+// ── 인증·실사 대응 ────────────────────────────────────────────────────────────
+export type InspectionStatus = '예정' | '사전 확인 필요' | '자료 준비 중' | '완료'
+export interface InspectionItem {
+  clientId: string
+  clientName: string
+  type: string
+  dday: number
+  status: InspectionStatus
+  needs: string[]
+}
+
+/** 14일 이내 인증·실사 예정 (병원·요양병원 우선, 규칙 기반 시연 데이터) */
+export function inspectionAlerts(data: AppData): InspectionItem[] {
+  const pool = data.clients.filter((c) => c.type === '병원' || c.type === '요양병원')
+  const base = pool.length ? pool : data.clients
+  const defs: Omit<InspectionItem, 'clientId' | 'clientName'>[] = [
+    { type: '병원 정기인증', dday: 7, status: '사전 확인 필요', needs: ['수거대장', '전용 용기 재고', '최근 3개월 수거이력'] },
+    { type: '보건소 실사', dday: 13, status: '자료 준비 중', needs: ['월간 명세', '자재 공급 내역'] },
+  ]
+  return defs
+    .map((d, i) => (base[i] ? { clientId: base[i].id, clientName: base[i].name, ...d } : null))
+    .filter((x): x is InspectionItem => x !== null)
+}
+
+/** 특정 거래처의 인증·실사 예정 (없으면 undefined) */
+export function clientInspection(data: AppData, clientId: string): InspectionItem | undefined {
+  return inspectionAlerts(data).find((a) => a.clientId === clientId)
+}
+
+// ── 병원 요청사항 ─────────────────────────────────────────────────────────────
+export type RequestStatus = '접수' | '확인 중' | '일정 반영' | '처리 완료'
+export interface RequestItem {
+  id: string
+  clientId: string
+  clientName: string
+  type: string
+  content: string
+  when: string
+  urgent: boolean
+  status: RequestStatus
+}
+
+/** 최근 병원 요청사항 (관리자·이사가 전화·카톡으로 받은 요청을 기록한 구조, 시연 데이터) */
+export function clientRequests(data: AppData): RequestItem[] {
+  const c = data.clients
+  if (c.length === 0) return []
+  const t = today()
+  const y = new Date()
+  y.setDate(y.getDate() - 1)
+  const yday = `${y.getFullYear()}-${pad2(y.getMonth() + 1)}-${pad2(y.getDate())}`
+  const pick = (i: number) => c[i % c.length]
+  const defs: { type: string; content: string; when: string; urgent: boolean; status: RequestStatus }[] = [
+    { type: '긴급수거', content: '격리환자 발생 — 보관기한 임박, 오늘 중 추가 수거 요청', when: `${t} 08:20`, urgent: true, status: '일정 반영' },
+    { type: '인증·실사 자료', content: '병원 정기인증 대비 최근 3개월 수거대장 요청', when: `${t} 09:05`, urgent: false, status: '확인 중' },
+    { type: '자재공급', content: '전용 용기 소진 임박 — 다음 수거 시 동시 공급 요청', when: `${yday} 16:40`, urgent: false, status: '일정 반영' },
+    { type: '수거대장 요청', content: '월말 통합 명세와 수거대장 이메일 발송 요청', when: `${yday} 14:10`, urgent: false, status: '접수' },
+    { type: '담당자 변경', content: '폐기물 담당 부서 변경 — 연락 채널 업데이트 요청', when: `${yday} 11:30`, urgent: false, status: '처리 완료' },
+  ]
+  return defs.map((d, i) => ({ id: `req${i + 1}`, clientId: pick(i * 2).id, clientName: pick(i * 2).name, ...d }))
+}
+
+/** 특정 거래처의 요청사항 */
+export function requestsForClient(data: AppData, clientId: string): RequestItem[] {
+  return clientRequests(data).filter((r) => r.clientId === clientId)
+}
+
+// ── 자재 공급 대비 배출 비교 ──────────────────────────────────────────────────
+export type UsageStatus = '정상' | '확인 필요' | '점검 필요'
+export interface MaterialUsageRow {
+  clientId: string
+  clientName: string
+  suppliedUnits: number // 이번 달 공급 자재 수량 합(박스+용기+봉투)
+  dischargedKg: number // 이번 달 수거량
+  ratio: number // 배출/공급 지표 (kg per unit)
+  status: UsageStatus
+  note: string
+}
+
+/** 이번 달 자재 공급량 대비 실제 배출량(수거량) 비교 — 과다사용/누락 "가능성"만 표시 */
+export function materialUsage(data: AppData, month = thisMonth()): MaterialUsageRow[] {
+  const rows: MaterialUsageRow[] = []
+  for (const c of data.clients) {
+    const mats = data.materials.filter((m) => m.clientId === c.id && m.date.startsWith(month))
+    if (mats.length === 0) continue
+    const suppliedUnits = mats.reduce((s, m) => s + m.boxCount + m.needleBoxCount + Math.round(m.vinylCount / 2), 0)
+    const dischargedKg = data.schedules
+      .filter((s) => s.clientId === c.id && s.status === '완료' && s.date.startsWith(month) && s.actualAmount != null)
+      .reduce((s, x) => s + (x.actualAmount ?? 0), 0)
+    if (suppliedUnits === 0) continue
+    const ratio = Math.round((dischargedKg / suppliedUnits) * 10) / 10
+    // 배출/공급 지표가 낮으면(공급 대비 배출 적음) 확인 필요, 매우 낮으면 점검 필요
+    const status: UsageStatus = ratio >= 6 ? '정상' : ratio >= 3 ? '확인 필요' : '점검 필요'
+    const note =
+      status === '정상'
+        ? '공급 대비 배출 정상 범위'
+        : status === '확인 필요'
+          ? '공급 대비 배출량 적음 — 사용량 점검 필요'
+          : '공급 대비 배출량 크게 적음 — 담당자 확인 권장'
+    rows.push({ clientId: c.id, clientName: c.name, suppliedUnits, dischargedKg, ratio, status, note })
+  }
+  return rows.sort((a, b) => a.ratio - b.ratio).slice(0, 6)
+}
+
+// ── 수거 완료 후 입력 대기 (오늘 방문 예정시간 지난 미완료 건) ────────────────
+export function pendingInputSchedules(data: AppData): typeof data.schedules {
+  const t = today()
+  const now = new Date()
+  const hhmm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`
+  return schedulesOn(data, t).filter((s) => s.status === '지연' || (s.status !== '완료' && s.scheduledTime < hhmm))
+}
+
+// ── 오늘 처리장 인계 예정 (배차된 차량 기준) ─────────────────────────────────
+export interface HandoverItem {
+  facilityId: string
+  facilityName: string
+  wasteType: WasteType
+  targetTime: string
+  vehicleCount: number
+}
+export function handoverToday(data: AppData): HandoverItem[] {
+  const plans = dispatchPlans(data).filter((p) => p.stops.length > 0)
+  const byWaste = new Map<WasteType, number>()
+  for (const p of plans) byWaste.set(p.wasteType, (byWaste.get(p.wasteType) ?? 0) + 1)
+  const facilities = new Map<string, HandoverItem>()
+  for (const p of plans) {
+    const key = p.facilityName
+    if (!facilities.has(key)) {
+      facilities.set(key, {
+        facilityId: key,
+        facilityName: p.facilityName,
+        wasteType: p.wasteType,
+        targetTime: p.handoverTime,
+        vehicleCount: 0,
+      })
+    }
+    facilities.get(key)!.vehicleCount += 1
+  }
+  return [...facilities.values()]
 }

@@ -57,6 +57,7 @@ export default {
           '"Noto Sans KR"',
           '"Malgun Gothic"',
           'system-ui',
+          'Arial',
           'sans-serif',
         ],
       },

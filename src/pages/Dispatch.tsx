@@ -90,9 +90,24 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
   )
 }
 
+const fleetStatusStyle: Record<string, string> = {
+  '운행 중': 'bg-teal-50 text-teal-700',
+  대기: 'bg-navy-100 text-navy-500',
+  '정비 예정': 'bg-amber-50 text-amber-600',
+  '검사 예정': 'bg-amber-50 text-amber-600',
+}
+
 export function Dispatch() {
   const { data } = useData()
-  const plans = dispatchPlans(data).filter((p) => p.stops.length > 0)
+  const allPlans = dispatchPlans(data)
+  const plans = allPlans.filter((p) => p.stops.length > 0)
+  const fleet = data.vehicles.map((v, i) => {
+    const plan = allPlans.find((p) => p.vehicleId === v.id)
+    const stops = plan?.stops.length ?? 0
+    const loadRate = plan?.loadRate ?? 0
+    const status = stops > 0 ? '운행 중' : i % 5 === 4 ? '정비 예정' : i % 5 === 3 ? '검사 예정' : '대기'
+    return { v, stops, loadRate, status }
+  })
   const stopCount = plans.reduce((s, p) => s + p.stops.length, 0)
   const urgentCount = plans.reduce((s, p) => s + p.urgentCount, 0)
   const materialCount = plans.reduce((s, p) => s + p.materialCount, 0)
@@ -111,10 +126,14 @@ export function Dispatch() {
           <p className="text-[0.9375rem] font-bold">오늘 배차 추천 시뮬레이션</p>
         </div>
         <p className="mt-2.5 text-sm leading-relaxed text-navy-200">
-          경기 남양주시 출발 · 서울·경기권 권역 배차. 적재율·긴급수거·처리장 인계를 함께 고려합니다.
+          경기 남양주시 출발 · 서울·경기권 권역 배차. 거래처 위치·수거 가능시간·수거주기·예정 수거량·차량 적재가능량·폐기물
+          구분·기사 근무시간·처리장 인계시간·긴급수거·자재 동시공급을 함께 고려합니다.
+        </p>
+        <p className="mt-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-xs leading-snug text-teal-100">
+          현재는 현장 규칙을 반영한 추천 시뮬레이션 단계이며, 실제 운행데이터를 축적하여 추천 로직을 고도화할 예정입니다.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {['남양주 출발', '개발 중', '시뮬레이션', '실증 예정'].map((b) => (
+          {['남양주 출발', '규칙 기반', '시뮬레이션', '실증 예정'].map((b) => (
             <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[0.6875rem] font-bold text-teal-200">{b}</span>
           ))}
         </div>
@@ -148,6 +167,31 @@ export function Dispatch() {
             <PlanCard key={p.vehicleId} p={p} open={open === p.vehicleId} onToggle={() => setOpen(open === p.vehicleId ? null : p.vehicleId)} />
           ))}
           {plans.length === 0 && <div className="card p-5 text-sm text-navy-400">오늘 배정된 차량 일정이 없습니다.</div>}
+        </div>
+      </section>
+
+      {/* 차량 운영 상태 */}
+      <section>
+        <SectionTitle>차량 운영 상태</SectionTitle>
+        <div className="card p-4 sm:p-5">
+          <div className="space-y-2.5">
+            {fleet.map(({ v, stops, loadRate, status }) => (
+              <div key={v.id} className="flex items-center gap-3 rounded-xl bg-navy-50 px-3.5 py-3">
+                <WasteBadge type={v.wasteType} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-navy-800">{v.name}</p>
+                  <p className="text-xs font-medium text-navy-500">
+                    {v.driver} · 최대 {v.nominalCapacity.toLocaleString('ko-KR')}kg · 오늘 {stops}곳 · 적재율 {loadRate}%
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.75rem] font-bold ${fleetStatusStyle[status]}`}>{status}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 rounded-xl bg-navy-50 px-3.5 py-2.5 text-xs leading-snug text-navy-500">
+            의료폐기물 차량은 전용 용기 부피로 인해 실제 적재가 최대 적재량의 <b className="text-navy-700">약 2/3 수준</b>입니다. 이를
+            반영해 배차·적재율을 계산합니다. (차량 검사·정비 일정 알림은 향후 고도화 예정)
+          </p>
         </div>
       </section>
 

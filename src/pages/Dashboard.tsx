@@ -58,8 +58,10 @@ export function Dashboard() {
   const addMaterials = additionalMaterialCount(data)
   const confirmNeeded = data.payments.filter((p) => p.status === '확인필요').length
   const checklist = todayChecklist(data)
-  const primary = checklist.filter((c) => ['urgent', 'delay', 'unpaid'].includes(c.key))
-  const rest = checklist.filter((c) => !['urgent', 'delay', 'unpaid'].includes(c.key))
+  // 오늘 놓치면 안 되는 현장 운영 항목 — 격리 긴급수거·인증실사·입력대기·자재 동시공급·처리장 인계
+  const PRIMARY_KEYS = ['urgent', 'inspection', 'pending', 'sameday', 'handover']
+  const primary = PRIMARY_KEYS.map((k) => checklist.find((c) => c.key === k)).filter((c): c is NonNullable<typeof c> => Boolean(c))
+  const rest = checklist.filter((c) => !PRIMARY_KEYS.includes(c.key))
   const activePlans = dispatchPlans(data).filter((p) => p.stops.length > 0).length
 
   // KPI — 오늘 수거량 / 이번 달 수거량 / 미수금
@@ -120,9 +122,9 @@ export function Dashboard() {
         <MetricCard label="차량 운행" value={`${activePlans}/${data.vehicles.length}`} unit="대" tone="navy" size="lg" nowrap onClick={() => navigate('/dispatch')} />
       </div>
 
-      {/* 오늘 먼저 확인할 일 (3) + 전체 보기 */}
+      {/* 오늘 놓치면 안 되는 운영 항목 + 전체 보기 */}
       <section>
-        <SectionTitle>오늘 먼저 확인할 일</SectionTitle>
+        <SectionTitle>오늘 놓치면 안 되는 운영 항목</SectionTitle>
         <div className="card space-y-1 p-2">
           {primary.map((item) => (
             <ChecklistRow key={item.key} item={item} />
