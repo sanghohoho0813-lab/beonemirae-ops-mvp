@@ -20,8 +20,12 @@ import {
   Clock,
   CheckCircle2,
   ChevronDown,
+  ExternalLink,
   type LucideIcon,
 } from 'lucide-react'
+
+// 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
+const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 주식회사 비원미래 공식 반응형 홈페이지 (/company)
@@ -947,6 +951,16 @@ export function CompanyHomePage() {
                 <li>전용 용기·자재 공급</li>
                 <li>운영관리 시스템 개발</li>
               </ul>
+              <p className="mt-5 font-bold text-navy-900">관련 시스템</p>
+              <a
+                href={ALLBARO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-4 py-3 text-[15px] font-bold text-teal-700 transition hover:bg-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+              >
+                올바로 시스템 바로가기 <ExternalLink size={15} strokeWidth={2.4} />
+              </a>
+              <p className="mt-2 text-[13px] leading-snug text-navy-400">폐기물 적법처리 국가시스템(환경부·한국환경공단)</p>
             </div>
           </div>
 

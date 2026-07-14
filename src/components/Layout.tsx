@@ -14,8 +14,12 @@ import {
   Truck,
   Globe,
   Workflow,
+  ExternalLink,
   type LucideIcon,
 } from 'lucide-react'
+
+// 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
+const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
@@ -113,6 +117,15 @@ function Sidebar() {
           <Smartphone size={18} strokeWidth={2.2} />
           모바일 미리보기
         </button>
+        <a
+          href={ALLBARO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-2.5 rounded-2xl bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-700 transition hover:bg-teal-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+        >
+          <ExternalLink size={18} strokeWidth={2.2} />
+          올바로 시스템
+        </a>
         <p className="px-1 pt-1 text-[0.6875rem] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
       </div>
     </aside>

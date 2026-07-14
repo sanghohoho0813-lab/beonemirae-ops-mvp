@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, Workflow, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, type LucideIcon } from 'lucide-react'
+
+// 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
+const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useData } from '../context/DataContext'
 import { FontSizeControl } from './FontSizeControl'
 import { InfoBanner } from './InfoBanner'
@@ -110,6 +113,19 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
             </div>
             <ChevronRight size={18} className="ml-auto text-navy-300" />
           </Tappable>
+          <a
+            href={ALLBARO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card flex items-center gap-3 p-4 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+          >
+            <IconChip icon={ExternalLink} tone="teal" />
+            <div className="min-w-0">
+              <p className="font-bold text-navy-900">올바로 시스템</p>
+              <p className="text-xs text-navy-400">폐기물 적법처리 국가시스템 바로가기</p>
+            </div>
+            <ExternalLink size={16} className="ml-auto shrink-0 text-navy-300" />
+          </a>
           {variant === 'mobile' &&
             MOBILE_SHORTCUTS.map((s) => (
               <Tappable key={s.to} as="div" onClick={() => go(s.to)} className="card flex cursor-pointer items-center gap-3 p-4">
