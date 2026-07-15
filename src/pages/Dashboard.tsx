@@ -115,8 +115,8 @@ export function Dashboard() {
         <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-500 px-3 py-1.5 text-xs font-bold text-white">3분 시연</span>
       </button>
 
-      {/* 핵심 KPI — 오늘/이번 달 운영 지표 */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {/* 핵심 KPI — 오늘/이번 달 운영 지표 (숫자가 잘리지 않도록 최대 3열로 배치) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <MetricCard label="오늘 수거건수" value={summary.total} unit="건" tone="navy" size="lg" nowrap onClick={() => navigate('/today')} />
         <MetricCard label="오늘 수거량" value={weight(todayCollectedKg)} tone="teal" size="lg" nowrap />
         <MetricCard label="이번 달 수거량" value={weight(monthTotalKg)} tone="navy" size="lg" nowrap hint="목표 105톤" onClick={() => navigate('/stats')} />

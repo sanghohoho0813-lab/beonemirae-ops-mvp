@@ -56,7 +56,7 @@ export function MetricCard({
   nowrap?: boolean
   onClick?: () => void
 }) {
-  const numberSize = size === 'lg' ? 'text-[1.875rem] sm:text-[2.125rem]' : 'text-[1.625rem]'
+  const numberSize = size === 'lg' ? 'text-[1.375rem] sm:text-[1.625rem] xl:text-[1.875rem]' : 'text-[1.625rem]'
   return (
     <motion.div
       onClick={onClick}
