@@ -70,7 +70,7 @@ export function MetricCard({
           : ''
       }`}
     >
-      <span className={`order-2 mt-2 font-semibold text-navy-400 ${size === 'lg' ? 'text-sm' : 'text-[0.8125rem]'}`}>{label}</span>
+      <span className={`order-2 mt-2 break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-sm' : 'text-[0.8125rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-300">{unit}</span>}
