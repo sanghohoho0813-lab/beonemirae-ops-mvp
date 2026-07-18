@@ -78,6 +78,9 @@ const phaseStateStyle: Record<PhaseState, string> = {
   예정: 'bg-amber-50 text-amber-600',
 }
 
+// 활용 계획 하단 시연 진입 버튼 노출 여부 (당분간 숨김 — true 로 바꾸면 다시 표시)
+const SHOW_DEMO_CTA = false
+
 const PHASES: Phase[] = [
   {
     tag: '1단계',
@@ -372,15 +375,19 @@ export function Roadmap() {
         </div>
       </section>
 
-      {/* 하단 CTA */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <button className="btn-primary flex-1" onClick={() => navigate('/presentation')}>
-          대표님 3분 시연 시작 <ArrowRight size={17} strokeWidth={2.4} />
-        </button>
-        <button className="btn-navy flex-1" onClick={() => navigate('/demo')}>
-          심사관 시연 요약 보기
-        </button>
-      </div>
+      {/* 하단 CTA — 시연 진입 버튼(대표님 3분 시연 / 심사관 시연 요약)은
+          당분간 숨김 처리. 기능·라우트(/presentation, /demo)는 그대로이며,
+          다시 노출하려면 아래 SHOW_DEMO_CTA 를 true 로 바꾸면 됩니다. */}
+      {SHOW_DEMO_CTA && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button className="btn-primary flex-1" onClick={() => navigate('/presentation')}>
+            대표님 3분 시연 시작 <ArrowRight size={17} strokeWidth={2.4} />
+          </button>
+          <button className="btn-navy flex-1" onClick={() => navigate('/demo')}>
+            심사관 시연 요약 보기
+          </button>
+        </div>
+      )}
 
       <p className="pb-2 text-center text-xs text-navy-300">활용 계획·업무흐름도 · ㈜비원미래 운영관리</p>
     </PageShell>
