@@ -49,6 +49,9 @@ function ChecklistRow({ item }: { item: ReturnType<typeof todayChecklist>[number
   )
 }
 
+// 대시보드 '대표님 시연 시작' 카드 노출 여부 (당분간 숨김 — true 로 바꾸면 다시 표시)
+const SHOW_DEMO_CTA = false
+
 export function Dashboard() {
   const { data, clientSet } = useData()
   const navigate = useNavigate()
@@ -103,17 +106,20 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* 대표님 시연 시작 */}
-      <button onClick={() => navigate('/presentation')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50">
-          <PlayCircle size={22} strokeWidth={2.2} className="text-teal-600" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.9375rem] font-bold text-navy-900">대표님 시연 시작</p>
-          <p className="truncate text-xs text-navy-400">현황 → 배차 → 거래처 → 수거대장 → 특허·사업계획</p>
-        </div>
-        <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-500 px-3 py-1.5 text-xs font-bold text-white">3분 시연</span>
-      </button>
+      {/* 대표님 시연 시작 — 당분간 숨김(SHOW_DEMO_CTA=false). 기능·라우트(/presentation)는
+          그대로이며, 다시 노출하려면 아래 SHOW_DEMO_CTA 를 true 로 바꾸면 됩니다. */}
+      {SHOW_DEMO_CTA && (
+        <button onClick={() => navigate('/presentation')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50">
+            <PlayCircle size={22} strokeWidth={2.2} className="text-teal-600" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.9375rem] font-bold text-navy-900">대표님 시연 시작</p>
+            <p className="truncate text-xs text-navy-400">현황 → 배차 → 거래처 → 수거대장 → 특허·사업계획</p>
+          </div>
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-teal-500 px-3 py-1.5 text-xs font-bold text-white">3분 시연</span>
+        </button>
+      )}
 
       {/* 핵심 KPI — 오늘/이번 달 운영 지표 (숫자가 잘리지 않도록 최대 3열로 배치) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
