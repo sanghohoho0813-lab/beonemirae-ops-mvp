@@ -40,7 +40,7 @@ const EASE = [0.22, 1, 0.36, 1] as const
 const NAV = [
   { label: '회사소개', href: '#about' },
   { label: '서비스', href: '#services' },
-  { label: '개발 현황', href: '#tech' },
+  { label: '운영현황', href: '#tech' },
   { label: '문의', href: '#contact' },
 ]
 
@@ -169,6 +169,25 @@ function BrandMark({ size = 40, className = '' }: { size?: number; className?: s
         <circle cx="11" cy="24" r="3.6" fill="#3182f6" />
         <circle cx="20" cy="13" r="3.6" fill="#2563eb" />
         <circle cx="29" cy="20" r="3" fill="#0f1a2e" />
+      </svg>
+    </span>
+  )
+}
+
+// 다크 헤더/푸터용 브랜드 마크 — 틸 육각형 안에 'B' 모노그램
+function BrandMarkDark({ size = 38 }: { size?: number }) {
+  return (
+    <span className="flex shrink-0 items-center justify-center" style={{ width: size, height: size }} aria-hidden>
+      <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
+        <path
+          d="M20 3.2 L33.5 11 V29 L20 36.8 L6.5 29 V11 Z"
+          stroke="#2dd4bf"
+          strokeWidth="2"
+          fill="rgba(20,184,166,0.10)"
+          strokeLinejoin="round"
+        />
+        <path d="M15.5 13 H21.2 a4 4 0 0 1 0 8 H15.5 Z M15.5 20 H21.8 a4 4 0 0 1 0 8 H15.5 Z"
+          stroke="#5eead4" strokeWidth="1.7" strokeLinejoin="round" fill="none" />
       </svg>
     </span>
   )
@@ -474,7 +493,16 @@ export function CompanyHomePage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [statsRun, setStatsRun] = useState(false)
   const [techOpen, setTechOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const statsRef = useRef(false)
+
+  // 헤더 톤 전환 — 히어로 위에서는 투명, 스크롤하면 다크 솔리드
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   // SEO — 홈페이지 진입 시 문서 타이틀/설명 지정, 이탈 시 복원
   useEffect(() => {
@@ -496,24 +524,25 @@ export function CompanyHomePage() {
 
   return (
     <div className="min-h-[100dvh] bg-white font-sans text-navy-700">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-navy-100 bg-white/85 backdrop-blur-lg">
-        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
+      {/* ── Header (히어로 위 투명 → 스크롤 시 다크 솔리드) ───────────────────── */}
+      <header
+        className={`fixed top-0 z-50 w-full transition-colors duration-300 ${
+          scrolled || menuOpen ? 'border-b border-white/10 bg-navy-950/90 backdrop-blur-lg' : 'bg-transparent'
+        }`}
+      >
+        <div className="mx-auto flex h-[76px] w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
           <a href="#top" className="flex items-center gap-2.5" aria-label="주식회사 비원미래 홈">
-            <BrandMark size={40} />
-            <span className="leading-tight">
-              <span className="block text-[17px] font-extrabold tracking-tight text-navy-900">주식회사 비원미래</span>
-              <span className="block text-[12px] font-semibold tracking-wide text-navy-400">BEONE MIRAE CO.</span>
-            </span>
+            <BrandMarkDark size={34} />
+            <span className="text-[20px] font-extrabold tracking-tight text-white">비원미래</span>
           </a>
 
           {/* 데스크톱 내비 */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-8 lg:flex">
             {NAV.map((n) => (
               <a
                 key={n.href}
                 href={n.href}
-                className="rounded-lg px-3 py-2 text-base font-bold text-navy-600 transition-colors hover:bg-navy-50 hover:text-teal-600"
+                className="text-[15px] font-bold text-white/80 transition-colors hover:text-white"
               >
                 {n.label}
               </a>
@@ -523,16 +552,16 @@ export function CompanyHomePage() {
           <div className="hidden items-center gap-2 lg:flex">
             <a
               href="#contact"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-5 py-3 text-base font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-5 py-2.5 text-[15px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-950"
             >
-              수거 상담 <ArrowRight size={18} strokeWidth={2.4} />
+              수거 상담
             </a>
           </div>
 
           {/* 모바일 햄버거 */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-navy-700 transition hover:bg-navy-50 lg:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:bg-white/10 lg:hidden"
             aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
             aria-expanded={menuOpen}
           >
@@ -548,7 +577,7 @@ export function CompanyHomePage() {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: EASE }}
-              className="overflow-hidden border-t border-navy-100 bg-white lg:hidden"
+              className="overflow-hidden border-t border-white/10 bg-navy-950/95 lg:hidden"
             >
               <nav className="mx-auto flex w-full max-w-6xl flex-col px-5 py-2 sm:px-6">
                 {NAV.map((n) => (
@@ -556,7 +585,7 @@ export function CompanyHomePage() {
                     key={n.href}
                     href={n.href}
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-lg px-2 py-3 text-[15px] font-bold text-navy-700 transition hover:bg-navy-50"
+                    className="rounded-lg px-2 py-3 text-[15px] font-bold text-white/85 transition hover:bg-white/10"
                   >
                     {n.label}
                   </a>
@@ -564,7 +593,7 @@ export function CompanyHomePage() {
                 <a
                   href="#contact"
                   onClick={() => setMenuOpen(false)}
-                  className="mb-3 mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-4 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-teal-600"
+                  className="mb-3 mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-4 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-accent-400"
                 >
                   수거 상담 <ArrowRight size={18} strokeWidth={2.4} />
                 </a>
@@ -575,20 +604,79 @@ export function CompanyHomePage() {
       </header>
 
       <main id="top">
-        {/* ── Hero ─────────────────────────────────────────────────────────── */}
-        <section className="relative overflow-hidden border-b border-navy-100 bg-gradient-to-b from-navy-50 to-white">
-          {/* 은은한 grid 배경 */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-70"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, rgba(15,26,46,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,26,46,0.04) 1px, transparent 1px)',
-              backgroundSize: '34px 34px',
-              maskImage: 'radial-gradient(ellipse 90% 80% at 70% 10%, black 40%, transparent 100%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 70% 10%, black 40%, transparent 100%)',
-            }}
+        {/* ── Hero (다크 풀블리드 · 밴/병원 현장 배경 + 코드 텍스트) ─────────────── */}
+        <section className="relative w-full overflow-hidden bg-navy-950 sm:min-h-[100svh]">
+          {/* 배경 사진 */}
+          <img
+            src="/company/field-truck-hospital.webp"
+            alt="종합병원 앞에서 전용 용기를 수거 차량에 싣는 비원미래 현장"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            loading="eager"
           />
+          {/* 가독성 오버레이 — 좌측 진하게, 하단 진하게 */}
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-navy-950 via-navy-950/80 to-navy-950/25" />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/10 to-navy-950/60" />
+
+          <div className="relative mx-auto flex w-full max-w-6xl flex-col justify-center px-5 pb-14 pt-28 sm:min-h-[100svh] sm:px-6 sm:pb-52 sm:pt-32 lg:px-8">
+            <motion.div
+              initial={reduced ? false : { opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EASE }}
+              className="max-w-2xl"
+            >
+              <h1 className="text-[2.1rem] font-extrabold leading-[1.14] tracking-tight text-white sm:text-[3rem] lg:text-[3.6rem]">
+                <span className="block">의료폐기물 운송을</span>
+                <span className="block">운영 기준까지 관리합니다</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-white/75 sm:text-[19px]">
+                서울·경기권 의료기관의 정기 수거, 긴급 대응, 용기 공급, 수거대장 관리.
+              </p>
+
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href="#contact"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-7 py-4 text-[17px] font-bold text-white shadow-lg shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-950"
+                >
+                  수거 상담 요청 <ArrowRight size={19} strokeWidth={2.4} />
+                </a>
+                <a
+                  href="#services"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 bg-white/5 px-7 py-4 text-[17px] font-bold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/10"
+                >
+                  운영 범위 보기
+                </a>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* 하단 특징 바 — 3열 (코드로 렌더) · 모바일은 본문 아래로 흐름 */}
+          <div className="relative z-10 border-t border-white/10 bg-navy-950/55 backdrop-blur-md sm:absolute sm:inset-x-0 sm:bottom-0">
+            <div className="mx-auto grid w-full max-w-6xl grid-cols-1 divide-y divide-white/10 px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6 lg:px-8">
+              {[
+                { icon: ShieldCheck, title: '허가 기반 운송', desc: '관할 기관 허가 기반의 안전한 운송 체계' },
+                { icon: Container, title: '전용 용기 관리', desc: '규격 용기 사용 및 회수·세척·소독 관리' },
+                { icon: FileText, title: '수거이력 기록', desc: '수거부터 폐기까지 전 과정 기록·보관' },
+              ].map((f) => {
+                const Icon = f.icon
+                return (
+                  <div key={f.title} className="flex items-center gap-3.5 py-5 sm:px-6 sm:first:pl-0">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent-400/30 bg-accent-500/10 text-accent-300">
+                      <Icon size={20} strokeWidth={2} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-bold text-white">{f.title}</p>
+                      <p className="mt-0.5 text-[13px] leading-snug text-white/55">{f.desc}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ▼▼▼ 아래 섹션들은 다음 단계에서 순차적으로 다크 시안에 맞춰 교체 예정 ▼▼▼ */}
+        {false && (
+        <section className="relative overflow-hidden border-b border-navy-100 bg-gradient-to-b from-navy-50 to-white">
           <div className="relative mx-auto grid w-full max-w-6xl items-start gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:py-24">
             <motion.div
               className="lg:pt-6"
@@ -596,37 +684,9 @@ export function CompanyHomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE }}
             >
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-teal-600 shadow-card ring-1 ring-navy-100">
-                <Recycle size={16} /> 서울·경기권 의료기관 의료폐기물 수거·운반 업체
-              </div>
               <h1 className="mt-5 text-[1.75rem] font-extrabold leading-[1.16] tracking-tight text-navy-900 sm:text-[2.4rem] lg:text-[3rem]">
                 <span className="block">의료기관 폐기물 수거·운반,</span>
-                <span className="block"><span className="text-teal-600">안전하게</span> 맡길 곳이 필요하신가요?</span>
               </h1>
-              <p className="mt-6 max-w-xl text-[17px] font-semibold leading-relaxed text-navy-800 sm:text-lg">
-                비원미래는 서울·경기권 병원·요양병원·의원 등 배출기관의 정기 수거, 추가 수거, 자재공급, 수거이력 관리를
-                함께 지원합니다.
-              </p>
-              <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-navy-600 sm:text-[17px]">
-                의료폐기물 수거·운반은 단순 방문 수거가 아니라 보관기한, 폐기물 종류, 전용 용기, 처리장 인계, 수거대장
-                요청까지 함께 관리해야 하는 업무입니다. 비원미래는 현장 수거·운반 경험을 바탕으로 의료기관별 운영 조건에
-                맞춰 대응합니다.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#contact"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500 px-7 py-4 text-[17px] font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
-                >
-                  우리 기관 수거 상담하기 <ArrowRight size={19} strokeWidth={2.4} />
-                </a>
-                <a
-                  href="#services"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-7 py-4 text-[17px] font-bold text-navy-700 ring-1 ring-navy-200 transition hover:-translate-y-0.5 hover:bg-navy-50"
-                >
-                  서비스 범위 확인하기 <ArrowRight size={19} strokeWidth={2.4} />
-                </a>
-              </div>
 
               <div className="mt-8 flex flex-wrap gap-2">
                 {HERO_BADGES.map((b) => (
@@ -651,6 +711,7 @@ export function CompanyHomePage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ── 핵심 신뢰 포인트 (흰 배경 · 큰 아이콘 카드 4개) ─────────────────── */}
         <Section>
