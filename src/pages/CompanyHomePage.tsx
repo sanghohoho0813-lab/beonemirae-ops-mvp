@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
@@ -37,9 +37,10 @@ const IMG = {
   clinic: '/company/local-clinic-pickup.webp',
   care: '/company/care-facility-pickup.webp',
   network: '/company/client-network-board.webp',
-  workflow: '/company/collection-record-dashboard.webp',
-  inspection: '/company/inspection-record-support.webp',
-  route: '/company/route-operations-desk.webp',
+  coverage: '/company/route-operations-desk.webp',
+  workflow: '/company/field-pickup-tablet.webp',
+  inspection: '/company/consultation-hospital-admin.webp',
+  route: '/company/multi-vehicle-route-dispatch.webp',
 }
 
 type Tone = 'teal' | 'blue' | 'amber' | 'slate'
@@ -373,6 +374,85 @@ function OperationsSection() {
   )
 }
 
+void OperationsSection
+
+function OperationsSectionV2() {
+  const points = ['정기 수거와 추가 요청 대응', '보관기한 알림', '전용 용기 및 자재 공급 이력', '수거대장 정리']
+
+  return (
+    <Section id="about" className="bg-[#f5f8fb]">
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+        <Reveal>
+          <Eyebrow>핵심 운영 기준</Eyebrow>
+          <Heading>수거만 맡기는 것이 아니라, 운영 부담까지 줄입니다</Heading>
+          <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-slate-600">
+            정기 수거, 추가 요청, 전용 용기, 수거대장까지 의료기관 담당자가 챙겨야 할 일을 한 흐름으로 관리합니다.
+          </p>
+          <div className="mt-9 divide-y divide-slate-200 border-y border-slate-200">
+            {points.map((point) => (
+              <div key={point} className="flex items-center justify-between gap-5 py-4">
+                <span className="flex items-center gap-3 text-[17px] font-extrabold text-slate-900">
+                  <CheckCircle2 size={21} className="text-teal-600" />
+                  {point}
+                </span>
+                <ArrowRight size={18} className="shrink-0 text-teal-600" />
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={() => scrollToSection('workflow')} className="mt-8 inline-flex items-center gap-2 text-[16px] font-black text-slate-900 underline decoration-teal-500 decoration-2 underline-offset-8">
+            관리 기준 확인하기 <ArrowRight size={18} />
+          </button>
+        </Reveal>
+
+        <Reveal delay={0.08}>
+          <div className="overflow-hidden rounded-lg bg-white p-4 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.32)] ring-1 ring-slate-200 sm:p-5">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div className="flex items-center gap-3">
+                <BrandMark />
+                <div>
+                  <p className="text-sm font-black text-slate-950">BEONE MIRAE</p>
+                  <p className="text-xs font-bold text-slate-500">수거 일정 보드</p>
+                </div>
+              </div>
+              <span className="rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-black text-teal-700">2026.07.19</span>
+            </div>
+            <div className="mt-4 grid grid-cols-[76px_repeat(5,minmax(0,1fr))] overflow-hidden rounded-lg border border-slate-200 text-center text-[11px] font-black text-slate-500 sm:grid-cols-[96px_repeat(5,minmax(0,1fr))]">
+              <div className="bg-slate-50 p-3 text-left">구분</div>
+              {['월', '화', '수', '목', '금'].map((day) => <div key={day} className="border-l border-slate-200 bg-slate-50 p-3">{day}</div>)}
+              {[
+                ['의료폐기물', '09:00 종합병원', '10:30 의료원', '09:30 대학병원', '11:00 내과의원', '09:00 요양병원'],
+                ['일회용기저귀', '13:30 요양시설', '14:00 장례식장', '', '15:00 요양시설', ''],
+              ].map(([type, ...entries]) => (
+                <Fragment key={type}>
+                  <div key={type} className="flex min-h-24 items-center bg-white p-3 text-left text-[11px] font-black text-slate-800">{type}</div>
+                  {entries.map((entry, index) => (
+                    <div key={`${type}-${index}`} className="min-h-24 border-l border-t border-slate-200 bg-white p-2 text-left">
+                      {entry && <div className={`rounded-md p-2 text-[10px] font-black leading-relaxed ${type === '일회용기저귀' ? 'bg-amber-50 text-amber-700' : 'bg-teal-50 text-teal-700'}`}>{entry}</div>}
+                    </div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {[
+                ['전용 용기 보유 현황', '124개', '다음 공급 07.24'],
+                ['수거 현황', '18건', '운행 중 4건'],
+                ['준수 관리 체크리스트', '정상', '수거대장 작성 완료'],
+              ].map(([label, value, desc]) => (
+                <div key={label} className="rounded-lg bg-[#f5f8fb] p-4 ring-1 ring-slate-200">
+                  <p className="text-xs font-black text-slate-500">{label}</p>
+                  <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
+                  <p className="mt-1 text-xs font-bold text-teal-700">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </Section>
+  )
+}
+
 function ServicesSection({ onContact }: { onContact: () => void }) {
   const services = [
     { label: '병원 및 요양병원', team: '의료폐기물 팀', image: IMG.hospital, desc: '정기 수거와 추가 수거 요청, 전용 용기 공급을 함께 관리합니다.' },
@@ -417,13 +497,59 @@ function ServicesSection({ onContact }: { onContact: () => void }) {
   )
 }
 
+void ServicesSection
+
+function ServicesSectionV2({ onContact }: { onContact: () => void }) {
+  const services = [
+    { label: '병원·요양병원', team: '의료폐기물 수거', image: IMG.hospital, desc: '정기 수거부터 추가 수거 요청, 전용 용기 공급까지 함께 관리합니다.', tone: 'teal' },
+    { label: '의원·치과·한의원', team: '의료폐기물 수거', image: IMG.clinic, desc: '소규모 배출기관의 수거 주기와 보관 기준에 맞춰 운영합니다.', tone: 'teal' },
+    { label: '요양시설·장례식장', team: '기저귀 수거 포함', image: IMG.care, desc: '시설 조건에 맞춰 관련 배출물을 분리하고 수거 기준을 정리합니다.', tone: 'amber' },
+    { label: '다수 거래처 관리', team: '통합 배차', image: IMG.network, desc: '서울·경기권 분산 거래처의 수거 조건과 이력을 통합 관리합니다.', tone: 'teal' },
+  ]
+
+  return (
+    <Section id="services" className="bg-white">
+      <Reveal>
+        <Eyebrow>대상별 서비스</Eyebrow>
+        <Heading>기관 유형과 폐기물 종류에 따라 수거 기준을 나눕니다</Heading>
+        <p className="mt-5 max-w-4xl text-[18px] leading-relaxed text-slate-600">
+          병원과 의원은 의료폐기물 중심으로, 요양시설과 장례식장은 일회용기저귀 수거를 포함해 현장 조건에 맞춰 운영합니다.
+        </p>
+      </Reveal>
+
+      <div className="mt-12 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 xl:gap-0">
+        {services.map((service, index) => (
+          <Reveal key={service.label} delay={index * 0.05}>
+            <article className={`group relative min-h-[460px] overflow-hidden bg-slate-950 shadow-card xl:min-h-[560px] ${index > 0 ? 'xl:-ml-7' : ''}`} style={{ clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)' }}>
+              <img src={service.image} alt={service.label} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white xl:pr-10">
+                <span className={`inline-flex rounded-lg px-3 py-1 text-xs font-black text-white ${service.tone === 'amber' ? 'bg-amber-500' : 'bg-teal-600'}`}>{service.team}</span>
+                <p className="mt-4 text-[1.65rem] font-black leading-tight xl:text-[2rem]">{service.label}</p>
+                <p className="mt-3 text-[15px] leading-relaxed text-white/72">{service.desc}</p>
+                <div className="mt-5 flex gap-2 text-xs font-black text-white/85">
+                  {['정기', '추가', '용기', '대장'].map((item) => <span key={item} className="rounded bg-white/12 px-2 py-1.5">{item}</span>)}
+                </div>
+              </div>
+            </article>
+          </Reveal>
+        ))}
+      </div>
+
+      <Reveal className="mt-10 text-center">
+        <ActionButton onClick={onContact} variant="ghost">대상 기관 확인하기 <ArrowRight size={17} /></ActionButton>
+      </Reveal>
+    </Section>
+  )
+}
+
 function CoverageSection({ onContact }: { onContact: () => void }) {
   return (
     <Section id="coverage" className="overflow-hidden bg-slate-950 text-white">
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <Reveal>
           <div className="relative min-h-[520px] overflow-hidden rounded-lg bg-[#071420] ring-1 ring-white/10">
-            <img src={IMG.network} alt="서울 경기권 거래처 권역 관리 화면" className="absolute inset-0 h-full w-full object-cover opacity-34" />
+            <img src={IMG.coverage} alt="서울 경기권 수거 경로를 확인하는 운영 화면" className="absolute inset-0 h-full w-full object-cover opacity-42" />
             <div className="absolute inset-0 bg-slate-950/42" />
             <div className="absolute left-[12%] top-[30%] h-4 w-4 rounded-full bg-teal-300 shadow-[0_0_0_12px_rgba(20,184,166,0.18)]" />
             <div className="absolute left-[38%] top-[45%] h-4 w-4 rounded-full bg-teal-300 shadow-[0_0_0_12px_rgba(20,184,166,0.18)]" />
@@ -477,7 +603,7 @@ function WorkflowSection() {
     <Section id="workflow" className="bg-[#f5f8fb]">
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <Reveal>
-          <img src={IMG.workflow} alt="현장에서 수거이력과 용기 정보를 확인하는 모습" className="aspect-[4/3] w-full rounded-lg object-cover shadow-card" />
+          <img src={IMG.workflow} alt="현장에서 수거 경로와 전용 용기 정보를 확인하는 모습" className="aspect-[4/3] w-full rounded-lg object-cover shadow-card" />
         </Reveal>
 
         <Reveal delay={0.05}>
@@ -924,8 +1050,8 @@ export function CompanyHomePage() {
       <Header onContact={openContact} />
       <main>
         <Hero onContact={openContact} />
-        <OperationsSection />
-        <ServicesSection onContact={openContact} />
+        <OperationsSectionV2 />
+        <ServicesSectionV2 onContact={openContact} />
         <CoverageSection onContact={openContact} />
         <WorkflowSection />
         <TechSection onContact={openContact} onSystem={goSystem} />
