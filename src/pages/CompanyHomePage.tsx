@@ -13,8 +13,6 @@ import {
   CheckCircle2,
   CalendarClock,
   Truck,
-  FlaskConical,
-  Route,
   MapPin,
   MessageSquare,
   MoreHorizontal,
@@ -704,44 +702,105 @@ export function CompanyHomePage() {
           </div>
         </section>
 
-        {/* ═══ 섹션 6 · 개발 현황 (분할: 텍스트 좌 / 대시보드 우) ═══════════ */}
-        <section id="tech" className="w-full scroll-mt-16 overflow-hidden bg-[#eef2f7] py-[clamp(48px,6vw,90px)]">
-          <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
-            <div>
+        {/* ═══ 섹션 6 · 비원미래 차별화 (흩어진 기록 → 하나의 시스템) ═══════ */}
+        <section id="tech" className="w-full scroll-mt-16 overflow-hidden bg-[#eef2f7] py-[clamp(48px,6vw,100px)]">
+          <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+            {/* 헤더 */}
+            <Reveal className="mx-auto max-w-3xl text-center">
+              <p className="text-[13px] sm:text-[20px] font-bold tracking-wider text-accent-600">비원미래 차별화</p>
+              <h2 className="mt-2 text-[27px] break-keep font-extrabold leading-[1.18] tracking-tight text-navy-900 sm:text-[46px] lg:text-[56px]">
+                흩어진 기록을 하나로 모아
+                <br />
+                더 정확한 서비스로 돌려드립니다
+              </h2>
+              <p className="mx-auto mt-5 max-w-2xl text-[16px] leading-relaxed text-navy-500 sm:text-[23px]">
+                많은 곳이 전화·엑셀·종이로 따로 관리해 기록이 흩어지고 실수가 생기기 쉽습니다. 비원미래는 수거 정보를 한 번만 입력하면 일정·수거이력·자재·수거대장까지 자동으로 이어지는 통합 시스템을 직접 만들고 있습니다.
+              </p>
+            </Reveal>
+
+            {/* 기존 방식 vs 비원미래 방식 */}
+            <div className="mt-[clamp(28px,4vw,60px)] grid gap-4 md:grid-cols-2 md:gap-6">
               <Reveal>
-                <p className="text-[12px] sm:text-[19px] font-bold tracking-wider text-accent-600">고객 맞춤 운영</p>
-                <h2 className="mt-2 text-[30px] break-keep font-extrabold leading-[1.15] tracking-tight text-navy-900 sm:text-[56px] lg:text-[70px]">
-                  고객에게 꼭 맞는 수거를 위해 운영을 계속 다듬습니다
-                </h2>
-                <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[30px]">
-                  찾아주시는 기관이 늘수록 배출 조건과 수거 일정도 다양해집니다. 비원미래는 거래처·수거조건·차량·자재·수거이력을 한곳에서 관리하는 시스템을 직접 만들어, 기관마다 다른 요구에도 정확하고 빠르게 대응합니다.
-                </p>
+                <div className="h-full rounded-3xl border border-navy-100 bg-white/60 p-6 sm:p-9">
+                  <p className="text-[15px] sm:text-[24px] font-extrabold text-navy-400">일반적인 방식</p>
+                  <p className="mt-1 text-[12px] sm:text-[18px] font-semibold text-navy-300">수작업 · 분산 관리</p>
+                  <ul className="mt-5 space-y-3.5">
+                    {[
+                      '전화·문자·엑셀·종이로 따로 관리',
+                      '기록 누락·중복 입력 등 실수 발생',
+                      '정보가 흩어져 실시간 파악이 어려움',
+                      '담당자에 따라 처리 품질이 달라짐',
+                    ].map((t) => (
+                      <li key={t} className="flex items-start gap-3 text-[14px] sm:text-[21px] font-medium text-navy-500">
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy-100 text-navy-400 sm:h-7 sm:w-7">
+                          <X size={15} strokeWidth={3} />
+                        </span>
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </Reveal>
-              <Reveal delay={0.08}>
-                <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {[
-                    { icon: Route, t: '경로 최적화 특허 출원', d: '더 빠르고 정확한 수거를 위해 특허를 출원했습니다 (10-2026-0101187)' },
-                    { icon: CalendarClock, t: '놓치지 않는 일정 관리', d: '기관별 수거주기·보관기한을 챙겨 제때 방문합니다' },
-                    { icon: FileText, t: '투명한 수거이력', d: '수거부터 자재 공급까지 기록해 실사·정산까지 지원합니다' },
-                    { icon: FlaskConical, t: '전담 연구 조직 운영', d: '현장 데이터로 서비스를 꾸준히 개선하는 연구개발 체계' },
-                  ].map(({ icon: Icon, t, d }) => (
-                    <motion.div
-                      key={t}
-                      whileHover={{ y: -3 }}
-                      transition={{ duration: 0.2, ease: EASE }}
-                      className="flex items-start gap-3 rounded-xl border border-navy-100 bg-white p-4 shadow-sm"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-50 text-accent-600">
-                        <Icon size={19} strokeWidth={2.2} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-[16px] sm:text-[24px] font-bold text-navy-900">{t}</p>
-                        <p className="text-[12px] sm:text-[19px] leading-snug text-navy-400">{d}</p>
+              <Reveal delay={0.1}>
+                <div className="h-full rounded-3xl border-2 border-accent-400 bg-white p-6 shadow-card sm:p-9">
+                  <p className="text-[15px] sm:text-[24px] font-extrabold text-accent-600">비원미래 방식</p>
+                  <p className="mt-1 text-[12px] sm:text-[18px] font-semibold text-accent-500/80">통합 · 자동 관리</p>
+                  <ul className="mt-5 space-y-3.5">
+                    {[
+                      '수거 정보를 현장에서 한 번만 입력',
+                      '일정·수거이력·자재·수거대장 자동 연결',
+                      '실시간으로 현황을 공유·확인',
+                      '언제나 일관된 품질로 처리',
+                    ].map((t) => (
+                      <li key={t} className="flex items-start gap-3 text-[14px] sm:text-[21px] font-semibold text-navy-800">
+                        <CheckCircle2 size={24} className="mt-0.5 shrink-0 text-accent-500" />
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+            </div>
+
+            {/* 한 번 입력 → 자동 연결 */}
+            <Reveal delay={0.1}>
+              <div className="mt-[clamp(24px,3vw,48px)] rounded-3xl bg-navy-900 p-6 text-white sm:p-9">
+                <div className="flex flex-col items-center gap-5 lg:flex-row lg:gap-8">
+                  <div className="flex shrink-0 items-center gap-3 rounded-2xl bg-accent-500 px-6 py-4 text-center">
+                    <span className="text-[15px] sm:text-[22px] font-extrabold leading-tight">
+                      수거 정보
+                      <br />한 번 입력
+                    </span>
+                  </div>
+                  <ArrowRight className="hidden shrink-0 text-accent-300 lg:block" size={32} strokeWidth={2.4} />
+                  <div className="grid w-full flex-1 grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {['오늘 일정 완료', '수거이력 생성', '자재 재고 반영', '수거대장 초안', '월간 명세 초안', '대시보드 갱신'].map((t) => (
+                      <div key={t} className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-[12px] sm:text-[18px] font-semibold">
+                        <Check size={16} className="shrink-0 text-accent-300" strokeWidth={3} /> {t}
                       </div>
-                    </motion.div>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-6 text-center text-[14px] sm:text-[20px] font-semibold leading-relaxed text-white/75">
+                  한 번의 입력으로 모든 업무가 자동으로 이어져, 고객께 더 빠르고 정확하며 일관된 서비스를 드립니다.
+                </p>
+              </div>
+            </Reveal>
+
+            {/* 근거 배지 + CTA */}
+            <Reveal delay={0.1}>
+              <div className="mt-[clamp(24px,3vw,44px)] flex flex-col items-center gap-6">
+                <div className="flex flex-wrap justify-center gap-2.5">
+                  {['경로 최적화 특허출원 (10-2026-0101187)', '연구개발전담부서 운영'].map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2 text-[12px] sm:text-[18px] font-bold text-navy-600"
+                    >
+                      <ShieldCheck size={17} className="text-accent-500" /> {t}
+                    </span>
                   ))}
                 </div>
-                <div className="mt-8 flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-4">
                   <CtaButton onClick={() => goTo('contact')}>수거 상담하기</CtaButton>
                   <button
                     onClick={() => setInfoModal('intro')}
@@ -751,9 +810,8 @@ export function CompanyHomePage() {
                     <ArrowRight size={16} strokeWidth={2.4} className="transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
-              </Reveal>
-            </div>
-            <SplitImage n={6} alt="비원미래 운영관리 시스템 화면" dPos="object-right" className="lg:order-last" />
+              </div>
+            </Reveal>
           </div>
         </section>
 
@@ -769,7 +827,7 @@ export function CompanyHomePage() {
                 <h2 className="mt-2 text-[clamp(26px,4.3vw,66px)] break-keep font-extrabold leading-[1.2] tracking-tight text-navy-900">
                   기관의 배출 조건을 알려주시면
                   <br />
-                  수거 기준을 정리해드립니다
+                  맞춤 수거 기준을 안내해 드립니다
                 </h2>
                 <p className="mt-3 text-[17px] sm:text-[26px] leading-relaxed text-navy-500">
                   지역, 기관 유형, 수거 주기, 용기·자재 필요 여부를 바탕으로 상담합니다.
@@ -976,7 +1034,7 @@ export function CompanyHomePage() {
             <Reveal>
               <div className="flex flex-col items-start justify-between gap-5 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-8 sm:flex-row sm:items-center mt-[clamp(40px,5vw,72px)] sm:px-9">
                 <p className="text-[clamp(20px,3.4vw,54px)] font-extrabold leading-tight tracking-tight">
-                  의료폐기물 수거·운반 기준, 지금 정리하세요
+                  우리 기관에 맞는 수거, 지금 상담 신청하세요
                 </p>
                 <CtaButton onClick={() => goTo('contact')} className="shrink-0">
                   수거 상담하기
