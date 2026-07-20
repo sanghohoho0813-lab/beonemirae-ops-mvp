@@ -13,9 +13,7 @@ import {
   CheckCircle2,
   CalendarClock,
   Truck,
-  Award,
   FlaskConical,
-  Monitor,
   Route,
   MapPin,
   MessageSquare,
@@ -187,16 +185,20 @@ const COMPANY_INFO: Record<string, { title: string; eyebrow: string; blocks: Inf
     blocks: [
       {
         type: 'p',
-        text: '주식회사 비원미래는 서울·경기권 병원, 요양병원, 의원, 요양시설을 대상으로 의료폐기물 수거·운반과 운영관리를 수행하는 전문기업입니다.',
+        text: '주식회사 비원미래는 서울·경기권 병원·요양병원·의원·요양시설의 의료폐기물을 수거·운반하는 전문기업입니다. 관할 기관 허가를 기반으로 배출부터 처리까지 전 과정을 안전하고 투명하게 책임집니다.',
       },
       {
         type: 'p',
-        text: '단순 수거를 넘어 보관기한 관리, 전용 용기·자재 공급, 수거이력 정리까지 의료기관의 폐기물 운영 부담을 함께 덜어드립니다. 관할 기관 허가를 기반으로 안전하고 투명한 처리 체계를 갖추고 있으며, 현장에서 축적한 운영 데이터를 바탕으로 수거 경로와 관리 방식을 지속적으로 고도화하고 있습니다.',
+        text: '수거만 대행하는 데 그치지 않고 보관기한 관리, 전용 용기·자재 공급, 수거이력 정리까지 의료기관의 폐기물 운영 부담을 함께 덜어드립니다.',
+      },
+      {
+        type: 'p',
+        text: '매년 더 많은 기관이 비원미래를 찾아주시면서, 늘어나는 거래처를 고객의 필요에 맞게 더 체계적으로 관리하기 위해 운영 방식을 고도화하고 업무 효율화 시스템을 직접 구축하고 있습니다.',
       },
       {
         type: 'kv',
         items: [
-          { k: '주요 사업', v: '의료폐기물 수거·운반, 운영관리, 전용 용기·자재 공급' },
+          { k: '주요 사업', v: '의료폐기물 수거·운반, 전용 용기·자재 공급, 수거이력 관리' },
           { k: '운영 권역', v: '서울·경기 전역' },
           { k: '관리 거래처', v: '병원·요양병원·의원·요양시설 50곳+' },
         ],
@@ -210,13 +212,17 @@ const COMPANY_INFO: Record<string, { title: string; eyebrow: string; blocks: Inf
       { type: 'p', text: '안녕하십니까. 주식회사 비원미래를 찾아주셔서 진심으로 감사드립니다.' },
       {
         type: 'p',
-        text: '의료폐기물은 수거 그 자체보다, 배출부터 처리까지 전 과정을 얼마나 안전하고 정확하게 관리하느냐가 중요합니다. 비원미래는 현장의 기준에서 출발해, 의료기관이 안심하고 본연의 업무에 집중하실 수 있도록 폐기물 운영의 부담을 대신 짊어지겠습니다.',
+        text: '비원미래는 서울·경기권 의료기관의 의료폐기물을 안전하게 수거·운반하는 일을 해왔습니다. 감사하게도 매년 더 많은 기관에서 저희를 찾아주시면서, 기관 한 곳 한 곳의 배출 조건과 일정에 더 세심하게 맞춰드리는 일이 무엇보다 중요해졌습니다.',
       },
       {
         type: 'p',
-        text: '앞으로도 정직한 운영과 꾸준한 기술 개발로, 오래 신뢰받는 파트너가 되겠습니다. 감사합니다.',
+        text: '그래서 저희는 늘어나는 거래처를 고객의 필요에 꼭 맞게 관리하기 위해 운영 방식을 끊임없이 다듬고, 업무 효율화를 위한 시스템을 직접 만들어가고 있습니다. 기술은 목적이 아니라, 고객께 더 정확하고 빠른 서비스를 드리기 위한 수단이라고 믿습니다.',
       },
-      { type: 'p', text: '— 주식회사 비원미래 대표이사' },
+      {
+        type: 'p',
+        text: '앞으로도 정직한 운영과 세심한 관리로, 의료기관이 폐기물 걱정 없이 본연의 업무에 집중하실 수 있도록 곁을 지키겠습니다. 감사합니다.',
+      },
+      { type: 'p', text: '— 주식회사 비원미래 대표이사 송명근' },
     ],
   },
   history: {
@@ -226,10 +232,12 @@ const COMPANY_INFO: Record<string, { title: string; eyebrow: string; blocks: Inf
       {
         type: 'timeline',
         items: [
-          { when: '2026', what: '연구개발전담부서 설립' },
-          { when: '2026', what: '의료폐기물 수거·운반 경로 최적화 시스템 특허출원 (10-2026-0101187)' },
-          { when: '2026', what: '운영관리 시스템(MVP) 구축 및 현장 적용' },
-          { when: '현재', what: '서울·경기권 의료기관 수거망 운영 (관리 거래처 50곳+)' },
+          { when: '2022.10', what: '주식회사 비원미래 법인 설립' },
+          { when: '2022.12', what: '본점 이전 (서울 → 경기 남양주)' },
+          { when: '2024.06', what: '자본금 2억 5천만원 증자' },
+          { when: '2026.04', what: '연구개발전담부서 설립' },
+          { when: '2026.06', what: '수거·운반 경로 최적화 시스템 특허출원 (10-2026-0101187)' },
+          { when: '진행 중', what: '고객 맞춤 수거 운영을 위한 업무 효율화 시스템 구축' },
         ],
       },
     ],
@@ -403,15 +411,18 @@ export function CompanyHomePage() {
           <div className="absolute inset-0 flex flex-col justify-center px-6 pt-14 sm:px-10 lg:px-[6%]">
             <div className="max-w-[62rem] text-white">
               <Reveal>
-                <h1 className="text-[clamp(31px,6vw,104px)] break-keep font-extrabold leading-[1.16] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.35)]">
-                  의료폐기물 운송을
+                <span className="inline-flex items-center gap-2 rounded-full border border-accent-300/40 bg-accent-500/15 px-4 py-1.5 text-[clamp(12px,1.5vw,20px)] font-bold text-accent-200 backdrop-blur-sm">
+                  <ShieldCheck size={17} className="text-accent-300" /> 서울·경기 의료폐기물 수거·운반 전문기업
+                </span>
+                <h1 className="mt-4 text-[clamp(31px,6vw,104px)] break-keep font-extrabold leading-[1.16] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.35)]">
+                  의료폐기물 수거·운반을
                   <br />
-                  운영 기준까지 관리합니다
+                  운영 기준까지 책임집니다
                 </h1>
               </Reveal>
               <Reveal delay={0.1}>
                 <p className="mt-[clamp(16px,1.7vw,28px)] max-w-[46rem] text-[clamp(16px,2.6vw,42px)] font-medium leading-relaxed text-white/85">
-                  서울·경기권 의료기관의 정기 수거, 긴급 대응, 용기 공급, 수거대장 관리.
+                  병원·요양병원·의원·요양시설의 정기 수거부터 긴급 대응, 전용 용기 공급, 수거대장 관리까지 — 서울·경기 전역을 책임집니다.
                 </p>
               </Reveal>
               <Reveal delay={0.18}>
@@ -706,21 +717,21 @@ export function CompanyHomePage() {
           <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div>
               <Reveal>
-                <p className="text-[12px] sm:text-[19px] font-bold tracking-wider text-accent-600">06 / 08 · 개발 현황</p>
+                <p className="text-[12px] sm:text-[19px] font-bold tracking-wider text-accent-600">고객 맞춤 운영</p>
                 <h2 className="mt-2 text-[30px] break-keep font-extrabold leading-[1.15] tracking-tight text-navy-900 sm:text-[56px] lg:text-[70px]">
-                  운영관리 시스템을 현장 기준에 맞춰 고도화하고 있습니다
+                  고객에게 꼭 맞는 수거를 위해 운영을 계속 다듬습니다
                 </h2>
                 <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[30px]">
-                  수거·운반 현장에서 발생하는 거래처 정보, 수거조건, 차량 운행, 자재 요청, 수거이력을 체계적으로 관리하기 위한 운영관리 화면을 구축하고 있습니다.
+                  찾아주시는 기관이 늘수록 배출 조건과 수거 일정도 다양해집니다. 비원미래는 거래처·수거조건·차량·자재·수거이력을 한곳에서 관리하는 시스템을 직접 만들어, 기관마다 다른 요구에도 정확하고 빠르게 대응합니다.
                 </p>
               </Reveal>
               <Reveal delay={0.08}>
                 <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {[
-                    { icon: Award, t: '경로 최적화 특허출원', d: '경로 최적화 시스템 · 출원번호 10-2026-0101187' },
-                    { icon: FlaskConical, t: '연구개발전담부서 운영', d: '수거·운반·자재·이력 통합관리 연구개발 체계' },
-                    { icon: Monitor, t: '운영관리 화면 구축', d: '거래처·배차·수거이력·자재·미수금 관리 구현' },
-                    { icon: Route, t: '배차·경로 추천 로직 개발', d: '운영 데이터 기반 추천 시뮬레이션 고도화' },
+                    { icon: Route, t: '더 빠르고 정확한 수거', d: '경로 최적화로 방문 시간을 지킵니다 (특허출원 10-2026-0101187)' },
+                    { icon: CalendarClock, t: '놓치지 않는 일정 관리', d: '기관별 수거주기·보관기한을 챙겨 제때 방문합니다' },
+                    { icon: FileText, t: '투명한 수거이력', d: '수거부터 자재 공급까지 기록해 실사·정산까지 지원합니다' },
+                    { icon: FlaskConical, t: '전담 연구 조직 운영', d: '현장 데이터로 서비스를 꾸준히 개선하는 연구개발 체계' },
                   ].map(({ icon: Icon, t, d }) => (
                     <motion.div
                       key={t}
@@ -739,12 +750,12 @@ export function CompanyHomePage() {
                   ))}
                 </div>
                 <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <CtaButton onClick={() => goTo('contact')}>운영관리 화면 보기</CtaButton>
+                  <CtaButton onClick={() => goTo('contact')}>수거 상담하기</CtaButton>
                   <button
-                    onClick={() => goTo('contact')}
+                    onClick={() => setInfoModal('intro')}
                     className="group inline-flex items-center gap-1.5 text-[16px] sm:text-[24px] font-bold text-navy-600 transition-colors hover:text-accent-600"
                   >
-                    개발 현황 문의
+                    회사 이야기 보기
                     <ArrowRight size={16} strokeWidth={2.4} className="transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
