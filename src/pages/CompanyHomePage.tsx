@@ -37,8 +37,8 @@ const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 const D = (n: number) => `/company/boards/d${n}.png`
 const M = (n: number) => `/company/boards/m${n}.png`
 
-const NAV = [
-  { label: '회사소개', id: 'about' },
+const NAV: { label: string; id?: string; panel?: boolean }[] = [
+  { label: '회사소개', panel: true },
   { label: '서비스', id: 'services' },
   { label: '운영현황', id: 'tech' },
   { label: '문의', id: 'contact' },
@@ -90,7 +90,7 @@ function CtaButton({
   className?: string
 }) {
   const base =
-    'group inline-flex items-center justify-center gap-2 rounded-xl px-[clamp(18px,1.7vw,28px)] py-[clamp(12px,1.1vw,17px)] text-[clamp(15px,1.2vw,18px)] font-bold transition-colors'
+    'group inline-flex items-center justify-center gap-2 rounded-xl px-[clamp(22px,1.9vw,32px)] py-[clamp(14px,1.25vw,19px)] text-[clamp(18px,1.55vw,23px)] font-bold transition-colors'
   const styles = {
     solid: 'bg-accent-500 text-white hover:bg-accent-400 shadow-lg shadow-accent-500/20',
     outline: 'border border-navy-300 text-navy-700 hover:border-accent-400 hover:text-accent-600',
@@ -335,8 +335,8 @@ export function CompanyHomePage() {
           scrolled ? 'border-b border-white/10 bg-navy-950/90 backdrop-blur-lg' : 'bg-transparent'
         }`}
       >
-        <div className="mx-auto flex h-[60px] w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:h-[64px] lg:px-8">
-          <button onClick={() => goTo('top')} className="flex items-center gap-2 text-[18px] font-extrabold text-white" aria-label="맨 위로">
+        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:h-[82px] lg:px-8">
+          <button onClick={() => goTo('top')} className="flex items-center gap-2 text-[25px] font-extrabold text-white" aria-label="맨 위로">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent-400/50 text-accent-300">
               <svg viewBox="0 0 40 40" width={18} height={18} fill="none">
                 <path d="M20 4 L33 11.5 V28.5 L20 36 L7 28.5 V11.5 Z" stroke="#2dd4bf" strokeWidth="2.4" strokeLinejoin="round" />
@@ -347,16 +347,16 @@ export function CompanyHomePage() {
           <nav className="hidden items-center gap-9 lg:flex">
             {NAV.map((n) => (
               <button
-                key={n.id}
-                onClick={() => goTo(n.id)}
-                className="text-[16px] font-bold text-white/80 transition-colors hover:text-white"
+                key={n.label}
+                onClick={() => (n.panel ? setInfoModal('intro') : goTo(n.id!))}
+                className="text-[23px] font-bold text-white/80 transition-colors hover:text-white"
               >
                 {n.label}
               </button>
             ))}
           </nav>
           <div className="hidden lg:block">
-            <CtaButton onClick={() => goTo('contact')} className="!px-5 !py-2.5 !text-[15px]">
+            <CtaButton onClick={() => goTo('contact')} className="!px-6 !py-3 !text-[19px]">
               수거 상담
             </CtaButton>
           </div>
@@ -373,16 +373,19 @@ export function CompanyHomePage() {
             <nav className="mx-auto flex w-full max-w-6xl flex-col px-5 py-2">
               {NAV.map((n) => (
                 <button
-                  key={n.id}
-                  onClick={() => goTo(n.id)}
-                  className="rounded-lg px-2 py-3 text-left text-[15px] font-bold text-white/85 hover:bg-white/10"
+                  key={n.label}
+                  onClick={() => {
+                    setMenuOpen(false)
+                    n.panel ? setInfoModal('intro') : goTo(n.id!)
+                  }}
+                  className="rounded-lg px-2 py-3.5 text-left text-[19px] font-bold text-white/85 hover:bg-white/10"
                 >
                   {n.label}
                 </button>
               ))}
               <button
                 onClick={() => goTo('contact')}
-                className="my-2 rounded-lg bg-accent-500 px-4 py-3 text-[15px] font-bold text-white"
+                className="my-2 rounded-lg bg-accent-500 px-4 py-3.5 text-[19px] font-bold text-white"
               >
                 수거 상담
               </button>
@@ -400,14 +403,14 @@ export function CompanyHomePage() {
           <div className="absolute inset-0 flex flex-col justify-center px-6 pt-14 sm:px-10 lg:px-[6%]">
             <div className="max-w-[50rem] text-white">
               <Reveal>
-                <h1 className="text-[clamp(30px,4.4vw,66px)] font-extrabold leading-[1.16] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.35)]">
+                <h1 className="text-[clamp(40px,5.4vw,82px)] font-extrabold leading-[1.16] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.35)]">
                   의료폐기물 운송을
                   <br />
                   운영 기준까지 관리합니다
                 </h1>
               </Reveal>
               <Reveal delay={0.1}>
-                <p className="mt-[clamp(14px,1.6vw,26px)] max-w-[42rem] text-[clamp(16px,1.75vw,25px)] font-medium leading-relaxed text-white/85">
+                <p className="mt-[clamp(16px,1.7vw,28px)] max-w-[44rem] text-[clamp(20px,2.2vw,32px)] font-medium leading-relaxed text-white/85">
                   서울·경기권 의료기관의 정기 수거, 긴급 대응, 용기 공급, 수거대장 관리.
                 </p>
               </Reveal>
@@ -434,8 +437,8 @@ export function CompanyHomePage() {
                     <Icon size={23} strokeWidth={2.1} />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[clamp(15px,1.2vw,18px)] font-bold">{t}</p>
-                    <p className="truncate text-[clamp(12px,0.95vw,15px)] text-white/70">{d}</p>
+                    <p className="text-[clamp(18px,1.5vw,23px)] font-bold">{t}</p>
+                    <p className="truncate text-[clamp(14px,1.1vw,18px)] text-white/70">{d}</p>
                   </div>
                 </div>
               ))}
@@ -448,25 +451,25 @@ export function CompanyHomePage() {
           <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div>
               <Reveal>
-                <p className="flex items-center gap-2 text-[16px] font-bold text-accent-600">
+                <p className="flex items-center gap-2 text-[20px] font-bold text-accent-600">
                   <span className="h-2 w-2 rounded-full bg-accent-500" /> 핵심 운영 기준
                 </p>
-                <h2 className="mt-3 text-[30px] font-extrabold leading-[1.2] tracking-tight text-navy-900 sm:text-4xl lg:text-[46px]">
+                <h2 className="mt-3 text-[38px] font-extrabold leading-[1.2] tracking-tight text-navy-900 sm:text-[46px] lg:text-[58px]">
                   수거만 맡기는 것이 아니라,
                   <br />
                   운영 부담까지 줄입니다
                 </h2>
-                <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[19px]">
+                <p className="mt-5 max-w-xl text-[20px] leading-relaxed text-navy-500 sm:text-[23px]">
                   정기 수거, 추가 요청, 전용 용기, 수거대장까지 의료기관 담당자가 챙겨야 할 일을 함께 관리합니다.
                 </p>
-                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-[15px] font-bold text-amber-600">
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-[18px] font-bold text-amber-600">
                   <Check size={16} strokeWidth={3} /> 위생 폐기물 수거 포함
                 </span>
               </Reveal>
               <Reveal delay={0.08}>
                 <ul className="mt-7 space-y-3.5">
                   {['정기·추가 수거 대응', '보관기한 알림', '전용 용기·자재 공급 이력', '수거대장 정리'].map((t) => (
-                    <li key={t} className="flex items-center gap-3 text-[18px] font-semibold text-navy-700">
+                    <li key={t} className="flex items-center gap-3 text-[23px] font-semibold text-navy-700">
                       <CheckCircle2 size={22} className="shrink-0 text-accent-500" />
                       {t}
                     </li>
@@ -489,15 +492,15 @@ export function CompanyHomePage() {
             {/* 헤딩 (상단 여백) */}
             <div className="absolute inset-x-0 top-0 px-6 pt-[5%] sm:px-10 md:pl-[6%] md:pr-[40%]">
               <Reveal>
-                <p className="flex items-center gap-2 text-[clamp(13px,1.2vw,17px)] font-bold text-accent-600">
+                <p className="flex items-center gap-2 text-[clamp(16px,1.4vw,21px)] font-bold text-accent-600">
                   <span className="h-3.5 w-1 rounded-full bg-accent-500" /> 대상별 서비스
                 </p>
-                <h2 className="mt-2 text-[clamp(22px,3vw,46px)] font-extrabold leading-[1.2] tracking-tight text-navy-900">
+                <h2 className="mt-2 text-[clamp(28px,3.7vw,56px)] font-extrabold leading-[1.2] tracking-tight text-navy-900">
                   기관 유형과 폐기물 종류에 따라
                   <br />
                   수거 기준을 나눕니다
                 </h2>
-                <p className="mt-3 hidden text-[clamp(14px,1.35vw,19px)] leading-relaxed text-navy-500 sm:block">
+                <p className="mt-3 hidden text-[clamp(17px,1.6vw,23px)] leading-relaxed text-navy-500 sm:block">
                   병원·의원은 의료폐기물을, 요양시설·장례식장 등은 조건에 따라 위생 폐기물을 분리해 운영합니다.
                 </p>
               </Reveal>
@@ -514,20 +517,20 @@ export function CompanyHomePage() {
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[85%] bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
                   <Reveal delay={i * 0.06} className="relative">
                     <span
-                      className={`inline-block rounded-md px-2.5 py-1 text-[clamp(12px,1.15vw,16px)] font-bold text-white ${
+                      className={`inline-block rounded-md px-2.5 py-1 text-[clamp(14px,1.35vw,19px)] font-bold text-white ${
                         c.tone === 'teal' ? 'bg-accent-500' : c.tone === 'amber' ? 'bg-amber-500' : 'bg-sky-500'
                       }`}
                     >
                       {c.tag}
                     </span>
-                    <p className="mt-2.5 text-[clamp(20px,2.2vw,32px)] font-extrabold leading-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.75)]">
+                    <p className="mt-2.5 text-[clamp(25px,2.8vw,42px)] font-extrabold leading-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.75)]">
                       {c.title}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {['정기', '추가', '용기', '대장'].map((chip) => (
                         <span
                           key={chip}
-                          className="rounded border border-white/40 bg-white/20 px-2.5 py-0.5 text-[clamp(11px,0.95vw,14px)] font-semibold text-white backdrop-blur-sm"
+                          className="rounded border border-white/40 bg-white/20 px-2.5 py-1 text-[clamp(13px,1.1vw,17px)] font-semibold text-white backdrop-blur-sm"
                         >
                           {chip}
                         </span>
@@ -553,8 +556,8 @@ export function CompanyHomePage() {
           {/* 지도 위 라벨(그림 속 글자) — 데스크톱 전용 (지도 좌측 영역) */}
           <div className="pointer-events-none absolute inset-0 hidden md:block">
             {/* 광역 지명 (은은하게) */}
-            <span className="absolute left-[13%] top-[12%] text-[clamp(15px,1.5vw,22px)] font-bold tracking-wide text-white/25">경기도</span>
-            <span className="absolute left-[25%] top-[40%] text-[clamp(15px,1.5vw,22px)] font-bold tracking-wide text-white/30">서울특별시</span>
+            <span className="absolute left-[13%] top-[12%] text-[clamp(18px,1.7vw,26px)] font-bold tracking-wide text-white/25">경기도</span>
+            <span className="absolute left-[25%] top-[40%] text-[clamp(18px,1.7vw,26px)] font-bold tracking-wide text-white/30">서울특별시</span>
             {/* 도시명 */}
             {[
               { t: '고양시', l: 21, top: 17 },
@@ -564,19 +567,19 @@ export function CompanyHomePage() {
               { t: '성남시', l: 40, top: 82 },
               { t: '수원시', l: 26, top: 92 },
             ].map((c) => (
-              <span key={c.t} className="absolute text-[clamp(11px,0.95vw,14px)] font-semibold text-white/50" style={{ left: `${c.l}%`, top: `${c.top}%` }}>
+              <span key={c.t} className="absolute text-[clamp(13px,1.1vw,17px)] font-semibold text-white/50" style={{ left: `${c.l}%`, top: `${c.top}%` }}>
                 {c.t}
               </span>
             ))}
             {/* 남양주 운영 거점 콜아웃 (허브 근처) */}
             <div className="absolute left-[33%] top-[27%] rounded-lg border border-accent-400/40 bg-navy-950/70 px-3 py-2 backdrop-blur-sm">
-              <p className="flex items-center gap-1.5 text-[clamp(12px,1.05vw,15px)] font-bold text-accent-200">
+              <p className="flex items-center gap-1.5 text-[clamp(14px,1.2vw,18px)] font-bold text-accent-200">
                 <MapPin size={14} className="text-accent-300" /> 남양주 운영 거점
               </p>
-              <p className="mt-0.5 text-[clamp(10px,0.85vw,12px)] text-white/60">수거 · 보관 · 출고</p>
+              <p className="mt-0.5 text-[clamp(12px,1vw,15px)] text-white/60">수거 · 보관 · 출고</p>
             </div>
             {/* 긴급 요청 라벨 (주황 마커 근처) */}
-            <span className="absolute left-[37%] top-[71%] rounded-md bg-amber-500/20 px-2 py-0.5 text-[clamp(11px,0.95vw,14px)] font-bold text-amber-300">
+            <span className="absolute left-[37%] top-[71%] rounded-md bg-amber-500/20 px-2 py-0.5 text-[clamp(13px,1.1vw,17px)] font-bold text-amber-300">
               긴급 요청
             </span>
             {/* 범례 */}
@@ -594,7 +597,7 @@ export function CompanyHomePage() {
                   ) : (
                     <span className={`h-2.5 w-2.5 rounded-full ${it.c}`} />
                   )}
-                  <span className="text-[clamp(10px,0.9vw,13px)] font-medium text-white/70">{it.label}</span>
+                  <span className="text-[clamp(13px,1vw,16px)] font-medium text-white/70">{it.label}</span>
                 </div>
               ))}
             </div>
@@ -603,35 +606,35 @@ export function CompanyHomePage() {
           <div className="absolute inset-0 flex flex-col items-start justify-end px-6 pb-[7%] sm:px-10 md:items-end md:justify-center md:pb-0 md:pl-[52%] md:pr-[6%]">
             <div className="max-w-[36rem] text-white">
               <Reveal>
-                <p className="text-[clamp(13px,1.2vw,16px)] font-bold text-accent-300">거래처·권역</p>
-                <h2 className="mt-2 text-[clamp(24px,3.2vw,48px)] font-extrabold leading-[1.2] tracking-tight">
+                <p className="text-[clamp(16px,1.4vw,20px)] font-bold text-accent-300">거래처·권역</p>
+                <h2 className="mt-2 text-[clamp(30px,3.9vw,58px)] font-extrabold leading-[1.2] tracking-tight">
                   서울·경기권 수거망을
                   <br />
                   <span className="text-accent-300">한눈에</span> 관리합니다
                 </h2>
               </Reveal>
               <Reveal delay={0.08}>
-                <p className="mt-[clamp(12px,1.2vw,20px)] text-[clamp(14px,1.35vw,19px)] leading-relaxed text-white/75">
+                <p className="mt-[clamp(14px,1.3vw,22px)] text-[clamp(17px,1.6vw,23px)] leading-relaxed text-white/75">
                   남양주 기반 운영으로 병원, 요양병원, 의원, 요양시설의 정기·추가 수거 조건을 축적합니다.
                 </p>
               </Reveal>
               <Reveal delay={0.14}>
                 <div className="mt-[clamp(18px,2vw,32px)] grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
                   <div>
-                    <p className="whitespace-nowrap text-[clamp(22px,2.4vw,34px)] font-extrabold text-accent-300">
+                    <p className="whitespace-nowrap text-[clamp(28px,3vw,42px)] font-extrabold text-accent-300">
                       50<span className="text-[0.7em]">곳+</span>
                     </p>
-                    <p className="text-[clamp(12px,1.05vw,15px)] text-white/60">관리 거래처</p>
+                    <p className="text-[clamp(14px,1.2vw,18px)] text-white/60">관리 거래처</p>
                   </div>
                   <div>
-                    <p className="whitespace-nowrap text-[clamp(22px,2.4vw,34px)] font-extrabold text-accent-300">
+                    <p className="whitespace-nowrap text-[clamp(28px,3vw,42px)] font-extrabold text-accent-300">
                       월100<span className="text-[0.7em]">톤+</span>
                     </p>
-                    <p className="text-[clamp(12px,1.05vw,15px)] text-white/60">수거·운반</p>
+                    <p className="text-[clamp(14px,1.2vw,18px)] text-white/60">수거·운반</p>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <CalendarClock size={26} className="text-accent-300" />
-                    <p className="text-[clamp(12px,1.05vw,15px)] leading-tight text-white/70">
+                    <p className="text-[clamp(14px,1.2vw,18px)] leading-tight text-white/70">
                       정기·추가
                       <br />
                       수거 대응
@@ -639,7 +642,7 @@ export function CompanyHomePage() {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Truck size={26} className="text-accent-300" />
-                    <p className="text-[clamp(12px,1.05vw,15px)] leading-tight text-white/70">
+                    <p className="text-[clamp(14px,1.2vw,18px)] leading-tight text-white/70">
                       전용 차량
                       <br />
                       운영
@@ -662,14 +665,14 @@ export function CompanyHomePage() {
             <SplitImage n={5} alt="현장에서 전용 용기를 스캔·확인하는 작업자" dPos="object-left" />
             <div>
               <Reveal>
-                <p className="text-[13px] font-bold tracking-wider text-navy-400">05 / 08 · WORKFLOW CONTROL</p>
-                <p className="mt-3 text-[16px] font-bold text-accent-600">수거 관리 방식</p>
-                <h2 className="mt-2 text-[30px] font-extrabold leading-[1.2] tracking-tight text-navy-900 sm:text-4xl lg:text-[46px]">
+                <p className="text-[15px] font-bold tracking-wider text-navy-400">05 / 08 · WORKFLOW CONTROL</p>
+                <p className="mt-3 text-[20px] font-bold text-accent-600">수거 관리 방식</p>
+                <h2 className="mt-2 text-[38px] font-extrabold leading-[1.2] tracking-tight text-navy-900 sm:text-[46px] lg:text-[58px]">
                   보관기한부터 수거대장까지
                   <br />
                   현장에서 확인합니다
                 </h2>
-                <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[19px]">
+                <p className="mt-5 max-w-xl text-[20px] leading-relaxed text-navy-500 sm:text-[23px]">
                   보관기한, 전용 용기, 자재 요청, 수거이력을 현장에서 확인하고 정리해 의료기관의 관리 부담을 줄입니다.
                 </p>
               </Reveal>
@@ -682,7 +685,7 @@ export function CompanyHomePage() {
                     '의료폐기물 · 위생 폐기물 배출물 분리 관리',
                     '실사 · 인증 전 자료 요청 대응',
                   ].map((t) => (
-                    <li key={t} className="flex items-start gap-3 text-[18px] font-semibold text-navy-700">
+                    <li key={t} className="flex items-start gap-3 text-[23px] font-semibold text-navy-700">
                       <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-accent-500" />
                       {t}
                     </li>
@@ -703,11 +706,11 @@ export function CompanyHomePage() {
           <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div>
               <Reveal>
-                <p className="text-[13px] font-bold tracking-wider text-accent-600">06 / 08 · 개발 현황</p>
-                <h2 className="mt-2 text-[30px] font-extrabold leading-[1.18] tracking-tight text-navy-900 sm:text-4xl lg:text-[44px]">
+                <p className="text-[15px] font-bold tracking-wider text-accent-600">06 / 08 · 개발 현황</p>
+                <h2 className="mt-2 text-[36px] font-extrabold leading-[1.18] tracking-tight text-navy-900 sm:text-[44px] lg:text-[54px]">
                   운영관리 시스템을 현장 기준에 맞춰 고도화하고 있습니다
                 </h2>
-                <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[19px]">
+                <p className="mt-5 max-w-xl text-[20px] leading-relaxed text-navy-500 sm:text-[23px]">
                   수거·운반 현장에서 발생하는 거래처 정보, 수거조건, 차량 운행, 자재 요청, 수거이력을 체계적으로 관리하기 위한 운영관리 화면을 구축하고 있습니다.
                 </p>
               </Reveal>
@@ -729,8 +732,8 @@ export function CompanyHomePage() {
                         <Icon size={19} strokeWidth={2.2} />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[15px] font-bold text-navy-900">{t}</p>
-                        <p className="text-[13px] leading-snug text-navy-400">{d}</p>
+                        <p className="text-[18px] font-bold text-navy-900">{t}</p>
+                        <p className="text-[15px] leading-snug text-navy-400">{d}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -739,7 +742,7 @@ export function CompanyHomePage() {
                   <CtaButton onClick={() => goTo('contact')}>운영관리 화면 보기</CtaButton>
                   <button
                     onClick={() => goTo('contact')}
-                    className="group inline-flex items-center gap-1.5 text-[15px] font-bold text-navy-600 transition-colors hover:text-accent-600"
+                    className="group inline-flex items-center gap-1.5 text-[18px] font-bold text-navy-600 transition-colors hover:text-accent-600"
                   >
                     개발 현황 문의
                     <ArrowRight size={16} strokeWidth={2.4} className="transition-transform group-hover:translate-x-0.5" />
@@ -757,15 +760,15 @@ export function CompanyHomePage() {
             {/* 좌: 안내 + 사진 + 체크 */}
             <div>
               <Reveal>
-                <p className="flex items-center gap-2 text-[16px] font-bold text-accent-600">
+                <p className="flex items-center gap-2 text-[20px] font-bold text-accent-600">
                   <span className="h-3.5 w-1 rounded-full bg-accent-500" /> 상담 문의
                 </p>
-                <h2 className="mt-2 text-[clamp(26px,3.4vw,44px)] font-extrabold leading-[1.2] tracking-tight text-navy-900">
+                <h2 className="mt-2 text-[clamp(31px,3.8vw,52px)] font-extrabold leading-[1.2] tracking-tight text-navy-900">
                   기관의 배출 조건을 알려주시면
                   <br />
                   수거 기준을 정리해드립니다
                 </h2>
-                <p className="mt-3 text-[17px] leading-relaxed text-navy-500">
+                <p className="mt-3 text-[20px] leading-relaxed text-navy-500">
                   지역, 기관 유형, 수거 주기, 용기·자재 필요 여부를 바탕으로 상담합니다.
                 </p>
               </Reveal>
@@ -788,8 +791,8 @@ export function CompanyHomePage() {
                     <li key={c.t} className="flex items-start gap-3">
                       <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-accent-500" />
                       <div>
-                        <p className="text-[17px] font-bold text-navy-900">{c.t}</p>
-                        <p className="text-[14px] text-navy-500">{c.d}</p>
+                        <p className="text-[20px] font-bold text-navy-900">{c.t}</p>
+                        <p className="text-[16px] text-navy-500">{c.d}</p>
                       </div>
                     </li>
                   ))}
@@ -823,14 +826,14 @@ export function CompanyHomePage() {
                   </div>
                 ) : (
                   <form onSubmit={submit} className="space-y-5">
-                    <p className="text-xl font-extrabold text-navy-900">문의 유형</p>
+                    <p className="text-2xl font-extrabold text-navy-900">문의 유형</p>
                     <div className="grid grid-cols-4 gap-2">
                       {INQUIRY_TABS.map(({ key, label, icon: Icon }) => (
                         <button
                           type="button"
                           key={key}
                           onClick={() => setForm((f) => ({ ...f, type: key }))}
-                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-1 py-3.5 text-[13px] font-bold transition ${
+                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-1 py-4 text-[15px] font-bold transition ${
                             form.type === key
                               ? 'border-accent-400 bg-accent-50 text-accent-600'
                               : 'border-navy-100 text-navy-400 hover:border-navy-200'
@@ -924,11 +927,11 @@ export function CompanyHomePage() {
                         placeholder="배출 조건, 수거 주기, 용기·자재 필요 여부 등 자세히 입력해주시면 상담에 도움이 됩니다."
                         className={`${inputCls} h-28 resize-none`}
                       />
-                      <p className="mt-1 text-right text-[13px] text-navy-300">{form.content.length} / 500</p>
+                      <p className="mt-1 text-right text-[15px] text-navy-300">{form.content.length} / 500</p>
                     </Field>
 
                     <label className="flex items-center justify-between rounded-xl bg-navy-50 px-4 py-3.5">
-                      <span className="flex items-center gap-2 text-[14px] font-semibold text-navy-600">
+                      <span className="flex items-center gap-2 text-[16px] font-semibold text-navy-600">
                         <input
                           type="checkbox"
                           required
@@ -938,19 +941,19 @@ export function CompanyHomePage() {
                         />
                         개인정보 수집 및 이용에 동의합니다. (필수)
                       </span>
-                      <span className="hidden text-[13px] font-bold text-navy-400 sm:inline">자세히 보기 ›</span>
+                      <span className="hidden text-[15px] font-bold text-navy-400 sm:inline">자세히 보기 ›</span>
                     </label>
 
                     <motion.button
                       type="submit"
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      className="group flex w-full items-center justify-center gap-2 rounded-xl bg-accent-600 py-4 text-[17px] font-bold text-white transition hover:bg-accent-500"
+                      className="group flex w-full items-center justify-center gap-2 rounded-xl bg-accent-600 py-4 text-[20px] font-bold text-white transition hover:bg-accent-500"
                     >
                       상담 문의 보내기
                       <ArrowRight size={18} strokeWidth={2.4} className="transition-transform group-hover:translate-x-1" />
                     </motion.button>
-                    <p className="text-[13px] text-navy-400">* 표시 항목은 필수 입력 사항입니다.</p>
+                    <p className="text-[15px] text-navy-400">* 표시 항목은 필수 입력 사항입니다.</p>
                   </form>
                 )}
               </div>
@@ -969,7 +972,7 @@ export function CompanyHomePage() {
             {/* 상단 CTA 바 */}
             <Reveal>
               <div className="flex flex-col items-start justify-between gap-5 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-8 sm:flex-row sm:items-center mt-[clamp(40px,5vw,72px)] sm:px-9">
-                <p className="text-[clamp(20px,2.7vw,36px)] font-extrabold leading-tight tracking-tight">
+                <p className="text-[clamp(24px,3vw,42px)] font-extrabold leading-tight tracking-tight">
                   의료폐기물 수거·운반 기준, 지금 정리하세요
                 </p>
                 <CtaButton onClick={() => goTo('contact')} className="shrink-0">
@@ -980,7 +983,7 @@ export function CompanyHomePage() {
 
             {/* 구분선 */}
             <div className="mt-8 flex items-center gap-3 border-t border-dashed border-amber-400/30 pt-4 text-amber-400/70">
-              <span className="text-[13px] font-bold tracking-wider">MEDICAL &amp; SANITARY WASTE MANAGEMENT</span>
+              <span className="text-[15px] font-bold tracking-wider">MEDICAL &amp; SANITARY WASTE MANAGEMENT</span>
               <ShieldCheck size={16} className="ml-auto" />
             </div>
 
@@ -988,7 +991,7 @@ export function CompanyHomePage() {
             <div className="grid grid-cols-2 gap-8 py-12 md:grid-cols-5">
               {/* 브랜드 */}
               <div className="col-span-2 md:col-span-1">
-                <div className="flex items-center gap-2 text-[19px] font-extrabold">
+                <div className="flex items-center gap-2 text-[23px] font-extrabold">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-accent-400/50 text-accent-300">
                     <svg viewBox="0 0 40 40" width={18} height={18} fill="none">
                       <path d="M20 4 L33 11.5 V28.5 L20 36 L7 28.5 V11.5 Z" stroke="#2dd4bf" strokeWidth="2.4" strokeLinejoin="round" />
@@ -996,14 +999,14 @@ export function CompanyHomePage() {
                   </span>
                   BEONE MIRAE
                 </div>
-                <p className="mt-3 text-[15px] font-bold text-white/80">주식회사 비원미래</p>
-                <p className="mt-3 flex items-start gap-2 text-[14px] leading-relaxed text-white/55">
+                <p className="mt-3 text-[18px] font-bold text-white/80">주식회사 비원미래</p>
+                <p className="mt-3 flex items-start gap-2 text-[16px] leading-relaxed text-white/55">
                   <MapPin size={16} className="mt-0.5 shrink-0 text-accent-300" />
                   경기도 남양주시 오남읍
                   <br />
                   양지로 47-35, 바동 1층
                 </p>
-                <p className="mt-2 flex items-center gap-2 text-[14px] text-white/55">
+                <p className="mt-2 flex items-center gap-2 text-[16px] text-white/55">
                   <Truck size={16} className="shrink-0 text-accent-300" />
                   서울·경기권 운영
                 </p>
@@ -1011,14 +1014,14 @@ export function CompanyHomePage() {
 
               {/* 회사 — 클릭 시 소개 모달 */}
               <div>
-                <p className="text-[17px] font-bold text-white">회사</p>
+                <p className="text-[20px] font-bold text-white">회사</p>
                 <span className="mt-3 block h-0.5 w-6 rounded-full bg-accent-400" />
                 <ul className="mt-4 space-y-3">
                   {COMPANY_LINKS.map((it) => (
                     <li key={it.key}>
                       <button
                         onClick={() => setInfoModal(it.key)}
-                        className="text-left text-[15px] text-white/55 transition-colors hover:text-white"
+                        className="text-left text-[18px] text-white/55 transition-colors hover:text-white"
                       >
                         {it.label}
                       </button>
@@ -1033,14 +1036,14 @@ export function CompanyHomePage() {
                 { h: '운영', items: ['수거 권역 운영', '보관기한·수거이력 관리', '차량 및 이력 관리', '안전·교육 체계'] },
               ].map((col) => (
                 <div key={col.h}>
-                  <p className="text-[17px] font-bold text-white">{col.h}</p>
+                  <p className="text-[20px] font-bold text-white">{col.h}</p>
                   <span className="mt-3 block h-0.5 w-6 rounded-full bg-accent-400" />
                   <ul className="mt-4 space-y-3">
                     {col.items.map((it) => (
                       <li key={it}>
                         <button
                           onClick={() => goTo('contact')}
-                          className="text-left text-[15px] text-white/55 transition-colors hover:text-white"
+                          className="text-left text-[18px] text-white/55 transition-colors hover:text-white"
                         >
                           {it}
                         </button>
@@ -1052,13 +1055,13 @@ export function CompanyHomePage() {
 
               {/* 관련 시스템 */}
               <div>
-                <p className="text-[17px] font-bold text-white">관련 시스템</p>
+                <p className="text-[20px] font-bold text-white">관련 시스템</p>
                 <span className="mt-3 block h-0.5 w-6 rounded-full bg-accent-400" />
                 <a
                   href={ALLBARO_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="group mt-4 inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-[14px] font-bold text-white/80 transition hover:border-accent-300 hover:text-white"
+                  className="group mt-4 inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-[17px] font-bold text-white/80 transition hover:border-accent-300 hover:text-white"
                 >
                   올바로 시스템 바로가기
                   <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -1068,8 +1071,8 @@ export function CompanyHomePage() {
 
             {/* 하단 저작권 */}
             <div className="flex flex-col gap-3 border-t border-white/10 py-6 text-white/45 sm:flex-row sm:items-center">
-              <p className="text-[14px]">© 2026 BEONE MIRAE CO.</p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] sm:ml-6">
+              <p className="text-[16px]">© 2026 BEONE MIRAE CO.</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[15px] sm:ml-6">
                 {['개인정보처리방침', '이용약관', '정보보호 정책', '이메일무단수집거부', '윤리경영 신고센터'].map((t) => (
                   <button key={t} className="transition-colors hover:text-white/80">
                     {t}
@@ -1081,8 +1084,8 @@ export function CompanyHomePage() {
         </footer>
       </main>
 
-      {/* 회사 소개 모달 */}
-      <InfoModal topicKey={infoModal} onClose={() => setInfoModal(null)} />
+      {/* 회사 소개 슬라이드 패널 */}
+      <InfoDrawer topicKey={infoModal} onSelect={setInfoModal} onClose={() => setInfoModal(null)} />
 
       {/* 앱(운영 대시보드) 진입 — 시연용 숨은 진입점 유지 */}
       <button onClick={() => navigate('/')} className="sr-only">
@@ -1092,8 +1095,17 @@ export function CompanyHomePage() {
   )
 }
 
-// 회사 정보 모달 (푸터 '회사' 메뉴)
-function InfoModal({ topicKey, onClose }: { topicKey: string | null; onClose: () => void }) {
+// 회사 정보 슬라이드 패널 (푸터 '회사' 메뉴 / 상단 '회사소개')
+//  · 우측에서 스르륵 들어오는 드로어 + 상단 탭으로 항목 전환(콘텐츠도 슬라이드)
+function InfoDrawer({
+  topicKey,
+  onSelect,
+  onClose,
+}: {
+  topicKey: string | null
+  onSelect: (k: string) => void
+  onClose: () => void
+}) {
   useEffect(() => {
     if (!topicKey) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -1106,79 +1118,114 @@ function InfoModal({ topicKey, onClose }: { topicKey: string | null; onClose: ()
     }
   }, [topicKey, onClose])
 
+  const info = topicKey ? COMPANY_INFO[topicKey] : null
+
   return (
     <AnimatePresence>
-      {topicKey && COMPANY_INFO[topicKey] && (
+      {topicKey && info && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-navy-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+          className="fixed inset-0 z-[70] flex justify-end bg-navy-950/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.25 }}
           onClick={onClose}
         >
-          <motion.div
-            className="relative max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-7 shadow-2xl sm:rounded-3xl sm:p-9"
-            initial={{ y: 40, opacity: 0, scale: 0.98 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 20, opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.28, ease: EASE }}
+          <motion.aside
+            className="relative flex h-full w-full max-w-[600px] flex-col bg-white shadow-2xl"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.42, ease: EASE }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={onClose}
-              aria-label="닫기"
-              className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
-            >
-              <X size={20} />
-            </button>
-            <p className="text-[13px] font-bold tracking-widest text-accent-600">{COMPANY_INFO[topicKey].eyebrow}</p>
-            <h3 className="mt-1.5 text-2xl font-extrabold tracking-tight text-navy-900">{COMPANY_INFO[topicKey].title}</h3>
-            <div className="mt-5 space-y-4">
-              {COMPANY_INFO[topicKey].blocks.map((b, i) => {
-                if (b.type === 'p')
-                  return (
-                    <p key={i} className="text-[15px] leading-relaxed text-navy-600">
-                      {b.text}
-                    </p>
-                  )
-                if (b.type === 'list')
-                  return (
-                    <ul key={i} className="space-y-2.5">
-                      {b.items.map((it) => (
-                        <li key={it} className="flex items-start gap-2.5 text-[15px] font-medium text-navy-700">
-                          <CheckCircle2 size={19} className="mt-0.5 shrink-0 text-accent-500" />
-                          {it}
-                        </li>
-                      ))}
-                    </ul>
-                  )
-                if (b.type === 'timeline')
-                  return (
-                    <div key={i} className="relative space-y-4 border-l-2 border-navy-100 pl-5">
-                      {b.items.map((it, k) => (
-                        <div key={k} className="relative">
-                          <span className="absolute -left-[27px] top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-accent-500 shadow" />
-                          <p className="text-[13px] font-extrabold text-accent-600">{it.when}</p>
-                          <p className="mt-0.5 text-[15px] font-medium leading-snug text-navy-700">{it.what}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                // kv
-                return (
-                  <dl key={i} className="divide-y divide-navy-100 rounded-2xl bg-navy-50 px-4">
-                    {b.items.map((it) => (
-                      <div key={it.k} className="flex flex-col gap-0.5 py-3 sm:flex-row sm:gap-4">
-                        <dt className="w-28 shrink-0 text-[14px] font-bold text-navy-500">{it.k}</dt>
-                        <dd className="text-[15px] font-medium text-navy-800">{it.v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )
-              })}
+            {/* 헤더 + 닫기 */}
+            <div className="flex items-center justify-between border-b border-navy-100 px-7 py-5 sm:px-9">
+              <p className="text-xl font-extrabold tracking-tight text-navy-900">회사 정보</p>
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
+              >
+                <X size={22} />
+              </button>
             </div>
-          </motion.div>
+
+            {/* 탭(목록) — 클릭 시 해당 내용으로 전환 */}
+            <div className="flex flex-wrap gap-2 border-b border-navy-100 px-7 py-4 sm:px-9">
+              {COMPANY_LINKS.map((l) => (
+                <button
+                  key={l.key}
+                  onClick={() => onSelect(l.key)}
+                  className={`rounded-full px-4 py-2 text-[15px] font-bold transition ${
+                    topicKey === l.key ? 'bg-accent-500 text-white' : 'bg-navy-50 text-navy-500 hover:bg-navy-100'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 콘텐츠 (항목 전환 시 슬라이드) */}
+            <div className="flex-1 overflow-y-auto px-7 py-7 sm:px-9">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={topicKey}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -24 }}
+                  transition={{ duration: 0.28, ease: EASE }}
+                >
+                  <p className="text-[14px] font-bold tracking-widest text-accent-600">{info.eyebrow}</p>
+                  <h3 className="mt-1.5 text-3xl font-extrabold tracking-tight text-navy-900">{info.title}</h3>
+                  <div className="mt-6 space-y-5">
+                    {info.blocks.map((b, i) => {
+                      if (b.type === 'p')
+                        return (
+                          <p key={i} className="text-[17px] leading-relaxed text-navy-600">
+                            {b.text}
+                          </p>
+                        )
+                      if (b.type === 'list')
+                        return (
+                          <ul key={i} className="space-y-3.5">
+                            {b.items.map((it) => (
+                              <li key={it} className="flex items-start gap-3 text-[17px] font-medium text-navy-700">
+                                <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-accent-500" />
+                                {it}
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      if (b.type === 'timeline')
+                        return (
+                          <div key={i} className="relative space-y-5 border-l-2 border-navy-100 pl-6">
+                            {b.items.map((it, k) => (
+                              <div key={k} className="relative">
+                                <span className="absolute -left-[31px] top-1 h-4 w-4 rounded-full border-2 border-white bg-accent-500 shadow" />
+                                <p className="text-[15px] font-extrabold text-accent-600">{it.when}</p>
+                                <p className="mt-0.5 text-[17px] font-medium leading-snug text-navy-700">{it.what}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      // kv
+                      return (
+                        <dl key={i} className="divide-y divide-navy-100 rounded-2xl bg-navy-50 px-5">
+                          {b.items.map((it) => (
+                            <div key={it.k} className="flex flex-col gap-0.5 py-4 sm:flex-row sm:gap-5">
+                              <dt className="w-32 shrink-0 text-[16px] font-bold text-navy-500">{it.k}</dt>
+                              <dd className="text-[17px] font-medium text-navy-800">{it.v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.aside>
         </motion.div>
       )}
     </AnimatePresence>
@@ -1186,12 +1233,12 @@ function InfoModal({ topicKey, onClose }: { topicKey: string | null; onClose: ()
 }
 
 const inputCls =
-  'w-full rounded-xl border border-navy-200 bg-white px-4 py-3.5 text-[15px] text-navy-900 placeholder-navy-300 outline-none transition focus:border-accent-400 focus:ring-2 focus:ring-accent-100'
+  'w-full rounded-xl border border-navy-200 bg-white px-4 py-4 text-[17px] text-navy-900 placeholder-navy-300 outline-none transition focus:border-accent-400 focus:ring-2 focus:ring-accent-100'
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[15px] font-bold text-navy-700">
+      <span className="mb-2 block text-[17px] font-bold text-navy-700">
         {label} {required && <span className="text-accent-500">*</span>}
       </span>
       {children}
