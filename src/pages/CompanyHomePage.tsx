@@ -415,9 +415,9 @@ export function CompanyHomePage() {
                   <ShieldCheck size={17} className="text-accent-300" /> 서울·경기 의료폐기물 수거·운반 전문기업
                 </span>
                 <h1 className="mt-4 text-[clamp(31px,6vw,104px)] break-keep font-extrabold leading-[1.16] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.35)]">
-                  의료폐기물 수거·운반을
+                  의료폐기물,
                   <br />
-                  운영 기준까지 책임집니다
+                  빠르고 정확하게 수거합니다
                 </h1>
               </Reveal>
               <Reveal delay={0.1}>
@@ -463,15 +463,15 @@ export function CompanyHomePage() {
             <div>
               <Reveal>
                 <p className="flex items-center gap-2 text-[18px] sm:text-[27px] font-bold text-accent-600">
-                  <span className="h-2 w-2 rounded-full bg-accent-500" /> 핵심 운영 기준
+                  <span className="h-2 w-2 rounded-full bg-accent-500" /> 믿고 맡기는 이유
                 </p>
                 <h2 className="mt-3 text-[31px] break-keep font-extrabold leading-[1.15] tracking-tight text-navy-900 sm:text-[60px] lg:text-[76px]">
-                  수거만 맡기는 것이 아니라,
+                  수거 일정도, 용기도, 서류도
                   <br />
-                  운영 부담까지 줄입니다
+                  병원 대신 챙깁니다
                 </h2>
                 <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[30px]">
-                  정기 수거, 추가 요청, 전용 용기, 수거대장까지 의료기관 담당자가 챙겨야 할 일을 함께 관리합니다.
+                  정기·추가 수거, 전용 용기, 수거대장까지 — 담당자가 일일이 챙기던 일을 비원미래가 함께 관리합니다.
                 </p>
                 <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-5 py-2.5 text-[16px] sm:text-[24px] font-bold text-amber-600">
                   <Check size={16} strokeWidth={3} /> 위생 폐기물 수거 포함
@@ -551,12 +551,6 @@ export function CompanyHomePage() {
                 </div>
               ))}
             </div>
-          </div>
-          {/* CTA — 이미지 아래 별도 바 */}
-          <div className="flex justify-center py-7">
-            <CtaButton variant="outline" onClick={() => goTo('contact')}>
-              대상 기관 확인하기
-            </CtaButton>
           </div>
         </section>
 
@@ -676,8 +670,7 @@ export function CompanyHomePage() {
             <SplitImage n={5} alt="현장에서 전용 용기를 스캔·확인하는 작업자" dPos="object-left" />
             <div>
               <Reveal>
-                <p className="text-[12px] sm:text-[19px] font-bold tracking-wider text-navy-400">05 / 08 · WORKFLOW CONTROL</p>
-                <p className="mt-3 text-[18px] sm:text-[27px] font-bold text-accent-600">수거 관리 방식</p>
+                <p className="text-[18px] sm:text-[27px] font-bold text-accent-600">수거 관리 방식</p>
                 <h2 className="mt-2 text-[31px] break-keep font-extrabold leading-[1.15] tracking-tight text-navy-900 sm:text-[60px] lg:text-[76px]">
                   보관기한부터 수거대장까지
                   <br />
@@ -694,7 +687,6 @@ export function CompanyHomePage() {
                     '전용 용기 · 자재 공급 이력',
                     '수거완료 내역 · 수거대장 확인',
                     '의료폐기물 · 위생 폐기물 배출물 분리 관리',
-                    '실사 · 인증 전 자료 요청 대응',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-3 text-[20px] sm:text-[30px] font-semibold text-navy-700">
                       <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-accent-500" />
@@ -728,7 +720,7 @@ export function CompanyHomePage() {
               <Reveal delay={0.08}>
                 <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {[
-                    { icon: Route, t: '더 빠르고 정확한 수거', d: '경로 최적화로 방문 시간을 지킵니다 (특허출원 10-2026-0101187)' },
+                    { icon: Route, t: '경로 최적화 특허 출원', d: '더 빠르고 정확한 수거를 위해 특허를 출원했습니다 (10-2026-0101187)' },
                     { icon: CalendarClock, t: '놓치지 않는 일정 관리', d: '기관별 수거주기·보관기한을 챙겨 제때 방문합니다' },
                     { icon: FileText, t: '투명한 수거이력', d: '수거부터 자재 공급까지 기록해 실사·정산까지 지원합니다' },
                     { icon: FlaskConical, t: '전담 연구 조직 운영', d: '현장 데이터로 서비스를 꾸준히 개선하는 연구개발 체계' },
