@@ -709,9 +709,9 @@ export function CompanyHomePage() {
             <Reveal className="mx-auto max-w-3xl text-center">
               <p className="text-[13px] sm:text-[20px] font-bold tracking-wider text-accent-600">비원미래 차별화</p>
               <h2 className="mt-2 text-[27px] break-keep font-extrabold leading-[1.18] tracking-tight text-navy-900 sm:text-[46px] lg:text-[56px]">
-                흩어진 기록을 하나로 모아
+                자체 개발한 통합 시스템으로
                 <br />
-                더 정확한 서비스로 돌려드립니다
+                더 질 좋은 서비스를 제공합니다
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-[16px] leading-relaxed text-navy-500 sm:text-[23px]">
                 많은 곳이 전화·엑셀·종이로 따로 관리해 기록이 흩어지고 실수가 생기기 쉽습니다. 비원미래는 수거 정보를 한 번만 입력하면 일정·수거이력·자재·수거대장까지 자동으로 이어지는 통합 시스템을 직접 만들고 있습니다.
@@ -782,7 +782,7 @@ export function CompanyHomePage() {
                   </div>
                 </div>
                 <p className="mt-6 text-center text-[14px] sm:text-[20px] font-semibold leading-relaxed text-white/75">
-                  한 번의 입력으로 모든 업무가 자동으로 이어져, 고객께 더 빠르고 정확하며 일관된 서비스를 드립니다.
+                  고객 여러분께 더 빠르고 정확하며 일관된 서비스를 제공해 드립니다.
                 </p>
               </div>
             </Reveal>
