@@ -21,8 +21,8 @@ export type FontScale = 'normal' | 'large' | 'xlarge'
 
 export const FONT_SCALE_OPTIONS: { value: FontScale; label: string; hint: string }[] = [
   { value: 'normal', label: '기본', hint: '표준' },
-  { value: 'large', label: '크게', hint: '+15%' },
-  { value: 'xlarge', label: '매우 크게', hint: '+30%' },
+  { value: 'large', label: '크게', hint: '+5%' },
+  { value: 'xlarge', label: '매우 크게', hint: '+10%' },
 ]
 
 const STORAGE_KEY = 'beonemirae-ops:font-scale'

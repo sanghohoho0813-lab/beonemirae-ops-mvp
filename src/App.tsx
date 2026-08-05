@@ -12,6 +12,7 @@ import { Receivables } from './pages/Receivables'
 import { Statistics } from './pages/Statistics'
 import { Reports } from './pages/Reports'
 import { More } from './pages/More'
+import { Settings } from './pages/Settings'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
 import { CollectionHistory } from './pages/CollectionHistory'
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="stats" element={<Statistics />} />
           <Route path="reports" element={<Reports />} />
           <Route path="more" element={<More />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="demo" element={<DemoSummary />} />
           <Route path="roadmap" element={<Roadmap />} />
           <Route path="presentation" element={<Presentation />} />

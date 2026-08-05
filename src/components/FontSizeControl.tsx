@@ -22,9 +22,9 @@ export function FontSizeControl({
     <div className="grid grid-cols-3 gap-1.5">
       {FONT_SCALE_OPTIONS.map((opt) => {
         const active = fontScale === opt.value
-        // 미리보기 '가' 글자를 단계별로 키워 차이를 눈으로 보여줍니다.
+        // 미리보기 '가' 글자 — 실제 배율(기본 / +5% / +10%)과 같은 비율로 표시합니다.
         const previewSize =
-          opt.value === 'normal' ? 'text-[0.95rem]' : opt.value === 'large' ? 'text-[1.15rem]' : 'text-[1.4rem]'
+          opt.value === 'normal' ? 'text-[1.1rem]' : opt.value === 'large' ? 'text-[1.155rem]' : 'text-[1.21rem]'
         return (
           <button
             key={opt.value}

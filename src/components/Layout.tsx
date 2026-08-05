@@ -21,6 +21,7 @@ import {
   Lock,
   Sparkles,
   ChevronDown,
+  SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -29,8 +30,6 @@ const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
-import { DemoSettingsPanel } from './DemoControls'
-import { FontSizeControl } from './FontSizeControl'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 앱 전체 레이아웃 — 반응형 B2B 운영관리 콘솔
@@ -87,7 +86,7 @@ const BOTTOM_NAV: NavItem[] = [
 
 const MORE_PATHS = [
   '/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
-  '/presentation', '/history', '/roadmap', '/reports',
+  '/presentation', '/history', '/roadmap', '/reports', '/settings',
 ]
 
 // ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────
@@ -136,15 +135,6 @@ function Sidebar() {
         </div>
       </div>
 
-      {/* 화면 글자 크기 — 사이드바 상단에 고정 배치해 어떤 화면 높이에서도 바로 보입니다.
-          클릭 즉시 앱 전체에 반영되고 localStorage 에 저장됩니다. */}
-      <div className="px-3 pb-3">
-        <div className="rounded-2xl bg-white/5 p-3">
-          <p className="mb-2 px-0.5 text-[0.8rem] font-extrabold tracking-wide text-navy-300">화면 글자 크기</p>
-          <FontSizeControl variant="dark" />
-        </div>
-      </div>
-
       <nav className="flex-1 px-3">
         <p className="px-4 pb-2.5 pt-2 text-[0.8rem] font-extrabold tracking-wide text-teal-300">
           핵심 운영
@@ -164,10 +154,15 @@ function Sidebar() {
           ))}
         </div>
 
+        {/* 설정 — 글자 크기·데이터 관리 (추가 개발 예정 바로 위) */}
+        <div className="mt-6 space-y-0.5">
+          <SidebarLink item={{ to: '/settings', label: '설정', icon: SlidersHorizontal }} muted />
+        </div>
+
         {/* 추가 개발 예정 — 접기/펼치기 */}
         <button
           onClick={() => setPlannedOpen((v) => !v)}
-          className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.8rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
+          className="mt-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.8rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
         >
           <Sparkles size={13} />
           추가 개발 예정
@@ -236,7 +231,6 @@ function Sidebar() {
             <ExternalLink size={16} strokeWidth={2.2} />
           </a>
         </div>
-        <DemoSettingsPanel />
       </div>
     </aside>
   )

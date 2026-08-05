@@ -5,35 +5,35 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    font-size: 17px;
+    font-size: 16.15px;
   }
   @media (min-width: 640px) {
     html {
-      font-size: 20px;
+      font-size: 19px;
     }
   }
   /* 글자 크기 모드 — root font-size 를 키워 rem 기반 텍스트·여백을 함께 확대 */
-  /* 모바일(<640px) 기본을 17px 로 상향해 본문/보조문구 가독성 확보 */
+  /* 모바일(<640px) 기본 16.15px */
   html.scale-normal {
-    font-size: 17px;
+    font-size: 16.15px;
   }
   html.scale-lg {
-    font-size: 19.55px; /* 기본 대비 +15% */
+    font-size: 16.96px; /* 기본 대비 +5% */
   }
   html.scale-xl {
-    font-size: 22.1px; /* 기본 대비 +30% */
+    font-size: 17.77px; /* 기본 대비 +10% */
   }
-  /* 데스크톱(≥640px): 대형 화면 가독성을 위해 기본 root 를 20px 로 상향.
+  /* 데스크톱(≥640px): 대형 화면 가독성 기준 root 19px.
      타이포그래피 토큰(.t-*)이 이 root 를 기준으로 계산됩니다. */
   @media (min-width: 640px) {
     html.scale-normal {
-      font-size: 20px;
+      font-size: 19px;
     }
     html.scale-lg {
-      font-size: 23px; /* 기본 대비 +15% */
+      font-size: 19.95px; /* 기본 대비 +5% */
     }
     html.scale-xl {
-      font-size: 26px; /* 기본 대비 +30% */
+      font-size: 20.9px; /* 기본 대비 +10% */
     }
   }
 
