@@ -7,27 +7,33 @@
     -webkit-text-size-adjust: 100%;
     font-size: 17px;
   }
+  @media (min-width: 640px) {
+    html {
+      font-size: 20px;
+    }
+  }
   /* 글자 크기 모드 — root font-size 를 키워 rem 기반 텍스트·여백을 함께 확대 */
   /* 모바일(<640px) 기본을 17px 로 상향해 본문/보조문구 가독성 확보 */
   html.scale-normal {
     font-size: 17px;
   }
   html.scale-lg {
-    font-size: 19px; /* 약 +20% */
+    font-size: 19.55px; /* 기본 대비 +15% */
   }
   html.scale-xl {
-    font-size: 22px; /* 약 +40% */
+    font-size: 22.1px; /* 기본 대비 +30% */
   }
-  /* 데스크톱(≥640px): 기존 '매우 크게'(19px)를 기본으로 상향. 모바일(폰,<640px)은 위 값 유지 */
+  /* 데스크톱(≥640px): 대형 화면 가독성을 위해 기본 root 를 20px 로 상향.
+     타이포그래피 토큰(.t-*)이 이 root 를 기준으로 계산됩니다. */
   @media (min-width: 640px) {
     html.scale-normal {
-      font-size: 19px; /* 기존 데스크톱 '매우 크게'를 기본으로 */
+      font-size: 20px;
     }
     html.scale-lg {
-      font-size: 22.8px; /* 기본 대비 +20% */
+      font-size: 23px; /* 기본 대비 +15% */
     }
     html.scale-xl {
-      font-size: 26.6px; /* 기본 대비 +40% */
+      font-size: 26px; /* 기본 대비 +30% */
     }
   }
 
@@ -46,6 +52,50 @@
 }
 
 @layer components {
+  /* ───────────────────────────────────────────────────────────────────────
+     타이포그래피 스케일 (전역 토큰)
+     화면마다 개별 px 를 지정하지 않고 아래 토큰만 사용합니다.
+     rem 기반이라 '글자 크기' 설정(scale-normal/lg/xl)에 그대로 반응합니다.
+     기본 root=16px 기준 → 데스크톱(≥640px)에서 아래 값으로 확대됩니다.
+     ─────────────────────────────────────────────────────────────────────── */
+  /* rem 값은 root(모바일 17px / 데스크톱 20px) 기준으로 아래 px 에 대응합니다. */
+  .t-page {
+    /* 페이지 제목 — 28px / 40px */
+    @apply break-keep text-[1.65rem] font-extrabold leading-tight tracking-tight sm:text-[2rem];
+  }
+  .t-section {
+    /* 섹션 제목 — 21px / 28px */
+    @apply break-keep text-[1.25rem] font-extrabold leading-snug tracking-tight sm:text-[1.4rem];
+  }
+  .t-card {
+    /* 카드 제목 — 19px / 24px */
+    @apply break-keep text-[1.12rem] font-bold leading-snug sm:text-[1.2rem];
+  }
+  .t-kpi {
+    /* KPI 숫자 — 모바일 2열 카드에서도 '+190만원' 같은 값이 넘치지 않는 크기 / 데스크톱 46px */
+    @apply break-keep text-[1.4rem] font-extrabold leading-none tracking-tight sm:text-[2.1rem];
+  }
+  .t-kpi-sm {
+    /* 보조 KPI 숫자 — 25px / 34px */
+    @apply break-keep text-[1.5rem] font-extrabold leading-none tracking-tight sm:text-[1.7rem];
+  }
+  .t-body {
+    /* 본문 — 16px / 19px */
+    @apply break-keep text-[0.95rem] leading-snug;
+  }
+  .t-label {
+    /* 라벨/보조 강조 — 15px / 17px */
+    @apply break-keep text-[0.88rem] font-bold leading-snug sm:text-[0.85rem];
+  }
+  .t-muted {
+    /* 보조 문구 — 14px / 16px */
+    @apply break-keep text-[0.82rem] leading-snug text-navy-400 sm:text-[0.8rem];
+  }
+  .t-nav {
+    /* 사이드바 메뉴 — 17px / 19px */
+    @apply text-[1rem] font-bold sm:text-[0.95rem];
+  }
+
   /* 카드 — 테두리 대신 여백과 은은한 그림자로 구분 */
   .card {
     @apply rounded-3xl bg-white shadow-card;

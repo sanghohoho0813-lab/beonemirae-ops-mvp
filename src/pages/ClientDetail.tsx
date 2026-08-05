@@ -39,6 +39,7 @@ import { prettyDate, weight, won, wonShort } from '../lib/format'
 import { nextActionsFor, clientMonthlyReport } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
 import { MonthlyReportView } from '../components/MonthlyReport'
+import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,6 +68,7 @@ const billStyle: Record<BillStatus, string> = {
 const TABS = [
   { id: 'ops', label: '운영조건' },
   { id: 'report', label: '월간 리포트' },
+  { id: 'notes', label: '현장 메모' },
   { id: 'history', label: '수거이력' },
   { id: 'materials', label: '자재관리' },
   { id: 'requests', label: '요청·알림' },
@@ -77,7 +79,7 @@ type TabId = (typeof TABS)[number]['id']
 export function ClientDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const { data, clientById, updateClient, removeClient } = useData()
+  const { data, clientById, updateClient, removeClient, notesFor } = useData()
   const client = clientById(id)
 
   const [editing, setEditing] = useState(false)
@@ -158,6 +160,8 @@ export function ClientDetail() {
           <p className="flex items-center gap-2"><Recycle size={15} className="shrink-0 text-navy-400" /> 자재 보관창고 {client.storageSize}</p>
         </div>
         {client.note && <p className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium text-amber-700">📌 {client.note}</p>}
+        {/* 현장 메모 — 처리 전 항목을 헤더에서 바로 확인 */}
+        <NoteChips notes={notesFor(id)} max={3} />
 
         <div className="mt-4 flex items-center gap-2">
           <button className="btn-primary flex-1" onClick={() => setLogOpen(true)}>
@@ -304,6 +308,9 @@ export function ClientDetail() {
 
       {/* ── 월간 운영 리포트 ── */}
       {tab === 'report' && <MonthlyReportView report={report} />}
+
+      {/* ── 현장 메모 / 특이사항 ── */}
+      {tab === 'notes' && <SiteNotesPanel clientId={id} />}
 
       {/* ── 운영조건 ── */}
       {tab === 'ops' && (

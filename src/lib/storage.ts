@@ -27,13 +27,14 @@ const BACKUP_KEY = 'beonemirae-ops:v3:backup-before-schema2'
 //    누락된 필드(officeStock/events/requestOverrides, Schedule.origin/eventId 등)만 채웁니다.
 //  · 멱등(idempotent): 이미 v2 형태면 그대로 통과. 최초 1회만 백업 생성.
 // ─────────────────────────────────────────────────────────────────────────────
-type LegacyData = AppData & { officeStock?: unknown; events?: unknown; requestOverrides?: unknown }
+type LegacyData = AppData & { officeStock?: unknown; events?: unknown; requestOverrides?: unknown; notes?: unknown }
 
 function needsMigration(d: LegacyData): boolean {
   return (
     !d.officeStock ||
     !Array.isArray(d.events) ||
     !Array.isArray(d.requestOverrides) ||
+    !Array.isArray(d.notes) ||
     d.schedules.some((s) => s.origin === undefined)
   )
 }
@@ -64,6 +65,8 @@ export function migrateToV2(parsed: LegacyData): AppData {
     requestOverrides: Array.isArray(parsed.requestOverrides)
       ? (parsed.requestOverrides as AppData['requestOverrides'])
       : [],
+    // v3: 현장 메모 — 기존 저장 데이터에는 없으므로 빈 배열로 채웁니다.
+    notes: Array.isArray(parsed.notes) ? (parsed.notes as AppData['notes']) : [],
   }
   try {
     localStorage.setItem(SCHEMA_VERSION_KEY, String(SCHEMA_VERSION))
@@ -92,6 +95,8 @@ export function rebuildPreserving(prev: AppData): AppData {
     events: prev.events,
     officeStock: prev.officeStock,
     requestOverrides: [],
+    // 현장 메모는 병원별 정보라 날짜와 무관하게 보존합니다.
+    notes: prev.notes ?? [],
   }
 }
 

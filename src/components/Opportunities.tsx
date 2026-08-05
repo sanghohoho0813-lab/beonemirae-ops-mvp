@@ -42,14 +42,14 @@ export function ActionRow({ action, onAct }: { action: NextAction; onAct?: () =>
         </div>
         <button
           onClick={act}
-          className="pressable hidden shrink-0 whitespace-nowrap rounded-xl bg-navy-900 px-4 py-2.5 text-[0.9375rem] font-bold text-white transition hover:bg-navy-800 sm:block"
+          className="pressable hidden shrink-0 whitespace-nowrap rounded-xl bg-navy-900 px-4 py-2.5 text-[0.85rem] font-bold text-white transition hover:bg-navy-800 2xl:block"
         >
           {action.cta}
         </button>
       </div>
       <button
         onClick={act}
-        className="pressable mt-3 w-full rounded-xl bg-navy-900 px-4 py-3 text-[0.9375rem] font-bold text-white transition hover:bg-navy-800 sm:hidden"
+        className="pressable mt-3 w-full rounded-xl bg-navy-900 px-4 py-3 text-[0.9rem] font-bold text-white transition hover:bg-navy-800 2xl:hidden"
       >
         {action.cta}
       </button>

@@ -170,6 +170,21 @@ export interface CollectionEvent {
   demoSessionId?: string | null // 시연 세션 중 생성된 기록이면 세션 id (초기화 대상 구분)
 }
 
+// ── 현장 메모 / 특이사항 ─────────────────────────────────────────────────────
+// 현장에서 수기로 적거나 담당자가 기억하던 병원별 유의사항을 한 번 기록해두면
+// 오늘 일정·수거 입력·대시보드 등 관련 업무 화면에서 함께 확인됩니다.
+export type NoteKind = '수거요청' | '연락' | '주의' | '자재' | '기타'
+
+export interface SiteNote {
+  id: string
+  clientId: string
+  kind: NoteKind
+  content: string
+  createdAt: string // ISO
+  /** 처리 완료 여부 — 완료된 메모는 목록 하단으로 내려갑니다 */
+  done: boolean
+}
+
 // ── 시연 세션 (실사 당일 동일 초기 상태 복원용) ──────────────────────────────
 export interface DemoSession {
   id: string
@@ -190,6 +205,8 @@ export interface AppData {
   requestOverrides: RequestOverride[] // 병원 요청 자동 처리 결과
   // ── v2.5 (3.5단계 시연 안정화) ──
   demoSession?: DemoSession | null // 현재 시연 세션 (초기화 기준)
+  // ── v3: 병원별 현장 메모 (없으면 마이그레이션에서 빈 배열로 채움) ──
+  notes: SiteNote[]
 }
 
 /** 저장 스키마 버전 (마이그레이션 판단용) */

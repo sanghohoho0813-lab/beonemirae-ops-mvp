@@ -21,6 +21,7 @@ import { PageShell, SectionTitle, KpiCard } from '../components/ui'
 import { AutoLinkFlow } from '../components/AutoLinkFlow'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
+import { TodayClients } from '../components/TodayClients'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
@@ -75,10 +76,8 @@ export function Dashboard() {
     <PageShell>
       {/* 인사 */}
       <div>
-        <h1 className="break-keep text-[1.875rem] font-extrabold leading-tight tracking-tight text-navy-900 lg:text-[2.125rem]">
-          대표님 한눈에 보기
-        </h1>
-        <p className="mt-2 text-[1.0625rem] font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
+        <h1 className="t-page text-navy-900">대표님 한눈에 보기</h1>
+        <p className="t-body mt-2.5 font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
       </div>
 
       {/* 핵심 KPI 4개 */}
@@ -113,7 +112,9 @@ export function Dashboard() {
 
       {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 ── */}
       <section>
-        <SectionTitle>한 번 입력, 여러 업무 자동 연결</SectionTitle>
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1</span>}>
+          한 번 입력, 여러 업무 자동 연결
+        </SectionTitle>
         <AutoLinkFlow />
       </section>
 
@@ -121,18 +122,36 @@ export function Dashboard() {
       {/* 두 카드가 같은 높이로 정렬되도록 섹션을 flex 컬럼으로 두고 카드가 남는 높이를 흡수 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         <section className="flex min-w-0 flex-col">
-          <SectionTitle>데이터 기반 다음 행동 추천</SectionTitle>
+          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 2</span>}>
+            데이터 기반 다음 행동 추천
+          </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
             <OpportunityPanel summary={opportunities} />
           </div>
         </section>
 
         <section className="flex min-w-0 flex-col">
-          <SectionTitle>수거를 넘어 병원 운영지원으로</SectionTitle>
+          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 3</span>}>
+            수거를 넘어 병원 운영지원으로
+          </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
             <ReportHighlight reports={reports} />
           </div>
         </section>
+      </div>
+
+      {/* ── 오늘 거래처 운영 현황 — 병원별 데이터가 한 화면으로 연결됨을 보여줌 ── */}
+      <section>
+        <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">오늘 일정 기준</span>}>
+          오늘 거래처 운영 현황
+        </SectionTitle>
+        <TodayClients data={data} />
+      </section>
+
+      {/* ── 이하 운영 참고 ── */}
+      <div className="flex items-center gap-3 pt-2">
+        <span className="t-label whitespace-nowrap text-navy-400">운영 참고</span>
+        <span className="h-px flex-1 bg-navy-200" />
       </div>
 
       {/* ── 오늘 챙길 일 (상위 3건) + 진행 현황 ── */}

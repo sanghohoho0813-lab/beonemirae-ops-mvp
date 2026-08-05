@@ -52,7 +52,6 @@ const CORE_NAV: NavItem[] = [
   { to: '/clients', label: '거래처', icon: Building2 },
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart },
-  { to: '/stats', label: '통계', icon: PieChart },
 ]
 
 /** 운영 도구 — 핵심 흐름을 보조하는 실사용 화면 */
@@ -61,6 +60,7 @@ const TOOL_NAV: NavItem[] = [
   { to: '/materials', label: '자재 관리', icon: Boxes },
   { to: '/receivables', label: '미수금 관리', icon: Wallet },
   { to: '/history', label: '수거이력', icon: History },
+  { to: '/stats', label: '통계', icon: PieChart },
   { to: '/roadmap', label: '활용 계획', icon: Workflow },
 ]
 
@@ -90,20 +90,26 @@ const MORE_PATHS = [
 ]
 
 // ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────
-function SidebarLink({ item }: { item: NavItem }) {
+function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }) {
   const Icon = item.icon
   return (
     <NavLink
       to={item.to}
       end={item.to === '/'}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-xl px-3 py-3 text-[0.9375rem] font-bold transition ${
-          isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-navy-200/80 hover:bg-white/10 hover:text-white'
+        `t-nav flex items-center gap-3.5 rounded-xl px-4 transition ${
+          muted ? 'min-h-[46px] font-semibold' : 'min-h-[54px]'
+        } ${
+          isActive
+            ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/25'
+            : muted
+              ? 'text-navy-300/75 hover:bg-white/10 hover:text-white'
+              : 'text-navy-200/90 hover:bg-white/10 hover:text-white'
         }`
       }
     >
-      <Icon size={18} strokeWidth={2.2} />
-      {item.label}
+      <Icon size={muted ? 19 : 22} strokeWidth={2.2} className="shrink-0" />
+      <span className="min-w-0 break-keep">{item.label}</span>
     </NavLink>
   )
 }
@@ -113,25 +119,25 @@ function Sidebar() {
   const [plannedOpen, setPlannedOpen] = useState(false)
 
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-[264px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[320px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-base font-black text-white">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white">
             비
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1.0625rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
-            <p className="mt-1 break-keep text-[0.8125rem] font-medium leading-snug text-navy-300">
-              의료폐기물 통합 운영관리
+            <p className="break-keep text-[1.15rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
+            <p className="mt-1.5 break-keep text-[0.85rem] font-medium leading-snug text-navy-300">
+              의료폐기물 수거·운반 통합 운영관리
             </p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 px-3">
-        <p className="px-3 pb-2 pt-2 text-[0.75rem] font-extrabold uppercase tracking-wider text-navy-400">
-          현재 운영
+        <p className="px-4 pb-2.5 pt-2 text-[0.72rem] font-extrabold uppercase tracking-wider text-navy-400">
+          핵심 운영
         </p>
         <div className="space-y-0.5">
           {CORE_NAV.map((item) => (
@@ -139,19 +145,19 @@ function Sidebar() {
           ))}
         </div>
 
-        <p className="px-3 pb-2 pt-5 text-[0.75rem] font-extrabold uppercase tracking-wider text-navy-400">
-          운영 도구
+        <p className="px-4 pb-2.5 pt-6 text-[0.72rem] font-extrabold uppercase tracking-wider text-navy-400">
+          운영 도구 · 추가 고도화
         </p>
         <div className="space-y-0.5">
           {TOOL_NAV.map((item) => (
-            <SidebarLink key={item.to} item={item} />
+            <SidebarLink key={item.to} item={item} muted />
           ))}
         </div>
 
         {/* 추가 개발 예정 — 접기/펼치기 */}
         <button
           onClick={() => setPlannedOpen((v) => !v)}
-          className="mt-5 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.75rem] font-extrabold uppercase tracking-wider text-navy-400 transition hover:text-navy-200"
+          className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-wider text-navy-400 transition hover:text-navy-200"
         >
           <Sparkles size={13} />
           추가 개발 예정
@@ -164,7 +170,7 @@ function Sidebar() {
                 key={label}
                 onClick={() => navigate('/roadmap')}
                 title="향후 개발 예정 기능 — 활용 계획에서 단계별 로드맵을 확인할 수 있습니다"
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[0.8125rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+                className="flex w-full items-center gap-2.5 rounded-xl px-4 py-2.5 text-left text-[0.8rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
               >
                 <Lock size={14} className="shrink-0" />
                 <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
@@ -305,7 +311,7 @@ export function Layout() {
         <Sidebar />
         <div className="min-w-0 flex-1">
           <MobileHeader />
-          <main className="mx-auto w-full max-w-[1320px] px-4 pb-24 pt-4 lg:px-8 lg:pb-12 lg:pt-7">
+          <main className="mx-auto w-full max-w-[1760px] px-4 pb-24 pt-4 lg:px-10 lg:pb-14 lg:pt-8">
             <PageMotion key={pathname}>
               <Outlet />
             </PageMotion>

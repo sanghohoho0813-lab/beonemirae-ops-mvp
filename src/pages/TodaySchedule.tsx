@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
@@ -32,7 +33,7 @@ function defaultContainers(wasteType: WasteType, amount: number): ContainerBreak
 }
 
 export function TodaySchedule() {
-  const { data, clientById, completeSchedule, completeCollection } = useData()
+  const { data, clientById, completeSchedule, completeCollection, notesFor } = useData()
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
 
@@ -179,6 +180,8 @@ export function TodaySchedule() {
                         {client?.address} · {vehicle?.name ?? '미배정'}
                       </p>
                       {s.memo && <p className="mt-1.5 text-sm font-medium text-amber-600">📌 {s.memo}</p>}
+                      {/* 현장 메모 — 거래처 상세에 기록해둔 특이사항을 방문 전에 함께 확인 */}
+                      {client && <NoteChips notes={notesFor(client.id)} max={2} />}
                     </div>
                     <div className="shrink-0 text-right">
                       {s.actualAmount != null ? (

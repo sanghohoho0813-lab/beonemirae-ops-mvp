@@ -11,6 +11,7 @@ import {
   Truck,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { schedulesOn } from '../lib/selectors'
@@ -109,7 +110,7 @@ function Section({ n, title, desc, children }: { n: number; title: string; desc?
 }
 
 export function CollectionInput() {
-  const { data, completeCollection, revertCollection } = useData()
+  const { data, completeCollection, revertCollection, notesFor } = useData()
   const [params] = useSearchParams()
 
   // 오늘 미완료 일정 (선택 대상)
@@ -383,9 +384,13 @@ export function CollectionInput() {
               </div>
             </div>
             {client && (
-              <div className="rounded-2xl bg-navy-50 p-3 text-xs text-navy-500">
-                {client.address} · {client.manager} · {client.phone}
-              </div>
+              <>
+                <div className="rounded-2xl bg-navy-50 p-3 text-xs text-navy-500">
+                  {client.address} · {client.manager} · {client.phone}
+                </div>
+                {/* 현장 메모 — 이 거래처에 기록해둔 특이사항을 입력 전에 확인 */}
+                <NoteChips notes={notesFor(client.id)} max={3} />
+              </>
             )}
           </div>
         </Section>

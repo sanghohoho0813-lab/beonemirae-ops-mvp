@@ -11,8 +11,10 @@ import type {
   AppData,
   Client,
   MaterialSupply,
+  NoteKind,
   Payment,
   Schedule,
+  SiteNote,
 } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 import {
@@ -36,6 +38,11 @@ interface DataContextValue {
   addClient: (c: Omit<Client, 'id'>) => Client
   updateClient: (id: string, patch: Partial<Client>) => void
   removeClient: (id: string) => void
+  // 현장 메모 / 특이사항 (병원별)
+  addNote: (clientId: string, kind: NoteKind, content: string) => SiteNote
+  toggleNote: (id: string) => void
+  removeNote: (id: string) => void
+  notesFor: (clientId: string) => SiteNote[]
   // 수거일정
   addSchedule: (s: Omit<Schedule, 'id'>) => Schedule
   updateSchedule: (id: string, patch: Partial<Schedule>) => void
@@ -92,8 +99,47 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const removeClient = useCallback((id: string) => {
-    setData((d) => ({ ...d, clients: d.clients.filter((c) => c.id !== id) }))
+    // 거래처를 지우면 그 거래처의 현장 메모도 함께 정리합니다.
+    setData((d) => ({
+      ...d,
+      clients: d.clients.filter((c) => c.id !== id),
+      notes: (d.notes ?? []).filter((n) => n.clientId !== id),
+    }))
   }, [])
+
+  // ── 현장 메모 / 특이사항 ────────────────────────────────────────────────
+  // 한 번 기록하면 오늘 일정·수거 입력·대시보드에서 함께 확인됩니다.
+  const addNote = useCallback((clientId: string, kind: NoteKind, content: string) => {
+    const note: SiteNote = {
+      id: uid('note'),
+      clientId,
+      kind,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+      done: false,
+    }
+    setData((d) => ({ ...d, notes: [note, ...(d.notes ?? [])] }))
+    return note
+  }, [])
+
+  const toggleNote = useCallback((id: string) => {
+    setData((d) => ({
+      ...d,
+      notes: (d.notes ?? []).map((n) => (n.id === id ? { ...n, done: !n.done } : n)),
+    }))
+  }, [])
+
+  const removeNote = useCallback((id: string) => {
+    setData((d) => ({ ...d, notes: (d.notes ?? []).filter((n) => n.id !== id) }))
+  }, [])
+
+  const notesFor = useCallback(
+    (clientId: string) =>
+      (data.notes ?? [])
+        .filter((n) => n.clientId === clientId)
+        .sort((a, b) => Number(a.done) - Number(b.done) || b.createdAt.localeCompare(a.createdAt)),
+    [data.notes],
+  )
 
   // ── 수거일정 ────────────────────────────────────────────────────────────
   const addSchedule = useCallback((s: Omit<Schedule, 'id'>) => {
@@ -217,6 +263,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addClient,
       updateClient,
       removeClient,
+      addNote,
+      toggleNote,
+      removeNote,
+      notesFor,
       addSchedule,
       updateSchedule,
       removeSchedule,
@@ -242,6 +292,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addClient,
       updateClient,
       removeClient,
+      addNote,
+      toggleNote,
+      removeNote,
+      notesFor,
       addSchedule,
       updateSchedule,
       removeSchedule,

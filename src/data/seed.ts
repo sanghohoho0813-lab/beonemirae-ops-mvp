@@ -6,6 +6,8 @@ import type {
   MaterialSupply,
   Payment,
   Schedule,
+  SiteNote,
+  NoteKind,
   StorageSize,
   Vehicle,
   WasteType,
@@ -330,6 +332,29 @@ function buildPayments(clients: Client[], today: Date): Payment[] {
   return payments
 }
 
+// ── 현장 메모 시드 (현장에서 수기로 남기던 병원별 유의사항 예시) ─────────────
+function buildNotes(clients: Client[], today: Date): SiteNote[] {
+  if (clients.length === 0) return []
+  const defs: { kind: NoteKind; content: string; dayAgo: number }[] = [
+    { kind: '자재', content: '다음 방문 시 20L 전용용기 3개 추가 공급 요청', dayAgo: 1 },
+    { kind: '연락', content: '담당 간호사 오후 2시 이후 통화 가능', dayAgo: 3 },
+    { kind: '주의', content: '주차장 진입 시 후문 이용 (정문 높이 제한)', dayAgo: 5 },
+    { kind: '수거요청', content: '격리폐기물 증가 확인 — 다음 수거 시 여유 용기 준비', dayAgo: 2 },
+    { kind: '기타', content: '다음 수거 시 배출자 교육자료 전달 예정', dayAgo: 6 },
+  ]
+  return defs.map((d, i) => {
+    const at = addDays(today, -d.dayAgo)
+    return {
+      id: `note${i + 1}`,
+      clientId: clients[i % clients.length].id,
+      kind: d.kind,
+      content: d.content,
+      createdAt: new Date(at.getFullYear(), at.getMonth(), at.getDate(), 10 + (i % 6), 15).toISOString(),
+      done: false,
+    }
+  })
+}
+
 // ── 전체 시드 빌더 (demoCount: 0/10/20/30) ──────────────────────────────────
 export function buildSeedData(demoCount = 0, today = new Date()): AppData {
   const base = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -343,6 +368,7 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
     officeStock: { ...DEFAULT_OFFICE_STOCK },
     events: [],
     requestOverrides: [],
+    notes: buildNotes(clients, base),
   }
 }
 
@@ -361,5 +387,6 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
     officeStock: { ...DEFAULT_OFFICE_STOCK },
     events: [],
     requestOverrides: [],
+    notes: [],
   }
 }
