@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -44,6 +44,8 @@ export function TodaySchedule() {
 
   // 빠른 완료
   const [quick, setQuick] = useState<Schedule | null>(null)
+  // 성과측정: 빠른 완료 모달을 연 시각 (저장 시 경과시간 기록)
+  const quickStartRef = useRef<number | null>(null)
   const [quickAmount, setQuickAmount] = useState('')
   const [quickMemo, setQuickMemo] = useState('')
   const [quickError, setQuickError] = useState('')
@@ -65,6 +67,7 @@ export function TodaySchedule() {
   }
 
   function openQuick(s: Schedule) {
+    quickStartRef.current = Date.now()
     setQuick(s)
     setQuickAmount(String(s.expectedAmount))
     setQuickMemo(s.memo)
@@ -72,6 +75,7 @@ export function TodaySchedule() {
     setQuickResult(null)
   }
   function closeQuick() {
+    quickStartRef.current = null
     setQuick(null)
     setQuickResult(null)
   }
@@ -94,6 +98,8 @@ export function TodaySchedule() {
       memo: quickMemo,
       role: '현장 담당자',
       screen: '오늘 일정 · 빠른 완료',
+      // 성과측정: 빠른 완료 모달 진입 → 저장까지의 실제 경과시간
+      inputDurationMs: quickStartRef.current ? Date.now() - quickStartRef.current : null,
     })
     if (!result.ok) {
       setQuickError(result.errors.join(' '))

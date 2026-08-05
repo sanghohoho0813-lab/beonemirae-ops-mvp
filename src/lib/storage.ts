@@ -1,5 +1,5 @@
 import type { AppData, CollectionEvent, DemoSession } from '../types'
-import { DEFAULT_OFFICE_STOCK, SCHEMA_VERSION } from '../types'
+import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT, SCHEMA_VERSION } from '../types'
 import { buildSeedData, rebuildForToday } from '../data/seed'
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
@@ -27,7 +27,14 @@ const BACKUP_KEY = 'beonemirae-ops:v3:backup-before-schema2'
 //    누락된 필드(officeStock/events/requestOverrides, Schedule.origin/eventId 등)만 채웁니다.
 //  · 멱등(idempotent): 이미 v2 형태면 그대로 통과. 최초 1회만 백업 생성.
 // ─────────────────────────────────────────────────────────────────────────────
-type LegacyData = AppData & { officeStock?: unknown; events?: unknown; requestOverrides?: unknown; notes?: unknown }
+type LegacyData = AppData & {
+  officeStock?: unknown
+  events?: unknown
+  requestOverrides?: unknown
+  notes?: unknown
+  baseline?: unknown
+  experiment?: unknown
+}
 
 function needsMigration(d: LegacyData): boolean {
   return (
@@ -35,6 +42,8 @@ function needsMigration(d: LegacyData): boolean {
     !Array.isArray(d.events) ||
     !Array.isArray(d.requestOverrides) ||
     !Array.isArray(d.notes) ||
+    !d.baseline ||
+    !d.experiment ||
     d.schedules.some((s) => s.origin === undefined)
   )
 }
@@ -67,6 +76,9 @@ export function migrateToV2(parsed: LegacyData): AppData {
       : [],
     // v3: 현장 메모 — 기존 저장 데이터에는 없으므로 빈 배열로 채웁니다.
     notes: Array.isArray(parsed.notes) ? (parsed.notes as AppData['notes']) : [],
+    // v4: 성과측정 — 기준값/실증설정이 없으면 '미입력' 상태로 채웁니다(임의 값 생성 금지).
+    baseline: (parsed.baseline as AppData['baseline']) ?? { ...EMPTY_BASELINE },
+    experiment: (parsed.experiment as AppData['experiment']) ?? { ...EMPTY_EXPERIMENT },
   }
   try {
     localStorage.setItem(SCHEMA_VERSION_KEY, String(SCHEMA_VERSION))
@@ -97,6 +109,9 @@ export function rebuildPreserving(prev: AppData): AppData {
     requestOverrides: [],
     // 현장 메모는 병원별 정보라 날짜와 무관하게 보존합니다.
     notes: prev.notes ?? [],
+    // 성과측정 기준값·실증설정은 사용자 설정이므로 날짜 재생성과 무관하게 보존합니다.
+    baseline: prev.baseline ?? { ...EMPTY_BASELINE },
+    experiment: prev.experiment ?? { ...EMPTY_EXPERIMENT },
   }
 }
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FileBarChart, Search, ChevronRight, Building2, Scale, Users, TrendingUp } from 'lucide-react'
+import { FileBarChart, Search, ChevronRight, Building2, Scale, Users, TrendingUp, Gauge } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, KpiCard, EmptyState } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
@@ -55,9 +55,9 @@ export function Reports() {
         title="운영 리포트"
         subtitle={`${month.replace('-', '년 ')}월 · 병원별 월간 운영 리포트`}
         action={
-          <span className="hidden shrink-0 rounded-full bg-white px-3.5 py-2 text-[0.85rem] font-bold text-navy-500 shadow-card sm:inline-flex">
-            자동 집계 · 수거 입력 데이터 기반
-          </span>
+          <button onClick={() => navigate('/performance')} className="btn-ghost shrink-0">
+            <Gauge size={17} strokeWidth={2.4} /> AX 도입 성과
+          </button>
         }
       />
 

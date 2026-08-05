@@ -55,6 +55,8 @@ export interface CollectionCompletionInput {
   role: EventRole
   screen: string
   demoSessionId?: string | null // 시연 세션 중 입력이면 세션 id (없으면 실사용 field 로 기록)
+  // 성과측정용: 입력 화면 진입 → 저장까지의 실제 경과시간(ms). 미측정이면 생략.
+  inputDurationMs?: number | null
 }
 
 export interface CommandResult {
@@ -259,6 +261,7 @@ export function applyCollectionCompletion(data: AppData, input: CollectionComple
     reverted: false,
     revertedAt: null,
     demoSessionId: input.demoSessionId ?? null,
+    inputDurationMs: input.inputDurationMs ?? null,
   }
 
   const nextData: AppData = {

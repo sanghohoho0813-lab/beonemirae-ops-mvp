@@ -168,7 +168,19 @@ export interface CollectionEvent {
   reverted: boolean // 취소됨 여부 (기록은 유지)
   revertedAt?: string | null
   demoSessionId?: string | null // 시연 세션 중 생성된 기록이면 세션 id (초기화 대상 구분)
+  // ── v4: 성과측정용 시스템 측정값 ──
+  // 수거 입력 화면 진입 → 저장 버튼까지의 실제 경과시간(ms).
+  // 화면을 켜둔 채 방치한 경우 등 왜곡이 있을 수 있어 '시스템 측정값'으로만 표시하고,
+  // 집계 시 이상치(INPUT_SESSION_MAX_MS 초과)는 제외합니다.
+  inputDurationMs?: number | null
 }
+
+/** 입력 처리시간 집계 유효 범위 — 이 범위를 벗어난 표본은 왜곡으로 보고 제외합니다.
+ *  · 상한 30분: 입력 화면을 켜둔 채 방치한 경우
+ *  · 하한 20초: 실제 현장 입력(거래처·구분·수거량·용기·차량·인계 선택)이 물리적으로
+ *    불가능한 시간. 테스트 입력이나 오조작으로 보고 제외합니다. */
+export const INPUT_SESSION_MAX_MS = 30 * 60 * 1000
+export const INPUT_SESSION_MIN_MS = 20 * 1000
 
 // ── 현장 메모 / 특이사항 ─────────────────────────────────────────────────────
 // 현장에서 수기로 적거나 담당자가 기억하던 병원별 유의사항을 한 번 기록해두면
@@ -207,7 +219,63 @@ export interface AppData {
   demoSession?: DemoSession | null // 현재 시연 세션 (초기화 기준)
   // ── v3: 병원별 현장 메모 (없으면 마이그레이션에서 빈 배열로 채움) ──
   notes: SiteNote[]
+  // ── v4: AX 실증·성과측정 (없으면 마이그레이션에서 기본값으로 채움) ──
+  baseline: BaselineMetrics // 도입 전 기준값 (사용자 입력)
+  experiment: ExperimentConfig // 실증 기간 설정
 }
+
+// ── AX 실증 · 성과측정 (v4) ──────────────────────────────────────────────────
+// 정책자금·신용보증기금 심사에서 "도입 전 대비 얼마나 좋아졌는가"를 실제 데이터로
+// 제시하기 위한 구조입니다. 도입 전 값은 반드시 사용자가 입력하고(임의 생성 금지),
+// 도입 후 값은 실제 수거 입력 이벤트에서만 산출합니다.
+//
+// 서버 DB(Supabase) 이전을 염두에 두고 두 개의 평면 레코드로 분리했습니다.
+//  · baseline    → baseline_metrics 테이블 1행
+//  · experiment  → experiment_config 테이블 1행
+//  · 측정 원천    → CollectionEvent (이미 존재하는 감사기록)에 소요시간만 추가
+
+/** 기준값 출처 — 사용자가 직접 입력한 값인지, 시연용 예시값인지 구분합니다. */
+export type BaselineSource = 'user' | 'demo'
+
+/** 도입 전 업무 기준값 (모두 사용자 입력. 미입력은 null 로 두고 '기준값 입력 필요'로 표시) */
+export interface BaselineMetrics {
+  adminMinutesPerCollection: number | null // 수거 1건 처리 후 행정업무 소요시간 (분)
+  repeatEntriesPerCollection: number | null // 동일 정보 반복 입력 횟수 (회)
+  monthlyDocHours: number | null // 수거대장·명세 등 월간 문서 작성시간 (시간)
+  monthlyReworkCount: number | null // 월간 누락·재확인 발생 건수 (건)
+  dailyCapacity: number | null // 하루 평균 처리 건수 (건)
+  source: BaselineSource // 'user' = 직접 입력 / 'demo' = 시연용 예시값
+  updatedAt: string | null // ISO
+}
+
+/** 실증 설정 — 이 날짜 이후의 입력만 '도입 후' 성과로 집계합니다. */
+export interface ExperimentConfig {
+  startDate: string | null // YYYY-MM-DD (미설정이면 전체 기간)
+}
+
+/** 기준값 미입력 상태 — 시스템이 임의 값을 만들지 않음을 명시합니다. */
+export const EMPTY_BASELINE: BaselineMetrics = {
+  adminMinutesPerCollection: null,
+  repeatEntriesPerCollection: null,
+  monthlyDocHours: null,
+  monthlyReworkCount: null,
+  dailyCapacity: null,
+  source: 'user',
+  updatedAt: null,
+}
+
+/** 시연용 예시 기준값 — 사용자가 버튼으로 명시적으로 채울 때만 사용 (source='demo') */
+export const DEMO_BASELINE: BaselineMetrics = {
+  adminMinutesPerCollection: 18,
+  repeatEntriesPerCollection: 5,
+  monthlyDocHours: 12,
+  monthlyReworkCount: 8,
+  dailyCapacity: 9,
+  source: 'demo',
+  updatedAt: null,
+}
+
+export const EMPTY_EXPERIMENT: ExperimentConfig = { startDate: null }
 
 /** 저장 스키마 버전 (마이그레이션 판단용) */
 export const SCHEMA_VERSION = 2

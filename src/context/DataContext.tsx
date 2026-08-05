@@ -15,6 +15,7 @@ import type {
   Payment,
   Schedule,
   SiteNote,
+  BaselineMetrics,
 } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 import {
@@ -71,6 +72,9 @@ interface DataContextValue {
   // 거래처 데이터 세트 (0=실제 5곳, 10/20/30=실제+시연)
   clientSet: ClientSetSize
   setClientSet: (demoCount: ClientSetSize) => void
+  // AX 실증·성과측정 (v4)
+  setBaseline: (patch: Partial<BaselineMetrics>) => void // 도입 전 기준값 (사용자 입력)
+  setExperimentStart: (date: string | null) => void // 실증 시작일
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -199,6 +203,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   // ── 시연 안정화 ─────────────────────────────────────────────────────────
+  // ── AX 실증·성과측정 ────────────────────────────────────────────────────
+  // 기준값은 사용자가 입력한 값만 저장합니다(시스템이 임의 값을 만들지 않음).
+  const setBaseline = useCallback((patch: Partial<BaselineMetrics>) => {
+    setData((d) => ({
+      ...d,
+      baseline: { ...d.baseline, ...patch, updatedAt: new Date().toISOString() },
+    }))
+  }, [])
+
+  const setExperimentStart = useCallback((date: string | null) => {
+    setData((d) => ({ ...d, experiment: { ...d.experiment, startDate: date } }))
+  }, [])
+
   const resetDemo = useCallback(() => setData((d) => resetDemoSession(d)), [])
   const startDemo = useCallback(() => setData((d) => startDemoSession(d)), [])
   const restoreToday = useCallback(() => setData((d) => restoreTodayOnly(d)), [])
@@ -286,6 +303,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       replaceAll,
       clientSet,
       setClientSet,
+      setBaseline,
+      setExperimentStart,
     }),
     [
       data,
@@ -315,6 +334,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       replaceAll,
       clientSet,
       setClientSet,
+      setBaseline,
+      setExperimentStart,
     ],
   )
 

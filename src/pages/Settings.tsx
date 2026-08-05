@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Type,
   Building2,
@@ -10,9 +11,12 @@ import {
   Database,
   CheckCircle2,
   AlertTriangle,
+  Gauge,
+  ArrowRight,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
 import { PageShell } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { FontSizeControl } from '../components/FontSizeControl'
@@ -68,8 +72,29 @@ function SettingCard({
   )
 }
 
+/** 도입 전 기준값 5종 — 라벨/단위/설명은 정책자금 심사 설명과 동일한 문구를 씁니다. */
+const BASELINE_FIELDS: { key: keyof Omit<BaselineMetrics, 'source' | 'updatedAt'>; label: string; unit: string; hint: string }[] = [
+  { key: 'adminMinutesPerCollection', label: '수거 1건 후 행정업무', unit: '분', hint: '수거 1건을 마친 뒤 장부·문서 정리에 걸리던 평균 시간' },
+  { key: 'repeatEntriesPerCollection', label: '동일 정보 반복 입력', unit: '회', hint: '같은 수거 정보를 여러 장부·파일에 다시 적던 횟수' },
+  { key: 'monthlyDocHours', label: '월간 문서 작성시간', unit: '시간', hint: '수거대장·월간 명세 등 문서 정리에 쓰던 월 합계 시간' },
+  { key: 'monthlyReworkCount', label: '월간 누락·재확인', unit: '건', hint: '기록 누락·재확인·재작성이 발생하던 월 건수' },
+  { key: 'dailyCapacity', label: '하루 평균 처리건수', unit: '건', hint: '하루에 처리하던 수거 건수' },
+]
+
 export function Settings() {
-  const { data, clientSet, setClientSet, replaceAll, reset, resetDemo, restoreToday, startDemo } = useData()
+  const {
+    data,
+    clientSet,
+    setClientSet,
+    replaceAll,
+    reset,
+    resetDemo,
+    restoreToday,
+    startDemo,
+    setBaseline,
+    setExperimentStart,
+  } = useData()
+  const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [confirmKind, setConfirmKind] = useState<null | 'demo' | 'reset'>(null)
@@ -117,8 +142,93 @@ export function Settings() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start xl:gap-5">
-        {/* ── 좌: 화면 표시 ── */}
+        {/* ── 좌: 성과측정 · 화면 표시 ── */}
         <div className="space-y-4 xl:space-y-5">
+          {/* AX 실증 — 도입 전 기준값 (반드시 사용자가 입력. 시스템이 임의 생성하지 않음) */}
+          <section id="baseline" className="card p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+                <Gauge size={22} strokeWidth={2.2} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="t-card text-navy-900">AX 실증 · 도입 전 기준값</h2>
+                <p className="t-muted mt-1">
+                  이 시스템을 쓰기 전의 실제 업무 값을 입력하세요. 도입 후 성과와 비교하는 기준이 됩니다.
+                </p>
+              </div>
+            </div>
+
+            {/* 실증 시작일 */}
+            <div className="mt-4 rounded-2xl bg-navy-50 p-4">
+              <label className="field-label" htmlFor="exp-start">
+                실증 시작일
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  id="exp-start"
+                  type="date"
+                  className="field-input max-w-[14rem]"
+                  value={data.experiment.startDate ?? ''}
+                  onChange={(e) => setExperimentStart(e.target.value || null)}
+                />
+                {data.experiment.startDate && (
+                  <button className="btn-ghost" onClick={() => setExperimentStart(null)}>
+                    해제
+                  </button>
+                )}
+              </div>
+              <p className="t-muted mt-2">이 날짜 이후의 입력만 「도입 후 성과」로 집계합니다. 미설정 시 전체 기간을 집계합니다.</p>
+            </div>
+
+            {/* 기준값 5종 */}
+            <div className="mt-4 space-y-3">
+              {BASELINE_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label className="field-label" htmlFor={`bl-${f.key}`}>
+                    {f.label} <span className="font-medium text-navy-400">({f.unit})</span>
+                  </label>
+                  <input
+                    id={`bl-${f.key}`}
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    inputMode="decimal"
+                    className="field-input"
+                    placeholder="미입력"
+                    value={data.baseline[f.key] ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      setBaseline({ [f.key]: raw === '' ? null : Number(raw), source: 'user' } as Partial<BaselineMetrics>)
+                    }}
+                  />
+                  <p className="t-muted mt-1.5">{f.hint}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                className={`pill ${data.baseline.source === 'demo' ? 'bg-amber-50 text-amber-700' : 'bg-teal-50 text-teal-700'}`}
+              >
+                {data.baseline.source === 'demo' ? '시연 기준값' : '사용자 입력값'}
+              </span>
+              <button className="btn-ghost" onClick={() => setBaseline({ ...DEMO_BASELINE })}>
+                시연용 예시값 채우기
+              </button>
+              <button className="btn-ghost" onClick={() => setBaseline({ ...EMPTY_BASELINE })}>
+                기준값 비우기
+              </button>
+            </div>
+            <p className="t-muted mt-2.5">
+              「시연용 예시값」을 쓰면 출처가 <b>시연 기준값</b>으로 표시됩니다. 심사 제출 시에는 실제 업무 값을 직접
+              입력해 주세요.
+            </p>
+
+            <button className="btn-primary mt-4 w-full" onClick={() => navigate('/performance')}>
+              AX 도입 성과 보기 <ArrowRight size={17} strokeWidth={2.4} />
+            </button>
+          </section>
+
           <SettingCard
             icon={Type}
             title="화면 글자 크기"

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, Gauge, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -151,7 +151,15 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
 
       {/* 설정 — 글자 크기 · 데이터 백업 · 시연 데이터 관리 */}
       <section>
-        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">설정</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">성과 · 설정</h3>
+        <Tappable as="div" onClick={() => go('/performance')} className="card mb-2.5 flex cursor-pointer items-center gap-3 p-4">
+          <IconChip icon={Gauge} tone="teal" />
+          <div className="min-w-0">
+            <p className="font-bold text-navy-900">AX 도입 성과</p>
+            <p className="text-[0.85rem] text-navy-400">도입 전 → 도입 후 업무 효율 비교</p>
+          </div>
+          <ChevronRight size={18} className="ml-auto text-navy-300" />
+        </Tappable>
         <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
           <IconChip icon={SlidersHorizontal} tone="teal" />
           <div className="min-w-0">

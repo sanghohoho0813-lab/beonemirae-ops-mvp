@@ -22,6 +22,7 @@ import { AutoLinkFlow } from '../components/AutoLinkFlow'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
+import { AxGlanceCard } from '../components/AxGlance'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
@@ -154,6 +155,9 @@ export function Dashboard() {
         <span className="t-label whitespace-nowrap text-navy-400">운영 참고</span>
         <span className="h-px flex-1 bg-navy-200" />
       </div>
+
+      {/* AX 실증 현황 — 핵심 3개보다 작게, 성과 화면 진입점 */}
+      <AxGlanceCard data={data} />
 
       {/* ── 오늘 챙길 일 (상위 3건) + 진행 현황 ── */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">

@@ -12,7 +12,7 @@ import type {
   Vehicle,
   WasteType,
 } from '../types'
-import { DEFAULT_OFFICE_STOCK } from '../types'
+import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 
 // 완료 일정의 용기별 배출 수량을 결정적으로 산출 (시드 시연용)
 function seedContainers(wasteType: WasteType, amount: number, seed: number): ContainerBreakdown {
@@ -369,6 +369,9 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
     events: [],
     requestOverrides: [],
     notes: buildNotes(clients, base),
+    // v4: 성과측정 — 기준값은 사용자가 직접 입력해야 하므로 비워 둡니다(임의 생성 금지).
+    baseline: { ...EMPTY_BASELINE },
+    experiment: { ...EMPTY_EXPERIMENT },
   }
 }
 
@@ -388,5 +391,7 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
     events: [],
     requestOverrides: [],
     notes: [],
+    baseline: { ...EMPTY_BASELINE },
+    experiment: { ...EMPTY_EXPERIMENT },
   }
 }

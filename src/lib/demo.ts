@@ -1,5 +1,5 @@
 import type { AppData } from '../types'
-import { DEFAULT_OFFICE_STOCK } from '../types'
+import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { rebuildForToday } from '../data/seed'
 import { newDemoSession } from './storage'
 import { today } from './format'
@@ -39,6 +39,10 @@ export function resetDemoSession(data: AppData): AppData {
     officeStock: { ...DEFAULT_OFFICE_STOCK },
     // 세션 자체는 유지 (이후 입력도 계속 시연 기록으로 태깅)
     demoSession: data.demoSession ?? newDemoSession(),
+    // 성과측정 기준값·실증 시작일은 '설정'이므로 시연 초기화 대상이 아닙니다.
+    // (시연 중 입력된 이벤트는 함께 제거되므로 '도입 후 측정값'만 초기화됩니다.)
+    baseline: data.baseline ?? { ...EMPTY_BASELINE },
+    experiment: data.experiment ?? { ...EMPTY_EXPERIMENT },
   }
 }
 

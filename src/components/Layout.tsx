@@ -86,7 +86,7 @@ const BOTTOM_NAV: NavItem[] = [
 
 const MORE_PATHS = [
   '/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
-  '/presentation', '/history', '/roadmap', '/reports', '/settings',
+  '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
 ]
 
 // ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────

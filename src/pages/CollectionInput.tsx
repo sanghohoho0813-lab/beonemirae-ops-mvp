@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -112,6 +112,8 @@ function Section({ n, title, desc, children }: { n: number; title: string; desc?
 export function CollectionInput() {
   const { data, completeCollection, revertCollection, notesFor } = useData()
   const [params] = useSearchParams()
+  // 성과측정: 이 화면에 들어온 시각. 저장 시 경과시간을 '시스템 측정값'으로 남깁니다.
+  const sessionStartRef = useRef<number>(Date.now())
 
   // 오늘 미완료 일정 (선택 대상)
   const todayPending = useMemo(
@@ -198,6 +200,8 @@ export function CollectionInput() {
       memo,
       role: '현장 담당자',
       screen: '수거 입력',
+      // 성과측정(시스템 측정값): 이 화면 진입 → 저장까지의 실제 경과시간
+      inputDurationMs: Date.now() - sessionStartRef.current,
     }
   }
 
