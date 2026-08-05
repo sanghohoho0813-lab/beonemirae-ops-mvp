@@ -81,7 +81,7 @@
 
   /* 텍스트 위계 -------------------------------------------------------- */
   .t-caption {
-    @apply text-[0.8125rem] font-medium leading-snug text-navy-400;
+    @apply text-[0.875rem] font-medium leading-snug text-navy-400;
   }
   .t-sub {
     @apply text-sm text-navy-400;
@@ -89,6 +89,6 @@
 
   /* pill 형태 뱃지 공통 */
   .pill {
-    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold;
+    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 text-[0.8125rem] font-bold;
   }
 }

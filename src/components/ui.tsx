@@ -21,7 +21,7 @@ export function PageShell({ children, className = '' }: { children: ReactNode; c
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2 px-1">
-      <h2 className="min-w-0 break-keep text-[1.0625rem] font-extrabold leading-snug tracking-tight text-navy-800 sm:text-[1.1875rem]">
+      <h2 className="min-w-0 break-keep text-[1.1875rem] font-extrabold leading-snug tracking-tight text-navy-800 sm:text-[1.375rem]">
         {children}
       </h2>
       {action && <div className="shrink-0">{action}</div>}
@@ -246,11 +246,15 @@ export function FeatureCard({
         <Icon size={19} strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="break-keep text-[0.9375rem] font-bold leading-snug text-navy-900">{title}</p>
-        <p className="truncate text-xs text-navy-400">{desc}</p>
+        <p className="break-keep text-[1.0625rem] font-bold leading-snug text-navy-900">{title}</p>
+        <p className="break-keep text-[0.8125rem] leading-snug text-navy-400">{desc}</p>
       </div>
-      {badge && <span className="shrink-0 rounded-full bg-navy-50 px-2 py-0.5 text-xs font-bold text-navy-500">{badge}</span>}
-      <ChevronRight size={16} className="shrink-0 text-navy-300" />
+      {badge && (
+        <span className="shrink-0 rounded-full bg-navy-50 px-2.5 py-1 text-[0.8125rem] font-bold text-navy-500">
+          {badge}
+        </span>
+      )}
+      <ChevronRight size={18} className="shrink-0 text-navy-300" />
     </motion.button>
   )
 }
@@ -337,22 +341,25 @@ export function KpiCard({
       transition={{ duration: 0.15, ease: EASE }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      className={`card flex items-start gap-3 p-4 sm:p-5 ${
+      className={`card p-4 sm:p-5 ${
         onClick ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-lg' : ''
       }`}
     >
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${kpiToneStyle[tone]}`}>
-        <Icon size={21} strokeWidth={2.2} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="break-keep text-[0.8125rem] font-semibold leading-snug text-navy-400">{label}</p>
-        <p className="mt-1 whitespace-nowrap text-[1.5rem] font-extrabold leading-none tracking-tight text-navy-900">
-          {value}
-          {unit && <span className="ml-0.5 text-[0.75em] font-bold text-navy-400">{unit}</span>}
-        </p>
-        {delta && <p className={`mt-1.5 break-keep text-xs font-bold leading-snug ${deltaClass}`}>{delta}</p>}
-        {hint && !delta && <p className="mt-1.5 break-keep text-xs font-medium leading-snug text-navy-400">{hint}</p>}
+      {/* 아이콘 + 라벨을 한 줄로, 숫자는 카드 전체 폭을 쓰게 하여 잘림을 방지 */}
+      <div className="flex items-center gap-2.5">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${kpiToneStyle[tone]}`}>
+          <Icon size={20} strokeWidth={2.2} />
+        </span>
+        <p className="min-w-0 break-keep text-[0.9375rem] font-bold leading-snug text-navy-500">{label}</p>
       </div>
+      <p className="mt-3 break-keep text-[1.75rem] font-extrabold leading-none tracking-tight text-navy-900 sm:text-[2rem]">
+        {value}
+        {unit && <span className="ml-0.5 text-[0.7em] font-bold text-navy-400">{unit}</span>}
+      </p>
+      {delta && <p className={`mt-2 break-keep text-[0.8125rem] font-bold leading-snug ${deltaClass}`}>{delta}</p>}
+      {hint && !delta && (
+        <p className="mt-2 break-keep text-[0.8125rem] font-medium leading-snug text-navy-400">{hint}</p>
+      )}
     </motion.div>
   )
 }
@@ -393,13 +400,13 @@ export function ProgressStat({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="truncate text-[0.875rem] font-bold text-navy-700">{label}</p>
-          <p className={`shrink-0 text-[0.9375rem] font-extrabold ${textTone}`}>{pct}%</p>
+          <p className="min-w-0 break-keep text-[1rem] font-bold leading-snug text-navy-700">{label}</p>
+          <p className={`shrink-0 text-[1.125rem] font-extrabold ${textTone}`}>{pct}%</p>
         </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-navy-100">
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-navy-100">
           <div className={`h-full rounded-full ${barTone}`} style={{ width: `${pct}%` }} />
         </div>
-        {detail && <p className="mt-1 text-right text-[0.6875rem] font-medium text-navy-400">{detail}</p>}
+        {detail && <p className="mt-1.5 text-right text-[0.8125rem] font-medium text-navy-400">{detail}</p>}
       </div>
     </div>
   )

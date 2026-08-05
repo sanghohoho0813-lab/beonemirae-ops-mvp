@@ -62,7 +62,7 @@ export function Reports() {
       />
 
       {/* 이번 달 리포트 요약 */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <KpiCard icon={Scale} label="이번 달 총 수거량" value={weight(totalKg)} tone="teal" />
         <KpiCard icon={FileBarChart} label="수거 횟수" value={totalVisits} unit="회" tone="navy" />
         <KpiCard icon={Users} label="리포트 발행 대상" value={activeClients} unit="곳" tone="navy" hint={`전체 ${reports.length}곳`} />
@@ -75,12 +75,12 @@ export function Reports() {
           <SectionTitle>거래처 선택</SectionTitle>
           <div className="card p-3">
             <div className="relative">
-              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" />
+              <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="병원명 검색"
-                className="w-full rounded-2xl border-0 bg-navy-50 py-2.5 pl-10 pr-3 text-sm font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400"
+                className="w-full rounded-2xl border-0 bg-navy-50 py-3 pl-11 pr-3 text-[1rem] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400"
               />
             </div>
             <div className="mt-2 max-h-[420px] space-y-1 overflow-y-auto lg:max-h-[560px]">
@@ -94,30 +94,29 @@ export function Reports() {
                       active ? 'bg-teal-500 text-white' : 'hover:bg-navy-50'
                     }`}
                   >
-                    <Building2 size={16} className={`shrink-0 ${active ? 'text-white/80' : 'text-navy-300'}`} />
+                    <Building2 size={18} className={`shrink-0 ${active ? 'text-white/80' : 'text-navy-300'}`} />
                     <span className="min-w-0 flex-1">
-                      <span className={`block truncate text-sm font-bold ${active ? 'text-white' : 'text-navy-800'}`}>
+                      <span
+                        className={`block break-keep text-[1rem] font-bold leading-snug ${
+                          active ? 'text-white' : 'text-navy-800'
+                        }`}
+                      >
                         {r.client.name}
                       </span>
-                      <span className={`block truncate text-[0.6875rem] ${active ? 'text-white/75' : 'text-navy-400'}`}>
+                      <span
+                        className={`mt-0.5 block break-keep text-[0.875rem] leading-snug ${
+                          active ? 'text-white/75' : 'text-navy-400'
+                        }`}
+                      >
                         {weight(r.totalKg)} · {r.visits}회
                       </span>
                     </span>
-                    {r.changePct >= 15 && (
-                      <span
-                        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[0.5625rem] font-bold ${
-                          active ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
-                        }`}
-                      >
-                        +{r.changePct}%
-                      </span>
-                    )}
-                    <ChevronRight size={15} className={`shrink-0 ${active ? 'text-white/70' : 'text-navy-300'}`} />
+                    <ChevronRight size={17} className={`shrink-0 ${active ? 'text-white/70' : 'text-navy-300'}`} />
                   </button>
                 )
               })}
               {filtered.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-navy-400">검색 결과가 없습니다.</p>
+                <p className="px-3 py-6 text-center text-[1rem] text-navy-400">검색 결과가 없습니다.</p>
               )}
             </div>
           </div>

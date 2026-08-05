@@ -139,7 +139,7 @@ export function ClientDetail() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-xl font-extrabold text-navy-900">{client.name}</h1>
+              <h1 className="min-w-0 break-keep text-[1.625rem] font-extrabold leading-tight text-navy-900">{client.name}</h1>
               <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.6875rem] font-bold text-navy-500">{client.type}</span>
               <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[0.625rem] font-bold ${client.isDemoGenerated ? 'bg-navy-100 text-navy-500' : 'bg-teal-50 text-teal-600'}`}>
                 {client.isDemoGenerated ? '시연용' : '주요거래처'}
@@ -215,15 +215,15 @@ export function ClientDetail() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-[0.9375rem] font-bold text-navy-900">{a.title}</p>
+                        <p className="break-keep text-[1.125rem] font-extrabold leading-snug text-navy-900">{a.title}</p>
                         {a.estValue > 0 && (
                           <span className="pill bg-teal-50 text-teal-700">예상 +{wonShort(a.estValue)}</span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-sm leading-snug text-navy-500">{a.reason}</p>
+                      <p className="mt-1 break-keep text-[1rem] leading-snug text-navy-500">{a.reason}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {a.metrics.map((m) => (
-                          <span key={m.label} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">
+                          <span key={m.label} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.875rem] font-semibold text-navy-600">
                             {m.label} <span className="font-extrabold text-navy-800">{m.value}</span>
                           </span>
                         ))}
@@ -232,7 +232,7 @@ export function ClientDetail() {
                   </div>
                   <div className="mt-2.5 flex flex-wrap gap-2 pl-12">
                     <button
-                      className="pressable rounded-xl bg-navy-900 px-3.5 py-2 text-[0.8125rem] font-bold text-white transition hover:bg-navy-800"
+                      className="pressable rounded-xl bg-navy-900 px-4 py-2.5 text-[0.9375rem] font-bold text-white transition hover:bg-navy-800"
                       onClick={() =>
                         navigate(
                           a.kind === '소모품공급'
@@ -246,7 +246,7 @@ export function ClientDetail() {
                       {a.cta}
                     </button>
                     <button
-                      className="rounded-xl bg-navy-50 px-3.5 py-2 text-[0.8125rem] font-bold text-navy-600 transition hover:bg-navy-100"
+                      className="rounded-xl bg-navy-50 px-4 py-2.5 text-[0.9375rem] font-bold text-navy-600 transition hover:bg-navy-100"
                       onClick={() => setTab('report')}
                     >
                       리포트에 포함
@@ -276,7 +276,7 @@ export function ClientDetail() {
             <p className="mt-3 text-sm font-semibold text-navy-700">필요 자료 체크리스트</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {[...new Set(['올바로 자료', ...inspection.needs, '전용 용기', '표시라벨'])].map((n) => (
-                <span key={n} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">{n}</span>
+                <span key={n} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.875rem] font-semibold text-navy-600">{n}</span>
               ))}
             </div>
             <p className="mt-3 rounded-xl bg-amber-50/70 px-3.5 py-2.5 text-xs leading-snug text-amber-700">
@@ -293,7 +293,7 @@ export function ClientDetail() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2.5 text-[1rem] font-bold transition ${
               tab === t.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
             }`}
           >
