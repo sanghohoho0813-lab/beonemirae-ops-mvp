@@ -25,6 +25,7 @@ import {
   type MetricRow,
   type PeriodPreset,
 } from '../lib/performance'
+import { SalesFunnelPanel } from '../components/SalesFunnel'
 import { today } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -304,6 +305,14 @@ export function Performance() {
         <AutoLinkCard auto={summary.autoLink} count={summary.collectionCount} />
       </section>
 
+      {/* ── 매출 확장 성과 ── */}
+      <section id="sales">
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">담당자 기록 기준</span>}>
+          매출 확장 성과 — 추천 → 제안 → 수락 → 실제 매출
+        </SectionTitle>
+        <SalesFunnelPanel data={data} />
+      </section>
+
       {/* ── 심사용 요약 ── */}
       <section>
         <SectionTitle>정책자금 심사용 요약</SectionTitle>
@@ -317,6 +326,11 @@ export function Performance() {
             <p className="t-body leading-relaxed text-navy-700">
               <Zap size={17} className="mr-1.5 inline -translate-y-px text-teal-500" strokeWidth={2.6} />
               실증 데이터를 축적하여 업무시간·반복입력·누락건수·처리량 개선 효과를 정량적으로 검증합니다.
+            </p>
+            <p className="t-body leading-relaxed text-navy-700">
+              <Zap size={17} className="mr-1.5 inline -translate-y-px text-teal-500" strokeWidth={2.6} />
+              축적된 수거·자재·청구 데이터로 추가 수거·소모품·교육 필요를 <b>먼저 추천</b>하고, 실제 제안·수락·추가
+              매출까지 기록해 데이터 기반 영업활동의 성과를 검증합니다.
             </p>
             <p className="t-body leading-relaxed text-navy-700">
               <Zap size={17} className="mr-1.5 inline -translate-y-px text-teal-500" strokeWidth={2.6} />

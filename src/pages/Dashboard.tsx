@@ -23,6 +23,7 @@ import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
 import { AxGlanceCard } from '../components/AxGlance'
+import { SalesFunnelCard } from '../components/SalesFunnel'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
@@ -158,6 +159,9 @@ export function Dashboard() {
 
       {/* AX 실증 현황 — 핵심 3개보다 작게, 성과 화면 진입점 */}
       <AxGlanceCard data={data} />
+
+      {/* 매출 전환 현황 — 추천이 실제 제안·수락·매출로 이어진 정도 */}
+      <SalesFunnelCard data={data} />
 
       {/* ── 오늘 챙길 일 (상위 3건) + 진행 현황 ── */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">

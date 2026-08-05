@@ -372,6 +372,8 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
     // v4: 성과측정 — 기준값은 사용자가 직접 입력해야 하므로 비워 둡니다(임의 생성 금지).
     baseline: { ...EMPTY_BASELINE },
     experiment: { ...EMPTY_EXPERIMENT },
+    // v5: 매출 전환 — 영업 진행상태는 사용자가 기록해야 생깁니다(임의 생성 금지).
+    leads: [],
   }
 }
 
@@ -393,5 +395,7 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
     notes: [],
     baseline: { ...EMPTY_BASELINE },
     experiment: { ...EMPTY_EXPERIMENT },
+    // v5: 매출 전환 — 영업 진행상태는 사용자가 기록해야 생깁니다(임의 생성 금지).
+    leads: [],
   }
 }

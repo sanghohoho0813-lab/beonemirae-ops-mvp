@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { Package, GraduationCap, AlertCircle, ChevronRight, Truck, type LucideIcon } from 'lucide-react'
 import type { NextAction, NextActionKind, OpportunitySummary } from '../lib/insights'
+import { useData } from '../context/DataContext'
+import { stageOf } from '../lib/sales'
+import { STAGE_STYLE } from './LeadStage'
 import { wonShort } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,9 +23,12 @@ export const actionMeta: Record<NextActionKind, { icon: LucideIcon; chip: string
 /** 추천 1건 — 거래처명 / 추천 행동 / 근거 1줄 / 실행 버튼 */
 export function ActionRow({ action, onAct }: { action: NextAction; onAct?: () => void }) {
   const navigate = useNavigate()
+  const { data } = useData()
   const meta = actionMeta[action.kind]
   const Icon = meta.icon
   const act = () => (onAct ? onAct() : navigate(`/clients/${action.clientId}`))
+  // 담당자가 기록한 영업 진행상태 (기록 전에는 '추천')
+  const stage = stageOf(data, action)
 
   return (
     <div className="px-4 py-4">
@@ -31,7 +37,10 @@ export function ActionRow({ action, onAct }: { action: NextAction; onAct?: () =>
           <Icon size={21} strokeWidth={2.3} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="break-keep text-[1.0625rem] font-bold leading-snug text-navy-900">{action.clientName}</p>
+          <p className="break-keep text-[1.0625rem] font-bold leading-snug text-navy-900">
+            {action.clientName}
+            {stage !== '추천' && <span className={`pill ml-1.5 align-middle ${STAGE_STYLE[stage]}`}>{stage}</span>}
+          </p>
           <p className="mt-1 break-keep text-[1.125rem] font-extrabold leading-snug text-navy-800">{action.title}</p>
           <p className="mt-1.5 break-keep text-[0.9375rem] leading-snug text-navy-500">
             {action.reason}

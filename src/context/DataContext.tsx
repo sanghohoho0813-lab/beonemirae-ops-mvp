@@ -16,6 +16,8 @@ import type {
   Schedule,
   SiteNote,
   BaselineMetrics,
+  LeadStage,
+  SalesLead,
 } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 import {
@@ -25,6 +27,9 @@ import {
   type CommandResult,
 } from '../lib/collection'
 import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
+import { leadKey } from '../lib/sales'
+import type { NextAction } from '../lib/insights'
+import { thisMonth } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전역 데이터 컨텍스트
@@ -75,6 +80,9 @@ interface DataContextValue {
   // AX 실증·성과측정 (v4)
   setBaseline: (patch: Partial<BaselineMetrics>) => void // 도입 전 기준값 (사용자 입력)
   setExperimentStart: (date: string | null) => void // 실증 시작일
+  // 매출 전환 실증 (v5) — 추천 → 제안 → 수락 → 실제 매출
+  setLeadStage: (action: NextAction, stage: LeadStage, month?: string) => void
+  setLeadRevenue: (leadId: string, amount: number | null) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -216,6 +224,69 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData((d) => ({ ...d, experiment: { ...d.experiment, startDate: date } }))
   }, [])
 
+  // ── 매출 전환 실증 ──────────────────────────────────────────────────────
+  // 추천은 파생값이라 저장하지 않고, 담당자가 상태를 기록할 때만 lead 를 만듭니다.
+  const setLeadStage = useCallback((action: NextAction, stage: LeadStage, month = thisMonth()) => {
+    setData((d) => {
+      const key = leadKey(action.clientId, action.kind, month)
+      const at = new Date().toISOString()
+      const demoSessionId = d.demoSession?.active ? d.demoSession.id : null
+      const existing = (d.leads ?? []).find((l) => l.key === key)
+      if (existing) {
+        if (existing.stage === stage) return d
+        // 수락에서 벗어나면 입력된 실제 매출을 함께 비웁니다.
+        // (수락이 아닌 건에 매출이 남아 있으면 집계에서 보이지 않는 유령 값이 됩니다.)
+        const leavingAccepted = existing.stage === '수락' && stage !== '수락'
+        return {
+          ...d,
+          leads: d.leads.map((l) =>
+            l.key === key
+              ? {
+                  ...l,
+                  stage,
+                  history: [...l.history, { stage, at }],
+                  actualRevenue: leavingAccepted ? null : l.actualRevenue,
+                  actualRevenueAt: leavingAccepted ? null : l.actualRevenueAt,
+                }
+              : l,
+          ),
+        }
+      }
+      const lead: SalesLead = {
+        id: uid('lead'),
+        key,
+        clientId: action.clientId,
+        clientName: action.clientName,
+        kind: action.kind,
+        title: action.title,
+        month,
+        estValue: action.estValue,
+        stage,
+        actualRevenue: null,
+        actualRevenueAt: null,
+        history: [
+          { stage: '추천', at },
+          ...(stage === '추천' ? [] : [{ stage, at }]),
+        ],
+        createdAt: at,
+        demoSessionId,
+      }
+      return { ...d, leads: [...(d.leads ?? []), lead] }
+    })
+  }, [])
+
+  /** 실제 매출 입력 — null 이면 '미입력'으로 되돌립니다(0원과 구분). */
+  const setLeadRevenue = useCallback((leadId: string, amount: number | null) => {
+    setData((d) => ({
+      ...d,
+      leads: (d.leads ?? []).map((l) =>
+        l.id === leadId
+          ? { ...l, actualRevenue: amount, actualRevenueAt: amount == null ? null : new Date().toISOString() }
+          : l,
+      ),
+    }))
+  }, [])
+
   const resetDemo = useCallback(() => setData((d) => resetDemoSession(d)), [])
   const startDemo = useCallback(() => setData((d) => startDemoSession(d)), [])
   const restoreToday = useCallback(() => setData((d) => restoreTodayOnly(d)), [])
@@ -305,6 +376,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClientSet,
       setBaseline,
       setExperimentStart,
+      setLeadStage,
+      setLeadRevenue,
     }),
     [
       data,
@@ -336,6 +409,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClientSet,
       setBaseline,
       setExperimentStart,
+      setLeadStage,
+      setLeadRevenue,
     ],
   )
 

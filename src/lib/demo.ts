@@ -43,6 +43,8 @@ export function resetDemoSession(data: AppData): AppData {
     // (시연 중 입력된 이벤트는 함께 제거되므로 '도입 후 측정값'만 초기화됩니다.)
     baseline: data.baseline ?? { ...EMPTY_BASELINE },
     experiment: data.experiment ?? { ...EMPTY_EXPERIMENT },
+    // 영업 전환 기록: 시연 세션 중 기록한 건만 정리하고 실사용 기록은 보존합니다.
+    leads: (data.leads ?? []).filter((l) => !l.demoSessionId),
   }
 }
 

@@ -38,6 +38,8 @@ import {
 import { prettyDate, weight, won, wonShort } from '../lib/format'
 import { nextActionsFor, clientMonthlyReport } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
+import { LeadStageControl } from '../components/LeadStage'
+import { ClientLeadHistory } from '../components/LeadHistory'
 import { MonthlyReportView } from '../components/MonthlyReport'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import type { Client } from '../types'
@@ -256,6 +258,8 @@ export function ClientDetail() {
                       리포트에 포함
                     </button>
                   </div>
+                  {/* 영업 진행상태 — 추천 → 제안 → 수락 → 실제 매출 */}
+                  <LeadStageControl action={a} />
                 </div>
               )
             })}
@@ -266,6 +270,14 @@ export function ClientDetail() {
           </p>
         </section>
       )}
+
+      {/* 영업 전환 이력 — 추천 → 제안 → 수락 → 실제 매출 */}
+      <section>
+        <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">담당자 기록 기준</span>}>
+          영업 전환 이력
+        </SectionTitle>
+        <ClientLeadHistory data={data} clientId={client.id} />
+      </section>
 
       {/* 인증·실사 대응 (상시 노출) */}
       {inspection && (

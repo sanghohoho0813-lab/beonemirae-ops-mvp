@@ -222,6 +222,50 @@ export interface AppData {
   // ── v4: AX 실증·성과측정 (없으면 마이그레이션에서 기본값으로 채움) ──
   baseline: BaselineMetrics // 도입 전 기준값 (사용자 입력)
   experiment: ExperimentConfig // 실증 기간 설정
+  // ── v5: 매출 전환 실증 (추천 → 제안 → 수락 → 실제 매출) ──
+  leads: SalesLead[]
+}
+
+// ── 매출 전환 실증 (v5) ──────────────────────────────────────────────────────
+// 데이터 기반 추천이 실제 영업 행동과 매출로 이어졌는지 기록합니다.
+// 추천 자체는 파생값(nextActionsFor)이므로 저장하지 않고, '영업 진행상태'만
+// 안정 키(clientId::kind::month)로 붙여 둡니다.
+//
+// Supabase 이전 시 sales_leads 테이블 1행 = SalesLead 1건, history 는 JSONB
+// 또는 sales_lead_events 자식 테이블로 그대로 옮길 수 있는 형태입니다.
+
+/** 영업 진행상태 */
+export type LeadStage = '추천' | '제안' | '수락' | '보류' | '미전환'
+
+export const LEAD_STAGES: LeadStage[] = ['추천', '제안', '수락', '보류', '미전환']
+
+/** 상태 변경 이력 1건 */
+export interface LeadStageChange {
+  stage: LeadStage
+  at: string // ISO
+}
+
+export interface SalesLead {
+  id: string
+  /** 추천 식별 키 — `${clientId}::${kind}::${YYYY-MM}` (추천은 매달 재산출되므로 월 단위) */
+  key: string
+  clientId: string
+  clientName: string
+  /** 추천 유형 — NextActionKind 와 동일 문자열 */
+  kind: string
+  /** 추천 제목 (기록 시점 값) */
+  title: string
+  month: string // YYYY-MM
+  /** 추천 시점의 예상 매출(원). 실제 매출과 반드시 구분해 표시합니다. */
+  estValue: number
+  stage: LeadStage
+  /** 실제 매출(원) — 수락 건에만 입력. null = 아직 입력되지 않음(0원과 구분) */
+  actualRevenue: number | null
+  actualRevenueAt: string | null
+  history: LeadStageChange[]
+  createdAt: string
+  /** 시연 세션 중 생성된 기록이면 세션 id (시연용 표시 + 초기화 대상 구분) */
+  demoSessionId?: string | null
 }
 
 // ── AX 실증 · 성과측정 (v4) ──────────────────────────────────────────────────

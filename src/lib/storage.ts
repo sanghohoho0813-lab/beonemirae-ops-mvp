@@ -34,6 +34,7 @@ type LegacyData = AppData & {
   notes?: unknown
   baseline?: unknown
   experiment?: unknown
+  leads?: unknown
 }
 
 function needsMigration(d: LegacyData): boolean {
@@ -44,6 +45,7 @@ function needsMigration(d: LegacyData): boolean {
     !Array.isArray(d.notes) ||
     !d.baseline ||
     !d.experiment ||
+    !Array.isArray(d.leads) ||
     d.schedules.some((s) => s.origin === undefined)
   )
 }
@@ -79,6 +81,8 @@ export function migrateToV2(parsed: LegacyData): AppData {
     // v4: 성과측정 — 기준값/실증설정이 없으면 '미입력' 상태로 채웁니다(임의 값 생성 금지).
     baseline: (parsed.baseline as AppData['baseline']) ?? { ...EMPTY_BASELINE },
     experiment: (parsed.experiment as AppData['experiment']) ?? { ...EMPTY_EXPERIMENT },
+    // v5: 매출 전환 기록 — 없으면 빈 배열로 채웁니다.
+    leads: Array.isArray(parsed.leads) ? (parsed.leads as AppData['leads']) : [],
   }
   try {
     localStorage.setItem(SCHEMA_VERSION_KEY, String(SCHEMA_VERSION))
@@ -112,6 +116,8 @@ export function rebuildPreserving(prev: AppData): AppData {
     // 성과측정 기준값·실증설정은 사용자 설정이므로 날짜 재생성과 무관하게 보존합니다.
     baseline: prev.baseline ?? { ...EMPTY_BASELINE },
     experiment: prev.experiment ?? { ...EMPTY_EXPERIMENT },
+    // 영업 전환 기록은 날짜 재생성과 무관하게 보존합니다.
+    leads: prev.leads ?? [],
   }
 }
 
