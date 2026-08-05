@@ -15,6 +15,12 @@ import {
   Globe,
   Workflow,
   ExternalLink,
+  FileBarChart,
+  History,
+  Headset,
+  Lock,
+  Sparkles,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -26,10 +32,11 @@ import { PageMotion } from './motion'
 import { DemoSettingsPanel } from './DemoControls'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 앱 전체 레이아웃 — 반응형
-//  · 데스크톱(lg↑): 좌측 사이드바 + 넓은 본문(웹 운영관리 대시보드)
+// 앱 전체 레이아웃 — 반응형 B2B 운영관리 콘솔
+//  · 데스크톱(lg↑): 다크 네이비 사이드바 + 밝은 본문
 //  · 모바일(lg 미만): 상단 헤더 + 본문 + 하단 탭바(앱형)
-//  ※ 모바일 폰 프레임은 /mobile-preview 시연 모드에서만 사용
+//  · 메뉴는 "현재 운영 / 운영 도구 / 추가 개발 예정" 3단으로 분리해
+//    지금 바로 사용하는 기능과 향후 확장 기능을 명확히 구분합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface NavItem {
@@ -38,97 +45,180 @@ interface NavItem {
   icon: LucideIcon
 }
 
-/** 데스크톱 사이드바 전체 메뉴 */
-const FULL_NAV: NavItem[] = [
+/** 현재 운영 중인 핵심 메뉴 */
+const CORE_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: LayoutGrid },
-  { to: '/roadmap', label: '활용 계획', icon: Workflow },
   { to: '/today', label: '오늘 일정', icon: CalendarClock },
-  { to: '/dispatch', label: '배차·경로', icon: Truck },
   { to: '/clients', label: '거래처', icon: Building2 },
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
+  { to: '/reports', label: '운영 리포트', icon: FileBarChart },
+  { to: '/stats', label: '통계', icon: PieChart },
+]
+
+/** 운영 도구 — 핵심 흐름을 보조하는 실사용 화면 */
+const TOOL_NAV: NavItem[] = [
+  { to: '/dispatch', label: '배차·경로', icon: Truck },
   { to: '/materials', label: '자재 관리', icon: Boxes },
   { to: '/receivables', label: '미수금 관리', icon: Wallet },
-  { to: '/stats', label: '통계', icon: PieChart },
-  { to: '/more', label: '더보기', icon: MoreHorizontal },
+  { to: '/history', label: '수거이력', icon: History },
+  { to: '/roadmap', label: '활용 계획', icon: Workflow },
 ]
 
-/** 모바일 하단 고정 메뉴 — 대시보드 바로 옆에 활용계획 배치 (+ 더보기는 별도 버튼) */
+/** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 (클릭 시 활용 계획으로 안내) */
+const PLANNED: string[] = [
+  'AI 배차·경로 고도화',
+  '병원 요청 포털',
+  '소모품 주문',
+  '배출자 교육 관리',
+  '자동 문서 발송',
+  '올바로 API 연동',
+  '실시간 다중 사용자',
+  'SaaS 서비스 확장',
+]
+
+/** 모바일 하단 고정 메뉴 */
 const BOTTOM_NAV: NavItem[] = [
-  { to: '/', label: '대시보드', icon: LayoutGrid },
-  { to: '/roadmap', label: '활용계획', icon: Workflow },
-  { to: '/today', label: '오늘일정', icon: CalendarClock },
+  { to: '/', label: '홈', icon: LayoutGrid },
+  { to: '/today', label: '일정', icon: CalendarClock },
   { to: '/clients', label: '거래처', icon: Building2 },
-  { to: '/collection', label: '수거입력', icon: PlusCircle },
+  { to: '/collection', label: '입력', icon: PlusCircle },
 ]
 
-// /roadmap 은 하단 탭으로 노출되므로 '더보기' 활성 경로에서 제외
-const MORE_PATHS = ['/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch', '/presentation', '/history']
+const MORE_PATHS = [
+  '/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
+  '/presentation', '/history', '/roadmap', '/reports',
+]
 
-// ── 데스크톱 사이드바 ─────────────────────────────────────────────────────────
+// ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────
+function SidebarLink({ item }: { item: NavItem }) {
+  const Icon = item.icon
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === '/'}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.875rem] font-bold transition ${
+          isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-navy-200/80 hover:bg-white/10 hover:text-white'
+        }`
+      }
+    >
+      <Icon size={18} strokeWidth={2.2} />
+      {item.label}
+    </NavLink>
+  )
+}
+
 function Sidebar() {
   const navigate = useNavigate()
+  const [plannedOpen, setPlannedOpen] = useState(false)
+
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-navy-100 bg-white lg:flex">
-      <div className="px-5 py-5">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[248px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
+      {/* 브랜드 */}
+      <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-base font-black text-white">
             비
           </div>
-          <div className="leading-none">
-            <p className="whitespace-nowrap text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-            <p className="mt-1 whitespace-nowrap text-[0.6875rem] font-medium text-navy-400">통합 운영관리</p>
+          <div className="min-w-0 leading-none">
+            <p className="truncate text-[0.9375rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
+            <p className="mt-1.5 truncate text-[0.6875rem] font-medium text-navy-300">의료폐기물 수거·운반 통합 운영</p>
           </div>
         </div>
-        <span className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[0.625rem] font-bold text-amber-600 ring-1 ring-amber-100">
-          시연용 데이터 · Demo
-        </span>
       </div>
-      <nav className="flex-1 space-y-1 px-3">
-        {FULL_NAV.map((item) => {
-          const Icon = item.icon
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-bold transition ${
-                  isActive ? 'bg-teal-500 text-white shadow-sm' : 'text-navy-600 hover:bg-navy-50'
-                }`
-              }
-            >
-              <Icon size={18} strokeWidth={2.2} />
-              {item.label}
-            </NavLink>
-          )
-        })}
+
+      <nav className="flex-1 px-3">
+        <p className="px-3 pb-1.5 pt-2 text-[0.625rem] font-extrabold uppercase tracking-wider text-navy-400">
+          현재 운영
+        </p>
+        <div className="space-y-0.5">
+          {CORE_NAV.map((item) => (
+            <SidebarLink key={item.to} item={item} />
+          ))}
+        </div>
+
+        <p className="px-3 pb-1.5 pt-5 text-[0.625rem] font-extrabold uppercase tracking-wider text-navy-400">
+          운영 도구
+        </p>
+        <div className="space-y-0.5">
+          {TOOL_NAV.map((item) => (
+            <SidebarLink key={item.to} item={item} />
+          ))}
+        </div>
+
+        {/* 추가 개발 예정 — 접기/펼치기 */}
+        <button
+          onClick={() => setPlannedOpen((v) => !v)}
+          className="mt-5 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.625rem] font-extrabold uppercase tracking-wider text-navy-400 transition hover:text-navy-200"
+        >
+          <Sparkles size={13} />
+          추가 개발 예정
+          <ChevronDown size={13} className={`ml-auto transition-transform ${plannedOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {plannedOpen && (
+          <div className="space-y-0.5 pb-2">
+            {PLANNED.map((label) => (
+              <button
+                key={label}
+                onClick={() => navigate('/roadmap')}
+                title="향후 개발 예정 기능 — 활용 계획에서 단계별 로드맵을 확인할 수 있습니다"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[0.8125rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+              >
+                <Lock size={14} className="shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{label}</span>
+                <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.5625rem] font-bold text-navy-300">
+                  예정
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </nav>
-      <div className="space-y-2 px-3 pb-4">
-        <button
-          onClick={() => navigate('/company')}
-          className="flex w-full items-center gap-2.5 rounded-2xl bg-navy-900 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-navy-800"
-        >
-          <Globe size={18} strokeWidth={2.2} />
-          회사 홈페이지
-        </button>
-        <button
-          onClick={() => navigate('/mobile-preview')}
-          className="flex w-full items-center gap-2.5 rounded-2xl bg-navy-50 px-3 py-2.5 text-sm font-bold text-navy-600 transition hover:bg-navy-100"
-        >
-          <Smartphone size={18} strokeWidth={2.2} />
-          모바일 미리보기
-        </button>
-        <a
-          href={ALLBARO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full items-center gap-2.5 rounded-2xl bg-teal-50 px-3 py-2.5 text-sm font-bold text-teal-700 transition hover:bg-teal-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-        >
-          <ExternalLink size={18} strokeWidth={2.2} />
-          올바로 시스템
-        </a>
+
+      {/* 하단 — 계정 / 바로가기 */}
+      <div className="space-y-2 px-3 pb-4 pt-3">
+        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.75rem] font-black text-teal-300">
+            비
+          </div>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[0.8125rem] font-bold text-white">비원미래 대표</p>
+            <p className="truncate text-[0.6875rem] text-navy-400">대표 관리자</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
+          <Headset size={16} className="shrink-0 text-teal-300" />
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[0.8125rem] font-bold text-white">1533-8876</p>
+            <p className="truncate text-[0.6875rem] text-navy-400">평일 09:00 ~ 18:00</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <button
+            onClick={() => navigate('/company')}
+            title="회사 홈페이지"
+            className="flex items-center justify-center rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+          >
+            <Globe size={16} strokeWidth={2.2} />
+          </button>
+          <button
+            onClick={() => navigate('/mobile-preview')}
+            title="모바일 미리보기"
+            className="flex items-center justify-center rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+          >
+            <Smartphone size={16} strokeWidth={2.2} />
+          </button>
+          <a
+            href={ALLBARO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="올바로 시스템"
+            className="flex items-center justify-center rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+          >
+            <ExternalLink size={16} strokeWidth={2.2} />
+          </a>
+        </div>
         <DemoSettingsPanel />
-        <p className="px-1 pt-1 text-[0.6875rem] font-medium text-navy-300">beonemirae ops · 시연용 MVP</p>
       </div>
     </aside>
   )
@@ -144,7 +234,7 @@ function MobileHeader() {
         </div>
         <div className="leading-none">
           <p className="text-[0.9375rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-          <p className="mt-1 text-[0.6875rem] font-medium text-navy-400">의료폐기물 수거·운반 통합 운영관리</p>
+          <p className="mt-1 text-[0.6875rem] font-medium text-navy-400">의료폐기물 수거·운반 통합 운영</p>
         </div>
         <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.625rem] font-bold text-amber-600 ring-1 ring-amber-100">
           시연용 데이터
@@ -209,11 +299,11 @@ export function Layout() {
 
   return (
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
-      <div className="mx-auto flex w-full max-w-[1280px]">
+      <div className="flex w-full">
         <Sidebar />
         <div className="min-w-0 flex-1">
           <MobileHeader />
-          <main className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-4 lg:px-8 lg:pb-10 lg:pt-7">
+          <main className="mx-auto w-full max-w-[1320px] px-4 pb-24 pt-4 lg:px-8 lg:pb-12 lg:pt-7">
             <PageMotion key={pathname}>
               <Outlet />
             </PageMotion>

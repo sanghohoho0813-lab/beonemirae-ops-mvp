@@ -7,6 +7,9 @@ import { Modal } from '../components/Modal'
 import { FilterChip, EmptyState } from '../components/ui'
 import { ClientForm, emptyClientForm } from '../components/ClientForm'
 import { clientOutstanding } from '../lib/ops'
+import { nextActionsFor } from '../lib/insights'
+import { actionMeta } from '../components/Opportunities'
+import { wonShort } from '../lib/format'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import type { Client } from '../types'
 
@@ -109,6 +112,9 @@ export function Clients() {
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {filtered.map((c) => {
             const unpaid = clientOutstanding(data, c.id) > 0
+            // 이 거래처의 최우선 추천 (수거이력·자재·청구 데이터 기반)
+            const topAction = nextActionsFor(data, c)[0]
+            const meta = topAction ? actionMeta[topAction.kind] : null
             return (
               <li key={c.id}>
                 <button onClick={() => navigate(`/clients/${c.id}`)} className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left">
@@ -128,6 +134,13 @@ export function Clients() {
                       {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-teal-600">기저귀</span>}
                       {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-amber-600">미수금</span>}
                     </div>
+                    {topAction && meta && topAction.kind !== '정기수거' && (
+                      <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.6875rem] font-bold ${meta.chip}`}>
+                        <meta.icon size={12} strokeWidth={2.6} className="shrink-0" />
+                        <span className="truncate">{topAction.title}</span>
+                        {topAction.estValue > 0 && <span className="shrink-0">· +{wonShort(topAction.estValue)}</span>}
+                      </p>
+                    )}
                   </div>
                   <ChevronRight size={16} className="shrink-0 text-navy-300" />
                 </button>

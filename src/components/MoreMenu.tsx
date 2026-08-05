@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Download, Upload, RotateCcw, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -20,10 +20,24 @@ import { exportData, parseImportFile } from '../lib/backup'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOBILE_SHORTCUTS: { to: string; label: string; icon: LucideIcon; desc: string }[] = [
+  { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원별 월간 운영 리포트' },
+  { to: '/stats', label: '통계', icon: PieChart, desc: '수거량·거래처·차량 실적' },
   { to: '/materials', label: '자재 관리', icon: Boxes, desc: '박스·비닐·바늘통 공급 내역' },
   { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구·입금 현황 및 미수금' },
   { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '차량별 배차·경로 추천' },
-  { to: '/stats', label: '통계', icon: PieChart, desc: '수거량·거래처·차량 실적' },
+  { to: '/history', label: '수거이력', icon: History, desc: '전체 수거 입력 이력·감사기록' },
+]
+
+/** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 */
+const PLANNED_FEATURES = [
+  'AI 배차·경로 고도화',
+  '병원 요청 포털',
+  '소모품 주문',
+  '배출자 교육 관리',
+  '자동 문서 발송',
+  '올바로 API 연동',
+  '실시간 다중 사용자',
+  'SaaS 서비스 확장',
 ]
 
 export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile' | 'desktop'; onNavigate?: () => void }) {
@@ -147,6 +161,29 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
               <ChevronRight size={18} className="ml-auto text-navy-300" />
             </Tappable>
           )}
+        </div>
+      </section>
+
+      {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분 */}
+      <section>
+        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">추가 개발 예정</h3>
+        <div className="card p-4">
+          <div className="flex flex-wrap gap-1.5">
+            {PLANNED_FEATURES.map((f) => (
+              <span
+                key={f}
+                className="inline-flex items-center gap-1 rounded-lg bg-navy-50 px-2.5 py-1.5 text-xs font-semibold text-navy-500"
+              >
+                <Lock size={12} /> {f}
+              </span>
+            ))}
+          </div>
+          <button className="btn-ghost mt-3 w-full" onClick={() => go('/roadmap')}>
+            <Workflow size={16} strokeWidth={2.4} /> 단계별 활용 계획 보기
+          </button>
+          <p className="mt-2.5 text-xs text-navy-400">
+            위 기능은 아직 실사용 단계가 아니며, 단계별 로드맵에 따라 개발 예정입니다.
+          </p>
         </div>
       </section>
 

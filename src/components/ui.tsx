@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, Lock, type LucideIcon } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 토스 스타일 공용 UI 키트
@@ -21,8 +21,10 @@ export function PageShell({ children, className = '' }: { children: ReactNode; c
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-2 px-1">
-      <h2 className="text-[1.0625rem] font-extrabold tracking-tight text-navy-800 sm:text-[1.1875rem]">{children}</h2>
-      {action}
+      <h2 className="min-w-0 break-keep text-[1.0625rem] font-extrabold leading-snug tracking-tight text-navy-800 sm:text-[1.1875rem]">
+        {children}
+      </h2>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }
@@ -244,7 +246,7 @@ export function FeatureCard({
         <Icon size={19} strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[0.9375rem] font-bold text-navy-900">{title}</p>
+        <p className="break-keep text-[0.9375rem] font-bold leading-snug text-navy-900">{title}</p>
         <p className="truncate text-xs text-navy-400">{desc}</p>
       </div>
       {badge && <span className="shrink-0 rounded-full bg-navy-50 px-2 py-0.5 text-xs font-bold text-navy-500">{badge}</span>}
@@ -289,6 +291,126 @@ export function ExpandableSection({
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B2B 운영 콘솔용 프리미티브 (아이콘 KPI 카드 · 진행률 지표 · 개발예정 배지)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const kpiToneStyle: Record<IconTone, string> = {
+  navy: 'bg-navy-50 text-navy-600',
+  teal: 'bg-teal-50 text-teal-600',
+  rose: 'bg-rose-50 text-rose-500',
+  amber: 'bg-amber-50 text-amber-600',
+  emerald: 'bg-emerald-50 text-emerald-600',
+}
+
+/** 대시보드 상단 KPI 카드 — 아이콘 + 라벨 + 큰 숫자 + 증감/보조 문구 */
+export function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  unit,
+  delta,
+  deltaTone = 'navy',
+  hint,
+  tone = 'navy',
+  onClick,
+}: {
+  icon: LucideIcon
+  label: string
+  value: ReactNode
+  unit?: string
+  delta?: string
+  deltaTone?: 'up' | 'down' | 'navy'
+  hint?: string
+  tone?: IconTone
+  onClick?: () => void
+}) {
+  const deltaClass =
+    deltaTone === 'up' ? 'text-teal-600' : deltaTone === 'down' ? 'text-rose-500' : 'text-navy-400'
+  return (
+    <motion.div
+      onClick={onClick}
+      whileTap={onClick ? { scale: 0.985 } : undefined}
+      transition={{ duration: 0.15, ease: EASE }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      className={`card flex items-start gap-3 p-4 sm:p-5 ${
+        onClick ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-lg' : ''
+      }`}
+    >
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${kpiToneStyle[tone]}`}>
+        <Icon size={21} strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="break-keep text-[0.8125rem] font-semibold leading-snug text-navy-400">{label}</p>
+        <p className="mt-1 whitespace-nowrap text-[1.5rem] font-extrabold leading-none tracking-tight text-navy-900">
+          {value}
+          {unit && <span className="ml-0.5 text-[0.75em] font-bold text-navy-400">{unit}</span>}
+        </p>
+        {delta && <p className={`mt-1.5 break-keep text-xs font-bold leading-snug ${deltaClass}`}>{delta}</p>}
+        {hint && !delta && <p className="mt-1.5 break-keep text-xs font-medium leading-snug text-navy-400">{hint}</p>}
+      </div>
+    </motion.div>
+  )
+}
+
+/** 진행률 지표 행 — 라벨 + 퍼센트 + 진행 바 + 원본 수치 */
+export function ProgressStat({
+  icon: Icon,
+  label,
+  percent,
+  detail,
+  tone = 'teal',
+}: {
+  icon?: LucideIcon
+  label: string
+  percent: number
+  detail?: string
+  tone?: 'teal' | 'rose' | 'amber' | 'navy'
+}) {
+  const barTone = {
+    teal: 'bg-teal-500',
+    rose: 'bg-rose-400',
+    amber: 'bg-amber-400',
+    navy: 'bg-navy-500',
+  }[tone]
+  const textTone = {
+    teal: 'text-teal-600',
+    rose: 'text-rose-500',
+    amber: 'text-amber-600',
+    navy: 'text-navy-700',
+  }[tone]
+  const pct = Math.max(0, Math.min(100, percent))
+  return (
+    <div className="flex items-center gap-3">
+      {Icon && (
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kpiToneStyle[tone === 'rose' ? 'rose' : tone === 'amber' ? 'amber' : tone === 'navy' ? 'navy' : 'teal']}`}>
+          <Icon size={17} strokeWidth={2.2} />
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="truncate text-[0.875rem] font-bold text-navy-700">{label}</p>
+          <p className={`shrink-0 text-[0.9375rem] font-extrabold ${textTone}`}>{pct}%</p>
+        </div>
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-navy-100">
+          <div className={`h-full rounded-full ${barTone}`} style={{ width: `${pct}%` }} />
+        </div>
+        {detail && <p className="mt-1 text-right text-[0.6875rem] font-medium text-navy-400">{detail}</p>}
+      </div>
+    </div>
+  )
+}
+
+/** '개발 예정' 표시 배지 — 미구현 기능을 명확히 구분 */
+export function PlannedBadge({ label = '개발 예정' }: { label?: string }) {
+  return (
+    <span className="pill shrink-0 bg-navy-100 text-navy-500">
+      <Lock size={11} strokeWidth={2.6} /> {label}
+    </span>
   )
 }
 

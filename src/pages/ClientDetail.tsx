@@ -35,7 +35,10 @@ import {
   type UsageStatus,
   type BillStatus,
 } from '../lib/ops'
-import { prettyDate, weight, won } from '../lib/format'
+import { prettyDate, weight, won, wonShort } from '../lib/format'
+import { nextActionsFor, clientMonthlyReport } from '../lib/insights'
+import { actionMeta } from '../components/Opportunities'
+import { MonthlyReportView } from '../components/MonthlyReport'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,6 +66,7 @@ const billStyle: Record<BillStatus, string> = {
 
 const TABS = [
   { id: 'ops', label: '운영조건' },
+  { id: 'report', label: '월간 리포트' },
   { id: 'history', label: '수거이력' },
   { id: 'materials', label: '자재관리' },
   { id: 'requests', label: '요청·알림' },
@@ -108,6 +112,9 @@ export function ClientDetail() {
   const histSummary = collectionHistorySummary(data, id)
   const matSummary = clientMaterialSummary(data, id)
   const bills = clientPaymentRows(data, id)
+  // 축적된 운영 데이터 기반 다음 행동 추천 + 월간 운영 리포트
+  const actions = nextActionsFor(data, client)
+  const report = clientMonthlyReport(data, client)
 
   function saveEdit() {
     if (!form.name.trim()) return
@@ -190,6 +197,72 @@ export function ClientDetail() {
         </div>
       </div>
 
+      {/* 다음 행동 추천 — 축적된 운영 데이터 기반 */}
+      {actions.length > 0 && (
+        <section>
+          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">데이터 기반 추천</span>}>
+            다음 행동 추천
+          </SectionTitle>
+          <div className="card divide-y divide-navy-50 p-2">
+            {actions.map((a, i) => {
+              const meta = actionMeta[a.kind]
+              const Icon = meta.icon
+              return (
+                <div key={`${a.kind}-${i}`} className="p-3">
+                  <div className="flex items-start gap-3">
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${meta.chip}`}>
+                      <Icon size={17} strokeWidth={2.3} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-[0.9375rem] font-bold text-navy-900">{a.title}</p>
+                        {a.estValue > 0 && (
+                          <span className="pill bg-teal-50 text-teal-700">예상 +{wonShort(a.estValue)}</span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-sm leading-snug text-navy-500">{a.reason}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {a.metrics.map((m) => (
+                          <span key={m.label} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">
+                            {m.label} <span className="font-extrabold text-navy-800">{m.value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-2 pl-12">
+                    <button
+                      className="pressable rounded-xl bg-navy-900 px-3.5 py-2 text-[0.8125rem] font-bold text-white transition hover:bg-navy-800"
+                      onClick={() =>
+                        navigate(
+                          a.kind === '소모품공급'
+                            ? '/materials'
+                            : a.kind === '관리필요'
+                              ? '/receivables'
+                              : '/collection',
+                        )
+                      }
+                    >
+                      {a.cta}
+                    </button>
+                    <button
+                      className="rounded-xl bg-navy-50 px-3.5 py-2 text-[0.8125rem] font-bold text-navy-600 transition hover:bg-navy-100"
+                      onClick={() => setTab('report')}
+                    >
+                      리포트에 포함
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p className="mt-2 px-1 text-xs leading-snug text-navy-400">
+            이 거래처의 수거이력·자재공급·청구 데이터를 규칙에 대입해 도출한 추천입니다. 예상 금액은 실제 청구 단가
+            기준의 참고 값입니다.
+          </p>
+        </section>
+      )}
+
       {/* 인증·실사 대응 (상시 노출) */}
       {inspection && (
         <section>
@@ -228,6 +301,9 @@ export function ClientDetail() {
           </button>
         ))}
       </div>
+
+      {/* ── 월간 운영 리포트 ── */}
+      {tab === 'report' && <MonthlyReportView report={report} />}
 
       {/* ── 운영조건 ── */}
       {tab === 'ops' && (

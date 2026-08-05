@@ -10,6 +10,7 @@ import { CollectionInput } from './pages/CollectionInput'
 import { Materials } from './pages/Materials'
 import { Receivables } from './pages/Receivables'
 import { Statistics } from './pages/Statistics'
+import { Reports } from './pages/Reports'
 import { More } from './pages/More'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="materials" element={<Materials />} />
           <Route path="receivables" element={<Receivables />} />
           <Route path="stats" element={<Statistics />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="more" element={<More />} />
           <Route path="demo" element={<DemoSummary />} />
           <Route path="roadmap" element={<Roadmap />} />
