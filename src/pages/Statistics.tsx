@@ -54,7 +54,7 @@ export function Statistics() {
 
       {/* 월별 수거량 요약 */}
       <section className="mb-5">
-        <h2 className="mb-2 text-sm font-semibold text-navy-500">이번 달 수거량</h2>
+        <h2 className="mb-2 text-[0.95rem] font-semibold text-navy-500">이번 달 수거량</h2>
         <div className="grid grid-cols-3 gap-3">
           <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" />
           <MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" />
@@ -64,17 +64,17 @@ export function Statistics() {
 
       {/* 폐기물 비중 */}
       <section className="mb-5">
-        <h2 className="mb-2 text-sm font-semibold text-navy-500">폐기물 구분 비중</h2>
+        <h2 className="mb-2 text-[0.95rem] font-semibold text-navy-500">폐기물 구분 비중</h2>
         <div className="card p-4">
           <div className="mb-2 flex h-5 overflow-hidden rounded-full bg-navy-50">
-            <div className="flex items-center justify-center bg-navy-500 text-[0.625rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
+            <div className="flex items-center justify-center bg-navy-500 text-[0.78rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
               {medicalPct >= 12 ? `${medicalPct}%` : ''}
             </div>
-            <div className="flex items-center justify-center bg-teal-500 text-[0.625rem] font-bold text-white" style={{ width: `${diaperPct}%` }}>
+            <div className="flex items-center justify-center bg-teal-500 text-[0.78rem] font-bold text-white" style={{ width: `${diaperPct}%` }}>
               {diaperPct >= 12 ? `${diaperPct}%` : ''}
             </div>
           </div>
-          <div className="flex justify-between text-xs">
+          <div className="flex justify-between text-[0.85rem]">
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-navy-500" /> 의료폐기물 {medicalPct}%
             </span>
@@ -87,11 +87,11 @@ export function Statistics() {
 
       {/* 거래처 유형별 개수 */}
       <section className="mb-5">
-        <h2 className="mb-2 text-sm font-semibold text-navy-500">거래처 유형별 ({data.clients.length}곳)</h2>
+        <h2 className="mb-2 text-[0.95rem] font-semibold text-navy-500">거래처 유형별 ({data.clients.length}곳)</h2>
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {CLIENT_TYPES.map((t) => (
             <div key={t} className="card flex items-center justify-between p-3">
-              <span className="text-sm text-navy-500">{t}</span>
+              <span className="text-[0.95rem] text-navy-500">{t}</span>
               <span className="font-bold text-navy-900">{typeCounts[t] ?? 0}</span>
             </div>
           ))}
@@ -100,11 +100,11 @@ export function Statistics() {
 
       {/* 차량별 수거 건수 */}
       <section className="mb-5">
-        <h2 className="mb-2 text-sm font-semibold text-navy-500">차량별 수거 실적 (누적)</h2>
+        <h2 className="mb-2 text-[0.95rem] font-semibold text-navy-500">차량별 수거 실적 (누적)</h2>
         <div className="card space-y-3 p-4">
           {vehicleStats.map(({ vehicle, count, amount }) => (
             <div key={vehicle.id}>
-              <div className="mb-1 flex items-center justify-between text-sm">
+              <div className="mb-1 flex items-center justify-between text-[0.95rem]">
                 <span className="flex items-center gap-2">
                   <WasteBadge type={vehicle.wasteType} />
                   <span className="font-medium text-navy-700">{vehicle.name}</span>
@@ -126,14 +126,14 @@ export function Statistics() {
 
       {/* 자재 추가공급 */}
       <section className="mb-5">
-        <h2 className="mb-2 text-sm font-semibold text-navy-500">자재 추가공급</h2>
+        <h2 className="mb-2 text-[0.95rem] font-semibold text-navy-500">자재 추가공급</h2>
         <div className="grid grid-cols-2 gap-3">
           <MetricCard label="이번 달 추가공급" value={addMaterials} unit="건" tone="amber" hint="월평균 4~5회" />
           <MetricCard label="전체 공급 내역" value={num(data.materials.length)} unit="건" tone="navy" />
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-navy-300">
+      <p className="pb-2 text-center text-[0.85rem] text-navy-300">
         데이터 백업·초기화는 <b className="text-navy-400">더보기</b> 메뉴에서 할 수 있습니다.
       </p>
     </div>

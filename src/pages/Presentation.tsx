@@ -146,7 +146,7 @@ export function Presentation() {
       {/* 상단 */}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="text-[0.8125rem] font-bold text-teal-600">대표님 시연 · 3분</p>
+          <p className="text-[0.9rem] font-bold text-teal-600">대표님 시연 · 3분</p>
           <h1 className="text-xl font-extrabold text-navy-900">단계별로 보기</h1>
         </div>
         <button
@@ -182,7 +182,7 @@ export function Presentation() {
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50">
               <Icon size={18} strokeWidth={2.3} />
             </span>
-            <span className="text-sm font-bold">STEP {i + 1} / {steps.length}</span>
+            <span className="text-[0.95rem] font-bold">STEP {i + 1} / {steps.length}</span>
           </div>
           <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-navy-900">{step.title}</h2>
           <p className="mt-2 text-[0.9375rem] leading-relaxed text-navy-500">{step.line}</p>
@@ -190,7 +190,7 @@ export function Presentation() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             {step.stats.map((s) => (
               <div key={s.k} className="rounded-2xl bg-navy-50 p-3.5">
-                <p className="text-xs font-semibold text-navy-400">{s.k}</p>
+                <p className="text-[0.85rem] font-semibold text-navy-400">{s.k}</p>
                 <p className="mt-1 text-lg font-extrabold text-navy-900">{s.v}</p>
               </div>
             ))}
@@ -230,7 +230,7 @@ export function Presentation() {
         <p className="flex items-center gap-2 text-[0.9375rem] font-extrabold">
           <Workflow size={17} className="text-teal-300" /> 한 번 입력, 여러 화면 자동 연결
         </p>
-        <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-navy-100">
+        <p className="mt-1.5 text-[0.9rem] leading-relaxed text-navy-100">
           현장 담당자가 수거정보를 한 번 입력하면 오늘 일정, 수거이력, 자재와 통계에 연결됩니다. 여러 엑셀·수기대장에
           반복 입력할 필요가 없습니다.
         </p>
@@ -241,39 +241,39 @@ export function Presentation() {
         <p className="mb-2 px-1 text-[0.9375rem] font-extrabold text-navy-800">업무가 어떻게 달라지는가</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="card p-4">
-            <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[0.6875rem] font-bold text-navy-500">Before</span>
-            <ul className="mt-2.5 space-y-1.5 text-[0.8125rem] leading-snug text-navy-600">
+            <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[0.82rem] font-bold text-navy-500">Before</span>
+            <ul className="mt-2.5 space-y-1.5 text-[0.9rem] leading-snug text-navy-600">
               {['여러 개의 엑셀', '전화·카톡 요청', '수기대장', '담당자별 중복 입력', '자재·수거·정산 분산', '인증 직전 긴급 대응'].map((t) => (
                 <li key={t} className="flex gap-1.5"><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />{t}</li>
               ))}
             </ul>
           </div>
           <div className="card p-4 ring-1 ring-teal-200">
-            <span className="rounded-full bg-teal-500 px-2.5 py-1 text-[0.6875rem] font-bold text-white">After</span>
-            <ul className="mt-2.5 space-y-1.5 text-[0.8125rem] leading-snug text-navy-700">
+            <span className="rounded-full bg-teal-500 px-2.5 py-1 text-[0.82rem] font-bold text-white">After</span>
+            <ul className="mt-2.5 space-y-1.5 text-[0.9rem] leading-snug text-navy-700">
               {['하나의 운영 시스템', 'PC·모바일 동일 데이터', '수거·자재·이력 통합', '요청사항 기록', '월간 자료 자동화(예정)', '배차·경로 추천'].map((t) => (
                 <li key={t} className="flex gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-teal-500" />{t}</li>
               ))}
             </ul>
           </div>
         </div>
-        <p className="mt-2 px-1 text-[0.75rem] text-navy-400">※ 월간 자료 자동화·실시간 공유는 향후 고도화 예정입니다.</p>
+        <p className="mt-2 px-1 text-[0.85rem] text-navy-400">※ 월간 자료 자동화·실시간 공유는 향후 고도화 예정입니다.</p>
       </div>
 
       {/* 대표자 시연 가이드 (기본 접힘) */}
       <details className="card mt-6 p-0">
         <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-[0.9375rem] font-extrabold text-navy-800">
           <BookOpen size={16} className="text-teal-500" /> 대표자 시연 가이드
-          <span className="ml-auto text-xs font-semibold text-navy-400">펼치기</span>
+          <span className="ml-auto text-[0.85rem] font-semibold text-navy-400">펼치기</span>
         </summary>
         <div className="space-y-4 border-t border-navy-50 p-4">
           {/* 5분 시연 순서 */}
           <div>
-            <p className="mb-2 text-[0.8125rem] font-bold text-navy-600">추천 시연 순서 (약 5분)</p>
+            <p className="mb-2 text-[0.9rem] font-bold text-navy-600">추천 시연 순서 (약 5분)</p>
             <ol className="space-y-1.5">
               {DEMO_STEPS.map((s, i) => (
-                <li key={s.t} className="flex gap-2 text-[0.8125rem] leading-snug text-navy-700">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-navy-100 text-[0.625rem] font-extrabold text-navy-500">
+                <li key={s.t} className="flex gap-2 text-[0.9rem] leading-snug text-navy-700">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-navy-100 text-[0.78rem] font-extrabold text-navy-500">
                     {i + 1}
                   </span>
                   <span>
@@ -287,16 +287,16 @@ export function Presentation() {
           {/* 표현 가이드 */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-teal-50/60 p-3">
-              <p className="text-[0.75rem] font-bold text-teal-700">권장 표현</p>
-              <ul className="mt-1.5 space-y-1 text-[0.75rem] leading-snug text-navy-600">
+              <p className="text-[0.85rem] font-bold text-teal-700">권장 표현</p>
+              <ul className="mt-1.5 space-y-1 text-[0.85rem] leading-snug text-navy-600">
                 {SAY_DO.map((t) => (
                   <li key={t} className="flex gap-1.5"><CheckCircle2 size={12} className="mt-0.5 shrink-0 text-teal-500" />{t}</li>
                 ))}
               </ul>
             </div>
             <div className="rounded-2xl bg-rose-50/60 p-3">
-              <p className="text-[0.75rem] font-bold text-rose-600">피해야 할 표현</p>
-              <ul className="mt-1.5 space-y-1 text-[0.75rem] leading-snug text-navy-600">
+              <p className="text-[0.85rem] font-bold text-rose-600">피해야 할 표현</p>
+              <ul className="mt-1.5 space-y-1 text-[0.85rem] leading-snug text-navy-600">
                 {SAY_DONT.map((t) => (
                   <li key={t} className="flex gap-1.5"><span className="mt-0.5 shrink-0 font-bold text-rose-400">✕</span>{t}</li>
                 ))}
@@ -306,10 +306,10 @@ export function Presentation() {
 
           {/* 시연 전 확인 */}
           <div>
-            <p className="mb-2 text-[0.8125rem] font-bold text-navy-600">시연 전 확인</p>
+            <p className="mb-2 text-[0.9rem] font-bold text-navy-600">시연 전 확인</p>
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
               {PRE_CHECK.map((t) => (
-                <label key={t} className="flex items-center gap-2 text-[0.8125rem] text-navy-600">
+                <label key={t} className="flex items-center gap-2 text-[0.9rem] text-navy-600">
                   <input type="checkbox" className="h-3.5 w-3.5 accent-teal-500" /> {t}
                 </label>
               ))}
@@ -318,13 +318,13 @@ export function Presentation() {
 
           {/* 초기화 */}
           <div className="flex items-center justify-between gap-2 rounded-2xl bg-navy-50 p-3">
-            <p className="text-[0.75rem] leading-snug text-navy-500">시연이 끝나면 기준 상태로 되돌립니다.</p>
+            <p className="text-[0.85rem] leading-snug text-navy-500">시연이 끝나면 기준 상태로 되돌립니다.</p>
             <DemoResetButton />
           </div>
         </div>
       </details>
 
-      <p className="mt-4 text-center text-xs text-navy-300">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
+      <p className="mt-4 text-center text-[0.85rem] text-navy-300">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
     </div>
   )
 }

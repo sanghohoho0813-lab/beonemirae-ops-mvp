@@ -30,6 +30,7 @@ import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
 import { DemoSettingsPanel } from './DemoControls'
+import { FontSizeControl } from './FontSizeControl'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 앱 전체 레이아웃 — 반응형 B2B 운영관리 콘솔
@@ -98,7 +99,7 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
       end={item.to === '/'}
       className={({ isActive }) =>
         `t-nav flex items-center gap-3.5 rounded-xl px-4 transition ${
-          muted ? 'min-h-[46px] font-semibold' : 'min-h-[54px]'
+          muted ? 'min-h-[52px] font-semibold' : 'min-h-[60px]'
         } ${
           isActive
             ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/25'
@@ -108,7 +109,7 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
         }`
       }
     >
-      <Icon size={muted ? 19 : 22} strokeWidth={2.2} className="shrink-0" />
+      <Icon size={muted ? 21 : 25} strokeWidth={2.2} className="shrink-0" />
       <span className="min-w-0 break-keep">{item.label}</span>
     </NavLink>
   )
@@ -119,24 +120,33 @@ function Sidebar() {
   const [plannedOpen, setPlannedOpen] = useState(false)
 
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-[320px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[344px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.3rem] font-black text-white">
             비
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1.15rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
-            <p className="mt-1.5 break-keep text-[0.85rem] font-medium leading-snug text-navy-300">
+            <p className="break-keep text-[1.3rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
+            <p className="mt-1.5 break-keep text-[0.9rem] font-medium leading-snug text-navy-300">
               의료폐기물 수거·운반 통합 운영관리
             </p>
           </div>
         </div>
       </div>
 
+      {/* 화면 글자 크기 — 사이드바 상단에 고정 배치해 어떤 화면 높이에서도 바로 보입니다.
+          클릭 즉시 앱 전체에 반영되고 localStorage 에 저장됩니다. */}
+      <div className="px-3 pb-3">
+        <div className="rounded-2xl bg-white/5 p-3">
+          <p className="mb-2 px-0.5 text-[0.8rem] font-extrabold tracking-wide text-navy-300">화면 글자 크기</p>
+          <FontSizeControl variant="dark" />
+        </div>
+      </div>
+
       <nav className="flex-1 px-3">
-        <p className="px-4 pb-2.5 pt-2 text-[0.72rem] font-extrabold uppercase tracking-wider text-navy-400">
+        <p className="px-4 pb-2.5 pt-2 text-[0.8rem] font-extrabold tracking-wide text-teal-300">
           핵심 운영
         </p>
         <div className="space-y-0.5">
@@ -145,8 +155,8 @@ function Sidebar() {
           ))}
         </div>
 
-        <p className="px-4 pb-2.5 pt-6 text-[0.72rem] font-extrabold uppercase tracking-wider text-navy-400">
-          운영 도구 · 추가 고도화
+        <p className="px-4 pb-2.5 pt-7 text-[0.8rem] font-extrabold tracking-wide text-navy-400">
+          운영 도구 · 추가 고도화 예정
         </p>
         <div className="space-y-0.5">
           {TOOL_NAV.map((item) => (
@@ -157,7 +167,7 @@ function Sidebar() {
         {/* 추가 개발 예정 — 접기/펼치기 */}
         <button
           onClick={() => setPlannedOpen((v) => !v)}
-          className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-wider text-navy-400 transition hover:text-navy-200"
+          className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.8rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
         >
           <Sparkles size={13} />
           추가 개발 예정
@@ -170,11 +180,11 @@ function Sidebar() {
                 key={label}
                 onClick={() => navigate('/roadmap')}
                 title="향후 개발 예정 기능 — 활용 계획에서 단계별 로드맵을 확인할 수 있습니다"
-                className="flex w-full items-center gap-2.5 rounded-xl px-4 py-2.5 text-left text-[0.8rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+                className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[0.87rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
               >
                 <Lock size={14} className="shrink-0" />
                 <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
-                <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.5625rem] font-bold text-navy-300">
+                <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.85rem] font-bold text-navy-300">
                   예정
                 </span>
               </button>
@@ -186,19 +196,19 @@ function Sidebar() {
       {/* 하단 — 계정 / 바로가기 */}
       <div className="space-y-2 px-3 pb-4 pt-3">
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.75rem] font-black text-teal-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.85rem] font-black text-teal-300">
             비
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[0.9375rem] font-bold text-white">비원미래 대표</p>
-            <p className="break-keep text-[0.8125rem] text-navy-400">대표 관리자</p>
+            <p className="break-keep text-[1rem] font-bold text-white">비원미래 대표</p>
+            <p className="break-keep text-[0.87rem] text-navy-400">대표 관리자</p>
           </div>
         </div>
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
           <Headset size={16} className="shrink-0 text-teal-300" />
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[0.9375rem] font-bold text-white">1533-8876</p>
-            <p className="break-keep text-[0.8125rem] text-navy-400">평일 09:00 ~ 18:00</p>
+            <p className="break-keep text-[1rem] font-bold text-white">1533-8876</p>
+            <p className="break-keep text-[0.87rem] text-navy-400">평일 09:00 ~ 18:00</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -237,14 +247,14 @@ function MobileHeader() {
   return (
     <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg lg:hidden">
       <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-sm font-black text-teal-300">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[0.95rem] font-black text-teal-300">
           비
         </div>
         <div className="leading-none">
           <p className="text-[1.0625rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-          <p className="mt-1 break-keep text-[0.8125rem] font-medium text-navy-400">의료폐기물 통합 운영관리</p>
+          <p className="mt-1 break-keep text-[0.9rem] font-medium text-navy-400">의료폐기물 통합 운영관리</p>
         </div>
-        <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.625rem] font-bold text-amber-600 ring-1 ring-amber-100">
+        <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.78rem] font-bold text-amber-600 ring-1 ring-amber-100">
           시연용 데이터
         </span>
       </div>
@@ -271,7 +281,7 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
         strokeWidth={active ? 2.4 : 2}
         className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
       />
-      <span className={`relative z-10 whitespace-nowrap text-[0.8125rem] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+      <span className={`relative z-10 whitespace-nowrap text-[0.9rem] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
     </button>
@@ -311,7 +321,7 @@ export function Layout() {
         <Sidebar />
         <div className="min-w-0 flex-1">
           <MobileHeader />
-          <main className="mx-auto w-full max-w-[1760px] px-4 pb-24 pt-4 lg:px-10 lg:pb-14 lg:pt-8">
+          <main className="w-full px-4 pb-24 pt-4 lg:px-10 lg:pb-14 lg:pt-8 2xl:px-12">
             <PageMotion key={pathname}>
               <Outlet />
             </PageMotion>

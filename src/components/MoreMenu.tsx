@@ -75,7 +75,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
     <div className="space-y-5">
       {msg && (
         <div
-          className={`rounded-2xl px-4 py-3 text-sm font-semibold ${
+          className={`rounded-2xl px-4 py-3 text-[0.95rem] font-semibold ${
             msg.type === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'
           }`}
         >
@@ -94,7 +94,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
         </span>
         <div className="min-w-0">
           <p className="font-bold">시연용 핵심 요약</p>
-          <p className="text-[0.6875rem] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
+          <p className="text-[0.82rem] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
       </Tappable>
@@ -110,20 +110,20 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
         </span>
         <div className="min-w-0">
           <p className="font-bold">활용 계획 · 업무흐름도</p>
-          <p className="text-[0.6875rem] text-teal-100">일일 업무 흐름 · 단계별 활용 로드맵</p>
+          <p className="text-[0.82rem] text-teal-100">일일 업무 흐름 · 단계별 활용 로드맵</p>
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/70" />
       </Tappable>
 
       {/* 바로가기 — 모바일: 배차·경로/자재/미수금/통계, 데스크톱: 모바일 미리보기 */}
       <section>
-        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">메뉴</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">메뉴</h3>
         <div className="space-y-2.5">
           <Tappable as="div" onClick={() => go('/company')} className="card flex cursor-pointer items-center gap-3 p-4">
             <IconChip icon={Globe} tone="navy" />
             <div className="min-w-0">
               <p className="font-bold text-navy-900">회사 홈페이지</p>
-              <p className="text-xs text-navy-400">주식회사 비원미래 공식 홈페이지</p>
+              <p className="text-[0.85rem] text-navy-400">주식회사 비원미래 공식 홈페이지</p>
             </div>
             <ChevronRight size={18} className="ml-auto text-navy-300" />
           </Tappable>
@@ -136,7 +136,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
             <IconChip icon={ExternalLink} tone="teal" />
             <div className="min-w-0">
               <p className="font-bold text-navy-900">올바로 시스템</p>
-              <p className="text-xs text-navy-400">폐기물 적법처리 국가시스템 바로가기</p>
+              <p className="text-[0.85rem] text-navy-400">폐기물 적법처리 국가시스템 바로가기</p>
             </div>
             <ExternalLink size={16} className="ml-auto shrink-0 text-navy-300" />
           </a>
@@ -146,7 +146,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
                 <IconChip icon={s.icon} tone="navy" />
                 <div className="min-w-0">
                   <p className="font-bold text-navy-900">{s.label}</p>
-                  <p className="text-xs text-navy-400">{s.desc}</p>
+                  <p className="text-[0.85rem] text-navy-400">{s.desc}</p>
                 </div>
                 <ChevronRight size={18} className="ml-auto text-navy-300" />
               </Tappable>
@@ -156,7 +156,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
               <IconChip icon={Smartphone} tone="navy" />
               <div className="min-w-0">
                 <p className="font-bold text-navy-900">모바일 프레임으로 보기</p>
-                <p className="text-xs text-navy-400">시연용 모바일 미리보기</p>
+                <p className="text-[0.85rem] text-navy-400">시연용 모바일 미리보기</p>
               </div>
               <ChevronRight size={18} className="ml-auto text-navy-300" />
             </Tappable>
@@ -166,13 +166,13 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
 
       {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분 */}
       <section>
-        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">추가 개발 예정</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">추가 개발 예정</h3>
         <div className="card p-4">
           <div className="flex flex-wrap gap-1.5">
             {PLANNED_FEATURES.map((f) => (
               <span
                 key={f}
-                className="inline-flex items-center gap-1 rounded-lg bg-navy-50 px-2.5 py-1.5 text-xs font-semibold text-navy-500"
+                className="inline-flex items-center gap-1 rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.85rem] font-semibold text-navy-500"
               >
                 <Lock size={12} /> {f}
               </span>
@@ -181,7 +181,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
           <button className="btn-ghost mt-3 w-full" onClick={() => go('/roadmap')}>
             <Workflow size={16} strokeWidth={2.4} /> 단계별 활용 계획 보기
           </button>
-          <p className="mt-2.5 text-xs text-navy-400">
+          <p className="mt-2.5 text-[0.85rem] text-navy-400">
             위 기능은 아직 실사용 단계가 아니며, 단계별 로드맵에 따라 개발 예정입니다.
           </p>
         </div>
@@ -189,16 +189,16 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
 
       {/* 글자 크기 설정 */}
       <section>
-        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">글자 크기</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">글자 크기</h3>
         <div className="card p-4">
           <FontSizeControl />
-          <p className="mt-3 text-xs text-navy-400">선택한 글자 크기는 이 기기에 저장되어 새로고침해도 유지됩니다.</p>
+          <p className="mt-3 text-[0.85rem] text-navy-400">선택한 글자 크기는 이 기기에 저장되어 새로고침해도 유지됩니다.</p>
         </div>
       </section>
 
       {/* 데이터 백업/복원 */}
       <section>
-        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">데이터 백업 / 복원</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">데이터 백업 / 복원</h3>
         <div className="card space-y-3 p-4">
           <button className="btn-navy w-full" onClick={() => exportData(data)}>
             <Download size={17} strokeWidth={2.4} /> 전체 데이터 JSON 내보내기
@@ -207,17 +207,17 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
             <Upload size={17} strokeWidth={2.4} /> JSON 파일 가져오기
           </button>
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
-          <p className="text-xs text-navy-400">Supabase 연동 전까지 시연 데이터를 JSON 파일로 보관·복원할 수 있습니다.</p>
+          <p className="text-[0.85rem] text-navy-400">Supabase 연동 전까지 시연 데이터를 JSON 파일로 보관·복원할 수 있습니다.</p>
         </div>
       </section>
 
       {/* 샘플 초기화 */}
       <section>
-        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">초기화</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">초기화</h3>
         <div className="card flex items-center justify-between gap-3 p-4">
           <div>
             <p className="font-semibold text-navy-700">샘플 데이터로 초기화</p>
-            <p className="text-xs text-navy-400">모든 변경 내용을 지우고 초기 샘플로 되돌립니다.</p>
+            <p className="text-[0.85rem] text-navy-400">모든 변경 내용을 지우고 초기 샘플로 되돌립니다.</p>
           </div>
           <button
             className="btn-danger shrink-0"
@@ -235,13 +235,13 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
 
       {/* 기술개발 현황 */}
       <section>
-        <h3 className="mb-2 px-1 text-sm font-semibold text-navy-500">기술개발 현황</h3>
+        <h3 className="mb-2 px-1 text-[0.95rem] font-semibold text-navy-500">기술개발 현황</h3>
         <RnDCard />
       </section>
 
       <InfoBanner />
 
-      <p className="pb-1 text-center text-xs text-navy-300">㈜비원미래 · beonemirae ops · 시연용 MVP</p>
+      <p className="pb-1 text-center text-[0.85rem] text-navy-300">㈜비원미래 · beonemirae ops · 시연용 MVP</p>
     </div>
   )
 }

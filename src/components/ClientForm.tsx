@@ -88,7 +88,7 @@ export function ClientForm({
         />
       </div>
       <div className="flex gap-4">
-        <label className="flex items-center gap-2 text-sm font-medium text-navy-700">
+        <label className="flex items-center gap-2 text-[0.95rem] font-medium text-navy-700">
           <input
             type="checkbox"
             className="h-4 w-4 accent-teal-600"
@@ -97,7 +97,7 @@ export function ClientForm({
           />
           의료폐기물 수거
         </label>
-        <label className="flex items-center gap-2 text-sm font-medium text-navy-700">
+        <label className="flex items-center gap-2 text-[0.95rem] font-medium text-navy-700">
           <input
             type="checkbox"
             className="h-4 w-4 accent-teal-600"

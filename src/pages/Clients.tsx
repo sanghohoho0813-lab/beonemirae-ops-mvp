@@ -73,8 +73,8 @@ export function Clients() {
       {/* 거래처 데이터 세트 — segmented control */}
       <div className="mb-4">
         <div className="mb-1.5 flex items-center justify-between px-1">
-          <p className="text-[0.8125rem] font-bold text-navy-700">거래처 데이터 세트</p>
-          {clientSet > 0 && <span className="text-[0.6875rem] font-medium text-navy-400">현재 시연 데이터 기준</span>}
+          <p className="text-[0.9rem] font-bold text-navy-700">거래처 데이터 세트</p>
+          {clientSet > 0 && <span className="text-[0.82rem] font-medium text-navy-400">현재 시연 데이터 기준</span>}
         </div>
         <div className="flex gap-1 rounded-2xl bg-navy-50 p-1">
           {CLIENT_SETS.map((s) => {
@@ -83,7 +83,7 @@ export function Clients() {
               <button
                 key={s.demoCount}
                 onClick={() => setClientSet(s.demoCount as ClientSetSize)}
-                className={`flex-1 rounded-xl py-2 text-center text-sm font-extrabold transition active:scale-[0.98] ${
+                className={`flex-1 rounded-xl py-2 text-center text-[0.95rem] font-extrabold transition active:scale-[0.98] ${
                   active ? 'bg-white text-teal-600 shadow-sm' : 'text-navy-500'
                 }`}
               >
@@ -92,7 +92,7 @@ export function Clients() {
             )
           })}
         </div>
-        <p className="mt-1.5 px-1 text-[0.6875rem] leading-snug text-navy-400">
+        <p className="mt-1.5 px-1 text-[0.82rem] leading-snug text-navy-400">
           기본 5곳은 실제 주요거래처, 확장(+10/20/30)은 서울·경기권 시연용 데이터입니다.
         </p>
       </div>
@@ -121,21 +121,21 @@ export function Clients() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="truncate text-[0.9375rem] font-bold text-navy-900">{c.name}</span>
-                      <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.6875rem] font-bold text-navy-500">{c.type}</span>
+                      <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.82rem] font-bold text-navy-500">{c.type}</span>
                       {c.isDemoGenerated ? (
-                        <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[0.625rem] font-bold text-navy-500">시연용</span>
+                        <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[0.78rem] font-bold text-navy-500">시연용</span>
                       ) : (
-                        <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.625rem] font-bold text-teal-600">주요거래처</span>
+                        <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.78rem] font-bold text-teal-600">주요거래처</span>
                       )}
                     </div>
                     <p className="mt-1 truncate t-caption">{c.manager} · {c.collectionCycle}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-rose-500">의료</span>}
-                      {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-teal-600">기저귀</span>}
-                      {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.625rem] font-bold text-amber-600">미수금</span>}
+                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.78rem] font-bold text-rose-500">의료</span>}
+                      {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.78rem] font-bold text-teal-600">기저귀</span>}
+                      {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.78rem] font-bold text-amber-600">미수금</span>}
                     </div>
                     {topAction && meta && topAction.kind !== '정기수거' && (
-                      <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.6875rem] font-bold ${meta.chip}`}>
+                      <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.82rem] font-bold ${meta.chip}`}>
                         <meta.icon size={12} strokeWidth={2.6} className="shrink-0" />
                         <span className="truncate">{topAction.title}</span>
                         {topAction.estValue > 0 && <span className="shrink-0">· +{wonShort(topAction.estValue)}</span>}

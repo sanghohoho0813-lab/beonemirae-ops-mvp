@@ -55,14 +55,14 @@ export function Reports() {
         title="운영 리포트"
         subtitle={`${month.replace('-', '년 ')}월 · 병원별 월간 운영 리포트`}
         action={
-          <span className="hidden shrink-0 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-navy-500 shadow-card sm:inline-flex">
+          <span className="hidden shrink-0 rounded-full bg-white px-3.5 py-2 text-[0.85rem] font-bold text-navy-500 shadow-card sm:inline-flex">
             자동 집계 · 수거 입력 데이터 기반
           </span>
         }
       />
 
       {/* 이번 달 리포트 요약 */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">
         <KpiCard icon={Scale} label="이번 달 총 수거량" value={weight(totalKg)} tone="teal" />
         <KpiCard icon={FileBarChart} label="수거 횟수" value={totalVisits} unit="회" tone="navy" />
         <KpiCard icon={Users} label="리포트 발행 대상" value={activeClients} unit="곳" tone="navy" hint={`전체 ${reports.length}곳`} />

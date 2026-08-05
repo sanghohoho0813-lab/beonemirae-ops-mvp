@@ -20,9 +20,9 @@ import {
 export type FontScale = 'normal' | 'large' | 'xlarge'
 
 export const FONT_SCALE_OPTIONS: { value: FontScale; label: string; hint: string }[] = [
-  { value: 'normal', label: '기본', hint: '표준 크기' },
-  { value: 'large', label: '크게', hint: '약 20% 크게' },
-  { value: 'xlarge', label: '매우 크게', hint: '약 40% 크게' },
+  { value: 'normal', label: '기본', hint: '표준' },
+  { value: 'large', label: '크게', hint: '+15%' },
+  { value: 'xlarge', label: '매우 크게', hint: '+30%' },
 ]
 
 const STORAGE_KEY = 'beonemirae-ops:font-scale'

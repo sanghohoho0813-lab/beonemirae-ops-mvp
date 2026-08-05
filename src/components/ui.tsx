@@ -72,12 +72,12 @@ export function MetricCard({
           : ''
       }`}
     >
-      <span className={`order-2 mt-2 break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-sm' : 'text-[0.8125rem]'}`}>{label}</span>
+      <span className={`order-2 mt-2 break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[0.95rem]' : 'text-[0.9rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-300">{unit}</span>}
       </span>
-      {hint && <span className="order-3 mt-1.5 text-xs text-navy-400 sm:text-[0.8125rem]">{hint}</span>}
+      {hint && <span className="order-3 mt-1.5 text-[0.85rem] text-navy-400 sm:text-[0.9rem]">{hint}</span>}
     </motion.div>
   )
 }
@@ -124,7 +124,7 @@ export function FilterChip({
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.15, ease: EASE }}
-      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[0.8125rem] font-bold transition-colors ${
+      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[0.9rem] font-bold transition-colors ${
         active ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
       }`}
     >
@@ -212,7 +212,7 @@ export function EmptyState({ icon = '🗂️', title, subtitle }: { icon?: strin
     <div className="card flex flex-col items-center justify-center px-6 py-12 text-center">
       <span className="text-3xl">{icon}</span>
       <p className="mt-3 font-bold text-navy-700">{title}</p>
-      {subtitle && <p className="mt-1 text-sm text-navy-400">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-[0.95rem] text-navy-400">{subtitle}</p>}
     </div>
   )
 }
@@ -250,7 +250,7 @@ export function FeatureCard({
         <p className="t-muted">{desc}</p>
       </div>
       {badge && (
-        <span className="shrink-0 rounded-full bg-navy-50 px-2.5 py-1 text-[0.8125rem] font-bold text-navy-500">
+        <span className="shrink-0 rounded-full bg-navy-50 px-2.5 py-1 text-[0.9rem] font-bold text-navy-500">
           {badge}
         </span>
       )}
@@ -276,7 +276,7 @@ export function ExpandableSection({
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-center gap-1 rounded-2xl bg-navy-50 px-4 py-2.5 text-sm font-bold text-navy-600 transition active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-1 rounded-2xl bg-navy-50 px-4 py-2.5 text-[0.95rem] font-bold text-navy-600 transition active:scale-[0.99]"
       >
         {open ? openLabel ?? '접기' : label}
         <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -310,6 +310,12 @@ const kpiToneStyle: Record<IconTone, string> = {
   emerald: 'bg-emerald-50 text-emerald-600',
 }
 
+/** '622kg' → ['622','kg'] · '+190만원' → ['+190','만원'] · '완료' → ['완료',''] */
+function splitAmountUnit(s: string): [string, string] {
+  const m = s.match(/^([+\-]?[\d.,]+)(.*)$/)
+  return m ? [m[1], m[2]] : [s, '']
+}
+
 /** 대시보드 상단 KPI 카드 — 아이콘 + 라벨 + 큰 숫자 + 증감/보조 문구 */
 export function KpiCard({
   icon: Icon,
@@ -334,6 +340,10 @@ export function KpiCard({
 }) {
   const deltaClass =
     deltaTone === 'up' ? 'text-teal-600' : deltaTone === 'down' ? 'text-rose-500' : 'text-navy-400'
+  // '622kg' · '+190만원' 처럼 숫자 뒤에 단위가 붙은 값은 단위를 작게 분리해
+  // 숫자 자체를 최대한 크게 보여줍니다(좁은 카드에서도 잘리지 않음).
+  const [num, tail] =
+    typeof value === 'string' ? splitAmountUnit(value) : [value, '']
   return (
     <motion.div
       onClick={onClick}
@@ -341,7 +351,7 @@ export function KpiCard({
       transition={{ duration: 0.15, ease: EASE }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      className={`card p-4 sm:p-6 ${
+      className={`card kpi-box p-4 sm:p-5 ${
         onClick ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-lg' : ''
       }`}
     >
@@ -354,8 +364,13 @@ export function KpiCard({
         <p className="t-label min-w-0 text-navy-500">{label}</p>
       </div>
       <p className="t-kpi mt-3.5 text-navy-900">
-        {value}
-        {unit && <span className="ml-0.5 text-[0.7em] font-bold text-navy-400">{unit}</span>}
+        {num}
+        {(tail || unit) && (
+          <span className="ml-0.5 text-[0.62em] font-bold text-navy-400">
+            {tail}
+            {unit}
+          </span>
+        )}
       </p>
       {delta && <p className={`t-muted mt-2.5 font-bold ${deltaClass}`}>{delta}</p>}
       {hint && !delta && (
@@ -433,9 +448,9 @@ export function SectionTabs({ items }: { items: { id: string; label: string }[] 
         <button
           key={it.id}
           onClick={() => go(it.id)}
-          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.8125rem] font-bold text-navy-600 shadow-card"
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.9rem] font-bold text-navy-600 shadow-card"
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[0.6875rem] font-extrabold text-teal-600">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[0.82rem] font-extrabold text-teal-600">
             {i + 1}
           </span>
           {it.label}

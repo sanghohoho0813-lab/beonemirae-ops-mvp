@@ -141,7 +141,7 @@ const BASIS = [
 ]
 
 function StatusBadge({ status }: { status: StepStatus }) {
-  return <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.6875rem] font-bold ${STATUS_STYLE[status]}`}>{status}</span>
+  return <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.82rem] font-bold ${STATUS_STYLE[status]}`}>{status}</span>
 }
 
 // ── 한눈에 보는 활용 구조 인포그래픽 ─────────────────────────────────────────
@@ -166,10 +166,10 @@ function FlowInfographic() {
   return (
     <div className="card p-4 sm:p-5">
       {/* 4개 국면 카드 + 사이 화살표 */}
-      <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-stretch sm:gap-0">
+      <div className="grid grid-cols-2 gap-2.5 xl:flex xl:items-stretch xl:gap-0">
         {PHASES_VIS.map((p, i) => (
           <Fragment key={p.title}>
-            <div className={`flex flex-1 flex-col items-center rounded-2xl bg-white p-4 text-center ring-2 ${p.ring}`}>
+            <div className={`flex min-w-0 flex-1 flex-col items-center rounded-2xl bg-white p-4 text-center ring-2 ${p.ring}`}>
               <div className="flex items-center gap-1.5">
                 {p.icons.map((Icon, k) => (
                   <span key={k} className={`flex h-9 w-9 items-center justify-center rounded-xl ${p.chip}`}>
@@ -180,11 +180,11 @@ function FlowInfographic() {
               <p className="mt-2.5 text-[0.9375rem] font-extrabold text-navy-900">
                 {p.no} {p.title}
               </p>
-              <p className="mt-1 whitespace-pre-line text-xs leading-snug text-navy-500">{p.desc}</p>
-              <span className="mt-2 rounded-full bg-navy-50 px-2.5 py-0.5 text-[0.6875rem] font-bold text-navy-500">{p.steps}</span>
+              <p className="mt-1 whitespace-pre-line text-[0.85rem] leading-snug text-navy-500">{p.desc}</p>
+              <span className="mt-2 rounded-full bg-navy-50 px-2.5 py-0.5 text-[0.82rem] font-bold text-navy-500">{p.steps}</span>
             </div>
             {i < PHASES_VIS.length - 1 && (
-              <div className="hidden items-center px-1 sm:flex">
+              <div className="hidden items-center px-1 xl:flex">
                 <ArrowRight size={18} className="shrink-0 text-navy-300" strokeWidth={2.6} />
               </div>
             )}
@@ -193,21 +193,21 @@ function FlowInfographic() {
       </div>
 
       {/* 환류 루프 화살표 (데스크톱) — ④ 축적 → ② 운행 */}
-      <div className="relative mt-1 hidden h-16 sm:block" aria-hidden>
+      <div className="relative mt-1 hidden h-16 xl:block" aria-hidden>
         <div className="absolute bottom-4 left-[37%] right-[13%] top-0 rounded-b-2xl border-b-2 border-l-2 border-r-2 border-dashed border-teal-400" />
         <span className="absolute left-[37%] top-[-4px] -translate-x-1/2 text-teal-500">
           <ArrowUp size={18} strokeWidth={2.8} />
         </span>
-        <span className="absolute bottom-4 left-1/2 -translate-x-1/2 translate-y-1/2 whitespace-nowrap rounded-full bg-teal-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm">
+        <span className="absolute bottom-4 left-1/2 -translate-x-1/2 translate-y-1/2 whitespace-nowrap rounded-full bg-teal-500 px-3.5 py-1.5 text-[0.85rem] font-bold text-white shadow-sm">
           <RefreshCw size={12} className="mr-1 inline -translate-y-px" strokeWidth={2.8} />
           운영 데이터 환류 — 쓸수록 배차·경로가 정교해집니다
         </span>
       </div>
 
       {/* 환류 안내 (모바일) */}
-      <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-teal-50 px-3.5 py-2.5 sm:hidden">
+      <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-teal-50 px-3.5 py-2.5 xl:hidden">
         <RefreshCw size={15} className="shrink-0 text-teal-600" strokeWidth={2.6} />
-        <p className="text-xs font-bold leading-snug text-teal-700">④ 축적된 데이터가 ② 배차·경로를 다시 정교하게 만듭니다</p>
+        <p className="text-[0.85rem] font-bold leading-snug text-teal-700">④ 축적된 데이터가 ② 배차·경로를 다시 정교하게 만듭니다</p>
       </div>
     </div>
   )
@@ -230,10 +230,10 @@ export function Roadmap() {
         >
           <ArrowLeft size={18} />
         </button>
-        <span className="text-sm font-bold text-navy-500">활용 계획 · 업무흐름도</span>
+        <span className="text-[0.95rem] font-bold text-navy-500">활용 계획 · 업무흐름도</span>
         <button
           onClick={() => navigate('/demo')}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-bold text-navy-600 shadow-card transition hover:bg-navy-50"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.95rem] font-bold text-navy-600 shadow-card transition hover:bg-navy-50"
         >
           <Sparkles size={15} /> 시연 요약
         </button>
@@ -243,14 +243,14 @@ export function Roadmap() {
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-6 text-white shadow-lg">
         <div className="flex items-center gap-1.5 text-teal-300">
           <Workflow size={16} />
-          <span className="text-xs font-bold">이 시스템을 어떻게 활용하는가</span>
+          <span className="text-[0.85rem] font-bold">이 시스템을 어떻게 활용하는가</span>
         </div>
         <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight">
           현장 수거·운반을 데이터로 남기고,
           <br />
           그 데이터로 배차·경로를 최적화합니다
         </h1>
-        <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs font-bold">
+        <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[0.85rem] font-bold">
           <span className="rounded-full bg-white/10 px-3 py-1.5">① 현장 운영 기록</span>
           <ArrowRight size={13} className="text-teal-300" />
           <span className="rounded-full bg-white/10 px-3 py-1.5">② 운영 데이터 축적</span>
@@ -285,11 +285,11 @@ export function Roadmap() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-extrabold text-teal-600">STEP {s.n}</span>
+                      <span className="text-[0.85rem] font-extrabold text-teal-600">STEP {s.n}</span>
                       <StatusBadge status={s.status} />
                     </div>
                     <p className="mt-1 font-bold text-navy-900">{s.title}</p>
-                    <p className="mt-0.5 text-[0.8125rem] leading-snug text-navy-500">{s.desc}</p>
+                    <p className="mt-0.5 text-[0.9rem] leading-snug text-navy-500">{s.desc}</p>
                   </div>
                   <ArrowRight size={16} className="mt-1 shrink-0 text-navy-300" />
                 </button>
@@ -309,7 +309,7 @@ export function Roadmap() {
             {PHASES.map((p) => (
               <div key={p.tag} className="relative flex gap-3.5">
                 <span
-                  className={`relative z-10 mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-extrabold ring-4 ring-[#f5f7fa] ${
+                  className={`relative z-10 mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.82rem] font-extrabold ring-4 ring-[#f5f7fa] ${
                     p.current ? 'bg-teal-500 text-white' : 'bg-white text-navy-500 shadow-card'
                   }`}
                 >
@@ -318,17 +318,17 @@ export function Roadmap() {
                 <div className={`card flex-1 p-4 sm:p-5 ${p.current ? 'ring-2 ring-teal-400' : ''}`}>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-base font-extrabold text-navy-900 sm:text-[1.0625rem]">{p.title}</p>
-                    <span className={`rounded-full px-2.5 py-1 text-[0.6875rem] font-bold ${phaseStateStyle[p.state]}`}>
+                    <span className={`rounded-full px-2.5 py-1 text-[0.82rem] font-bold ${phaseStateStyle[p.state]}`}>
                       {p.state}
                     </span>
-                    <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.6875rem] font-bold text-navy-500">
+                    <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.82rem] font-bold text-navy-500">
                       {p.tag} · {p.period}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[0.8125rem] font-semibold leading-snug text-navy-600 sm:text-sm">{p.purpose}</p>
+                  <p className="mt-1.5 text-[0.9rem] font-semibold leading-snug text-navy-600 sm:text-[0.95rem]">{p.purpose}</p>
                   <ul className="mt-2.5 space-y-1.5">
                     {p.points.map((pt) => (
-                      <li key={pt} className="flex gap-2 text-[0.8125rem] leading-snug text-navy-700 sm:text-sm">
+                      <li key={pt} className="flex gap-2 text-[0.9rem] leading-snug text-navy-700 sm:text-[0.95rem]">
                         <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-teal-500" />
                         {pt}
                       </li>
@@ -350,12 +350,12 @@ export function Roadmap() {
               <ArrowDown size={18} className="shrink-0 text-teal-500" strokeWidth={2.4} />
               <div>
                 <p className="text-[0.9375rem] font-bold text-navy-900">{e.k}</p>
-                <p className="text-xs text-navy-500">{e.v}</p>
+                <p className="text-[0.85rem] text-navy-500">{e.v}</p>
               </div>
             </div>
           ))}
         </div>
-        <p className="mt-2 px-1 text-xs leading-snug text-navy-400">
+        <p className="mt-2 px-1 text-[0.85rem] leading-snug text-navy-400">
           ※ 위 항목은 확정 수치가 아니며, 실제 운행데이터 축적 후 실증지표로 검증할 예정입니다.
         </p>
       </section>
@@ -369,7 +369,7 @@ export function Roadmap() {
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
                 <Icon size={17} strokeWidth={2.2} />
               </span>
-              <p className="text-sm font-semibold leading-snug text-navy-700">{t}</p>
+              <p className="text-[0.95rem] font-semibold leading-snug text-navy-700">{t}</p>
             </div>
           ))}
         </div>
@@ -389,7 +389,7 @@ export function Roadmap() {
         </div>
       )}
 
-      <p className="pb-2 text-center text-xs text-navy-300">활용 계획·업무흐름도 · ㈜비원미래 운영관리</p>
+      <p className="pb-2 text-center text-[0.85rem] text-navy-300">활용 계획·업무흐름도 · ㈜비원미래 운영관리</p>
     </PageShell>
   )
 }

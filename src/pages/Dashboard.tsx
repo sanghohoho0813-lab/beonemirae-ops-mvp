@@ -81,7 +81,8 @@ export function Dashboard() {
       </div>
 
       {/* 핵심 KPI 4개 */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      {/* KPI — 숫자 크기는 카드 폭에 맞춰 자동 조절(.t-kpi/container query)됩니다 */}
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">
         <KpiCard
           icon={Package}
           label="오늘 수거 건수"

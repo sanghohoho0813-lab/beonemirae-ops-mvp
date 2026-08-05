@@ -125,7 +125,7 @@ export function TodaySchedule() {
         </button>
         <div className="text-center">
           <p className="text-[0.9375rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
-          <button className="text-xs font-bold text-teal-600" onClick={() => setDate(today())}>
+          <button className="text-[0.85rem] font-bold text-teal-600" onClick={() => setDate(today())}>
             오늘로 이동
           </button>
         </div>
@@ -150,7 +150,7 @@ export function TodaySchedule() {
             return (
               <StaggerItem key={s.id} className="card overflow-hidden">
                 {urgent && (
-                  <div className="flex items-center gap-1.5 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-500">
+                  <div className="flex items-center gap-1.5 bg-rose-50 px-4 py-2 text-[0.85rem] font-bold text-rose-500">
                     <AlertTriangle size={13} strokeWidth={2.6} /> 우선 방문 요청
                   </div>
                 )}
@@ -162,7 +162,7 @@ export function TodaySchedule() {
                         <WasteBadge type={s.wasteType} />
                         {!done && <StatusBadge status={s.status} />}
                         {done && s.handoverStatus && (
-                          <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[0.625rem] font-bold text-navy-500">
+                          <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[0.78rem] font-bold text-navy-500">
                             {s.handoverStatus}
                           </span>
                         )}
@@ -179,7 +179,7 @@ export function TodaySchedule() {
                       <p className="mt-0.5 truncate t-caption">
                         {client?.address} · {vehicle?.name ?? '미배정'}
                       </p>
-                      {s.memo && <p className="mt-1.5 text-sm font-medium text-amber-600">📌 {s.memo}</p>}
+                      {s.memo && <p className="mt-1.5 text-[0.95rem] font-medium text-amber-600">📌 {s.memo}</p>}
                       {/* 현장 메모 — 거래처 상세에 기록해둔 특이사항을 방문 전에 함께 확인 */}
                       {client && <NoteChips notes={notesFor(client.id)} max={2} />}
                     </div>
@@ -197,7 +197,7 @@ export function TodaySchedule() {
                       )}
                       {done && (
                         <button
-                          className="mt-1.5 rounded-full bg-navy-50 px-3 py-1 text-xs font-bold text-navy-500 transition active:scale-95"
+                          className="mt-1.5 rounded-full bg-navy-50 px-3 py-1 text-[0.85rem] font-bold text-navy-500 transition active:scale-95"
                           onClick={() => openEdit(s)}
                         >
                           수정
@@ -209,13 +209,13 @@ export function TodaySchedule() {
                   {!done && (
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
-                        className="flex items-center justify-center gap-1.5 rounded-xl bg-navy-50 px-3 py-2.5 text-sm font-bold text-navy-700 transition active:scale-95"
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-navy-50 px-3 py-2.5 text-[0.95rem] font-bold text-navy-700 transition active:scale-95"
                         onClick={() => navigate(`/collection?schedule=${s.id}`)}
                       >
                         <ClipboardEdit size={15} strokeWidth={2.4} /> 수거정보 입력
                       </button>
                       <button
-                        className="flex items-center justify-center gap-1.5 rounded-xl bg-teal-500 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95"
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-teal-500 px-3 py-2.5 text-[0.95rem] font-bold text-white shadow-sm transition active:scale-95"
                         onClick={() => openQuick(s)}
                       >
                         <Zap size={15} strokeWidth={2.6} /> 빠른 완료
@@ -253,7 +253,7 @@ export function TodaySchedule() {
       >
         {quick && !quickResult && (
           <>
-            <div className="rounded-xl bg-navy-50 p-3 text-sm">
+            <div className="rounded-xl bg-navy-50 p-3 text-[0.95rem]">
               <p className="font-semibold text-navy-900">{clientById(quick.clientId)?.name}</p>
               <p className="text-navy-400">
                 {quick.scheduledTime} · {quick.wasteType} ·{' '}
@@ -285,23 +285,23 @@ export function TodaySchedule() {
               />
             </div>
             <div className="rounded-xl bg-navy-50 p-3">
-              <p className="text-[0.6875rem] font-bold text-navy-400">완료 시 자동 반영</p>
+              <p className="text-[0.82rem] font-bold text-navy-400">완료 시 자동 반영</p>
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {['오늘 일정 완료', '수거이력', '거래처 최근 활동', '대시보드 KPI', '통계', '수거대장 초안', '월간 명세 초안'].map(
                   (t) => (
-                    <span key={t} className="rounded-full bg-white px-2 py-0.5 text-[0.625rem] font-semibold text-navy-500">
+                    <span key={t} className="rounded-full bg-white px-2 py-0.5 text-[0.78rem] font-semibold text-navy-500">
                       {t}
                     </span>
                   ),
                 )}
               </div>
             </div>
-            <p className="text-[0.6875rem] text-navy-400">
+            <p className="text-[0.82rem] text-navy-400">
               용기·자재까지 상세 입력하려면 <b>수거정보 입력</b>을 사용하세요. 빠른 완료도 동일하게 일정·이력·통계에
               연결됩니다.
             </p>
             {quickError && (
-              <p className="flex items-start gap-1.5 text-sm font-semibold text-rose-500">
+              <p className="flex items-start gap-1.5 text-[0.95rem] font-semibold text-rose-500">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" /> {quickError}
               </p>
             )}
@@ -311,26 +311,26 @@ export function TodaySchedule() {
           <>
             <div className="rounded-xl bg-emerald-50 p-3.5 text-center">
               <Check size={22} className="mx-auto text-emerald-500" strokeWidth={2.6} />
-              <p className="mt-1.5 text-sm font-bold text-navy-900">
+              <p className="mt-1.5 text-[0.95rem] font-bold text-navy-900">
                 {quickResult.name} · {weight(quickResult.amount)}
               </p>
-              <p className="text-[0.75rem] text-navy-500">수거정보가 여러 운영 화면에 자동 반영되었습니다.</p>
+              <p className="text-[0.85rem] text-navy-500">수거정보가 여러 운영 화면에 자동 반영되었습니다.</p>
             </div>
             <div className="grid grid-cols-1 gap-2">
               <button
-                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-sm font-bold text-navy-700 transition active:scale-[0.98]"
+                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[0.95rem] font-bold text-navy-700 transition active:scale-[0.98]"
                 onClick={() => navigate(`/clients/${quickResult.clientId}`)}
               >
                 거래처 상세에서 확인 <ChevronRight size={16} className="text-navy-300" />
               </button>
               <button
-                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-sm font-bold text-navy-700 transition active:scale-[0.98]"
+                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[0.95rem] font-bold text-navy-700 transition active:scale-[0.98]"
                 onClick={() => navigate('/materials')}
               >
                 자재관리에서 확인 <ChevronRight size={16} className="text-navy-300" />
               </button>
               <button
-                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-sm font-bold text-navy-700 transition active:scale-[0.98]"
+                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[0.95rem] font-bold text-navy-700 transition active:scale-[0.98]"
                 onClick={() => navigate('/history')}
               >
                 전체 수거이력에서 확인 <ChevronRight size={16} className="text-navy-300" />
@@ -358,7 +358,7 @@ export function TodaySchedule() {
       >
         {editTarget && (
           <>
-            <div className="rounded-xl bg-navy-50 p-3 text-sm">
+            <div className="rounded-xl bg-navy-50 p-3 text-[0.95rem]">
               <p className="font-semibold text-navy-900">{clientById(editTarget.clientId)?.name}</p>
               <p className="text-navy-400">
                 {editTarget.scheduledTime} · {editTarget.wasteType}

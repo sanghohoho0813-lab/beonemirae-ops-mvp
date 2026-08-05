@@ -47,7 +47,7 @@ function Stat({
         <Icon size={15} className="shrink-0" /> {label}
       </p>
       <p className={`mt-2 break-keep text-[1.5rem] font-extrabold leading-none ${valueClass}`}>{value}</p>
-      {sub && <p className="mt-1.5 break-keep text-[0.8125rem] leading-snug text-navy-400">{sub}</p>}
+      {sub && <p className="mt-1.5 break-keep text-[0.9rem] leading-snug text-navy-400">{sub}</p>}
     </div>
   )
 }

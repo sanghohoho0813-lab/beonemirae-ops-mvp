@@ -70,7 +70,7 @@ function NumField({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[0.8125rem] font-semibold text-navy-500">{label}</label>
+      <label className="mb-1 block text-[0.9rem] font-semibold text-navy-500">{label}</label>
       <div className="relative">
         <input
           type="number"
@@ -82,12 +82,12 @@ function NumField({
           placeholder="0"
         />
         {suffix && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-navy-300">
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[0.85rem] font-semibold text-navy-300">
             {suffix}
           </span>
         )}
       </div>
-      {hint && <p className={`mt-1 text-[0.6875rem] ${danger ? 'text-rose-500' : 'text-navy-400'}`}>{hint}</p>}
+      {hint && <p className={`mt-1 text-[0.82rem] ${danger ? 'text-rose-500' : 'text-navy-400'}`}>{hint}</p>}
     </div>
   )
 }
@@ -96,12 +96,12 @@ function Section({ n, title, desc, children }: { n: number; title: string; desc?
   return (
     <div className="card p-5">
       <div className="mb-3 flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-xs font-extrabold text-teal-600">
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.85rem] font-extrabold text-teal-600">
           {n}
         </span>
         <div>
           <h2 className="text-[1.0625rem] font-extrabold text-navy-900">{title}</h2>
-          {desc && <p className="mt-0.5 text-xs text-navy-400">{desc}</p>}
+          {desc && <p className="mt-0.5 text-[0.85rem] text-navy-400">{desc}</p>}
         </div>
       </div>
       {children}
@@ -250,8 +250,8 @@ export function CollectionInput() {
             {success.supplied > 0 && ` · 자재 ${success.supplied}점 동시공급`}
           </p>
 
-          <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-sm">
-            <p className="mb-1 text-xs font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
+          <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-[0.95rem]">
+            <p className="mb-1 text-[0.85rem] font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
             {[
               '오늘 일정 완료 처리 · 수거이력 생성',
               '거래처 최근 활동 · 월간 수거량 반영',
@@ -272,7 +272,7 @@ export function CollectionInput() {
               수거이력 보기
             </Link>
           </div>
-          <button className="mt-3 text-sm font-bold text-teal-600" onClick={() => setSuccess(null)}>
+          <button className="mt-3 text-[0.95rem] font-bold text-teal-600" onClick={() => setSuccess(null)}>
             + 이어서 다른 수거 입력
           </button>
         </motion.div>
@@ -281,7 +281,7 @@ export function CollectionInput() {
   }
 
   return (
-    <div className="mx-auto max-w-lg pb-4">
+    <div className="pb-4">
       <PageHeader title="수거 입력" subtitle="한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다" />
 
       {/* 검증 오류 */}
@@ -294,7 +294,7 @@ export function CollectionInput() {
             exit={{ opacity: 0 }}
           >
             {errors.map((e) => (
-              <p key={e} className="flex items-start gap-1.5 text-sm font-semibold text-rose-600">
+              <p key={e} className="t-body flex items-start gap-1.5 font-semibold text-rose-600">
                 <AlertCircle size={16} strokeWidth={2.3} className="mt-0.5 shrink-0" /> {e}
               </p>
             ))}
@@ -302,7 +302,9 @@ export function CollectionInput() {
         )}
       </AnimatePresence>
 
-      <div className="space-y-3.5">
+      {/* PC 는 좌(입력 대상·수거량) / 우(현장 정보·저장) 2열, 모바일은 1열로 자연스럽게 내려감 */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
+        <div className="space-y-4">
         {/* 1. 오늘 일정 선택 */}
         <Section n={1} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
           <div className="flex flex-wrap gap-2">
@@ -311,7 +313,7 @@ export function CollectionInput() {
                 setScheduleId('')
                 setErrors([])
               }}
-              className={`rounded-xl px-3.5 py-2.5 text-sm font-bold transition active:scale-[0.97] ${
+              className={`rounded-xl px-4 py-3 text-[0.95rem] font-bold transition active:scale-[0.97] ${
                 scheduleId === '' ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
               }`}
             >
@@ -324,17 +326,17 @@ export function CollectionInput() {
                 <button
                   key={s.id}
                   onClick={() => applySchedule(s.id)}
-                  className={`rounded-xl px-3.5 py-2.5 text-left text-sm font-bold transition active:scale-[0.97] ${
+                  className={`rounded-xl px-3.5 py-2.5 text-left text-[0.95rem] font-bold transition active:scale-[0.97] ${
                     active ? 'bg-teal-500 text-white' : 'bg-navy-50 text-navy-700'
                   }`}
                 >
                   <span className="tabular-nums">{s.scheduledTime}</span> · {c?.name ?? '거래처'}
-                  {s.status === '긴급' && <span className="ml-1 text-[0.625rem] font-extrabold text-rose-400">긴급</span>}
+                  {s.status === '긴급' && <span className="ml-1 text-[0.78rem] font-extrabold text-rose-400">긴급</span>}
                 </button>
               )
             })}
             {todayPending.length === 0 && (
-              <p className="text-sm text-navy-400">오늘 남은 예정 수거가 없습니다. 직접 입력으로 등록하세요.</p>
+              <p className="text-[0.95rem] text-navy-400">오늘 남은 예정 수거가 없습니다. 직접 입력으로 등록하세요.</p>
             )}
           </div>
         </Section>
@@ -360,7 +362,7 @@ export function CollectionInput() {
                   </option>
                 ))}
               </select>
-              {scheduleId && <p className="mt-1 text-[0.6875rem] text-navy-400">선택한 일정에서 자동 지정됨</p>}
+              {scheduleId && <p className="t-muted mt-1.5">선택한 일정에서 자동 지정됨</p>}
             </div>
             <div>
               <label className="field-label">폐기물 구분 *</label>
@@ -370,7 +372,7 @@ export function CollectionInput() {
                     key={w}
                     disabled={!!scheduleId}
                     onClick={() => setWasteType(w)}
-                    className={`rounded-2xl px-4 py-3 text-[0.9375rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
+                    className={`rounded-2xl px-4 py-3.5 text-[0.95rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
                       wasteType === w
                         ? w === '의료폐기물'
                           ? 'bg-rose-500 text-white shadow-sm'
@@ -385,11 +387,9 @@ export function CollectionInput() {
             </div>
             {client && (
               <>
-                <div className="rounded-2xl bg-navy-50 p-3 text-xs text-navy-500">
+                <div className="t-body rounded-2xl bg-navy-50 p-4 text-navy-500">
                   {client.address} · {client.manager} · {client.phone}
                 </div>
-                {/* 현장 메모 — 이 거래처에 기록해둔 특이사항을 입력 전에 확인 */}
-                <NoteChips notes={notesFor(client.id)} max={3} />
               </>
             )}
           </div>
@@ -432,8 +432,20 @@ export function CollectionInput() {
               />
             ))}
           </div>
-          {containerSum > 0 && <p className="mt-2 text-xs font-semibold text-navy-500">합계 {containerSum}개</p>}
+          {containerSum > 0 && <p className="mt-2 text-[0.85rem] font-semibold text-navy-500">합계 {containerSum}개</p>}
         </Section>
+
+        </div>
+
+        {/* ── 우측: 현장 정보 · 자재 · 차량 · 저장 ── */}
+        <div className="space-y-4">
+        {/* 현장 메모 — 이 거래처에 기록해둔 특이사항 */}
+        {client && notesFor(client.id).some((n) => !n.done) && (
+          <div className="card p-5">
+            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항</p>
+            <NoteChips notes={notesFor(client.id)} max={4} />
+          </div>
+        )}
 
         {/* 5. 자재 동시공급 */}
         <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
@@ -454,7 +466,7 @@ export function CollectionInput() {
             })}
           </div>
           {suppliedSum > 0 && (
-            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-navy-600">
+            <label className="mt-3 flex items-center gap-2 text-[0.95rem] font-semibold text-navy-600">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-teal-500"
@@ -465,7 +477,7 @@ export function CollectionInput() {
             </label>
           )}
           {overStock && (
-            <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-rose-500">
+            <p className="mt-2 flex items-center gap-1.5 text-[0.85rem] font-bold text-rose-500">
               <AlertTriangle size={13} /> 사무실 재고를 초과한 공급은 저장할 수 없습니다.
             </p>
           )}
@@ -503,7 +515,7 @@ export function CollectionInput() {
               />
             </div>
           </div>
-          <p className="mt-1.5 text-[0.6875rem] text-navy-400">
+          <p className="mt-1.5 text-[0.82rem] text-navy-400">
             {wasteType} 전용 차량만 배차할 수 있습니다 (구분 불일치 시 저장 차단).
           </p>
         </Section>
@@ -515,7 +527,7 @@ export function CollectionInput() {
               <button
                 key={h}
                 onClick={() => setHandover(h)}
-                className={`rounded-xl px-2 py-3 text-[0.8125rem] font-bold transition active:scale-[0.97] ${
+                className={`rounded-xl px-2 py-3 text-[0.9rem] font-bold transition active:scale-[0.97] ${
                   handover === h ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
                 }`}
               >
@@ -540,7 +552,7 @@ export function CollectionInput() {
         {warnings.length > 0 && (
           <div className="card border border-amber-200 bg-amber-50 p-4">
             {warnings.map((w) => (
-              <p key={w} className="flex items-start gap-1.5 text-sm font-semibold text-amber-700">
+              <p key={w} className="t-body flex items-start gap-1.5 font-semibold text-amber-700">
                 <AlertTriangle size={15} className="mt-0.5 shrink-0" /> {w}
               </p>
             ))}
@@ -550,10 +562,10 @@ export function CollectionInput() {
         {/* 저장 전 요약 */}
         {canSubmit && (
           <div className="card border border-teal-100 bg-teal-50/50 p-4">
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-teal-700">
+            <p className="t-label mb-2.5 flex items-center gap-1.5 text-teal-700">
               <ClipboardList size={14} /> 저장 전 확인
             </p>
-            <div className="grid grid-cols-2 gap-y-1 text-sm text-navy-700">
+            <div className="t-body grid grid-cols-2 gap-y-2 text-navy-700">
               <span className="text-navy-400">거래처</span>
               <span className="text-right font-bold">{client?.name}</span>
               <span className="text-navy-400">수거량</span>
@@ -570,16 +582,17 @@ export function CollectionInput() {
 
         {/* 완료 버튼 (48px) */}
         <button
-          className="btn-primary w-full py-4 text-base disabled:opacity-50"
+          className="btn-primary w-full py-5 !text-[1.05rem] disabled:opacity-50"
           style={{ minHeight: 48 }}
           onClick={submit}
           disabled={!canSubmit}
         >
           <CheckCircle2 size={18} strokeWidth={2.4} /> 수거 완료 저장
         </button>
-        <p className="text-center text-[0.6875rem] text-navy-400">
+        <p className="t-muted text-center">
           작업 주체: 현장 담당자 (Demo) · 실제 적용 시 사용자별 계정·수정이력과 연동 예정
         </p>
+        </div>
       </div>
 
       {/* 최근 입력 이력 (감사기록) */}
@@ -597,18 +610,18 @@ export function CollectionInput() {
                   {e.materialIds.length ? <Package size={16} /> : <Truck size={16} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-navy-900">
+                  <p className="truncate text-[0.95rem] font-bold text-navy-900">
                     {e.clientName} · {weight(e.amountKg)}
-                    {e.reverted && <span className="ml-1.5 text-xs font-bold text-navy-400">취소됨</span>}
+                    {e.reverted && <span className="ml-1.5 text-[0.85rem] font-bold text-navy-400">취소됨</span>}
                   </p>
-                  <p className="truncate text-[0.6875rem] text-navy-400">
+                  <p className="truncate text-[0.82rem] text-navy-400">
                     {e.at.slice(5, 16).replace('T', ' ')} · {e.role} · {e.screen}
                     {e.requestUpdates.length > 0 && ` · 요청 ${e.requestUpdates.length}건 자동처리`}
                   </p>
                 </div>
                 {!e.reverted && (
                   <button
-                    className="flex shrink-0 items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1.5 text-xs font-bold text-navy-500 transition active:scale-95"
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1.5 text-[0.85rem] font-bold text-navy-500 transition active:scale-95"
                     onClick={() => setConfirmRevert(e.id)}
                   >
                     <RotateCcw size={12} /> 취소
@@ -617,13 +630,13 @@ export function CollectionInput() {
               </div>
             ))}
           </div>
-          <p className="mt-1.5 px-1 text-[0.6875rem] text-navy-400">
+          <p className="mt-1.5 px-1 text-[0.82rem] text-navy-400">
             취소 시 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
           </p>
         </div>
       )}
 
-      <p className="mt-6 text-center text-xs text-navy-300">{prettyDate(today())} 기준</p>
+      <p className="mt-6 text-center text-[0.85rem] text-navy-300">{prettyDate(today())} 기준</p>
 
       {/* 완료 취소 확인 모달 (시연 중 실수 방지) */}
       <Modal
@@ -650,7 +663,7 @@ export function CollectionInput() {
           </>
         }
       >
-        <p className="text-sm leading-relaxed text-navy-700">
+        <p className="text-[0.95rem] leading-relaxed text-navy-700">
           이 수거 완료 입력을 취소하면 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
         </p>
       </Modal>

@@ -21,14 +21,14 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <WasteBadge type={p.wasteType} />
-            <span className="truncate font-bold text-navy-900">{p.vehicleName}</span>
+            <span className="min-w-0 break-keep font-bold text-navy-900">{p.vehicleName}</span>
           </div>
-          <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <div className="h-2 w-24 overflow-hidden rounded-full bg-navy-100">
               <div className="h-full rounded-full bg-teal-500" style={{ width: `${p.loadRate}%` }} />
             </div>
-            <span className="text-xs font-bold text-teal-600">{p.loadRate}%</span>
-            <span className="text-xs text-navy-400">· 경로 {p.stops.length}곳 · 인계 {p.handoverTime}</span>
+            <span className="text-[0.85rem] font-bold text-teal-600">{p.loadRate}%</span>
+            <span className="whitespace-nowrap text-[0.85rem] text-navy-400">· 경로 {p.stops.length}곳 · 인계 {p.handoverTime}</span>
           </div>
         </div>
         <ChevronDown size={18} className={`shrink-0 text-navy-300 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -46,13 +46,13 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
           >
             <div className="space-y-3 border-t border-navy-100 p-4">
               <div>
-                <div className="mb-1.5 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-navy-500">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-500">
                   <Route size={15} /> 권장 수거 순서
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {p.routeLabels.map((label, i) => (
                     <span key={label + i} className="flex items-center gap-1.5">
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${i === p.routeLabels.length - 1 ? 'bg-navy-800 text-white' : 'bg-navy-50 text-navy-700'}`}>
+                      <span className={`rounded-lg px-2.5 py-1 text-[0.85rem] font-bold ${i === p.routeLabels.length - 1 ? 'bg-navy-800 text-white' : 'bg-navy-50 text-navy-700'}`}>
                         {label}
                       </span>
                       {i < p.routeLabels.length - 1 && <span className="text-navy-300">→</span>}
@@ -63,23 +63,23 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
 
               <div className="flex flex-wrap gap-1.5">
                 {p.urgentCount > 0 && (
-                  <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-500">
+                  <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[0.85rem] font-bold text-rose-500">
                     <Siren size={12} /> 긴급 {p.urgentCount}건 반영
                   </span>
                 )}
                 {p.materialCount > 0 && (
-                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-600">
+                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[0.85rem] font-bold text-amber-600">
                     <Package size={12} /> 자재 동시공급 {p.materialCount}건
                   </span>
                 )}
-                <span className="flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700">
+                <span className="flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-[0.85rem] font-bold text-teal-700">
                   <Target size={12} /> {p.facilityName} 인계 {p.handoverTime}
                 </span>
               </div>
 
               {/* 추천 이유 */}
               <div>
-                <p className="mb-1.5 text-[0.8125rem] font-semibold text-navy-500">추천 이유</p>
+                <p className="mb-1.5 text-[0.9rem] font-semibold text-navy-500">추천 이유</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     '같은 권역 거래처 우선 묶음',
@@ -91,17 +91,17 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
                     '처리장 인계시간 고려',
                     '기사 근무시간 고려',
                   ].map((r) => (
-                    <span key={r} className="rounded-lg bg-navy-50 px-2.5 py-1 text-xs font-semibold text-navy-600">{r}</span>
+                    <span key={r} className="rounded-lg bg-navy-50 px-2.5 py-1 text-[0.85rem] font-semibold text-navy-600">{r}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-xs font-medium text-navy-500">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-[0.85rem] font-medium text-navy-500">
                 <span>실적재 약 {p.capacity.toLocaleString('ko-KR')}kg</span>
                 <span>운행거리 <b className="text-navy-700">{p.simDistanceKm}km</b> <span className="text-navy-300">(시뮬레이션)</span></span>
                 <span>운행시간 <b className="text-navy-700">{p.simMinutes}분</b> <span className="text-navy-300">(시뮬레이션)</span></span>
               </div>
-              <p className="text-[0.75rem] text-navy-400">업무보조 추천 · 관리자 최종 확인 필요</p>
+              <p className="text-[0.85rem] text-navy-400">업무보조 추천 · 관리자 최종 확인 필요</p>
             </div>
           </motion.div>
         )}
@@ -145,36 +145,36 @@ export function Dispatch() {
           </span>
           <p className="text-[0.9375rem] font-bold">오늘 배차 추천 시뮬레이션</p>
         </div>
-        <p className="mt-2.5 text-sm leading-relaxed text-navy-200">
+        <p className="mt-2.5 text-[0.95rem] leading-relaxed text-navy-200">
           경기 남양주시 출발 · 서울·경기권 권역 배차. 거래처 위치·수거 가능시간·수거주기·예정 수거량·차량 적재가능량·폐기물
           구분·기사 근무시간·처리장 인계시간·긴급수거·자재 동시공급을 함께 고려합니다.
         </p>
-        <p className="mt-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-xs leading-snug text-teal-100">
+        <p className="mt-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-[0.85rem] leading-snug text-teal-100">
           현재는 현장 규칙을 반영한 추천 시뮬레이션 단계이며, 실제 운행데이터를 축적하여 추천 로직을 고도화할 예정입니다.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {['남양주 출발', '규칙 기반', '시뮬레이션', '실증 예정'].map((b) => (
-            <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[0.6875rem] font-bold text-teal-200">{b}</span>
+            <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[0.82rem] font-bold text-teal-200">{b}</span>
           ))}
         </div>
       </div>
 
       {/* 핵심 숫자 */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <div className="card p-4">
-          <p className="text-[0.8125rem] font-semibold text-navy-400">추천 차량</p>
+          <p className="text-[0.9rem] font-semibold text-navy-400">추천 차량</p>
           <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{plans.length}<span className="ml-0.5 text-base text-navy-300">대</span></p>
         </div>
         <div className="card p-4">
-          <p className="text-[0.8125rem] font-semibold text-navy-400">반영 거래처</p>
+          <p className="text-[0.9rem] font-semibold text-navy-400">반영 거래처</p>
           <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{stopCount}<span className="ml-0.5 text-base text-navy-300">곳</span></p>
         </div>
         <div className="card p-4">
-          <p className="text-[0.8125rem] font-semibold text-navy-400">긴급</p>
+          <p className="text-[0.9rem] font-semibold text-navy-400">긴급</p>
           <p className="mt-1.5 text-2xl font-extrabold text-rose-500">{urgentCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
         </div>
         <div className="card p-4">
-          <p className="text-[0.8125rem] font-semibold text-navy-400">자재 동시공급</p>
+          <p className="text-[0.9rem] font-semibold text-navy-400">자재 동시공급</p>
           <p className="mt-1.5 text-2xl font-extrabold text-amber-600">{materialCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
         </div>
       </div>
@@ -182,11 +182,11 @@ export function Dispatch() {
       {/* 차량별 추천 (아코디언) */}
       <section>
         <SectionTitle>차량별 배차 추천</SectionTitle>
-        <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+        <div className="grid gap-3 xl:grid-cols-2 xl:items-start">
           {plans.map((p) => (
             <PlanCard key={p.vehicleId} p={p} open={open === p.vehicleId} onToggle={() => setOpen(open === p.vehicleId ? null : p.vehicleId)} />
           ))}
-          {plans.length === 0 && <div className="card p-5 text-sm text-navy-400">오늘 배정된 차량 일정이 없습니다.</div>}
+          {plans.length === 0 && <div className="card p-5 text-[0.95rem] text-navy-400">오늘 배정된 차량 일정이 없습니다.</div>}
         </div>
       </section>
 
@@ -199,16 +199,16 @@ export function Dispatch() {
               <div key={v.id} className="flex items-center gap-3 rounded-xl bg-navy-50 px-3.5 py-3">
                 <WasteBadge type={v.wasteType} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-navy-800">{v.name}</p>
-                  <p className="text-xs font-medium text-navy-500">
+                  <p className="truncate text-[0.95rem] font-bold text-navy-800">{v.name}</p>
+                  <p className="text-[0.85rem] font-medium text-navy-500">
                     {v.driver} · 최대 {v.nominalCapacity.toLocaleString('ko-KR')}kg · 오늘 {stops}곳 · 적재율 {loadRate}%
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.75rem] font-bold ${fleetStatusStyle[status]}`}>{status}</span>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.85rem] font-bold ${fleetStatusStyle[status]}`}>{status}</span>
               </div>
             ))}
           </div>
-          <p className="mt-3 rounded-xl bg-navy-50 px-3.5 py-2.5 text-xs leading-snug text-navy-500">
+          <p className="mt-3 rounded-xl bg-navy-50 px-3.5 py-2.5 text-[0.85rem] leading-snug text-navy-500">
             의료폐기물 차량은 전용 용기 부피로 인해 실제 적재가 최대 적재량의 <b className="text-navy-700">약 2/3 수준</b>입니다. 이를
             반영해 배차·적재율을 계산합니다. (차량 검사·정비 일정 알림은 향후 고도화 예정)
           </p>
@@ -216,7 +216,7 @@ export function Dispatch() {
       </section>
 
       {/* 분리 운행 + 격리 */}
-      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-3 xl:grid-cols-2 xl:items-start">
         <SeparationNotice />
         <IsolationCard />
       </div>
@@ -225,7 +225,7 @@ export function Dispatch() {
       <section>
         <SectionTitle>차량 · 처리장 정보</SectionTitle>
         <ExpandableSection label="차량·처리장 정보 자세히 보기">
-          <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+          <div className="grid gap-3 xl:grid-cols-2 xl:items-start">
             <VehicleFleetCard />
             <FacilityCard />
           </div>
