@@ -22,7 +22,7 @@ function Toast({ show, text }: { show: boolean; text: string }) {
           exit={{ opacity: 0, y: 20 }}
           transition={{ type: 'spring', stiffness: 360, damping: 30 }}
         >
-          <div className="flex items-center gap-2.5 rounded-2xl bg-navy-900 px-4 py-3 text-[0.95rem] font-semibold text-white shadow-xl">
+          <div className="flex items-center gap-2.5 rounded-2xl bg-navy-900 px-4 py-3 text-[1.08rem] font-semibold text-white shadow-xl">
             <CheckCircle2 size={18} className="text-emerald-400" /> {text}
           </div>
         </motion.div>
@@ -48,7 +48,7 @@ export function DemoResetButton({ className = '' }: { className?: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.95rem] font-bold text-navy-500 shadow-card transition hover:bg-navy-50 ${className}`}
+        className={`inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1.08rem] font-bold text-navy-500 shadow-card transition hover:bg-navy-50 ${className}`}
       >
         <RotateCcw size={15} strokeWidth={2.4} /> 시연 상태 초기화
       </button>
@@ -68,10 +68,10 @@ export function DemoResetButton({ className = '' }: { className?: string }) {
           </>
         }
       >
-        <p className="text-[0.95rem] leading-relaxed text-navy-700">
+        <p className="text-[1.08rem] leading-relaxed text-navy-700">
           시연용 데이터만 기본 상태로 되돌립니다. 실제 거래처 기본정보는 유지됩니다.
         </p>
-        <ul className="mt-3 space-y-1 rounded-2xl bg-navy-50 p-3 text-[0.9rem] text-navy-500">
+        <ul className="mt-3 space-y-1 rounded-2xl bg-navy-50 p-3 text-[1.03rem] text-navy-500">
           <li>· 오늘 일정 · 수거이력 · 자재 · 재고 · 통계 기준값 복원</li>
           <li>· 병원 요청 · 처리장 인계 · 수거대장 초안 원복</li>
           <li>· 거래처 세트(5/15/35)와 실사용 입력 기록은 유지</li>
@@ -101,7 +101,7 @@ export function DemoSettingsPanel() {
     <div className="rounded-2xl bg-navy-50/70">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-[0.9rem] font-bold text-navy-500 transition hover:bg-navy-100"
+        className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-[1.03rem] font-bold text-navy-500 transition hover:bg-navy-100"
       >
         <Settings2 size={15} strokeWidth={2.2} /> 시연 설정
         <ChevronDown size={14} className={`ml-auto transition ${open ? 'rotate-180' : ''}`} />
@@ -110,23 +110,23 @@ export function DemoSettingsPanel() {
         <div className="space-y-1.5 px-2 pb-2.5">
           <button
             onClick={() => setConfirm('reset')}
-            className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-2 text-[0.9rem] font-semibold text-navy-600 transition hover:bg-navy-50"
+            className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-2 text-[1.03rem] font-semibold text-navy-600 transition hover:bg-navy-50"
           >
             <RotateCcw size={14} /> 시연 상태 초기화
           </button>
           <button
             onClick={() => fire('오늘 일정이 기준값으로 복원되었습니다.', restoreToday)}
-            className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-2 text-[0.9rem] font-semibold text-navy-600 transition hover:bg-navy-50"
+            className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-2 text-[1.03rem] font-semibold text-navy-600 transition hover:bg-navy-50"
           >
             <CalendarClock size={14} /> 오늘 일정만 복원
           </button>
           <button
             onClick={() => setConfirm('start')}
-            className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-2 text-[0.9rem] font-semibold text-navy-600 transition hover:bg-navy-50"
+            className="flex w-full items-center gap-2 rounded-xl bg-white px-2.5 py-2 text-[1.03rem] font-semibold text-navy-600 transition hover:bg-navy-50"
           >
             <PlayCircle size={14} /> 시연 시작 (새 세션)
           </button>
-          <p className="px-1 pt-0.5 text-[0.78rem] leading-snug text-navy-400">
+          <p className="px-1 pt-0.5 text-[0.9rem] leading-snug text-navy-400">
             시연용 변경만 되돌립니다. 실제 거래처 기본정보는 유지됩니다.
           </p>
         </div>
@@ -154,7 +154,7 @@ export function DemoSettingsPanel() {
           </>
         }
       >
-        <p className="text-[0.95rem] leading-relaxed text-navy-700">
+        <p className="text-[1.08rem] leading-relaxed text-navy-700">
           {confirm === 'start'
             ? '현재 상태를 기준으로 새 시연 세션을 시작합니다. 이후 입력은 이 세션의 시연 기록으로 관리됩니다.'
             : '시연용 데이터만 기본 상태로 되돌립니다. 실제 거래처 기본정보는 유지됩니다.'}

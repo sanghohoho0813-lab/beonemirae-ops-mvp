@@ -94,23 +94,23 @@ export function Materials() {
       <section className="mb-5">
         <SectionTitle>자재 공급 대비 배출 비교</SectionTitle>
         <div className="card p-4 sm:p-5">
-          <p className="mb-3 text-[0.9rem] leading-snug text-navy-400">
+          <p className="mb-3 text-[1.03rem] leading-snug text-navy-400">
             자재 공급량과 실제 배출량(수거량)을 비교하여 과다 사용 또는 관리 누락 가능성을 확인합니다. 확정적 판단이 아닌
             <b className="text-navy-500"> 점검용 지표</b>입니다.
           </p>
           {usage.length === 0 ? (
-            <p className="rounded-xl bg-navy-50 px-3.5 py-3 text-[0.95rem] text-navy-400">이번 달 공급 내역이 쌓이면 비교가 표시됩니다.</p>
+            <p className="rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] text-navy-400">이번 달 공급 내역이 쌓이면 비교가 표시됩니다.</p>
           ) : (
             <div className="space-y-2">
               {usage.map((u) => (
                 <div key={u.clientId} className="flex items-center justify-between gap-3 rounded-xl bg-navy-50 px-3.5 py-3">
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-navy-800">{u.clientName}</p>
-                    <p className="mt-0.5 text-[0.85rem] font-medium text-navy-500">
+                    <p className="break-keep font-bold text-navy-800">{u.clientName}</p>
+                    <p className="mt-0.5 text-[0.98rem] font-medium text-navy-500">
                       공급 {u.suppliedUnits}단위 · 배출 {weight(u.dischargedKg)}
                     </p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.85rem] font-bold ${usageStyle[u.status]}`}>{u.status}</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.98rem] font-bold ${usageStyle[u.status]}`}>{u.status}</span>
                 </div>
               ))}
             </div>
@@ -118,7 +118,7 @@ export function Materials() {
         </div>
       </section>
 
-      <h2 className="mb-2.5 px-1 text-[0.9375rem] font-bold text-navy-700">공급 내역</h2>
+      <h2 className="mb-2.5 px-1 text-[1.07rem] font-bold text-navy-700">공급 내역</h2>
       {sorted.length === 0 ? (
         <EmptyState icon="📦" title="자재공급 내역이 없어요" subtitle="우측 상단에서 공급을 등록해 보세요." />
       ) : (
@@ -130,18 +130,18 @@ export function Materials() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[0.9375rem] font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
+                      <span className="text-[1.07rem] font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
                       {m.isAdditionalRequest && (
                         <span className="pill bg-amber-50 text-amber-600">추가요청</span>
                       )}
                     </div>
                     <p className="mt-0.5 t-caption">{prettyDate(m.date)}</p>
                   </div>
-                  <button className="text-[0.85rem] font-medium text-navy-300 hover:text-rose-500" onClick={() => removeMaterial(m.id)}>
+                  <button className="text-[0.98rem] font-medium text-navy-300 hover:text-rose-500" onClick={() => removeMaterial(m.id)}>
                     삭제
                   </button>
                 </div>
-                <div className="mt-2.5 flex gap-4 text-[0.95rem] font-medium text-navy-500">
+                <div className="mt-2.5 flex gap-4 text-[1.08rem] font-medium text-navy-500">
                   <span>박스 <b className="text-navy-900">{m.boxCount}</b></span>
                   <span>비닐 <b className="text-navy-900">{m.vinylCount}</b></span>
                   <span>바늘통 <b className="text-navy-900">{m.needleBoxCount}</b></span>
@@ -221,7 +221,7 @@ export function Materials() {
             />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-[0.95rem] font-medium text-navy-700">
+        <label className="flex items-center gap-2 text-[1.08rem] font-medium text-navy-700">
           <input
             type="checkbox"
             className="h-4 w-4 accent-teal-600"

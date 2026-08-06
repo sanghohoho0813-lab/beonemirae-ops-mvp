@@ -37,28 +37,29 @@ export function ActionRow({ action, onAct }: { action: NextAction; onAct?: () =>
           <Icon size={21} strokeWidth={2.3} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="break-keep text-[1.0625rem] font-bold leading-snug text-navy-900">
+          <p className="break-keep text-[1.15rem] font-bold leading-snug text-navy-900">
             {action.clientName}
             {stage !== '추천' && <span className={`pill ml-1.5 align-middle ${STAGE_STYLE[stage]}`}>{stage}</span>}
           </p>
-          <p className="mt-1 break-keep text-[1.125rem] font-extrabold leading-snug text-navy-800">{action.title}</p>
-          <p className="mt-1.5 break-keep text-[0.9375rem] leading-snug text-navy-500">
-            {action.reason}
-            {action.estValue > 0 && (
-              <span className="whitespace-nowrap font-bold text-teal-600"> · 예상 +{wonShort(action.estValue)}</span>
-            )}
-          </p>
+          <p className="mt-1 break-keep text-[1.22rem] font-extrabold leading-snug text-navy-800">{action.title}</p>
+          <p className="mt-1.5 break-keep text-[1.07rem] leading-snug text-navy-500">{action.reason}</p>
+          {/* 예상 금액은 줄바꿈이 불가한 값이라 별도 줄로 분리해 카드 밖으로 밀리지 않게 합니다 */}
+          {action.estValue > 0 && (
+            <p className="mt-1 break-keep text-[1.07rem] font-bold leading-snug text-teal-600">
+              예상 +{wonShort(action.estValue)}
+            </p>
+          )}
         </div>
         <button
           onClick={act}
-          className="pressable hidden shrink-0 whitespace-nowrap rounded-xl bg-navy-900 px-4 py-2.5 text-[0.85rem] font-bold text-white transition hover:bg-navy-800 2xl:block"
+          className="pressable hidden shrink-0 whitespace-nowrap rounded-xl bg-navy-900 px-4 py-2.5 text-[0.98rem] font-bold text-white transition hover:bg-navy-800 2xl:block"
         >
           {action.cta}
         </button>
       </div>
       <button
         onClick={act}
-        className="pressable mt-3 w-full rounded-xl bg-navy-900 px-4 py-3 text-[0.9rem] font-bold text-white transition hover:bg-navy-800 2xl:hidden"
+        className="pressable mt-3 w-full rounded-xl bg-navy-900 px-4 py-3 text-[1.03rem] font-bold text-white transition hover:bg-navy-800 2xl:hidden"
       >
         {action.cta}
       </button>
@@ -77,20 +78,20 @@ export function OpportunityPanel({ summary, limit = 3 }: { summary: OpportunityS
   return (
     <div className="card flex h-full flex-col overflow-hidden">
       {/* 합계 — 가장 먼저 보여야 할 숫자 */}
-      <div className="border-b border-navy-100 px-5 py-5">
-        <p className="text-[1rem] font-bold text-navy-500">이번 달 추가 매출 기회</p>
+      <div className="kpi-box border-b border-navy-100 px-5 py-5">
+        <p className="text-[1.12rem] font-bold text-navy-500">이번 달 추가 매출 기회</p>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <p className="break-keep text-[2.25rem] font-extrabold leading-none tracking-tight text-teal-600">
+          <p className="t-stat text-teal-600">
             +{wonShort(summary.totalValue)}
           </p>
-          <p className="text-[1.125rem] font-bold text-navy-400">{summary.totalCount}건</p>
+          <p className="text-[1.22rem] font-bold text-navy-400">{summary.totalCount}건</p>
         </div>
       </div>
 
       {/* 상위 추천 */}
       <div className="flex-1 divide-y divide-navy-50">
         {top.length === 0 ? (
-          <p className="px-5 py-8 text-center text-[1rem] text-navy-400">
+          <p className="px-5 py-8 text-center text-[1.12rem] text-navy-400">
             현재 데이터 기준 추가 매출 기회가 없습니다.
           </p>
         ) : (
@@ -100,11 +101,11 @@ export function OpportunityPanel({ summary, limit = 3 }: { summary: OpportunityS
 
       <button
         onClick={() => navigate('/clients')}
-        className="flex w-full items-center justify-center gap-1.5 border-t border-navy-100 py-4 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-50"
+        className="flex w-full items-center justify-center gap-1.5 border-t border-navy-100 py-4 text-[1.12rem] font-bold text-navy-600 transition hover:bg-navy-50"
       >
         전체 보기 <ChevronRight size={18} />
       </button>
-      <p className="border-t border-navy-100 px-5 py-3 break-keep text-[0.875rem] leading-snug text-navy-400">
+      <p className="border-t border-navy-100 px-5 py-3 break-keep text-[1rem] leading-snug text-navy-400">
         축적된 수거·자재·청구 데이터로 도출한 추천이며, 금액은 시연용 예상값입니다.
       </p>
     </div>

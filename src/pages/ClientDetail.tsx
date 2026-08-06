@@ -134,7 +134,7 @@ export function ClientDetail() {
 
   return (
     <PageShell>
-      <button onClick={() => navigate('/clients')} className="flex items-center gap-1.5 text-[0.95rem] font-bold text-navy-500">
+      <button onClick={() => navigate('/clients')} className="flex items-center gap-1.5 text-[1.08rem] font-bold text-navy-500">
         <ArrowLeft size={16} /> 거래처 목록
       </button>
 
@@ -143,9 +143,9 @@ export function ClientDetail() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="min-w-0 break-keep text-[1.625rem] font-extrabold leading-tight text-navy-900">{client.name}</h1>
-              <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.82rem] font-bold text-navy-500">{client.type}</span>
-              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[0.78rem] font-bold ${client.isDemoGenerated ? 'bg-navy-100 text-navy-500' : 'bg-teal-50 text-teal-600'}`}>
+              <h1 className="min-w-0 break-keep text-[1.75rem] font-extrabold leading-tight text-navy-900">{client.name}</h1>
+              <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.95rem] font-bold text-navy-500">{client.type}</span>
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[0.9rem] font-bold ${client.isDemoGenerated ? 'bg-navy-100 text-navy-500' : 'bg-teal-50 text-teal-600'}`}>
                 {client.isDemoGenerated ? '시연용' : '주요거래처'}
               </span>
             </div>
@@ -155,13 +155,13 @@ export function ClientDetail() {
             </div>
           </div>
         </div>
-        <div className="mt-3 space-y-1.5 text-[0.95rem] text-navy-600">
+        <div className="mt-3 space-y-1.5 text-[1.08rem] text-navy-600">
           <p className="flex items-center gap-2"><MapPin size={15} className="shrink-0 text-navy-400" /> {client.address}</p>
           <p className="flex items-center gap-2"><Phone size={15} className="shrink-0 text-navy-400" /> {profile.roleManager} · {client.phone}</p>
           <p className="flex items-center gap-2"><RefreshCw size={15} className="shrink-0 text-navy-400" /> 수거주기 {client.collectionCycle}</p>
           <p className="flex items-center gap-2"><Recycle size={15} className="shrink-0 text-navy-400" /> 자재 보관창고 {client.storageSize}</p>
         </div>
-        {client.note && <p className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[0.95rem] font-medium text-amber-700">📌 {client.note}</p>}
+        {client.note && <p className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[1.08rem] font-medium text-amber-700">📌 {client.note}</p>}
         {/* 현장 메모 — 처리 전 항목을 헤더에서 바로 확인 */}
         <NoteChips notes={notesFor(id)} max={3} />
 
@@ -174,10 +174,10 @@ export function ClientDetail() {
           </button>
         </div>
         <div className="mt-2 flex items-center justify-end gap-3">
-          <button className="flex items-center gap-1 text-[0.95rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={() => setEditing(true)}>
+          <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={() => setEditing(true)}>
             <Pencil size={14} /> 수정
           </button>
-          <button className="flex items-center gap-1 text-[0.95rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
+          <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
             <Trash2 size={14} /> 삭제
           </button>
         </div>
@@ -194,11 +194,11 @@ export function ClientDetail() {
           onClick={() => navigate('/receivables')}
         />
         <div className="card p-4">
-          <p className="text-[0.9rem] font-semibold text-navy-400">최근 수거일</p>
+          <p className="text-[1.03rem] font-semibold text-navy-400">최근 수거일</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{last ? prettyDate(last.date) : '—'}</p>
         </div>
         <div className="card p-4">
-          <p className="text-[0.9rem] font-semibold text-navy-400">다음 예정 수거</p>
+          <p className="text-[1.03rem] font-semibold text-navy-400">다음 예정 수거</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{next ? prettyDate(next.date) : '—'}</p>
         </div>
       </div>
@@ -221,15 +221,15 @@ export function ClientDetail() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="break-keep text-[1.125rem] font-extrabold leading-snug text-navy-900">{a.title}</p>
+                        <p className="break-keep text-[1.22rem] font-extrabold leading-snug text-navy-900">{a.title}</p>
                         {a.estValue > 0 && (
                           <span className="pill bg-teal-50 text-teal-700">예상 +{wonShort(a.estValue)}</span>
                         )}
                       </div>
-                      <p className="mt-1 break-keep text-[1rem] leading-snug text-navy-500">{a.reason}</p>
+                      <p className="mt-1 break-keep text-[1.12rem] leading-snug text-navy-500">{a.reason}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {a.metrics.map((m) => (
-                          <span key={m.label} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.875rem] font-semibold text-navy-600">
+                          <span key={m.label} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[1rem] font-semibold text-navy-600">
                             {m.label} <span className="font-extrabold text-navy-800">{m.value}</span>
                           </span>
                         ))}
@@ -238,7 +238,7 @@ export function ClientDetail() {
                   </div>
                   <div className="mt-2.5 flex flex-wrap gap-2 pl-12">
                     <button
-                      className="pressable rounded-xl bg-navy-900 px-4 py-2.5 text-[0.9375rem] font-bold text-white transition hover:bg-navy-800"
+                      className="pressable rounded-xl bg-navy-900 px-4 py-2.5 text-[1.07rem] font-bold text-white transition hover:bg-navy-800"
                       onClick={() =>
                         navigate(
                           a.kind === '소모품공급'
@@ -252,7 +252,7 @@ export function ClientDetail() {
                       {a.cta}
                     </button>
                     <button
-                      className="rounded-xl bg-navy-50 px-4 py-2.5 text-[0.9375rem] font-bold text-navy-600 transition hover:bg-navy-100"
+                      className="rounded-xl bg-navy-50 px-4 py-2.5 text-[1.07rem] font-bold text-navy-600 transition hover:bg-navy-100"
                       onClick={() => setTab('report')}
                     >
                       리포트에 포함
@@ -264,7 +264,7 @@ export function ClientDetail() {
               )
             })}
           </div>
-          <p className="mt-2 px-1 text-[0.85rem] leading-snug text-navy-400">
+          <p className="mt-2 px-1 text-[0.98rem] leading-snug text-navy-400">
             이 거래처의 수거이력·자재공급·청구 데이터를 규칙에 대입해 도출한 추천입니다. 예상 금액은 실제 청구 단가
             기준의 참고 값입니다.
           </p>
@@ -285,17 +285,17 @@ export function ClientDetail() {
           <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>인증·실사 대응</SectionTitle>
           <div className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-navy-800 px-2.5 py-1 text-[0.85rem] font-bold text-white">{inspection.type}</span>
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.85rem] font-bold text-amber-600">인증 D-{inspection.dday}</span>
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.85rem] font-bold text-amber-600">{inspection.status}</span>
+              <span className="rounded-full bg-navy-800 px-2.5 py-1 text-[0.98rem] font-bold text-white">{inspection.type}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-600">인증 D-{inspection.dday}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-600">{inspection.status}</span>
             </div>
-            <p className="mt-3 text-[0.95rem] font-semibold text-navy-700">필요 자료 체크리스트</p>
+            <p className="mt-3 text-[1.08rem] font-semibold text-navy-700">필요 자료 체크리스트</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {[...new Set(['올바로 자료', ...inspection.needs, '전용 용기', '표시라벨'])].map((n) => (
-                <span key={n} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.875rem] font-semibold text-navy-600">{n}</span>
+                <span key={n} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[1rem] font-semibold text-navy-600">{n}</span>
               ))}
             </div>
-            <p className="mt-3 rounded-xl bg-amber-50/70 px-3.5 py-2.5 text-[0.85rem] leading-snug text-amber-700">
+            <p className="mt-3 rounded-xl bg-amber-50/70 px-3.5 py-2.5 text-[0.98rem] leading-snug text-amber-700">
               사전 확인 필요 · 전용 용기 재고와 최근 수거대장을 미리 준비합니다. 체크리스트는 시연용이며, 문자·카카오 알림
               연동은 향후 고도화 예정입니다.
             </p>
@@ -309,7 +309,7 @@ export function ClientDetail() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2.5 text-[1rem] font-bold transition ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2.5 text-[1.12rem] font-bold transition ${
               tab === t.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
             }`}
           >
@@ -349,8 +349,8 @@ export function ClientDetail() {
                 ['보관창고', client.storageSize],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-start justify-between gap-3 border-b border-navy-50 pb-2.5">
-                  <dt className="shrink-0 text-[0.95rem] font-semibold text-navy-400">{k}</dt>
-                  <dd className="text-right text-[0.95rem] font-bold text-navy-800">{v}</dd>
+                  <dt className="shrink-0 text-[1.08rem] font-semibold text-navy-400">{k}</dt>
+                  <dd className="text-right text-[1.08rem] font-bold text-navy-800">{v}</dd>
                 </div>
               ))}
             </dl>
@@ -368,7 +368,7 @@ export function ClientDetail() {
             <MetricCard label="자재 동시공급" value={histSummary.sameDayMaterial} unit="건" tone="amber" nowrap />
           </div>
           <div className="card overflow-x-auto p-1">
-            <table className="w-full border-collapse text-left text-[0.85rem]">
+            <table className="w-full border-collapse text-left text-[0.98rem]">
               <thead>
                 <tr className="bg-navy-50 text-navy-500">
                   {['날짜', '구분', '성상', '수거량', '용기', '기사', '차량', '인계', '유형', '대장'].map((h) => (
@@ -405,7 +405,7 @@ export function ClientDetail() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-bold text-navy-900">전체 수거이력 보기</p>
-              <p className="text-[0.85rem] text-navy-400">기간·차량·폐기물 구분 필터로 전체 이력을 확인합니다</p>
+              <p className="text-[0.98rem] text-navy-400">기간·차량·폐기물 구분 필터로 전체 이력을 확인합니다</p>
             </div>
             <ChevronRight size={18} className="shrink-0 text-navy-300" />
           </button>
@@ -419,16 +419,16 @@ export function ClientDetail() {
             {matSummary.map((m) => (
               <div key={m.type} className="flex items-center justify-between gap-3 border-b border-navy-50 p-3.5 last:border-0">
                 <div className="min-w-0">
-                  <p className="truncate font-bold text-navy-800">{m.type}</p>
-                  <p className="mt-0.5 text-[0.85rem] font-medium text-navy-500">
+                  <p className="break-keep font-bold text-navy-800">{m.type}</p>
+                  <p className="mt-0.5 text-[0.98rem] font-medium text-navy-500">
                     이번 달 공급 {m.suppliedMonth} · 추정 잔량 {m.estRemain} · 최근 {m.lastDate ? prettyDate(m.lastDate) : '-'}
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.85rem] font-bold ${usageStyle[m.status]}`}>{m.status}</span>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.98rem] font-bold ${usageStyle[m.status]}`}>{m.status}</span>
               </div>
             ))}
           </div>
-          <p className="px-1 text-[0.85rem] leading-snug text-navy-400">
+          <p className="px-1 text-[0.98rem] leading-snug text-navy-400">
             자재 공급량과 실제 배출량 비교는 <b className="text-navy-500">자재 관리</b> 화면에서 확인합니다. 확정 판단이 아닌
             점검용 지표입니다.
           </p>
@@ -440,24 +440,24 @@ export function ClientDetail() {
       {tab === 'requests' && (
         <div className="space-y-3">
           {requests.length === 0 ? (
-            <p className="card p-4 text-[0.95rem] text-navy-400">등록된 요청이 없습니다.</p>
+            <p className="card p-4 text-[1.08rem] text-navy-400">등록된 요청이 없습니다.</p>
           ) : (
             <div className="card divide-y divide-navy-100 p-1">
               {requests.map((r) => (
                 <div key={r.id} className="p-3.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.85rem] font-bold text-teal-700">{r.type}</span>
-                    {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.85rem] font-bold text-rose-500">긴급</span>}
-                    <span className={`rounded-lg px-2 py-0.5 text-[0.85rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
-                    <span className="ml-auto text-[0.85rem] text-navy-400">{r.when}</span>
+                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.98rem] font-bold text-teal-700">{r.type}</span>
+                    {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.98rem] font-bold text-rose-500">긴급</span>}
+                    <span className={`rounded-lg px-2 py-0.5 text-[0.98rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
+                    <span className="ml-auto text-[0.98rem] text-navy-400">{r.when}</span>
                   </div>
-                  <p className="mt-1.5 text-[0.95rem] leading-snug text-navy-700">{r.content}</p>
-                  <p className="mt-1 text-[0.85rem] text-navy-400">담당 {profile.roleManager} 접수 · 전화·카카오 기록</p>
+                  <p className="mt-1.5 text-[1.08rem] leading-snug text-navy-700">{r.content}</p>
+                  <p className="mt-1 text-[0.98rem] text-navy-400">담당 {profile.roleManager} 접수 · 전화·카카오 기록</p>
                 </div>
               ))}
             </div>
           )}
-          <p className="px-1 text-[0.85rem] leading-snug text-navy-400">
+          <p className="px-1 text-[0.98rem] leading-snug text-navy-400">
             현재는 관리자·이사가 전화·카톡 요청을 기록하는 MVP이며, 병원 담당자 직접 요청 기능은 향후 고도화 예정입니다.
           </p>
         </div>
@@ -467,7 +467,7 @@ export function ClientDetail() {
       {tab === 'billing' && (
         <div className="space-y-3">
           <div className="card overflow-x-auto p-1">
-            <table className="w-full border-collapse text-left text-[0.85rem]">
+            <table className="w-full border-collapse text-left text-[0.98rem]">
               <thead>
                 <tr className="bg-navy-50 text-navy-500">
                   {['청구월', '청구금액', '입금', '미수금', '계산서', '상태'].map((h) => (
@@ -483,7 +483,7 @@ export function ClientDetail() {
                     <td className="whitespace-nowrap px-2.5 py-2">{b.paid.toLocaleString('ko-KR')}</td>
                     <td className={`whitespace-nowrap px-2.5 py-2 font-bold ${b.outstanding > 0 ? 'text-rose-500' : 'text-navy-500'}`}>{b.outstanding.toLocaleString('ko-KR')}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{b.invoiceIssued ? '발행' : '-'}</td>
-                    <td className="whitespace-nowrap px-2.5 py-2"><span className={`rounded-full px-2 py-0.5 text-[0.82rem] font-bold ${billStyle[b.status]}`}>{b.status}</span></td>
+                    <td className="whitespace-nowrap px-2.5 py-2"><span className={`rounded-full px-2 py-0.5 text-[0.95rem] font-bold ${billStyle[b.status]}`}>{b.status}</span></td>
                   </tr>
                 ))}
                 {bills.length === 0 && (
@@ -526,11 +526,11 @@ export function ClientDetail() {
         }
       >
         <div>
-          <p className="text-[0.95rem] font-bold text-navy-800">{client.name}</p>
+          <p className="text-[1.08rem] font-bold text-navy-800">{client.name}</p>
           <p className="t-caption">월간 수거대장 · 수거이력 + 자재공급 통합</p>
         </div>
         <div className="overflow-x-auto rounded-2xl ring-1 ring-navy-100">
-          <table className="w-full border-collapse text-left text-[0.85rem]">
+          <table className="w-full border-collapse text-left text-[0.98rem]">
             <thead>
               <tr className="bg-navy-50 text-navy-500">
                 <th className="whitespace-nowrap px-3 py-2 font-bold">수거일</th>
@@ -560,7 +560,7 @@ export function ClientDetail() {
             </tbody>
           </table>
         </div>
-        <p className="text-[0.85rem] leading-snug text-navy-400">
+        <p className="text-[0.98rem] leading-snug text-navy-400">
           병원 요청 시 별도 수거대장 제공을 위해 수거이력과 자재공급 이력을 통합하여 출력하는 구조로 고도화 예정입니다.
         </p>
       </Modal>
@@ -575,5 +575,5 @@ function Cond({ label, tone = 'navy' }: { label: string; tone?: 'navy' | 'rose' 
     teal: 'bg-teal-50 text-teal-600',
     amber: 'bg-amber-50 text-amber-600',
   }[tone]
-  return <span className={`rounded-full px-3 py-1.5 text-[0.85rem] font-bold ${styles}`}>{label}</span>
+  return <span className={`rounded-full px-3 py-1.5 text-[0.98rem] font-bold ${styles}`}>{label}</span>
 }

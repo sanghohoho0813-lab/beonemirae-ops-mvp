@@ -11,9 +11,9 @@ export function WasteBadge({ type }: { type: WasteType }) {
     type === '의료폐기물' ? 'bg-rose-50 text-rose-500' : 'bg-teal-50 text-teal-600'
   const dot = type === '의료폐기물' ? 'bg-rose-400' : 'bg-teal-500'
   return (
-    <span className={`pill ${styles}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-      {type}
+    <span className={`pill min-w-0 !shrink !whitespace-normal ${styles}`}>
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+      <span className="min-w-0 break-keep">{type}</span>
     </span>
   )
 }

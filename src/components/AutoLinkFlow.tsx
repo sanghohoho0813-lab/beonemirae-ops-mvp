@@ -20,21 +20,21 @@ export function AutoLinkFlow() {
 
   return (
     <div className="card overflow-hidden p-5 sm:p-7">
-      <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-center lg:gap-7">
+      <div className="flex flex-col items-stretch gap-4 xl:flex-row xl:items-center xl:gap-7">
         {/* 시작점 — 수거 완료 1회 입력 */}
         <button
           onClick={() => navigate('/collection')}
-          className="pressable flex shrink-0 items-center gap-3.5 rounded-2xl bg-teal-500 px-6 py-5 text-left text-white shadow-sm transition hover:bg-teal-600"
+          className="pressable flex min-w-0 shrink-0 items-center gap-3.5 rounded-2xl bg-teal-500 px-6 py-5 text-left text-white shadow-sm transition hover:bg-teal-600"
         >
           <PlusCircle size={30} strokeWidth={2.2} className="shrink-0" />
           <span className="min-w-0 leading-tight">
-            <span className="block text-[0.9375rem] font-semibold text-teal-50">현장에서</span>
-            <span className="block break-keep text-[1.25rem] font-extrabold">수거 완료 1회 입력</span>
+            <span className="block text-[1.07rem] font-semibold text-teal-50">현장에서</span>
+            <span className="block break-keep text-[1.35rem] font-extrabold">수거 완료 1회 입력</span>
           </span>
         </button>
 
-        <ArrowRight size={28} className="hidden shrink-0 text-navy-300 lg:block" strokeWidth={2.4} />
-        <ArrowDown size={24} className="mx-auto shrink-0 text-navy-300 lg:hidden" strokeWidth={2.4} />
+        <ArrowRight size={28} className="hidden shrink-0 text-navy-300 xl:block" strokeWidth={2.4} />
+        <ArrowDown size={24} className="mx-auto shrink-0 text-navy-300 xl:hidden" strokeWidth={2.4} />
 
         {/* 자동으로 이어지는 업무 */}
         <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
@@ -42,7 +42,7 @@ export function AutoLinkFlow() {
             <button
               key={label}
               onClick={() => navigate(to)}
-              className="pressable rounded-xl bg-navy-50 px-3 py-3.5 text-center text-[1rem] font-bold text-navy-700 transition hover:bg-teal-50 hover:text-teal-700"
+              className="pressable rounded-xl bg-navy-50 px-3 py-3.5 text-center text-[1.12rem] font-bold text-navy-700 transition hover:bg-teal-50 hover:text-teal-700"
             >
               <span className="block break-keep leading-snug">{label}</span>
             </button>

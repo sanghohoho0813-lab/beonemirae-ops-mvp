@@ -80,7 +80,7 @@ export function Reports() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="병원명 검색"
-                className="w-full rounded-2xl border-0 bg-navy-50 py-3 pl-11 pr-3 text-[1rem] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400"
+                className="w-full rounded-2xl border-0 bg-navy-50 py-3 pl-11 pr-3 text-[1.12rem] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400"
               />
             </div>
             <div className="mt-2 max-h-[420px] space-y-1 overflow-y-auto lg:max-h-[560px]">
@@ -97,14 +97,14 @@ export function Reports() {
                     <Building2 size={18} className={`shrink-0 ${active ? 'text-white/80' : 'text-navy-300'}`} />
                     <span className="min-w-0 flex-1">
                       <span
-                        className={`block break-keep text-[1rem] font-bold leading-snug ${
+                        className={`block break-keep text-[1.12rem] font-bold leading-snug ${
                           active ? 'text-white' : 'text-navy-800'
                         }`}
                       >
                         {r.client.name}
                       </span>
                       <span
-                        className={`mt-0.5 block break-keep text-[0.875rem] leading-snug ${
+                        className={`mt-0.5 block break-keep text-[1rem] leading-snug ${
                           active ? 'text-white/75' : 'text-navy-400'
                         }`}
                       >
@@ -116,7 +116,7 @@ export function Reports() {
                 )
               })}
               {filtered.length === 0 && (
-                <p className="px-3 py-6 text-center text-[1rem] text-navy-400">검색 결과가 없습니다.</p>
+                <p className="px-3 py-6 text-center text-[1.12rem] text-navy-400">검색 결과가 없습니다.</p>
               )}
             </div>
           </div>

@@ -70,7 +70,7 @@ function RevenueInput({ lead }: { lead: SalesLead }) {
             onChange={(e) => setDraft(e.target.value)}
             onBlur={save}
           />
-          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[0.9rem] font-bold text-navy-400">
+          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[1.03rem] font-bold text-navy-400">
             만원
           </span>
         </div>
@@ -107,7 +107,7 @@ export function LeadStageControl({ action, month = thisMonth() }: { action: Next
               key={c.stage}
               onClick={() => setLeadStage(action, c.stage, month)}
               aria-pressed={active}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[0.9rem] font-bold transition active:scale-[0.97] ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[1.03rem] font-bold transition active:scale-[0.97] ${
                 active ? 'bg-navy-900 text-white' : 'bg-white text-navy-600 hover:bg-navy-100'
               }`}
             >

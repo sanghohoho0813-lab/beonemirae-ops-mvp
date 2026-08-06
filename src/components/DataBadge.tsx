@@ -88,7 +88,7 @@ export function TierProgress({
         </p>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
         {TIER_STEPS.map((s, i) => {
           const done = i <= idx
           return (

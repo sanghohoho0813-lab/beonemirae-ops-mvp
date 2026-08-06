@@ -87,7 +87,7 @@ export function AxSummaryCard({ data }: { data: AppData }) {
 
       {/* 2) 운영효율 대표 지표 — 한 줄 압축.
              개선율은 실제 현장 표본이 충분한 지표(emphasis)만 색으로 강조합니다. */}
-      <div className="mt-5 grid gap-px bg-navy-100 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-px bg-navy-100 sm:grid-cols-2 2xl:grid-cols-4">
         {hi.map((h) => (
           <div key={h.key} className="flex flex-col bg-white px-5 py-4">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -144,7 +144,7 @@ export function AxSummaryCard({ data }: { data: AppData }) {
 
       <Link
         to="/performance"
-        className="flex w-full items-center justify-center gap-1.5 border-t border-navy-100 py-4 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-50"
+        className="flex w-full items-center justify-center gap-1.5 border-t border-navy-100 py-4 text-[1.12rem] font-bold text-navy-600 transition hover:bg-navy-50"
       >
         AX 도입 성과 자세히 보기 <ChevronRight size={18} />
       </Link>

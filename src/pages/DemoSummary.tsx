@@ -71,10 +71,10 @@ export function DemoSummary() {
         <button onClick={() => navigate('/')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-navy-500 shadow-card transition active:scale-95" aria-label="뒤로">
           <ArrowLeft size={18} />
         </button>
-        <span className="text-[0.95rem] font-bold text-navy-500">심사관 시연 요약</span>
+        <span className="text-[1.08rem] font-bold text-navy-500">심사관 시연 요약</span>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <DemoResetButton />
-          <button onClick={() => navigate('/mobile-preview')} className="hidden items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.95rem] font-bold text-navy-600 shadow-card transition hover:bg-navy-50 lg:inline-flex">
+          <button onClick={() => navigate('/mobile-preview')} className="hidden items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1.08rem] font-bold text-navy-600 shadow-card transition hover:bg-navy-50 lg:inline-flex">
             <Smartphone size={16} /> 모바일 프레임으로 보기
           </button>
         </div>
@@ -84,7 +84,7 @@ export function DemoSummary() {
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-6 text-white shadow-lg">
         <div className="flex items-center gap-1.5 text-teal-300">
           <Sparkles size={16} />
-          <span className="text-[0.85rem] font-bold">beonemirae ops</span>
+          <span className="text-[0.98rem] font-bold">beonemirae ops</span>
         </div>
         <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight">
           데이터 기반 의료폐기물
@@ -93,7 +93,7 @@ export function DemoSummary() {
         </h1>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {[`거래처 ${data.clients.length}곳`, `차량 ${data.vehicles.length}대`, '월 105톤'].map((c) => (
-            <span key={c} className="rounded-full bg-white/10 px-3 py-1 text-[0.85rem] font-bold text-white">{c}</span>
+            <span key={c} className="rounded-full bg-white/10 px-3 py-1 text-[0.98rem] font-bold text-white">{c}</span>
           ))}
         </div>
       </div>
@@ -104,10 +104,10 @@ export function DemoSummary() {
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {FLOW.map((f) => (
             <button key={f.id} onClick={() => scrollTo(f.id)} className="card pressable flex items-center gap-3 p-4 text-left">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-[0.95rem] font-extrabold text-teal-600">{f.n}</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-[1.08rem] font-extrabold text-teal-600">{f.n}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[0.9375rem] font-bold text-navy-900">{f.title}</p>
-                <p className="truncate text-[0.85rem] text-navy-400">{f.line}</p>
+                <p className="break-keep text-[1.07rem] font-bold text-navy-900">{f.title}</p>
+                <p className="break-keep text-[0.98rem] text-navy-400">{f.line}</p>
               </div>
               <ChevronRight size={16} className="shrink-0 text-navy-300" />
             </button>
@@ -124,16 +124,16 @@ export function DemoSummary() {
             <div className="space-y-3">
               {DAY_SCENARIO.map((s) => (
                 <div key={s.time} className="relative flex items-center gap-3">
-                  <span className="w-[38px] shrink-0 text-right text-[0.9rem] font-extrabold tabular-nums text-teal-600 sm:w-[46px]">{s.time}</span>
+                  <span className="w-[38px] shrink-0 text-right text-[1.03rem] font-extrabold tabular-nums text-teal-600 sm:w-[46px]">{s.time}</span>
                   <span className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-50 ring-4 ring-white">
                     <span className="h-2 w-2 rounded-full bg-teal-500" />
                   </span>
-                  <p className="text-[0.95rem] font-semibold leading-snug text-navy-700">{s.text}</p>
+                  <p className="text-[1.08rem] font-semibold leading-snug text-navy-700">{s.text}</p>
                 </div>
               ))}
             </div>
           </div>
-          <p className="mt-3 text-[0.85rem] leading-snug text-navy-400">※ 수거대장·월간 명세 자동 반영은 향후 고도화 예정입니다.</p>
+          <p className="mt-3 text-[0.98rem] leading-snug text-navy-400">※ 수거대장·월간 명세 자동 반영은 향후 고도화 예정입니다.</p>
         </div>
       </section>
 
@@ -154,11 +154,11 @@ export function DemoSummary() {
           <div className="card p-5">
             <div className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-amber-500" />
-              <p className="text-[0.9375rem] font-bold text-navy-800">의료기관 폐기물 운영 과제</p>
+              <p className="text-[1.07rem] font-bold text-navy-800">의료기관 폐기물 운영 과제</p>
             </div>
             <ul className="mt-3 space-y-1.5">
               {FIELD_PROBLEMS.map((p) => (
-                <li key={p} className="flex gap-2 text-[0.95rem] leading-snug text-navy-600">
+                <li key={p} className="flex gap-2 text-[1.08rem] leading-snug text-navy-600">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />{p}
                 </li>
               ))}
@@ -170,11 +170,11 @@ export function DemoSummary() {
           <div className="card p-5">
             <div className="flex items-center gap-2">
               <Layers size={18} className="text-teal-600" />
-              <p className="text-[0.9375rem] font-bold text-navy-800">통합 운영관리 시스템 (개발 중)</p>
+              <p className="text-[1.07rem] font-bold text-navy-800">통합 운영관리 시스템 (개발 중)</p>
             </div>
             <ul className="mt-3 space-y-1.5">
               {SYSTEM_SCOPE.map((p) => (
-                <li key={p} className="flex gap-2 text-[0.95rem] leading-snug text-navy-600">
+                <li key={p} className="flex gap-2 text-[1.08rem] leading-snug text-navy-600">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />{p}
                 </li>
               ))}
@@ -185,7 +185,7 @@ export function DemoSummary() {
 
       {/* 3. 배차·경로 추천 */}
       <section id="d-3" className="scroll-mt-4">
-        <SectionTitle action={<button onClick={() => navigate('/dispatch')} className="text-[0.9rem] font-bold text-teal-600">자세히 →</button>}>
+        <SectionTitle action={<button onClick={() => navigate('/dispatch')} className="text-[1.03rem] font-bold text-teal-600">자세히 →</button>}>
           3. 배차·경로 추천 시뮬레이션
         </SectionTitle>
         <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
@@ -194,13 +194,13 @@ export function DemoSummary() {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <WasteBadge type={p.wasteType} />
-                  <span className="truncate font-bold text-navy-900">{p.vehicleName}</span>
+                  <span className="break-keep font-bold text-navy-900">{p.vehicleName}</span>
                 </div>
                 <span className="shrink-0 text-lg font-extrabold text-teal-600">{p.loadRate}%</span>
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[0.9rem] font-semibold text-navy-500"><Route size={14} className="shrink-0" /> 권장 순서</p>
-              <p className="mt-1 break-words text-[0.95rem] font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
-              <p className="mt-2 flex items-start gap-1.5 break-words text-[0.85rem] font-bold text-navy-500"><Target size={13} className="mt-0.5 shrink-0" /> <span className="min-w-0">{p.facilityName} 인계 {p.handoverTime} · 운행 {p.simDistanceKm}km (시뮬)</span></p>
+              <p className="mt-2 flex items-center gap-1.5 text-[1.03rem] font-semibold text-navy-500"><Route size={14} className="shrink-0" /> 권장 순서</p>
+              <p className="mt-1 break-words text-[1.08rem] font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
+              <p className="mt-2 flex items-start gap-1.5 break-words text-[0.98rem] font-bold text-navy-500"><Target size={13} className="mt-0.5 shrink-0" /> <span className="min-w-0">{p.facilityName} 인계 {p.handoverTime} · 운행 {p.simDistanceKm}km (시뮬)</span></p>
             </div>
           ))}
         </div>
@@ -221,10 +221,10 @@ export function DemoSummary() {
       <section id="d-4" className="scroll-mt-4">
         <SectionTitle>4. 거래처·수거대장 관리</SectionTitle>
         <div className="card p-5">
-          <p className="text-[0.95rem] leading-relaxed text-navy-600">
+          <p className="text-[1.08rem] leading-relaxed text-navy-600">
             거래처별 수거조건·이력·자재·미수금을 통합 관리하고, 수거이력과 자재공급을 합쳐 월간 수거대장으로 출력(예정)합니다.
           </p>
-          <p className="mt-2 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-[0.85rem] leading-snug text-navy-500">
+          <p className="mt-2 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-[0.98rem] leading-snug text-navy-500">
             ㈜비원미래는 <b className="text-navy-700">경기 남양주시</b> 기반 수거·운반 업체로, <b className="text-navy-700">서울·경기권 거래처</b>를
             중심으로 운영합니다. 기본은 사업계획서 주요거래처 5곳이며, 시연용 확장(15·25·35곳)은 서울·경기권 거래처 증가 상황을
             가정한 데이터입니다. 운영 데이터 누적 시 배차·경로 추천 고도화 예정.
@@ -235,10 +235,10 @@ export function DemoSummary() {
             <MetricCard label="수거대장" value="PDF 예정" tone="teal" />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={() => navigate(firstClient ? `/clients/${firstClient.id}` : '/clients')} className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-[0.95rem] font-bold text-white shadow-sm transition active:scale-95">
+            <button onClick={() => navigate(firstClient ? `/clients/${firstClient.id}` : '/clients')} className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95">
               <Building2 size={15} /> 거래처 상세 보기
             </button>
-            <button onClick={() => navigate(firstClient ? `/clients/${firstClient.id}` : '/clients')} className="flex items-center gap-1.5 rounded-full bg-navy-50 px-4 py-2 text-[0.95rem] font-bold text-navy-600 transition active:scale-95">
+            <button onClick={() => navigate(firstClient ? `/clients/${firstClient.id}` : '/clients')} className="flex items-center gap-1.5 rounded-full bg-navy-50 px-4 py-2 text-[1.08rem] font-bold text-navy-600 transition active:scale-95">
               <FileText size={15} /> 수거대장 보기
             </button>
           </div>
@@ -248,7 +248,7 @@ export function DemoSummary() {
       {/* 5. 특허·사업계획 정합성 */}
       <section id="d-5" className="scroll-mt-4">
         <SectionTitle>5. 특허·사업계획 정합성</SectionTitle>
-        <p className="mb-2 px-1 text-[0.95rem] text-navy-500">의료폐기물 수거·운반 경로 최적화 시스템 · 10-2026-0101187</p>
+        <p className="mb-2 px-1 text-[1.08rem] text-navy-500">의료폐기물 수거·운반 경로 최적화 시스템 · 10-2026-0101187</p>
         <div className="space-y-2.5">
           <ExpandableSection label="특허 구성요소 ↔ 앱 기능 매핑 보기">
             <PatentMappingCard />
@@ -275,12 +275,12 @@ export function DemoSummary() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-bold text-navy-900">향후 활용 계획 · 업무흐름도 보기</p>
-          <p className="text-[0.85rem] text-navy-400">일일 업무 흐름과 단계별 고도화 로드맵을 한눈에</p>
+          <p className="text-[0.98rem] text-navy-400">일일 업무 흐름과 단계별 고도화 로드맵을 한눈에</p>
         </div>
         <ChevronRight size={18} className="shrink-0 text-navy-300" />
       </button>
 
-      <p className="pb-2 text-center text-[0.85rem] text-navy-300">데이터 기반 의료폐기물 운영관리 시스템 · ㈜비원미래</p>
+      <p className="pb-2 text-center text-[0.98rem] text-navy-300">데이터 기반 의료폐기물 운영관리 시스템 · ㈜비원미래</p>
     </PageShell>
   )
 }

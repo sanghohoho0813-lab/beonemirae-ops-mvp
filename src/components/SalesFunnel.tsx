@@ -92,7 +92,7 @@ export function SalesFunnelPanel({ data, month = thisMonth() }: { data: AppData;
           </p>
           <button
             onClick={() => setFieldOnly((v) => !v)}
-            className={`ml-auto shrink-0 rounded-full px-3.5 py-2 text-[0.87rem] font-extrabold transition ${
+            className={`ml-auto shrink-0 rounded-full px-3.5 py-2 text-[1rem] font-extrabold transition ${
               fieldOnly ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500 hover:text-navy-700'
             }`}
           >

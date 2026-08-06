@@ -70,7 +70,7 @@ function NumField({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[0.9rem] font-semibold text-navy-500">{label}</label>
+      <label className="mb-1 block text-[1.03rem] font-semibold text-navy-500">{label}</label>
       <div className="relative">
         <input
           type="number"
@@ -82,12 +82,12 @@ function NumField({
           placeholder="0"
         />
         {suffix && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[0.85rem] font-semibold text-navy-300">
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[0.98rem] font-semibold text-navy-300">
             {suffix}
           </span>
         )}
       </div>
-      {hint && <p className={`mt-1 text-[0.82rem] ${danger ? 'text-rose-500' : 'text-navy-400'}`}>{hint}</p>}
+      {hint && <p className={`mt-1 text-[0.95rem] ${danger ? 'text-rose-500' : 'text-navy-400'}`}>{hint}</p>}
     </div>
   )
 }
@@ -96,12 +96,12 @@ function Section({ n, title, desc, children }: { n: number; title: string; desc?
   return (
     <div className="card p-5">
       <div className="mb-3 flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.85rem] font-extrabold text-teal-600">
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
           {n}
         </span>
         <div>
-          <h2 className="text-[1.0625rem] font-extrabold text-navy-900">{title}</h2>
-          {desc && <p className="mt-0.5 text-[0.85rem] text-navy-400">{desc}</p>}
+          <h2 className="text-[1.15rem] font-extrabold text-navy-900">{title}</h2>
+          {desc && <p className="mt-0.5 text-[0.98rem] text-navy-400">{desc}</p>}
         </div>
       </div>
       {children}
@@ -249,13 +249,13 @@ export function CollectionInput() {
             <CheckCircle2 size={34} className="text-emerald-500" strokeWidth={2.2} />
           </span>
           <h2 className="mt-4 text-2xl font-extrabold text-navy-900">수거 완료가 반영되었습니다</h2>
-          <p className="mt-1.5 text-[0.9375rem] text-navy-500">
+          <p className="mt-1.5 text-[1.07rem] text-navy-500">
             {success.client} · {weight(success.amount)}
             {success.supplied > 0 && ` · 자재 ${success.supplied}점 동시공급`}
           </p>
 
-          <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-[0.95rem]">
-            <p className="mb-1 text-[0.85rem] font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
+          <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-[1.08rem]">
+            <p className="mb-1 text-[0.98rem] font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
             {[
               '오늘 일정 완료 처리 · 수거이력 생성',
               '거래처 최근 활동 · 월간 수거량 반영',
@@ -276,7 +276,7 @@ export function CollectionInput() {
               수거이력 보기
             </Link>
           </div>
-          <button className="mt-3 text-[0.95rem] font-bold text-teal-600" onClick={() => setSuccess(null)}>
+          <button className="mt-3 text-[1.08rem] font-bold text-teal-600" onClick={() => setSuccess(null)}>
             + 이어서 다른 수거 입력
           </button>
         </motion.div>
@@ -317,7 +317,7 @@ export function CollectionInput() {
                 setScheduleId('')
                 setErrors([])
               }}
-              className={`rounded-xl px-4 py-3 text-[0.95rem] font-bold transition active:scale-[0.97] ${
+              className={`rounded-xl px-4 py-3 text-[1.08rem] font-bold transition active:scale-[0.97] ${
                 scheduleId === '' ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
               }`}
             >
@@ -330,17 +330,17 @@ export function CollectionInput() {
                 <button
                   key={s.id}
                   onClick={() => applySchedule(s.id)}
-                  className={`rounded-xl px-3.5 py-2.5 text-left text-[0.95rem] font-bold transition active:scale-[0.97] ${
+                  className={`rounded-xl px-3.5 py-2.5 text-left text-[1.08rem] font-bold transition active:scale-[0.97] ${
                     active ? 'bg-teal-500 text-white' : 'bg-navy-50 text-navy-700'
                   }`}
                 >
                   <span className="tabular-nums">{s.scheduledTime}</span> · {c?.name ?? '거래처'}
-                  {s.status === '긴급' && <span className="ml-1 text-[0.78rem] font-extrabold text-rose-400">긴급</span>}
+                  {s.status === '긴급' && <span className="ml-1 text-[0.9rem] font-extrabold text-rose-400">긴급</span>}
                 </button>
               )
             })}
             {todayPending.length === 0 && (
-              <p className="text-[0.95rem] text-navy-400">오늘 남은 예정 수거가 없습니다. 직접 입력으로 등록하세요.</p>
+              <p className="text-[1.08rem] text-navy-400">오늘 남은 예정 수거가 없습니다. 직접 입력으로 등록하세요.</p>
             )}
           </div>
         </Section>
@@ -376,7 +376,7 @@ export function CollectionInput() {
                     key={w}
                     disabled={!!scheduleId}
                     onClick={() => setWasteType(w)}
-                    className={`rounded-2xl px-4 py-3.5 text-[0.95rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
+                    className={`rounded-2xl px-4 py-3.5 text-[1.08rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
                       wasteType === w
                         ? w === '의료폐기물'
                           ? 'bg-rose-500 text-white shadow-sm'
@@ -436,7 +436,7 @@ export function CollectionInput() {
               />
             ))}
           </div>
-          {containerSum > 0 && <p className="mt-2 text-[0.85rem] font-semibold text-navy-500">합계 {containerSum}개</p>}
+          {containerSum > 0 && <p className="mt-2 text-[0.98rem] font-semibold text-navy-500">합계 {containerSum}개</p>}
         </Section>
 
         </div>
@@ -446,7 +446,7 @@ export function CollectionInput() {
         {/* 현장 메모 — 이 거래처에 기록해둔 특이사항 */}
         {client && notesFor(client.id).some((n) => !n.done) && (
           <div className="card p-5">
-            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항</p>
+            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항 <span className="font-medium text-navy-400">(거래처 상세에 기록해 둔 내용)</span></p>
             <NoteChips notes={notesFor(client.id)} max={4} />
           </div>
         )}
@@ -470,7 +470,7 @@ export function CollectionInput() {
             })}
           </div>
           {suppliedSum > 0 && (
-            <label className="mt-3 flex items-center gap-2 text-[0.95rem] font-semibold text-navy-600">
+            <label className="mt-3 flex items-center gap-2 text-[1.08rem] font-semibold text-navy-600">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-teal-500"
@@ -481,7 +481,7 @@ export function CollectionInput() {
             </label>
           )}
           {overStock && (
-            <p className="mt-2 flex items-center gap-1.5 text-[0.85rem] font-bold text-rose-500">
+            <p className="mt-2 flex items-center gap-1.5 text-[0.98rem] font-bold text-rose-500">
               <AlertTriangle size={13} /> 사무실 재고를 초과한 공급은 저장할 수 없습니다.
             </p>
           )}
@@ -519,7 +519,7 @@ export function CollectionInput() {
               />
             </div>
           </div>
-          <p className="mt-1.5 text-[0.82rem] text-navy-400">
+          <p className="mt-1.5 text-[0.95rem] text-navy-400">
             {wasteType} 전용 차량만 배차할 수 있습니다 (구분 불일치 시 저장 차단).
           </p>
         </Section>
@@ -531,7 +531,7 @@ export function CollectionInput() {
               <button
                 key={h}
                 onClick={() => setHandover(h)}
-                className={`rounded-xl px-2 py-3 text-[0.9rem] font-bold transition active:scale-[0.97] ${
+                className={`rounded-xl px-2 py-3 text-[1.03rem] font-bold transition active:scale-[0.97] ${
                   handover === h ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
                 }`}
               >
@@ -586,7 +586,7 @@ export function CollectionInput() {
 
         {/* 완료 버튼 (48px) */}
         <button
-          className="btn-primary w-full py-5 !text-[1.05rem] disabled:opacity-50"
+          className="btn-primary w-full py-5 !text-[1.15rem] disabled:opacity-50"
           style={{ minHeight: 48 }}
           onClick={submit}
           disabled={!canSubmit}
@@ -602,7 +602,7 @@ export function CollectionInput() {
       {/* 최근 입력 이력 (감사기록) */}
       {recentEvents.length > 0 && (
         <div className="mt-6">
-          <p className="mb-2 px-1 text-[0.9375rem] font-extrabold text-navy-800">최근 입력 이력</p>
+          <p className="mb-2 px-1 text-[1.07rem] font-extrabold text-navy-800">최근 입력 이력</p>
           <div className="card divide-y divide-navy-50">
             {recentEvents.map((e) => (
               <div key={e.id} className="flex items-center gap-3 p-3.5">
@@ -614,18 +614,18 @@ export function CollectionInput() {
                   {e.materialIds.length ? <Package size={16} /> : <Truck size={16} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[0.95rem] font-bold text-navy-900">
+                  <p className="break-keep text-[1.08rem] font-bold text-navy-900">
                     {e.clientName} · {weight(e.amountKg)}
-                    {e.reverted && <span className="ml-1.5 text-[0.85rem] font-bold text-navy-400">취소됨</span>}
+                    {e.reverted && <span className="ml-1.5 text-[0.98rem] font-bold text-navy-400">취소됨</span>}
                   </p>
-                  <p className="truncate text-[0.82rem] text-navy-400">
+                  <p className="break-keep text-[0.95rem] text-navy-400">
                     {e.at.slice(5, 16).replace('T', ' ')} · {e.role} · {e.screen}
                     {e.requestUpdates.length > 0 && ` · 요청 ${e.requestUpdates.length}건 자동처리`}
                   </p>
                 </div>
                 {!e.reverted && (
                   <button
-                    className="flex shrink-0 items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1.5 text-[0.85rem] font-bold text-navy-500 transition active:scale-95"
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1.5 text-[0.98rem] font-bold text-navy-500 transition active:scale-95"
                     onClick={() => setConfirmRevert(e.id)}
                   >
                     <RotateCcw size={12} /> 취소
@@ -634,13 +634,13 @@ export function CollectionInput() {
               </div>
             ))}
           </div>
-          <p className="mt-1.5 px-1 text-[0.82rem] text-navy-400">
+          <p className="mt-1.5 px-1 text-[0.95rem] text-navy-400">
             취소 시 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
           </p>
         </div>
       )}
 
-      <p className="mt-6 text-center text-[0.85rem] text-navy-300">{prettyDate(today())} 기준</p>
+      <p className="mt-6 text-center text-[0.98rem] text-navy-300">{prettyDate(today())} 기준</p>
 
       {/* 완료 취소 확인 모달 (시연 중 실수 방지) */}
       <Modal
@@ -667,7 +667,7 @@ export function CollectionInput() {
           </>
         }
       >
-        <p className="text-[0.95rem] leading-relaxed text-navy-700">
+        <p className="text-[1.08rem] leading-relaxed text-navy-700">
           이 수거 완료 입력을 취소하면 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
         </p>
       </Modal>

@@ -79,28 +79,28 @@ export function CollectionHistory() {
 
   return (
     <div>
-      <button onClick={() => navigate(-1)} className="mb-3 flex items-center gap-1.5 text-[0.95rem] font-bold text-navy-500">
+      <button onClick={() => navigate(-1)} className="mb-3 flex items-center gap-1.5 text-[1.08rem] font-bold text-navy-500">
         <ArrowLeft size={16} /> 뒤로
       </button>
       <PageHeader title="전체 수거이력" subtitle="거래처·차량·폐기물 구분별 수거 기록" />
 
       {/* 요약 */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="card p-4">
-          <p className="text-[0.9rem] font-semibold text-navy-400">전체 수거건수</p>
-          <p className="mt-1.5 whitespace-nowrap text-[1.625rem] font-extrabold text-navy-900">{rows.length}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+        <div className="card kpi-box p-4">
+          <p className="text-[1.03rem] font-semibold text-navy-400">전체 수거건수</p>
+          <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[0.55em] text-navy-300">건</span></p>
         </div>
-        <div className="card p-4">
-          <p className="text-[0.9rem] font-semibold text-navy-400">총 수거량</p>
-          <p className="mt-1.5 whitespace-nowrap text-[1.625rem] font-extrabold text-teal-600">{weight(totalKg)}</p>
+        <div className="card kpi-box p-4">
+          <p className="text-[1.03rem] font-semibold text-navy-400">총 수거량</p>
+          <p className="t-stat mt-1.5 text-teal-600">{weight(totalKg)}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-[0.9rem] font-semibold text-navy-400">긴급수거</p>
-          <p className="mt-1.5 whitespace-nowrap text-[1.625rem] font-extrabold text-rose-500">{urgent}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+        <div className="card kpi-box p-4">
+          <p className="text-[1.03rem] font-semibold text-navy-400">긴급수거</p>
+          <p className="t-stat mt-1.5 text-rose-500">{urgent}<span className="ml-0.5 text-[0.55em] text-navy-300">건</span></p>
         </div>
-        <div className="card p-4">
-          <p className="text-[0.9rem] font-semibold text-navy-400">인계 완료율</p>
-          <p className="mt-1.5 whitespace-nowrap text-[1.625rem] font-extrabold text-navy-900">{handoverRate}<span className="ml-0.5 text-base text-navy-300">%</span></p>
+        <div className="card kpi-box p-4">
+          <p className="text-[1.03rem] font-semibold text-navy-400">인계 완료율</p>
+          <p className="t-stat mt-1.5 text-navy-900">{handoverRate}<span className="ml-0.5 text-[0.55em] text-navy-300">%</span></p>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export function CollectionHistory() {
 
       {/* 테이블 */}
       <div className="card overflow-x-auto p-1">
-        <table className="w-full border-collapse text-left text-[0.85rem]">
+        <table className="w-full border-collapse text-left text-[0.98rem]">
           <thead>
             <tr className="bg-navy-50 text-navy-500">
               {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고'].map((h) => (
@@ -138,7 +138,7 @@ export function CollectionHistory() {
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.date.slice(5)} {r.time}</td>
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">
                   {r.clientName}
-                  {r.fromField && <span className="ml-1 rounded bg-teal-50 px-1 py-0.5 text-[0.85rem] font-bold text-teal-600">현장입력</span>}
+                  {r.fromField && <span className="ml-1 rounded bg-teal-50 px-1 py-0.5 text-[0.98rem] font-bold text-teal-600">현장입력</span>}
                 </td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.clientType}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.wasteType === '의료폐기물' ? '의료' : '기저귀'} · {r.kind}</td>
@@ -156,7 +156,7 @@ export function CollectionHistory() {
           </tbody>
         </table>
       </div>
-      {rows.length > 60 && <p className="mt-2 px-1 text-[0.85rem] text-navy-400">최근 60건까지 표시합니다.</p>}
+      {rows.length > 60 && <p className="mt-2 px-1 text-[0.98rem] text-navy-400">최근 60건까지 표시합니다.</p>}
     </div>
   )
 }

@@ -43,11 +43,11 @@ function Stat({
 }) {
   return (
     <div className="rounded-2xl bg-navy-50 p-4">
-      <p className="flex items-center gap-1.5 break-keep text-[0.875rem] font-bold leading-snug text-navy-400">
+      <p className="flex items-center gap-1.5 break-keep text-[1rem] font-bold leading-snug text-navy-400">
         <Icon size={15} className="shrink-0" /> {label}
       </p>
-      <p className={`mt-2 break-keep text-[1.5rem] font-extrabold leading-none ${valueClass}`}>{value}</p>
-      {sub && <p className="mt-1.5 break-keep text-[0.9rem] leading-snug text-navy-400">{sub}</p>}
+      <p className={`mt-2 break-keep text-[1.62rem] font-extrabold leading-none ${valueClass}`}>{value}</p>
+      {sub && <p className="mt-1.5 break-keep text-[1.03rem] leading-snug text-navy-400">{sub}</p>}
     </div>
   )
 }
@@ -62,13 +62,13 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
     <div className="card overflow-hidden">
       {/* 헤더 — 병원명 + 이번 달 총 수거량 */}
       <div className="bg-navy-900 px-5 py-6 text-white sm:px-7">
-        <p className="text-[0.875rem] font-bold tracking-wider text-teal-300">
+        <p className="text-[1rem] font-bold tracking-wider text-teal-300">
           {year}년 {Number(month)}월 운영 리포트
         </p>
-        <h3 className="mt-1.5 break-keep text-[1.5rem] font-extrabold leading-tight tracking-tight sm:text-[1.75rem]">
+        <h3 className="mt-1.5 break-keep text-[1.62rem] font-extrabold leading-tight tracking-tight sm:text-[1.9rem]">
           {report.client.name}
         </h3>
-        <p className="mt-1 text-[0.9375rem] text-navy-300">{report.client.type} · 수거주기 {report.client.collectionCycle}</p>
+        <p className="mt-1 text-[1.07rem] text-navy-300">{report.client.type} · 수거주기 {report.client.collectionCycle}</p>
       </div>
 
       <div className="space-y-6 p-5 sm:p-7">
@@ -88,9 +88,9 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
 
         {/* 폐기물 유형 */}
         <section>
-          <h4 className="mb-2.5 text-[1.0625rem] font-bold text-navy-700">폐기물 유형</h4>
+          <h4 className="mb-2.5 text-[1.15rem] font-bold text-navy-700">폐기물 유형</h4>
           {report.byWaste.length === 0 ? (
-            <p className="rounded-2xl bg-navy-50 px-4 py-3.5 text-[1rem] text-navy-400">
+            <p className="rounded-2xl bg-navy-50 px-4 py-3.5 text-[1.12rem] text-navy-400">
               이번 달 완료된 수거 내역이 없습니다.
             </p>
           ) : (
@@ -102,10 +102,10 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
                       w.type === '의료폐기물' ? 'bg-teal-500' : 'bg-slate2-500'
                     }`}
                   />
-                  <p className="min-w-0 flex-1 break-keep text-[1rem] font-bold leading-snug text-navy-700">{w.type}</p>
-                  <p className="shrink-0 whitespace-nowrap text-[1rem] font-extrabold text-navy-900">
+                  <p className="min-w-0 flex-1 break-keep text-[1.12rem] font-bold leading-snug text-navy-700">{w.type}</p>
+                  <p className="min-w-0 break-keep text-right text-[1.12rem] font-extrabold text-navy-900">
                     {weight(w.kg)}
-                    <span className="ml-1.5 text-[0.875rem] font-semibold text-navy-400">{w.count}회</span>
+                    <span className="ml-1.5 inline-block text-[0.9rem] font-semibold text-navy-400">{w.count}회</span>
                   </p>
                 </div>
               ))}
@@ -118,8 +118,8 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
           <div className="flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5">
             <CalendarClock size={19} className="shrink-0 text-navy-400" />
             <div className="min-w-0">
-              <p className="text-[0.875rem] font-bold text-navy-400">다음 수거 예상</p>
-              <p className="break-keep text-[1rem] font-extrabold text-navy-900">
+              <p className="text-[1rem] font-bold text-navy-400">다음 수거 예상</p>
+              <p className="break-keep text-[1.12rem] font-extrabold text-navy-900">
                 {report.nextPredicted ? report.nextPredicted.slice(5).replace('-', '/') : '—'}
               </p>
             </div>
@@ -127,8 +127,8 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
           <div className="flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5">
             <AlertTriangle size={19} className="shrink-0 text-navy-400" />
             <div className="min-w-0">
-              <p className="text-[0.875rem] font-bold text-navy-400">긴급수거</p>
-              <p className="break-keep text-[1rem] font-extrabold text-navy-900">
+              <p className="text-[1rem] font-bold text-navy-400">긴급수거</p>
+              <p className="break-keep text-[1.12rem] font-extrabold text-navy-900">
                 {report.urgentCount > 0 ? `${report.urgentCount}건` : '없음'}
               </p>
             </div>
@@ -140,10 +140,10 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
           >
             <GraduationCap size={19} className={`shrink-0 ${report.education.needed ? 'text-amber-600' : 'text-navy-400'}`} />
             <div className="min-w-0">
-              <p className={`text-[0.875rem] font-bold ${report.education.needed ? 'text-amber-600' : 'text-navy-400'}`}>
+              <p className={`text-[1rem] font-bold ${report.education.needed ? 'text-amber-600' : 'text-navy-400'}`}>
                 배출자 교육
               </p>
-              <p className="break-keep text-[1rem] font-extrabold leading-snug text-navy-900">
+              <p className="break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">
                 {report.education.needed ? '주기 도래 임박' : '정상'}
               </p>
             </div>
@@ -152,12 +152,12 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
 
         {/* 관리 특이사항 */}
         <section>
-          <h4 className="mb-2.5 text-[1.0625rem] font-bold text-navy-700">관리 특이사항</h4>
+          <h4 className="mb-2.5 text-[1.15rem] font-bold text-navy-700">관리 특이사항</h4>
           <ul className="space-y-1.5">
             {report.notes.map((n) => (
               <li
                 key={n}
-                className="flex items-start gap-2.5 rounded-2xl bg-navy-50 px-4 py-3 text-[1rem] leading-snug text-navy-600"
+                className="flex items-start gap-2.5 rounded-2xl bg-navy-50 px-4 py-3 text-[1.12rem] leading-snug text-navy-600"
               >
                 <span className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
                 <span className="min-w-0 break-keep">{n}</span>
@@ -169,9 +169,9 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
         {/* 세부 내역 — 접기 */}
         <ExpandableSection label="세부 내역 보기" openLabel="세부 내역 접기">
           <div className="space-y-2">
-            <p className="text-[0.9375rem] font-bold text-navy-500">자재·소모품 공급 내역</p>
+            <p className="text-[1.07rem] font-bold text-navy-500">자재·소모품 공급 내역</p>
             {report.supplies.length === 0 ? (
-              <p className="rounded-2xl bg-navy-50 px-4 py-3 text-[0.9375rem] text-navy-400">
+              <p className="rounded-2xl bg-navy-50 px-4 py-3 text-[1.07rem] text-navy-400">
                 이번 달 공급 내역이 없습니다.
               </p>
             ) : (
@@ -179,14 +179,14 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
                 {report.supplies.map((s) => (
                   <span
                     key={s.type}
-                    className="break-keep rounded-xl bg-navy-50 px-3.5 py-2.5 text-[0.9375rem] font-semibold text-navy-600"
+                    className="break-keep rounded-xl bg-navy-50 px-3.5 py-2.5 text-[1.07rem] font-semibold text-navy-600"
                   >
                     {s.type} <span className="font-extrabold text-navy-900">{s.count}</span>
                   </span>
                 ))}
               </div>
             )}
-            <p className="pt-1 text-[0.875rem] text-navy-400">
+            <p className="pt-1 text-[1rem] text-navy-400">
               배출자 교육 이력은 시연용 파생값이며, 실제 적용 시 교육 이력 데이터와 연동됩니다.
             </p>
           </div>
@@ -203,7 +203,7 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
             </button>
             <PlannedBadge />
           </div>
-          <p className="mt-2.5 break-keep text-[0.875rem] leading-snug text-navy-400">
+          <p className="mt-2.5 break-keep text-[1rem] leading-snug text-navy-400">
             현재는 화면 미리보기까지 제공합니다. PDF 자동 생성·이메일 발송은 개발 예정입니다.
           </p>
         </div>

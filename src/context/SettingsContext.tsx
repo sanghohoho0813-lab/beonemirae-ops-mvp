@@ -21,9 +21,9 @@ import { useAuth } from './AuthContext'
 export type FontScale = 'normal' | 'large' | 'xlarge'
 
 export const FONT_SCALE_OPTIONS: { value: FontScale; label: string; hint: string }[] = [
-  { value: 'normal', label: '기본', hint: '표준' },
-  { value: 'large', label: '크게', hint: '+5%' },
-  { value: 'xlarge', label: '매우 크게', hint: '+10%' },
+  { value: 'normal', label: '기본', hint: '표준 (크게 보기)' },
+  { value: 'large', label: '크게', hint: '+10%' },
+  { value: 'xlarge', label: '매우 크게', hint: '+20%' },
 ]
 
 const STORAGE_KEY = 'beonemirae-ops:font-scale'

@@ -49,7 +49,7 @@ export function TodayClients({ data, limit = 4 }: { data: AppData; limit?: numbe
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {/* 오늘 수거 상태 */}
                 <span
-                  className={`rounded-lg px-2.5 py-1 text-[0.82rem] font-bold ${
+                  className={`rounded-lg px-2.5 py-1 text-[0.95rem] font-bold ${
                     r.doneCount > 0 ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-600'
                   }`}
                 >
@@ -57,19 +57,19 @@ export function TodayClients({ data, limit = 4 }: { data: AppData; limit?: numbe
                 </span>
                 {/* 자재 공급 */}
                 {r.materialCount > 0 && (
-                  <span className="rounded-lg bg-sky-50 px-2.5 py-1 text-[0.82rem] font-bold text-sky-700">
+                  <span className="rounded-lg bg-sky-50 px-2.5 py-1 text-[0.95rem] font-bold text-sky-700">
                     자재 공급 {r.materialCount}개
                   </span>
                 )}
                 {/* 추천 행동 */}
                 {r.action && (
-                  <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[0.82rem] font-bold text-amber-700">
+                  <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-[0.95rem] font-bold text-amber-700">
                     {r.action.title}
                   </span>
                 )}
                 {/* 현장 메모 */}
                 {r.openNotes > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-navy-100 px-2.5 py-1 text-[0.82rem] font-bold text-navy-600">
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-navy-100 px-2.5 py-1 text-[0.95rem] font-bold text-navy-600">
                     <StickyNote size={13} strokeWidth={2.6} /> 현장 메모 {r.openNotes}건
                   </span>
                 )}

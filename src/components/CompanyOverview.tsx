@@ -35,7 +35,7 @@ export function CompanyOverview() {
         <div className="flex items-center gap-3">
           <IconChip icon={Recycle} tone="teal" />
           <div>
-            <p className="text-[0.9rem] font-semibold text-navy-400">월평균 수거량</p>
+            <p className="text-[1.03rem] font-semibold text-navy-400">월평균 수거량</p>
             <p className="text-xl font-extrabold tracking-tight text-navy-900">총 105톤</p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export function CompanyOverview() {
               { value: DIAPER_TON, className: 'bg-teal-500', label: 'diaper' },
             ]}
           />
-          <div className="mt-2 flex justify-between text-[0.85rem] font-medium">
+          <div className="mt-2 flex justify-between text-[0.98rem] font-medium">
             <span className="flex items-center gap-1.5 text-navy-500">
               <span className="h-2 w-2 rounded-full bg-navy-400" /> 의료폐기물 {MEDICAL_TON}톤
             </span>
@@ -62,13 +62,13 @@ export function CompanyOverview() {
         <div className="flex items-center gap-3">
           <IconChip icon={Building2} tone="navy" />
           <div>
-            <p className="text-[0.9rem] font-semibold text-navy-400">거래처 구성</p>
+            <p className="text-[1.03rem] font-semibold text-navy-400">거래처 구성</p>
             <p className="text-xl font-extrabold tracking-tight text-navy-900">총 {data.clients.length}곳</p>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {TYPE_GROUPS.map((g) => (
-            <span key={g.label} className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.85rem] font-bold text-navy-600">
+            <span key={g.label} className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.98rem] font-bold text-navy-600">
               {g.label} {typeCount(g.types)}
             </span>
           ))}
@@ -80,15 +80,15 @@ export function CompanyOverview() {
         <div className="flex items-center gap-3">
           <IconChip icon={Truck} tone="navy" />
           <div>
-            <p className="text-[0.9rem] font-semibold text-navy-400">차량 구성</p>
+            <p className="text-[1.03rem] font-semibold text-navy-400">차량 구성</p>
             <p className="text-xl font-extrabold tracking-tight text-navy-900">총 {data.vehicles.length}대</p>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[0.85rem] font-bold text-rose-500">
+          <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[0.98rem] font-bold text-rose-500">
             의료폐기물 {medicalVehicles}대
           </span>
-          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-[0.85rem] font-bold text-teal-600">
+          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-[0.98rem] font-bold text-teal-600">
             일회용기저귀 {diaperVehicles}대
           </span>
         </div>
@@ -98,7 +98,7 @@ export function CompanyOverview() {
       <div className="flex items-center gap-3 p-4">
         <IconChip icon={Boxes} tone="amber" />
         <div>
-          <p className="text-[0.9rem] font-semibold text-navy-400">자재 추가공급</p>
+          <p className="text-[1.03rem] font-semibold text-navy-400">자재 추가공급</p>
           <p className="text-xl font-extrabold tracking-tight text-navy-900">월 4~5회 발생</p>
         </div>
       </div>

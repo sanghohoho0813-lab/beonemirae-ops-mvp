@@ -58,7 +58,7 @@ export function MetricCard({
   nowrap?: boolean
   onClick?: () => void
 }) {
-  const numberSize = size === 'lg' ? 'text-[1.375rem] sm:text-[1.625rem] xl:text-[1.875rem]' : 'text-[1.625rem]'
+  const numberSize = size === 'lg' ? 'text-[1.375rem] sm:text-[1.75rem] xl:text-[1.875rem]' : 'text-[1.75rem]'
   return (
     <motion.div
       onClick={onClick}
@@ -72,12 +72,12 @@ export function MetricCard({
           : ''
       }`}
     >
-      <span className={`order-2 mt-2 break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[0.95rem]' : 'text-[0.9rem]'}`}>{label}</span>
+      <span className={`order-2 mt-2 break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-300">{unit}</span>}
       </span>
-      {hint && <span className="order-3 mt-1.5 text-[0.85rem] text-navy-400 sm:text-[0.9rem]">{hint}</span>}
+      {hint && <span className="order-3 mt-1.5 text-[0.98rem] text-navy-400 sm:text-[1.03rem]">{hint}</span>}
     </motion.div>
   )
 }
@@ -124,7 +124,7 @@ export function FilterChip({
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.15, ease: EASE }}
-      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[0.9rem] font-bold transition-colors ${
+      className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[1.03rem] font-bold transition-colors ${
         active ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
       }`}
     >
@@ -212,7 +212,7 @@ export function EmptyState({ icon = '🗂️', title, subtitle }: { icon?: strin
     <div className="card flex flex-col items-center justify-center px-6 py-12 text-center">
       <span className="text-3xl">{icon}</span>
       <p className="mt-3 font-bold text-navy-700">{title}</p>
-      {subtitle && <p className="mt-1 text-[0.95rem] text-navy-400">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-[1.08rem] text-navy-400">{subtitle}</p>}
     </div>
   )
 }
@@ -250,7 +250,7 @@ export function FeatureCard({
         <p className="t-muted">{desc}</p>
       </div>
       {badge && (
-        <span className="shrink-0 rounded-full bg-navy-50 px-2.5 py-1 text-[0.9rem] font-bold text-navy-500">
+        <span className="shrink-0 rounded-full bg-navy-50 px-2.5 py-1 text-[1.03rem] font-bold text-navy-500">
           {badge}
         </span>
       )}
@@ -276,7 +276,7 @@ export function ExpandableSection({
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-center gap-1 rounded-2xl bg-navy-50 px-4 py-2.5 text-[0.95rem] font-bold text-navy-600 transition active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-1 rounded-2xl bg-navy-50 px-4 py-2.5 text-[1.08rem] font-bold text-navy-600 transition active:scale-[0.99]"
       >
         {open ? openLabel ?? '접기' : label}
         <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -355,18 +355,21 @@ export function KpiCard({
         onClick ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-lg' : ''
       }`}
     >
-      {/* 아이콘 + 라벨을 한 줄로, 숫자는 카드 전체 폭을 쓰게 하여 잘림을 방지 */}
-      <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12 sm:rounded-2xl ${kpiToneStyle[tone]}`}>
+      {/* 글자가 커진 뒤에도 라벨이 두 줄로 접히지 않도록 아이콘을 위로 올리고
+          라벨이 카드 가로폭 전체를 쓰게 합니다. 숫자는 그 아래 전체 폭 사용. */}
+      <div className="flex min-w-0 items-center gap-2 sm:block sm:gap-0">
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:mb-2.5 sm:h-11 sm:w-11 sm:rounded-2xl ${kpiToneStyle[tone]}`}
+        >
           <Icon size={20} strokeWidth={2.2} className="sm:hidden" />
-          <Icon size={24} strokeWidth={2.2} className="hidden sm:block" />
+          <Icon size={23} strokeWidth={2.2} className="hidden sm:block" />
         </span>
         <p className="t-label min-w-0 text-navy-500">{label}</p>
       </div>
       <p className="t-kpi mt-3.5 text-navy-900">
         {num}
         {(tail || unit) && (
-          <span className="ml-0.5 text-[0.62em] font-bold text-navy-400">
+          <span className="ml-0.5 text-[0.52em] font-bold text-navy-400">
             {tail}
             {unit}
           </span>
@@ -448,9 +451,9 @@ export function SectionTabs({ items }: { items: { id: string; label: string }[] 
         <button
           key={it.id}
           onClick={() => go(it.id)}
-          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[0.9rem] font-bold text-navy-600 shadow-card"
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1.03rem] font-bold text-navy-600 shadow-card"
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[0.82rem] font-extrabold text-teal-600">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-50 text-[0.95rem] font-extrabold text-teal-600">
             {i + 1}
           </span>
           {it.label}

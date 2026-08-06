@@ -264,7 +264,7 @@ export function Settings() {
                   <button
                     key={s.demoCount}
                     onClick={() => setClientSet(s.demoCount as ClientSetSize)}
-                    className={`flex-1 rounded-xl py-2.5 text-center text-[0.95rem] font-extrabold transition active:scale-[0.98] ${
+                    className={`flex-1 rounded-xl py-2.5 text-center text-[1.08rem] font-extrabold transition active:scale-[0.98] ${
                       active ? 'bg-white text-teal-600 shadow-sm' : 'text-navy-500 hover:text-navy-700'
                     }`}
                   >

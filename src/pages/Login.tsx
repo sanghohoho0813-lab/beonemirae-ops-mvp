@@ -47,7 +47,7 @@ export function Login() {
       <div className="w-full max-w-[30rem]">
         {/* 브랜드 */}
         <div className="mb-8 flex items-center gap-3.5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.5rem] font-extrabold text-white">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.62rem] font-extrabold text-white">
             비
           </span>
           <div className="min-w-0">

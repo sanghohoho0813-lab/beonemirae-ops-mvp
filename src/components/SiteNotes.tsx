@@ -32,7 +32,7 @@ export function NoteChips({ notes, max = 2 }: { notes: SiteNote[]; max?: number 
         return (
           <p
             key={n.id}
-            className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[0.82rem] font-semibold leading-snug ${m.chip}`}
+            className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[0.95rem] font-semibold leading-snug ${m.chip}`}
           >
             <Icon size={15} strokeWidth={2.4} className="mt-0.5 shrink-0" />
             <span className="min-w-0 break-keep">{n.content}</span>
@@ -40,7 +40,7 @@ export function NoteChips({ notes, max = 2 }: { notes: SiteNote[]; max?: number 
         )
       })}
       {open.length > max && (
-        <p className="px-1 text-[0.8rem] font-semibold text-navy-400">+ 현장 메모 {open.length - max}건 더</p>
+        <p className="px-1 text-[0.92rem] font-semibold text-navy-400">+ 현장 메모 {open.length - max}건 더</p>
       )}
     </div>
   )
@@ -62,6 +62,18 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
 
   return (
     <div className="card p-5 sm:p-6">
+      {/* 흐름 안내 — 수기로 적던 내용이 어디에 남고 어디서 보이는지 명확히 */}
+      <div className="mb-4 rounded-2xl bg-navy-50 px-4 py-3.5">
+        <p className="t-body break-keep font-bold text-navy-700">
+          수첩·메모지에 적던 병원별 특이사항을 여기에 한 번만 기록하세요.
+        </p>
+        <p className="t-muted mt-1 break-keep">
+          기록하면 <b className="text-navy-600">오늘 일정</b> · <b className="text-navy-600">수거 입력</b> ·{' '}
+          <b className="text-navy-600">대시보드</b> 화면에서 방문 전에 자동으로 함께 보입니다. 처리한 메모는
+          완료 표시하면 목록 아래로 내려갑니다.
+        </p>
+      </div>
+
       {/* 입력 */}
       <form onSubmit={submit}>
         <div className="flex flex-wrap gap-2">
@@ -70,7 +82,7 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
               type="button"
               key={k}
               onClick={() => setKind(k)}
-              className={`rounded-full px-4 py-2 text-[0.85rem] font-bold transition ${
+              className={`rounded-full px-4 py-2 text-[0.98rem] font-bold transition ${
                 kind === k ? 'bg-teal-500 text-white' : 'bg-navy-50 text-navy-500 hover:bg-navy-100'
               }`}
             >
@@ -95,7 +107,7 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
       <div className="mt-5 space-y-2">
         {notes.length === 0 ? (
           <p className="rounded-2xl bg-navy-50 px-4 py-5 text-center t-body text-navy-400">
-            기록된 현장 메모가 없습니다. 현장에서 확인한 특이사항을 남겨보세요.
+            아직 기록된 현장 메모가 없습니다. 위에 한 줄 적어두면 다음 방문 때 오늘 일정·수거 입력 화면에서 바로 확인됩니다.
           </p>
         ) : (
           notes.map((n) => {
@@ -117,7 +129,7 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
                   >
                     {n.content}
                   </p>
-                  <p className="mt-1 text-[0.8rem] text-navy-400">
+                  <p className="mt-1 text-[0.92rem] text-navy-400">
                     {n.kind} · {n.createdAt.slice(5, 10).replace('-', '/')} 기록
                   </p>
                 </div>

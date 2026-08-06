@@ -19,7 +19,7 @@ export function SyncBar() {
         <p className="t-body min-w-0 flex-1 break-keep font-bold">{sync.error}</p>
         <button
           onClick={() => void retry()}
-          className="shrink-0 rounded-full bg-white/20 px-3.5 py-1.5 text-[0.87rem] font-extrabold transition hover:bg-white/30"
+          className="shrink-0 rounded-full bg-white/20 px-3.5 py-1.5 text-[1rem] font-extrabold transition hover:bg-white/30"
         >
           <RotateCw size={14} className="mr-1 inline -translate-y-px" />
           다시 시도

@@ -22,9 +22,9 @@ export function FontSizeControl({
     <div className="grid grid-cols-3 gap-1.5">
       {FONT_SCALE_OPTIONS.map((opt) => {
         const active = fontScale === opt.value
-        // 미리보기 '가' 글자 — 실제 배율(기본 / +5% / +10%)과 같은 비율로 표시합니다.
+        // 미리보기 '가' 글자 — 실제 배율(기본 / +10% / +20%)과 같은 비율로 표시합니다.
         const previewSize =
-          opt.value === 'normal' ? 'text-[1.1rem]' : opt.value === 'large' ? 'text-[1.155rem]' : 'text-[1.21rem]'
+          opt.value === 'normal' ? 'text-[1.3rem]' : opt.value === 'large' ? 'text-[1.43rem]' : 'text-[1.56rem]'
         return (
           <button
             key={opt.value}
@@ -43,10 +43,10 @@ export function FontSizeControl({
               <Check size={12} strokeWidth={3.5} className="absolute right-1.5 top-1.5 text-white" />
             )}
             <span className={`font-extrabold leading-none ${previewSize}`}>가</span>
-            <span className="mt-1.5 whitespace-nowrap text-[0.82rem] font-bold leading-none">{opt.label}</span>
+            <span className="mt-1.5 whitespace-nowrap text-[1.05rem] font-bold leading-none">{opt.label}</span>
             {!compact && (
               <span
-                className={`mt-1 whitespace-nowrap text-[0.72rem] leading-none ${
+                className={`mt-1 whitespace-nowrap text-[0.9rem] leading-none ${
                   active ? 'text-teal-50' : dark ? 'text-navy-400' : 'text-navy-400'
                 }`}
               >

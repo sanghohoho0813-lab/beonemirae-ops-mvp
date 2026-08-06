@@ -176,10 +176,10 @@ export function Dashboard() {
                   <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${m.chip}`}>
                     <Icon size={19} strokeWidth={2.4} />
                   </span>
-                  <span className="min-w-0 flex-1 break-keep text-[1.0625rem] font-bold leading-snug text-navy-700">
+                  <span className="min-w-0 flex-1 break-keep text-[1.15rem] font-bold leading-snug text-navy-700">
                     {item.label}
                   </span>
-                  <span className={`shrink-0 whitespace-nowrap text-[1.0625rem] font-extrabold ${m.color}`}>
+                  <span className={`shrink-0 whitespace-nowrap text-[1.15rem] font-extrabold ${m.color}`}>
                     {item.count}건
                   </span>
                   <ChevronRight size={18} className="shrink-0 text-navy-300" />
@@ -188,7 +188,7 @@ export function Dashboard() {
             })}
             <button
               onClick={() => navigate('/today')}
-              className="flex w-full items-center justify-center gap-1.5 py-4 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-50"
+              className="flex w-full items-center justify-center gap-1.5 py-4 text-[1.12rem] font-bold text-navy-600 transition hover:bg-navy-50"
             >
               전체 보기 <ChevronRight size={18} />
             </button>
@@ -205,15 +205,15 @@ export function Dashboard() {
                 { label: '입력 대기', v: progress.pendingInput, u: '건' },
               ].map((s) => (
                 <div key={s.label} className="rounded-2xl bg-navy-50 px-3 py-4 text-center">
-                  <p className="break-keep text-[0.9375rem] font-bold leading-snug text-navy-400">{s.label}</p>
-                  <p className="mt-2 text-[1.75rem] font-extrabold leading-none text-navy-900">
+                  <p className="break-keep text-[1.07rem] font-bold leading-snug text-navy-400">{s.label}</p>
+                  <p className="mt-2 text-[1.9rem] font-extrabold leading-none text-navy-900">
                     {s.v}
-                    <span className="ml-0.5 text-[0.9375rem] font-bold text-navy-400">{s.u}</span>
+                    <span className="ml-0.5 text-[1.07rem] font-bold text-navy-400">{s.u}</span>
                   </p>
                 </div>
               ))}
             </div>
-            <button onClick={() => navigate('/collection')} className="btn-primary mt-4 w-full !text-[1.0625rem]">
+            <button onClick={() => navigate('/collection')} className="btn-primary mt-4 w-full !text-[1.15rem]">
               <PlusCircle size={19} strokeWidth={2.4} /> 수거 완료 입력하기
             </button>
           </div>
@@ -251,8 +251,8 @@ export function Dashboard() {
           <Lightbulb size={22} className="text-teal-300" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="break-keep text-[1.125rem] font-bold leading-snug">데이터 기반 병원 운영지원으로 확장</p>
-          <p className="mt-1 break-keep text-[0.9375rem] leading-snug text-navy-300">
+          <p className="break-keep text-[1.22rem] font-bold leading-snug">데이터 기반 병원 운영지원으로 확장</p>
+          <p className="mt-1 break-keep text-[1.07rem] leading-snug text-navy-300">
             수거 데이터 축적 → 다음 행동 추천 → 병원 운영지원 서비스
           </p>
         </div>

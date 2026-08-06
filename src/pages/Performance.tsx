@@ -73,7 +73,7 @@ function BasisDetails({ m }: { m: MetricRow }) {
     <div className="mt-4 border-t border-navy-50 pt-3">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 text-left text-[0.87rem] font-bold text-navy-400 transition hover:text-navy-600"
+        className="flex w-full items-center gap-1.5 text-left text-[1rem] font-bold text-navy-400 transition hover:text-navy-600"
       >
         측정 근거
         <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -296,7 +296,7 @@ export function Performance() {
             <button
               key={p.value}
               onClick={() => setPreset(p.value)}
-              className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-center text-[0.95rem] font-extrabold transition sm:flex-1 ${
+              className={`whitespace-nowrap rounded-xl px-2 py-2.5 text-center text-[1.08rem] font-extrabold transition sm:flex-1 ${
                 preset === p.value ? 'bg-white text-teal-600 shadow-sm' : 'text-navy-500 hover:text-navy-700'
               }`}
             >
@@ -405,14 +405,14 @@ export function Performance() {
           <div className="mt-4 border-t border-navy-50 pt-3">
             <button
               onClick={() => setAutoOpen((v) => !v)}
-              className="flex w-full items-center gap-1.5 text-left text-[0.87rem] font-bold text-navy-400 transition hover:text-navy-600"
+              className="flex w-full items-center gap-1.5 text-left text-[1rem] font-bold text-navy-400 transition hover:text-navy-600"
             >
               자동 연결 업무 내역
               <ChevronDown size={14} className={`transition-transform ${autoOpen ? 'rotate-180' : ''}`} />
             </button>
             {autoOpen &&
               (autoRows.length > 0 ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
                   {autoRows.map((r) => (
                     <div key={r.key} className="flex items-center justify-between gap-2 rounded-2xl bg-navy-50 px-4 py-3">
                       <span className="t-body min-w-0 break-keep font-bold text-navy-600">{r.label}</span>

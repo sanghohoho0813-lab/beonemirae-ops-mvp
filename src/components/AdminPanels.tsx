@@ -97,7 +97,7 @@ export function UserManagementCard() {
                   disabled={busy || r.id === profile?.id}
                   onClick={() => void change(() => setProfileRole(r.id, role))}
                   title={r.id === profile?.id ? '본인 역할은 변경할 수 없습니다' : ROLE_LABEL[role]}
-                  className={`rounded-full px-3 py-1.5 text-[0.82rem] font-extrabold transition disabled:opacity-50 ${
+                  className={`rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-50 ${
                     r.role === role ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500 hover:text-navy-700'
                   }`}
                 >
@@ -109,7 +109,7 @@ export function UserManagementCard() {
             <button
               disabled={busy || r.id === profile?.id}
               onClick={() => void change(() => setProfileActive(r.id, !r.active))}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[0.82rem] font-extrabold transition disabled:opacity-50 ${
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-50 ${
                 r.active ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'
               }`}
             >

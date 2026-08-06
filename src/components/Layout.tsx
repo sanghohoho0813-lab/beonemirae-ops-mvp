@@ -140,16 +140,16 @@ function Sidebar() {
   const showSettings = !configured || profile?.role === 'admin'
 
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-[344px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.3rem] font-black text-white">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.42rem] font-black text-white">
             비
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1.3rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
-            <p className="mt-1.5 break-keep text-[0.9rem] font-medium leading-snug text-navy-300">
+            <p className="break-keep text-[1.42rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
+            <p className="mt-1.5 break-keep text-[1.03rem] font-medium leading-snug text-navy-300">
               의료폐기물 수거·운반 통합 운영관리
             </p>
           </div>
@@ -157,7 +157,7 @@ function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3">
-        <p className="px-4 pb-2.5 pt-2 text-[0.8rem] font-extrabold tracking-wide text-teal-300">
+        <p className="px-4 pb-2.5 pt-2 text-[0.92rem] font-extrabold tracking-wide text-teal-300">
           핵심 운영
         </p>
         <div className="space-y-0.5">
@@ -166,7 +166,7 @@ function Sidebar() {
           ))}
         </div>
 
-        <p className="px-4 pb-2.5 pt-7 text-[0.8rem] font-extrabold tracking-wide text-navy-400">
+        <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">
           운영 도구 · 추가 고도화 예정
         </p>
         <div className="space-y-0.5">
@@ -185,7 +185,7 @@ function Sidebar() {
         {/* 추가 개발 예정 — 접기/펼치기 */}
         <button
           onClick={() => setPlannedOpen((v) => !v)}
-          className="mt-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.8rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
+          className="mt-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
         >
           <Sparkles size={13} />
           추가 개발 예정
@@ -198,11 +198,11 @@ function Sidebar() {
                 key={label}
                 onClick={() => navigate('/roadmap')}
                 title="향후 개발 예정 기능 — 활용 계획에서 단계별 로드맵을 확인할 수 있습니다"
-                className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[0.87rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+                className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
               >
                 <Lock size={14} className="shrink-0" />
                 <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
-                <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.85rem] font-bold text-navy-300">
+                <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.98rem] font-bold text-navy-300">
                   예정
                 </span>
               </button>
@@ -214,14 +214,14 @@ function Sidebar() {
       {/* 하단 — 계정 / 바로가기 */}
       <div className="space-y-2 px-3 pb-4 pt-3">
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.85rem] font-black text-teal-300">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.98rem] font-black text-teal-300">
             {(profile?.name ?? '비').slice(0, 1)}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="break-keep text-[1rem] font-bold text-white">
+            <p className="break-keep text-[1.12rem] font-bold text-white">
               {profile?.name || (configured ? '로그인 필요' : '비원미래 대표')}
             </p>
-            <p className="break-keep text-[0.87rem] text-navy-400">
+            <p className="break-keep text-[1rem] text-navy-400">
               {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
             </p>
           </div>
@@ -241,8 +241,8 @@ function Sidebar() {
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
           <Headset size={16} className="shrink-0 text-teal-300" />
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1rem] font-bold text-white">1533-8876</p>
-            <p className="break-keep text-[0.87rem] text-navy-400">평일 09:00 ~ 18:00</p>
+            <p className="break-keep text-[1.12rem] font-bold text-white">1533-8876</p>
+            <p className="break-keep text-[1rem] text-navy-400">평일 09:00 ~ 18:00</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -282,19 +282,19 @@ function MobileHeader() {
   return (
     <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg lg:hidden">
       <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[0.95rem] font-black text-teal-300">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[1.08rem] font-black text-teal-300">
           비
         </div>
         <div className="min-w-0 leading-none">
-          <p className="text-[1.0625rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="text-[1.15rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
           {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
-          <p className="mt-1 break-keep text-[0.9rem] font-medium text-navy-400">
+          <p className="mt-1 break-keep text-[1.03rem] font-medium text-navy-400">
             {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '의료폐기물 통합 운영관리'}
           </p>
         </div>
         {/* 실제 운영 데이터를 시연 데이터로 오인하지 않도록 배지를 구분합니다 */}
         <span
-          className={`ml-auto shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.78rem] font-bold ring-1 ${
+          className={`ml-auto shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.9rem] font-bold ring-1 ${
             live
               ? 'bg-teal-50 text-teal-700 ring-teal-100'
               : 'bg-amber-50 text-amber-600 ring-amber-100'
@@ -326,7 +326,7 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
         strokeWidth={active ? 2.4 : 2}
         className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
       />
-      <span className={`relative z-10 whitespace-nowrap text-[0.9rem] font-bold leading-none transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+      <span className={`t-tab relative z-10 whitespace-nowrap transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
     </button>
@@ -365,11 +365,11 @@ export function Layout() {
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
       <div className="flex w-full">
         <Sidebar />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-x-hidden">
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
           <SyncBar />
           <MobileHeader />
-          <main className="w-full px-4 pb-24 pt-4 lg:px-10 lg:pb-14 lg:pt-8 2xl:px-12">
+          <main className="w-full px-4 pb-24 pt-4 lg:px-[40px] lg:pb-14 lg:pt-8 2xl:px-[56px]">
             <PageMotion key={pathname}>
               <Outlet />
             </PageMotion>
