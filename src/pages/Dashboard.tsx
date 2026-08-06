@@ -22,8 +22,7 @@ import { AutoLinkFlow } from '../components/AutoLinkFlow'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
-import { AxGlanceCard } from '../components/AxGlance'
-import { SalesFunnelCard } from '../components/SalesFunnel'
+import { AxSummaryCard } from '../components/AxSummary'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
@@ -81,6 +80,9 @@ export function Dashboard() {
         <h1 className="t-page text-navy-900">대표님 한눈에 보기</h1>
         <p className="t-body mt-2.5 font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
       </div>
+
+      {/* ── AX 성과 요약 — 심사자가 가장 먼저 보는 카드 ── */}
+      <AxSummaryCard data={data} />
 
       {/* 핵심 KPI 4개 */}
       {/* KPI — 숫자 크기는 카드 폭에 맞춰 자동 조절(.t-kpi/container query)됩니다 */}
@@ -156,12 +158,6 @@ export function Dashboard() {
         <span className="t-label whitespace-nowrap text-navy-400">운영 참고</span>
         <span className="h-px flex-1 bg-navy-200" />
       </div>
-
-      {/* AX 실증 현황 — 핵심 3개보다 작게, 성과 화면 진입점 */}
-      <AxGlanceCard data={data} />
-
-      {/* 매출 전환 현황 — 추천이 실제 제안·수락·매출로 이어진 정도 */}
-      <SalesFunnelCard data={data} />
 
       {/* ── 오늘 챙길 일 (상위 3건) + 진행 현황 ── */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">

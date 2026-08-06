@@ -403,6 +403,89 @@ export function performanceSummary(
   }
 }
 
+// ── 데이터 출처 구분 (실제 현장 / 시연) ─────────────────────────────────────
+// 심사자가 '성과 확정'으로 오해하지 않도록, 집계에 쓰인 데이터가 실제 현장
+// 기록인지 시연 세션 기록인지 명시합니다.
+export type ProvenanceKind = 'none' | 'demo' | 'mixed' | 'field'
+
+export interface Provenance {
+  kind: ProvenanceKind
+  label: string
+  fieldEvents: number
+  demoEvents: number
+  fieldLeads: number
+  demoLeads: number
+}
+
+export const PROVENANCE_LABEL: Record<ProvenanceKind, string> = {
+  none: '데이터 없음',
+  demo: '시연 데이터',
+  mixed: '시연 + 실제 현장 데이터',
+  field: '실제 현장 데이터',
+}
+
+export function provenanceOf(data: AppData, events?: CollectionEvent[]): Provenance {
+  const evs = events ?? (data.events ?? []).filter((e) => e.action === '수거 완료' && !e.reverted)
+  const leads = data.leads ?? []
+  const fieldEvents = evs.filter((e) => !e.demoSessionId).length
+  const demoEvents = evs.length - fieldEvents
+  const fieldLeads = leads.filter((l) => !l.demoSessionId).length
+  const demoLeads = leads.length - fieldLeads
+  const field = fieldEvents + fieldLeads
+  const demo = demoEvents + demoLeads
+  const kind: ProvenanceKind =
+    field + demo === 0 ? 'none' : field === 0 ? 'demo' : demo === 0 ? 'field' : 'mixed'
+  return { kind, label: PROVENANCE_LABEL[kind], fieldEvents, demoEvents, fieldLeads, demoLeads }
+}
+
+// ── 대시보드 상단 요약용 대표 지표 ──────────────────────────────────────────
+export interface AxHighlight {
+  key: string
+  label: string
+  before: string
+  after: string
+  /** 근거가 확보되지 않아 숫자를 만들지 않는 경우 true */
+  measuring: boolean
+  changeText: string
+}
+
+/**
+ * 심사자에게 5초 안에 보여줄 운영효율 대표 지표 (최대 3개).
+ * 근거가 확보된 지표(status='ok')를 우선 노출하고, 없으면 '실증 중'으로 둡니다.
+ */
+export function axHighlights(data: AppData): AxHighlight[] {
+  const s = performanceSummary(data, 'all')
+  const pick = ['adminTime', 'repeatEntry', 'rework']
+  const rows: AxHighlight[] = pick
+    .map((k) => s.metrics.find((m) => m.key === k))
+    .filter((m): m is MetricRow => !!m)
+    .map((m) => ({
+      key: m.key,
+      label: m.label,
+      before: m.before == null ? '—' : `${m.before}${m.unit}`,
+      after: m.after == null ? '측정 중' : `${m.after}${m.unit}`,
+      measuring: m.status !== 'ok',
+      changeText:
+        m.status === 'ok' && m.changePct != null
+          ? `${Math.abs(m.changePct)}% ${m.changePct > 0 ? (m.betterWhen === 'lower' ? '단축' : '증가') : m.betterWhen === 'lower' ? '증가' : '감소'}`
+          : m.status === 'need-baseline'
+            ? '기준값 입력 필요'
+            : '실증 중',
+    }))
+  // 근거가 확보된 지표를 앞으로
+  return rows.sort((a, b) => Number(a.measuring) - Number(b.measuring)).slice(0, 3)
+}
+
+/** 수거 1건 입력이 자동으로 처리한 후속업무 평균 건수 (실측) */
+export function autoPerInput(data: AppData): { count: number; total: number; avg: number | null } {
+  const s = performanceSummary(data, 'all')
+  return {
+    count: s.collectionCount,
+    total: s.autoLink.total,
+    avg: s.collectionCount > 0 ? Math.round((s.autoLink.total / s.collectionCount) * 10) / 10 : null,
+  }
+}
+
 /** 대시보드 카드용 초경량 요약 (실증 전체 기준) */
 export function performanceGlance(data: AppData) {
   const s = performanceSummary(data, 'all')

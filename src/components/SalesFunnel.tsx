@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom'
-import { ArrowRight, ChevronRight, Coins } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import type { AppData } from '../types'
 import { LEAD_KIND_LABEL, MIN_PROPOSALS_FOR_RATE, salesFunnel, type SalesFunnel } from '../lib/sales'
 import { thisMonth } from '../lib/format'
@@ -55,36 +54,6 @@ function ConversionLine({ f }: { f: SalesFunnel }) {
     <p className="t-body font-bold text-navy-400">
       전환율 실증 중 — 제안 {f.proposed}건 (전환율은 {MIN_PROPOSALS_FOR_RATE}건 이상부터 산출)
     </p>
-  )
-}
-
-/** 대시보드용 축소 카드 — 핵심 3개보다 작게 */
-export function SalesFunnelCard({ data }: { data: AppData }) {
-  const f = salesFunnel(data)
-  return (
-    <Link
-      to="/performance#sales"
-      className="card block p-4 transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
-    >
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-          <Coins size={21} strokeWidth={2.2} />
-        </span>
-        <div className="min-w-0">
-          <p className="t-card text-navy-900">이번 달 AX 매출 전환</p>
-          <p className="t-muted mt-0.5">{f.month.replace('-', '년 ')}월 · 담당자 기록 기준</p>
-        </div>
-        <span className="ml-auto flex shrink-0 items-center gap-1 whitespace-nowrap text-[0.95rem] font-bold text-teal-600">
-          성과 보기 <ChevronRight size={17} />
-        </span>
-      </div>
-      <div className="mt-4">
-        <FunnelRow f={f} />
-      </div>
-      <div className="mt-3">
-        <ConversionLine f={f} />
-      </div>
-    </Link>
   )
 }
 
