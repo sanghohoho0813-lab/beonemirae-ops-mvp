@@ -58,6 +58,15 @@ export interface MetricRow {
   basis: string
   /** 표본 수 등 부가 설명 (없으면 빈 문자열) */
   note: string
+  // ── v6: 심사 제출 전 신뢰성 점검 ──
+  /** 이 지표 산출에 쓰인 '실제 현장' 표본 수 (시연 세션 기록 제외) */
+  fieldSamples: number
+  /** 실제 현장 표본 수에 따른 실증 단계 */
+  tier: EvidenceTier
+  /** 개선율을 크게 강조해도 되는지 — 현장 표본이 대표성 기준을 넘을 때만 true */
+  emphasis: boolean
+  /** 이 지표가 사용한 데이터 출처 (시연 / 실제 현장 / 혼합) */
+  provenance: ProvenanceKind
 }
 
 /** 1회 입력으로 자동 반영된 업무 건수 */
@@ -107,15 +116,27 @@ export interface PerformanceSummary {
   experimentDay: number | null
   /** 집계 대상 이벤트 (기간 내 · 실증 시작 이후 · 취소되지 않은 수거 완료) */
   events: CollectionEvent[]
+  /** 위 이벤트 중 시연 세션이 아닌 '실제 현장' 기록만 */
+  fieldEvents: CollectionEvent[]
   /** 기간 내 취소(재입력) 건수 */
   revertedCount: number
   collectionCount: number
+  /** 실제 현장 수거 입력 건수 (실증 단계 판정 기준) */
+  fieldCount: number
+  /** 시연 세션 중 기록된 수거 입력 건수 */
+  demoCount: number
+  /** 실제 현장 표본 수 기준 실증 단계 */
+  tier: EvidenceTier
   activeDays: number
   autoLink: AutoLinkBreakdown
   duration: InputDurationStat
+  /** 실제 현장 기록만으로 산출한 입력 처리시간 */
+  fieldDuration: InputDurationStat
   metrics: MetricRow[]
   /** 확보된 지표 수 / 전체 지표 수 */
   ready: { confirmed: number; total: number }
+  /** 개선율을 대표 성과값으로 강조해도 되는 지표 수 */
+  emphasized: number
 }
 
 // ── 날짜 유틸 (로컬 기준, YYYY-MM-DD 문자열 비교) ────────────────────────────
@@ -249,6 +270,75 @@ export const MIN_SAMPLES = 3
 /** 누락·재확인율은 단기 표본에서 '0건 = 100% 감소'로 과장되기 쉬워 더 많은 표본을 요구합니다. */
 export const MIN_REWORK_EVENTS = 10
 
+// ── 실증 단계 (실제 현장 표본 수 기준) ──────────────────────────────────────
+// 계산이 가능하다는 것과, 그 숫자를 대표 성과값으로 내세워도 된다는 것은 다릅니다.
+// 시연 데이터나 표본 몇 건으로 나온 개선율이 '확정 성과'처럼 보이지 않도록,
+// 실제 현장 기록 건수에 따라 화면 상태가 단계적으로 바뀌게 합니다.
+
+/** 이 건수 미만은 '초기 실증' — 참고값으로만 봅니다. */
+export const TIER_ACCUMULATING = 10
+/** 이 건수 이상부터 개선율을 대표 성과값으로 강조합니다. */
+export const TIER_FIELD = 30
+
+export type EvidenceTier = 'none' | 'initial' | 'accumulating' | 'field'
+
+export const TIER_LABEL: Record<EvidenceTier, string> = {
+  // 시연 기록은 있어도 현장 기록이 0건일 수 있으므로 '현장'을 명시합니다.
+  none: '현장 데이터 없음',
+  initial: '초기 실증',
+  accumulating: '실증 데이터 축적 중',
+  field: '현장 실증 지표',
+}
+
+export const TIER_DESC: Record<EvidenceTier, string> = {
+  none: '실제 현장 입력 기록이 아직 없습니다',
+  initial: `현장 사용 초기 단계입니다. 개선율은 참고값이며 현장 ${TIER_ACCUMULATING}건 이상부터 실증값으로 봅니다`,
+  accumulating: `표본을 모으는 중입니다. 현장 ${TIER_FIELD}건 이상부터 대표 성과값으로 제시합니다`,
+  field: '실제 현장 데이터로 확보된 대표 성과값입니다',
+}
+
+/** 화면에 단계 진행을 그대로 보여주기 위한 순서 정의 */
+export const TIER_STEPS: { tier: EvidenceTier; range: string }[] = [
+  { tier: 'none', range: '0건' },
+  { tier: 'initial', range: `1~${TIER_ACCUMULATING - 1}건` },
+  { tier: 'accumulating', range: `${TIER_ACCUMULATING}~${TIER_FIELD - 1}건` },
+  { tier: 'field', range: `${TIER_FIELD}건 이상` },
+]
+
+export function evidenceTierOf(fieldSamples: number): EvidenceTier {
+  if (fieldSamples <= 0) return 'none'
+  if (fieldSamples < TIER_ACCUMULATING) return 'initial'
+  if (fieldSamples < TIER_FIELD) return 'accumulating'
+  return 'field'
+}
+
+/** 다음 단계까지 남은 실제 현장 표본 수 (최종 단계면 null) */
+export function tierProgress(fieldSamples: number): {
+  tier: EvidenceTier
+  label: string
+  desc: string
+  nextAt: number | null
+  remaining: number | null
+} {
+  const tier = evidenceTierOf(fieldSamples)
+  const nextAt = tier === 'none' ? 1 : tier === 'initial' ? TIER_ACCUMULATING : tier === 'accumulating' ? TIER_FIELD : null
+  return {
+    tier,
+    label: TIER_LABEL[tier],
+    desc: TIER_DESC[tier],
+    nextAt,
+    remaining: nextAt == null ? null : Math.max(0, nextAt - fieldSamples),
+  }
+}
+
+/** 실제 현장 / 시연 건수 조합 → 출처 구분 */
+function provenanceKind(field: number, demo: number): ProvenanceKind {
+  if (field + demo === 0) return 'none'
+  if (field === 0) return 'demo'
+  if (demo === 0) return 'field'
+  return 'mixed'
+}
+
 // ── 지표 5종 ─────────────────────────────────────────────────────────────────
 function buildMetrics(
   baseline: BaselineMetrics,
@@ -258,11 +348,20 @@ function buildMetrics(
   activeDays: number,
   duration: InputDurationStat,
   autoLink: AutoLinkBreakdown,
+  fieldCount: number,
+  demoCount: number,
+  fieldDuration: InputDurationStat,
 ): MetricRow[] {
   const rows: MetricRow[] = []
   const monthFactor = period.days / 30 // 월 기준 기준값을 기간 길이에 맞춰 환산
 
-  const push = (r: Omit<MetricRow, 'changePct' | 'status'> & { status?: MetricStatus }) => {
+  type Input = Omit<MetricRow, 'changePct' | 'status' | 'tier' | 'emphasis' | 'provenance'> & {
+    status?: MetricStatus
+    /** 이 지표의 시연 표본 수 (기본값: 전체 시연 수거 입력 건수) */
+    demoSamples?: number
+  }
+
+  const push = ({ demoSamples, ...r }: Input) => {
     let status: MetricStatus = r.status ?? 'ok'
     let changePct: number | null = null
     if (!status || status === 'ok') {
@@ -273,7 +372,20 @@ function buildMetrics(
         status = changePct == null ? 'measuring' : 'ok'
       }
     }
-    rows.push({ ...r, status, changePct })
+    const tier = evidenceTierOf(r.fieldSamples)
+    const provenance = provenanceKind(r.fieldSamples, demoSamples ?? demoCount)
+    rows.push({
+      ...r,
+      status,
+      changePct,
+      tier,
+      provenance,
+      // 개선율을 대표 성과값으로 강조하는 조건은 두 가지를 모두 만족할 때뿐입니다.
+      //  1) 실제 현장 표본이 대표성 기준(TIER_FIELD) 이상
+      //  2) 집계에 시연 기록이 섞여 있지 않음
+      // 시연 기록이 남아 있으면 '설정 > 시연 상태 초기화'로 분리한 뒤 확정됩니다.
+      emphasis: status === 'ok' && tier === 'field' && provenance === 'field',
+    })
   }
 
   // 1) 수거 1건 처리 후 행정업무 소요시간
@@ -286,12 +398,15 @@ function buildMetrics(
     betterWhen: 'lower',
     beforeSource: 'baseline',
     afterSource: 'measured',
+    // 처리시간 지표의 현장 표본은 '이상치를 걸러낸 뒤 남은 실제 현장 입력' 건수입니다.
+    fieldSamples: fieldDuration.samples,
+    demoSamples: duration.samples - fieldDuration.samples,
     basis: '수거 입력 화면 진입 시각 → 저장 완료 시각의 실제 경과시간(중앙값). 20초 미만(오조작·테스트)과 30분 초과(화면 방치) 표본은 제외.',
     note:
       duration.samples > 0
-        ? `측정 표본 ${duration.samples}건${duration.excluded ? ` · 이상치 ${duration.excluded}건 제외` : ''}${
-            duration.samples < MIN_SAMPLES ? ` · ${MIN_SAMPLES}건 이상부터 산출` : ''
-          }`
+        ? `측정 표본 ${duration.samples}건 (실제 현장 ${fieldDuration.samples}건)${
+            duration.excluded ? ` · 이상치 ${duration.excluded}건 제외` : ''
+          }${duration.samples < MIN_SAMPLES ? ` · ${MIN_SAMPLES}건 이상부터 산출` : ''}`
         : `아직 측정된 입력이 없습니다 (최소 ${MIN_SAMPLES}건 필요)`,
   })
 
@@ -305,8 +420,12 @@ function buildMetrics(
     betterWhen: 'lower',
     beforeSource: 'baseline',
     afterSource: 'derived',
+    fieldSamples: fieldCount,
     basis: '수거 완료 1건당 실제 입력 횟수. 현재 시스템은 1회 입력으로 일정·이력·거래처·자재·통계·문서 초안에 자동 반영됩니다.',
-    note: events.length > 0 ? `기간 내 수거 입력 ${events.length}건 모두 1회 입력` : '기간 내 수거 입력 없음',
+    note:
+      events.length > 0
+        ? `기간 내 수거 입력 ${events.length}건 모두 1회 입력 (실제 현장 ${fieldCount}건)`
+        : '기간 내 수거 입력 없음',
   })
 
   // 3) 월간 문서 작성시간 — 자동 측정 항목이 아직 없으므로 개선율을 만들지 않습니다.
@@ -320,6 +439,7 @@ function buildMetrics(
     beforeSource: 'baseline',
     afterSource: null,
     status: 'not-measured',
+    fieldSamples: fieldCount,
     basis: '수거대장·명세 작성시간은 현재 자동 측정 항목이 없습니다. 문서 초안 자동 생성 건수만 참고값으로 제공합니다.',
     note: `기간 내 자동 생성된 문서 초안 ${autoLink.document}건`,
   })
@@ -336,6 +456,7 @@ function buildMetrics(
     betterWhen: 'lower',
     beforeSource: 'baseline',
     afterSource: 'measured',
+    fieldSamples: fieldCount,
     basis: `기간 내 '완료 취소 후 재입력' 건수를 실측합니다. 도입 전 값은 월 기준이라 기간(${period.days}일)에 맞춰 환산했습니다.`,
     note:
       events.length + revertedCount < MIN_REWORK_EVENTS
@@ -355,8 +476,12 @@ function buildMetrics(
     betterWhen: 'higher',
     beforeSource: 'baseline',
     afterSource: 'measured',
+    fieldSamples: fieldCount,
     basis: '기간 내 수거 완료 건수 ÷ 실제 입력이 발생한 일수. 이틀 이상 사용 기록이 있어야 산출합니다.',
-    note: activeDays > 0 ? `입력 발생일 ${activeDays}일 · 완료 ${events.length}건` : '입력 발생일 없음',
+    note:
+      activeDays > 0
+        ? `입력 발생일 ${activeDays}일 · 완료 ${events.length}건 (실제 현장 ${fieldCount}건)`
+        : '입력 발생일 없음',
   })
 
   return rows
@@ -384,22 +509,46 @@ export function performanceSummary(
   const revertedCount = all.filter((e) => e.reverted).length
   const activeDays = new Set(events.map((e) => eventDate(e.at))).size
 
+  // 시연 세션 중 만들어진 기록과 실제 현장 기록을 분리합니다.
+  // 실증 단계·개선율 강조 여부는 '실제 현장' 건수만으로 판정합니다.
+  const fieldEvents = events.filter((e) => !e.demoSessionId)
+  const fieldCount = fieldEvents.length
+  const demoCount = events.length - fieldCount
+
   const autoLink = autoLinkOf(events)
   const duration = durationStat(events)
-  const metrics = buildMetrics(baseline, period, events, revertedCount, activeDays, duration, autoLink)
+  const fieldDuration = durationStat(fieldEvents)
+  const metrics = buildMetrics(
+    baseline,
+    period,
+    events,
+    revertedCount,
+    activeDays,
+    duration,
+    autoLink,
+    fieldCount,
+    demoCount,
+    fieldDuration,
+  )
 
   return {
     period,
     experimentStart,
     experimentDay: experimentStart ? daysBetween(experimentStart, today()) : null,
     events,
+    fieldEvents,
     revertedCount,
     collectionCount: events.length,
+    fieldCount,
+    demoCount,
+    tier: evidenceTierOf(fieldCount),
     activeDays,
     autoLink,
     duration,
+    fieldDuration,
     metrics,
     ready: { confirmed: metrics.filter((m) => m.status === 'ok').length, total: metrics.length },
+    emphasized: metrics.filter((m) => m.emphasis).length,
   }
 }
 
@@ -431,10 +580,7 @@ export function provenanceOf(data: AppData, events?: CollectionEvent[]): Provena
   const demoEvents = evs.length - fieldEvents
   const fieldLeads = leads.filter((l) => !l.demoSessionId).length
   const demoLeads = leads.length - fieldLeads
-  const field = fieldEvents + fieldLeads
-  const demo = demoEvents + demoLeads
-  const kind: ProvenanceKind =
-    field + demo === 0 ? 'none' : field === 0 ? 'demo' : demo === 0 ? 'field' : 'mixed'
+  const kind = provenanceKind(fieldEvents + fieldLeads, demoEvents + demoLeads)
   return { kind, label: PROVENANCE_LABEL[kind], fieldEvents, demoEvents, fieldLeads, demoLeads }
 }
 
@@ -447,11 +593,25 @@ export interface AxHighlight {
   /** 근거가 확보되지 않아 숫자를 만들지 않는 경우 true */
   measuring: boolean
   changeText: string
+  /** 개선율을 크게 강조해도 되는지 (실제 현장 표본 충분) */
+  emphasis: boolean
+  tier: EvidenceTier
+  provenance: ProvenanceKind
+  fieldSamples: number
+}
+
+/** 개선율 문구 — '96.7% 단축' 처럼 방향까지 붙여 반환합니다. */
+function changeLabel(m: MetricRow): string {
+  if (m.changePct == null) return ''
+  const dir =
+    m.changePct > 0 ? (m.betterWhen === 'lower' ? '단축' : '증가') : m.betterWhen === 'lower' ? '증가' : '감소'
+  return `${Math.abs(m.changePct)}% ${dir}`
 }
 
 /**
  * 심사자에게 5초 안에 보여줄 운영효율 대표 지표 (최대 3개).
  * 근거가 확보된 지표(status='ok')를 우선 노출하고, 없으면 '실증 중'으로 둡니다.
+ * 개선율이 계산되더라도 실제 현장 표본이 부족하면 강조하지 않고 단계를 표시합니다.
  */
 export function axHighlights(data: AppData): AxHighlight[] {
   const s = performanceSummary(data, 'all')
@@ -465,25 +625,50 @@ export function axHighlights(data: AppData): AxHighlight[] {
       before: m.before == null ? '—' : `${m.before}${m.unit}`,
       after: m.after == null ? '측정 중' : `${m.after}${m.unit}`,
       measuring: m.status !== 'ok',
+      emphasis: m.emphasis,
+      tier: m.tier,
+      provenance: m.provenance,
+      fieldSamples: m.fieldSamples,
       changeText:
-        m.status === 'ok' && m.changePct != null
-          ? `${Math.abs(m.changePct)}% ${m.changePct > 0 ? (m.betterWhen === 'lower' ? '단축' : '증가') : m.betterWhen === 'lower' ? '증가' : '감소'}`
+        m.status === 'ok'
+          ? // 표본이 부족하면 퍼센트를 단독으로 두지 않고 '무엇을 근거로 나온 값인지'를 붙입니다.
+            m.emphasis
+            ? changeLabel(m)
+            : `${changeLabel(m)} · ${m.provenance === 'demo' ? '시연 데이터 기준' : TIER_LABEL[m.tier]}`
           : m.status === 'need-baseline'
             ? '기준값 입력 필요'
             : '실증 중',
     }))
-  // 근거가 확보된 지표를 앞으로
-  return rows.sort((a, b) => Number(a.measuring) - Number(b.measuring)).slice(0, 3)
+  // 대표 성과값(강조 가능) → 계산됨 → 측정 중 순
+  return rows
+    .sort((a, b) => Number(b.emphasis) - Number(a.emphasis) || Number(a.measuring) - Number(b.measuring))
+    .slice(0, 3)
 }
 
 /** 수거 1건 입력이 자동으로 처리한 후속업무 평균 건수 (실측) */
-export function autoPerInput(data: AppData): { count: number; total: number; avg: number | null } {
+export function autoPerInput(data: AppData): {
+  count: number
+  total: number
+  avg: number | null
+  fieldCount: number
+  demoCount: number
+  provenance: ProvenanceKind
+} {
   const s = performanceSummary(data, 'all')
   return {
     count: s.collectionCount,
     total: s.autoLink.total,
     avg: s.collectionCount > 0 ? Math.round((s.autoLink.total / s.collectionCount) * 10) / 10 : null,
+    fieldCount: s.fieldCount,
+    demoCount: s.demoCount,
+    provenance: provenanceKind(s.fieldCount, s.demoCount),
   }
+}
+
+/** 대시보드·성과 페이지가 공유하는 실증 단계 요약 (실제 현장 수거 입력 기준) */
+export function evidenceStatus(data: AppData) {
+  const s = performanceSummary(data, 'all')
+  return { ...tierProgress(s.fieldCount), fieldCount: s.fieldCount, demoCount: s.demoCount }
 }
 
 /** 대시보드 카드용 초경량 요약 (실증 전체 기준) */

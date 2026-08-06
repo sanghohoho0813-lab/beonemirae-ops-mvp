@@ -1,5 +1,6 @@
 import type { AppData, LeadStage, SalesLead } from '../types'
 import { allNextActions, type NextAction, type NextActionKind } from './insights'
+import type { ProvenanceKind } from './performance'
 import { thisMonth } from './format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,15 +99,43 @@ export interface SalesFunnel {
   /** 표본이 충분한지 — false 면 화면에서 '실증 중'으로 표시 */
   rateReady: boolean
   leads: SalesLead[]
+  // ── v6: 시연 / 실제 현장 분리 ──
+  /** 이 집계가 '실제 현장 기록만' 대상인지 */
+  fieldOnly: boolean
+  /** 실제 현장 기록 기준 제안·수락 건수 (fieldOnly 여부와 무관하게 항상 제공) */
+  fieldProposed: number
+  fieldAccepted: number
+  /** 시연 세션 기록 기준 제안·수락 건수 */
+  demoProposed: number
+  demoAccepted: number
+  /** 실제 현장 기록만으로 입력된 매출 합계 */
+  fieldRevenue: number
+  /** 집계에 쓰인 영업기록의 출처 */
+  provenance: ProvenanceKind
 }
 
 /**
  * 이번 달 추천 + 기록된 영업 진행상태를 합쳐 퍼널을 만듭니다.
  * 추천은 매달 재산출되므로 해당 월 키를 가진 lead 만 집계 대상입니다.
+ *
+ * `fieldOnly` 를 켜면 시연 세션 중 기록된 영업건을 제외하고, 실제 현장에서
+ * 담당자가 기록한 제안·수락·매출만 집계합니다. (추천 건수는 추천 로직 산출값이라
+ * 시연/현장 구분 대상이 아니며 항상 동일합니다.)
  */
-export function salesFunnel(data: AppData, month = thisMonth()): SalesFunnel {
+export function salesFunnel(
+  data: AppData,
+  month = thisMonth(),
+  opts: { fieldOnly?: boolean } = {},
+): SalesFunnel {
+  const fieldOnly = !!opts.fieldOnly
   const actions = allNextActions(data, month)
-  const leads = (data.leads ?? []).filter((l) => l.month === month)
+  const monthLeads = (data.leads ?? []).filter((l) => l.month === month)
+  const leads = fieldOnly ? monthLeads.filter((l) => !l.demoSessionId) : monthLeads
+
+  // 출처 구분은 항상 '해당 월 전체 기록' 기준으로 계산합니다.
+  const fieldLeads = monthLeads.filter((l) => !l.demoSessionId)
+  const demoLeads = monthLeads.filter((l) => !!l.demoSessionId)
+  const fieldAcceptedLeads = fieldLeads.filter((l) => l.stage === '수락')
 
   const byKind: KindFunnel[] = LEAD_KINDS.map(({ kind, label }) => {
     const acts = actions.filter((a) => a.kind === kind)
@@ -141,9 +170,23 @@ export function salesFunnel(data: AppData, month = thisMonth()): SalesFunnel {
     revenuePending: accepted.filter((l) => l.actualRevenue == null).length,
     acceptedEstValue: accepted.reduce((s, l) => s + l.estValue, 0),
     byKind,
-    hasDemoRecords: leads.some((l) => !!l.demoSessionId),
+    hasDemoRecords: demoLeads.length > 0,
     rateReady: proposed >= MIN_PROPOSALS_FOR_RATE,
     leads,
+    fieldOnly,
+    fieldProposed: fieldLeads.filter(wasProposed).length,
+    fieldAccepted: fieldAcceptedLeads.length,
+    demoProposed: demoLeads.filter(wasProposed).length,
+    demoAccepted: demoLeads.filter((l) => l.stage === '수락').length,
+    fieldRevenue: fieldAcceptedLeads.reduce((s, l) => s + (l.actualRevenue ?? 0), 0),
+    provenance:
+      monthLeads.length === 0
+        ? 'none'
+        : fieldLeads.length === 0
+          ? 'demo'
+          : demoLeads.length === 0
+            ? 'field'
+            : 'mixed',
   }
 }
 

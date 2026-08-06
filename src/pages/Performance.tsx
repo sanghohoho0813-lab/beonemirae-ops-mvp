@@ -21,13 +21,16 @@ import {
   PERIOD_PRESETS,
   SOURCE_LABEL,
   STATUS_LABEL,
+  TIER_FIELD,
   performanceSummary,
   provenanceOf,
+  tierProgress,
   type MetricRow,
   type PeriodPreset,
 } from '../lib/performance'
 import { SalesFunnelPanel } from '../components/SalesFunnel'
 import { BeforeAfterPanel } from '../components/BeforeAfter'
+import { ProvenanceBadge, TierBadge, TierProgress } from '../components/DataBadge'
 import { today } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,13 +58,6 @@ const STATUS_STYLE: Record<MetricRow['status'], string> = {
   'need-baseline': 'bg-amber-50 text-amber-700',
   measuring: 'bg-navy-100 text-navy-500',
   'not-measured': 'bg-navy-100 text-navy-500',
-}
-
-const PROVENANCE_STYLE: Record<string, string> = {
-  field: 'bg-teal-50 text-teal-700',
-  mixed: 'bg-amber-50 text-amber-700',
-  demo: 'bg-amber-50 text-amber-700',
-  none: 'bg-navy-100 text-navy-500',
 }
 
 function fmt(v: number | null, unit: string): string {
@@ -112,9 +108,10 @@ function MetricCard({ m, onSetBaseline }: { m: MetricRow; onSetBaseline: () => v
           <Icon size={20} strokeWidth={2.2} />
         </span>
         {/* 좁은 폭(1024px 3열)에서는 상태 배지가 아래 줄로 내려가도록 wrap 처리 */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5">
           <p className="t-card min-w-0 break-keep text-navy-900">{m.label}</p>
           <span className={`pill max-w-full ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+          <ProvenanceBadge kind={m.provenance} compact />
         </div>
       </div>
 
@@ -132,21 +129,46 @@ function MetricCard({ m, onSetBaseline }: { m: MetricRow; onSetBaseline: () => v
         </div>
       </div>
 
-      {/* 개선율 — 근거가 모두 있을 때만 */}
+      {/* 개선율 — 근거가 모두 있을 때만.
+          계산이 되더라도 실제 현장 표본이 부족하면(emphasis=false) 크게 강조하지 않고
+          참고값임을 함께 밝힙니다. */}
       <div className="mt-3">
         {m.status === 'ok' && m.changePct != null ? (
-          <p className={`t-section ${improved ? 'text-teal-600' : worsened ? 'text-rose-500' : 'text-navy-500'}`}>
-            {improved ? `${m.changePct}% ` : worsened ? `${Math.abs(m.changePct)}% ` : '변화 없음'}
-            {improved
-              ? m.betterWhen === 'lower'
-                ? '단축'
-                : '증가'
-              : worsened
+          <>
+            <p
+              className={
+                m.emphasis
+                  ? `t-section ${improved ? 'text-teal-600' : worsened ? 'text-rose-500' : 'text-navy-500'}`
+                  : 't-body font-extrabold text-navy-500'
+              }
+            >
+              {improved ? `${m.changePct}% ` : worsened ? `${Math.abs(m.changePct)}% ` : '변화 없음'}
+              {improved
                 ? m.betterWhen === 'lower'
-                  ? '증가'
-                  : '감소'
-                : ''}
-          </p>
+                  ? '단축'
+                  : '증가'
+                : worsened
+                  ? m.betterWhen === 'lower'
+                    ? '증가'
+                    : '감소'
+                  : ''}
+            </p>
+            {m.emphasis ? (
+              <p className="t-muted mt-1 font-bold text-teal-600">실제 현장 {m.fieldSamples}건 기준 확정값</p>
+            ) : (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <TierBadge tier={m.tier} />
+                <p className="t-muted break-keep font-bold text-navy-400">
+                  {m.provenance === 'demo'
+                    ? '시연 데이터 기준 참고값 — 실제 현장 데이터 축적 후 확정'
+                    : m.tier === 'field'
+                      ? // 표본은 충분하지만 시연 기록이 섞여 있는 상태 — 분리 방법을 알려줍니다.
+                        '집계에 시연 기록이 포함되어 있습니다 · 설정 > 시연 상태 초기화 후 확정값으로 표시됩니다'
+                      : `실제 현장 ${m.fieldSamples}건 · ${TIER_FIELD}건 이상부터 대표 성과값`}
+                </p>
+              </div>
+            )}
+          </>
         ) : m.status === 'need-baseline' ? (
           <button onClick={onSetBaseline} className="t-body font-bold text-amber-600 underline underline-offset-4">
             도입 전 기준값 입력하기
@@ -176,6 +198,8 @@ export function Performance() {
     [data, preset, customFrom, customTo],
   )
   const prov = useMemo(() => provenanceOf(data, summary.events), [data, summary.events])
+  // 실증 단계는 '실제 현장 수거 입력 건수'만으로 판정합니다 (시연 기록 제외).
+  const tier = useMemo(() => tierProgress(summary.fieldCount), [summary.fieldCount])
 
   const goSettings = () => navigate('/settings#baseline')
   const hasBaseline = summary.metrics.some((m) => m.before != null)
@@ -213,8 +237,19 @@ export function Performance() {
           현장 업무를 자동화하고, 축적된 병원 데이터로 추가 수거·소모품·교육 기회를 발굴해 실제 매출 전환까지
           추적합니다
         </p>
-        <span className={`pill shrink-0 ${PROVENANCE_STYLE[prov.kind]}`}>{prov.label}</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ProvenanceBadge kind={prov.kind} />
+          <TierBadge tier={tier.tier} />
+        </div>
       </div>
+
+      {/* 표본이 부족한 단계에서는 화면에서 먼저 밝힙니다 (짧게 한 줄) */}
+      {tier.tier !== 'field' && (
+        <p className="t-body break-keep rounded-3xl bg-navy-50 px-5 py-3.5 font-bold text-navy-500">
+          현재 일부 지표는 시연 및 초기 실증 데이터를 포함합니다. 실제 현장 사용 데이터가 축적될수록 성과지표가
+          자동 갱신됩니다.
+        </p>
+      )}
 
       {/* 실증 상태 + 기간 선택 */}
       <div className="card p-5 sm:p-6">
@@ -245,7 +280,13 @@ export function Performance() {
           <div>
             <p className="t-muted font-bold">집계 데이터</p>
             <p className="t-body mt-0.5 font-extrabold text-navy-900">
-              실제 현장 {prov.fieldEvents}건 · 시연 {prov.demoEvents}건
+              실제 현장 {summary.fieldCount}건 · 시연 {summary.demoCount}건
+            </p>
+          </div>
+          <div>
+            <p className="t-muted font-bold">대표 성과값</p>
+            <p className="t-body mt-0.5 font-extrabold text-navy-900">
+              {summary.emphasized > 0 ? `${summary.emphasized}개 확정` : '없음 (실증 중)'}
             </p>
           </div>
         </div>
@@ -288,6 +329,18 @@ export function Performance() {
         </div>
       )}
 
+      {/* ── 실증 단계 — 현장 데이터가 쌓일수록 상태가 바뀝니다 ── */}
+      <section>
+        <SectionTitle>실증 진행 단계</SectionTitle>
+        <TierProgress
+          tier={tier.tier}
+          fieldCount={summary.fieldCount}
+          remaining={tier.remaining}
+          nextAt={tier.nextAt}
+          desc={tier.desc}
+        />
+      </section>
+
       {/* ── 일하는 방식 Before / After ── */}
       <section>
         <SectionTitle>도입 전 → 도입 후, 일하는 방식</SectionTitle>
@@ -309,7 +362,14 @@ export function Performance() {
 
       {/* ── B. 자동화 ── */}
       <section id="automation">
-        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">시스템 자동 측정</span>}>
+        <SectionTitle
+          action={
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="pill bg-teal-50 text-teal-700">시스템 자동 측정</span>
+              <ProvenanceBadge kind={prov.kind} />
+            </div>
+          }
+        >
           B. 자동화
         </SectionTitle>
         <div className="card p-5 sm:p-6">
@@ -336,6 +396,11 @@ export function Performance() {
               </p>
             </div>
           </div>
+          <p className="t-muted mt-3 break-keep font-bold text-navy-500">
+            수거 입력 {summary.collectionCount}건 중 실제 현장 {summary.fieldCount}건 · 시연{' '}
+            {summary.demoCount}건. 자동 연결 건수는 입력 1건이 실제로 바꾼 대상만 세므로 데이터 출처와 무관하게
+            동일하게 동작합니다.
+          </p>
 
           <div className="mt-4 border-t border-navy-50 pt-3">
             <button
@@ -396,14 +461,15 @@ export function Performance() {
             </p>
           </div>
           <div className="mt-4 rounded-2xl bg-navy-50 px-4 py-3.5">
-            <p className="t-body font-bold text-navy-700">
-              {summary.ready.confirmed === summary.ready.total
-                ? `측정지표 ${summary.ready.total}개 모두 확보 — 도입 전후 비교가 가능합니다.`
-                : `현재 실증 중 — 측정지표 ${summary.ready.confirmed}/${summary.ready.total}개 확보. 나머지 지표는 기준값 입력 또는 사용 데이터 축적이 더 필요합니다.`}
+            <p className="t-body break-keep font-bold text-navy-700">
+              {summary.emphasized > 0
+                ? `대표 성과값 ${summary.emphasized}개 확보 (실제 현장 ${TIER_FIELD}건 이상 기준) · 계산된 측정지표 ${summary.ready.confirmed}/${summary.ready.total}개.`
+                : `현재 실증 중 — 측정지표 ${summary.ready.confirmed}/${summary.ready.total}개가 계산되었으나, 실제 현장 표본이 ${TIER_FIELD}건에 미치지 않아 대표 성과값으로 확정하지 않았습니다.`}
             </p>
-            <p className="t-muted mt-1.5">
-              집계 대상: 수거 입력 {summary.collectionCount}건 · 자동 처리 {summary.autoLink.total}건 · 입력시간 표본{' '}
-              {summary.duration.samples}건
+            <p className="t-muted mt-1.5 break-keep">
+              집계 대상: 수거 입력 {summary.collectionCount}건 (실제 현장 {summary.fieldCount}건 · 시연{' '}
+              {summary.demoCount}건) · 자동 처리 {summary.autoLink.total}건 · 입력시간 표본{' '}
+              {summary.duration.samples}건 (실제 현장 {summary.fieldDuration.samples}건)
               {summary.revertedCount > 0 && ` · 재입력 ${summary.revertedCount}건`} · 데이터 출처 {prov.label}
             </p>
           </div>

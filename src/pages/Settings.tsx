@@ -8,6 +8,7 @@ import {
   RotateCcw,
   CalendarClock,
   PlayCircle,
+  FlaskConical,
   Database,
   CheckCircle2,
   AlertTriangle,
@@ -93,7 +94,9 @@ export function Settings() {
     startDemo,
     setBaseline,
     setExperimentStart,
+    setDemoActive,
   } = useData()
+  const demoActive = data.demoSession?.active !== false
   const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
@@ -306,10 +309,52 @@ export function Settings() {
             <p className="t-muted mt-3">가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.</p>
           </SettingCard>
 
+          {/* 성과 실증의 기준 — 이 모드에 따라 이후 입력의 데이터 출처가 결정됩니다. */}
+          <SettingCard
+            icon={FlaskConical}
+            title="운영 모드"
+            desc="이후 저장되는 수거 입력·영업 기록을 시연 데이터로 남길지, 실제 현장 데이터로 남길지 정합니다."
+            tone={demoActive ? 'amber' : 'teal'}
+          >
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[
+                { active: true, label: '시연 모드', desc: '시연 초기화로 되돌릴 수 있음 · 성과 실증에서 제외' },
+                { active: false, label: '실제 현장 운영', desc: '실증 데이터로 집계 · 시연 초기화해도 보존' },
+              ].map((m) => (
+                <button
+                  key={m.label}
+                  onClick={() => {
+                    setDemoActive(m.active)
+                    flash(
+                      'ok',
+                      m.active
+                        ? '시연 모드로 전환했습니다. 이후 입력은 시연 데이터로 기록됩니다.'
+                        : '실제 현장 운영 모드로 전환했습니다. 이후 입력이 실증 데이터로 집계됩니다.',
+                    )
+                  }}
+                  className={`rounded-2xl px-4 py-3.5 text-left transition ${
+                    demoActive === m.active
+                      ? 'bg-navy-900 text-white'
+                      : 'bg-navy-50 text-navy-500 hover:text-navy-700'
+                  }`}
+                >
+                  <p className="t-body font-extrabold">{m.label}</p>
+                  <p className={`t-muted mt-1 break-keep ${demoActive === m.active ? 'text-navy-200' : ''}`}>
+                    {m.desc}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <p className="t-muted mt-3 break-keep">
+              이미 저장된 기록의 출처는 바뀌지 않습니다. 성과 지표의 「실제 현장 데이터」 집계와 실증 단계는 이
+              모드를 끈 뒤 입력한 기록만으로 산출됩니다.
+            </p>
+          </SettingCard>
+
           <SettingCard
             icon={PlayCircle}
             title="시연 데이터 관리"
-            desc="시연용 변경만 기준 상태로 되돌립니다. 실제 거래처 기본정보는 유지됩니다."
+            desc="시연용 변경만 기준 상태로 되돌립니다. 실제 거래처 기본정보와 실제 현장 기록은 유지됩니다."
             tone="amber"
           >
             <div className="space-y-2.5">

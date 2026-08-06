@@ -61,6 +61,8 @@ interface DataContextValue {
   resetDemo: () => void // 시연용 변경만 기준 상태로 복원
   startDemo: () => void // 기준 복원 + 새 시연 세션 시작
   restoreToday: () => void // 오늘 일정만 기준 복원 (비상)
+  /** 운영 모드 전환 — 끄면 이후 입력이 '실제 현장 기록'으로 저장됩니다(성과 실증 대상). */
+  setDemoActive: (active: boolean) => void
   // 자재공급
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
@@ -287,6 +289,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  // 시연 모드를 끄면 이후 수거 입력·영업 기록에 demoSessionId 가 붙지 않아
+  // '실제 현장 데이터'로 집계됩니다. 이미 저장된 기록의 출처는 바꾸지 않습니다.
+  const setDemoActive = useCallback((active: boolean) => {
+    setData((d) => ({
+      ...d,
+      demoSession: d.demoSession
+        ? { ...d.demoSession, active }
+        : { id: uid('demo'), startedAt: new Date().toISOString(), active },
+    }))
+  }, [])
+
   const resetDemo = useCallback(() => setData((d) => resetDemoSession(d)), [])
   const startDemo = useCallback(() => setData((d) => startDemoSession(d)), [])
   const restoreToday = useCallback(() => setData((d) => restoreTodayOnly(d)), [])
@@ -364,6 +377,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       resetDemo,
       startDemo,
       restoreToday,
+      setDemoActive,
       addMaterial,
       removeMaterial,
       addPayment,
@@ -397,6 +411,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       resetDemo,
       startDemo,
       restoreToday,
+      setDemoActive,
       addMaterial,
       removeMaterial,
       addPayment,
