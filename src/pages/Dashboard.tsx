@@ -23,6 +23,8 @@ import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
 import { AxSummaryCard } from '../components/AxSummary'
+import { AxStoryStrip } from '../components/AxStory'
+import { useAuth } from '../context/AuthContext'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
@@ -45,6 +47,7 @@ const statusMeta: Record<CheckStatus, { icon: LucideIcon; color: string; chip: s
 
 export function Dashboard() {
   const { data } = useData()
+  const { profile } = useAuth()
   const navigate = useNavigate()
   const t = today()
   const month = thisMonth()
@@ -77,12 +80,50 @@ export function Dashboard() {
     <PageShell>
       {/* 인사 */}
       <div>
-        <h1 className="t-page text-navy-900">대표님 한눈에 보기</h1>
-        <p className="t-body mt-2.5 font-medium text-navy-400">{prettyDate(t)} · 오늘의 운영 현황</p>
+        <h1 className="t-page text-navy-900">
+          {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
+        </h1>
+        <p className="t-body mt-2.5 font-medium text-navy-400">{prettyDate(t)} · 의료폐기물 운영관리</p>
       </div>
 
-      {/* ── AX 성과 요약 — 심사자가 가장 먼저 보는 카드 ── */}
-      <AxSummaryCard data={data} />
+      {/* ── 이 시스템이 무엇을 하는지 — 데이터가 없어도 항상 읽히는 한 줄 흐름 ── */}
+      <AxStoryStrip data={data} />
+
+      {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 ── */}
+      <section>
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1</span>}>
+          한 번 입력, 여러 업무 자동 연결
+        </SectionTitle>
+        <AutoLinkFlow />
+      </section>
+
+      {/* ── 핵심 2·3 · 추가 매출 기회 / 병원 운영 리포트 ── */}
+      {/* 두 카드가 같은 높이로 정렬되도록 섹션을 flex 컬럼으로 두고 카드가 남는 높이를 흡수 */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
+        <section className="flex min-w-0 flex-col">
+          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 2</span>}>
+            데이터 기반 다음 행동 추천
+          </SectionTitle>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <OpportunityPanel summary={opportunities} />
+          </div>
+        </section>
+
+        <section className="flex min-w-0 flex-col">
+          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 3</span>}>
+            수거를 넘어 병원 운영지원으로
+          </SectionTitle>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <ReportHighlight reports={reports} />
+          </div>
+        </section>
+      </div>
+
+      {/* ── 오늘 운영 현황 (핵심 3기능 다음) ── */}
+      <div className="flex items-center gap-3 pt-1">
+        <span className="t-label whitespace-nowrap text-navy-500">오늘 운영 현황</span>
+        <span className="h-px flex-1 bg-navy-200" />
+      </div>
 
       {/* 핵심 KPI 4개 */}
       {/* KPI — 숫자 크기는 카드 폭에 맞춰 자동 조절(.t-kpi/container query)됩니다 */}
@@ -115,42 +156,20 @@ export function Dashboard() {
         />
       </div>
 
-      {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 ── */}
-      <section>
-        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1</span>}>
-          한 번 입력, 여러 업무 자동 연결
-        </SectionTitle>
-        <AutoLinkFlow />
-      </section>
-
-      {/* ── 핵심 2·3 · 추가 매출 기회 / 병원 운영 리포트 ── */}
-      {/* 두 카드가 같은 높이로 정렬되도록 섹션을 flex 컬럼으로 두고 카드가 남는 높이를 흡수 */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
-        <section className="flex min-w-0 flex-col">
-          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 2</span>}>
-            데이터 기반 다음 행동 추천
-          </SectionTitle>
-          <div className="flex min-h-0 flex-1 flex-col">
-            <OpportunityPanel summary={opportunities} />
-          </div>
-        </section>
-
-        <section className="flex min-w-0 flex-col">
-          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 3</span>}>
-            수거를 넘어 병원 운영지원으로
-          </SectionTitle>
-          <div className="flex min-h-0 flex-1 flex-col">
-            <ReportHighlight reports={reports} />
-          </div>
-        </section>
-      </div>
-
       {/* ── 오늘 거래처 운영 현황 — 병원별 데이터가 한 화면으로 연결됨을 보여줌 ── */}
       <section>
         <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">오늘 일정 기준</span>}>
           오늘 거래처 운영 현황
         </SectionTitle>
         <TodayClients data={data} />
+      </section>
+
+      {/* ── AX 도입 성과 (측정 결과) — 무엇을 하는지 본 다음에 성과를 봅니다 ── */}
+      <section>
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">실증</span>}>
+          AX 도입 성과
+        </SectionTitle>
+        <AxSummaryCard data={data} />
       </section>
 
       {/* ── 이하 운영 참고 ── */}

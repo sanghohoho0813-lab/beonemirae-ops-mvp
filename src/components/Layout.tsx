@@ -23,6 +23,7 @@ import {
   ChevronDown,
   SlidersHorizontal,
   ScrollText,
+  Gauge,
   LogOut,
   type LucideIcon,
 } from 'lucide-react'
@@ -50,13 +51,14 @@ interface NavItem {
   icon: LucideIcon
 }
 
-/** 현재 운영 중인 핵심 메뉴 */
+/** 핵심 운영 — 매일 쓰는 화면 + 심사에서 보여줄 성과 화면 */
 const CORE_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: LayoutGrid },
   { to: '/today', label: '오늘 일정', icon: CalendarClock },
   { to: '/clients', label: '거래처', icon: Building2 },
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart },
+  { to: '/performance', label: 'AX 도입 성과', icon: Gauge },
 ]
 
 /** 운영 도구 — 핵심 흐름을 보조하는 실사용 화면 */
@@ -67,6 +69,11 @@ const TOOL_NAV: NavItem[] = [
   { to: '/history', label: '수거이력', icon: History },
   { to: '/stats', label: '통계', icon: PieChart },
   { to: '/roadmap', label: '활용 계획', icon: Workflow },
+]
+
+/** 관리 — 관리자만 보이는 영역 */
+const ADMIN_NAV: NavItem[] = [
+  { to: '/settings', label: '설정', icon: SlidersHorizontal },
   { to: '/audit', label: '감사로그', icon: ScrollText },
 ]
 
@@ -137,7 +144,7 @@ function Sidebar() {
   const { configured, profile, signOut } = useAuth()
   const coreNav = useVisibleNav(CORE_NAV)
   const toolNav = useVisibleNav(TOOL_NAV)
-  const showSettings = !configured || profile?.role === 'admin'
+  const adminNav = !configured || profile?.role === 'admin' ? ADMIN_NAV : []
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
@@ -175,11 +182,16 @@ function Sidebar() {
           ))}
         </div>
 
-        {/* 설정 — 관리자 전용 (추가 개발 예정 바로 위) */}
-        {showSettings && (
-          <div className="mt-6 space-y-0.5">
-            <SidebarLink item={{ to: '/settings', label: '설정', icon: SlidersHorizontal }} muted />
-          </div>
+        {/* 관리 — 관리자 전용 (추가 개발 예정 바로 위) */}
+        {adminNav.length > 0 && (
+          <>
+            <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">관리</p>
+            <div className="space-y-0.5">
+              {adminNav.map((item) => (
+                <SidebarLink key={item.to} item={item} muted />
+              ))}
+            </div>
+          </>
         )}
 
         {/* 추가 개발 예정 — 접기/펼치기 */}
