@@ -277,18 +277,30 @@ function Sidebar() {
 
 // ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
 function MobileHeader() {
+  const { mode, profile } = useAuth()
+  const live = mode === 'live'
   return (
     <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg lg:hidden">
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[0.95rem] font-black text-teal-300">
           비
         </div>
-        <div className="leading-none">
+        <div className="min-w-0 leading-none">
           <p className="text-[1.0625rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
-          <p className="mt-1 break-keep text-[0.9rem] font-medium text-navy-400">의료폐기물 통합 운영관리</p>
+          {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
+          <p className="mt-1 break-keep text-[0.9rem] font-medium text-navy-400">
+            {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '의료폐기물 통합 운영관리'}
+          </p>
         </div>
-        <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.78rem] font-bold text-amber-600 ring-1 ring-amber-100">
-          시연용 데이터
+        {/* 실제 운영 데이터를 시연 데이터로 오인하지 않도록 배지를 구분합니다 */}
+        <span
+          className={`ml-auto shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.78rem] font-bold ring-1 ${
+            live
+              ? 'bg-teal-50 text-teal-700 ring-teal-100'
+              : 'bg-amber-50 text-amber-600 ring-amber-100'
+          }`}
+        >
+          {live ? '실제 운영' : '시연용 데이터'}
         </span>
       </div>
     </header>
@@ -322,6 +334,7 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
 }
 
 function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
+  const bottomNav = useVisibleNav(BOTTOM_NAV)
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const moreActive = moreOpen || MORE_PATHS.includes(pathname)
@@ -332,7 +345,7 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex w-full max-w-2xl">
-        {BOTTOM_NAV.map((item) => {
+        {bottomNav.map((item) => {
           const active = !moreActive && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))
           return (
             <NavTab key={item.to} active={active} icon={item.icon} label={item.label} onClick={() => navigate(item.to)} />

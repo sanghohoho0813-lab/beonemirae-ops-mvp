@@ -45,6 +45,9 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 1 | `supabase/migrations/0001_schema.sql` | 테이블 · 인덱스 · 트리거 |
 | 2 | `supabase/migrations/0002_rls.sql` | Row Level Security 정책 |
 | 3 | `supabase/migrations/0003_functions.sql` | 수거 완료 트랜잭션 · 취소 · 시연 초기화 |
+| 4 | `supabase/migrations/0004_grants.sql` | PostgREST 롤 권한 |
+
+> 이 4개 파일은 로컬 Supabase(Postgres 17.6) 및 PostgreSQL 16 에서 **실제로 적용·검증**되었습니다.
 
 Supabase CLI를 쓰는 경우:
 
@@ -116,6 +119,23 @@ insert into public.vehicles (name, waste_type, tonnage, nominal_capacity, expect
   ('의료폐기물 1호', '의료폐기물', 1.0, 1000, 800, '기사명'),
   ('기저귀 1호',   '일회용기저귀', 2.5, 2500, 2000, '기사명');
 ```
+
+---
+
+## 6-1. 검증 스크립트 (선택)
+
+저장소에 실제 DB 검증 스크립트가 포함되어 있습니다. 로컬에서 다시 확인하려면:
+
+```bash
+# 로컬 Supabase 전체 스택 (Docker 필요)
+npx supabase start
+psql "$(npx supabase status -o env | grep DB_URL | cut -d= -f2- | tr -d '"')" \
+  -f supabase/test/01_verify.sql      # RLS·트랜잭션·감사로그 단언 65건
+bash supabase/test/02_concurrency.sh  # 두 세션 동시 완료 방지 6건
+```
+
+`supabase/test/00_harness.sql` 은 Supabase 없이 순수 PostgreSQL 로 검증할 때만 씁니다
+(실제 Supabase 프로젝트에는 적용하지 마세요 — auth 스키마가 이미 존재합니다).
 
 ---
 

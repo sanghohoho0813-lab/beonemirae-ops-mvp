@@ -234,9 +234,13 @@ end $$;
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 수거 완료 취소 — 일정/자재/재고/요청을 원복하고 감사기록은 유지합니다.
 -- ─────────────────────────────────────────────────────────────────────────────
+-- security definer 인 이유:
+--  취소는 자재 공급 이력을 되돌려야 하는데, materials 에 DELETE 정책을 열어 주면
+--  누구나 임의의 자재 기록을 지울 수 있게 됩니다. 그래서 정책을 넓히는 대신
+--  이 함수 안에서만 정리하고, 권한 검사는 아래에서 직접 수행합니다.
 create or replace function public.revert_collection(p_event_id uuid)
 returns jsonb
-language plpgsql security invoker set search_path = public
+language plpgsql security definer set search_path = public
 as $$
 declare
   v_actor profiles%rowtype;
@@ -251,6 +255,12 @@ begin
   end if;
 
   select * into v_e from collection_events where id = p_event_id for update;
+
+  -- 현장 담당자는 본인이 입력한 건만 취소할 수 있습니다.
+  -- (관리자·사무실은 다른 사람의 입력도 정정할 수 있어야 합니다)
+  if found and v_actor.role = 'field' and v_e.actor_id is distinct from v_actor.id then
+    raise exception '본인이 입력한 수거만 취소할 수 있습니다.' using errcode = 'P0001';
+  end if;
   if not found then
     raise exception '취소할 입력을 찾을 수 없습니다.' using errcode = 'P0001';
   end if;

@@ -54,6 +54,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!canAccess(role, location.pathname)) {
+    // 기본 진입 경로('/')는 차단 화면 대신 그 역할의 첫 업무 화면으로 보냅니다.
+    // (현장 담당자는 대시보드 대신 오늘 일정이 첫 화면입니다)
+    if (location.pathname === '/') return <Navigate to={landingPath(role)} replace />
     return (
       <FullScreen>
         <div className="card max-w-[32rem] p-6 text-center sm:p-8">

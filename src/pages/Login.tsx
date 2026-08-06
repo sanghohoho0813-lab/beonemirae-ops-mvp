@@ -13,7 +13,7 @@ import { landingPath } from '../lib/access'
 
 export function Login() {
   const { signIn, session, profile, loading, configured, role } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useNavigate()   // 시연 모드 안내 버튼에서 사용
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,7 +37,9 @@ export function Login() {
       setError(res.error ?? '로그인에 실패했습니다.')
       return
     }
-    navigate(landingPath(role), { replace: true })
+    // 여기서 곧바로 이동하지 않습니다. 로그인 직후에는 아직 profile(역할)이
+    // 로드되지 않아 역할별 첫 화면을 알 수 없기 때문입니다.
+    // 프로필이 도착하면 위의 <Navigate> 가 올바른 화면으로 보냅니다.
   }
 
   return (

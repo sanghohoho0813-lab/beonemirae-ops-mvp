@@ -12,6 +12,15 @@ import type { UserRole } from '../context/AuthContext'
 //   현장(field)    모바일 현장업무 중심 · 미수금/경영성과/매출 전환 숨김
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 정확히 일치해야 하는 경로.
+ * '/' 는 prefix 로 두면 모든 경로에 걸리므로 따로 관리합니다.
+ * 대시보드에는 매출 기회·AX 성과 등 경영 지표가 있어 현장 담당자에게는 열지 않습니다.
+ */
+const EXACT_ROUTE_ROLES: Record<string, UserRole[]> = {
+  '/': ['admin', 'office'],
+}
+
 /** 경로 → 접근 가능한 역할. 목록에 없는 경로는 로그인만 하면 접근 가능합니다. */
 const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   // 경영 · 성과 · 매출
@@ -40,6 +49,8 @@ export function isPublicPath(path: string): boolean {
 export function canAccess(role: UserRole | null, path: string): boolean {
   if (!role) return false
   if (role === 'admin') return true
+  const exact = EXACT_ROUTE_ROLES[path]
+  if (exact) return exact.includes(role)
   const rule = ROUTE_ROLES.find((r) => path === r.prefix || path.startsWith(r.prefix + '/'))
   return rule ? rule.roles.includes(role) : true
 }

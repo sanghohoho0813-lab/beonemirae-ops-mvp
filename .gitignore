@@ -29,3 +29,7 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Supabase 로컬 개발 산물
+supabase/.temp
+supabase/.branches
