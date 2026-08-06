@@ -22,11 +22,16 @@ import {
   Sparkles,
   ChevronDown,
   SlidersHorizontal,
+  ScrollText,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
+import { useAuth, ROLE_LABEL } from '../context/AuthContext'
+import { canAccess } from '../lib/access'
+import { SyncBar } from './SyncBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { PageMotion } from './motion'
@@ -62,6 +67,7 @@ const TOOL_NAV: NavItem[] = [
   { to: '/history', label: '수거이력', icon: History },
   { to: '/stats', label: '통계', icon: PieChart },
   { to: '/roadmap', label: '활용 계획', icon: Workflow },
+  { to: '/audit', label: '감사로그', icon: ScrollText },
 ]
 
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 (클릭 시 활용 계획으로 안내) */
@@ -87,7 +93,18 @@ const BOTTOM_NAV: NavItem[] = [
 const MORE_PATHS = [
   '/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
   '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
+  '/audit',
 ]
+
+/**
+ * 역할이 접근할 수 없는 메뉴는 목록에서 아예 제거합니다.
+ * (라우트 차단은 RequireAuth, DB 접근 차단은 RLS 가 별도로 담당합니다.)
+ */
+function useVisibleNav(items: NavItem[]): NavItem[] {
+  const { configured, role } = useAuth()
+  if (!configured) return items          // 시연 모드에서는 기존과 동일
+  return items.filter((i) => canAccess(role, i.to))
+}
 
 // ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────
 function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }) {
@@ -117,6 +134,10 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
 function Sidebar() {
   const navigate = useNavigate()
   const [plannedOpen, setPlannedOpen] = useState(false)
+  const { configured, profile, signOut } = useAuth()
+  const coreNav = useVisibleNav(CORE_NAV)
+  const toolNav = useVisibleNav(TOOL_NAV)
+  const showSettings = !configured || profile?.role === 'admin'
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[344px] shrink-0 flex-col overflow-y-auto bg-navy-950 lg:flex">
@@ -140,7 +161,7 @@ function Sidebar() {
           핵심 운영
         </p>
         <div className="space-y-0.5">
-          {CORE_NAV.map((item) => (
+          {coreNav.map((item) => (
             <SidebarLink key={item.to} item={item} />
           ))}
         </div>
@@ -149,15 +170,17 @@ function Sidebar() {
           운영 도구 · 추가 고도화 예정
         </p>
         <div className="space-y-0.5">
-          {TOOL_NAV.map((item) => (
+          {toolNav.map((item) => (
             <SidebarLink key={item.to} item={item} muted />
           ))}
         </div>
 
-        {/* 설정 — 글자 크기·데이터 관리 (추가 개발 예정 바로 위) */}
-        <div className="mt-6 space-y-0.5">
-          <SidebarLink item={{ to: '/settings', label: '설정', icon: SlidersHorizontal }} muted />
-        </div>
+        {/* 설정 — 관리자 전용 (추가 개발 예정 바로 위) */}
+        {showSettings && (
+          <div className="mt-6 space-y-0.5">
+            <SidebarLink item={{ to: '/settings', label: '설정', icon: SlidersHorizontal }} muted />
+          </div>
+        )}
 
         {/* 추가 개발 예정 — 접기/펼치기 */}
         <button
@@ -192,12 +215,28 @@ function Sidebar() {
       <div className="space-y-2 px-3 pb-4 pt-3">
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.85rem] font-black text-teal-300">
-            비
+            {(profile?.name ?? '비').slice(0, 1)}
           </div>
-          <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1rem] font-bold text-white">비원미래 대표</p>
-            <p className="break-keep text-[0.87rem] text-navy-400">대표 관리자</p>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="break-keep text-[1rem] font-bold text-white">
+              {profile?.name || (configured ? '로그인 필요' : '비원미래 대표')}
+            </p>
+            <p className="break-keep text-[0.87rem] text-navy-400">
+              {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
+            </p>
           </div>
+          {profile && (
+            <button
+              onClick={() => {
+                void signOut()
+                navigate('/login')
+              }}
+              title="로그아웃"
+              className="shrink-0 rounded-lg p-2 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            >
+              <LogOut size={16} strokeWidth={2.2} />
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
           <Headset size={16} className="shrink-0 text-teal-300" />
@@ -314,6 +353,8 @@ export function Layout() {
       <div className="flex w-full">
         <Sidebar />
         <div className="min-w-0 flex-1">
+          {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
+          <SyncBar />
           <MobileHeader />
           <main className="w-full px-4 pb-24 pt-4 lg:px-10 lg:pb-14 lg:pt-8 2xl:px-12">
             <PageMotion key={pathname}>

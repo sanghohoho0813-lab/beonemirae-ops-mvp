@@ -22,5 +22,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# 환경변수 — Supabase 연결 정보는 절대 커밋하지 않습니다
+.env
+.env.*
+!.env.example
+
 # Vercel
 .vercel

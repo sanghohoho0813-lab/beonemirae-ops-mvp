@@ -1,0 +1,120 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Loader2, RefreshCw, ScrollText, ShieldAlert } from 'lucide-react'
+import { PageShell } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
+import { useAuth, ROLE_LABEL, type UserRole } from '../context/AuthContext'
+import { loadAuditLogs, type AuditRow } from '../lib/repo'
+import { friendlyError } from '../lib/supabase'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 감사로그 (관리자 전용)
+//
+//  누가 · 언제 · 어떤 거래처에 · 무엇을 했는지 그대로 보여줍니다.
+//  복잡한 관리자 시스템을 만들지 않고, 조회와 새로고침만 제공합니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ACTION_LABEL: Record<string, string> = {
+  'collection.complete': '수거 완료',
+  'collection.revert': '수거 완료 취소',
+  'client.create': '거래처 등록',
+  'client.update': '거래처 수정',
+  'client.deactivate': '거래처 비활성화',
+  'schedule.create': '일정 생성',
+  'schedule.update': '일정 수정',
+  'schedule.delete': '일정 삭제',
+  'material.supply': '자재 공급',
+  'payment.paid': '입금 완료',
+  'data.import': '데이터 가져오기',
+  'demo.reset': '시연 데이터 초기화',
+}
+
+const fmtAt = (iso: string) => {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+export function AuditLog() {
+  const { mode, role } = useAuth()
+  const [rows, setRows] = useState<AuditRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    if (mode !== 'live') return
+    setLoading(true)
+    setError(null)
+    try {
+      setRows(await loadAuditLogs(200))
+    } catch (e) {
+      setError(friendlyError(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [mode])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  return (
+    <PageShell>
+      <PageHeader
+        title="감사로그"
+        subtitle="누가 · 언제 · 어떤 작업을 했는지 기록합니다"
+        action={
+          <button onClick={load} disabled={loading} className="btn-ghost shrink-0 disabled:opacity-60">
+            {loading ? <Loader2 size={17} className="animate-spin" /> : <RefreshCw size={17} strokeWidth={2.4} />}
+            새로고침
+          </button>
+        }
+      />
+
+      {mode !== 'live' ? (
+        <div className="card flex flex-wrap items-center gap-3 p-5 sm:p-6">
+          <ShieldAlert size={22} className="shrink-0 text-amber-500" />
+          <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-500">
+            감사로그는 서버(Supabase)에 로그인한 실제 운영 모드에서만 기록·조회됩니다. 현재는 시연 모드입니다.
+          </p>
+        </div>
+      ) : error ? (
+        <div className="card p-5 sm:p-6">
+          <p className="t-body break-keep font-bold text-rose-600">{error}</p>
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="card p-5 sm:p-6">
+          <p className="t-body text-navy-400">{loading ? '불러오는 중…' : '아직 기록된 작업이 없습니다.'}</p>
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <div className="divide-y divide-navy-50">
+            {rows.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-start gap-x-4 gap-y-1.5 px-5 py-4">
+                <p className="t-body w-full shrink-0 font-bold text-navy-400 sm:w-[10.5rem]">{fmtAt(r.at)}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="t-body break-keep font-extrabold text-navy-900">
+                    {r.actorName || '알 수 없음'}
+                    {r.actorRole && (
+                      <span className="ml-2 font-bold text-navy-400">
+                        {ROLE_LABEL[r.actorRole as UserRole] ?? r.actorRole}
+                      </span>
+                    )}
+                  </p>
+                  <p className="t-body mt-0.5 break-keep text-navy-600">{r.summary}</p>
+                  {r.screen && <p className="t-muted mt-0.5">입력 화면 · {r.screen}</p>}
+                </div>
+                <span className="pill shrink-0 bg-navy-50 text-navy-600">
+                  {ACTION_LABEL[r.action] ?? r.action}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="t-muted border-t border-navy-100 px-5 py-3.5">
+            <ScrollText size={14} className="mr-1.5 inline -translate-y-px" />
+            최근 {rows.length}건. 감사로그는 수정·삭제할 수 없습니다{role === 'admin' ? ' (관리자도 동일)' : ''}.
+          </p>
+        </div>
+      )}
+    </PageShell>
+  )
+}

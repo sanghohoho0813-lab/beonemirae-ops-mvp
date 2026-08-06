@@ -13,10 +13,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   Gauge,
+  Users,
   ArrowRight,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { UserManagementCard, ImportLocalCard } from '../components/AdminPanels'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
 import { PageShell } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
@@ -96,6 +99,8 @@ export function Settings() {
     setExperimentStart,
     setDemoActive,
   } = useData()
+  const { mode, profile } = useAuth()
+  const live = mode === 'live'
   const demoActive = data.demoSession?.active !== false
   const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -309,7 +314,32 @@ export function Settings() {
             <p className="t-muted mt-3">가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.</p>
           </SettingCard>
 
-          {/* 성과 실증의 기준 — 이 모드에 따라 이후 입력의 데이터 출처가 결정됩니다. */}
+          {/* ── 실사용 전환: 사용자 계정 / 데이터 가져오기 ── */}
+          {live && (
+            <>
+              <SettingCard
+                icon={Users}
+                title="사용자 계정"
+                desc="직원 계정의 역할과 사용 여부를 관리합니다."
+                tone="navy"
+              >
+                <UserManagementCard />
+              </SettingCard>
+
+              <SettingCard
+                icon={Database}
+                title="브라우저 데이터 가져오기"
+                desc="이 브라우저에 저장된 실제 데이터를 확인한 뒤 서버로 올립니다."
+                tone="teal"
+              >
+                <ImportLocalCard />
+              </SettingCard>
+            </>
+          )}
+
+          {/* 성과 실증의 기준 — 시연 모드에서만 의미가 있습니다.
+              실제 운영(live)에서는 모든 입력이 항상 실제 현장 데이터입니다. */}
+          {!live && (
           <SettingCard
             icon={FlaskConical}
             title="운영 모드"
@@ -350,7 +380,30 @@ export function Settings() {
               모드를 끈 뒤 입력한 기록만으로 산출됩니다.
             </p>
           </SettingCard>
+          )}
 
+          {live ? (
+            <SettingCard
+              icon={Database}
+              title="실제 운영 중"
+              desc="이 계정은 서버(Supabase)에 연결되어 있습니다."
+              tone="teal"
+            >
+              <p className="t-body break-keep font-bold text-navy-600">
+                입력한 내용은 서버에 저장되어 다른 기기에서도 동일하게 보입니다.
+              </p>
+              <p className="t-muted mt-2.5 break-keep">
+                실제 운영 데이터를 보호하기 위해 「시연 상태 초기화」·「샘플 데이터로 전체 초기화」·「거래처 세트
+                전환」은 실제 운영 모드에서 동작하지 않습니다. 시연이 필요하면 로그아웃 후 시연 모드에서 사용해
+                주세요.
+              </p>
+              {profile && (
+                <p className="t-muted mt-2.5">
+                  로그인 계정 · {profile.name || profile.email} ({profile.role})
+                </p>
+              )}
+            </SettingCard>
+          ) : (
           <SettingCard
             icon={PlayCircle}
             title="시연 데이터 관리"
@@ -381,7 +434,9 @@ export function Settings() {
               </button>
             </div>
           </SettingCard>
+          )}
 
+          {!live && (
           <SettingCard
             icon={AlertTriangle}
             title="전체 초기화"
@@ -393,6 +448,7 @@ export function Settings() {
             </button>
             <p className="t-muted mt-3">실행 전에 위의 「전체 데이터 JSON 내보내기」로 백업하는 것을 권장합니다.</p>
           </SettingCard>
+          )}
         </div>
       </div>
 

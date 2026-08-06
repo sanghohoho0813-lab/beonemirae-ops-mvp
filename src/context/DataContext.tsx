@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -30,6 +31,10 @@ import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/dem
 import { leadKey } from '../lib/sales'
 import type { NextAction } from '../lib/insights'
 import { thisMonth } from '../lib/format'
+import { useAuth } from './AuthContext'
+import { friendlyError } from '../lib/supabase'
+import * as repo from '../lib/repo'
+import { clientRequests } from '../lib/ops'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전역 데이터 컨텍스트
@@ -85,67 +90,221 @@ interface DataContextValue {
   // 매출 전환 실증 (v5) — 추천 → 제안 → 수락 → 실제 매출
   setLeadStage: (action: NextAction, stage: LeadStage, month?: string) => void
   setLeadRevenue: (leadId: string, amount: number | null) => void
+  // ── v6: 실사용 전환 (Supabase) ──
+  /** 'live' = 로그인 상태의 서버 DB, 'demo' = 이 브라우저에만 저장되는 시연 데이터 */
+  mode: 'live' | 'demo'
+  /** 서버 통신 상태 — 화면에서 로딩/저장중/실패를 그대로 보여주기 위한 값 */
+  sync: { loading: boolean; saving: boolean; error: string | null; lastSavedAt: string | null }
+  /** 서버에서 다시 읽어옵니다 (다른 기기에서 입력한 내용 반영) */
+  reload: () => Promise<void>
+  /** 마지막 실패한 저장을 다시 시도 */
+  retry: () => Promise<void>
+  clearSyncError: () => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const { mode } = useAuth()
   const [data, setData] = useState<AppData>(() => loadData())
   const [clientSet, setClientSetState] = useState<ClientSetSize>(() => loadClientSet())
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  // 실패한 작업을 그대로 다시 실행하기 위해 보관합니다 (입력값이 사라지지 않도록).
+  const pending = useRef<null | (() => Promise<void>)>(null)
+  const live = mode === 'live'
 
-  // 변경 시 영속화
+  // 변경 시 영속화 — 실제 운영(live) 모드에서는 서버가 원본이므로 저장하지 않습니다.
+  // (시연 데이터가 실제 데이터를 덮어쓰지 않게 하는 안전장치이기도 합니다.)
   useEffect(() => {
-    saveData(data)
-  }, [data])
+    if (!live) saveData(data)
+  }, [data, live])
+
+  /** 서버에서 전체 운영 데이터를 다시 읽어옵니다. */
+  const reload = useCallback(async () => {
+    if (mode !== 'live') return
+    setLoading(true)
+    setSyncError(null)
+    try {
+      setData(await repo.loadAppData())
+    } catch (e) {
+      setSyncError(friendlyError(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [mode])
+
+  // 로그인/로그아웃 시 데이터 원본을 전환합니다.
+  useEffect(() => {
+    if (live) void reload()
+    else setData(loadData())
+  }, [live, reload])
+
+  /**
+   * 서버 반영 후 최신 상태를 다시 읽어옵니다.
+   * 실패하면 화면 상태를 바꾸지 않고 오류만 노출해, 사용자가 입력한 내용이
+   * 사라지지 않도록 합니다(재시도 가능).
+   */
+  const runLive = useCallback(
+    async (fn: () => Promise<void>): Promise<boolean> => {
+      setSaving(true)
+      setSyncError(null)
+      try {
+        await fn()
+        setData(await repo.loadAppData())
+        setLastSavedAt(new Date().toISOString())
+        pending.current = null
+        return true
+      } catch (e) {
+        setSyncError(friendlyError(e))
+        pending.current = fn
+        return false
+      } finally {
+        setSaving(false)
+      }
+    },
+    [],
+  )
+
+  const retry = useCallback(async () => {
+    const fn = pending.current
+    if (fn) await runLive(fn)
+  }, [runLive])
+
+  const clearSyncError = useCallback(() => setSyncError(null), [])
 
   // ── 거래처 ──────────────────────────────────────────────────────────────
-  const addClient = useCallback((c: Omit<Client, 'id'>) => {
-    const client: Client = { ...c, id: uid('c') }
-    setData((d) => ({ ...d, clients: [...d.clients, client] }))
-    return client
-  }, [])
+  const addClient = useCallback(
+    (c: Omit<Client, 'id'>) => {
+      const client: Client = { ...c, id: uid('c') }
+      if (live) {
+        void runLive(async () => {
+          const created = await repo.insertClient(c)
+          await repo.writeAudit({
+            action: 'client.create',
+            entity: 'clients',
+            entityId: created.id,
+            clientId: created.id,
+            clientName: created.name,
+            after: c,
+            summary: `거래처 등록 — ${created.name}`,
+          })
+        })
+        return client
+      }
+      setData((d) => ({ ...d, clients: [...d.clients, client] }))
+      return client
+    },
+    [live, runLive],
+  )
 
-  const updateClient = useCallback((id: string, patch: Partial<Client>) => {
-    setData((d) => ({
-      ...d,
-      clients: d.clients.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-    }))
-  }, [])
+  const updateClient = useCallback(
+    (id: string, patch: Partial<Client>) => {
+      if (live) {
+        const before = data.clients.find((c) => c.id === id)
+        void runLive(async () => {
+          await repo.updateClient(id, patch)
+          await repo.writeAudit({
+            action: 'client.update',
+            entity: 'clients',
+            entityId: id,
+            clientId: id,
+            clientName: before?.name ?? '',
+            before,
+            after: patch,
+            summary: `거래처 정보 수정 — ${before?.name ?? id}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        clients: d.clients.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      }))
+    },
+    [live, runLive, data.clients],
+  )
 
-  const removeClient = useCallback((id: string) => {
-    // 거래처를 지우면 그 거래처의 현장 메모도 함께 정리합니다.
-    setData((d) => ({
-      ...d,
-      clients: d.clients.filter((c) => c.id !== id),
-      notes: (d.notes ?? []).filter((n) => n.clientId !== id),
-    }))
-  }, [])
+  /** 실사용에서는 삭제 대신 비활성화합니다 — 과거 수거 이력이 끊기지 않도록. */
+  const removeClient = useCallback(
+    (id: string) => {
+      if (live) {
+        const before = data.clients.find((c) => c.id === id)
+        void runLive(async () => {
+          await repo.deactivateClient(id)
+          await repo.writeAudit({
+            action: 'client.deactivate',
+            entity: 'clients',
+            entityId: id,
+            clientId: id,
+            clientName: before?.name ?? '',
+            summary: `거래처 비활성화 — ${before?.name ?? id}`,
+          })
+        })
+        return
+      }
+      // 거래처를 지우면 그 거래처의 현장 메모도 함께 정리합니다.
+      setData((d) => ({
+        ...d,
+        clients: d.clients.filter((c) => c.id !== id),
+        notes: (d.notes ?? []).filter((n) => n.clientId !== id),
+      }))
+    },
+    [live, runLive, data.clients],
+  )
 
   // ── 현장 메모 / 특이사항 ────────────────────────────────────────────────
   // 한 번 기록하면 오늘 일정·수거 입력·대시보드에서 함께 확인됩니다.
-  const addNote = useCallback((clientId: string, kind: NoteKind, content: string) => {
-    const note: SiteNote = {
-      id: uid('note'),
-      clientId,
-      kind,
-      content: content.trim(),
-      createdAt: new Date().toISOString(),
-      done: false,
-    }
-    setData((d) => ({ ...d, notes: [note, ...(d.notes ?? [])] }))
-    return note
-  }, [])
+  const addNote = useCallback(
+    (clientId: string, kind: NoteKind, content: string) => {
+      const note: SiteNote = {
+        id: uid('note'),
+        clientId,
+        kind,
+        content: content.trim(),
+        createdAt: new Date().toISOString(),
+        done: false,
+      }
+      if (live) {
+        void runLive(async () => {
+          await repo.insertNote({ clientId, kind, content: content.trim(), done: false })
+        })
+        return note
+      }
+      setData((d) => ({ ...d, notes: [note, ...(d.notes ?? [])] }))
+      return note
+    },
+    [live, runLive],
+  )
 
-  const toggleNote = useCallback((id: string) => {
-    setData((d) => ({
-      ...d,
-      notes: (d.notes ?? []).map((n) => (n.id === id ? { ...n, done: !n.done } : n)),
-    }))
-  }, [])
+  const toggleNote = useCallback(
+    (id: string) => {
+      if (live) {
+        const cur = (data.notes ?? []).find((n) => n.id === id)
+        void runLive(async () => repo.setNoteDone(id, !cur?.done))
+        return
+      }
+      setData((d) => ({
+        ...d,
+        notes: (d.notes ?? []).map((n) => (n.id === id ? { ...n, done: !n.done } : n)),
+      }))
+    },
+    [live, runLive, data.notes],
+  )
 
-  const removeNote = useCallback((id: string) => {
-    setData((d) => ({ ...d, notes: (d.notes ?? []).filter((n) => n.id !== id) }))
-  }, [])
+  /** 실사용에서는 메모도 삭제 대신 보관 처리합니다. */
+  const removeNote = useCallback(
+    (id: string) => {
+      if (live) {
+        void runLive(async () => repo.archiveNote(id))
+        return
+      }
+      setData((d) => ({ ...d, notes: (d.notes ?? []).filter((n) => n.id !== id) }))
+    },
+    [live, runLive],
+  )
 
   const notesFor = useCallback(
     (clientId: string) =>
@@ -156,22 +315,72 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   // ── 수거일정 ────────────────────────────────────────────────────────────
-  const addSchedule = useCallback((s: Omit<Schedule, 'id'>) => {
-    const schedule: Schedule = { ...s, id: uid('s') }
-    setData((d) => ({ ...d, schedules: [...d.schedules, schedule] }))
-    return schedule
-  }, [])
+  const addSchedule = useCallback(
+    (s: Omit<Schedule, 'id'>) => {
+      const schedule: Schedule = { ...s, id: uid('s') }
+      if (live) {
+        void runLive(async () => {
+          const created = await repo.insertSchedule(s)
+          await repo.writeAudit({
+            action: 'schedule.create',
+            entity: 'schedules',
+            entityId: created.id,
+            clientId: s.clientId,
+            summary: `수거일정 생성 — ${s.date} ${s.wasteType}`,
+          })
+        })
+        return schedule
+      }
+      setData((d) => ({ ...d, schedules: [...d.schedules, schedule] }))
+      return schedule
+    },
+    [live, runLive],
+  )
 
-  const updateSchedule = useCallback((id: string, patch: Partial<Schedule>) => {
-    setData((d) => ({
-      ...d,
-      schedules: d.schedules.map((s) => (s.id === id ? { ...s, ...patch } : s)),
-    }))
-  }, [])
+  const updateSchedule = useCallback(
+    (id: string, patch: Partial<Schedule>) => {
+      if (live) {
+        const before = data.schedules.find((s) => s.id === id)
+        void runLive(async () => {
+          await repo.updateSchedule(id, patch)
+          await repo.writeAudit({
+            action: 'schedule.update',
+            entity: 'schedules',
+            entityId: id,
+            clientId: before?.clientId,
+            before,
+            after: patch,
+            summary: `수거일정 수정 — ${before?.date ?? id}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        schedules: d.schedules.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      }))
+    },
+    [live, runLive, data.schedules],
+  )
 
-  const removeSchedule = useCallback((id: string) => {
-    setData((d) => ({ ...d, schedules: d.schedules.filter((s) => s.id !== id) }))
-  }, [])
+  const removeSchedule = useCallback(
+    (id: string) => {
+      if (live) {
+        void runLive(async () => {
+          await repo.deleteSchedule(id)
+          await repo.writeAudit({
+            action: 'schedule.delete',
+            entity: 'schedules',
+            entityId: id,
+            summary: '수거일정 삭제',
+          })
+        })
+        return
+      }
+      setData((d) => ({ ...d, schedules: d.schedules.filter((s) => s.id !== id) }))
+    },
+    [live, runLive],
+  )
 
   const completeSchedule = useCallback((id: string, actualAmount: number, memo?: string) => {
     setData((d) => ({
@@ -194,41 +403,112 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // 검증→적용→저장을 한 번에 수행. 현재 커밋된 data 기준으로 계산(원자적)합니다.
   const completeCollection = useCallback(
     (input: CollectionCompletionInput): CommandResult => {
-      // 시연 세션이 활성화되어 있으면 입력을 시연 기록으로 태깅(초기화 대상 구분)
+      if (live) {
+        // 실사용: 서버 함수(complete_collection)가 일정·이력·자재·재고·요청·감사기록을
+        // 한 트랜잭션에서 처리합니다. 여기서는 먼저 로컬 검증을 돌려 즉시 피드백을 주고,
+        // 실제 반영은 서버가 다시 검증한 뒤 수행합니다(중복 완료·재고 초과는 서버가 최종 차단).
+        const precheck = applyCollectionCompletion(data, { ...input, demoSessionId: null })
+        if (!precheck.ok) return precheck
+
+        // 이 수거로 자동 종료될 병원 요청 목록 (요청은 파생 계산이므로 서버에 전달)
+        const suppliedAny =
+          input.supplied.corrugatedBox + input.supplied.plasticContainer + input.supplied.bag + input.supplied.needleBox > 0
+        const closeRequests = clientRequests(data)
+          .filter(
+            (r) =>
+              r.clientId === input.clientId &&
+              r.status !== '처리 완료' &&
+              (r.type === '긴급수거' || (r.type === '자재공급' && suppliedAny)),
+          )
+          .map((r) => ({ requestId: r.id, from: r.status }))
+
+        void runLive(async () => {
+          await repo.completeCollection(input, closeRequests)
+        })
+        return { ok: true, errors: [], warnings: precheck.warnings }
+      }
+
+      // 시연 모드: 로컬에서 순수 함수로 처리하고 시연 기록으로 태깅합니다.
       const demoSessionId = data.demoSession?.active ? data.demoSession.id : null
       const result = applyCollectionCompletion(data, { ...input, demoSessionId })
       if (result.ok && result.data) setData(result.data)
       return result
     },
-    [data],
+    [data, live, runLive],
   )
 
   const revertCollection = useCallback(
     (eventId: string): CommandResult => {
+      if (live) {
+        const e = data.events.find((x) => x.id === eventId)
+        if (!e) return { ok: false, errors: ['취소할 입력을 찾을 수 없습니다.'], warnings: [] }
+        if (e.reverted) return { ok: false, errors: ['이미 취소된 입력입니다.'], warnings: [] }
+        void runLive(async () => repo.revertCollection(eventId))
+        return { ok: true, errors: [], warnings: [] }
+      }
       const result = rollbackCollectionCompletion(data, eventId)
       if (result.ok && result.data) setData(result.data)
       return result
     },
-    [data],
+    [data, live, runLive],
   )
 
   // ── 시연 안정화 ─────────────────────────────────────────────────────────
   // ── AX 실증·성과측정 ────────────────────────────────────────────────────
   // 기준값은 사용자가 입력한 값만 저장합니다(시스템이 임의 값을 만들지 않음).
-  const setBaseline = useCallback((patch: Partial<BaselineMetrics>) => {
-    setData((d) => ({
-      ...d,
-      baseline: { ...d.baseline, ...patch, updatedAt: new Date().toISOString() },
-    }))
-  }, [])
+  const setBaseline = useCallback(
+    (patch: Partial<BaselineMetrics>) => {
+      if (live) {
+        const row: Record<string, number | null> = {}
+        if ('adminMinutesPerCollection' in patch) row.admin_minutes_per_collection = patch.adminMinutesPerCollection ?? null
+        if ('repeatEntriesPerCollection' in patch) row.repeat_entries_per_collection = patch.repeatEntriesPerCollection ?? null
+        if ('monthlyDocHours' in patch) row.monthly_doc_hours = patch.monthlyDocHours ?? null
+        if ('monthlyReworkCount' in patch) row.monthly_rework_count = patch.monthlyReworkCount ?? null
+        if ('dailyCapacity' in patch) row.daily_capacity = patch.dailyCapacity ?? null
+        if (Object.keys(row).length) void runLive(async () => repo.saveBaseline(row))
+        return
+      }
+      setData((d) => ({
+        ...d,
+        baseline: { ...d.baseline, ...patch, updatedAt: new Date().toISOString() },
+      }))
+    },
+    [live, runLive],
+  )
 
-  const setExperimentStart = useCallback((date: string | null) => {
-    setData((d) => ({ ...d, experiment: { ...d.experiment, startDate: date } }))
-  }, [])
+  const setExperimentStart = useCallback(
+    (date: string | null) => {
+      if (live) {
+        void runLive(async () => repo.saveExperimentStart(date))
+        return
+      }
+      setData((d) => ({ ...d, experiment: { ...d.experiment, startDate: date } }))
+    },
+    [live, runLive],
+  )
 
   // ── 매출 전환 실증 ──────────────────────────────────────────────────────
   // 추천은 파생값이라 저장하지 않고, 담당자가 상태를 기록할 때만 lead 를 만듭니다.
   const setLeadStage = useCallback((action: NextAction, stage: LeadStage, month = thisMonth()) => {
+    if (live) {
+      void runLive(async () =>
+        repo.upsertLead({
+          key: leadKey(action.clientId, action.kind, month),
+          clientId: action.clientId,
+          clientName: action.clientName,
+          kind: action.kind,
+          title: action.title,
+          month,
+          estValue: action.estValue,
+          stage,
+          // 수락에서 벗어나면 실제 매출을 함께 비웁니다(유령 값 방지).
+          actualRevenue: stage === '수락' ? (data.leads ?? []).find((l) => l.key === leadKey(action.clientId, action.kind, month))?.actualRevenue ?? null : null,
+          actualRevenueAt: stage === '수락' ? (data.leads ?? []).find((l) => l.key === leadKey(action.clientId, action.kind, month))?.actualRevenueAt ?? null : null,
+          demoSessionId: null,
+        }),
+      )
+      return
+    }
     setData((d) => {
       const key = leadKey(action.clientId, action.kind, month)
       const at = new Date().toISOString()
@@ -275,41 +555,77 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       return { ...d, leads: [...(d.leads ?? []), lead] }
     })
-  }, [])
+  }, [live, runLive, data.leads])
 
   /** 실제 매출 입력 — null 이면 '미입력'으로 되돌립니다(0원과 구분). */
-  const setLeadRevenue = useCallback((leadId: string, amount: number | null) => {
-    setData((d) => ({
-      ...d,
-      leads: (d.leads ?? []).map((l) =>
-        l.id === leadId
-          ? { ...l, actualRevenue: amount, actualRevenueAt: amount == null ? null : new Date().toISOString() }
-          : l,
-      ),
-    }))
-  }, [])
+  const setLeadRevenue = useCallback(
+    (leadId: string, amount: number | null) => {
+      if (live) {
+        void runLive(async () => repo.setLeadRevenue(leadId, amount))
+        return
+      }
+      setData((d) => ({
+        ...d,
+        leads: (d.leads ?? []).map((l) =>
+          l.id === leadId
+            ? { ...l, actualRevenue: amount, actualRevenueAt: amount == null ? null : new Date().toISOString() }
+            : l,
+        ),
+      }))
+    },
+    [live, runLive],
+  )
 
-  // 시연 모드를 끄면 이후 수거 입력·영업 기록에 demoSessionId 가 붙지 않아
-  // '실제 현장 데이터'로 집계됩니다. 이미 저장된 기록의 출처는 바꾸지 않습니다.
-  const setDemoActive = useCallback((active: boolean) => {
-    setData((d) => ({
-      ...d,
-      demoSession: d.demoSession
-        ? { ...d.demoSession, active }
-        : { id: uid('demo'), startedAt: new Date().toISOString(), active },
-    }))
-  }, [])
+  // ── 시연 전용 기능 ──────────────────────────────────────────────────────
+  // 실제 운영(live) 모드에서는 시연 초기화·복원이 동작하지 않습니다.
+  // 실제 DB 데이터를 시연 버튼으로 지우는 사고를 원천 차단합니다.
+  const setDemoActive = useCallback(
+    (active: boolean) => {
+      if (live) return
+      setData((d) => ({
+        ...d,
+        demoSession: d.demoSession
+          ? { ...d.demoSession, active }
+          : { id: uid('demo'), startedAt: new Date().toISOString(), active },
+      }))
+    },
+    [live],
+  )
 
-  const resetDemo = useCallback(() => setData((d) => resetDemoSession(d)), [])
-  const startDemo = useCallback(() => setData((d) => startDemoSession(d)), [])
-  const restoreToday = useCallback(() => setData((d) => restoreTodayOnly(d)), [])
+  const resetDemo = useCallback(() => {
+    if (live) return
+    setData((d) => resetDemoSession(d))
+  }, [live])
+  const startDemo = useCallback(() => {
+    if (live) return
+    setData((d) => startDemoSession(d))
+  }, [live])
+  const restoreToday = useCallback(() => {
+    if (live) return
+    setData((d) => restoreTodayOnly(d))
+  }, [live])
 
   // ── 자재공급 ────────────────────────────────────────────────────────────
-  const addMaterial = useCallback((m: Omit<MaterialSupply, 'id'>) => {
-    const material: MaterialSupply = { ...m, id: uid('m') }
-    setData((d) => ({ ...d, materials: [...d.materials, material] }))
-    return material
-  }, [])
+  const addMaterial = useCallback(
+    (m: Omit<MaterialSupply, 'id'>) => {
+      const material: MaterialSupply = { ...m, id: uid('m') }
+      if (live) {
+        void runLive(async () => {
+          await repo.insertMaterial(m)
+          await repo.writeAudit({
+            action: 'material.supply',
+            entity: 'materials',
+            clientId: m.clientId,
+            summary: `자재 공급 기록 — 박스 ${m.boxCount} · 비닐 ${m.vinylCount} · 바늘통 ${m.needleBoxCount}`,
+          })
+        })
+        return material
+      }
+      setData((d) => ({ ...d, materials: [...d.materials, material] }))
+      return material
+    },
+    [live, runLive],
+  )
 
   const removeMaterial = useCallback((id: string) => {
     setData((d) => ({ ...d, materials: d.materials.filter((m) => m.id !== id) }))
@@ -322,36 +638,68 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return payment
   }, [])
 
-  const updatePayment = useCallback((id: string, patch: Partial<Payment>) => {
-    setData((d) => ({
-      ...d,
-      payments: d.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-    }))
-  }, [])
+  const updatePayment = useCallback(
+    (id: string, patch: Partial<Payment>) => {
+      if (live) {
+        void runLive(async () => repo.updatePayment(id, patch))
+        return
+      }
+      setData((d) => ({
+        ...d,
+        payments: d.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      }))
+    },
+    [live, runLive],
+  )
 
-  const markPaid = useCallback((id: string) => {
-    setData((d) => ({
-      ...d,
-      payments: d.payments.map((p) =>
-        p.id === id ? { ...p, status: '입금완료', paidAt: new Date().toISOString() } : p,
-      ),
-    }))
-  }, [])
+  const markPaid = useCallback(
+    (id: string) => {
+      const paidAt = new Date().toISOString()
+      if (live) {
+        void runLive(async () => {
+          await repo.updatePayment(id, { status: '입금완료', paidAt })
+          await repo.writeAudit({
+            action: 'payment.paid',
+            entity: 'payments',
+            entityId: id,
+            summary: '입금 완료 처리',
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        payments: d.payments.map((p) => (p.id === id ? { ...p, status: '입금완료', paidAt } : p)),
+      }))
+    },
+    [live, runLive],
+  )
 
+  // 아래 세 가지는 시연/로컬 데이터 전용입니다.
+  // 실제 운영 모드에서는 서버 데이터를 건드리지 않습니다.
   const reset = useCallback(() => {
+    if (live) return
     setData(resetData(loadClientSet()))
-  }, [])
+  }, [live])
 
-  const replaceAll = useCallback((next: AppData) => {
-    setData(next)
-  }, [])
+  const replaceAll = useCallback(
+    (next: AppData) => {
+      if (live) return
+      setData(next)
+    },
+    [live],
+  )
 
   // 거래처 세트 전환 — 해당 세트 기준으로 데이터 재생성
-  const setClientSet = useCallback((demoCount: ClientSetSize) => {
-    saveClientSet(demoCount)
-    setClientSetState(demoCount)
-    setData(resetData(demoCount))
-  }, [])
+  const setClientSet = useCallback(
+    (demoCount: ClientSetSize) => {
+      if (live) return
+      saveClientSet(demoCount)
+      setClientSetState(demoCount)
+      setData(resetData(demoCount))
+    },
+    [live],
+  )
 
   const clientById = useCallback(
     (id: string) => data.clients.find((c) => c.id === id),
@@ -392,6 +740,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setExperimentStart,
       setLeadStage,
       setLeadRevenue,
+      mode,
+      sync: { loading, saving, error: syncError, lastSavedAt },
+      reload,
+      retry,
+      clearSyncError,
     }),
     [
       data,
@@ -426,6 +779,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setExperimentStart,
       setLeadStage,
       setLeadRevenue,
+      mode,
+      loading,
+      saving,
+      syncError,
+      lastSavedAt,
+      reload,
+      retry,
+      clearSyncError,
     ],
   )
 

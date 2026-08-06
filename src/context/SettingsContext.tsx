@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useAuth } from './AuthContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UI 설정 컨텍스트 — 글자 크기 모드
@@ -57,8 +58,18 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
 
+// profiles.font_scale ↔ 화면 값 매핑 (DB 는 normal/lg/xl 로 저장합니다)
+const TO_DB: Record<FontScale, 'normal' | 'lg' | 'xl'> = { normal: 'normal', large: 'lg', xlarge: 'xl' }
+const FROM_DB: Record<'normal' | 'lg' | 'xl', FontScale> = { normal: 'normal', lg: 'large', xl: 'xlarge' }
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [fontScale, setFontScaleState] = useState<FontScale>(() => loadScale())
+  const { profile, updateProfile } = useAuth()
+
+  // 로그인하면 사용자 계정에 저장된 글자 크기를 따라갑니다(기기가 바뀌어도 동일).
+  useEffect(() => {
+    if (profile?.fontScale) setFontScaleState(FROM_DB[profile.fontScale])
+  }, [profile?.fontScale])
 
   // <html> 클래스 동기화 + 영속화
   useEffect(() => {
@@ -72,7 +83,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [fontScale])
 
-  const setFontScale = useCallback((scale: FontScale) => setFontScaleState(scale), [])
+  const setFontScale = useCallback(
+    (scale: FontScale) => {
+      setFontScaleState(scale)
+      // 로그인 상태면 계정에도 저장해 다른 기기에서도 같은 크기로 보이게 합니다.
+      if (profile) void updateProfile({ fontScale: TO_DB[scale] })
+    },
+    [profile, updateProfile],
+  )
 
   const value = useMemo(() => ({ fontScale, setFontScale }), [fontScale, setFontScale])
 
