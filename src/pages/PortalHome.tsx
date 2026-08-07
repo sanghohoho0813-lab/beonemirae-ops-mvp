@@ -359,20 +359,26 @@ export function PortalHome() {
             icon: FileBarChart,
             tone: 'sky' as const,
             title: '월간 운영 리포트',
-            desc: '배출량·수거 횟수·용기 공급 내역을 매달 정리해 드립니다',
+            desc: '배출량·수거 횟수·용기 공급을 매달 정리',
           },
           {
             to: '/portal/history',
             icon: Clock,
             tone: 'sky' as const,
             title: '수거 이력',
-            desc: '인증·실사 자료로 그대로 쓸 수 있는 전체 수거 기록',
+            desc: '인증·실사에 그대로 쓰는 전체 수거 기록',
           },
         ].map((x) => {
           const Icon = x.icon
           return (
-            <Link key={x.to} to={x.to} className="card pressable flex items-center gap-4 p-5 transition hover:shadow-lg">
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${TONE[x.tone].tile}`}>
+            <Link
+              key={x.to}
+              to={x.to}
+              className="card pressable flex items-center gap-3.5 p-4 transition hover:shadow-lg sm:gap-4 sm:p-5"
+            >
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${TONE[x.tone].tile}`}
+              >
                 <Icon size={23} strokeWidth={2.3} />
               </span>
               <div className="min-w-0 flex-1">
