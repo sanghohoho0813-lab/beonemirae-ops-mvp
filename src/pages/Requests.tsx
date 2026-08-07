@@ -126,7 +126,7 @@ export function Requests() {
         />
       ) : (
         <div className="space-y-3">
-          {rows.map((r) => (
+          {rows.map((r, ri) => (
             <div key={r.id} className="card p-5">
               <div className="flex flex-wrap items-center gap-2.5">
                 {(() => {
@@ -187,7 +187,10 @@ export function Requests() {
               )}
 
               {/* 처리 단계 — 여기서 바꾼 상태가 병원 화면에 그대로 보입니다 */}
-              <div className="mt-4 flex flex-wrap items-center gap-1.5">
+              <div
+                data-tour={ri === 0 ? 'requests-list' : undefined}
+                className="mt-4 flex flex-wrap items-center gap-1.5"
+              >
                 {FLOW.map((st) => (
                   <button
                     key={st}

@@ -89,8 +89,23 @@ export function RevenueModelCard({ data }: { data: AppData }) {
     },
   ]
 
+  const count = (st: Status) => rows.filter((r) => r.status === st).length
+
   return (
     <div className="card overflow-hidden">
+      {/* 구현 상태 요약 — 다섯 줄을 다 읽기 전에 "어디까지 왔는지"가 먼저 보이게 */}
+      <div
+        data-tour="perf-model"
+        className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-navy-100 px-5 py-4 sm:px-6"
+      >
+        <p className="t-label min-w-0 flex-1 break-keep text-navy-500">거래처당 매출 5가지</p>
+        {(['구현됨', '실증 중', '개발 예정'] as Status[]).map((st) => (
+          <span key={st} className={`pill ${STATUS_META[st].chip}`}>
+            {st} {count(st)}
+          </span>
+        ))}
+      </div>
+
       <div className="divide-y divide-navy-50">
         {rows.map((r) => {
           const m = STATUS_META[r.status]

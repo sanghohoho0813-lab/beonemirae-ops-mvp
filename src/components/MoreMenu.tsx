@@ -6,6 +6,7 @@ const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { InfoBanner } from './InfoBanner'
 import { RnDCard } from './RnDCard'
 import { IconChip } from './ui'
+import { TourButton } from './TourEntry'
 import { Tappable } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,7 +161,11 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
           </div>
           <ChevronRight size={18} className="ml-auto text-navy-300" />
         </Tappable>
-        <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
+        <TourButton
+        className="card mb-2.5 flex w-full cursor-pointer items-center gap-3 p-4 text-left text-[1.12rem] font-bold text-navy-800"
+        label="사용 방법 보기"
+      />
+      <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
           <IconChip icon={SlidersHorizontal} tone="teal" />
           <div className="min-w-0">
             <p className="font-bold text-navy-900">설정</p>

@@ -37,6 +37,7 @@ import { TONE, type Tone } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
+import { TourButton } from './TourEntry'
 import { PageMotion } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -293,6 +294,7 @@ function Sidebar() {
             </button>
           )}
         </div>
+        <TourButton className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-3 py-3 text-[1.05rem] font-bold text-navy-200 transition hover:bg-white/10 hover:text-white" />
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
           <Headset size={16} className="shrink-0 text-teal-300" />
           <div className="min-w-0 leading-tight">
@@ -341,15 +343,20 @@ function MobileHeader() {
           비
         </div>
         <div className="min-w-0 leading-none">
-          <p className="text-[1.15rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="whitespace-nowrap text-[1.15rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
           {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
-          <p className="mt-1 break-keep text-[1.03rem] font-medium text-navy-400">
-            {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '의료폐기물 통합 운영관리'}
+          <p className="mt-1 truncate text-[1.03rem] font-medium text-navy-400">
+            {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '통합 운영관리'}
           </p>
         </div>
+        <TourButton
+          compact
+          className="ml-auto shrink-0 rounded-lg p-2 text-navy-400 transition hover:bg-navy-100 hover:text-navy-700"
+          label=""
+        />
         {/* 실제 운영 데이터를 시연 데이터로 오인하지 않도록 배지를 구분합니다 */}
         <span
-          className={`ml-auto shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.9rem] font-bold ring-1 ${
+          className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.9rem] font-bold ring-1 ${
             live
               ? 'bg-teal-50 text-teal-700 ring-teal-100'
               : 'bg-amber-50 text-amber-600 ring-amber-100'

@@ -108,12 +108,20 @@ export function AxStoryStrip({ data }: { data: AppData }) {
         </p>
       </div>
 
-      <div className="grid gap-px bg-navy-100 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+      {/* 6단계 — 좁은 화면에서는 세로로 길어지지 않도록 가로로 훑어보는 한 줄입니다.
+          (넓은 화면에서는 6칸이 한눈에 들어옵니다) */}
+      <div
+        data-tour="story"
+        className="flex gap-px overflow-x-auto bg-navy-100 2xl:grid 2xl:grid-cols-6 2xl:overflow-visible"
+      >
         {steps.map((s, i) => {
           const Icon = s.icon
           const at = TONE[ACTOR_TONE[s.actor]]
           return (
-            <div key={s.label} className="kpi-box relative flex flex-col bg-white px-5 py-4">
+            <div
+              key={s.label}
+              className="kpi-box relative flex w-[11.5rem] shrink-0 flex-col bg-white px-4 py-4 sm:w-[13rem] 2xl:w-auto 2xl:px-5"
+            >
               <div className="flex items-center gap-2">
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
@@ -125,7 +133,7 @@ export function AxStoryStrip({ data }: { data: AppData }) {
                 {/* 누가 하는 일인지 — 흐름 가운데의 '병원'이 눈에 띄게 */}
                 <span className={`pill shrink-0 ${at.chip}`}>{s.actor}</span>
                 {i < steps.length - 1 && (
-                  <ArrowRight size={18} className="ml-auto hidden shrink-0 text-navy-200 2xl:block" strokeWidth={2.6} />
+                  <ArrowRight size={18} className="ml-auto shrink-0 text-navy-200" strokeWidth={2.6} />
                 )}
               </div>
               <p className="t-label mt-2.5 min-w-0 break-keep text-navy-500">{s.label}</p>

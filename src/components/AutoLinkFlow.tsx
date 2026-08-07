@@ -37,7 +37,7 @@ export function AutoLinkFlow() {
         <ArrowDown size={24} className="mx-auto shrink-0 text-navy-300 xl:hidden" strokeWidth={2.4} />
 
         {/* 자동으로 이어지는 업무 */}
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
+        <div data-tour="core1" className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
           {LINKED.map(({ label, to }) => (
             <button
               key={label}

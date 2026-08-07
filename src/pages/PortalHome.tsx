@@ -23,6 +23,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { PageShell, SectionTitle, EmptyState } from '../components/ui'
 import { Modal } from '../components/Modal'
+import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, type RequestKind, type RequestStatus } from '../types'
@@ -141,14 +142,17 @@ export function PortalHome() {
         </div>
       )}
 
+      <TourBanner tourId="client" />
+
       {/* ── 1. 지금 바로 요청하기 — 병원이 로그인하는 첫 번째 이유 ── */}
       <section>
         <SectionTitle
           action={<span className="t-muted hidden font-bold text-navy-400 sm:inline">전화하지 않아도 됩니다</span>}
+          hint="눌러서 내용만 적으면 비원미래 담당자 화면에 바로 뜹니다. 통화 연결을 기다리지 않으셔도 됩니다."
         >
           필요한 것을 바로 요청하세요
         </SectionTitle>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div data-tour="portal-request" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {QUICK.map((q) => {
             const Icon = KIND_ICON[q.kind]
             const t = TONE[REQUEST_TONE[q.kind]]
@@ -191,7 +195,7 @@ export function PortalHome() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-px bg-navy-100 sm:grid-cols-3">
+        <div data-tour="portal-status" className="grid grid-cols-1 gap-px bg-navy-100 sm:grid-cols-3">
           {[
             { icon: Clock, label: '최근 수거', value: s.lastDate ? prettyDate(s.lastDate) : '기록 없음', tone: 'sky' as const },
             { icon: Scale, label: '최근 배출량', value: s.lastKg != null ? weight(s.lastKg) : '—', tone: 'blue' as const },
@@ -277,12 +281,12 @@ export function PortalHome() {
           </div>
         ) : (
           <div className="card divide-y divide-navy-50">
-            {s.allRequests.slice(0, 8).map((r) => {
+            {s.allRequests.slice(0, 8).map((r, ri) => {
               const Icon = KIND_ICON[r.type]
               const kt = TONE[REQUEST_TONE[r.type]]
               const stepIdx = STATUS_STEPS.indexOf(r.status)
               return (
-                <div key={r.id} className="px-5 py-4">
+                <div key={r.id} data-tour={ri === 0 ? 'portal-requests' : undefined} className="px-5 py-4">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kt.tile}`}>
                       <Icon size={18} strokeWidth={2.3} />
@@ -345,7 +349,7 @@ export function PortalHome() {
       </section>
 
       {/* ── 5. 리포트 · 이력 바로가기 ── */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div data-tour="portal-report" className="grid gap-3 sm:grid-cols-2">
         {[
           {
             to: '/portal/report',

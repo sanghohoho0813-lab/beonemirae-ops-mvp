@@ -43,9 +43,18 @@ export function Stagger({ children, className }: { children: ReactNode; classNam
 }
 
 /** Stagger 내부 항목 */
-export function StaggerItem({ children, className }: { children: ReactNode; className?: string }) {
+export function StaggerItem({
+  children,
+  className,
+  'data-tour': dataTour,
+}: {
+  children: ReactNode
+  className?: string
+  /** 제품 투어 대상 표시 (그대로 DOM 으로 전달) */
+  'data-tour'?: string
+}) {
   return (
-    <motion.div variants={itemVariants} className={className}>
+    <motion.div variants={itemVariants} className={className} data-tour={dataTour}>
       {children}
     </motion.div>
   )

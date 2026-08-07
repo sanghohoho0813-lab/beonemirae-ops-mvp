@@ -78,7 +78,7 @@ export function OpportunityPanel({ summary, limit = 3 }: { summary: OpportunityS
   return (
     <div className="card flex h-full flex-col overflow-hidden">
       {/* 합계 — 가장 먼저 보여야 할 숫자 */}
-      <div className="kpi-box border-b border-navy-100 px-5 py-5">
+      <div data-tour="core3" className="kpi-box border-b border-navy-100 px-5 py-5">
         <p className="text-[1.12rem] font-bold text-navy-500">이번 달 추가 매출 기회</p>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className="t-stat text-teal-600">

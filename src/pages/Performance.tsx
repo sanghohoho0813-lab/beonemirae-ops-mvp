@@ -356,8 +356,10 @@ export function Performance() {
         </SectionTitle>
         {/* 1024px에서는 사이드바(344px) 때문에 3열이 지나치게 좁아져 2열로 둡니다 */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {efficiency.map((m) => (
-            <MetricCard key={m.key} m={m} onSetBaseline={goSettings} />
+          {efficiency.map((m, mi) => (
+            <div key={m.key} data-tour={mi === 0 ? 'perf-a' : undefined}>
+              <MetricCard m={m} onSetBaseline={goSettings} />
+            </div>
           ))}
         </div>
       </section>

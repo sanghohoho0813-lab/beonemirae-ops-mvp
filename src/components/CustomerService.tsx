@@ -105,16 +105,17 @@ export function CustomerServiceCard({ data }: { data: AppData }) {
       ) : (
         <>
           {/* 5단계 흐름 — 색이 왼쪽(병원)에서 오른쪽(매출)으로 이어집니다 */}
-          <div className="grid gap-px border-t border-navy-100 bg-navy-100 sm:grid-cols-2 xl:grid-cols-5">
+          <div
+            data-tour="customer"
+            className="flex gap-px overflow-x-auto border-t border-navy-100 bg-navy-100 xl:grid xl:grid-cols-5 xl:overflow-visible"
+          >
             {stages.map((x, i) => {
               const Icon = x.icon
               return (
                 <div
                   key={x.label}
                   // 좁은 폭에서는 2열로 접히므로, 마지막 칸이 빈 칸을 남기지 않게 한 줄을 채웁니다
-                  className={`kpi-box flex flex-col bg-white px-5 py-4 xl:px-4 2xl:px-5 ${
-                    i === stages.length - 1 ? 'sm:col-span-2 xl:col-span-1' : ''
-                  }`}
+                  className="kpi-box flex w-[10.5rem] shrink-0 flex-col bg-white px-4 py-4 sm:w-[12rem] xl:w-auto 2xl:px-5"
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -125,7 +126,7 @@ export function CustomerServiceCard({ data }: { data: AppData }) {
                       <Icon size={18} strokeWidth={2.3} />
                     </span>
                     {i < stages.length - 1 && (
-                      <ArrowRight size={17} className="ml-auto hidden shrink-0 text-navy-200 xl:block" strokeWidth={2.6} />
+                      <ArrowRight size={17} className="ml-auto shrink-0 text-navy-200" strokeWidth={2.6} />
                     )}
                   </div>
                   <p className="t-label mt-2.5 break-keep text-navy-500">{x.label}</p>

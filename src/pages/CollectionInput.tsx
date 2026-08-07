@@ -92,9 +92,22 @@ function NumField({
   )
 }
 
-function Section({ n, title, desc, children }: { n: number; title: string; desc?: string; children: React.ReactNode }) {
+function Section({
+  n,
+  title,
+  desc,
+  tour,
+  children,
+}: {
+  n: number
+  title: string
+  desc?: string
+  /** 제품 투어 대상 표시 */
+  tour?: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="card p-5">
+    <div data-tour={tour} className="card p-5">
       <div className="mb-3 flex items-start gap-2.5">
         <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
           {n}
@@ -400,7 +413,7 @@ export function CollectionInput() {
         </Section>
 
         {/* 3. 실제 수거 시간 · 수거량 */}
-        <Section n={3} title="실제 수거 시간 · 수거량">
+        <Section n={3} title="실제 수거 시간 · 수거량" tour="collect-form">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">실제 수거 시간</label>
@@ -453,7 +466,7 @@ export function CollectionInput() {
 
         {/* 5. 자재 동시공급 */}
         <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
-          <div className="grid grid-cols-2 gap-3">
+          <div data-tour="collect-supply" className="grid grid-cols-2 gap-3">
             {SUPPLY_KEYS.map(({ key, label }) => {
               const over = supplied[key] > stock[key]
               return (
@@ -586,6 +599,7 @@ export function CollectionInput() {
 
         {/* 완료 버튼 (48px) */}
         <button
+          data-tour="collect-save"
           className="btn-primary w-full py-5 !text-[1.15rem] disabled:opacity-50"
           style={{ minHeight: 48 }}
           onClick={submit}

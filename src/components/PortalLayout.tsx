@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
 import { PageMotion } from './motion'
+import { TourButton } from './TourEntry'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 고객 포털 레이아웃
@@ -50,6 +51,11 @@ export function PortalLayout() {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <TourButton
+              compact
+              tourId="client"
+              className="flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-[1.05rem] font-bold text-white transition hover:bg-white/20"
+            />
             <a
               href="tel:1533-8876"
               className="flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-white transition hover:bg-white/20"

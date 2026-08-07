@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
 import { StartHere } from '../components/StartHere'
+import { TourBanner } from '../components/TourEntry'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
@@ -121,6 +122,7 @@ export function TodaySchedule() {
     <div>
       <div className={flash ? 'rounded-2xl bg-teal-50/70 transition-colors duration-700' : 'transition-colors duration-700'}>
         <StartHere data={data} />
+        <TourBanner />
         <PageHeader title="오늘 일정" subtitle={`완료 ${doneCount} / 전체 ${list.length}건`} />
       </div>
 
@@ -170,7 +172,7 @@ export function TodaySchedule() {
         <EmptyState icon="🗓️" title="등록된 일정이 없어요" subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요." />
       ) : (
         <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
-          {list.map((s) => {
+          {list.map((s, si) => {
             const client = clientById(s.clientId)
             const vehicle = data.vehicles.find((v) => v.id === s.vehicleId)
             const done = s.status === '완료'
@@ -183,7 +185,10 @@ export function TodaySchedule() {
                   </div>
                 )}
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div
+                    data-tour={si === 0 ? 'today-list' : undefined}
+                    className="flex items-start justify-between gap-3"
+                  >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="tabular-nums text-lg font-extrabold text-navy-900">{s.scheduledTime}</span>
@@ -209,7 +214,11 @@ export function TodaySchedule() {
                       </p>
                       {s.memo && <p className="mt-1.5 text-[1.08rem] font-medium text-amber-600">📌 {s.memo}</p>}
                       {/* 현장 메모 — 거래처 상세에 기록해둔 특이사항을 방문 전에 함께 확인 */}
-                      {client && <NoteChips notes={notesFor(client.id)} max={2} />}
+                      {client && (
+                        <span data-tour={si === 0 ? 'today-notes' : undefined} className="block">
+                          <NoteChips notes={notesFor(client.id)} max={2} />
+                        </span>
+                      )}
                     </div>
                     <div className="shrink-0 text-right">
                       {s.actualAmount != null ? (

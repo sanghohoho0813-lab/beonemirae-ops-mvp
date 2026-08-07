@@ -26,6 +26,7 @@ import { AxSummaryCard } from '../components/AxSummary'
 import { AxStoryStrip } from '../components/AxStory'
 import { CustomerServiceCard } from '../components/CustomerService'
 import { StartHere } from '../components/StartHere'
+import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
@@ -89,6 +90,9 @@ export function Dashboard() {
         <p className="t-body mt-2.5 font-medium text-navy-400">{prettyDate(t)} · 의료폐기물 운영관리</p>
       </div>
 
+      {/* 처음 들어온 사용자에게만 보이는 안내 — 화면을 막지 않습니다 */}
+      <TourBanner />
+
       {/* ── 이 시스템이 무엇을 하는지 — 데이터가 없어도 항상 읽히는 한 줄 흐름 ── */}
       <AxStoryStrip data={data} />
 
@@ -97,7 +101,10 @@ export function Dashboard() {
 
       {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 (내부 효율) ── */}
       <section>
-        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1 · 내부 효율</span>}>
+        <SectionTitle
+          action={<span className="pill bg-teal-50 text-teal-700">핵심 1 · 내부 효율</span>}
+          hint="현장에서 수거 완료를 한 번만 입력하면 오른쪽 업무가 함께 처리됩니다. 옮겨 적을 필요가 없습니다."
+        >
           한 번 입력, 여러 업무 자동 연결
         </SectionTitle>
         <AutoLinkFlow />
@@ -105,7 +112,10 @@ export function Dashboard() {
 
       {/* ── 핵심 2 · 병원 고객 서비스 → 추가 매출 (이번 확장의 중심) ── */}
       <section>
-        <SectionTitle action={<span className="pill bg-violet-50 text-violet-700">핵심 2 · 고객 서비스</span>}>
+        <SectionTitle
+          action={<span className="pill bg-violet-50 text-violet-700">핵심 2 · 고객 서비스</span>}
+          hint="병원이 포털에서 올린 요청이 여기로 들어오고, 처리 결과와 제안이 다시 병원 화면으로 갑니다."
+        >
           병원이 직접 확인하고 요청합니다
         </SectionTitle>
         <CustomerServiceCard data={data} />
@@ -115,7 +125,10 @@ export function Dashboard() {
       {/* 두 카드가 같은 높이로 정렬되도록 섹션을 flex 컬럼으로 두고 카드가 남는 높이를 흡수 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         <section className="flex min-w-0 flex-col">
-          <SectionTitle action={<span className="pill bg-orange-50 text-orange-700">핵심 3</span>}>
+          <SectionTitle
+            action={<span className="pill bg-orange-50 text-orange-700">핵심 3</span>}
+            hint="쌓인 수거·자재 기록에서 다음에 제안할 것을 뽑습니다. 근거도 함께 보입니다."
+          >
             데이터 기반 다음 행동 추천
           </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
@@ -124,7 +137,10 @@ export function Dashboard() {
         </section>
 
         <section className="flex min-w-0 flex-col">
-          <SectionTitle action={<span className="pill bg-sky-50 text-sky-700">핵심 4</span>}>
+          <SectionTitle
+            action={<span className="pill bg-sky-50 text-sky-700">핵심 4</span>}
+            hint="병원에 매달 제공하는 운영 리포트입니다. 병원도 포털에서 같은 내용을 봅니다."
+          >
             수거를 넘어 병원 운영지원으로
           </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">

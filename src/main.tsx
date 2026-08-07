@@ -5,6 +5,7 @@ import App from './App'
 import { DataProvider } from './context/DataContext'
 import { SettingsProvider } from './context/SettingsContext'
 import { AuthProvider } from './context/AuthContext'
+import { TourProvider } from './context/TourContext'
 import './index.css'
 
 // AuthProvider 가 DataProvider 보다 바깥에 있어야, 데이터 레이어가 로그인 상태와
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <SettingsProvider>
           <DataProvider>
-            <App />
+            <TourProvider>
+              <App />
+            </TourProvider>
           </DataProvider>
         </SettingsProvider>
       </AuthProvider>

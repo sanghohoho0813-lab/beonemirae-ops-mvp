@@ -29,11 +29,14 @@ import { PortalHome } from './pages/PortalHome'
 import { PortalReport } from './pages/PortalReport'
 import { PortalHistory } from './pages/PortalHistory'
 import { RequireAuth } from './components/RequireAuth'
+import { TourOverlay } from './components/TourOverlay'
 
 export default function App() {
   return (
     <>
       <ScrollToTop />
+      {/* 제품 투어 — 어느 화면에서든 실행되고, 단계마다 필요한 화면으로 이동합니다 */}
+      <TourOverlay />
       <Routes>
         {/* 시연 전용 — Layout(사이드바/탭) 바깥의 독립 전체화면 라우트 */}
         <Route path="mobile-preview" element={<MobilePreview />} />

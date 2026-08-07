@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { TourButton } from '../components/TourEntry'
 import {
   Type,
   Building2,
@@ -152,6 +153,21 @@ export function Settings() {
           <span className="t-body font-bold">{msg.text}</span>
         </div>
       )}
+
+      {/* 사용 방법 — 언제든 다시 실행 */}
+      <section className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+          <PlayCircle size={22} strokeWidth={2.2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="t-card break-keep text-navy-900">사용 방법 다시 보기</h2>
+          <p className="t-muted mt-1 break-keep">
+            화면을 하나씩 짚어가며 "왜 필요한지 · 어떻게 쓰는지 · 무엇이 바뀌는지"를 안내합니다. 역할에 맞는
+            내용으로 보여집니다.
+          </p>
+        </div>
+        <TourButton className="btn-primary shrink-0" label="사용 방법 보기" />
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start xl:gap-5">
         {/* ── 좌: 성과측정 · 화면 표시 ── */}

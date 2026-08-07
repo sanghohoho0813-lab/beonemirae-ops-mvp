@@ -18,13 +18,30 @@ export function PageShell({ children, className = '' }: { children: ReactNode; c
   return <div className={`space-y-6 ${className}`}>{children}</div>
 }
 
-/** 섹션 제목 (+ 우측 액션) */
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+/**
+ * 섹션 제목 (+ 우측 액션 + 한 줄 설명)
+ *
+ * hint 는 "이 섹션이 왜 있는지"를 한 줄로 적는 자리입니다.
+ * 투어를 보지 않은 사람도 화면만 보고 흐름을 따라갈 수 있게 하는 용도라,
+ * 기능 이름을 반복하지 말고 목적을 씁니다.
+ */
+export function SectionTitle({
+  children,
+  action,
+  hint,
+}: {
+  children: ReactNode
+  action?: ReactNode
+  hint?: string
+}) {
   return (
-    // 좁은 폭에서 제목이 뭉개지지 않도록, 자리가 부족하면 액션이 아래 줄로 내려갑니다.
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-1">
-      <h2 className="t-section min-w-0 flex-1 text-navy-800">{children}</h2>
-      {action && <div className="shrink-0">{action}</div>}
+    <div className={`px-1 ${hint ? 'mb-3.5' : 'mb-3'}`}>
+      {/* 좁은 폭에서 제목이 뭉개지지 않도록, 자리가 부족하면 액션이 아래 줄로 내려갑니다. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+        <h2 className="t-section min-w-0 flex-1 text-navy-800">{children}</h2>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      {hint && <p className="t-muted mt-1.5 break-keep leading-snug">{hint}</p>}
     </div>
   )
 }
