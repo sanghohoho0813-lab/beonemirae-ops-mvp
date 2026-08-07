@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, ChevronLeft, HelpCircle, Lightbulb, Target, X } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft, X } from 'lucide-react'
 import { useTour } from '../context/TourContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -293,6 +293,21 @@ export function TourOverlay() {
 
   const last = index === active.steps.length - 1
 
+  /**
+   * 마지막 단계 — 투어를 닫고 끝나지 않고, 역할에 맞는 실제 행동으로 넘깁니다.
+   * emit 이 있으면 도착한 화면이 그 동작(예: 요청 작성)을 바로 시작합니다.
+   */
+  const finish = () => {
+    const f = active.finish
+    stop()
+    navigate(f.to)
+    if (f.emit) {
+      const name = f.emit
+      // 화면이 그려진 다음에 보내야 그 화면이 받을 수 있습니다.
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent(name)), 400)
+    }
+  }
+
   // 설명 박스 높이 상한 — "대상 전체 + 설명"이 세로로 함께 들어가는 높이.
   // 글자를 키운 만큼 박스가 커졌기 때문에, 대상이 큰 화면에서는 이 상한이
   // 있어야 설명이 대상을 덮지 않습니다. (넘치는 본문만 박스 안에서 스크롤됩니다)
@@ -352,11 +367,11 @@ export function TourOverlay() {
         <div className="flex shrink-0 items-center gap-2">
           <span
             data-tour-step
-            className="inline-flex shrink-0 items-center rounded-full bg-teal-500 px-3.5 py-1.5 text-[1.15rem] font-extrabold text-white"
+            className="inline-flex shrink-0 items-center rounded-full bg-teal-500 px-3.5 py-1.5 text-[1.2rem] font-extrabold text-white"
           >
             {index + 1} / {active.steps.length}
           </span>
-          <span className="min-w-0 truncate text-[1.1rem] font-bold text-navy-400">{active.label}</span>
+          <span className="min-w-0 truncate text-[1.14rem] font-bold text-navy-400">{active.label}</span>
           <button
             onClick={stop}
             title="종료"
@@ -366,12 +381,12 @@ export function TourOverlay() {
           </button>
         </div>
 
-        {/* 투어는 '사용법을 설명하는 집중 화면'이라 본문보다 확실히 크게 둡니다. */}
-        <h2 className="mt-2.5 shrink-0 break-keep text-[1.44rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[1.82rem]">
+        {/* 이 단계에서 무엇을 하는 곳인지 — 실제 화면의 섹션·버튼 이름과 같습니다 */}
+        <p className="mt-2 shrink-0 truncate text-[1.18rem] font-extrabold text-teal-600 sm:text-[1.26rem]">
           {step.title}
-        </h2>
+        </p>
 
-        {/* 왜 → 어떻게 → 결과. 기능 설명이 아니라 이해의 순서입니다.
+        {/* 지금 하면 되는 일 → 그러면 무엇이 바뀌는가. 문장은 둘뿐입니다.
             (좁은 화면에서는 이 영역만 스크롤됩니다) */}
         <div
           ref={bodyRef}
@@ -379,31 +394,20 @@ export function TourOverlay() {
             const b = e.currentTarget
             setMore(b.scrollTop + b.clientHeight < b.scrollHeight - 2)
           }}
-          className="relative mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
+          className="relative mt-0.5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
         >
-          <div className="space-y-2.5">
-          {[
-            { icon: HelpCircle, label: '왜', text: step.why, tone: 'bg-rose-50 text-rose-600' },
-            { icon: Target, label: '어떻게', text: step.how, tone: 'bg-sky-50 text-sky-600' },
-            { icon: Lightbulb, label: '결과', text: step.result, tone: 'bg-emerald-50 text-emerald-600' },
-          ].map((x) => {
-            const Icon = x.icon
-            return (
-              <div key={x.label} className="flex items-start gap-2.5">
-                <span
-                  className={`mt-0.5 hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:flex ${x.tone}`}
-                >
-                  <Icon size={17} strokeWidth={2.5} />
-                </span>
-                <p className="min-w-0 flex-1 break-keep text-[1.2rem] leading-snug text-navy-600 sm:text-[1.3rem]">
-                  <span className="font-extrabold text-navy-900">{x.label}</span>
-                  <span className="mx-1.5 text-navy-300">·</span>
-                  {x.text}
-                </p>
-              </div>
-            )
-          })}
-          </div>
+          <h2 className="break-keep text-[1.72rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[2.1rem]">
+            {step.action}
+          </h2>
+          <p className="mt-2.5 flex items-start gap-2 break-keep text-[1.28rem] leading-snug text-navy-500 sm:text-[1.42rem]">
+            <ArrowRight size={20} strokeWidth={2.6} className="mt-1 shrink-0 text-teal-500" />
+            <span className="min-w-0">{step.result}</span>
+          </p>
+          {step.why && (
+            <p className="mt-2.5 break-keep border-l-2 border-navy-100 pl-3 text-[1.05rem] leading-snug text-navy-400 sm:text-[1.12rem]">
+              {step.why}
+            </p>
+          )}
         </div>
 
         {/* 좁은 화면에서 본문이 잘릴 때만 "더 있다"는 신호를 둡니다 */}
@@ -411,35 +415,39 @@ export function TourOverlay() {
           <div className="pointer-events-none relative z-10 -mt-7 h-7 shrink-0 bg-gradient-to-t from-white to-transparent" />
         )}
 
-        <div className="mt-3.5 flex shrink-0 gap-1.5">
+        <div className="mt-3 flex shrink-0 gap-1.5">
           {active.steps.map((_, i) => (
             <span key={i} className={`h-2 flex-1 rounded-full ${i <= index ? 'bg-teal-500' : 'bg-navy-100'}`} />
           ))}
         </div>
 
-        <div className="mt-2.5 flex shrink-0 items-center gap-2">
+        {/* 마지막 단계의 CTA 는 문장이 길어지므로, 좁은 화면에서는 한 줄을 통째로 씁니다 */}
+        <div className="mt-2 flex shrink-0 flex-wrap items-center gap-2">
           <button
             onClick={stop}
-            className="shrink-0 rounded-xl px-2 py-2.5 text-[1.15rem] font-bold text-navy-400 transition hover:text-navy-700"
+            className="shrink-0 rounded-xl px-2 py-2.5 text-[1.2rem] font-bold text-navy-400 transition hover:text-navy-700"
           >
             건너뛰기
           </button>
-          <div className="ml-auto flex shrink-0 gap-2">
+          <div className={`ml-auto flex gap-2 ${last ? 'w-full sm:w-auto' : 'shrink-0'}`}>
             {index > 0 && (
               <button
                 onClick={prev}
-                className="inline-flex items-center gap-1.5 rounded-2xl bg-navy-50 px-4 py-2.5 text-[1.2rem] font-extrabold text-navy-600 transition hover:bg-navy-100"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-navy-50 px-4 py-3 text-[1.26rem] font-extrabold text-navy-600 transition hover:bg-navy-100"
               >
                 <ChevronLeft size={19} strokeWidth={2.5} /> 이전
               </button>
             )}
             <button
-              onClick={next}
-              className="inline-flex items-center gap-1.5 rounded-2xl bg-teal-500 px-5 py-2.5 text-[1.2rem] font-extrabold text-white shadow-sm transition hover:bg-teal-600"
+              onClick={last ? finish : next}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-2xl bg-teal-500 px-5 py-3 text-[1.26rem] font-extrabold text-white shadow-sm transition hover:bg-teal-600 ${
+                last ? 'min-w-0 flex-1 sm:flex-none' : ''
+              }`}
             >
               {last ? (
                 <>
-                  <Check size={19} strokeWidth={2.6} /> 이제 직접 사용해보기
+                  <Check size={19} strokeWidth={2.6} className="hidden shrink-0 sm:block" />
+                  <span className="truncate">{active.finish.label}</span>
                 </>
               ) : (
                 <>

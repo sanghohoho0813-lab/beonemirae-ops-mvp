@@ -39,14 +39,15 @@ export function PortalLayout() {
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
       {/* 상단 바 — 병원 이름이 가장 먼저 보이게 합니다 */}
       <header className="bg-navy-950">
-        <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1240px] items-center gap-x-3 gap-y-2 px-4 py-3.5 lg:gap-x-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.3rem] font-black text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white sm:h-12 sm:w-12 sm:text-[1.3rem]">
               비
             </div>
+            {/* 좁은 화면에서는 병원 이름 한 줄만 — 헤더가 길어지면 정작 눌러야 할 버튼이 아래로 밀립니다 */}
             <div className="min-w-0 leading-tight">
-              <p className="t-card break-keep text-white">{clientName || '우리 병원'} 폐기물 관리</p>
-              <p className="t-muted mt-1 break-keep text-navy-300">㈜비원미래 병원 운영지원 서비스</p>
+              <p className="t-card truncate text-white sm:break-keep">{clientName || '우리 병원'}</p>
+              <p className="t-muted mt-1 hidden break-keep text-navy-300 sm:block">㈜비원미래 병원 운영지원 서비스</p>
             </div>
           </div>
 
@@ -54,11 +55,11 @@ export function PortalLayout() {
             <TourButton
               compact
               tourId="client"
-              className="flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-[1.05rem] font-bold text-white transition hover:bg-white/20"
+              className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             />
             <a
               href="tel:1533-8876"
-              className="flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-white transition hover:bg-white/20"
+              className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             >
               <Headset size={17} strokeWidth={2.3} />
               <span className="t-btn hidden sm:inline">1533-8876</span>
@@ -69,7 +70,7 @@ export function PortalLayout() {
                 navigate('/login')
               }}
               title="로그아웃"
-              className="flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-white transition hover:bg-white/20"
+              className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             >
               <LogOut size={17} strokeWidth={2.3} />
               <span className="t-btn hidden sm:inline">{profile?.name ?? '로그아웃'}</span>
@@ -102,7 +103,9 @@ export function PortalLayout() {
       </header>
 
       <SyncBar />
-      <main className="mx-auto w-full max-w-[1240px] px-4 pb-16 pt-5 lg:px-8 lg:pt-8">
+      {/* 아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로 스크롤할 수 없어
+          사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
+      <main className="mx-auto w-full max-w-[1240px] px-4 pb-[40vh] pt-5 lg:px-8 lg:pt-8">
         <PageMotion key={pathname}>
           <Outlet />
         </PageMotion>

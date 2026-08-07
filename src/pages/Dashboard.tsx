@@ -47,7 +47,7 @@ const statusMeta: Record<CheckStatus, { icon: LucideIcon; color: string; chip: s
 
 export function Dashboard() {
   const { data } = useData()
-  const { profile } = useAuth()
+  const { profile, mode } = useAuth()
   const navigate = useNavigate()
   const t = today()
   const month = thisMonth()
@@ -94,10 +94,7 @@ export function Dashboard() {
 
       {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 (내부 효율) ── */}
       <section>
-        <SectionTitle
-          action={<span className="pill bg-teal-50 text-teal-700">핵심 1 · 내부 효율</span>}
-          hint="현장에서 수거 완료를 한 번만 입력하면 오른쪽 업무가 함께 처리됩니다. 옮겨 적을 필요가 없습니다."
-        >
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1 · 내부 효율</span>}>
           한 번 입력, 여러 업무 자동 연결
         </SectionTitle>
         <AutoLinkFlow />
@@ -105,23 +102,17 @@ export function Dashboard() {
 
       {/* ── 핵심 2 · 병원 고객 서비스 → 추가 매출 (이번 확장의 중심) ── */}
       <section>
-        <SectionTitle
-          action={<span className="pill bg-violet-50 text-violet-700">핵심 2 · 고객 서비스</span>}
-          hint="병원이 포털에서 올린 요청이 여기로 들어오고, 처리 결과와 제안이 다시 병원 화면으로 갑니다."
-        >
-          병원이 직접 확인하고 요청합니다
+        <SectionTitle action={<span className="pill bg-violet-50 text-violet-700">핵심 2 · 고객 서비스</span>}>
+          병원 요청이 추가 매출이 되기까지
         </SectionTitle>
-        <CustomerServiceCard data={data} />
+        <CustomerServiceCard data={data} demo={mode !== 'live'} />
       </section>
 
       {/* ── 핵심 3·4 · 추가 매출 기회 / 병원 운영 리포트 ── */}
       {/* 두 카드가 같은 높이로 정렬되도록 섹션을 flex 컬럼으로 두고 카드가 남는 높이를 흡수 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         <section className="flex min-w-0 flex-col">
-          <SectionTitle
-            action={<span className="pill bg-accent-50 text-accent-700">핵심 3</span>}
-            hint="쌓인 수거·자재 기록에서 다음에 제안할 것을 뽑습니다. 근거도 함께 보입니다."
-          >
+          <SectionTitle action={<span className="pill bg-accent-50 text-accent-700">핵심 3</span>}>
             데이터 기반 다음 행동 추천
           </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
@@ -130,11 +121,8 @@ export function Dashboard() {
         </section>
 
         <section className="flex min-w-0 flex-col">
-          <SectionTitle
-            action={<span className="pill bg-sky-50 text-sky-700">핵심 4</span>}
-            hint="병원에 매달 제공하는 운영 리포트입니다. 병원도 포털에서 같은 내용을 봅니다."
-          >
-            수거를 넘어 병원 운영지원으로
+          <SectionTitle action={<span className="pill bg-sky-50 text-sky-700">핵심 4</span>}>
+            병원에 매달 제공하는 운영 리포트
           </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
             <ReportHighlight reports={reports} />
