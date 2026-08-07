@@ -37,6 +37,42 @@ export type HandoverStatus = '수거 완료' | '인계 대기' | '인계 완료'
 /** 병원 요청 처리 상태 */
 export type RequestStatus = '접수' | '확인 중' | '일정 반영' | '처리 완료'
 
+// ── 병원 요청 (v7) ───────────────────────────────────────────────────────────
+// 이전에는 화면용 파생값(규칙으로 만들어 낸 예시)이었습니다.
+// v7부터는 병원 담당자가 직접 올리거나 비원미래가 대신 접수한 '실제 기록'입니다.
+//  · 병원 포털에서 등록 → 비원미래 오늘 일정·요청 화면에 즉시 표시
+//  · 수거 완료 입력 시 관련 요청이 자동으로 '처리 완료'로 닫힙니다
+//  · 회신(reply)은 병원 포털에서 그대로 보입니다
+
+/** 요청 유형 — 각 유형이 비원미래의 어떤 업무·매출로 이어지는지와 1:1 대응됩니다. */
+export type RequestKind = '긴급수거' | '추가수거' | '소모품' | '교육·자료' | '기타'
+
+export const REQUEST_KINDS: RequestKind[] = ['긴급수거', '추가수거', '소모품', '교육·자료', '기타']
+
+/** 요청 등록 주체 — 병원 포털 / 비원미래 대행 접수(전화·카톡) */
+export type RequestSource = 'portal' | 'staff'
+
+export interface ClientRequest {
+  id: string
+  clientId: string
+  clientName: string
+  kind: RequestKind
+  content: string
+  /** 희망일 (YYYY-MM-DD) — 없으면 null */
+  desiredDate: string | null
+  urgent: boolean
+  status: RequestStatus
+  source: RequestSource
+  /** 등록한 사람 이름 (병원 담당자 또는 접수한 직원) */
+  requesterName: string
+  /** 비원미래 회신 — 병원 포털에 그대로 보입니다 */
+  reply: string
+  handledBy: string | null
+  handledAt: string | null
+  createdAt: string
+  demoSessionId?: string | null
+}
+
 /** 수거 이벤트 작업 주체 (Demo — 실제 적용 시 사용자별 계정 연동 예정) */
 export type EventRole = '관리자' | '현장 담당자' | '대표자(Demo)'
 
@@ -224,6 +260,8 @@ export interface AppData {
   experiment: ExperimentConfig // 실증 기간 설정
   // ── v5: 매출 전환 실증 (추천 → 제안 → 수락 → 실제 매출) ──
   leads: SalesLead[]
+  // ── v7: 병원 고객 서비스 — 병원이 직접 올린 요청 (없으면 빈 배열) ──
+  requests: ClientRequest[]
 }
 
 // ── 매출 전환 실증 (v5) ──────────────────────────────────────────────────────
@@ -266,6 +304,16 @@ export interface SalesLead {
   createdAt: string
   /** 시연 세션 중 생성된 기록이면 세션 id (시연용 표시 + 초기화 대상 구분) */
   demoSessionId?: string | null
+  // ── v7: 병원 고객에게 실제로 전달된 제안인지 ──
+  // 이전에는 '제안'이 담당자의 자기 기록이었습니다. 이제 병원 포털로 전달되고
+  // 병원 담당자가 직접 수락/보류하므로, '수락'이 실제 고객 행동이 됩니다.
+  /** 병원 포털에 공유되었는지 */
+  sharedWithClient?: boolean
+  sharedAt?: string | null
+  /** 병원에 보여줄 제안 설명 */
+  clientMessage?: string
+  /** 병원이 응답한 시각 (수락/보류) */
+  clientRespondedAt?: string | null
 }
 
 // ── AX 실증 · 성과측정 (v4) ──────────────────────────────────────────────────

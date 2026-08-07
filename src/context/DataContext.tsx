@@ -20,6 +20,8 @@ import type {
   BaselineMetrics,
   LeadStage,
   SalesLead,
+  RequestKind,
+  RequestStatus,
 } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 import {
@@ -35,7 +37,6 @@ import { thisMonth } from '../lib/format'
 import { useAuth } from './AuthContext'
 import { friendlyError } from '../lib/supabase'
 import * as repo from '../lib/repo'
-import { clientRequests } from '../lib/ops'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전역 데이터 컨텍스트
@@ -95,6 +96,23 @@ interface DataContextValue {
   // 매출 전환 실증 (v5) — 추천 → 제안 → 수락 → 실제 매출
   setLeadStage: (action: NextAction, stage: LeadStage, month?: string) => void
   setLeadRevenue: (leadId: string, amount: number | null) => void
+  // ── v7: 병원 고객 서비스 ──
+  /** 병원 요청 등록 (병원 포털 직접 등록 / 비원미래 대행 접수) */
+  addRequest: (r: {
+    clientId: string
+    kind: RequestKind
+    content: string
+    desiredDate?: string | null
+    urgent?: boolean
+    source?: 'portal' | 'staff'
+    requesterName?: string
+  }) => void
+  /** 비원미래 담당자의 요청 처리 (상태 변경 · 병원에 보이는 회신) */
+  handleRequest: (id: string, patch: { status?: RequestStatus; reply?: string }) => void
+  /** 추천을 병원 포털로 전달 — 이후 수락은 병원이 직접 누릅니다 */
+  shareProposal: (action: NextAction, message: string, month?: string) => void
+  /** 병원 담당자의 제안 응답 (수락 / 보류) */
+  respondProposal: (leadId: string, accept: boolean) => void
   // ── v6: 실사용 전환 (Supabase) ──
   /** 'live' = 로그인 상태의 서버 DB, 'demo' = 이 브라우저에만 저장되는 시연 데이터 */
   mode: 'live' | 'demo'
@@ -415,20 +433,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const precheck = applyCollectionCompletion(data, { ...input, demoSessionId: null })
         if (!precheck.ok) return precheck
 
-        // 이 수거로 자동 종료될 병원 요청 목록 (요청은 파생 계산이므로 서버에 전달)
-        const suppliedAny =
-          input.supplied.corrugatedBox + input.supplied.plasticContainer + input.supplied.bag + input.supplied.needleBox > 0
-        const closeRequests = clientRequests(data)
-          .filter(
-            (r) =>
-              r.clientId === input.clientId &&
-              r.status !== '처리 완료' &&
-              (r.type === '긴급수거' || (r.type === '자재공급' && suppliedAny)),
-          )
-          .map((r) => ({ requestId: r.id, from: r.status }))
-
+        // 관련 병원 요청은 서버(complete_collection)가 같은 트랜잭션에서 직접 닫습니다.
         void runLive(async () => {
-          await repo.completeCollection(input, closeRequests)
+          await repo.completeCollection(input)
         })
         return { ok: true, errors: [], warnings: precheck.warnings }
       }
@@ -574,6 +581,199 @@ export function DataProvider({ children }: { children: ReactNode }) {
         leads: (d.leads ?? []).map((l) =>
           l.id === leadId
             ? { ...l, actualRevenue: amount, actualRevenueAt: amount == null ? null : new Date().toISOString() }
+            : l,
+        ),
+      }))
+    },
+    [live, runLive],
+  )
+
+  // ── 병원 요청 (병원 고객 서비스) ────────────────────────────────────────
+  // 병원 담당자가 포털에서 직접 올리거나, 전화·카톡으로 받은 것을 비원미래가
+  // 대신 접수합니다. 어느 쪽이든 같은 기록으로 남아 오늘 일정·수거 입력과 연결됩니다.
+  const addRequest = useCallback(
+    (r: {
+      clientId: string
+      kind: RequestKind
+      content: string
+      desiredDate?: string | null
+      urgent?: boolean
+      source?: 'portal' | 'staff'
+      requesterName?: string
+    }) => {
+      const payload = {
+        clientId: r.clientId,
+        kind: r.kind,
+        content: r.content.trim(),
+        desiredDate: r.desiredDate ?? null,
+        urgent: r.urgent ?? false,
+        source: r.source ?? 'portal',
+        requesterName: r.requesterName ?? '',
+      }
+      if (live) {
+        void runLive(async () => repo.insertRequest(payload))
+        return
+      }
+      const now = new Date().toISOString()
+      setData((d) => ({
+        ...d,
+        requests: [
+          {
+            ...payload,
+            id: uid('creq'),
+            clientName: d.clients.find((c) => c.id === r.clientId)?.name ?? '',
+            status: '접수' as const,
+            reply: '',
+            handledBy: null,
+            handledAt: null,
+            createdAt: now,
+            demoSessionId: d.demoSession?.active ? d.demoSession.id : null,
+          },
+          ...(d.requests ?? []),
+        ],
+      }))
+    },
+    [live, runLive],
+  )
+
+  /** 비원미래 담당자의 요청 처리 — 상태 변경 + 병원에 보이는 회신 */
+  const handleRequest = useCallback(
+    (id: string, patch: { status?: RequestStatus; reply?: string }) => {
+      if (live) {
+        const before = (data.requests ?? []).find((r) => r.id === id)
+        void runLive(async () => {
+          await repo.updateRequest(id, patch)
+          await repo.writeAudit({
+            action: 'request.handle',
+            entity: 'client_requests',
+            entityId: id,
+            clientId: before?.clientId,
+            clientName: before?.clientName,
+            screen: '병원 요청',
+            before,
+            after: patch,
+            summary: `병원 요청 처리 — ${before?.clientName ?? ''} ${before?.kind ?? ''} → ${patch.status ?? '회신'}`,
+          })
+        })
+        return
+      }
+      const at = new Date().toISOString()
+      setData((d) => ({
+        ...d,
+        requests: (d.requests ?? []).map((r) =>
+          r.id === id ? { ...r, ...patch, handledAt: patch.status ? at : r.handledAt } : r,
+        ),
+      }))
+    },
+    [live, runLive, data.requests],
+  )
+
+  /**
+   * 추천을 병원 포털로 전달합니다 — 이후 '수락'은 병원이 직접 누릅니다.
+   * 추천 자체는 파생값이라 저장되어 있지 않으므로, 전달할 때 lead 를 만들며 함께 공유합니다.
+   */
+  const shareProposal = useCallback(
+    (action: NextAction, message: string, month = thisMonth()) => {
+      const key = leadKey(action.clientId, action.kind, month)
+      const at = new Date().toISOString()
+      if (live) {
+        const existing = (data.leads ?? []).find((l) => l.key === key)
+        void runLive(async () => {
+          await repo.upsertLead({
+            key,
+            clientId: action.clientId,
+            clientName: action.clientName,
+            kind: action.kind,
+            title: action.title,
+            month,
+            estValue: action.estValue,
+            stage: '제안',
+            actualRevenue: existing?.actualRevenue ?? null,
+            actualRevenueAt: existing?.actualRevenueAt ?? null,
+            demoSessionId: null,
+            sharedWithClient: true,
+            sharedAt: at,
+            clientMessage: message,
+          })
+          await repo.writeAudit({
+            action: 'proposal.share',
+            entity: 'sales_leads',
+            clientId: action.clientId,
+            clientName: action.clientName,
+            screen: '추천',
+            summary: `병원에 제안 전달 — ${action.clientName} ${action.title}`,
+          })
+        })
+        return
+      }
+      setData((d) => {
+        const existing = (d.leads ?? []).find((l) => l.key === key)
+        if (existing) {
+          return {
+            ...d,
+            leads: d.leads.map((l) =>
+              l.key === key
+                ? {
+                    ...l,
+                    stage: '제안' as const,
+                    sharedWithClient: true,
+                    sharedAt: at,
+                    clientMessage: message,
+                    history: [...l.history, { stage: '제안' as const, at }],
+                  }
+                : l,
+            ),
+          }
+        }
+        const lead: SalesLead = {
+          id: uid('lead'),
+          key,
+          clientId: action.clientId,
+          clientName: action.clientName,
+          kind: action.kind,
+          title: action.title,
+          month,
+          estValue: action.estValue,
+          stage: '제안',
+          actualRevenue: null,
+          actualRevenueAt: null,
+          history: [
+            { stage: '추천', at },
+            { stage: '제안', at },
+          ],
+          createdAt: at,
+          demoSessionId: d.demoSession?.active ? d.demoSession.id : null,
+          sharedWithClient: true,
+          sharedAt: at,
+          clientMessage: message,
+        }
+        return { ...d, leads: [...(d.leads ?? []), lead] }
+      })
+    },
+    [live, runLive, data.leads],
+  )
+
+  /** 병원 담당자의 제안 응답 — 수락/보류 (실제 고객 행동) */
+  const respondProposal = useCallback(
+    (leadId: string, accept: boolean) => {
+      const stage = accept ? ('수락' as const) : ('보류' as const)
+      if (live) {
+        void runLive(async () => repo.respondToProposal(leadId, accept))
+        return
+      }
+      const at = new Date().toISOString()
+      setData((d) => ({
+        ...d,
+        leads: (d.leads ?? []).map((l) =>
+          l.id === leadId
+            ? {
+                ...l,
+                stage,
+                clientRespondedAt: at,
+                actualRevenue: accept ? l.actualRevenue : null,
+                actualRevenueAt: accept ? l.actualRevenueAt : null,
+                history: [...l.history, { stage, at }],
+              }
             : l,
         ),
       }))
@@ -813,6 +1013,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setExperimentStart,
       setLeadStage,
       setLeadRevenue,
+      addRequest,
+      handleRequest,
+      shareProposal,
+      respondProposal,
       mode,
       sync: { loading, saving, error: syncError, lastSavedAt },
       reload,
@@ -855,6 +1059,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setExperimentStart,
       setLeadStage,
       setLeadRevenue,
+      addRequest,
+      handleRequest,
+      shareProposal,
+      respondProposal,
       mode,
       loading,
       saving,

@@ -1,6 +1,7 @@
 import type {
   AppData,
   Client,
+  ClientRequest,
   CollectionEvent,
   MaterialSupply,
   OfficeStock,
@@ -147,6 +148,24 @@ const toEvent = (r: Row): CollectionEvent => ({
   inputDurationMs: r.input_duration_ms ?? null,
 })
 
+const toRequest = (r: Row): ClientRequest => ({
+  id: r.id,
+  clientId: r.client_id,
+  clientName: r.clients?.name ?? '',
+  kind: r.kind,
+  content: r.content ?? '',
+  desiredDate: r.desired_date ?? null,
+  urgent: !!r.urgent,
+  status: r.status,
+  source: r.source ?? 'portal',
+  requesterName: r.requester_name ?? '',
+  reply: r.reply ?? '',
+  handledBy: r.handled_by ?? null,
+  handledAt: r.handled_at ?? null,
+  createdAt: r.created_at,
+  demoSessionId: r.demo_session_id ?? null,
+})
+
 const toLead = (r: Row): SalesLead => ({
   id: r.id,
   key: r.key,
@@ -162,6 +181,10 @@ const toLead = (r: Row): SalesLead => ({
   history: (r.sales_lead_events ?? []).map((h: Row) => ({ stage: h.stage, at: h.at })),
   createdAt: r.created_at,
   demoSessionId: r.demo_session_id ?? null,
+  sharedWithClient: !!r.shared_with_client,
+  sharedAt: r.shared_at ?? null,
+  clientMessage: r.client_message ?? '',
+  clientRespondedAt: r.client_responded_at ?? null,
 })
 
 const toStock = (r: Row | null): OfficeStock =>
@@ -194,7 +217,7 @@ export async function loadAppData(): Promise<AppData> {
     }
   }
 
-  const [clients, vehicles, schedules, materials, notes, events, stock, overrides] = await Promise.all([
+  const [clients, vehicles, schedules, materials, notes, events, stock, overrides, requests] = await Promise.all([
     withRetry(async () => unwrap<Row[]>(await sb.from('clients').select('*').eq('active', true))),
     withRetry(async () => unwrap<Row[]>(await sb.from('vehicles').select('*').eq('active', true))),
     withRetry(async () => unwrap<Row[]>(await sb.from('schedules').select('*'))),
@@ -205,6 +228,14 @@ export async function loadAppData(): Promise<AppData> {
     ),
     withRetry(async () => unwrapOne(await sb.from('office_stock').select('*').eq('id', 1).maybeSingle())),
     withRetry(async () => unwrap<Row[]>(await sb.from('request_overrides').select('*'))),
+    withRetry(async () =>
+      unwrap<Row[]>(
+        await sb
+          .from('client_requests')
+          .select('*, clients(name)')
+          .order('created_at', { ascending: false }),
+      ),
+    ),
   ])
 
   const payments = await soft(
@@ -241,6 +272,7 @@ export async function loadAppData(): Promise<AppData> {
       }),
     ),
     notes: notes.map(toNote),
+    requests: requests.map(toRequest),
     baseline: baselineRow
       ? {
           adminMinutesPerCollection: baselineRow.admin_minutes_per_collection,
@@ -439,9 +471,63 @@ export async function updatePayment(id: string, patch: Partial<Payment>): Promis
   )
 }
 
+// ── 병원 요청 ────────────────────────────────────────────────────────────────
+// 병원 담당자가 포털에서 직접 등록하거나(source='portal'),
+// 전화·카톡으로 받은 것을 비원미래가 대신 접수합니다(source='staff').
+export async function insertRequest(r: {
+  clientId: string
+  kind: ClientRequest['kind']
+  content: string
+  desiredDate: string | null
+  urgent: boolean
+  source: ClientRequest['source']
+  requesterName: string
+}): Promise<void> {
+  const sb = need()
+  unwrap(
+    await sb
+      .from('client_requests')
+      .insert({
+        client_id: r.clientId,
+        kind: r.kind,
+        content: r.content,
+        desired_date: r.desiredDate,
+        urgent: r.urgent,
+        source: r.source,
+        requester_name: r.requesterName,
+        status: '접수',
+      })
+      .select(),
+  )
+}
+
+/** 비원미래 담당자의 요청 처리 — 상태 변경 + 회신 */
+export async function updateRequest(
+  id: string,
+  patch: { status?: ClientRequest['status']; reply?: string },
+): Promise<void> {
+  const sb = need()
+  const row: Record<string, unknown> = {}
+  if (patch.status !== undefined) {
+    row.status = patch.status
+    row.handled_at = new Date().toISOString()
+  }
+  if (patch.reply !== undefined) row.reply = patch.reply
+  if (Object.keys(row).length === 0) return
+  unwrap(await sb.from('client_requests').update(row).eq('id', id).select())
+}
+
 // ── 매출 전환 ────────────────────────────────────────────────────────────────
 export async function upsertLead(lead: Omit<SalesLead, 'id' | 'history' | 'createdAt'>): Promise<void> {
   const sb = need()
+  const share =
+    lead.sharedWithClient
+      ? {
+          shared_with_client: true,
+          shared_at: lead.sharedAt ?? new Date().toISOString(),
+          client_message: lead.clientMessage ?? '',
+        }
+      : {}
   const rows = unwrap<Row[]>(
     await sb
       .from('sales_leads')
@@ -457,12 +543,20 @@ export async function upsertLead(lead: Omit<SalesLead, 'id' | 'history' | 'creat
           stage: lead.stage,
           actual_revenue: lead.actualRevenue,
           actual_revenue_at: lead.actualRevenueAt,
+          ...share,
         },
         { onConflict: 'key' },
       )
       .select(),
   )
   if (rows[0]) unwrap(await sb.from('sales_lead_events').insert({ lead_id: rows[0].id, stage: lead.stage }).select())
+}
+
+/** 병원 담당자의 제안 응답 (수락 / 보류) — 서버 함수가 권한을 다시 검사합니다. */
+export async function respondToProposal(leadId: string, accept: boolean): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('respond_to_proposal', { p_lead_id: leadId, p_accept: accept })
+  if (error) throw new Error(error.message)
 }
 
 export async function setLeadRevenue(leadId: string, amount: number | null): Promise<void> {
@@ -496,13 +590,11 @@ export interface CompleteResult {
 
 /**
  * 서버 함수 complete_collection 을 호출합니다.
- * 일정·수거이력·자재·재고·요청·감사기록이 한 트랜잭션에서 처리되므로
+ * 일정·수거이력·자재·재고·병원 요청·감사기록이 한 트랜잭션에서 처리되므로
  * "일부만 저장된 상태"가 생기지 않습니다.
+ * 관련 병원 요청은 서버가 직접 찾아 닫습니다(프론트가 대상 목록을 만들지 않습니다).
  */
-export async function completeCollection(
-  input: CollectionCompletionInput,
-  closeRequests: { requestId: string; from: string }[],
-): Promise<CompleteResult> {
+export async function completeCollection(input: CollectionCompletionInput): Promise<CompleteResult> {
   const sb = need()
   const { data, error } = await sb.rpc('complete_collection', {
     p: {
@@ -521,7 +613,6 @@ export async function completeCollection(
       screen: input.screen,
       inputDurationMs: input.inputDurationMs ?? null,
       demoSessionId: null, // 실제 운영 모드에서는 시연 태깅을 하지 않습니다.
-      closeRequests,
     },
   })
   if (error) throw new Error(error.message)
@@ -612,14 +703,19 @@ export interface ProfileRow {
   id: string
   email: string
   name: string
-  role: 'admin' | 'office' | 'field'
+  role: 'admin' | 'office' | 'field' | 'client'
   active: boolean
   createdAt: string
+  /** 병원 계정이면 소속 거래처 id */
+  clientId: string | null
+  clientName: string
 }
 
 export async function loadProfiles(): Promise<ProfileRow[]> {
   const sb = need()
-  const rows = unwrap<Row[]>(await sb.from('profiles').select('*').order('created_at'))
+  const rows = unwrap<Row[]>(
+    await sb.from('profiles').select('*, clients(name)').order('created_at'),
+  )
   return rows.map((r) => ({
     id: r.id,
     email: r.email,
@@ -627,6 +723,8 @@ export async function loadProfiles(): Promise<ProfileRow[]> {
     role: r.role,
     active: !!r.active,
     createdAt: r.created_at,
+    clientId: r.client_id ?? null,
+    clientName: r.clients?.name ?? '',
   }))
 }
 

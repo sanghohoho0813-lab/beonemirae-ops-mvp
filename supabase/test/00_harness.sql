@@ -24,14 +24,26 @@ create table if not exists auth.users (
 );
 
 -- Supabase 와 동일하게 JWT 클레임의 sub 를 현재 사용자 id 로 사용합니다.
+--
+--  ※ 실제 Supabase 구현을 그대로 옮겼습니다. 특히 jsonb 로 캐스팅하기 전에
+--    nullif(..., '') 로 빈 문자열을 먼저 걸러야 합니다. 이 가드가 없으면
+--    로그아웃 상태(클레임='')에서 ''::jsonb 파싱 오류가 나서, RLS 가 제대로
+--    막고 있는지와 무관하게 테스트가 깨집니다. (하네스 전용 문제)
 create or replace function auth.uid()
 returns uuid language sql stable as $$
-  select nullif(current_setting('request.jwt.claims', true)::jsonb->>'sub', '')::uuid
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
+  )::uuid
 $$;
 
 create or replace function auth.role()
 returns text language sql stable as $$
-  select coalesce(current_setting('request.jwt.claims', true)::jsonb->>'role', 'anon')
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.role', true), ''),
+    (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'),
+    'anon'
+  )
 $$;
 
 -- PostgREST 가 사용하는 롤들

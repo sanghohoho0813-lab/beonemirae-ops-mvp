@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, Gauge, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -16,6 +16,7 @@ import { Tappable } from './motion'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOBILE_SHORTCUTS: { to: string; label: string; icon: LucideIcon; desc: string }[] = [
+  { to: '/requests', label: '병원 요청', icon: Inbox, desc: '병원이 올린 요청 처리·회신' },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원별 월간 운영 리포트' },
   { to: '/stats', label: '통계', icon: PieChart, desc: '수거량·거래처·차량 실적' },
   { to: '/materials', label: '자재 관리', icon: Boxes, desc: '박스·비닐·바늘통 공급 내역' },
@@ -27,12 +28,11 @@ const MOBILE_SHORTCUTS: { to: string; label: string; icon: LucideIcon; desc: str
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 */
 const PLANNED_FEATURES = [
   'AI 배차·경로 고도화',
-  '병원 요청 포털',
-  '소모품 주문',
-  '배출자 교육 관리',
-  '자동 문서 발송',
+  '소모품 주문·결제',
+  '배출자 교육 이력 관리',
+  '리포트 자동 발송(PDF·메일)',
   '올바로 API 연동',
-  '실시간 다중 사용자',
+  '병원 다중 담당자 계정',
   'SaaS 서비스 확장',
 ]
 

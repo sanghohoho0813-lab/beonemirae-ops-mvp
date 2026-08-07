@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
@@ -10,6 +10,7 @@ import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
 import { schedulesOn } from '../lib/selectors'
+import { openRequests } from '../lib/ops'
 import { EMPTY_SUPPLIED } from '../lib/collection'
 import { prettyDate, today, weight } from '../lib/format'
 import type { ContainerBreakdown, Schedule, WasteType } from '../types'
@@ -114,6 +115,7 @@ export function TodaySchedule() {
   }
 
   const doneCount = list.filter((s) => s.status === '완료').length
+  const pendingRequests = openRequests(data)
 
   return (
     <div>
@@ -121,6 +123,24 @@ export function TodaySchedule() {
         <StartHere data={data} />
         <PageHeader title="오늘 일정" subtitle={`완료 ${doneCount} / 전체 ${list.length}건`} />
       </div>
+
+      {/* 병원에서 올라온 요청 — 오늘 방문 전에 확인해야 하는 것 */}
+      {pendingRequests.length > 0 && (
+        <button
+          onClick={() => navigate('/requests')}
+          className="card mb-4 flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 text-left transition hover:bg-navy-50"
+        >
+          <Inbox size={19} className="shrink-0 text-teal-600" strokeWidth={2.4} />
+          <span className="t-body min-w-0 break-keep font-extrabold text-navy-900">
+            병원 요청 {pendingRequests.length}건 처리 대기
+          </span>
+          {pendingRequests.some((r) => r.urgent) && <span className="pill bg-rose-50 text-rose-600">긴급 포함</span>}
+          <span className="t-muted min-w-0 flex-1 break-keep">
+            {pendingRequests[0].clientName} · {pendingRequests[0].type}
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-navy-300" />
+        </button>
+      )}
 
       {/* 날짜 네비게이션 */}
       <div className="card mb-4 flex items-center justify-between p-2">

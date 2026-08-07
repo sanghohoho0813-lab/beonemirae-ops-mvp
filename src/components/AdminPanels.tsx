@@ -21,6 +21,8 @@ import { friendlyError } from '../lib/supabase'
 //  "누가 어떤 역할인지"와 "기존 브라우저 데이터를 서버로 올리기"만 제공합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// 화면에서 바꿀 수 있는 역할은 내부 직원 역할뿐입니다.
+// 병원 계정(client)은 소속 거래처가 반드시 있어야 해서 초대 시 지정합니다.
 const ROLES: UserRole[] = ['admin', 'office', 'field']
 
 /** 사용자 계정 현황 + 역할 변경 */
@@ -90,6 +92,11 @@ export function UserManagementCard() {
               <p className="t-muted break-keep">{r.email}</p>
             </div>
 
+            {r.role === 'client' ? (
+              <span className="pill shrink-0 bg-sky-50 text-sky-700">
+                병원 계정 · {r.clientName || '소속 미지정'}
+              </span>
+            ) : (
             <div className="flex flex-wrap gap-1">
               {ROLES.map((role) => (
                 <button
@@ -105,6 +112,7 @@ export function UserManagementCard() {
                 </button>
               ))}
             </div>
+            )}
 
             <button
               disabled={busy || r.id === profile?.id}
@@ -125,7 +133,9 @@ export function UserManagementCard() {
       <p className="t-muted break-keep">
         계정 생성은 Supabase 대시보드(Authentication → Users)에서 초대하거나 직접 추가합니다. 공개 가입은
         제공하지 않으며, 비밀번호는 이 시스템에 저장되지 않습니다. 본인 계정의 역할·활성 상태는 실수를 막기 위해
-        스스로 바꿀 수 없습니다.
+        스스로 바꿀 수 없습니다. 병원 담당자 계정은 초대할 때 User Metadata 에
+        {'{'} "role": "client", "client_id": "거래처 id" {'}'} 를 함께 넣어야 만들어집니다 — 소속 병원이 없는
+        병원 계정은 생성되지 않습니다.
       </p>
     </div>
   )

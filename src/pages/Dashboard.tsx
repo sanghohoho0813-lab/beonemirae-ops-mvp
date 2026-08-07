@@ -24,6 +24,7 @@ import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
 import { AxSummaryCard } from '../components/AxSummary'
 import { AxStoryStrip } from '../components/AxStory'
+import { CustomerServiceCard } from '../components/CustomerService'
 import { StartHere } from '../components/StartHere'
 import { useAuth } from '../context/AuthContext'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
@@ -36,6 +37,7 @@ import { prettyDate, today, weight, wonShort, thisMonth } from '../lib/format'
 //  1) 한 번 입력, 여러 업무 자동 연결
 //  2) 이번 달 추가 매출 기회 (데이터 기반 추천)
 //  3) 병원 운영 리포트
+//  4) 병원 고객이 직접 쓰는 서비스 (요청 → 처리 → 제안 → 수락)
 //  그 외 운영 항목은 우선순위를 낮춰 하단에 배치합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -122,6 +124,14 @@ export function Dashboard() {
           </div>
         </section>
       </div>
+
+      {/* ── 핵심 4 · 병원 고객이 직접 쓰는 서비스 (이번 확장의 중심) ── */}
+      <section>
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 4</span>}>
+          병원이 직접 확인하고 요청합니다
+        </SectionTitle>
+        <CustomerServiceCard data={data} />
+      </section>
 
       {/* ── 오늘 운영 현황 (핵심 3기능 다음) ── */}
       <div className="flex items-center gap-3 pt-1">

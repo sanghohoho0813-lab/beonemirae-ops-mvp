@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Phone,
@@ -452,14 +452,22 @@ export function ClientDetail() {
                     <span className="ml-auto text-[0.98rem] text-navy-400">{r.when}</span>
                   </div>
                   <p className="mt-1.5 text-[1.08rem] leading-snug text-navy-700">{r.content}</p>
-                  <p className="mt-1 text-[0.98rem] text-navy-400">담당 {profile.roleManager} 접수 · 전화·카카오 기록</p>
+                  <p className="mt-1 text-[0.98rem] text-navy-400">
+                    {r.source === 'portal' ? '병원 담당자 직접 등록' : '전화·카톡 접수'}
+                    {r.requesterName && ` · ${r.requesterName}`}
+                  </p>
+                  {r.reply && (
+                    <p className="mt-1.5 rounded-xl bg-teal-50/70 px-3 py-2 text-[1.02rem] leading-snug text-teal-800">
+                      회신: {r.reply}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
           )}
-          <p className="px-1 text-[0.98rem] leading-snug text-navy-400">
-            현재는 관리자·이사가 전화·카톡 요청을 기록하는 MVP이며, 병원 담당자 직접 요청 기능은 향후 고도화 예정입니다.
-          </p>
+          <Link to="/requests" className="btn-ghost inline-flex">
+            병원 요청 화면에서 처리하기
+          </Link>
         </div>
       )}
 

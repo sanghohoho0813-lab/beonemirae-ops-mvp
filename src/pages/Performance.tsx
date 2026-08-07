@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle } from '../components/ui'
+import { RevenueModelCard } from '../components/RevenueModel'
 import { PageHeader } from '../components/PageHeader'
 import {
   AUTO_LINK_LABEL,
@@ -40,6 +41,7 @@ import { today } from '../lib/format'
 //    A. 업무 효율 — 행정업무 시간 / 반복 입력 / 누락·재확인
 //    B. 자동화   — 수거 입력 → 자동 처리 건수
 //    C. 매출 확장 — 추천 → 제안 → 수락 → 실제 매출
+//    D. 사업 확장 — 거래처당 매출 구조 (구현됨 / 실증 중 / 개발 예정 구분)
 //
 //  원칙: 근거가 없으면 숫자를 만들지 않고 '측정 중 / 기준값 입력 필요'로 둡니다.
 //        긴 측정 근거는 접기 영역으로 보내 숫자가 먼저 보이게 합니다.
@@ -438,6 +440,14 @@ export function Performance() {
           C. 매출 확장 — 추천 → 제안 → 수락 → 실제 매출
         </SectionTitle>
         <SalesFunnelPanel data={data} />
+      </section>
+
+      {/* ── D. 사업 확장 ── */}
+      <section id="model">
+        <SectionTitle action={<span className="pill bg-navy-100 text-navy-500">구현 상태 구분</span>}>
+          D. 사업 확장 — 거래처당 매출 구조
+        </SectionTitle>
+        <RevenueModelCard data={data} />
       </section>
 
       {/* ── 심사용 요약 ── */}

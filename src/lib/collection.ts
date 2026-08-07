@@ -6,12 +6,11 @@ import type {
   HandoverStatus,
   MaterialSupply,
   OfficeStock,
-  RequestOverride,
   Schedule,
   ScheduleStatus,
   WasteType,
 } from '../types'
-import { clientRequests } from './ops'
+import { requestsClosedByCollection } from './ops'
 import { today } from './format'
 import { uid } from './storage'
 
@@ -225,20 +224,26 @@ export function applyCollectionCompletion(data: AppData, input: CollectionComple
     needleBox: data.officeStock.needleBox - input.supplied.needleBox,
   }
 
-  // 4) 관련 병원 요청 자동 처리 (긴급수거 = 완료로, 자재공급 = 동시공급 시 완료로)
-  //    인증·실사 자료 / 수거대장 요청 등 '자료 요청'은 자동 종료하지 않음.
-  const requestUpdates: CollectionEvent['requestUpdates'] = []
-  const requestOverrides: RequestOverride[] = [...data.requestOverrides]
-  for (const r of clientRequests(data)) {
-    if (r.clientId !== input.clientId || r.status === '처리 완료') continue
-    const closes = r.type === '긴급수거' || (r.type === '자재공급' && suppliedAny)
-    if (!closes) continue
-    requestUpdates.push({ requestId: r.id, from: r.status, to: '처리 완료' })
-    const ov: RequestOverride = { requestId: r.id, status: '처리 완료', changedAt: nowIso, by: '수거 완료 자동 반영' }
-    const idx = requestOverrides.findIndex((o) => o.requestId === r.id)
-    if (idx >= 0) requestOverrides[idx] = ov
-    else requestOverrides.push(ov)
-  }
+  // 4) 관련 병원 요청 자동 처리
+  //    병원이 올린 수거요청은 수거하면 닫히고, 소모품 요청은 자재를 함께 공급했을 때 닫힙니다.
+  //    교육·자료 요청은 별도 처리가 필요하므로 자동 종료하지 않습니다.
+  const closing = requestsClosedByCollection(data, input.clientId, suppliedAny)
+  const requestUpdates: CollectionEvent['requestUpdates'] = closing.map((r) => ({
+    requestId: r.id,
+    from: r.status,
+    to: '처리 완료' as const,
+  }))
+  const closingIds = new Set(closing.map((r) => r.id))
+  const requests = (data.requests ?? []).map((r) =>
+    closingIds.has(r.id)
+      ? {
+          ...r,
+          status: '처리 완료' as const,
+          handledAt: nowIso,
+          reply: r.reply || '수거 완료로 처리되었습니다.',
+        }
+      : r,
+  )
 
   // 5) 이벤트(감사기록 + 되돌리기 원장)
   const event: CollectionEvent = {
@@ -270,7 +275,7 @@ export function applyCollectionCompletion(data: AppData, input: CollectionComple
     materials,
     officeStock,
     events: [event, ...data.events],
-    requestOverrides,
+    requests,
   }
 
   return { ok: true, data: nextData, event, errors: [], warnings }
@@ -315,13 +320,23 @@ export function rollbackCollectionCompletion(data: AppData, eventId: string): Co
   const materials = data.materials.filter((m) => !event.materialIds.includes(m.id))
   const officeStock: OfficeStock = { ...event.stockBefore }
 
-  // 4) 요청 오버라이드 원복 (이 이벤트가 바꾼 것만 제거)
-  const revertedReqIds = new Set(event.requestUpdates.map((u) => u.requestId))
-  const requestOverrides = data.requestOverrides.filter((o) => !revertedReqIds.has(o.requestId))
+  // 4) 자동으로 닫혔던 병원 요청을 다시 열어 둡니다 (요청이 사라지지 않도록)
+  const reopened = new Set(event.requestUpdates.map((u) => u.requestId))
+  const requests = (data.requests ?? []).map((r) =>
+    reopened.has(r.id)
+      ? {
+          ...r,
+          status: '접수' as const,
+          handledAt: null,
+          handledBy: null,
+          reply: r.reply === '수거 완료로 처리되었습니다.' ? '' : r.reply,
+        }
+      : r,
+  )
 
   // 5) 이벤트는 유지하되 취소 표시
   const events = data.events.map((e) => (e.id === eventId ? { ...e, reverted: true, revertedAt: nowIso } : e))
 
-  const nextData: AppData = { ...data, schedules, materials, officeStock, events, requestOverrides }
+  const nextData: AppData = { ...data, schedules, materials, officeStock, events, requests }
   return { ok: true, data: nextData, errors: [], warnings: [] }
 }

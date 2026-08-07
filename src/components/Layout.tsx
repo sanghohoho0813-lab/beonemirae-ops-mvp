@@ -24,6 +24,7 @@ import {
   SlidersHorizontal,
   ScrollText,
   Gauge,
+  Inbox,
   LogOut,
   type LucideIcon,
 } from 'lucide-react'
@@ -51,12 +52,17 @@ interface NavItem {
   icon: LucideIcon
 }
 
-/** 핵심 운영 — 매일 쓰는 화면 + 심사에서 보여줄 성과 화면 */
+/** 핵심 운영 — 매일 쓰는 화면 */
 const CORE_NAV: NavItem[] = [
   { to: '/', label: '대시보드', icon: LayoutGrid },
   { to: '/today', label: '오늘 일정', icon: CalendarClock },
-  { to: '/clients', label: '거래처', icon: Building2 },
   { to: '/collection', label: '수거 입력', icon: PlusCircle },
+  { to: '/clients', label: '거래처', icon: Building2 },
+]
+
+/** 병원 서비스 — 이번 확장의 중심. 병원에 무엇을 제공하고 무엇을 받았는지 */
+const SERVICE_NAV: NavItem[] = [
+  { to: '/requests', label: '병원 요청', icon: Inbox },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart },
   { to: '/performance', label: 'AX 도입 성과', icon: Gauge },
 ]
@@ -80,12 +86,11 @@ const ADMIN_NAV: NavItem[] = [
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 (클릭 시 활용 계획으로 안내) */
 const PLANNED: string[] = [
   'AI 배차·경로 고도화',
-  '병원 요청 포털',
-  '소모품 주문',
-  '배출자 교육 관리',
-  '자동 문서 발송',
+  '소모품 주문·결제',
+  '배출자 교육 이력 관리',
+  '리포트 자동 발송(PDF·메일)',
   '올바로 API 연동',
-  '실시간 다중 사용자',
+  '병원 다중 담당자 계정',
   'SaaS 서비스 확장',
 ]
 
@@ -100,7 +105,7 @@ const BOTTOM_NAV: NavItem[] = [
 const MORE_PATHS = [
   '/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
   '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
-  '/audit',
+  '/audit', '/requests',
 ]
 
 /**
@@ -143,6 +148,7 @@ function Sidebar() {
   const [plannedOpen, setPlannedOpen] = useState(false)
   const { configured, profile, signOut } = useAuth()
   const coreNav = useVisibleNav(CORE_NAV)
+  const serviceNav = useVisibleNav(SERVICE_NAV)
   const toolNav = useVisibleNav(TOOL_NAV)
   const adminNav = !configured || profile?.role === 'admin' ? ADMIN_NAV : []
 
@@ -172,6 +178,19 @@ function Sidebar() {
             <SidebarLink key={item.to} item={item} />
           ))}
         </div>
+
+        {serviceNav.length > 0 && (
+          <>
+            <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-teal-300">
+              병원 서비스 · 성과
+            </p>
+            <div className="space-y-0.5">
+              {serviceNav.map((item) => (
+                <SidebarLink key={item.to} item={item} />
+              ))}
+            </div>
+          </>
+        )}
 
         <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">
           운영 도구 · 추가 고도화 예정

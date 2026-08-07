@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Loader2, ShieldAlert } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
           <ShieldAlert size={40} className="mx-auto text-navy-300" />
           <p className="t-card mt-4 break-keep text-navy-900">접근 권한이 없는 화면입니다</p>
           <p className="t-body mt-2 break-keep font-medium text-navy-500">
-            현재 역할({profile.role === 'field' ? '현장 담당자' : '사무실 담당자'})에게 허용되지 않은 메뉴입니다.
+            현재 역할({ROLE_LABEL[profile.role]})에게 허용되지 않은 메뉴입니다.
           </p>
           <a href={landingPath(role)} className="btn-navy mt-5 inline-flex">
             내 업무 화면으로 이동

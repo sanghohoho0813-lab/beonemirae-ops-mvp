@@ -8,6 +8,9 @@ import type {
   Schedule,
   SiteNote,
   NoteKind,
+  ClientRequest,
+  RequestKind,
+  RequestStatus,
   StorageSize,
   Vehicle,
   WasteType,
@@ -355,6 +358,64 @@ function buildNotes(clients: Client[], today: Date): SiteNote[] {
   })
 }
 
+// ── 병원 요청 시드 (시연용) ──────────────────────────────────────────────────
+// 실제 운영에서는 병원 담당자가 포털에서 직접 올리거나 비원미래가 대신 접수합니다.
+// 시연 모드에서만 "병원에서 이런 요청이 들어온다"를 보여주기 위해 미리 채웁니다.
+function buildRequests(clients: Client[], today: Date): ClientRequest[] {
+  if (clients.length === 0) return []
+  const defs: {
+    kind: RequestKind
+    content: string
+    urgent: boolean
+    status: RequestStatus
+    source: 'portal' | 'staff'
+    hourAgo: number
+    requester: string
+  }[] = [
+    {
+      kind: '긴급수거',
+      content: '격리환자 발생으로 배출량이 늘었습니다. 보관기한 전에 추가 수거 부탁드립니다.',
+      urgent: true, status: '일정 반영', source: 'portal', hourAgo: 3, requester: '감염관리팀 김주현',
+    },
+    {
+      kind: '소모품',
+      content: '합성수지 전용용기가 거의 소진되었습니다. 다음 수거 때 함께 부탁드립니다.',
+      urgent: false, status: '접수', source: 'portal', hourAgo: 8, requester: '원무과 이지현',
+    },
+    {
+      kind: '교육·자료',
+      content: '병원 정기인증 대비 최근 3개월 수거대장이 필요합니다.',
+      urgent: false, status: '확인 중', source: 'portal', hourAgo: 26, requester: '시설관리 박성우',
+    },
+    {
+      kind: '추가수거',
+      content: '(전화 접수) 병동 리모델링으로 이번 주 배출량 증가 예상',
+      urgent: false, status: '접수', source: 'staff', hourAgo: 30, requester: '사무실 접수',
+    },
+  ]
+  return defs.map((d, i) => {
+    const at = new Date(today.getTime() - d.hourAgo * 3600 * 1000)
+    const client = clients[(i * 2) % clients.length]
+    return {
+      id: `creq${i + 1}`,
+      clientId: client.id,
+      clientName: client.name,
+      kind: d.kind,
+      content: d.content,
+      desiredDate: null,
+      urgent: d.urgent,
+      status: d.status,
+      source: d.source,
+      requesterName: d.requester,
+      reply: d.status === '확인 중' ? '자료 확인 후 담당자가 이메일로 보내드리겠습니다.' : '',
+      handledBy: null,
+      handledAt: null,
+      createdAt: at.toISOString(),
+      demoSessionId: null,
+    }
+  })
+}
+
 // ── 전체 시드 빌더 (demoCount: 0/10/20/30) ──────────────────────────────────
 export function buildSeedData(demoCount = 0, today = new Date()): AppData {
   const base = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -369,6 +430,8 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
     events: [],
     requestOverrides: [],
     notes: buildNotes(clients, base),
+    // v7: 병원 요청 — 시연 모드에서 '병원이 직접 올린 요청'을 보여주기 위한 예시
+    requests: buildRequests(clients, today),
     // v4: 성과측정 — 기준값은 사용자가 직접 입력해야 하므로 비워 둡니다(임의 생성 금지).
     baseline: { ...EMPTY_BASELINE },
     experiment: { ...EMPTY_EXPERIMENT },
@@ -393,6 +456,7 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
     events: [],
     requestOverrides: [],
     notes: [],
+    requests: [],
     baseline: { ...EMPTY_BASELINE },
     experiment: { ...EMPTY_EXPERIMENT },
     // v5: 매출 전환 — 영업 진행상태는 사용자가 기록해야 생깁니다(임의 생성 금지).

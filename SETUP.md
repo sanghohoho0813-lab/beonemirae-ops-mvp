@@ -46,8 +46,13 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 2 | `supabase/migrations/0002_rls.sql` | Row Level Security 정책 |
 | 3 | `supabase/migrations/0003_functions.sql` | 수거 완료 트랜잭션 · 취소 · 시연 초기화 |
 | 4 | `supabase/migrations/0004_grants.sql` | PostgREST 롤 권한 |
+| 5 | `supabase/migrations/0005_client_role.sql` | 병원 고객 역할(`client`) 추가 |
+| 6 | `supabase/migrations/0006_portal.sql` | 병원 요청 테이블 · 포털 RLS · 제안 응답 함수 |
 
-> 이 4개 파일은 로컬 Supabase(Postgres 17.6) 및 PostgreSQL 16 에서 **실제로 적용·검증**되었습니다.
+> **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
+> 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
+
+> 이 파일들은 로컬 Supabase(Postgres 17.6) 및 PostgreSQL 16 에서 **실제로 적용·검증**되었습니다.
 
 Supabase CLI를 쓰는 경우:
 
@@ -85,6 +90,27 @@ supabase db push
 { "name": "홍길동", "role": "field" }
 ```
 
+### 병원 담당자 계정 (`client`)
+
+병원 계정은 **소속 거래처가 반드시 있어야** 만들어집니다. 먼저 앱에서 해당 병원을
+거래처로 등록한 뒤, `clients.id` 를 확인해 아래처럼 초대합니다.
+
+```sql
+-- 거래처 id 확인
+select id, name from public.clients where name = '의료법인한양의료재단';
+```
+
+```json
+{ "name": "감염관리팀 김주현", "role": "client", "client_id": "위에서 확인한 uuid" }
+```
+
+- `client_id` 없이 `role: "client"` 로 초대하면 **병원 계정이 만들어지지 않고** 안전하게
+  `field` 로 떨어집니다 (소속 병원을 모르는 병원 계정을 금지).
+- 병원 계정은 로그인하면 `/portal` 로만 들어가며, 비원미래 내부 화면은 화면·DB 양쪽에서
+  차단됩니다. 자기 병원의 거래처 정보 · 수거일정 · 자재공급 · 자기 요청 · **자기에게
+  공유된 제안** 만 조회할 수 있습니다.
+- 미수금·차량·감사로그·다른 병원 데이터에는 RLS 정책 자체가 없어 접근이 불가능합니다.
+
 ### 테스트용 계정 구성 (권장)
 
 | 역할 | 예시 이메일 | 확인할 것 |
@@ -92,6 +118,7 @@ supabase db push
 | 대표 · 관리자 (`admin`) | daepyo@beonemirae.co.kr | 전체 메뉴 · 설정 · 감사로그 |
 | 사무실 담당자 (`office`) | office@beonemirae.co.kr | 설정/감사로그 접근 차단 확인 |
 | 현장 담당자 (`field`) | field@beonemirae.co.kr | 미수금·성과·통계 숨김 / 수거 입력 정상 |
+| 병원 담당자 (`client`) | manager@hanyang-test.kr | 포털만 보임 · 자기 병원 데이터만 조회 |
 
 > 비밀번호는 코드나 문서에 적지 않습니다. 계정 생성 시 대표님이 직접 정하고,
 > 첫 로그인 후 각자 변경하도록 안내해 주세요.

@@ -45,6 +45,8 @@ export function resetDemoSession(data: AppData): AppData {
     experiment: data.experiment ?? { ...EMPTY_EXPERIMENT },
     // 영업 전환 기록: 시연 세션 중 기록한 건만 정리하고 실사용 기록은 보존합니다.
     leads: (data.leads ?? []).filter((l) => !l.demoSessionId),
+    // 병원 요청도 시연 세션 중 등록된 것만 정리합니다.
+    requests: (data.requests ?? []).filter((r) => !r.demoSessionId),
   }
 }
 

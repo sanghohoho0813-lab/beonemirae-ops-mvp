@@ -1,4 +1,12 @@
-import type { AppData, Client, HandoverStatus, RequestStatus, WasteType } from '../types'
+import type {
+  AppData,
+  Client,
+  HandoverStatus,
+  RequestKind,
+  RequestSource,
+  RequestStatus,
+  WasteType,
+} from '../types'
 import { facilityByWaste } from '../data/ops'
 import { schedulesOn, todaySummary, additionalMaterialCount } from './selectors'
 import { today, thisMonth } from './format'
@@ -308,54 +316,79 @@ export function clientInspection(data: AppData, clientId: string): InspectionIte
 }
 
 // ── 병원 요청사항 ─────────────────────────────────────────────────────────────
+// v7 이전에는 규칙으로 만들어 낸 화면용 예시였습니다.
+// 이제는 병원 담당자가 포털에서 직접 올리거나(source='portal'),
+// 전화·카톡으로 받은 것을 비원미래가 대신 접수한(source='staff') 실제 기록입니다.
 export type { RequestStatus }
 export interface RequestItem {
   id: string
   clientId: string
   clientName: string
-  type: string
+  /** 요청 유형 (긴급수거 / 추가수거 / 소모품 / 교육·자료 / 기타) */
+  type: RequestKind
   content: string
+  /** 접수 시각 (YYYY-MM-DD HH:mm) */
   when: string
   urgent: boolean
   status: RequestStatus
-  autoProcessed?: boolean // 수거 완료로 자동 처리됨
-  processedAt?: string // 자동 처리 시각
+  source: RequestSource
+  requesterName: string
+  reply: string
+  desiredDate: string | null
+  /** 수거 완료로 자동 종료된 건 */
+  autoProcessed?: boolean
+  processedAt?: string
 }
 
-/** 최근 병원 요청사항 (관리자·이사가 전화·카톡으로 받은 요청을 기록한 구조, 시연 데이터) */
+const whenOf = (iso: string) => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/** 병원 요청 목록 — 최신순 */
 export function clientRequests(data: AppData): RequestItem[] {
-  const c = data.clients
-  if (c.length === 0) return []
-  const t = today()
-  const y = new Date()
-  y.setDate(y.getDate() - 1)
-  const yday = `${y.getFullYear()}-${pad2(y.getMonth() + 1)}-${pad2(y.getDate())}`
-  const pick = (i: number) => c[i % c.length]
-  const defs: { type: string; content: string; when: string; urgent: boolean; status: RequestStatus }[] = [
-    { type: '긴급수거', content: '격리환자 발생 — 보관기한 임박, 오늘 중 추가 수거 요청', when: `${t} 08:20`, urgent: true, status: '일정 반영' },
-    { type: '인증·실사 자료', content: '병원 정기인증 대비 최근 3개월 수거대장 요청', when: `${t} 09:05`, urgent: false, status: '확인 중' },
-    { type: '자재공급', content: '전용 용기 소진 임박 — 다음 수거 시 동시 공급 요청', when: `${yday} 16:40`, urgent: false, status: '일정 반영' },
-    { type: '수거대장 요청', content: '월말 통합 명세와 수거대장 이메일 발송 요청', when: `${yday} 14:10`, urgent: false, status: '접수' },
-    { type: '담당자 변경', content: '폐기물 담당 부서 변경 — 연락 채널 업데이트 요청', when: `${yday} 11:30`, urgent: false, status: '처리 완료' },
-  ]
-  return defs.map((d, i) => {
-    const id = `req${i + 1}`
-    const override = data.requestOverrides.find((o) => o.requestId === id)
-    return {
-      id,
-      clientId: pick(i * 2).id,
-      clientName: pick(i * 2).name,
-      ...d,
-      status: override ? override.status : d.status,
-      autoProcessed: !!override,
-      processedAt: override?.changedAt,
-    }
-  })
+  return [...(data.requests ?? [])]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((r) => ({
+      id: r.id,
+      clientId: r.clientId,
+      clientName: r.clientName || data.clients.find((c) => c.id === r.clientId)?.name || '거래처',
+      type: r.kind,
+      content: r.content,
+      when: whenOf(r.createdAt),
+      urgent: r.urgent,
+      status: r.status,
+      source: r.source,
+      requesterName: r.requesterName,
+      reply: r.reply,
+      desiredDate: r.desiredDate,
+      autoProcessed: r.status === '처리 완료' && r.reply === '수거 완료로 처리되었습니다.',
+      processedAt: r.handledAt ?? undefined,
+    }))
+}
+
+/** 아직 처리되지 않은 요청 */
+export function openRequests(data: AppData): RequestItem[] {
+  return clientRequests(data).filter((r) => r.status !== '처리 완료')
 }
 
 /** 특정 거래처의 요청사항 */
 export function requestsForClient(data: AppData, clientId: string): RequestItem[] {
   return clientRequests(data).filter((r) => r.clientId === clientId)
+}
+
+/** 이 수거 완료 입력으로 자동 종료되는 요청 — 수거하면 수거요청이, 자재를 함께 주면 소모품요청이 닫힙니다. */
+export function requestsClosedByCollection(
+  data: AppData,
+  clientId: string,
+  suppliedAny: boolean,
+): RequestItem[] {
+  return openRequests(data).filter(
+    (r) =>
+      r.clientId === clientId &&
+      (r.type === '긴급수거' || r.type === '추가수거' || (suppliedAny && r.type === '소모품')),
+  )
 }
 
 // ── 자재 공급 대비 배출 비교 ──────────────────────────────────────────────────

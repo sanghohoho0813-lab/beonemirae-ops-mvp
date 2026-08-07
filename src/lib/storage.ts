@@ -35,6 +35,7 @@ type LegacyData = AppData & {
   baseline?: unknown
   experiment?: unknown
   leads?: unknown
+  requests?: unknown
 }
 
 function needsMigration(d: LegacyData): boolean {
@@ -46,6 +47,7 @@ function needsMigration(d: LegacyData): boolean {
     !d.baseline ||
     !d.experiment ||
     !Array.isArray(d.leads) ||
+    !Array.isArray(d.requests) ||
     d.schedules.some((s) => s.origin === undefined)
   )
 }
@@ -83,6 +85,8 @@ export function migrateToV2(parsed: LegacyData): AppData {
     experiment: (parsed.experiment as AppData['experiment']) ?? { ...EMPTY_EXPERIMENT },
     // v5: 매출 전환 기록 — 없으면 빈 배열로 채웁니다.
     leads: Array.isArray(parsed.leads) ? (parsed.leads as AppData['leads']) : [],
+    // v7: 병원 요청 — 이전 저장 데이터에는 없으므로 빈 배열로 채웁니다.
+    requests: Array.isArray(parsed.requests) ? (parsed.requests as AppData['requests']) : [],
   }
   try {
     localStorage.setItem(SCHEMA_VERSION_KEY, String(SCHEMA_VERSION))
@@ -118,6 +122,8 @@ export function rebuildPreserving(prev: AppData): AppData {
     experiment: prev.experiment ?? { ...EMPTY_EXPERIMENT },
     // 영업 전환 기록은 날짜 재생성과 무관하게 보존합니다.
     leads: prev.leads ?? [],
+    // 병원이 올린 요청도 날짜와 무관한 실제 기록이므로 보존합니다.
+    requests: prev.requests ?? [],
   }
 }
 

@@ -12,13 +12,19 @@ import { supabase, isSupabaseConfigured, friendlyError } from '../lib/supabase'
 //  · Supabase 미설정이면 mode='demo' 로 두고 기존 로컬 시연 모드로 동작합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'office' | 'field'
+// admin/office/field = 비원미래 내부 직원, client = 병원 고객 담당자
+export type UserRole = 'admin' | 'office' | 'field' | 'client'
 
 export const ROLE_LABEL: Record<UserRole, string> = {
   admin: '대표 · 관리자',
   office: '사무실 담당자',
   field: '현장 담당자',
+  client: '병원 담당자',
 }
+
+/** 비원미래 내부 직원 계정인지 (병원 고객 계정과 구분) */
+export const isStaffRole = (role: UserRole | null): boolean =>
+  role === 'admin' || role === 'office' || role === 'field'
 
 export interface Profile {
   id: string
@@ -27,6 +33,8 @@ export interface Profile {
   role: UserRole
   fontScale: 'normal' | 'lg' | 'xl'
   active: boolean
+  /** 병원 계정이면 소속 거래처 id (직원 계정은 null) */
+  clientId: string | null
 }
 
 /** 앱 동작 모드 — 실제 운영(서버 DB) / 시연(로컬 저장) */
@@ -61,6 +69,7 @@ type ProfileRow = {
   role: UserRole
   font_scale: 'normal' | 'lg' | 'xl'
   active: boolean
+  client_id: string | null
 }
 
 const toProfile = (r: ProfileRow): Profile => ({
@@ -70,6 +79,7 @@ const toProfile = (r: ProfileRow): Profile => ({
   role: r.role,
   fontScale: r.font_scale,
   active: r.active,
+  clientId: r.client_id ?? null,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -82,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return null
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, name, role, font_scale, active')
+      .select('id, email, name, role, font_scale, active, client_id')
       .eq('id', userId)
       .maybeSingle()
     if (error || !data) return null

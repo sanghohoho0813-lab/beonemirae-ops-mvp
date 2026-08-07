@@ -20,8 +20,8 @@ export const STAGE_STYLE: Record<LeadStage, string> = {
   미전환: 'bg-navy-100 text-navy-400',
 }
 
+// '제안'은 병원에 실제로 전달해야 성립하므로 아래 전용 버튼으로 분리했습니다.
 const CHOICES: { stage: LeadStage; label: string; icon: typeof Check }[] = [
-  { stage: '제안', label: '고객 제안', icon: Send },
   { stage: '수락', label: '수락', icon: Check },
   { stage: '보류', label: '보류', icon: Clock },
   { stage: '미전환', label: '미전환', icon: X },
@@ -87,17 +87,62 @@ function RevenueInput({ lead }: { lead: SalesLead }) {
 
 /** 추천 카드 하단에 붙는 영업 진행상태 컨트롤 */
 export function LeadStageControl({ action, month = thisMonth() }: { action: NextAction; month?: string }) {
-  const { data, setLeadStage } = useData()
+  const { data, setLeadStage, shareProposal } = useData()
   const lead = findLead(data, action, month)
   const stage: LeadStage = lead?.stage ?? '추천'
+  const shared = !!lead?.sharedWithClient
+  const [composing, setComposing] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const send = () => {
+    shareProposal(action, msg.trim() || action.reason, month)
+    setComposing(false)
+    setMsg('')
+  }
 
   return (
     <div className="mt-3 rounded-2xl bg-navy-50/70 p-3.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="t-muted font-bold text-navy-500">영업 진행</span>
         <span className={`pill ${STAGE_STYLE[stage]}`}>{stage}</span>
+        {shared && <span className="pill bg-sky-50 text-sky-700">병원에 전달됨</span>}
+        {lead?.clientRespondedAt && <span className="pill bg-teal-50 text-teal-700">병원이 직접 응답</span>}
         {lead?.demoSessionId && <span className="pill bg-amber-50 text-amber-700">시연 기록</span>}
       </div>
+
+      {/* 병원 전달 — 여기서 보낸 제안이 병원 포털에 뜨고, 수락은 병원이 직접 누릅니다 */}
+      {!composing ? (
+        <button
+          onClick={() => {
+            setComposing(true)
+            setMsg(action.reason)
+          }}
+          className={`mt-2.5 inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[1.03rem] font-bold transition active:scale-[0.97] ${
+            shared ? 'bg-white text-navy-600 hover:bg-navy-100' : 'bg-teal-500 text-white hover:bg-teal-600'
+          }`}
+        >
+          <Send size={15} strokeWidth={2.6} /> {shared ? '병원에 다시 전달' : '병원에 제안 전달'}
+        </button>
+      ) : (
+        <div className="mt-2.5 rounded-xl bg-white p-3">
+          <textarea
+            rows={2}
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            placeholder="병원 담당자에게 보일 설명을 적어 주세요."
+            className="field-input w-full resize-none"
+          />
+          <div className="mt-2 flex gap-2">
+            <button onClick={() => setComposing(false)} className="btn-ghost flex-1">
+              취소
+            </button>
+            <button onClick={send} className="btn-primary flex-1">
+              <Send size={16} strokeWidth={2.5} /> 전달
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         {CHOICES.map((c) => {
           const Icon = c.icon
@@ -117,6 +162,12 @@ export function LeadStageControl({ action, month = thisMonth() }: { action: Next
         })}
       </div>
       {stage === '수락' && lead && <RevenueInput lead={lead} />}
+      {shared && stage === '제안' && (
+        <p className="t-muted mt-2.5 break-keep">
+          병원 담당자가 포털에서 수락하면 자동으로 '수락'으로 바뀝니다. 위 버튼은 전화로 받은 답변을 직접
+          기록할 때만 쓰세요.
+        </p>
+      )}
       {lead && lead.history.length > 1 && (
         <p className="t-muted mt-2.5">
           이력:{' '}
