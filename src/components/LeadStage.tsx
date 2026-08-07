@@ -69,6 +69,13 @@ function RevenueInput({ lead }: { lead: SalesLead }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={save}
+            // 숫자를 치고 Enter 를 누르는 것이 자연스러운 동작이라 함께 받습니다
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                save()
+              }
+            }}
           />
           <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[1.03rem] font-bold text-navy-400">
             만원

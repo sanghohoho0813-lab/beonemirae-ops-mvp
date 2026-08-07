@@ -5,7 +5,7 @@ import { serviceConversion } from '../lib/portal'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { openRequests } from '../lib/ops'
 import { allNextActions } from '../lib/insights'
-import { won } from '../lib/format'
+import { wonShort } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 서비스 전환 (대시보드용)
@@ -34,9 +34,17 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
   const open = openRequests(data)
   // 다음 할 일이 정확히 그 화면으로 가도록, 대상 거래처를 미리 찾아 둡니다.
   // (제안 전달과 매출 입력은 모두 거래처 상세에 있습니다)
-  const firstLeadClient = allNextActions(data)[0]?.clientId ?? null
+  //
+  // 병원 화면은 로그인한 병원 하나만 보여 주므로, 같은 조건이면 그 병원을 먼저
+  // 고릅니다. 그래야 "제안 전달 → 병원 화면에서 수락"이 한 줄로 이어집니다.
+  const portalClientId = data.clients[0]?.id
+  const actions = allNextActions(data)
+  const firstLeadClient =
+    (actions.find((a) => a.clientId === portalClientId) ?? actions[0])?.clientId ?? null
+  const pendingRevenueLeads = (data.leads ?? []).filter((l) => l.stage === '수락' && l.actualRevenue == null)
   const revenuePendingClient =
-    (data.leads ?? []).find((l) => l.stage === '수락' && l.actualRevenue == null)?.clientId ?? firstLeadClient
+    (pendingRevenueLeads.find((l) => l.clientId === portalClientId) ?? pendingRevenueLeads[0])?.clientId ??
+    firstLeadClient
 
   const nodes: Node[] = [
     {
@@ -58,11 +66,16 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
       value: `${c.accepted}건`,
       sub: c.proposed > 0 ? `제안 ${c.proposed}건 중` : '제안 전달 전',
       on: c.accepted > 0,
-      todo: { label: '제안 전달하기', to: firstLeadClient ? `/clients/${firstLeadClient}` : '/clients' },
+      // 제안을 아직 안 보냈으면 보내는 화면으로, 보냈으면 병원이 누르는 화면으로.
+      // 다음 할 일이 늘 '지금 눌러야 할 그 화면'을 가리키게 합니다.
+      todo:
+        c.proposed > 0
+          ? { label: '병원 화면에서 수락', to: '/portal' }
+          : { label: '제안 전달하기', to: firstLeadClient ? `/clients/${firstLeadClient}` : '/clients' },
     },
     {
       label: '실제 추가 매출',
-      value: c.revenue > 0 ? won(c.revenue) : '—',
+      value: c.revenue > 0 ? wonShort(c.revenue) : '—',
       sub: c.revenuePending > 0 ? `${c.revenuePending}건 매출 미입력` : '수거료 외',
       on: c.revenue > 0,
       todo: { label: '매출 입력하기', to: revenuePendingClient ? `/clients/${revenuePendingClient}` : '/clients' },
@@ -121,14 +134,15 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.kind]].dot}`} />
                 <span className="t-body min-w-0 flex-1 break-keep font-extrabold text-navy-900">{r.label}</span>
                 <span className="t-body shrink-0 whitespace-nowrap text-navy-500">
-                  요청 {r.requested} <span className="text-navy-300">→</span> 처리 {r.handled}
+                  요청 {r.requested}건 <span className="text-navy-300">→</span> 처리 {r.handled}건{' '}
+                  <span className="text-navy-300">→</span>
                 </span>
                 <span
                   className={`t-body shrink-0 whitespace-nowrap font-extrabold ${
                     r.revenue > 0 ? 'text-emerald-600' : 'text-navy-300'
                   }`}
                 >
-                  {r.revenue > 0 ? won(r.revenue) : r.revenuePending > 0 ? '매출 미입력' : '—'}
+                  {r.revenue > 0 ? wonShort(r.revenue) : r.revenuePending > 0 ? '매출 미입력' : '—'}
                 </span>
               </div>
             ))}
