@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Hospital} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, EmptyState } from '../components/ui'
 import { MonthlyReportView } from '../components/MonthlyReport'
@@ -30,7 +30,7 @@ export function PortalReport() {
   if (!client || !report) {
     return (
       <PageShell>
-        <EmptyState icon="🏥" title="연결된 병원 정보를 찾을 수 없습니다" />
+        <EmptyState icon={Hospital} title="연결된 병원 정보를 찾을 수 없습니다" />
       </PageShell>
     )
   }

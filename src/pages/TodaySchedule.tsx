@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
@@ -169,7 +169,7 @@ export function TodaySchedule() {
       </div>
 
       {list.length === 0 ? (
-        <EmptyState icon="🗓️" title="등록된 일정이 없어요" subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요." />
+        <EmptyState icon={CalendarX2} title="등록된 일정이 없어요" subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요." />
       ) : (
         <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
           {list.map((s, si) => {
@@ -212,7 +212,12 @@ export function TodaySchedule() {
                       <p className="mt-0.5 break-keep t-caption">
                         {client?.address} · {vehicle?.name ?? '미배정'}
                       </p>
-                      {s.memo && <p className="mt-1.5 text-[1.08rem] font-medium text-amber-600">📌 {s.memo}</p>}
+                      {s.memo && (
+                          <p className="mt-1.5 flex items-start gap-1.5 text-[1.08rem] font-medium text-amber-600">
+                            <Pin size={14} strokeWidth={2.4} className="mt-1 shrink-0" />
+                            <span className="break-keep">{s.memo}</span>
+                          </p>
+                        )}
                       {/* 현장 메모 — 거래처 상세에 기록해둔 특이사항을 방문 전에 함께 확인 */}
                       {client && (
                         <span data-tour={si === 0 ? 'today-notes' : undefined} className="block">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, SearchX} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
@@ -107,7 +107,7 @@ export function Clients() {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon="🏥" title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
+        <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {filtered.map((c) => {

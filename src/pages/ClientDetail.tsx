@@ -12,6 +12,8 @@ import {
   Pencil,
   Truck,
   ChevronRight,
+  SearchX,
+  Pin,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { WasteBadge } from '../components/Badge'
@@ -96,7 +98,7 @@ export function ClientDetail() {
   if (!client) {
     return (
       <PageShell>
-        <EmptyState icon="🔍" title="거래처를 찾을 수 없어요" subtitle="목록에서 다시 선택해 주세요." />
+        <EmptyState icon={SearchX} title="거래처를 찾을 수 없어요" subtitle="목록에서 다시 선택해 주세요." />
         <button className="btn-ghost mx-auto" onClick={() => navigate('/clients')}>
           거래처 목록으로
         </button>
@@ -161,7 +163,11 @@ export function ClientDetail() {
           <p className="flex items-center gap-2"><RefreshCw size={15} className="shrink-0 text-navy-400" /> 수거주기 {client.collectionCycle}</p>
           <p className="flex items-center gap-2"><Recycle size={15} className="shrink-0 text-navy-400" /> 자재 보관창고 {client.storageSize}</p>
         </div>
-        {client.note && <p className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[1.08rem] font-medium text-amber-700">📌 {client.note}</p>}
+        {client.note && (
+          <p className="mt-3 flex items-start gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[1.08rem] font-medium text-amber-700">
+            <Pin size={15} strokeWidth={2.4} className="mt-1 shrink-0" /> <span className="break-keep">{client.note}</span>
+          </p>
+        )}
         {/* 현장 메모 — 처리 전 항목을 헤더에서 바로 확인 */}
         <NoteChips notes={notesFor(id)} max={3} />
 

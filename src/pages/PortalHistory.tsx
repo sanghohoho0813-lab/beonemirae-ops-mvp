@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Hospital, ClipboardList } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, EmptyState } from '../components/ui'
 import { collectionHistory } from '../lib/ops'
@@ -21,7 +22,7 @@ export function PortalHistory() {
   if (!client) {
     return (
       <PageShell>
-        <EmptyState icon="🏥" title="연결된 병원 정보를 찾을 수 없습니다" />
+        <EmptyState icon={Hospital} title="연결된 병원 정보를 찾을 수 없습니다" />
       </PageShell>
     )
   }
@@ -36,7 +37,7 @@ export function PortalHistory() {
       </div>
 
       {done.length === 0 ? (
-        <EmptyState icon="📋" title="아직 수거 기록이 없습니다" subtitle="첫 수거가 완료되면 여기에 표시됩니다." />
+        <EmptyState icon={ClipboardList} title="아직 수거 기록이 없습니다" subtitle="첫 수거가 완료되면 여기에 표시됩니다." />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left">

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useHistoryDismiss } from '../lib/useHistoryDismiss'
 
@@ -45,7 +46,7 @@ export function Modal({ open, title, onClose, children, footer }: ModalProps) {
                 className="flex h-9 w-9 items-center justify-center rounded-full text-navy-400 hover:bg-navy-50"
                 aria-label="닫기"
               >
-                ✕
+                <X size={19} strokeWidth={2.4} />
               </button>
             </div>
             <div className="space-y-4">{children}</div>

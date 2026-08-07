@@ -6,10 +6,10 @@ import {
   ChevronRight,
   ChevronLeft,
   CalendarClock,
-  Truck,
-  Building2,
-  FileText,
-  FileBadge,
+  PenLine,
+  Hospital,
+  Inbox,
+  TrendingUp,
   Workflow,
   ArrowRight,
   CheckCircle2,
@@ -17,28 +17,29 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { todaySummary } from '../lib/selectors'
-import { dispatchPlans } from '../lib/ops'
+import { autoPerInput } from '../lib/performance'
+import { customerServiceStats } from '../lib/portal'
 import { weight } from '../lib/format'
 import { DemoResetButton } from '../components/DemoControls'
 
-// 대표자 5분 시연 동선 (각 1문장)
+// 심사 시연 동선 (약 5분) — "무엇을 하는 회사인가 → 어떻게 돈을 버는가" 순서
 const DEMO_STEPS = [
-  { t: '대시보드', l: '수거·자재·미수금·차량 운영현황을 한눈에 확인합니다.' },
-  { t: '오늘 일정', l: '정기수거뿐 아니라 긴급수거와 자재 동시공급 일정도 함께 관리합니다.' },
-  { t: '빠른 완료 1회', l: '수거정보를 한 번 입력하면 일정·이력·자재·통계에 연결됩니다.' },
-  { t: '거래처 상세', l: '거래처별 수거조건과 수거이력, 자재, 요청사항을 통합 관리합니다.' },
-  { t: '자재 반영', l: '방금 공급한 자재가 사무실 재고와 자재관리에 자동 반영됩니다.' },
-  { t: '문서 초안', l: '입력된 수거정보가 수거대장과 월간 명세 초안에 자동 반영됩니다.' },
-  { t: '활용계획', l: '향후 서버·DB와 병원 요청·알림 기능으로 고도화할 계획입니다.' },
-  { t: '특허 매핑', l: '특허 구성요소가 현재 MVP 화면과 기능으로 연결됩니다.' },
+  { t: '대시보드 상단', l: '수거 회사에서 병원 폐기물 운영지원 서비스로 넘어가는 여섯 단계를 한 줄로 보여줍니다.' },
+  { t: '수거 완료 입력 1회', l: '현장에서 한 번 입력하면 일정·이력·자재·재고·통계·대장이 함께 갱신됩니다.' },
+  { t: '병원 포털', l: '병원이 직접 수거 현황을 보고 긴급수거·소모품·자료를 요청합니다.' },
+  { t: '병원 요청 처리', l: '요청 상태를 바꾸고 회신을 남기면 병원 화면에 그대로 보입니다.' },
+  { t: '다음 행동 추천', l: '쌓인 기록에서 거래처별 다음 제안을 뽑고, 근거와 함께 병원에 전달합니다.' },
+  { t: '병원 수락 → 추가 매출', l: '수락은 병원이 직접 누르고, 그 시점이 수거료 외 매출로 기록됩니다.' },
+  { t: '매출 구조·도입 성과', l: '수거료 외 매출 다섯 가지를 구현됨·실증 중·개발 예정으로 나눠 보여줍니다.' },
+  { t: '향후 계획·특허 매핑', l: '단계별 로드맵과 특허 구성요소가 현재 화면에 어떻게 연결되는지 확인합니다.' },
   { t: '시연 종료', l: '시연 상태를 초기화하면 동일한 기준 상태로 되돌아갑니다.' },
 ]
 const SAY_DO = [
   '현재 MVP 단계',
-  '규칙 기반 추천 시뮬레이션',
+  '규칙 기반 추천 (학습형 아님)',
   '기존 거래처 시범 적용 예정',
   '실제 운행데이터 기반 고도화 예정',
-  '서버·DB 연동 예정',
+  '병원 포털은 실증 단계',
   '실증지표로 효과 검증 예정',
 ]
 const SAY_DONT = [
@@ -53,16 +54,16 @@ const PRE_CHECK = [
   '인터넷 연결 확인',
   '브라우저 새로고침',
   '시연 상태 초기화',
-  '대시보드 숫자 확인',
-  '오늘 일정 10건 확인',
-  '빠른 완료 대상 확인',
-  '거래처 상세 링크 확인',
-  '자재관리 링크 확인',
-  '특허 매핑 확인',
+  '대시보드 여섯 단계 숫자 확인',
+  '수거 완료 입력 대상 확인',
+  '병원 포털 요청 1건 이상',
+  '처리 대기 요청 확인',
+  '전달할 제안 1건 이상',
+  '매출 구조·도입 성과 확인',
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 대표님 시연 — 3분 가이드 흐름 (요약 슬라이드 → 실제 화면 진입)
+// 심사 시연 — 5분 가이드 흐름 (요약 슬라이드 → 실제 화면 진입)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Presentation() {
@@ -71,14 +72,15 @@ export function Presentation() {
   const [i, setI] = useState(0)
 
   const summary = todaySummary(data)
-  const topPlan = dispatchPlans(data).find((p) => p.stops.length > 0)
-  const firstClient = data.clients[0]
+  const auto = autoPerInput(data)
+  const cs = customerServiceStats(data)
 
+  // 심사 5분 동선 — 내부 효율(1~2) → 병원 서비스(3~4) → 추가 매출(5) → 근거(6)
   const steps = [
     {
       icon: CalendarClock,
       title: '오늘 운영 현황',
-      line: '오늘 수거 일정과 확인할 일을 한 화면에서 봅니다.',
+      line: '오늘 수거 일정과 확인할 일을 한 화면에서 봅니다. 여기가 매일 여는 화면입니다.',
       stats: [
         { k: '오늘 수거 예정', v: `${summary.total}건` },
         { k: '긴급·지연', v: `${summary.긴급 + summary.지연}건` },
@@ -87,50 +89,56 @@ export function Presentation() {
       to: '/today',
     },
     {
-      icon: Truck,
-      title: '배차·경로 추천',
-      line: '차량 적재율·긴급수거·처리장 인계를 함께 고려한 추천(개발 중).',
+      icon: PenLine,
+      title: '현장 1회 입력 → 자동 연결',
+      line: '현장에서 수거 완료를 한 번만 입력하면 일정·이력·자재·재고·통계·대장이 함께 갱신됩니다.',
       stats: [
-        { k: '추천 차량', v: `${dispatchPlans(data).filter((p) => p.stops.length > 0).length}대` },
-        { k: '예상 적재율', v: topPlan ? `${topPlan.loadRate}%` : '-' },
+        { k: '입력 1회당 자동 처리', v: auto.avg != null ? `${auto.avg}건` : '—' },
+        { k: '누적 자동 처리', v: `${auto.total}건` },
       ],
-      cta: '배차·경로 보기',
-      to: '/dispatch',
+      cta: '수거 완료 입력 열기',
+      to: '/collection',
     },
     {
-      icon: Building2,
-      title: '거래처 상세관리',
-      line: '주요거래처 5곳 기반 · 서울·경기권 시연용으로 15/25/35곳 확장.',
+      icon: Hospital,
+      title: '병원이 직접 확인하고 요청합니다',
+      line: '병원은 전화 대신 포털에서 수거 현황을 보고 긴급수거·소모품·자료를 요청합니다.',
       stats: [
-        { k: '관리 거래처', v: `${data.clients.length}곳` },
-        { k: '차량', v: `${data.vehicles.length}대` },
+        { k: '병원 요청', v: `${cs.requestsTotal}건` },
+        { k: '처리 대기', v: `${cs.requestsOpen}건` },
       ],
-      cta: firstClient ? `${firstClient.name} 보기` : '거래처 보기',
-      to: firstClient ? `/clients/${firstClient.id}` : '/clients',
+      cta: '병원 화면 그대로 보기',
+      to: '/portal',
     },
     {
-      icon: FileText,
-      title: '수거대장 미리보기',
-      line: '수거이력과 자재공급을 통합해 월간 수거대장으로 출력(예정).',
-      stats: [{ k: '출력', v: 'PDF 예정' }],
-      cta: '거래처에서 수거대장 보기',
-      to: firstClient ? `/clients/${firstClient.id}` : '/clients',
+      icon: Inbox,
+      title: '요청 처리 → 병원에 회신',
+      line: '접수 → 확인 중 → 일정 반영 → 처리 완료. 바꾼 상태와 회신이 병원 화면에 그대로 보입니다.',
+      stats: [
+        { k: '처리 완료', v: `${cs.requestsDone}건` },
+        { k: '수거 완료 시', v: '요청 자동 종료' },
+      ],
+      cta: '병원 요청 처리 화면',
+      to: '/requests',
     },
     {
-      icon: FileBadge,
-      title: '특허·사업계획서 정합성',
-      line: '특허 구성요소·사업계획 방향과 앱 기능을 연결해 보여줍니다.',
-      stats: [{ k: '특허출원', v: '10-2026-0101187' }],
-      cta: '심사관 시연 요약 보기',
-      to: '/demo',
+      icon: TrendingUp,
+      title: '데이터 기반 제안 → 병원 수락 → 추가 매출',
+      line: '쌓인 기록에서 다음 제안을 뽑아 병원에 전달하고, 수락은 병원이 직접 누릅니다.',
+      stats: [
+        { k: '전달한 제안', v: `${cs.proposalsShared}건` },
+        { k: '병원 수락', v: `${cs.proposalsAccepted}건` },
+      ],
+      cta: '거래처당 매출 구조 보기',
+      to: '/performance',
     },
     {
       icon: Workflow,
-      title: '향후 활용 계획',
-      line: '일일 업무흐름도와 단계별 고도화 로드맵을 한 화면에서 봅니다.',
+      title: '근거 · 향후 계획',
+      line: '성과는 실제 입력에서만 계산하고, 아직 만들지 않은 것은 개발 예정으로 표시합니다.',
       stats: [
-        { k: '현재', v: '1단계 · MVP 운영' },
-        { k: '다음', v: '실데이터 · 경로 최적화' },
+        { k: '특허출원', v: '10-2026-0101187' },
+        { k: '다음 단계', v: '소모품 주문 · 배출자 교육' },
       ],
       cta: '활용 계획·업무흐름도 보기',
       to: '/roadmap',
@@ -146,7 +154,7 @@ export function Presentation() {
       {/* 상단 */}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="text-[1.03rem] font-bold text-teal-600">대표님 시연 · 3분</p>
+          <p className="text-[1.03rem] font-bold text-teal-600">심사 시연 · 5분</p>
           <h1 className="text-xl font-extrabold text-navy-900">단계별로 보기</h1>
         </div>
         <button
@@ -231,8 +239,8 @@ export function Presentation() {
           <Workflow size={17} className="text-teal-300" /> 한 번 입력, 여러 화면 자동 연결
         </p>
         <p className="mt-1.5 text-[1.03rem] leading-relaxed text-navy-100">
-          현장 담당자가 수거정보를 한 번 입력하면 오늘 일정, 수거이력, 자재와 통계에 연결됩니다. 여러 엑셀·수기대장에
-          반복 입력할 필요가 없습니다.
+          현장 담당자가 수거정보를 한 번 입력하면 오늘 일정, 수거이력, 자재, 통계, 그리고 병원이 보는 화면까지 함께
+          갱신됩니다. 여러 엑셀·수기대장에 반복 입력할 필요가 없습니다.
         </p>
       </div>
 
@@ -251,13 +259,13 @@ export function Presentation() {
           <div className="card p-4 ring-1 ring-teal-200">
             <span className="rounded-full bg-teal-500 px-2.5 py-1 text-[0.95rem] font-bold text-white">After</span>
             <ul className="mt-2.5 space-y-1.5 text-[1.03rem] leading-snug text-navy-700">
-              {['하나의 운영 시스템', 'PC·모바일 동일 데이터', '수거·자재·이력 통합', '요청사항 기록', '월간 자료 자동화(예정)', '배차·경로 추천'].map((t) => (
+              {['하나의 운영 시스템', 'PC·모바일 동일 데이터', '수거·자재·이력 통합', '병원이 직접 확인·요청', '요청 처리·회신 기록', '데이터 기반 제안 → 추가 매출'].map((t) => (
                 <li key={t} className="flex gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-teal-500" />{t}</li>
               ))}
             </ul>
           </div>
         </div>
-        <p className="mt-2 px-1 text-[0.98rem] text-navy-400">※ 월간 자료 자동화·실시간 공유는 향후 고도화 예정입니다.</p>
+        <p className="mt-2 px-1 text-[0.98rem] text-navy-400">※ 소모품 주문·배출자 교육·리포트 자동 발송은 개발 예정입니다.</p>
       </div>
 
       {/* 대표자 시연 가이드 (기본 접힘) */}

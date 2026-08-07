@@ -14,6 +14,7 @@ import {
   Truck,
   PackagePlus,
   GraduationCap,
+  Inbox,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
@@ -120,7 +121,7 @@ export function Requests() {
 
       {rows.length === 0 ? (
         <EmptyState
-          icon="📮"
+          icon={Inbox}
           title={filter === '진행 중' ? '처리할 요청이 없습니다' : '요청이 없습니다'}
           subtitle="병원 담당자가 포털에서 요청을 올리면 여기에 바로 표시됩니다."
         />

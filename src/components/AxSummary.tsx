@@ -26,7 +26,12 @@ function Step({ label, value, accent = false }: { label: string; value: string; 
   )
 }
 
-export function AxSummaryCard({ data }: { data: AppData }) {
+/**
+ * @param compact 대시보드용 — 퍼널 한 줄과 상태만 보여주고 세부 측정지표는
+ *                성과 화면(/performance)에 맡깁니다. 첫 화면이 측정값 자리표시자로
+ *                길어지는 것을 막기 위한 구분입니다.
+ */
+export function AxSummaryCard({ data, compact = false }: { data: AppData; compact?: boolean }) {
   const f = salesFunnel(data)
   const hi = axHighlights(data)
   const auto = autoPerInput(data)
@@ -87,6 +92,7 @@ export function AxSummaryCard({ data }: { data: AppData }) {
 
       {/* 2) 운영효율 대표 지표 — 한 줄 압축.
              개선율은 실제 현장 표본이 충분한 지표(emphasis)만 색으로 강조합니다. */}
+      {!compact && (
       <div className="mt-5 grid gap-px bg-navy-100 sm:grid-cols-2 2xl:grid-cols-4">
         {hi.map((h) => (
           <div key={h.key} className="flex flex-col bg-white px-5 py-4">
@@ -134,6 +140,7 @@ export function AxSummaryCard({ data }: { data: AppData }) {
           </p>
         </div>
       </div>
+      )}
 
       {/* 표본이 부족하면 화면에서 먼저 밝힙니다 — 확정 성과처럼 보이지 않도록 */}
       {ev.tier !== 'field' && (

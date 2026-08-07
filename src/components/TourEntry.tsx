@@ -20,13 +20,13 @@ export function TourBanner({ tourId }: { tourId?: TourId }) {
 
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4 sm:px-6">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-          <PlayCircle size={24} strokeWidth={2.2} />
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3.5 px-5 py-5 sm:px-6">
+        <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+          <PlayCircle size={26} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="t-body break-keep font-extrabold text-navy-900">처음이신가요? 사용 방법을 보여드릴게요</p>
-          <p className="t-muted mt-1 break-keep">{tour.intro}</p>
+          <p className="t-card break-keep text-navy-900">{tour.minutes}이면 핵심 사용법을 확인할 수 있습니다</p>
+          <p className="t-body mt-1.5 break-keep text-navy-400">{tour.intro}</p>
         </div>
         <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
           <button
@@ -36,10 +36,10 @@ export function TourBanner({ tourId }: { tourId?: TourId }) {
             }}
             className="btn-ghost order-2 sm:order-1"
           >
-            나중에 보기
+            바로 시작하기
           </button>
           <button data-tour-start onClick={() => start(tour)} className="btn-primary order-1 sm:order-2">
-            <PlayCircle size={18} strokeWidth={2.4} /> 사용 방법 보기
+            <PlayCircle size={19} strokeWidth={2.4} /> 사용 방법 보기
           </button>
         </div>
         <button

@@ -51,6 +51,11 @@ export function TourOverlay() {
   const [ready, setReady] = useState(false)
   /** 설명 박스 실제 크기 — 배치 계산의 입력값이라 먼저 재야 합니다 */
   const [card, setCard] = useState<{ w: number; h: number } | null>(null)
+  /** 강조 대상의 높이 — 설명 박스가 커질 수 있는 한도를 여기서 먼저 정합니다 */
+  const [anchorH, setAnchorH] = useState<number | null>(null)
+  /** 본문이 넘쳐서 스크롤이 필요한 상태인지 (아래쪽 페이드 표시용) */
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [more, setMore] = useState(false)
 
   const step = active?.steps[index]
 
@@ -60,20 +65,51 @@ export function TourOverlay() {
     if (pathname !== step.route) navigate(step.route)
   }, [step, pathname, navigate])
 
-  // 단계가 바뀌면 다시 계산합니다 (설명 박스 크기부터)
+  // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {
     setReady(false)
     setCard(null)
     setRect(null)
+    setAnchorH(null)
   }, [index, active])
 
-  // ── 2) 설명 박스 크기 측정 ───────────────────────────────────────────────
+  // ── 2a) 대상 높이 측정 ───────────────────────────────────────────────────
+  //  설명 박스를 자연 높이 그대로 두면, 대상이 큰 화면에서는 둘을 세로로 나란히
+  //  놓을 수가 없어 결국 대상을 가리게 됩니다. 그래서 대상 높이를 먼저 재고,
+  //  "대상 + 간격 + 설명"이 화면에 들어가는 높이로 설명 박스 상한을 정합니다.
+  useEffect(() => {
+    if (!active || !step || anchorH !== null) return
+    if (pathname !== step.route) return
+    let cancelled = false
+    void (async () => {
+      if (!step.anchor) {
+        if (!cancelled) setAnchorH(0)
+        return
+      }
+      let el: HTMLElement | null = null
+      for (let i = 0; i < 40 && !el; i++) {
+        el = document.querySelector<HTMLElement>(`[data-tour="${step.anchor}"]`)
+        if (!el) await wait(50)
+      }
+      if (!cancelled) setAnchorH(el ? el.getBoundingClientRect().height : 0)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [active, step, pathname, anchorH])
+
+  // ── 2b) 설명 박스 크기 측정 ──────────────────────────────────────────────
   useLayoutEffect(() => {
     const el = cardRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
     if (!card || Math.abs(r.width - card.w) > 1 || Math.abs(r.height - card.h) > 1) {
       setCard({ w: r.width, h: r.height })
+    }
+    const b = bodyRef.current
+    if (b) {
+      const over = b.scrollHeight - b.clientHeight > 2 && b.scrollTop + b.clientHeight < b.scrollHeight - 2
+      if (over !== more) setMore(over)
     }
   })
 
@@ -117,7 +153,11 @@ export function TourOverlay() {
       let want: Placement
       let wantTop: number // 대상(강조 영역)의 목표 viewport top
 
-      if (stackFits) {
+      // 대상이 화면 높이의 절반 가까이 되면, 위아래로 나눠 넣어봐야 설명이 눌립니다.
+      // 옆에 세울 자리가 있으면 그쪽이 항상 더 읽기 좋습니다.
+      const tallTarget = eh > vh * 0.45
+
+      if (stackFits && !(tallTarget && sideFits)) {
         want = 'below'
         const groupH = eh + GAP + ch
         wantTop = Math.max(EDGE, (vh - groupH) / 2)
@@ -178,11 +218,11 @@ export function TourOverlay() {
   )
 
   useEffect(() => {
-    if (!active || !step || !card) return
+    if (!active || !step || !card || anchorH === null) return
     if (pathname !== step.route) return
     void layout(step.anchor, card.h, card.w, true)
     // card 크기는 단계마다 한 번만 바뀌므로 재실행 루프가 생기지 않습니다.
-  }, [active, step, pathname, card, layout])
+  }, [active, step, pathname, card, anchorH, layout])
 
   // 사용자가 스크롤·리사이즈하면 강조 위치만 따라갑니다 (다시 스크롤하지 않음).
   useEffect(() => {
@@ -193,7 +233,7 @@ export function TourOverlay() {
       const r = el.getBoundingClientRect()
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
     }
-    const onResize = () => void layout(step.anchor, card.h, card.w, true)
+    const onResize = () => setAnchorH(null) // 상한부터 다시 계산 → 이어서 배치가 다시 돕니다
     window.addEventListener('scroll', follow, true)
     window.addEventListener('resize', onResize)
     return () => {
@@ -237,7 +277,10 @@ export function TourOverlay() {
       cardTop = rect.top + rect.height / 2 - ch / 2
     } else {
       const roomBelow = vh - sBottom - GAP - EDGE
-      if (roomBelow >= ch) {
+      const roomAbove = sTop - GAP - EDGE
+      // 아래가 되면 아래, 안 되면 위. 둘 다 모자라면 그나마 넓은 쪽에 둡니다.
+      // (모자란 쪽에 억지로 넣으면 가장자리로 밀리면서 대상을 덮게 됩니다)
+      if (roomBelow >= ch - 1 || roomBelow >= roomAbove) {
         cardTop = sBottom + GAP
       } else {
         cardTop = sTop - GAP - ch // 위쪽
@@ -250,19 +293,43 @@ export function TourOverlay() {
 
   const last = index === active.steps.length - 1
 
+  // 설명 박스 높이 상한 — "대상 전체 + 설명"이 세로로 함께 들어가는 높이.
+  // 글자를 키운 만큼 박스가 커졌기 때문에, 대상이 큰 화면에서는 이 상한이
+  // 있어야 설명이 대상을 덮지 않습니다. (넘치는 본문만 박스 안에서 스크롤됩니다)
+  const MIN_CARD = 300
+  const cardMaxH = (() => {
+    const hard = vh * (vw < 640 ? 0.84 : 0.9)
+    // 옆에 세우는 배치에서는 대상과 세로로 겹칠 일이 없으므로 줄이지 않습니다.
+    if (placement === 'right' || placement === 'left') return hard
+    // 2px 여유 — 딱 맞게 두면 반올림 한 픽셀 때문에 "아래에 못 넣는다"고 판단해
+    // 설명이 대상 위로 올라가 겹칩니다.
+    if (rect) {
+      // 배치가 끝난 뒤에는 실제로 남은 위/아래 공간이 정답입니다.
+      // 페이지 맨 아래처럼 더 스크롤할 수 없는 경우까지 여기서 반영됩니다.
+      const roomBelow = vh - (rect.top + rect.height + PAD) - GAP - EDGE
+      const roomAbove = rect.top - PAD - GAP - EDGE
+      return Math.min(hard, Math.max(MIN_CARD, Math.max(roomBelow, roomAbove) - 2))
+    }
+    if (!anchorH) return hard
+    const room = vh - (anchorH + PAD * 2) - GAP - EDGE * 2 - 2
+    return Math.min(hard, Math.max(MIN_CARD, room))
+  })()
+
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="사용 방법 안내">
       {/* 배경 dim + 강조 — 큰 box-shadow 로 대상만 밝게 남깁니다 */}
       {rect ? (
         <div
           data-tour-spot
-          className="pointer-events-none absolute rounded-2xl ring-2 ring-teal-400"
+          className="pointer-events-none absolute rounded-[1.25rem] transition-opacity duration-200"
           style={{
             top: rect.top - PAD,
             left: rect.left - PAD,
             width: rect.width + PAD * 2,
             height: rect.height + PAD * 2,
-            boxShadow: '0 0 0 9999px rgba(8, 15, 28, 0.66)',
+            // 배경 dim + 대상 주변의 은은한 후광. 딱딱한 테두리 대신 부드럽게 떠 보이게 합니다.
+            boxShadow:
+              '0 0 0 9999px rgba(8, 15, 28, 0.72), 0 0 0 3px rgba(49, 130, 246, 0.55), 0 0 34px 6px rgba(49, 130, 246, 0.28)',
             opacity: ready ? 1 : 0,
           }}
         />
@@ -279,30 +346,42 @@ export function TourOverlay() {
         data-tour-card
         // 모바일에서는 설명이 길어져도 화면 절반을 넘지 않게 합니다.
         // 헤더와 버튼은 고정하고 본문만 스크롤되게 해, 좁은 화면에서도 '다음'이 항상 보입니다.
-        className="absolute flex max-h-[46vh] w-[min(23rem,calc(100vw-1.5rem))] flex-col rounded-3xl bg-white p-4 shadow-2xl sm:max-h-[82vh] sm:p-5"
-        style={{ top: cardTop, left: cardLeft, opacity: ready ? 1 : 0 }}
+        className="absolute flex w-[min(30rem,calc(100vw-1rem))] flex-col rounded-3xl bg-white p-4 shadow-2xl sm:p-6"
+        style={{ top: cardTop, left: cardLeft, maxHeight: cardMaxH, opacity: ready ? 1 : 0 }}
       >
         <div className="flex shrink-0 items-center gap-2">
-          <span className="pill bg-teal-50 text-teal-700">
+          <span
+            data-tour-step
+            className="inline-flex shrink-0 items-center rounded-full bg-teal-500 px-3.5 py-1.5 text-[1.15rem] font-extrabold text-white"
+          >
             {index + 1} / {active.steps.length}
           </span>
-          <span className="t-muted min-w-0 truncate font-bold text-navy-400">{active.label}</span>
+          <span className="min-w-0 truncate text-[1.1rem] font-bold text-navy-400">{active.label}</span>
           <button
             onClick={stop}
             title="종료"
-            className="-mr-1 ml-auto shrink-0 rounded-lg p-1.5 text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
+            className="-mr-1 ml-auto shrink-0 rounded-xl p-2 text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
           >
-            <X size={18} strokeWidth={2.4} />
+            <X size={22} strokeWidth={2.4} />
           </button>
         </div>
 
-        <h2 className="mt-2.5 shrink-0 break-keep text-[1.22rem] font-extrabold leading-snug text-navy-900">
+        {/* 투어는 '사용법을 설명하는 집중 화면'이라 본문보다 확실히 크게 둡니다. */}
+        <h2 className="mt-2.5 shrink-0 break-keep text-[1.44rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[1.82rem]">
           {step.title}
         </h2>
 
         {/* 왜 → 어떻게 → 결과. 기능 설명이 아니라 이해의 순서입니다.
             (좁은 화면에서는 이 영역만 스크롤됩니다) */}
-        <div className="mt-2.5 min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pr-0.5">
+        <div
+          ref={bodyRef}
+          onScroll={(e) => {
+            const b = e.currentTarget
+            setMore(b.scrollTop + b.clientHeight < b.scrollHeight - 2)
+          }}
+          className="relative mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
+        >
+          <div className="space-y-2.5">
           {[
             { icon: HelpCircle, label: '왜', text: step.why, tone: 'bg-rose-50 text-rose-600' },
             { icon: Target, label: '어떻게', text: step.how, tone: 'bg-sky-50 text-sky-600' },
@@ -310,30 +389,38 @@ export function TourOverlay() {
           ].map((x) => {
             const Icon = x.icon
             return (
-              <div key={x.label} className="flex items-start gap-2">
-                <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${x.tone}`}>
-                  <Icon size={13} strokeWidth={2.6} />
+              <div key={x.label} className="flex items-start gap-2.5">
+                <span
+                  className={`mt-0.5 hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:flex ${x.tone}`}
+                >
+                  <Icon size={17} strokeWidth={2.5} />
                 </span>
-                <p className="min-w-0 flex-1 break-keep text-[0.95rem] leading-snug text-navy-600">
-                  <span className="font-extrabold text-navy-800">{x.label}</span>
-                  <span className="mx-1 text-navy-300">·</span>
+                <p className="min-w-0 flex-1 break-keep text-[1.2rem] leading-snug text-navy-600 sm:text-[1.3rem]">
+                  <span className="font-extrabold text-navy-900">{x.label}</span>
+                  <span className="mx-1.5 text-navy-300">·</span>
                   {x.text}
                 </p>
               </div>
             )
           })}
+          </div>
         </div>
 
-        <div className="mt-3 flex shrink-0 gap-1">
+        {/* 좁은 화면에서 본문이 잘릴 때만 "더 있다"는 신호를 둡니다 */}
+        {more && (
+          <div className="pointer-events-none relative z-10 -mt-7 h-7 shrink-0 bg-gradient-to-t from-white to-transparent" />
+        )}
+
+        <div className="mt-3.5 flex shrink-0 gap-1.5">
           {active.steps.map((_, i) => (
-            <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= index ? 'bg-teal-500' : 'bg-navy-100'}`} />
+            <span key={i} className={`h-2 flex-1 rounded-full ${i <= index ? 'bg-teal-500' : 'bg-navy-100'}`} />
           ))}
         </div>
 
-        <div className="mt-3 flex shrink-0 items-center gap-2">
+        <div className="mt-2.5 flex shrink-0 items-center gap-2">
           <button
             onClick={stop}
-            className="shrink-0 px-1.5 py-2 text-[1rem] font-bold text-navy-400 transition hover:text-navy-700"
+            className="shrink-0 rounded-xl px-2 py-2.5 text-[1.15rem] font-bold text-navy-400 transition hover:text-navy-700"
           >
             건너뛰기
           </button>
@@ -341,22 +428,22 @@ export function TourOverlay() {
             {index > 0 && (
               <button
                 onClick={prev}
-                className="inline-flex items-center gap-1 rounded-xl bg-navy-50 px-3.5 py-2.5 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-100"
+                className="inline-flex items-center gap-1.5 rounded-2xl bg-navy-50 px-4 py-2.5 text-[1.2rem] font-extrabold text-navy-600 transition hover:bg-navy-100"
               >
-                <ChevronLeft size={16} strokeWidth={2.5} /> 이전
+                <ChevronLeft size={19} strokeWidth={2.5} /> 이전
               </button>
             )}
             <button
               onClick={next}
-              className="inline-flex items-center gap-1 rounded-xl bg-teal-500 px-4 py-2.5 text-[1rem] font-bold text-white transition hover:bg-teal-600"
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-teal-500 px-5 py-2.5 text-[1.2rem] font-extrabold text-white shadow-sm transition hover:bg-teal-600"
             >
               {last ? (
                 <>
-                  <Check size={16} strokeWidth={2.6} /> 시작하기
+                  <Check size={19} strokeWidth={2.6} /> 이제 직접 사용해보기
                 </>
               ) : (
                 <>
-                  다음 <ArrowRight size={16} strokeWidth={2.5} />
+                  다음 <ArrowRight size={19} strokeWidth={2.5} />
                 </>
               )}
             </button>

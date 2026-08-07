@@ -18,6 +18,7 @@ import {
   Sparkles,
   Truck,
   X,
+  Hospital,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -87,7 +88,7 @@ export function PortalHome() {
     return (
       <PageShell>
         <EmptyState
-          icon="🏥"
+          icon={Hospital}
           title="연결된 병원 정보를 찾을 수 없습니다"
           subtitle="비원미래 담당자에게 계정 연결을 요청해 주세요. (1533-8876)"
         />
@@ -123,10 +124,11 @@ export function PortalHome() {
 
   return (
     <PageShell>
+      {/* 병원 이름은 위 헤더에 이미 있으므로, 여기서는 "여기서 무엇을 할 수 있는지"를 씁니다 */}
       <div>
-        <h1 className="t-page text-navy-900">{client.name}</h1>
+        <h1 className="t-page break-keep text-navy-900">우리 병원 폐기물 운영 현황</h1>
         <p className="t-body mt-2.5 break-keep font-medium text-navy-400">
-          {prettyDate(today())} · 수거주기 {client.collectionCycle || '미설정'}
+          {prettyDate(today())} · 수거주기 {client.collectionCycle || '미설정'} · 담당 1533-8876
         </p>
       </div>
 
@@ -160,10 +162,11 @@ export function PortalHome() {
               <button
                 key={q.kind}
                 onClick={() => start(q.kind)}
-                className="card pressable flex flex-col items-start gap-3 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
+                // 좁은 화면에서는 아이콘과 글자를 한 줄에 두어 세로 길이를 줄입니다
+                className="card pressable flex items-center gap-3 p-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:flex-col sm:items-start sm:p-5"
               >
-                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${t.tile}`}>
-                  <Icon size={24} strokeWidth={2.3} />
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${t.tile}`}>
+                  <Icon size={23} strokeWidth={2.3} />
                 </span>
                 <span className="min-w-0">
                   <span className="t-body block break-keep font-extrabold text-navy-900">{q.kind}</span>
@@ -221,7 +224,7 @@ export function PortalHome() {
       {(s.pendingProposals.length > 0 || s.acceptedProposals.length > 0) && (
         <section>
           <SectionTitle
-            action={<span className="pill bg-orange-50 text-orange-700">우리 병원 데이터 기준</span>}
+            action={<span className="pill bg-accent-50 text-accent-700">우리 병원 데이터 기준</span>}
           >
             비원미래가 제안드립니다
           </SectionTitle>
@@ -229,7 +232,7 @@ export function PortalHome() {
             {s.pendingProposals.map((l) => (
               <div key={l.id} className="card p-5">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
                     <Sparkles size={20} strokeWidth={2.3} />
                   </span>
                   <p className="t-card min-w-0 flex-1 break-keep text-navy-900">{l.title}</p>
@@ -286,7 +289,7 @@ export function PortalHome() {
               const kt = TONE[REQUEST_TONE[r.type]]
               const stepIdx = STATUS_STEPS.indexOf(r.status)
               return (
-                <div key={r.id} data-tour={ri === 0 ? 'portal-requests' : undefined} className="px-5 py-4">
+                <div key={r.id} className="px-5 py-4">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kt.tile}`}>
                       <Icon size={18} strokeWidth={2.3} />
@@ -305,7 +308,7 @@ export function PortalHome() {
 
                   {/* 진행 단계 — 지금 어디까지 왔는지 한 줄로
                       (모바일에서는 단계 이름이 잘리므로 막대 + 한 줄 요약으로 대체) */}
-                  <div className="mt-3">
+                  <div className="mt-3" data-tour={ri === 0 ? 'portal-requests' : undefined}>
                     <div className="flex items-center gap-1">
                       {STATUS_STEPS.map((st, i) => (
                         <span
@@ -354,7 +357,7 @@ export function PortalHome() {
           {
             to: '/portal/report',
             icon: FileBarChart,
-            tone: 'orange' as const,
+            tone: 'sky' as const,
             title: '월간 운영 리포트',
             desc: '배출량·수거 횟수·용기 공급 내역을 매달 정리해 드립니다',
           },

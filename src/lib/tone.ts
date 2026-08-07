@@ -38,6 +38,18 @@ export const TONE: Record<Tone, ToneStyle> = {
 }
 
 // ── 의미 → 색 매핑 (한 곳에서만 정합니다) ───────────────────────────────────
+//
+//  색이 화면마다 다른 뜻을 갖지 않도록, 아래 두 축으로만 나눕니다.
+//
+//   ① 서비스 카테고리 — 어떤 일인지
+//      blue   운영 · 수거 · 입력          violet 소모품 · 병원 고객
+//      orange 추가수거                    sky    교육 · 자료 · 리포트
+//      rose   긴급                        teal   영업기회 · 추가매출
+//
+//   ② 상태 — 지금 어디까지 왔는지 (진행할수록 밝아집니다)
+//      rose 조치 필요(접수) → amber 확인 중 → blue 일정 반영 → emerald 완료
+//
+//  같은 뜻이면 어느 화면에서든 같은 색을 씁니다.
 
 /** 요청 유형 — 각 유형이 어떤 매출로 이어지는지와 같은 색을 씁니다 */
 export const REQUEST_TONE: Record<RequestKind, Tone> = {
@@ -58,15 +70,15 @@ export const REQUEST_REVENUE: Record<RequestKind, string> = {
 }
 
 export const STATUS_TONE: Record<RequestStatus, Tone> = {
-  접수: 'rose',
+  접수: 'rose', // 아직 아무도 보지 않음 — 가장 먼저 처리해야 할 상태
   '확인 중': 'amber',
-  '일정 반영': 'sky',
+  '일정 반영': 'blue', // 운영 일정에 들어감 → 운영 색
   '처리 완료': 'emerald',
 }
 
 export const STAGE_TONE: Record<LeadStage, Tone> = {
   추천: 'navy',
-  제안: 'sky',
+  제안: 'teal', // 영업기회
   수락: 'emerald',
   보류: 'amber',
   미전환: 'navy',

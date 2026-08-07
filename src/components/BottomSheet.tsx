@@ -1,4 +1,5 @@
 import { AnimatePresence, motion, useDragControls } from 'framer-motion'
+import { X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { useHistoryDismiss } from '../lib/useHistoryDismiss'
 
@@ -75,7 +76,7 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
                     className="flex h-9 w-9 items-center justify-center rounded-full text-navy-400 hover:bg-navy-50"
                     aria-label="닫기"
                   >
-                    ✕
+                    <X size={19} strokeWidth={2.4} />
                   </button>
                 </div>
               )}

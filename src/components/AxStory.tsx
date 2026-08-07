@@ -4,7 +4,7 @@ import type { AppData } from '../types'
 import { autoPerInput, evidenceStatus } from '../lib/performance'
 import { salesFunnel } from '../lib/sales'
 import { customerServiceStats } from '../lib/portal'
-import { ACTOR_TONE, TONE, type Actor, type Tone } from '../lib/tone'
+import { ACTOR_TONE, TONE, type Actor } from '../lib/tone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AX 전환 스토리 — 첫 화면에서 5초 안에 "이 시스템이 무엇을 하는가"를 보여줍니다.
@@ -34,12 +34,10 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     value: string
     sub: string
     on: boolean
-    tone: Tone
   }[] = [
     {
       icon: PenLine,
       actor: '현장',
-      tone: 'blue',
       label: '현장 1회 입력',
       value: auto.count > 0 ? `${auto.count}건` : '시작 전',
       sub: '수거 완료를 한 번만 입력',
@@ -48,7 +46,6 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     {
       icon: Share2,
       actor: '시스템',
-      tone: 'navy',
       label: '업무 자동 연결',
       value: auto.total > 0 ? `${auto.total}건` : '—',
       sub: '일정·이력·자재·통계·문서',
@@ -57,7 +54,6 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     {
       icon: BarChart3,
       actor: '시스템',
-      tone: 'navy',
       label: '병원 데이터 축적',
       value: `${data.clients.length}곳`,
       sub: '거래처별 수거·자재·메모',
@@ -66,7 +62,6 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     {
       icon: Hospital,
       actor: '병원',
-      tone: 'violet',
       label: '병원이 직접 확인·요청',
       value: cs.requestsTotal > 0 ? `${cs.requestsTotal}건` : '—',
       sub: '현황·리포트 확인 후 요청',
@@ -75,7 +70,6 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     {
       icon: Lightbulb,
       actor: '비원미래',
-      tone: 'orange',
       label: '데이터 기반 제안',
       value: cs.proposalsShared > 0 ? `${cs.proposalsShared}건` : f.recommended > 0 ? `추천 ${f.recommended}건` : '—',
       sub: '추가 수거·소모품·교육 제안',
@@ -84,7 +78,6 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     {
       icon: TrendingUp,
       actor: '병원',
-      tone: 'emerald',
       label: '병원 수락 → 추가 매출',
       value: f.accepted > 0 && f.actualRevenue > 0 ? won(f.actualRevenue) : f.accepted > 0 ? `수락 ${f.accepted}건` : '—',
       sub: '수거료 외 거래처당 매출',
@@ -95,7 +88,7 @@ export function AxStoryStrip({ data }: { data: AppData }) {
   return (
     <section className="card overflow-hidden">
       {/* 사업 전환 한 줄 — 무엇에서 무엇으로 가는 회사인지 */}
-      <div className="bg-navy-900 px-5 py-4 sm:px-6">
+      <div data-tour="story" className="bg-navy-900 px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <span className="pill bg-white/10 text-navy-200">의료폐기물 수거·운반</span>
           <ArrowRight size={16} className="shrink-0 text-teal-300" strokeWidth={2.8} />
@@ -109,10 +102,10 @@ export function AxStoryStrip({ data }: { data: AppData }) {
       </div>
 
       {/* 6단계 — 좁은 화면에서는 세로로 길어지지 않도록 가로로 훑어보는 한 줄입니다.
-          (넓은 화면에서는 6칸이 한눈에 들어옵니다) */}
+          넓은 화면에서는 6칸이 한 줄로 들어와, 왼쪽에서 오른쪽으로 읽으면 흐름이 그대로 보입니다. */}
       <div
-        data-tour="story"
-        className="flex gap-px overflow-x-auto bg-navy-100 2xl:grid 2xl:grid-cols-6 2xl:overflow-visible"
+        data-tour="story-steps"
+        className="flex gap-px overflow-x-auto bg-navy-100 lg:grid lg:grid-cols-3 lg:overflow-visible min-[1700px]:grid-cols-6"
       >
         {steps.map((s, i) => {
           const Icon = s.icon
@@ -120,24 +113,34 @@ export function AxStoryStrip({ data }: { data: AppData }) {
           return (
             <div
               key={s.label}
-              className="kpi-box relative flex w-[11.5rem] shrink-0 flex-col bg-white px-4 py-4 sm:w-[13rem] 2xl:w-auto 2xl:px-5"
+              className="kpi-box relative flex w-[11.5rem] shrink-0 flex-col bg-white px-4 py-3.5 sm:w-[13rem] lg:w-auto lg:px-4"
             >
+              {/* 흐름 방향 화살표는 칸 오른쪽 끝에 겹쳐 둡니다.
+                  줄 안에 두면 좁은 화면에서 배지를 밀어내 글자가 잘립니다. */}
+              {i < steps.length - 1 && (
+                <ArrowRight
+                  size={16}
+                  strokeWidth={2.6}
+                  className="pointer-events-none absolute right-1.5 top-6 text-navy-200"
+                />
+              )}
               <div className="flex items-center gap-2">
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    s.on ? TONE[s.tone].tile : 'bg-navy-50 text-navy-300'
+                    s.on ? at.tile : 'bg-navy-50 text-navy-300'
                   }`}
                 >
                   <Icon size={19} strokeWidth={2.3} />
                 </span>
                 {/* 누가 하는 일인지 — 흐름 가운데의 '병원'이 눈에 띄게 */}
-                <span className={`pill shrink-0 ${at.chip}`}>{s.actor}</span>
-                {i < steps.length - 1 && (
-                  <ArrowRight size={18} className="ml-auto shrink-0 text-navy-200" strokeWidth={2.6} />
-                )}
+                <span
+                  className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-lg px-2 py-0.5 text-[0.88rem] font-extrabold ${at.chip}`}
+                >
+                  {s.actor}
+                </span>
               </div>
-              <p className="t-label mt-2.5 min-w-0 break-keep text-navy-500">{s.label}</p>
-              <p className={`t-stat mt-1.5 ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
+              <p className="t-label mt-2 min-w-0 break-keep text-navy-500">{s.label}</p>
+              <p className={`t-stat mt-1 ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
               <p className="t-muted mt-auto break-keep pt-1.5">{s.sub}</p>
             </div>
           )

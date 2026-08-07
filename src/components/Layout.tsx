@@ -68,7 +68,7 @@ const CORE_NAV: NavItem[] = [
 /** 병원 서비스 — 이번 확장의 중심. 병원에 무엇을 제공하고 무엇을 받았는지 */
 const SERVICE_NAV: NavItem[] = [
   { to: '/requests', label: '병원 요청', icon: Inbox, desc: '병원이 올린 요청 처리 · 회신', tone: 'violet' },
-  { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'orange' },
+  { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
   { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '효율 · 자동화 · 매출 확장', tone: 'teal' },
 ]
 
@@ -346,7 +346,7 @@ function MobileHeader() {
           <p className="whitespace-nowrap text-[1.15rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
           {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
           <p className="mt-1 truncate text-[1.03rem] font-medium text-navy-400">
-            {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '통합 운영관리'}
+            {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '운영관리'}
           </p>
         </div>
         <TourButton

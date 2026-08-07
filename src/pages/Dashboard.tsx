@@ -6,14 +6,10 @@ import {
   AlertCircle,
   Circle,
   CheckCircle2,
-  Truck,
+  CalendarClock,
+  ClipboardEdit,
   PlusCircle,
-  Wallet,
-  Package,
   Scale,
-  Target,
-  TrendingUp,
-  Lightbulb,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -28,7 +24,7 @@ import { CustomerServiceCard } from '../components/CustomerService'
 import { StartHere } from '../components/StartHere'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
-import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
+import { monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
 import { prettyDate, today, weight, wonShort, thisMonth } from '../lib/format'
@@ -56,7 +52,6 @@ export function Dashboard() {
   const t = today()
   const month = thisMonth()
 
-  const summary = todaySummary(data)
   const activePlans = dispatchPlans(data).filter((p) => p.stops.length > 0).length
   const progress = todayProgress(data)
   const outstanding = outstandingTotal(data)
@@ -76,8 +71,6 @@ export function Dashboard() {
   const opportunities = useMemo(() => revenueOpportunities(data, month), [data, month])
   const reports = useMemo(() => data.clients.map((c) => clientMonthlyReport(data, c, month)), [data, month])
 
-  const MONTH_TARGET_KG = 105_000
-  const kgPct = Math.round((monthTotalKg / MONTH_TARGET_KG) * 100)
   const vehiclePct = data.vehicles.length ? Math.round((activePlans / data.vehicles.length) * 100) : 0
 
   return (
@@ -126,7 +119,7 @@ export function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         <section className="flex min-w-0 flex-col">
           <SectionTitle
-            action={<span className="pill bg-orange-50 text-orange-700">핵심 3</span>}
+            action={<span className="pill bg-accent-50 text-accent-700">핵심 3</span>}
             hint="쌓인 수거·자재 기록에서 다음에 제안할 것을 뽑습니다. 근거도 함께 보입니다."
           >
             데이터 기반 다음 행동 추천
@@ -149,70 +142,59 @@ export function Dashboard() {
         </section>
       </div>
 
-      {/* ── 오늘 운영 현황 (핵심 3기능 다음) ── */}
-      <div className="flex items-center gap-3 pt-1">
-        <span className="t-label whitespace-nowrap text-navy-500">오늘 운영 현황</span>
+      {/* ══ 여기부터는 오늘 운영 — 핵심 3기능보다 시각적으로 한 단계 낮춥니다 ══ */}
+      <div className="flex items-center gap-3 pt-2">
+        <span className="t-label whitespace-nowrap text-navy-400">오늘 운영</span>
         <span className="h-px flex-1 bg-navy-200" />
+        <button
+          onClick={() => navigate('/collection')}
+          className="t-btn flex shrink-0 items-center gap-1.5 rounded-xl bg-teal-500 px-4 py-2.5 text-white transition hover:bg-teal-600"
+        >
+          <PlusCircle size={18} strokeWidth={2.5} /> 수거 완료 입력
+        </button>
       </div>
 
-      {/* 핵심 KPI 4개 */}
-      {/* KPI — 숫자 크기는 카드 폭에 맞춰 자동 조절(.t-kpi/container query)됩니다 */}
+      {/* 오늘 한 줄 요약 — 예정/완료/입력 대기/이번 달 (중복 KPI 를 하나로 합쳤습니다) */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">
         <KpiCard
-          icon={Package}
-          label="오늘 수거 건수"
-          value={summary.total}
+          icon={CalendarClock}
+          label="오늘 수거 예정"
+          value={progress.planned}
           unit="건"
           tone="navy"
-          hint={`완료 ${summary.완료}건`}
           onClick={() => navigate('/today')}
         />
-        <KpiCard icon={Scale} label="오늘 수거량" value={weight(todayCollectedKg)} tone="teal" />
+        <KpiCard icon={CheckCircle2} label="수거 완료" value={progress.done} unit="건" tone="emerald" />
         <KpiCard
-          icon={Target}
+          icon={ClipboardEdit}
+          label="입력 대기"
+          value={progress.pendingInput}
+          unit="건"
+          tone={progress.pendingInput > 0 ? 'amber' : 'navy'}
+          onClick={() => navigate('/today')}
+        />
+        <KpiCard
+          icon={Scale}
           label="이번 달 수거량"
           value={weight(monthTotalKg)}
-          tone="navy"
-          hint={`목표 105톤의 ${kgPct}%`}
+          tone="teal"
+          hint={`오늘 ${weight(todayCollectedKg)}`}
           onClick={() => navigate('/stats')}
         />
-        <KpiCard
-          icon={TrendingUp}
-          label="추가 매출 기회"
-          value={`+${wonShort(opportunities.totalValue)}`}
-          tone="emerald"
-          hint={`${opportunities.totalCount}건 추천`}
-          onClick={() => navigate('/clients')}
-        />
       </div>
 
-      {/* ── 오늘 거래처 운영 현황 — 병원별 데이터가 한 화면으로 연결됨을 보여줌 ── */}
-      <section>
-        <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">오늘 일정 기준</span>}>
-          오늘 거래처 운영 현황
-        </SectionTitle>
-        <TodayClients data={data} />
-      </section>
-
-      {/* ── AX 도입 성과 (측정 결과) — 무엇을 하는지 본 다음에 성과를 봅니다 ── */}
-      <section>
-        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">실증</span>}>
-          AX 도입 성과
-        </SectionTitle>
-        <AxSummaryCard data={data} />
-      </section>
-
-      {/* ── 이하 운영 참고 ── */}
-      <div className="flex items-center gap-3 pt-2">
-        <span className="t-label whitespace-nowrap text-navy-400">운영 참고</span>
-        <span className="h-px flex-1 bg-navy-200" />
-      </div>
-
-      {/* ── 오늘 챙길 일 (상위 3건) + 진행 현황 ── */}
+      {/* 오늘 거래처 + 챙길 일 — 나란히 두어 화면 길이를 줄였습니다 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
-        <section className="min-w-0">
+        <section className="flex min-w-0 flex-col">
+          <SectionTitle action={<span className="pill bg-navy-100 text-navy-500">오늘 일정 기준</span>}>
+            오늘 거래처 운영 현황
+          </SectionTitle>
+          <TodayClients data={data} />
+        </section>
+
+        <section className="flex min-w-0 flex-col">
           <SectionTitle>오늘 챙길 일</SectionTitle>
-          <div className="card divide-y divide-navy-50">
+          <div className="card flex min-h-0 flex-1 flex-col divide-y divide-navy-50">
             {topChecks.map((item) => {
               const m = statusMeta[item.status]
               const Icon = m.icon
@@ -235,78 +217,32 @@ export function Dashboard() {
                 </Link>
               )
             })}
-            <button
-              onClick={() => navigate('/today')}
-              className="flex w-full items-center justify-center gap-1.5 py-4 text-[1.12rem] font-bold text-navy-600 transition hover:bg-navy-50"
-            >
-              전체 보기 <ChevronRight size={18} />
-            </button>
-          </div>
-        </section>
-
-        <section className="min-w-0">
-          <SectionTitle>오늘 진행 현황</SectionTitle>
-          <div className="card p-5 sm:p-6">
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: '수거 예정', v: progress.planned, u: '건' },
-                { label: '수거 완료', v: progress.done, u: '건' },
-                { label: '입력 대기', v: progress.pendingInput, u: '건' },
-              ].map((s) => (
-                <div key={s.label} className="rounded-2xl bg-navy-50 px-3 py-4 text-center">
-                  <p className="break-keep text-[1.07rem] font-bold leading-snug text-navy-400">{s.label}</p>
-                  <p className="mt-2 text-[1.9rem] font-extrabold leading-none text-navy-900">
-                    {s.v}
-                    <span className="ml-0.5 text-[1.07rem] font-bold text-navy-400">{s.u}</span>
-                  </p>
-                </div>
-              ))}
+            <div className="mt-auto grid grid-cols-2 divide-x divide-navy-50 border-t border-navy-50">
+              <Link
+                to="/receivables"
+                className="flex items-center justify-center gap-1.5 py-4 text-[1.08rem] font-bold text-navy-600 transition hover:bg-navy-50"
+              >
+                미수금 {wonShort(outstanding)}
+              </Link>
+              <Link
+                to="/dispatch"
+                className="flex items-center justify-center gap-1.5 py-4 text-[1.08rem] font-bold text-navy-600 transition hover:bg-navy-50"
+              >
+                차량 가동 {vehiclePct}%
+              </Link>
             </div>
-            <button onClick={() => navigate('/collection')} className="btn-primary mt-4 w-full !text-[1.15rem]">
-              <PlusCircle size={19} strokeWidth={2.4} /> 수거 완료 입력하기
-            </button>
           </div>
         </section>
       </div>
 
-      {/* 보조 지표 — 우선순위를 낮춰 하단에 요약만 */}
+      {/* AX 도입 성과 — 자세한 측정은 성과 화면에 있으므로 여기서는 요약만 */}
       <section>
-        <SectionTitle>운영 지표</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard
-            icon={Wallet}
-            label="미수금"
-            value={wonShort(outstanding)}
-            tone="rose"
-            onClick={() => navigate('/receivables')}
-          />
-          <KpiCard
-            icon={Truck}
-            label="차량 가동률"
-            value={`${vehiclePct}%`}
-            tone="navy"
-            hint={`${activePlans} / ${data.vehicles.length}대 운행`}
-            onClick={() => navigate('/dispatch')}
-          />
-        </div>
+        <SectionTitle action={<span className="pill bg-accent-50 text-accent-700">실증</span>}>
+          AX 도입 성과
+        </SectionTitle>
+        <AxSummaryCard data={data} compact />
       </section>
 
-      {/* 확장 방향 */}
-      <Link
-        to="/roadmap"
-        className="pressable flex items-center gap-4 rounded-3xl bg-navy-900 p-5 text-white shadow-lg"
-      >
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-          <Lightbulb size={22} className="text-teal-300" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="break-keep text-[1.22rem] font-bold leading-snug">데이터 기반 병원 운영지원으로 확장</p>
-          <p className="mt-1 break-keep text-[1.07rem] leading-snug text-navy-300">
-            수거 데이터 축적 → 다음 행동 추천 → 병원 운영지원 서비스
-          </p>
-        </div>
-        <ChevronRight size={20} className="shrink-0 text-white/60" />
-      </Link>
     </PageShell>
   )
 }

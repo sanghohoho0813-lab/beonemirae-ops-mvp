@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ChevronRight, Lock, type LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, Inbox, Lock, type LucideIcon } from 'lucide-react'
 import { TONE, type Tone } from '../lib/tone'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,13 +251,28 @@ export function RatioBar({ segments }: { segments: { value: number; className: s
   )
 }
 
-/** 비어있는 상태 */
-export function EmptyState({ icon = '🗂️', title, subtitle }: { icon?: string; title: string; subtitle?: string }) {
+/**
+ * 비어있는 상태
+ *
+ * 아이콘은 이모지 대신 제품 전체와 같은 선 아이콘을 씁니다.
+ * (화면마다 그림체가 달라지면 완성도가 떨어져 보입니다)
+ */
+export function EmptyState({
+  icon: Icon = Inbox,
+  title,
+  subtitle,
+}: {
+  icon?: LucideIcon
+  title: string
+  subtitle?: string
+}) {
   return (
     <div className="card flex flex-col items-center justify-center px-6 py-12 text-center">
-      <span className="text-3xl">{icon}</span>
-      <p className="mt-3 font-bold text-navy-700">{title}</p>
-      {subtitle && <p className="mt-1 text-[1.08rem] text-navy-400">{subtitle}</p>}
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-50 text-navy-300">
+        <Icon size={26} strokeWidth={2.2} />
+      </span>
+      <p className="t-card mt-3.5 break-keep text-navy-700">{title}</p>
+      {subtitle && <p className="t-body mt-1.5 max-w-md break-keep text-navy-400">{subtitle}</p>}
     </div>
   )
 }

@@ -44,7 +44,7 @@ export function Reports() {
     return (
       <PageShell>
         <PageHeader title="운영 리포트" subtitle="병원별 월간 운영 리포트" />
-        <EmptyState icon="📄" title="거래처가 없습니다" subtitle="거래처를 등록하면 월간 리포트가 생성됩니다." />
+        <EmptyState icon={FileBarChart} title="거래처가 없습니다" subtitle="거래처를 등록하면 월간 리포트가 생성됩니다." />
       </PageShell>
     )
   }
