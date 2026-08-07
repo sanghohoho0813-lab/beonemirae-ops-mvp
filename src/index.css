@@ -89,9 +89,10 @@
   }
   .t-stat {
     /* 좁은 통계 카드용 숫자 — 카드 폭(container query)에 맞춰 자동 축소되어
-       '건'·'%' 같은 단위까지 카드 안에 들어옵니다. .kpi-box 와 함께 사용합니다. */
+       '건'·'%' 같은 단위까지 카드 안에 들어옵니다. .kpi-box 와 함께 사용합니다.
+       하한을 낮게 둬야 '+25%'·'1.1톤' 처럼 짧지만 폭이 넓은 값도 잘리지 않습니다. */
     @apply break-keep font-extrabold leading-none tracking-tight;
-    font-size: clamp(1.3rem, 17cqi, 2.2rem);
+    font-size: clamp(1.05rem, 17cqi, 2.2rem);
   }
   .t-kpi-sm {
     /* 보조 KPI 숫자 — 29px / 49px */
@@ -174,5 +175,22 @@
   /* pill 형태 뱃지 공통 */
   .pill {
     @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 t-badge;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   한글 줄바꿈 안전장치
+
+   Tailwind 의 break-keep(word-break: keep-all)은 한글을 어절 단위로 끊어 읽기
+   좋게 만들지만, '의료법인한양의료재단'처럼 공백 없는 긴 이름은 좁은 칸에서
+   줄바꿈 지점이 없어 그대로 잘려 나갑니다.
+
+   overflow-wrap: anywhere 를 함께 걸어 두면, 다른 방법이 없을 때만 글자 단위로
+   넘어갑니다. 평소 동작(어절 단위 줄바꿈)은 그대로 유지되고, 칸을 넘칠 때만
+   잘리는 대신 다음 줄로 내려갑니다.
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .break-keep {
+    overflow-wrap: anywhere;
   }
 }

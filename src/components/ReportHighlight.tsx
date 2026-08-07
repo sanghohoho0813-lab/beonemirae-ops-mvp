@@ -31,7 +31,7 @@ export function ReportHighlight({ reports }: { reports: MonthlyReport[] }) {
             className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-navy-50"
           >
             <div className="min-w-0 flex-1">
-              <p className="break-keep text-[1.15rem] font-bold leading-snug text-navy-900">{r.client.name}</p>
+              <p className="text-[1.15rem] font-bold leading-snug text-navy-900 [overflow-wrap:anywhere] [word-break:keep-all]">{r.client.name}</p>
               <p className="mt-1 break-keep text-[1.07rem] leading-snug text-navy-500">
                 이번 달 {weight(r.totalKg)} · {r.visits}회 수거
               </p>

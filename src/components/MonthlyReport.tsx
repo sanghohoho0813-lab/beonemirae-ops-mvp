@@ -42,11 +42,12 @@ function Stat({
   valueClass?: string
 }) {
   return (
-    <div className="rounded-2xl bg-navy-50 p-4">
+    <div className="kpi-box rounded-2xl bg-navy-50 p-4">
       <p className="flex items-center gap-1.5 break-keep text-[1rem] font-bold leading-snug text-navy-400">
         <Icon size={15} className="shrink-0" /> {label}
       </p>
-      <p className={`mt-2 break-keep text-[1.62rem] font-extrabold leading-none ${valueClass}`}>{value}</p>
+      {/* 값은 칸 폭에 맞춰 자동 축소 — '1.1톤'·'+25%' 가 칸 밖으로 나가지 않게 */}
+      <p className={`t-stat mt-2 ${valueClass}`}>{value}</p>
       {sub && <p className="mt-1.5 break-keep text-[1.03rem] leading-snug text-navy-400">{sub}</p>}
     </div>
   )

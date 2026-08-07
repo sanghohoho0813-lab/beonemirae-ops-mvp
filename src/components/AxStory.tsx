@@ -4,6 +4,7 @@ import type { AppData } from '../types'
 import { autoPerInput, evidenceStatus } from '../lib/performance'
 import { salesFunnel } from '../lib/sales'
 import { customerServiceStats } from '../lib/portal'
+import { ACTOR_TONE, TONE, type Actor, type Tone } from '../lib/tone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AX 전환 스토리 — 첫 화면에서 5초 안에 "이 시스템이 무엇을 하는가"를 보여줍니다.
@@ -11,9 +12,11 @@ import { customerServiceStats } from '../lib/portal'
 //   현장 1회 입력 → 업무 자동 연결 → 병원 데이터 축적
 //     → 병원이 직접 확인·요청 → 데이터 기반 제안 → 추가 매출
 //
+//  · 각 칸에 "누가 하는 일인지"(현장/시스템/병원/비원미래)를 색 배지로 표시합니다.
+//    흐름 한가운데에 보라색 '병원'이 들어가 있어, 이 시스템이 내부 운영툴이 아니라
+//    병원도 함께 쓰는 서비스라는 사실이 설명 없이 읽힙니다.
 //  · 각 단계에 실제 데이터가 있으면 숫자를, 없으면 '시작 전'을 그대로 씁니다.
 //    (없는 데이터를 그럴듯한 숫자로 채우지 않습니다)
-//  · 데이터가 하나도 없어도 '무엇을 하는 시스템인지'는 항상 읽힙니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const won = (v: number) => (v >= 10000 ? `${Math.round(v / 10000).toLocaleString('ko-KR')}만원` : `${v.toLocaleString('ko-KR')}원`)
@@ -24,9 +27,19 @@ export function AxStoryStrip({ data }: { data: AppData }) {
   const ev = evidenceStatus(data)
   const cs = customerServiceStats(data)
 
-  const steps = [
+  const steps: {
+    icon: typeof PenLine
+    actor: Actor
+    label: string
+    value: string
+    sub: string
+    on: boolean
+    tone: Tone
+  }[] = [
     {
       icon: PenLine,
+      actor: '현장',
+      tone: 'blue',
       label: '현장 1회 입력',
       value: auto.count > 0 ? `${auto.count}건` : '시작 전',
       sub: '수거 완료를 한 번만 입력',
@@ -34,6 +47,8 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     },
     {
       icon: Share2,
+      actor: '시스템',
+      tone: 'navy',
       label: '업무 자동 연결',
       value: auto.total > 0 ? `${auto.total}건` : '—',
       sub: '일정·이력·자재·통계·문서',
@@ -41,6 +56,8 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     },
     {
       icon: BarChart3,
+      actor: '시스템',
+      tone: 'navy',
       label: '병원 데이터 축적',
       value: `${data.clients.length}곳`,
       sub: '거래처별 수거·자재·메모',
@@ -48,13 +65,17 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     },
     {
       icon: Hospital,
+      actor: '병원',
+      tone: 'violet',
       label: '병원이 직접 확인·요청',
       value: cs.requestsTotal > 0 ? `${cs.requestsTotal}건` : '—',
-      sub: '현황·리포트·수거·소모품 요청',
+      sub: '현황·리포트 확인 후 요청',
       on: cs.requestsTotal > 0,
     },
     {
       icon: Lightbulb,
+      actor: '비원미래',
+      tone: 'orange',
       label: '데이터 기반 제안',
       value: cs.proposalsShared > 0 ? `${cs.proposalsShared}건` : f.recommended > 0 ? `추천 ${f.recommended}건` : '—',
       sub: '추가 수거·소모품·교육 제안',
@@ -62,19 +83,27 @@ export function AxStoryStrip({ data }: { data: AppData }) {
     },
     {
       icon: TrendingUp,
-      label: '추가 매출',
+      actor: '병원',
+      tone: 'emerald',
+      label: '병원 수락 → 추가 매출',
       value: f.accepted > 0 && f.actualRevenue > 0 ? won(f.actualRevenue) : f.accepted > 0 ? `수락 ${f.accepted}건` : '—',
-      sub: '병원 수락 → 실제 매출',
+      sub: '수거료 외 거래처당 매출',
       on: f.accepted > 0,
     },
   ]
 
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-navy-900 px-5 py-4 sm:px-6">
-        <p className="t-card min-w-0 flex-1 break-keep text-white">
-          전화·수기·엑셀 반복 입력을 <span className="text-teal-300">현장 1회 입력</span>으로 바꾸고, 쌓인 병원
-          데이터를 <span className="text-teal-300">병원과 함께 보며</span> 다음에 필요한 수거·소모품·교육까지
+      {/* 사업 전환 한 줄 — 무엇에서 무엇으로 가는 회사인지 */}
+      <div className="bg-navy-900 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          <span className="pill bg-white/10 text-navy-200">의료폐기물 수거·운반</span>
+          <ArrowRight size={16} className="shrink-0 text-teal-300" strokeWidth={2.8} />
+          <span className="pill bg-teal-500 text-white">병원 폐기물 운영지원 서비스</span>
+        </div>
+        <p className="t-body mt-2.5 break-keep text-navy-200">
+          전화·수기·엑셀 반복 입력을 <span className="font-bold text-white">현장 1회 입력</span>으로 바꾸고, 쌓인
+          데이터를 <span className="font-bold text-white">병원과 함께 보며</span> 다음에 필요한 수거·소모품·교육까지
           잇습니다
         </p>
       </div>
@@ -82,23 +111,25 @@ export function AxStoryStrip({ data }: { data: AppData }) {
       <div className="grid gap-px bg-navy-100 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {steps.map((s, i) => {
           const Icon = s.icon
+          const at = TONE[ACTOR_TONE[s.actor]]
           return (
-            <div key={s.label} className="relative flex flex-col bg-white px-5 py-4">
-              {/* 아이콘을 라벨 위에 두어 좁은 칸에서도 라벨이 접히지 않게 합니다 */}
+            <div key={s.label} className="kpi-box relative flex flex-col bg-white px-5 py-4">
               <div className="flex items-center gap-2">
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    s.on ? 'bg-teal-50 text-teal-600' : 'bg-navy-50 text-navy-300'
+                    s.on ? TONE[s.tone].tile : 'bg-navy-50 text-navy-300'
                   }`}
                 >
                   <Icon size={19} strokeWidth={2.3} />
                 </span>
+                {/* 누가 하는 일인지 — 흐름 가운데의 '병원'이 눈에 띄게 */}
+                <span className={`pill shrink-0 ${at.chip}`}>{s.actor}</span>
                 {i < steps.length - 1 && (
                   <ArrowRight size={18} className="ml-auto hidden shrink-0 text-navy-200 2xl:block" strokeWidth={2.6} />
                 )}
               </div>
-              <p className="t-label mt-2 min-w-0 break-keep text-navy-500">{s.label}</p>
-              <p className={`t-kpi-sm mt-1.5 break-keep ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
+              <p className="t-label mt-2.5 min-w-0 break-keep text-navy-500">{s.label}</p>
+              <p className={`t-stat mt-1.5 ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
               <p className="t-muted mt-auto break-keep pt-1.5">{s.sub}</p>
             </div>
           )

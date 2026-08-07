@@ -95,19 +95,27 @@ export function Dashboard() {
       {/* 실제 운영 전환 직후 — 무엇부터 해야 하는지 (다 끝나면 사라집니다) */}
       <StartHere data={data} />
 
-      {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 ── */}
+      {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 (내부 효율) ── */}
       <section>
-        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1</span>}>
+        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 1 · 내부 효율</span>}>
           한 번 입력, 여러 업무 자동 연결
         </SectionTitle>
         <AutoLinkFlow />
       </section>
 
-      {/* ── 핵심 2·3 · 추가 매출 기회 / 병원 운영 리포트 ── */}
+      {/* ── 핵심 2 · 병원 고객 서비스 → 추가 매출 (이번 확장의 중심) ── */}
+      <section>
+        <SectionTitle action={<span className="pill bg-violet-50 text-violet-700">핵심 2 · 고객 서비스</span>}>
+          병원이 직접 확인하고 요청합니다
+        </SectionTitle>
+        <CustomerServiceCard data={data} />
+      </section>
+
+      {/* ── 핵심 3·4 · 추가 매출 기회 / 병원 운영 리포트 ── */}
       {/* 두 카드가 같은 높이로 정렬되도록 섹션을 flex 컬럼으로 두고 카드가 남는 높이를 흡수 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
         <section className="flex min-w-0 flex-col">
-          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 2</span>}>
+          <SectionTitle action={<span className="pill bg-orange-50 text-orange-700">핵심 3</span>}>
             데이터 기반 다음 행동 추천
           </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
@@ -116,7 +124,7 @@ export function Dashboard() {
         </section>
 
         <section className="flex min-w-0 flex-col">
-          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 3</span>}>
+          <SectionTitle action={<span className="pill bg-sky-50 text-sky-700">핵심 4</span>}>
             수거를 넘어 병원 운영지원으로
           </SectionTitle>
           <div className="flex min-h-0 flex-1 flex-col">
@@ -124,14 +132,6 @@ export function Dashboard() {
           </div>
         </section>
       </div>
-
-      {/* ── 핵심 4 · 병원 고객이 직접 쓰는 서비스 (이번 확장의 중심) ── */}
-      <section>
-        <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">핵심 4</span>}>
-          병원이 직접 확인하고 요청합니다
-        </SectionTitle>
-        <CustomerServiceCard data={data} />
-      </section>
 
       {/* ── 오늘 운영 현황 (핵심 3기능 다음) ── */}
       <div className="flex items-center gap-3 pt-1">

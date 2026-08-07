@@ -37,7 +37,7 @@ export function ActionRow({ action, onAct }: { action: NextAction; onAct?: () =>
           <Icon size={21} strokeWidth={2.3} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="break-keep text-[1.15rem] font-bold leading-snug text-navy-900">
+          <p className="text-[1.15rem] font-bold leading-snug text-navy-900 [overflow-wrap:anywhere] [word-break:keep-all]">
             {action.clientName}
             {stage !== '추천' && <span className={`pill ml-1.5 align-middle ${STAGE_STYLE[stage]}`}>{stage}</span>}
           </p>

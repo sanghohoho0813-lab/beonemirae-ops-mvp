@@ -1,27 +1,92 @@
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Handshake, Inbox, Smartphone } from 'lucide-react'
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronRight,
+  Handshake,
+  Inbox,
+  Send,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import type { AppData } from '../types'
 import { customerServiceStats } from '../lib/portal'
 import { openRequests } from '../lib/ops'
+import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE, type Tone } from '../lib/tone'
 import { won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 병원 고객 서비스 현황 (대시보드용)
+// 병원 고객 서비스 → 추가 매출 (대시보드용)
 //
-//  이번 확장의 핵심 — "병원이 실제로 쓰고 있는가"를 실제 기록으로만 보여줍니다.
-//  숫자를 만들어 내지 않으며, 아직 없으면 무엇을 하면 되는지 안내합니다.
+//  이 카드 하나로 "병원의 행동이 어떻게 매출이 되는가"에 답합니다.
+//
+//    병원 요청  →  비원미래 처리  →  데이터 기반 제안  →  병원 수락  →  실제 매출
+//
+//  숫자는 전부 실제 기록에서만 나옵니다. 아직 없으면 만들지 않고,
+//  무엇을 하면 되는지 안내로 대체합니다.
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface Stage {
+  icon: LucideIcon
+  label: string
+  value: string
+  sub: string
+  tone: Tone
+  on: boolean
+}
 
 export function CustomerServiceCard({ data }: { data: AppData }) {
   const s = customerServiceStats(data)
   const open = openRequests(data)
-  const urgent = open.filter((r) => r.urgent).length
   const started = s.requestsTotal > 0 || s.proposalsShared > 0
+
+  const stages: Stage[] = [
+    {
+      icon: Inbox,
+      label: '병원 요청',
+      value: `${s.requestsTotal}건`,
+      sub: `병원 직접 ${s.portalRatio}%`,
+      tone: 'violet',
+      on: s.requestsTotal > 0,
+    },
+    {
+      icon: CheckCircle2,
+      label: '비원미래 처리',
+      value: `${s.requestsDone}건`,
+      sub: s.requestsOpen > 0 ? `대기 ${s.requestsOpen}건` : '대기 없음',
+      tone: 'sky',
+      on: s.requestsDone > 0,
+    },
+    {
+      icon: Send,
+      label: '데이터 기반 제안',
+      value: `${s.proposalsShared}건`,
+      sub: '병원에 전달',
+      tone: 'orange',
+      on: s.proposalsShared > 0,
+    },
+    {
+      icon: Handshake,
+      label: '병원 수락',
+      value: `${s.proposalsAccepted}건`,
+      sub: s.proposalsShared > 0 ? `수락률 ${Math.round((s.proposalsAccepted / s.proposalsShared) * 100)}%` : '—',
+      tone: 'emerald',
+      on: s.proposalsAccepted > 0,
+    },
+    {
+      icon: Wallet,
+      label: '실제 추가 매출',
+      value: s.acceptedRevenue > 0 ? won(s.acceptedRevenue) : '미입력',
+      sub: '수거료 외 매출',
+      tone: 'teal',
+      on: s.acceptedRevenue > 0,
+    },
+  ]
 
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 sm:px-6">
-        <p className="t-card min-w-0 flex-1 break-keep text-navy-900">병원 고객 서비스</p>
+        <p className="t-card min-w-0 flex-1 break-keep text-navy-900">병원의 행동이 매출이 되는 흐름</p>
         <Link to="/requests" className="t-btn flex shrink-0 items-center gap-1 text-teal-700 hover:underline">
           요청 처리 <ChevronRight size={16} />
         </Link>
@@ -30,8 +95,8 @@ export function CustomerServiceCard({ data }: { data: AppData }) {
       {!started ? (
         <div className="border-t border-navy-100 px-5 py-5 sm:px-6">
           <p className="t-body break-keep leading-snug text-navy-600">
-            병원 담당자 계정을 만들면 병원이 직접 수거·소모품을 요청하고 월간 리포트를 확인할 수 있습니다.
-            여기에는 실제로 오간 요청과 제안만 집계됩니다.
+            병원 담당자 계정을 만들면 병원이 직접 수거·소모품을 요청하고 월간 리포트를 확인합니다. 그 요청과 제안이
+            여기에 실제 기록으로 쌓입니다.
           </p>
           <Link to="/settings" className="btn-navy mt-4 inline-flex">
             병원 계정 만들기 안내
@@ -39,59 +104,64 @@ export function CustomerServiceCard({ data }: { data: AppData }) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-px border-t border-navy-100 bg-navy-100 lg:grid-cols-4">
-            {[
-              { icon: Inbox, label: '처리 대기 요청', value: `${s.requestsOpen}건`, tone: s.requestsOpen > 0 },
-              { icon: Smartphone, label: '병원 직접 등록', value: `${s.portalRatio}%`, tone: s.portalRatio > 0 },
-              {
-                icon: Handshake,
-                label: '제안 → 수락',
-                value: `${s.proposalsAccepted} / ${s.proposalsShared}건`,
-                tone: s.proposalsAccepted > 0,
-              },
-              {
-                icon: AlertTriangle,
-                label: '수락 건 실제 매출',
-                value: s.acceptedRevenue > 0 ? won(s.acceptedRevenue) : '미입력',
-                tone: s.acceptedRevenue > 0,
-              },
-            ].map((x) => {
+          {/* 5단계 흐름 — 색이 왼쪽(병원)에서 오른쪽(매출)으로 이어집니다 */}
+          <div className="grid gap-px border-t border-navy-100 bg-navy-100 sm:grid-cols-2 xl:grid-cols-5">
+            {stages.map((x, i) => {
               const Icon = x.icon
               return (
-                <div key={x.label} className="bg-white px-5 py-4">
-                  <p className="t-muted flex items-center gap-1.5 break-keep">
-                    <Icon size={14} className="shrink-0" strokeWidth={2.4} /> {x.label}
-                  </p>
-                  <p className={`t-kpi-sm mt-1.5 break-keep ${x.tone ? 'text-navy-900' : 'text-navy-300'}`}>
-                    {x.value}
-                  </p>
+                <div
+                  key={x.label}
+                  // 좁은 폭에서는 2열로 접히므로, 마지막 칸이 빈 칸을 남기지 않게 한 줄을 채웁니다
+                  className={`kpi-box flex flex-col bg-white px-5 py-4 xl:px-4 2xl:px-5 ${
+                    i === stages.length - 1 ? 'sm:col-span-2 xl:col-span-1' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                        x.on ? TONE[x.tone].tile : 'bg-navy-50 text-navy-300'
+                      }`}
+                    >
+                      <Icon size={18} strokeWidth={2.3} />
+                    </span>
+                    {i < stages.length - 1 && (
+                      <ArrowRight size={17} className="ml-auto hidden shrink-0 text-navy-200 xl:block" strokeWidth={2.6} />
+                    )}
+                  </div>
+                  <p className="t-label mt-2.5 break-keep text-navy-500">{x.label}</p>
+                  {/* 칸 폭에 맞춰 자동 축소 — '미입력'·'123만원' 같은 값이 칸 밖으로 나가지 않게 */}
+                  <p className={`t-stat mt-1 ${x.on ? 'text-navy-900' : 'text-navy-300'}`}>{x.value}</p>
+                  <p className="t-muted mt-auto break-keep pt-1">{x.sub}</p>
                 </div>
               )
             })}
           </div>
 
+          {/* 지금 들어와 있는 요청 — 각 요청이 어떤 매출로 이어지는지 함께 표시 */}
           {open.length > 0 && (
             <div className="divide-y divide-navy-50 border-t border-navy-100">
               {open.slice(0, 3).map((r) => (
                 <Link
                   key={r.id}
                   to="/requests"
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3.5 transition hover:bg-navy-50 sm:px-6"
+                  className="flex items-center gap-3.5 px-5 py-3.5 transition hover:bg-navy-50 sm:px-6"
                 >
-                  <span className="t-body min-w-0 break-keep font-extrabold text-navy-900">{r.clientName}</span>
-                  <span className="pill bg-navy-50 text-navy-600">{r.type}</span>
-                  {r.urgent && <span className="pill bg-rose-50 text-rose-600">긴급</span>}
-                  <span className="t-muted min-w-0 flex-1 break-keep">{r.content}</span>
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.type]].dot}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="t-body break-keep font-extrabold text-navy-900">{r.clientName}</span>
+                      <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{r.type}</span>
+                      <span className={`pill ${TONE[STATUS_TONE[r.status]].chip}`}>{r.status}</span>
+                    </div>
+                    <p className="t-muted mt-1 break-keep">
+                      {r.content.length > 40 ? r.content.slice(0, 40) + '…' : r.content}
+                      <span className="ml-1.5 font-bold text-navy-500">· {REQUEST_REVENUE[r.type]}</span>
+                    </p>
+                  </div>
                   <ChevronRight size={17} className="shrink-0 text-navy-300" />
                 </Link>
               ))}
             </div>
-          )}
-
-          {urgent > 0 && (
-            <p className="t-muted break-keep border-t border-navy-100 px-5 py-3 text-rose-600 sm:px-6">
-              긴급 요청 {urgent}건이 아직 처리되지 않았습니다.
-            </p>
           )}
         </>
       )}

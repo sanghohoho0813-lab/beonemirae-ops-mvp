@@ -97,7 +97,7 @@ export function Reports() {
                     <Building2 size={18} className={`shrink-0 ${active ? 'text-white/80' : 'text-navy-300'}`} />
                     <span className="min-w-0 flex-1">
                       <span
-                        className={`block break-keep text-[1.12rem] font-bold leading-snug ${
+                        className={`block text-[1.12rem] font-bold leading-snug [overflow-wrap:anywhere] [word-break:keep-all] ${
                           active ? 'text-white' : 'text-navy-800'
                         }`}
                       >

@@ -199,7 +199,7 @@ export function TodaySchedule() {
                         onClick={() => client && navigate(`/clients/${client.id}`)}
                         className="mt-1.5 flex min-w-0 max-w-full items-center gap-1 text-left"
                       >
-                        <span className="min-w-0 break-keep text-xl font-extrabold text-navy-900">
+                        <span className="min-w-0 text-xl font-extrabold text-navy-900 [overflow-wrap:anywhere] [word-break:keep-all]">
                           {client?.name ?? '알 수 없는 거래처'}
                         </span>
                         <ChevronRight size={16} className="shrink-0 text-navy-300" />

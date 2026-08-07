@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronRight, Lock, type LucideIcon } from 'lucide-react'
+import { TONE, type Tone } from '../lib/tone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 토스 스타일 공용 UI 키트
@@ -20,17 +21,16 @@ export function PageShell({ children, className = '' }: { children: ReactNode; c
 /** 섹션 제목 (+ 우측 액션) */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-2 px-1">
-      <h2 className="t-section min-w-0 text-navy-800">
-        {children}
-      </h2>
+    // 좁은 폭에서 제목이 뭉개지지 않도록, 자리가 부족하면 액션이 아래 줄로 내려갑니다.
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-1">
+      <h2 className="t-section min-w-0 flex-1 text-navy-800">{children}</h2>
       {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }
 
-type Tone = 'navy' | 'teal' | 'amber' | 'rose' | 'emerald'
-const numberTone: Record<Tone, string> = {
+type NumberTone = 'navy' | 'teal' | 'amber' | 'rose' | 'emerald'
+const numberTone: Record<NumberTone, string> = {
   navy: 'text-navy-900',
   teal: 'text-teal-600',
   amber: 'text-amber-500',
@@ -53,7 +53,7 @@ export function MetricCard({
   value: ReactNode
   unit?: string
   hint?: string
-  tone?: Tone
+  tone?: NumberTone
   size?: 'md' | 'lg'
   nowrap?: boolean
   onClick?: () => void
@@ -192,6 +192,34 @@ export function IconChip({ icon: Icon, tone = 'navy', size = 44 }: { icon: Lucid
       <Icon size={size * 0.5} strokeWidth={2.2} />
     </span>
   )
+}
+
+/**
+ * 색 아이콘 타일 — 목록·메뉴에서 항목을 빠르게 구분하기 위한 최소 단위.
+ * 색은 여기(작은 배경)와 칩·점에만 쓰고 카드 전체에는 쓰지 않습니다.
+ */
+export function IconTile({
+  icon: Icon,
+  tone = 'navy',
+  size = 42,
+}: {
+  icon: LucideIcon
+  tone?: Tone
+  size?: number
+}) {
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-2xl ${TONE[tone].tile}`}
+      style={{ width: size, height: size }}
+    >
+      <Icon size={Math.round(size * 0.5)} strokeWidth={2.2} />
+    </span>
+  )
+}
+
+/** 작은 라벨 칩 (요청 유형 · 상태 · 단계 등) */
+export function ToneChip({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return <span className={`pill ${TONE[tone].chip}`}>{children}</span>
 }
 
 /** 두 구간 비율 바 (예: 의료폐기물 vs 일회용기저귀) */

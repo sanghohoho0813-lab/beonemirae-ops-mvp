@@ -42,9 +42,9 @@ export function AutoLinkFlow() {
             <button
               key={label}
               onClick={() => navigate(to)}
-              className="pressable rounded-xl bg-navy-50 px-3 py-3.5 text-center text-[1.12rem] font-bold text-navy-700 transition hover:bg-teal-50 hover:text-teal-700"
+              className="pressable rounded-xl bg-navy-50 px-2 py-3.5 text-center text-[1.02rem] font-bold text-navy-700 transition hover:bg-teal-50 hover:text-teal-700 sm:px-3 sm:text-[1.12rem]"
             >
-              <span className="block break-keep leading-snug">{label}</span>
+              <span className="block leading-snug [word-break:keep-all] [overflow-wrap:anywhere]">{label}</span>
             </button>
           ))}
         </div>

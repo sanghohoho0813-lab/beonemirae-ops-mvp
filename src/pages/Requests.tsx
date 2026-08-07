@@ -10,6 +10,10 @@ import {
   PlusCircle,
   Send,
   Smartphone,
+  Siren,
+  Truck,
+  PackagePlus,
+  GraduationCap,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
@@ -17,6 +21,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { clientRequests, type RequestItem } from '../lib/ops'
 import { customerServiceStats } from '../lib/portal'
+import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, type RequestKind, type RequestStatus } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,11 +32,13 @@ import { REQUEST_KINDS, type RequestKind, type RequestStatus } from '../types'
 //  관련 요청은 자동으로 닫힙니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STATUS_STYLE: Record<RequestStatus, string> = {
-  접수: 'bg-rose-50 text-rose-600',
-  '확인 중': 'bg-amber-50 text-amber-700',
-  '일정 반영': 'bg-sky-50 text-sky-700',
-  '처리 완료': 'bg-teal-50 text-teal-700',
+/** 요청 유형 아이콘 — 무엇을 원하는 요청인지 글자 없이도 구분되게 */
+const KIND_ICON: Record<RequestKind, typeof Siren> = {
+  긴급수거: Siren,
+  추가수거: Truck,
+  소모품: PackagePlus,
+  '교육·자료': GraduationCap,
+  기타: MessageSquare,
 }
 
 const FLOW: RequestStatus[] = ['접수', '확인 중', '일정 반영', '처리 완료']
@@ -121,20 +128,32 @@ export function Requests() {
         <div className="space-y-3">
           {rows.map((r) => (
             <div key={r.id} className="card p-5">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {(() => {
+                  const Icon = KIND_ICON[r.type]
+                  return (
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TONE[REQUEST_TONE[r.type]].tile}`}
+                    >
+                      <Icon size={20} strokeWidth={2.3} />
+                    </span>
+                  )
+                })()}
                 <Link
                   to={`/clients/${r.clientId}`}
                   className="t-card min-w-0 break-keep text-navy-900 hover:text-teal-700"
                 >
                   {r.clientName}
                 </Link>
-                <span className="pill bg-navy-50 text-navy-600">{r.type}</span>
+                <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{r.type}</span>
                 {r.urgent && (
                   <span className="pill bg-rose-50 text-rose-600">
                     <AlertTriangle size={13} strokeWidth={2.6} /> 긴급
                   </span>
                 )}
-                <span className={`pill ${r.source === 'portal' ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
+                <span
+                  className={`pill ${r.source === 'portal' ? 'bg-violet-50 text-violet-700' : 'bg-navy-100 text-navy-500'}`}
+                >
                   {r.source === 'portal' ? (
                     <>
                       <Smartphone size={13} strokeWidth={2.6} /> 병원 직접
@@ -154,24 +173,30 @@ export function Requests() {
                 {r.desiredDate && ` · 희망일 ${r.desiredDate}`}
               </p>
 
+              {/* 이 요청이 어떤 매출로 이어지는지 — 요청 처리 = 영업 행동임을 명시 */}
+              <p className="t-muted mt-2 flex flex-wrap items-center gap-1.5 break-keep">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.type]].dot}`} />
+                연결되는 매출: <b className="font-extrabold text-navy-600">{REQUEST_REVENUE[r.type]}</b>
+              </p>
+
               {r.reply && (
-                <div className="mt-3 flex items-start gap-2 rounded-xl bg-teal-50/70 px-3.5 py-3">
-                  <MessageSquare size={16} className="mt-0.5 shrink-0 text-teal-600" strokeWidth={2.3} />
-                  <p className="t-body min-w-0 break-keep leading-snug text-teal-800">{r.reply}</p>
+                <div className="mt-3 flex items-start gap-2 rounded-xl bg-sky-50 px-3.5 py-3">
+                  <MessageSquare size={16} className="mt-0.5 shrink-0 text-sky-600" strokeWidth={2.3} />
+                  <p className="t-body min-w-0 break-keep leading-snug text-sky-900">{r.reply}</p>
                 </div>
               )}
 
               {/* 처리 단계 — 여기서 바꾼 상태가 병원 화면에 그대로 보입니다 */}
               <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                {FLOW.map((s) => (
+                {FLOW.map((st) => (
                   <button
-                    key={s}
-                    onClick={() => handleRequest(r.id, { status: s })}
+                    key={st}
+                    onClick={() => handleRequest(r.id, { status: st })}
                     className={`rounded-full px-3.5 py-2 text-[1rem] font-extrabold transition ${
-                      r.status === s ? STATUS_STYLE[s] : 'bg-navy-50 text-navy-400 hover:text-navy-700'
+                      r.status === st ? TONE[STATUS_TONE[st]].chip : 'bg-navy-50 text-navy-400 hover:text-navy-700'
                     }`}
                   >
-                    {s}
+                    {st}
                   </button>
                 ))}
                 <button
@@ -276,7 +301,7 @@ export function Requests() {
                   key={k}
                   onClick={() => setNKind(k)}
                   className={`rounded-full px-4 py-2.5 text-[1.02rem] font-bold transition ${
-                    nKind === k ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500 hover:text-navy-700'
+                    nKind === k ? 'bg-navy-900 text-white' : `${TONE[REQUEST_TONE[k]].chip} hover:opacity-80`
                   }`}
                 >
                   {k}

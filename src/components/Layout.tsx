@@ -33,6 +33,7 @@ import {
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
+import { TONE, type Tone } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
@@ -50,37 +51,40 @@ interface NavItem {
   to: string
   label: string
   icon: LucideIcon
+  /** 한 줄 설명 — 무엇을 하는 메뉴인지 목차에서 바로 읽히게 */
+  desc: string
+  tone: Tone
 }
 
 /** 핵심 운영 — 매일 쓰는 화면 */
 const CORE_NAV: NavItem[] = [
-  { to: '/', label: '대시보드', icon: LayoutGrid },
-  { to: '/today', label: '오늘 일정', icon: CalendarClock },
-  { to: '/collection', label: '수거 입력', icon: PlusCircle },
-  { to: '/clients', label: '거래처', icon: Building2 },
+  { to: '/', label: '대시보드', icon: LayoutGrid, desc: '오늘 현황 · 핵심 지표', tone: 'blue' },
+  { to: '/today', label: '오늘 일정', icon: CalendarClock, desc: '방문 · 완료 · 입력 대기', tone: 'sky' },
+  { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '한 번 입력 → 자동 연결', tone: 'emerald' },
+  { to: '/clients', label: '거래처', icon: Building2, desc: '병원별 이력 · 메모 · 추천', tone: 'navy' },
 ]
 
 /** 병원 서비스 — 이번 확장의 중심. 병원에 무엇을 제공하고 무엇을 받았는지 */
 const SERVICE_NAV: NavItem[] = [
-  { to: '/requests', label: '병원 요청', icon: Inbox },
-  { to: '/reports', label: '운영 리포트', icon: FileBarChart },
-  { to: '/performance', label: 'AX 도입 성과', icon: Gauge },
+  { to: '/requests', label: '병원 요청', icon: Inbox, desc: '병원이 올린 요청 처리 · 회신', tone: 'violet' },
+  { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'orange' },
+  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '효율 · 자동화 · 매출 확장', tone: 'teal' },
 ]
 
 /** 운영 도구 — 핵심 흐름을 보조하는 실사용 화면 */
 const TOOL_NAV: NavItem[] = [
-  { to: '/dispatch', label: '배차·경로', icon: Truck },
-  { to: '/materials', label: '자재 관리', icon: Boxes },
-  { to: '/receivables', label: '미수금 관리', icon: Wallet },
-  { to: '/history', label: '수거이력', icon: History },
-  { to: '/stats', label: '통계', icon: PieChart },
-  { to: '/roadmap', label: '활용 계획', icon: Workflow },
+  { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '', tone: 'navy' },
+  { to: '/materials', label: '자재 관리', icon: Boxes, desc: '', tone: 'navy' },
+  { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '', tone: 'navy' },
+  { to: '/history', label: '수거이력', icon: History, desc: '', tone: 'navy' },
+  { to: '/stats', label: '통계', icon: PieChart, desc: '', tone: 'navy' },
+  { to: '/roadmap', label: '활용 계획', icon: Workflow, desc: '', tone: 'navy' },
 ]
 
 /** 관리 — 관리자만 보이는 영역 */
 const ADMIN_NAV: NavItem[] = [
-  { to: '/settings', label: '설정', icon: SlidersHorizontal },
-  { to: '/audit', label: '감사로그', icon: ScrollText },
+  { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '', tone: 'navy' },
+  { to: '/audit', label: '감사로그', icon: ScrollText, desc: '', tone: 'navy' },
 ]
 
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 (클릭 시 활용 계획으로 안내) */
@@ -96,10 +100,10 @@ const PLANNED: string[] = [
 
 /** 모바일 하단 고정 메뉴 */
 const BOTTOM_NAV: NavItem[] = [
-  { to: '/', label: '홈', icon: LayoutGrid },
-  { to: '/today', label: '일정', icon: CalendarClock },
-  { to: '/clients', label: '거래처', icon: Building2 },
-  { to: '/collection', label: '입력', icon: PlusCircle },
+  { to: '/', label: '홈', icon: LayoutGrid, desc: '', tone: 'blue' },
+  { to: '/today', label: '일정', icon: CalendarClock, desc: '', tone: 'sky' },
+  { to: '/collection', label: '입력', icon: PlusCircle, desc: '', tone: 'emerald' },
+  { to: '/requests', label: '병원 요청', icon: Inbox, desc: '', tone: 'violet' },
 ]
 
 const MORE_PATHS = [
@@ -119,6 +123,12 @@ function useVisibleNav(items: NavItem[]): NavItem[] {
 }
 
 // ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────
+/**
+ * 사이드바 메뉴 1줄.
+ * 주요 메뉴는 색 아이콘 타일 + 한 줄 설명을 함께 보여줘, 목차만 봐도
+ * "무엇을 하는 메뉴인지"와 "어떤 영역인지"가 바로 구분되게 합니다.
+ * (색은 아이콘 타일에만 — 줄 전체를 칠하지 않습니다)
+ */
 function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }) {
   const Icon = item.icon
   return (
@@ -126,19 +136,33 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
       to={item.to}
       end={item.to === '/'}
       className={({ isActive }) =>
-        `t-nav flex items-center gap-3.5 rounded-xl px-4 transition ${
-          muted ? 'min-h-[52px] font-semibold' : 'min-h-[60px]'
+        `t-nav flex items-center gap-3 rounded-2xl px-3 transition ${
+          muted ? 'min-h-[52px] font-semibold' : 'min-h-[64px]'
         } ${
           isActive
-            ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/25'
+            ? 'bg-white/[0.14] text-white'
             : muted
               ? 'text-navy-300/75 hover:bg-white/10 hover:text-white'
-              : 'text-navy-200/90 hover:bg-white/10 hover:text-white'
+              : 'text-navy-100 hover:bg-white/10 hover:text-white'
         }`
       }
     >
-      <Icon size={muted ? 21 : 25} strokeWidth={2.2} className="shrink-0" />
-      <span className="min-w-0 break-keep">{item.label}</span>
+      {muted ? (
+        <Icon size={21} strokeWidth={2.2} className="ml-1 shrink-0" />
+      ) : (
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE[item.tone].tile}`}>
+          <Icon size={22} strokeWidth={2.3} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block break-keep">{item.label}</span>
+        {/* 설명은 사이드바가 넉넉해지는 xl 이상에서만 — 좁은 폭에서는 메뉴명만 보여 줍니다 */}
+        {!muted && item.desc && (
+          <span className="mt-1 hidden break-keep text-[0.95rem] font-medium text-navy-400 xl:block">
+            {item.desc}
+          </span>
+        )}
+      </span>
     </NavLink>
   )
 }
