@@ -14,12 +14,16 @@ import {
   AlertTriangle,
   Gauge,
   Users,
+  Truck,
+  KeyRound,
   ArrowRight,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { UserManagementCard, ImportLocalCard } from '../components/AdminPanels'
+import { VehicleManager } from '../components/VehicleManager'
+import { PasswordCard } from '../components/PasswordCard'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
 import { PageShell } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
@@ -313,6 +317,28 @@ export function Settings() {
             </div>
             <p className="t-muted mt-3">가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.</p>
           </SettingCard>
+
+          {/* 차량 — 한 대도 없으면 수거 완료 입력이 불가능합니다 */}
+          <SettingCard
+            icon={Truck}
+            title="운행 차량"
+            desc="수거에 사용하는 차량을 등록합니다. 차량이 없으면 수거 입력을 할 수 없습니다."
+            tone={data.vehicles.length === 0 ? 'amber' : 'navy'}
+          >
+            <VehicleManager />
+          </SettingCard>
+
+          {/* 본인 비밀번호 변경 (실제 운영 모드에서만) */}
+          {live && (
+            <SettingCard
+              icon={KeyRound}
+              title="내 비밀번호"
+              desc="본인 계정의 비밀번호를 변경합니다."
+              tone="navy"
+            >
+              <PasswordCard />
+            </SettingCard>
+          )}
 
           {/* ── 실사용 전환: 사용자 계정 / 데이터 가져오기 ── */}
           {live && (

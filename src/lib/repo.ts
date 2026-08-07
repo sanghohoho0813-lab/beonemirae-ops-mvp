@@ -293,6 +293,35 @@ export async function deactivateClient(id: string): Promise<void> {
   unwrap(await sb.from('clients').update({ active: false }).eq('id', id).select())
 }
 
+// ── 차량 ─────────────────────────────────────────────────────────────────────
+// 차량이 한 대도 없으면 수거 완료 입력 자체가 불가능하므로(배차 차량 필수),
+// 실사용 전환 시 반드시 앱에서 등록할 수 있어야 합니다.
+const vehicleRow = (v: Partial<Vehicle>) => ({
+  name: v.name,
+  waste_type: v.wasteType,
+  tonnage: v.tonnage,
+  nominal_capacity: v.nominalCapacity,
+  expected_capacity: v.expectedCapacity,
+  driver: v.driver,
+})
+
+export async function insertVehicle(v: Omit<Vehicle, 'id'>): Promise<Vehicle> {
+  const sb = need()
+  const row = unwrap<Row[]>(await sb.from('vehicles').insert(clean(vehicleRow(v))).select())
+  return toVehicle(row[0])
+}
+
+export async function updateVehicle(id: string, patch: Partial<Vehicle>): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('vehicles').update(clean(vehicleRow(patch))).eq('id', id).select())
+}
+
+/** 차량도 삭제 대신 비활성화 — 과거 수거 이력의 배차 정보가 끊기지 않도록 */
+export async function deactivateVehicle(id: string): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('vehicles').update({ active: false }).eq('id', id).select())
+}
+
 // ── 수거일정 ─────────────────────────────────────────────────────────────────
 const scheduleRow = (s: Partial<Schedule>) => ({
   date: s.date,

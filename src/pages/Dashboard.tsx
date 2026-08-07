@@ -24,6 +24,7 @@ import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
 import { AxSummaryCard } from '../components/AxSummary'
 import { AxStoryStrip } from '../components/AxStory'
+import { StartHere } from '../components/StartHere'
 import { useAuth } from '../context/AuthContext'
 import { todaySummary, monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
@@ -88,6 +89,9 @@ export function Dashboard() {
 
       {/* ── 이 시스템이 무엇을 하는지 — 데이터가 없어도 항상 읽히는 한 줄 흐름 ── */}
       <AxStoryStrip data={data} />
+
+      {/* 실제 운영 전환 직후 — 무엇부터 해야 하는지 (다 끝나면 사라집니다) */}
+      <StartHere data={data} />
 
       {/* ── 핵심 1 · 한 번 입력, 여러 업무 자동 연결 ── */}
       <section>

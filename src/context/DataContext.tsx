@@ -16,6 +16,7 @@ import type {
   Payment,
   Schedule,
   SiteNote,
+  Vehicle,
   BaselineMetrics,
   LeadStage,
   SalesLead,
@@ -68,6 +69,10 @@ interface DataContextValue {
   restoreToday: () => void // 오늘 일정만 기준 복원 (비상)
   /** 운영 모드 전환 — 끄면 이후 입력이 '실제 현장 기록'으로 저장됩니다(성과 실증 대상). */
   setDemoActive: (active: boolean) => void
+  // 차량 — 차량이 없으면 수거 완료 입력이 불가능하므로 앱에서 등록할 수 있어야 합니다
+  addVehicle: (v: Omit<Vehicle, 'id'>) => Vehicle
+  updateVehicle: (id: string, patch: Partial<Vehicle>) => void
+  removeVehicle: (id: string) => void
   // 자재공급
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
@@ -605,6 +610,71 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData((d) => restoreTodayOnly(d))
   }, [live])
 
+  // ── 차량 ────────────────────────────────────────────────────────────────
+  const addVehicle = useCallback(
+    (v: Omit<Vehicle, 'id'>) => {
+      const vehicle: Vehicle = { ...v, id: uid('v') }
+      if (live) {
+        void runLive(async () => {
+          const created = await repo.insertVehicle(v)
+          await repo.writeAudit({
+            action: 'vehicle.create',
+            entity: 'vehicles',
+            entityId: created.id,
+            summary: `차량 등록 — ${created.name} (${v.wasteType})`,
+          })
+        })
+        return vehicle
+      }
+      setData((d) => ({ ...d, vehicles: [...d.vehicles, vehicle] }))
+      return vehicle
+    },
+    [live, runLive],
+  )
+
+  const updateVehicle = useCallback(
+    (id: string, patch: Partial<Vehicle>) => {
+      if (live) {
+        const before = data.vehicles.find((v) => v.id === id)
+        void runLive(async () => {
+          await repo.updateVehicle(id, patch)
+          await repo.writeAudit({
+            action: 'vehicle.update',
+            entity: 'vehicles',
+            entityId: id,
+            before,
+            after: patch,
+            summary: `차량 정보 수정 — ${before?.name ?? id}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({ ...d, vehicles: d.vehicles.map((v) => (v.id === id ? { ...v, ...patch } : v)) }))
+    },
+    [live, runLive, data.vehicles],
+  )
+
+  /** 차량도 삭제 대신 비활성화 — 과거 배차 이력이 끊기지 않도록 */
+  const removeVehicle = useCallback(
+    (id: string) => {
+      if (live) {
+        const before = data.vehicles.find((v) => v.id === id)
+        void runLive(async () => {
+          await repo.deactivateVehicle(id)
+          await repo.writeAudit({
+            action: 'vehicle.deactivate',
+            entity: 'vehicles',
+            entityId: id,
+            summary: `차량 비활성화 — ${before?.name ?? id}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({ ...d, vehicles: d.vehicles.filter((v) => v.id !== id) }))
+    },
+    [live, runLive, data.vehicles],
+  )
+
   // ── 자재공급 ────────────────────────────────────────────────────────────
   const addMaterial = useCallback(
     (m: Omit<MaterialSupply, 'id'>) => {
@@ -726,6 +796,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       startDemo,
       restoreToday,
       setDemoActive,
+      addVehicle,
+      updateVehicle,
+      removeVehicle,
       addMaterial,
       removeMaterial,
       addPayment,
@@ -765,6 +838,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       startDemo,
       restoreToday,
       setDemoActive,
+      addVehicle,
+      updateVehicle,
+      removeVehicle,
       addMaterial,
       removeMaterial,
       addPayment,

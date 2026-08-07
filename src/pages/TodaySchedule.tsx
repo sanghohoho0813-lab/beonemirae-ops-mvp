@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, Al
 import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
+import { StartHere } from '../components/StartHere'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
@@ -117,6 +118,7 @@ export function TodaySchedule() {
   return (
     <div>
       <div className={flash ? 'rounded-2xl bg-teal-50/70 transition-colors duration-700' : 'transition-colors duration-700'}>
+        <StartHere data={data} />
         <PageHeader title="오늘 일정" subtitle={`완료 ${doneCount} / 전체 ${list.length}건`} />
       </div>
 

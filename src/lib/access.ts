@@ -39,7 +39,7 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
 ]
 
 /** 로그인 없이 볼 수 있는 공개 경로 (회사 홈페이지 · 로그인) */
-export const PUBLIC_PATHS = ['/login', '/home', '/company']
+export const PUBLIC_PATHS = ['/login', '/reset-password', '/home', '/company']
 
 export function isPublicPath(path: string): boolean {
   return PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + '/'))

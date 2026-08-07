@@ -12,13 +12,14 @@ import { landingPath } from '../lib/access'
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Login() {
-  const { signIn, session, profile, loading, configured, role } = useAuth()
+  const { signIn, session, profile, loading, configured, role, sendPasswordReset } = useAuth()
   const navigate = useNavigate()   // 시연 모드 안내 버튼에서 사용
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [resetMsg, setResetMsg] = useState<string | null>(null)
 
   // 이미 로그인되어 있으면 원래 가려던 곳(또는 역할별 첫 화면)으로
   if (!loading && session && profile) {
@@ -143,6 +144,23 @@ export function Login() {
                   </>
                 )}
               </button>
+
+              {/* 비밀번호를 잊었을 때 — 관리자를 거치지 않고 본인이 재설정 */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email.trim()) {
+                    setResetMsg('먼저 이메일을 입력해 주세요.')
+                    return
+                  }
+                  const r = await sendPasswordReset(email)
+                  setResetMsg(r.ok ? '재설정 메일을 보냈습니다. 메일함을 확인해 주세요.' : (r.error ?? '발송 실패'))
+                }}
+                className="t-body w-full font-bold text-navy-500 underline underline-offset-4 transition hover:text-navy-700"
+              >
+                비밀번호를 잊으셨나요?
+              </button>
+              {resetMsg && <p className="t-body break-keep font-bold text-teal-600">{resetMsg}</p>}
 
               <div className="flex items-start gap-2.5 border-t border-navy-100 pt-4">
                 <ShieldCheck size={19} className="mt-0.5 shrink-0 text-navy-300" />

@@ -73,6 +73,7 @@ export function AxStoryStrip({ data }: { data: AppData }) {
           const Icon = s.icon
           return (
             <div key={s.label} className="relative flex flex-col bg-white px-5 py-4">
+              {/* 아이콘을 라벨 위에 두어 좁은 칸에서도 라벨이 접히지 않게 합니다 */}
               <div className="flex items-center gap-2">
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
@@ -81,12 +82,12 @@ export function AxStoryStrip({ data }: { data: AppData }) {
                 >
                   <Icon size={19} strokeWidth={2.3} />
                 </span>
-                <p className="t-label min-w-0 break-keep text-navy-500">{s.label}</p>
                 {i < steps.length - 1 && (
                   <ArrowRight size={18} className="ml-auto hidden shrink-0 text-navy-200 xl:block" strokeWidth={2.6} />
                 )}
               </div>
-              <p className={`t-kpi-sm mt-2.5 break-keep ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
+              <p className="t-label mt-2 min-w-0 break-keep text-navy-500">{s.label}</p>
+              <p className={`t-kpi-sm mt-1.5 break-keep ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
               <p className="t-muted mt-auto break-keep pt-1.5">{s.sub}</p>
             </div>
           )

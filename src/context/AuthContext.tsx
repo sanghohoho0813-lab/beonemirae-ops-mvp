@@ -46,6 +46,10 @@ interface AuthContextValue {
   /** 이름 / 글자크기 등 본인 프로필 수정 */
   updateProfile: (patch: Partial<Pick<Profile, 'name' | 'fontScale'>>) => Promise<void>
   refreshProfile: () => Promise<void>
+  /** 비밀번호 재설정 메일 발송 (로그인 화면에서 사용) */
+  sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>
+  /** 로그인 상태에서 본인 비밀번호 변경 */
+  changePassword: (next: string) => Promise<{ ok: boolean; error?: string }>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -136,6 +140,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [profile],
   )
 
+  const sendPasswordReset = useCallback(async (email: string) => {
+    if (!supabase) return { ok: false, error: 'Supabase 연결이 설정되지 않았습니다.' }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) return { ok: false, error: friendlyError(error) }
+    return { ok: true }
+  }, [])
+
+  const changePassword = useCallback(async (next: string) => {
+    if (!supabase) return { ok: false, error: 'Supabase 연결이 설정되지 않았습니다.' }
+    if (next.length < 8) return { ok: false, error: '비밀번호는 8자 이상이어야 합니다.' }
+    const { error } = await supabase.auth.updateUser({ password: next })
+    if (error) return { ok: false, error: friendlyError(error) }
+    return { ok: true }
+  }, [])
+
   const refreshProfile = useCallback(async () => {
     if (session?.user) setProfile(await loadProfile(session.user.id))
   }, [session, loadProfile])
@@ -153,8 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       updateProfile,
       refreshProfile,
+      sendPasswordReset,
+      changePassword,
     }),
-    [loading, session, profile, signIn, signOut, updateProfile, refreshProfile],
+    [loading, session, profile, signIn, signOut, updateProfile, refreshProfile, sendPasswordReset, changePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
