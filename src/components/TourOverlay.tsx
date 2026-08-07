@@ -34,6 +34,12 @@ const PAD = 8
 const GAP = 14
 /** 화면 가장자리 최소 여백 */
 const EDGE = 12
+/**
+ * 폰에는 하단 탭바가 떠 있습니다. 설명 박스도, 강조 대상도 그 아래로 들어가면
+ * 가려지므로 아래쪽 여백만 따로 크게 잡습니다.
+ */
+const NAV_H = 78
+const bottomInset = (vw: number) => (vw <= 1023 ? NAV_H : EDGE)
 
 type Placement = 'below' | 'above' | 'right' | 'left' | 'center'
 
@@ -41,7 +47,7 @@ const raf = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 export function TourOverlay() {
-  const { active, index, next, prev, stop } = useTour()
+  const { active, steps, index, next, prev, stop } = useTour()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const cardRef = useRef<HTMLDivElement>(null)
@@ -57,7 +63,7 @@ export function TourOverlay() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [more, setMore] = useState(false)
 
-  const step = active?.steps[index]
+  const step = steps[index]
 
   // ── 1) 단계가 요구하는 화면으로 이동 ─────────────────────────────────────
   useEffect(() => {
@@ -141,14 +147,15 @@ export function TourOverlay() {
 
       const r0 = el.getBoundingClientRect()
       const eh = r0.height + PAD * 2
+      const BOT = bottomInset(vw)
 
       // 세로로 대상 + 설명을 함께 담을 수 있는가?
-      const stackFits = eh + GAP + ch + EDGE * 2 <= vh
+      const stackFits = eh + GAP + ch + EDGE + BOT <= vh
       // 옆에 세울 수 있는가? — 가로 스크롤은 하지 않으므로 '지금 이 위치 기준'으로
       // 실제 남는 좌/우 공간을 재야 합니다. (요소 폭만 보면 사이드바 때문에 틀립니다)
       const roomRight0 = vw - (r0.right + PAD) - GAP - EDGE
       const roomLeft0 = r0.left - PAD - GAP - EDGE
-      const sideFits = vw >= 640 && Math.max(roomRight0, roomLeft0) >= cw && eh + EDGE * 2 <= vh
+      const sideFits = vw >= 640 && Math.max(roomRight0, roomLeft0) >= cw && eh + EDGE + BOT <= vh
 
       let want: Placement
       let wantTop: number // 대상(강조 영역)의 목표 viewport top
@@ -160,10 +167,10 @@ export function TourOverlay() {
       if (stackFits && !(tallTarget && sideFits)) {
         want = 'below'
         const groupH = eh + GAP + ch
-        wantTop = Math.max(EDGE, (vh - groupH) / 2)
+        wantTop = Math.max(EDGE, (vh - BOT - groupH) / 2)
       } else if (sideFits) {
         want = 'right'
-        wantTop = Math.max(EDGE, (vh - eh) / 2)
+        wantTop = Math.max(EDGE, (vh - BOT - eh) / 2)
       } else {
         // 대상이 화면보다 큰 예외 상황 — 위에 붙이고 남는 아래 공간에 설명을 둡니다.
         want = 'below'
@@ -185,8 +192,8 @@ export function TourOverlay() {
         const b = el!.getBoundingClientRect()
         const sT = b.top - PAD
         const sB = b.bottom + PAD
-        const visible = sT >= -1 && sB <= vh + 1
-        const room = vh - sB - GAP - EDGE >= ch || sT - GAP - EDGE >= ch
+        const visible = sT >= -1 && sB <= vh - BOT + 1
+        const room = vh - sB - GAP - BOT >= ch || sT - GAP - EDGE >= ch
         return visible && room
       }
 
@@ -195,9 +202,9 @@ export function TourOverlay() {
         // 가능한 배치 후보를 순서대로 시도하고 처음으로 조건을 만족하는 곳에 멈춥니다.
         const candidates = [
           wantTop, // ① 대상+설명을 한 덩어리로 세로 가운데
-          vh - ch - GAP - EDGE - eh, // ② 아래에 설명 자리를 확보
+          vh - ch - GAP - BOT - eh, // ② 아래에 설명 자리를 확보
           ch + GAP + EDGE, // ③ 위에 설명 자리를 확보
-          vh - EDGE - eh, // ④ 화면 아래 끝에 붙임
+          vh - BOT - eh, // ④ 화면 아래 끝(탭바 위)에 붙임
           EDGE, // ⑤ 화면 위 끝에 붙임
         ]
         for (const c of candidates) {
@@ -258,6 +265,7 @@ export function TourOverlay() {
 
   const vw = window.innerWidth
   const vh = window.innerHeight
+  const BOT = bottomInset(vw)
   const cw = card?.w ?? 360
   const ch = card?.h ?? 300
 
@@ -276,7 +284,7 @@ export function TourOverlay() {
       cardLeft = roomRight >= cw ? sRight + GAP : sLeft - GAP - cw
       cardTop = rect.top + rect.height / 2 - ch / 2
     } else {
-      const roomBelow = vh - sBottom - GAP - EDGE
+      const roomBelow = vh - sBottom - GAP - BOT
       const roomAbove = sTop - GAP - EDGE
       // 아래가 되면 아래, 안 되면 위. 둘 다 모자라면 그나마 넓은 쪽에 둡니다.
       // (모자란 쪽에 억지로 넣으면 가장자리로 밀리면서 대상을 덮게 됩니다)
@@ -287,11 +295,11 @@ export function TourOverlay() {
       }
       cardLeft = rect.left + rect.width / 2 - cw / 2
     }
-    cardTop = Math.min(Math.max(EDGE, cardTop), Math.max(EDGE, vh - ch - EDGE))
+    cardTop = Math.min(Math.max(EDGE, cardTop), Math.max(EDGE, vh - ch - BOT))
     cardLeft = Math.min(Math.max(EDGE, cardLeft), Math.max(EDGE, vw - cw - EDGE))
   }
 
-  const last = index === active.steps.length - 1
+  const last = index === steps.length - 1
 
   /**
    * 마지막 단계 — 투어를 닫고 끝나지 않고, 역할에 맞는 실제 행동으로 넘깁니다.
@@ -321,12 +329,12 @@ export function TourOverlay() {
     if (rect) {
       // 배치가 끝난 뒤에는 실제로 남은 위/아래 공간이 정답입니다.
       // 페이지 맨 아래처럼 더 스크롤할 수 없는 경우까지 여기서 반영됩니다.
-      const roomBelow = vh - (rect.top + rect.height + PAD) - GAP - EDGE
+      const roomBelow = vh - (rect.top + rect.height + PAD) - GAP - BOT
       const roomAbove = rect.top - PAD - GAP - EDGE
       return Math.min(hard, Math.max(MIN_CARD, Math.max(roomBelow, roomAbove) - 2))
     }
     if (!anchorH) return hard
-    const room = vh - (anchorH + PAD * 2) - GAP - EDGE * 2 - 2
+    const room = vh - (anchorH + PAD * 2) - GAP - EDGE - BOT - 2
     return Math.min(hard, Math.max(MIN_CARD, room))
   })()
 
@@ -369,7 +377,7 @@ export function TourOverlay() {
             data-tour-step
             className="inline-flex shrink-0 items-center rounded-full bg-teal-500 px-3.5 py-1.5 text-[1.2rem] font-extrabold text-white"
           >
-            {index + 1} / {active.steps.length}
+            {index + 1} / {steps.length}
           </span>
           <span className="min-w-0 truncate text-[1.14rem] font-bold text-navy-400">{active.label}</span>
           <button
@@ -416,20 +424,24 @@ export function TourOverlay() {
         )}
 
         <div className="mt-3 flex shrink-0 gap-1.5">
-          {active.steps.map((_, i) => (
+          {steps.map((_, i) => (
             <span key={i} className={`h-2 flex-1 rounded-full ${i <= index ? 'bg-teal-500' : 'bg-navy-100'}`} />
           ))}
         </div>
 
-        {/* 마지막 단계의 CTA 는 문장이 길어지므로, 좁은 화면에서는 한 줄을 통째로 씁니다 */}
-        <div className="mt-2 flex shrink-0 flex-wrap items-center gap-2">
-          <button
-            onClick={stop}
-            className="shrink-0 rounded-xl px-2 py-2.5 text-[1.2rem] font-bold text-navy-400 transition hover:text-navy-700"
-          >
-            건너뛰기
-          </button>
-          <div className={`ml-auto flex gap-2 ${last ? 'w-full sm:w-auto' : 'shrink-0'}`}>
+        {/* 마지막 단계에서는 「건너뛰기」를 두지 않습니다.
+            이미 끝난 자리라 의미가 없고, 좁은 화면에서 버튼 줄이 접히면서
+            설명이 들어갈 자리를 한 줄만큼 잡아먹습니다. */}
+        <div className="mt-2 flex shrink-0 items-center gap-2">
+          {!last && (
+            <button
+              onClick={stop}
+              className="shrink-0 rounded-xl px-2 py-2.5 text-[1.2rem] font-bold text-navy-400 transition hover:text-navy-700"
+            >
+              건너뛰기
+            </button>
+          )}
+          <div className={`ml-auto flex gap-2 ${last ? 'min-w-0 flex-1 sm:flex-none' : 'shrink-0'}`}>
             {index > 0 && (
               <button
                 onClick={prev}

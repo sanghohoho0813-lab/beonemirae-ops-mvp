@@ -54,7 +54,21 @@ export interface Tour {
   minutes: string
   intro: string
   steps: TourStep[]
+  /**
+   * 좁은 화면 전용 단계.
+   * 폰은 화면 구성 자체가 다르고(첫 화면이 '오늘 할 일'), 한 번에 볼 수 있는 양도
+   * 적어서 데스크톱 단계를 그대로 쓰면 맞지 않습니다. 없으면 steps 를 씁니다.
+   */
+  stepsMobile?: TourStep[]
   finish: TourFinish
+}
+
+/** 하단 탭바가 있는 폰 기준 — 이 아래로는 모바일 단계를 씁니다 */
+export const MOBILE_MAX = 1023
+
+/** 이 화면 폭에서 실제로 보여줄 단계 */
+export function stepsFor(tour: Tour, width: number): TourStep[] {
+  return width <= MOBILE_MAX && tour.stepsMobile ? tour.stepsMobile : tour.steps
 }
 
 // ── A. 대표 · 사무실 담당자 ──────────────────────────────────────────────────
@@ -101,6 +115,29 @@ const STAFF: Tour = {
       why: '심사에서 가장 많이 받는 질문이 "무엇으로 돈을 버느냐"입니다.',
     },
   ],
+  stepsMobile: [
+    {
+      route: '/',
+      anchor: 'today-focus',
+      title: '오늘 할 일',
+      action: '남은 수거를 바로 입력하세요.',
+      result: '일정·이력·자재·통계가 함께 갱신됩니다.',
+    },
+    {
+      route: '/requests',
+      anchor: 'requests-list',
+      title: '병원 요청',
+      action: '요청 상태를 바꾸고 회신을 남기세요.',
+      result: '병원 화면에 그대로 보입니다.',
+    },
+    {
+      route: '/',
+      anchor: 'today-focus',
+      title: '더보기',
+      action: '매출·성과는 더보기에 있습니다.',
+      result: '폰에서는 오늘 할 일만 남겼습니다.',
+    },
+  ],
   finish: { label: '운영현황 보기', to: '/' },
 }
 
@@ -140,6 +177,29 @@ const FIELD: Tour = {
       result: '자동 처리된 항목이 그 자리에 뜨고, 잘못 눌렀으면 취소됩니다.',
     },
   ],
+  stepsMobile: [
+    {
+      route: '/today',
+      anchor: 'next-visit',
+      title: '다음 방문',
+      action: '다음 갈 병원과 특이사항을 확인하세요.',
+      result: '다음 순서가 항상 맨 위에 있습니다.',
+    },
+    {
+      route: '/today',
+      anchor: 'next-visit',
+      title: '수거 입력 시작',
+      action: '「수거 입력 시작」을 누르세요.',
+      result: '병원 정보가 미리 채워집니다.',
+    },
+    {
+      route: '/collection',
+      anchor: 'collect-save',
+      title: '저장',
+      action: '수거량을 적고 저장을 누르세요.',
+      result: '자동 처리된 항목이 그 자리에 뜹니다.',
+    },
+  ],
   finish: { label: '오늘 일정 보기', to: '/today' },
 }
 
@@ -170,6 +230,29 @@ const CLIENT: Tour = {
       title: '우리 병원 현황',
       action: '다음 수거일과 이번 달 배출량을 확인하세요.',
       result: '월간 리포트와 수거 이력은 인증·실사 자료로 바로 쓰실 수 있습니다.',
+    },
+  ],
+  stepsMobile: [
+    {
+      route: '/portal',
+      anchor: 'portal-request',
+      title: '수거 요청',
+      action: '필요한 것을 눌러 보내세요.',
+      result: '담당자 화면에 바로 뜹니다.',
+    },
+    {
+      route: '/portal',
+      anchor: 'portal-requests',
+      title: '내 요청 진행 상태',
+      action: '보낸 요청이 어디까지 왔는지 봅니다.',
+      result: '담당자 회신도 같은 자리에 보입니다.',
+    },
+    {
+      route: '/portal',
+      anchor: 'portal-status',
+      title: '우리 병원 현황',
+      action: '다음 수거일과 배출량을 확인하세요.',
+      result: '리포트는 인증 자료로 바로 씁니다.',
     },
   ],
   finish: { label: '수거 요청하기', to: '/portal', emit: 'beonemirae:portal-request' },

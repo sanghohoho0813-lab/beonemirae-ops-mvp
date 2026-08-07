@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
 import { StartHere } from '../components/StartHere'
+import { NextVisitCard } from '../components/NextVisit'
 import { TourBanner } from '../components/TourEntry'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
@@ -123,14 +124,21 @@ export function TodaySchedule() {
       <div className={flash ? 'rounded-2xl bg-teal-50/70 transition-colors duration-700' : 'transition-colors duration-700'}>
         <StartHere data={data} />
         <TourBanner />
-        <PageHeader title="오늘 일정" subtitle={`완료 ${doneCount} / 전체 ${list.length}건`} />
+        {/* 진행 건수는 아래 「다음 방문」 카드가 크게 보여 주므로 폰에서는 반복하지 않습니다 */}
+        <PageHeader
+          title="오늘 일정"
+          subtitle={<span className="hidden lg:inline">{`완료 ${doneCount} / 전체 ${list.length}건`}</span>}
+        />
       </div>
+
+      {/* 모바일 — 폰을 열면 가장 먼저 "다음에 어디로 가는가" */}
+      <NextVisitCard data={data} list={list} notesFor={notesFor} />
 
       {/* 병원에서 올라온 요청 — 오늘 방문 전에 확인해야 하는 것 */}
       {pendingRequests.length > 0 && (
         <button
           onClick={() => navigate('/requests')}
-          className="card mb-4 flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 text-left transition hover:bg-navy-50"
+          className="card mb-4 hidden w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 text-left transition hover:bg-navy-50 lg:flex"
         >
           <Inbox size={19} className="shrink-0 text-teal-600" strokeWidth={2.4} />
           <span className="t-body min-w-0 break-keep font-extrabold text-navy-900">
@@ -179,6 +187,41 @@ export function TodaySchedule() {
             const urgent = s.status === '긴급'
             return (
               <StaggerItem key={s.id} className="card overflow-hidden">
+                {/* 폰 — 한 줄 요약. 상세와 조작은 위 「다음 방문」 카드와 상세 화면에서 합니다 */}
+                <button
+                  onClick={() => (done ? openEdit(s) : navigate(`/collection?schedule=${s.id}`))}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition active:bg-navy-50 lg:hidden"
+                >
+                  <span
+                    className={`w-[3.6rem] shrink-0 tabular-nums text-[1.15rem] font-extrabold ${
+                      done ? 'text-navy-300' : 'text-navy-900'
+                    }`}
+                  >
+                    {s.scheduledTime}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block break-keep text-[1.15rem] font-extrabold leading-snug ${
+                        done ? 'text-navy-400' : 'text-navy-900'
+                      }`}
+                    >
+                      {client?.name ?? '알 수 없는 거래처'}
+                    </span>
+                    <span className="t-muted mt-0.5 block break-keep">
+                      {s.wasteType} · {weight(s.actualAmount ?? s.expectedAmount)}
+                      {s.memo ? ' · 특이사항 있음' : ''}
+                    </span>
+                  </span>
+                  {done ? (
+                    <span className="pill shrink-0 bg-emerald-50 text-emerald-700">완료</span>
+                  ) : urgent ? (
+                    <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급</span>
+                  ) : (
+                    <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                  )}
+                </button>
+
+                <div className="hidden lg:block">
                 {urgent && (
                   <div className="flex items-center gap-1.5 bg-rose-50 px-4 py-2 text-[0.98rem] font-bold text-rose-500">
                     <AlertTriangle size={13} strokeWidth={2.6} /> 우선 방문 요청
@@ -265,11 +308,31 @@ export function TodaySchedule() {
                     </div>
                   )}
                 </div>
+                </div>
               </StaggerItem>
             )
           })}
         </Stagger>
       )}
+
+      {/* 병원 요청은 사무실 업무라, 좁은 화면에서는 일정 아래로 내립니다 */}
+      {pendingRequests.length > 0 && (
+        <button
+          onClick={() => navigate('/requests')}
+          className="card mt-4 flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 text-left transition hover:bg-navy-50 lg:hidden"
+        >
+          <Inbox size={19} className="shrink-0 text-teal-600" strokeWidth={2.4} />
+          <span className="t-body min-w-0 break-keep font-extrabold text-navy-900">
+            병원 요청 {pendingRequests.length}건 처리 대기
+          </span>
+          {pendingRequests.some((r) => r.urgent) && <span className="pill bg-rose-50 text-rose-600">긴급 포함</span>}
+          <span className="t-muted min-w-0 flex-1 break-keep">
+            {pendingRequests[0].clientName} · {pendingRequests[0].type}
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-navy-300" />
+        </button>
+      )}
+
 
       {/* 빠른 완료 모달 — 입력 → 성공을 한 모달 안에서 전환 (통합 커맨드 사용) */}
       <Modal

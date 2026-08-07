@@ -22,6 +22,7 @@ import { AxSummaryCard } from '../components/AxSummary'
 import { AxStoryStrip } from '../components/AxStory'
 import { CustomerServiceCard } from '../components/CustomerService'
 import { StartHere } from '../components/StartHere'
+import { TodayFocus } from '../components/TodayFocus'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
 import { monthlyCollected, outstandingTotal, schedulesOn } from '../lib/selectors'
@@ -75,10 +76,13 @@ export function Dashboard() {
 
   return (
     <PageShell>
-      {/* 인사 */}
+      {/* 인사 — 좁은 화면에서는 한 줄만 */}
       <div>
-        <h1 className="t-page text-navy-900">
-          {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
+        <h1 className="t-page break-keep text-navy-900">
+          <span className="lg:hidden">{profile ? `${profile.name}님, 오늘 할 일` : '오늘 할 일'}</span>
+          <span className="hidden lg:inline">
+            {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
+          </span>
         </h1>
         <p className="t-body mt-2.5 font-medium text-navy-400">{prettyDate(t)} · 의료폐기물 운영관리</p>
       </div>
@@ -86,6 +90,13 @@ export function Dashboard() {
       {/* 처음 들어온 사용자에게만 보이는 안내 — 화면을 막지 않습니다 */}
       <TourBanner />
 
+      {/* ── 모바일 첫 화면 — 오늘 처리할 일만 남깁니다 ─────────────────────── */}
+      <TodayFocus data={data} />
+
+      {/* ══ 아래는 넓은 화면 전용 ══════════════════════════════════════════
+          폰에서는 사업 구조·매출 퍼널·통계를 첫 화면에 두지 않습니다.
+          필요하면 위 「병원 서비스 · 추가 매출 · AX 성과」 링크로 들어갑니다. */}
+      <div className="hidden lg:contents">
       {/* ── 이 시스템이 무엇을 하는지 — 데이터가 없어도 항상 읽히는 한 줄 흐름 ── */}
       <AxStoryStrip data={data} />
 
@@ -230,7 +241,7 @@ export function Dashboard() {
         </SectionTitle>
         <AxSummaryCard data={data} compact />
       </section>
-
+      </div>
     </PageShell>
   )
 }

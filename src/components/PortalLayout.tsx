@@ -78,8 +78,8 @@ export function PortalLayout() {
           </div>
         </div>
 
-        {/* 3개뿐인 메뉴 — 접히거나 숨지 않고 항상 그대로 보입니다 */}
-        <nav className="mx-auto flex w-full max-w-[1240px] gap-1 overflow-x-auto px-3 lg:px-7">
+        {/* 3개뿐인 메뉴 — 넓은 화면에서는 상단에, 폰에서는 엄지가 닿는 하단에 둡니다 */}
+        <nav className="mx-auto hidden w-full max-w-[1240px] gap-1 overflow-x-auto px-3 sm:flex lg:px-7">
           {NAV.map((n) => {
             const Icon = n.icon
             return (
@@ -110,6 +110,35 @@ export function PortalLayout() {
           <Outlet />
         </PageMotion>
       </main>
+
+      {/* 폰 전용 하단 탭 — 화면이 셋뿐이라 접거나 숨기지 않습니다 */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-30 flex bg-white/95 shadow-nav backdrop-blur-lg sm:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {NAV.map((n) => {
+          const Icon = n.icon
+          const active = n.to === '/portal' ? pathname === '/portal' : pathname.startsWith(n.to)
+          return (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.to === '/portal'}
+              className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5"
+            >
+              {active && <span className="absolute inset-x-2 inset-y-1 rounded-2xl bg-teal-50" />}
+              <Icon
+                size={22}
+                strokeWidth={active ? 2.4 : 2}
+                className={`relative z-10 ${active ? 'text-teal-600' : 'text-navy-400'}`}
+              />
+              <span className={`t-tab relative z-10 whitespace-nowrap ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+                {n.short}
+              </span>
+            </NavLink>
+          )
+        })}
+      </nav>
     </div>
   )
 }

@@ -99,12 +99,24 @@ const PLANNED: string[] = [
   'SaaS 서비스 확장',
 ]
 
-/** 모바일 하단 고정 메뉴 */
-const BOTTOM_NAV: NavItem[] = [
+/**
+ * 모바일 하단 고정 메뉴 — 데스크톱 메뉴를 그대로 넣지 않습니다.
+ *
+ *  폰에서 실제로 반복해서 누르는 것만 남기고, 나머지는 전부 「더보기」로 보냅니다.
+ *  역할마다 하는 일이 다르므로 구성도 다릅니다.
+ *
+ *   현장   오늘 갈 곳 → 입력 → 병원 정보. 대시보드는 아예 열리지 않습니다.
+ *   사무실 오늘 할 일 → 일정 → 병원 요청.
+ */
+const BOTTOM_NAV_STAFF: NavItem[] = [
   { to: '/', label: '홈', icon: LayoutGrid, desc: '', tone: 'blue' },
-  { to: '/today', label: '일정', icon: CalendarClock, desc: '', tone: 'sky' },
-  { to: '/collection', label: '입력', icon: PlusCircle, desc: '', tone: 'emerald' },
-  { to: '/requests', label: '병원 요청', icon: Inbox, desc: '', tone: 'violet' },
+  { to: '/today', label: '오늘', icon: CalendarClock, desc: '', tone: 'sky' },
+  { to: '/requests', label: '요청', icon: Inbox, desc: '', tone: 'violet' },
+]
+const BOTTOM_NAV_FIELD: NavItem[] = [
+  { to: '/today', label: '오늘', icon: CalendarClock, desc: '', tone: 'sky' },
+  { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '', tone: 'emerald' },
+  { to: '/clients', label: '거래처', icon: Building2, desc: '', tone: 'navy' },
 ]
 
 const MORE_PATHS = [
@@ -396,7 +408,8 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
 }
 
 function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
-  const bottomNav = useVisibleNav(BOTTOM_NAV)
+  const { role } = useAuth()
+  const bottomNav = useVisibleNav(role === 'field' ? BOTTOM_NAV_FIELD : BOTTOM_NAV_STAFF)
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const moreActive = moreOpen || MORE_PATHS.includes(pathname)
