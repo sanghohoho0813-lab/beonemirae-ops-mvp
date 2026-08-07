@@ -111,6 +111,7 @@ const PLANNED: string[] = [
 const BOTTOM_NAV_STAFF: NavItem[] = [
   { to: '/', label: '홈', icon: LayoutGrid, desc: '', tone: 'blue' },
   { to: '/today', label: '오늘', icon: CalendarClock, desc: '', tone: 'sky' },
+  { to: '/collection', label: '입력', icon: PlusCircle, desc: '', tone: 'emerald' },
   { to: '/requests', label: '요청', icon: Inbox, desc: '', tone: 'violet' },
 ]
 const BOTTOM_NAV_FIELD: NavItem[] = [

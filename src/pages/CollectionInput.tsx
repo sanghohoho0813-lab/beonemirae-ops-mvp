@@ -9,6 +9,7 @@ import {
   Package,
   RotateCcw,
   Truck,
+  ArrowRight,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
@@ -250,6 +251,10 @@ export function CollectionInput() {
   const recentEvents = data.events.slice(0, 4)
 
   // ── 성공 화면 ──
+  // 저장 직후 기준으로 다시 계산 — 방금 저장한 건은 이미 완료로 빠집니다
+  const nextPending = todayPending[0] ?? null
+  const nextPendingClient = nextPending ? data.clients.find((c) => c.id === nextPending.clientId) : null
+
   if (success) {
     return (
       <div className="mx-auto max-w-lg">
@@ -281,16 +286,36 @@ export function CollectionInput() {
             ))}
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2.5">
-            <Link to="/today" className="btn-navy">
+          {/* 현장에서는 저장 다음에 할 일이 하나뿐입니다 — 다음 병원으로.
+              그래서 남은 일정이 있으면 그 병원을 미리 채운 버튼을 가장 크게 둡니다. */}
+          {nextPending ? (
+            <button
+              onClick={() => {
+                setSuccess(null)
+                applySchedule(nextPending.id)
+                window.scrollTo({ top: 0 })
+              }}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 px-5 py-4 text-[1.2rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
+            >
+              다음 방문 · {nextPendingClient?.name ?? '수거 입력'}
+              <ArrowRight size={20} strokeWidth={2.5} />
+            </button>
+          ) : (
+            <p className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3.5 text-[1.12rem] font-bold text-emerald-700">
+              오늘 방문을 모두 마쳤습니다
+            </p>
+          )}
+
+          <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+            <Link to="/today" className="btn-ghost">
               오늘 일정
             </Link>
-            <Link to="/history" className="btn-primary">
-              수거이력 보기
+            <Link to="/history" className="btn-ghost">
+              수거이력
             </Link>
           </div>
-          <button className="mt-3 text-[1.08rem] font-bold text-teal-600" onClick={() => setSuccess(null)}>
-            + 이어서 다른 수거 입력
+          <button className="mt-3 text-[1.08rem] font-bold text-navy-500" onClick={() => setSuccess(null)}>
+            + 직접 골라서 입력
           </button>
         </motion.div>
       </div>

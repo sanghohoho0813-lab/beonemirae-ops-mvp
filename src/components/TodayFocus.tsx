@@ -65,7 +65,7 @@ export function TodayFocus({ data }: { data: AppData }) {
     {
       key: 'input',
       icon: ClipboardEdit,
-      label: '수거 후 입력 대기',
+      label: '입력 대기',
       count: progress.pendingInput,
       unit: '건',
       tone: 'amber' as const,
