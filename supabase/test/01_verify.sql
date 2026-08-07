@@ -467,12 +467,26 @@ begin
 end $$;
 
 -- 7-2. 같은 거래처·날짜·구분 중복 수거 등록 차단 (DB unique index)
+--
+--  '같은 날'의 기준은 complete_collection 과 같아야 합니다. 이 함수는 한국시간
+--  기준으로 오늘 날짜를 씁니다(현장 업무 기준). 그래서 여기서도 먼저 한국시간
+--  오늘로 정상 수거를 한 건 저장한 뒤, 같은 조건으로 한 번 더 시도합니다.
 do $$
-declare v_client uuid; v_vehicle uuid; v_failed boolean := false; v_msg text;
+declare v_client uuid; v_vehicle uuid; v_failed boolean := false; v_msg text; v_add_ok boolean := true;
 begin
   select id into v_client from public.clients where active limit 1;
   select id into v_vehicle from public.vehicles where waste_type = '의료폐기물' limit 1;
   perform login_as('field@beonemirae.test');
+
+  -- ① 오늘(KST) 정상 수거 1건
+  perform public.complete_collection(jsonb_build_object(
+    'scheduleId', null, 'clientId', v_client, 'wasteType', '의료폐기물',
+    'vehicleId', v_vehicle, 'driverName', '김기사', 'actualAmount', 88,
+    'actualTime', '17:00', 'containers', '{}'::jsonb, 'handoverStatus', '수거 완료',
+    'supplied', jsonb_build_object('corrugatedBox',0,'plasticContainer',0,'bag',0,'needleBox',0),
+    'isAdditional', false, 'memo', '중복 검증 1회차', 'screen', '수거 입력', 'closeRequests', '[]'::jsonb));
+
+  -- ② 같은 조건으로 한 번 더 → 막혀야 함
   begin
     perform public.complete_collection(jsonb_build_object(
       'scheduleId', null, 'clientId', v_client, 'wasteType', '의료폐기물',
@@ -482,8 +496,21 @@ begin
       'isAdditional', false, 'memo', '중복 시도', 'screen', '수거 입력', 'closeRequests', '[]'::jsonb));
   exception when others then v_failed := true; v_msg := sqlerrm;
   end;
+  perform test_assert(v_failed, '중복 수거 등록 차단 (같은 거래처·날짜·구분) — ' || left(coalesce(v_msg,''), 40));
+
+  -- ③ 추가 수거로 표시하면 같은 날이어도 저장되어야 합니다 (정상 업무)
+  v_msg := null;
+  begin
+    perform public.complete_collection(jsonb_build_object(
+      'scheduleId', null, 'clientId', v_client, 'wasteType', '의료폐기물',
+      'vehicleId', v_vehicle, 'driverName', '김기사', 'actualAmount', 40,
+      'actualTime', '19:00', 'containers', '{}'::jsonb, 'handoverStatus', '수거 완료',
+      'supplied', jsonb_build_object('corrugatedBox',0,'plasticContainer',0,'bag',0,'needleBox',0),
+      'isAdditional', true, 'memo', '추가 수거', 'screen', '수거 입력', 'closeRequests', '[]'::jsonb));
+  exception when others then v_add_ok := false; v_msg := sqlerrm;
+  end;
   perform as_postgres();
-  perform test_assert(v_failed, '중복 수거 등록 차단 (같은 거래처·날짜·구분)');
+  perform test_assert(v_add_ok, '추가 수거는 같은 날에도 저장 허용 — ' || left(coalesce(v_msg,''), 40));
 end $$;
 
 -- 7-3. 수거 완료 취소 → 원복

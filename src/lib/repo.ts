@@ -730,12 +730,31 @@ export async function loadProfiles(): Promise<ProfileRow[]> {
 
 export async function setProfileRole(id: string, role: ProfileRow['role']): Promise<void> {
   const sb = need()
+  // 변경 전 값을 먼저 읽어 감사기록에 남깁니다 — 권한 변경은 추적 대상입니다.
+  const { data: before } = await sb.from('profiles').select('name, role').eq('id', id).maybeSingle()
   unwrap(await sb.from('profiles').update({ role }).eq('id', id).select())
+  await writeAudit({
+    action: 'profile.role',
+    entity: 'profiles',
+    entityId: id,
+    before: { role: before?.role ?? null },
+    after: { role },
+    summary: `권한 변경 — ${before?.name ?? id} · ${before?.role ?? '?'} → ${role}`,
+  })
 }
 
 export async function setProfileActive(id: string, active: boolean): Promise<void> {
   const sb = need()
+  const { data: before } = await sb.from('profiles').select('name, active').eq('id', id).maybeSingle()
   unwrap(await sb.from('profiles').update({ active }).eq('id', id).select())
+  await writeAudit({
+    action: 'profile.active',
+    entity: 'profiles',
+    entityId: id,
+    before: { active: before?.active ?? null },
+    after: { active },
+    summary: `계정 ${active ? '사용' : '중지'} — ${before?.name ?? id}`,
+  })
 }
 
 // ── 시연 데이터 초기화 (실제 운영 데이터는 건드리지 않음) ───────────────────

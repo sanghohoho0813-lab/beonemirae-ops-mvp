@@ -517,7 +517,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
           actualRevenue: stage === '수락' ? (data.leads ?? []).find((l) => l.key === leadKey(action.clientId, action.kind, month))?.actualRevenue ?? null : null,
           actualRevenueAt: stage === '수락' ? (data.leads ?? []).find((l) => l.key === leadKey(action.clientId, action.kind, month))?.actualRevenueAt ?? null : null,
           demoSessionId: null,
-        }),
+        }).then(() =>
+          repo.writeAudit({
+            action: 'lead.stage',
+            entity: 'sales_leads',
+            entityId: leadKey(action.clientId, action.kind, month),
+            clientId: action.clientId,
+            clientName: action.clientName,
+            after: { stage, kind: action.kind, month },
+            summary: `영업 단계 변경 — ${action.clientName} · ${action.title} → ${stage}`,
+          }),
+        ),
       )
       return
     }
@@ -573,7 +583,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const setLeadRevenue = useCallback(
     (leadId: string, amount: number | null) => {
       if (live) {
-        void runLive(async () => repo.setLeadRevenue(leadId, amount))
+        const lead = (data.leads ?? []).find((l) => l.id === leadId)
+        void runLive(async () => {
+          await repo.setLeadRevenue(leadId, amount)
+          await repo.writeAudit({
+            action: 'lead.revenue',
+            entity: 'sales_leads',
+            entityId: leadId,
+            clientId: lead?.clientId,
+            clientName: lead?.clientName,
+            before: { actualRevenue: lead?.actualRevenue ?? null },
+            after: { actualRevenue: amount },
+            summary:
+              amount == null
+                ? `실제 매출 삭제 — ${lead?.clientName ?? ''} · ${lead?.title ?? ''}`
+                : `실제 매출 입력 — ${lead?.clientName ?? ''} · ${lead?.title ?? ''} · ${amount.toLocaleString('ko-KR')}원`,
+          })
+        })
         return
       }
       setData((d) => ({
@@ -585,7 +611,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ),
       }))
     },
-    [live, runLive],
+    // data.leads 를 읽어 변경 전 값을 감사기록에 남기므로 의존성에 포함합니다.
+    [live, runLive, data.leads],
   )
 
   // ── 병원 요청 (병원 고객 서비스) ────────────────────────────────────────

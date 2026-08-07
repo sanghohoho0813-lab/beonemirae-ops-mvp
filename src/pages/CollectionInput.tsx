@@ -124,7 +124,7 @@ function Section({
 }
 
 export function CollectionInput() {
-  const { data, completeCollection, revertCollection, notesFor } = useData()
+  const { data, completeCollection, revertCollection, notesFor, sync } = useData()
   const [params] = useSearchParams()
   // 성과측정: 이 화면에 들어온 시각. 저장 시 경과시간을 '시스템 측정값'으로 남깁니다.
   const sessionStartRef = useRef<number>(Date.now())
@@ -622,15 +622,24 @@ export function CollectionInput() {
           </div>
         )}
 
-        {/* 완료 버튼 (48px) */}
+        {/* 완료 버튼 (48px)
+            저장 중에는 눌리지 않게 합니다 — 현장 모바일에서 응답이 느릴 때
+            두 번 누르면 같은 수거가 두 번 올라갑니다. (DB 에서도 막지만,
+            사용자가 오류 화면을 보는 것보다 아예 못 누르게 하는 편이 낫습니다) */}
         <button
           data-tour="collect-save"
           className="btn-primary w-full py-5 !text-[1.15rem] disabled:opacity-50"
           style={{ minHeight: 48 }}
           onClick={submit}
-          disabled={!canSubmit}
+          disabled={!canSubmit || sync.saving}
         >
-          <CheckCircle2 size={18} strokeWidth={2.4} /> 수거 완료 저장
+          {sync.saving ? (
+            <>저장 중…</>
+          ) : (
+            <>
+              <CheckCircle2 size={18} strokeWidth={2.4} /> 수거 완료 저장
+            </>
+          )}
         </button>
         <p className="t-muted text-center">
           작업 주체: 현장 담당자 (Demo) · 실제 적용 시 사용자별 계정·수정이력과 연동 예정

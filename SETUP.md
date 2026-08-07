@@ -48,6 +48,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 4 | `supabase/migrations/0004_grants.sql` | PostgREST 롤 권한 |
 | 5 | `supabase/migrations/0005_client_role.sql` | 병원 고객 역할(`client`) 추가 |
 | 6 | `supabase/migrations/0006_portal.sql` | 병원 요청 테이블 · 포털 RLS · 제안 응답 함수 |
+| 7 | `supabase/migrations/0007_integrity.sql` | 중복 수거 차단(추가 수거는 허용) · 재고 음수 차단 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
@@ -153,16 +154,31 @@ insert into public.vehicles (name, waste_type, tonnage, nominal_capacity, expect
 
 저장소에 실제 DB 검증 스크립트가 포함되어 있습니다. 로컬에서 다시 확인하려면:
 
+**A. 실제 Supabase 프로젝트에서 (권장)**
+
 ```bash
-# 로컬 Supabase 전체 스택 (Docker 필요)
-npx supabase start
-psql "$(npx supabase status -o env | grep DB_URL | cut -d= -f2- | tr -d '"')" \
-  -f supabase/test/01_verify.sql      # RLS·트랜잭션·감사로그 단언 65건
-bash supabase/test/02_concurrency.sh  # 두 세션 동시 완료 방지 6건
+npx supabase start                    # 또는 실제 프로젝트의 DB_URL
+psql "$DB_URL" -f supabase/test/01_verify.sql   # RLS·트랜잭션·감사로그 66건
+psql "$DB_URL" -f supabase/test/03_portal.sql   # 병원 포털 RLS 27건
+PGDATABASE=... bash supabase/test/02_concurrency.sh  # 동시 완료 방지 6건
 ```
 
-`supabase/test/00_harness.sql` 은 Supabase 없이 순수 PostgreSQL 로 검증할 때만 씁니다
-(실제 Supabase 프로젝트에는 적용하지 마세요 — auth 스키마가 이미 존재합니다).
+**B. Docker 없이 순수 PostgreSQL 로 (스키마·RLS·트랜잭션만 확인)**
+
+Supabase 를 띄울 수 없는 환경에서는 `00_harness.sql` 이 `auth.uid()` / `auth.role()` 을
+흉내 내 같은 단언을 그대로 돌릴 수 있습니다. 로그인(GoTrue)과 PostgREST 는 빠지므로
+**DB 계층만** 검증되는 점을 기억하세요.
+
+```bash
+createdb rlsqa
+psql -d rlsqa -f supabase/test/00_harness.sql
+for f in supabase/migrations/0*.sql; do psql -v ON_ERROR_STOP=1 -d rlsqa -f "$f"; done
+psql -d rlsqa -f supabase/test/01_verify.sql
+psql -d rlsqa -f supabase/test/03_portal.sql
+```
+
+> `00_harness.sql` 은 순수 PostgreSQL 검증 전용입니다.
+> **실제 Supabase 프로젝트에는 적용하지 마세요** — auth 스키마가 이미 존재합니다.
 
 ---
 
@@ -175,6 +191,9 @@ bash supabase/test/02_concurrency.sh  # 두 세션 동시 완료 방지 6건
 - [ ] 현장 계정으로 `/receivables` 직접 입력 → 접근 차단 화면
 - [ ] 수거 입력 저장 → 오늘 일정 완료 · 수거이력 · 자재 차감 · 감사로그 동시 반영
 - [ ] 같은 일정을 두 번 완료 시도 → `이미 완료 처리된 일정입니다` 차단
+- [ ] 같은 거래처를 같은 날 다시 직접 입력 → `이미 저장되어 있습니다 … 추가 수거로 저장해 주세요` 안내
+- [ ] 같은 건을 `추가 수거`로 표시하고 저장 → 정상 저장 (같은 날 재방문은 실제 업무)
+- [ ] 저장 중에 버튼을 다시 눌러도 두 번 저장되지 않음
 - [ ] 다른 브라우저에서 로그인 → 같은 데이터 확인
 - [ ] 관리자 → 감사로그에 작업자 이름·역할·시간 기록 확인
 
