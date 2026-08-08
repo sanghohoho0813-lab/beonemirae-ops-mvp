@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardEdit,
-  Gauge,
   Inbox,
   PlusCircle,
   Siren,
@@ -139,19 +138,9 @@ export function TodayFocus({ data }: { data: AppData }) {
         </section>
       )}
 
-      {/* ③ 사업 현황은 링크 한 줄 — 폰 첫 화면에서 설명을 읽게 하지 않습니다 */}
-      <Link
-        to="/performance"
-        className="card flex items-center gap-3 px-5 py-4 transition active:bg-navy-50"
-      >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
-          <Gauge size={19} strokeWidth={2.3} />
-        </span>
-        <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">
-          병원 서비스 · 추가 매출 · AX 성과
-        </span>
-        <ChevronRight size={18} className="shrink-0 text-navy-300" />
-      </Link>
+      {/* 사업 현황 링크는 아래 「④ 성장기회」로 옮겼습니다.
+          ① 오늘 처리할 업무 안에 두면 오늘 할 일과 섞여서, 폰 첫 화면에서
+          "지금 눌러야 하는 것"이 하나 더 늘어난 것처럼 보였습니다. */}
 
       {urgent.length > 0 && (
         <p className="t-muted flex items-center gap-1.5 px-1 break-keep text-rose-500">

@@ -20,10 +20,12 @@ import { useAuth } from './AuthContext'
 
 export type FontScale = 'normal' | 'large' | 'xlarge'
 
+// 배율(%)을 적지 않습니다. 같은 '크게'라도 노트북과 폰에서 올라가는 폭이
+// 다르기 때문에(index.css 참고) 숫자를 적으면 한쪽은 반드시 틀린 설명이 됩니다.
 export const FONT_SCALE_OPTIONS: { value: FontScale; label: string; hint: string }[] = [
-  { value: 'normal', label: '기본', hint: '표준 (크게 보기)' },
-  { value: 'large', label: '크게', hint: '+10%' },
-  { value: 'xlarge', label: '매우 크게', hint: '+20%' },
+  { value: 'normal', label: '기본', hint: '노트북 기준 표준' },
+  { value: 'large', label: '크게', hint: '조금 크게' },
+  { value: 'xlarge', label: '매우 크게', hint: '가장 크게' },
 ]
 
 const STORAGE_KEY = 'beonemirae-ops:font-scale'

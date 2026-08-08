@@ -29,21 +29,73 @@ export function SectionTitle({
   children,
   action,
   hint,
+  /**
+   * 대영역(AreaHeader) 안에 들어가는 소제목이면 'sub' 입니다.
+   * 같은 크기로 두면 "①오늘 처리할 업무"와 그 안의 "오늘 챙길 일"이 같은 무게로
+   * 보여서, 네 덩어리로 나눈 의미가 사라집니다. 한 단계 낮춰 둡니다.
+   */
+  size = 'default',
 }: {
   children: ReactNode
   action?: ReactNode
   hint?: string
+  size?: 'default' | 'sub'
 }) {
   return (
     <div className={`px-1 ${hint ? 'mb-3.5' : 'mb-3'}`}>
       {/* 좁은 폭에서 제목이 뭉개지지 않도록, 자리가 부족하면 액션이 아래 줄로 내려갑니다. */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-        <h2 className="t-section min-w-0 flex-1 text-navy-800">{children}</h2>
+        <h2 className={`min-w-0 flex-1 text-navy-800 ${size === 'sub' ? 't-card' : 't-section'}`}>{children}</h2>
         {action && <div className="shrink-0">{action}</div>}
       </div>
       {hint && <p className="t-muted mt-1.5 break-keep leading-snug">{hint}</p>}
     </div>
   )
+}
+
+/**
+ * 대영역 머리글 — 대시보드를 네 덩어리로 읽히게 하는 유일한 장치입니다.
+ *
+ * 카드마다 번호를 붙이면 다시 "다 중요해" 보입니다. 그래서 번호는 이 자리에만
+ * 네 개 씁니다. 구분은 색이 아니라 번호·아이콘·여백·가는 선으로 냅니다 —
+ * 영역마다 색을 칠하면 정작 색으로 표시해야 할 긴급·완료가 묻힙니다.
+ *
+ * 설명 한 줄은 "이 정보를 왜 보는지"입니다. 기능 이름을 다시 적지 않습니다.
+ */
+export function AreaHeader({
+  n,
+  icon: Icon,
+  title,
+  desc,
+  action,
+}: {
+  n: number
+  icon: LucideIcon
+  title: string
+  desc: string
+  action?: ReactNode
+}) {
+  return (
+    <div className="mb-3 flex items-start gap-3 px-1 pt-1 lg:mb-4 lg:gap-3.5">
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-navy-900 text-white lg:h-10 lg:w-10">
+        <Icon size={18} strokeWidth={2.3} />
+        {/* 번호는 아이콘 위에 작게 — 제목 줄의 글자 흐름을 끊지 않습니다 */}
+        <span className="absolute -right-1 -top-1 flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-teal-500 text-[0.72rem] font-black text-white ring-2 ring-[#f5f7fa]">
+          {n}
+        </span>
+      </span>
+      <div className="min-w-0 flex-1">
+        <h2 className="t-section break-keep text-navy-900">{title}</h2>
+        <p className="t-muted mt-0.5 break-keep leading-snug">{desc}</p>
+      </div>
+      {action && <div className="shrink-0 pt-0.5">{action}</div>}
+    </div>
+  )
+}
+
+/** 대영역 사이 구분선 — 색 대신 여백과 가는 선으로만 끊습니다 */
+export function AreaDivider() {
+  return <div className="h-px bg-navy-200/70" />
 }
 
 type NumberTone = 'navy' | 'teal' | 'amber' | 'rose' | 'emerald'
@@ -106,8 +158,12 @@ export function QtyField({
 }) {
   const set = (n: number) => onChange(Math.max(0, max != null ? Math.min(max, n) : n))
   // 44px — 손가락으로 확실히 눌리는 최소 크기입니다. 이보다 줄이지 않습니다.
+  //
+  // h-11 은 rem 이라 글자 크기 기준선을 낮추면 같이 줄어듭니다. 실제로
+  // 노트북 기준을 다시 맞췄더니 43px 이 되어 이 약속이 깨졌습니다.
+  // 손가락 크기는 글자 설정과 무관하므로 px 하한을 따로 겁니다.
   const btn =
-    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-100 text-navy-600 transition hover:bg-navy-200 active:scale-95 disabled:opacity-35 disabled:hover:bg-navy-100'
+    'flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl bg-navy-100 text-navy-600 transition hover:bg-navy-200 active:scale-95 disabled:opacity-35 disabled:hover:bg-navy-100'
 
   const control = (
     <>

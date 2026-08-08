@@ -37,7 +37,7 @@ import { TONE, type Tone } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
-import { TourButton } from './TourEntry'
+import { TourButton, TourWhyButton } from './TourEntry'
 import { PageMotion } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,17 +355,32 @@ function MobileHeader() {
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[1.08rem] font-black text-teal-300">
           비
         </div>
-        <div className="min-w-0 leading-none">
-          <p className="whitespace-nowrap text-[1.15rem] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+        {/* 폰 헤더는 가로가 390px 뿐입니다. 회사명·담당자·사용법·상태배지를
+            다 넣으면 글자 크기를 '크게'로 둔 사용자에게서 서로 밀어냅니다.
+            그래서 이 블록만 줄어들게 두고(min-w-0 + truncate),
+            오른쪽 두 개는 절대 줄지 않게 했습니다. */}
+        {/* 폰 헤더는 가로가 390px 뿐입니다. 회사명·담당자·사용법·상태배지를
+            다 넣으면 글자 크기를 '매우 크게'로 둔 사용자에게서 서로 밀어냅니다.
+            그래서 이 블록만 줄어들게 두고(min-w-0 + truncate),
+            오른쪽 두 개는 절대 줄지 않게 했습니다.
+
+            여기만 rem 이 아니라 px 입니다. 상호와 역할은 '읽어서 판단하는
+            업무 데이터'가 아니라 앱 이름표라서, 글자 크기를 키운 목적과
+            상관이 없습니다. 오히려 같이 커지면 정작 눌러야 할 「사용법」과
+            실제/시연 배지를 밀어내 상호가 「㈜비…」로 잘렸습니다. */}
+        <div className="min-w-0 flex-1 leading-none">
+          <p className="truncate text-[15px] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
           {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
-          <p className="mt-1 truncate text-[1.03rem] font-medium text-navy-400">
+          <p className="mt-1 truncate text-[13px] font-medium text-navy-400">
             {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '운영관리'}
           </p>
         </div>
+        {/* 아이콘만 두었더니 무엇인지 알 수 없어서 아무도 누르지 않았습니다.
+            글자를 붙여 헤더에서 바로 보이게 합니다 — 안내를 닫은 사람이
+            다시 찾을 수 있는 자리가 폰에서는 여기와 「더보기」 두 곳입니다. */}
         <TourButton
-          compact
-          className="ml-auto shrink-0 rounded-lg p-2 text-navy-400 transition hover:bg-navy-100 hover:text-navy-700"
-          label=""
+          className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-white px-3 py-2 text-[0.95rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition active:bg-navy-50"
+          label="사용법"
         />
         {/* 실제 운영 데이터를 시연 데이터로 오인하지 않도록 배지를 구분합니다 */}
         <span
@@ -375,7 +390,7 @@ function MobileHeader() {
               : 'bg-amber-50 text-amber-600 ring-amber-100'
           }`}
         >
-          {live ? '실제 운영' : '시연용 데이터'}
+          {live ? '실제 운영' : '시연용'}
         </span>
       </div>
     </header>
@@ -446,6 +461,16 @@ export function Layout() {
           <SyncBar />
           <MobileHeader />
           <main className="w-full px-4 pb-24 pt-4 lg:px-[40px] lg:pb-14 lg:pt-8 2xl:px-[56px]">
+            {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
+                사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
+                안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
+            <div className="mb-3 hidden items-center justify-end gap-2 lg:flex">
+              <TourWhyButton className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+              <TourButton
+                className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
+                label="사용 방법"
+              />
+            </div>
             <PageMotion key={pathname}>
               <Outlet />
             </PageMotion>
