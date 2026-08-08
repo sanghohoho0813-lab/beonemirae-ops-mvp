@@ -424,6 +424,11 @@ export async function insertMaterial(m: Omit<MaterialSupply, 'id'>): Promise<Mat
 }
 
 /** 자재 입고 / 재고 조정 — 원장에 사유를 함께 남깁니다. */
+export async function deleteMaterial(id: string): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('materials').delete().eq('id', id).select())
+}
+
 export async function adjustStock(
   patch: Partial<OfficeStock>,
   kind: '입고' | '조정',
@@ -452,6 +457,25 @@ export async function adjustStock(
 }
 
 // ── 결제 / 미수금 ────────────────────────────────────────────────────────────
+export async function insertPayment(p: Omit<Payment, 'id'>): Promise<Payment> {
+  const sb = need()
+  const row = unwrap<Row[]>(
+    await sb
+      .from('payments')
+      .insert({
+        client_id: p.clientId,
+        billing_month: p.billingMonth,
+        amount: p.amount,
+        status: p.status,
+        method: p.method,
+        paid_at: p.paidAt,
+        memo: p.memo,
+      })
+      .select(),
+  )
+  return toPayment(row[0])
+}
+
 export async function updatePayment(id: string, patch: Partial<Payment>): Promise<void> {
   const sb = need()
   unwrap(

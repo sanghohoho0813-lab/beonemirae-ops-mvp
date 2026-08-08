@@ -415,22 +415,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive],
   )
 
-  const completeSchedule = useCallback((id: string, actualAmount: number, memo?: string) => {
-    setData((d) => ({
-      ...d,
-      schedules: d.schedules.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              status: '완료',
-              actualAmount,
-              completedAt: new Date().toISOString(),
-              memo: memo !== undefined ? memo : s.memo,
-            }
-          : s,
-      ),
-    }))
-  }, [])
+  // 완료된 일정의 수거량·메모 수정 (오늘 일정 화면의 '수정')
+  //
+  // 실제 운영에서는 서버가 원본입니다. 여기서 화면 상태만 바꾸면 새로고침하는
+  // 순간 수정한 값이 사라지는데, 사용자에게는 저장된 것처럼 보입니다.
+  const completeSchedule = useCallback(
+    (id: string, actualAmount: number, memo?: string) => {
+      const patch: Partial<Schedule> = {
+        status: '완료',
+        actualAmount,
+        completedAt: new Date().toISOString(),
+        ...(memo !== undefined ? { memo } : {}),
+      }
+      if (live) {
+        const before = data.schedules.find((s) => s.id === id)
+        void runLive(async () => {
+          await repo.updateSchedule(id, patch)
+          await repo.writeAudit({
+            action: 'schedule.complete',
+            entity: 'schedules',
+            entityId: id,
+            clientId: before?.clientId,
+            before,
+            after: patch,
+            summary: `수거 완료 수정 — ${before?.date ?? id} · ${actualAmount}kg`,
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        schedules: d.schedules.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      }))
+    },
+    [live, runLive, data.schedules],
+  )
 
   // ── 수거 완료 통합 커맨드 (3단계) ───────────────────────────────────────
   // 검증→적용→저장을 한 번에 수행. 현재 커밋된 data 기준으로 계산(원자적)합니다.
@@ -934,16 +953,51 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive],
   )
 
-  const removeMaterial = useCallback((id: string) => {
-    setData((d) => ({ ...d, materials: d.materials.filter((m) => m.id !== id) }))
-  }, [])
+  const removeMaterial = useCallback(
+    (id: string) => {
+      if (live) {
+        const before = data.materials.find((m) => m.id === id)
+        void runLive(async () => {
+          await repo.deleteMaterial(id)
+          await repo.writeAudit({
+            action: 'material.delete',
+            entity: 'materials',
+            entityId: id,
+            clientId: before?.clientId,
+            before,
+            summary: `자재 공급 기록 삭제 — ${before?.date ?? id}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({ ...d, materials: d.materials.filter((m) => m.id !== id) }))
+    },
+    [live, runLive, data.materials],
+  )
 
   // ── 결제 ────────────────────────────────────────────────────────────────
-  const addPayment = useCallback((p: Omit<Payment, 'id'>) => {
-    const payment: Payment = { ...p, id: uid('p') }
-    setData((d) => ({ ...d, payments: [...d.payments, payment] }))
-    return payment
-  }, [])
+  const addPayment = useCallback(
+    (p: Omit<Payment, 'id'>) => {
+      const payment: Payment = { ...p, id: uid('p') }
+      if (live) {
+        void runLive(async () => {
+          const created = await repo.insertPayment(p)
+          await repo.writeAudit({
+            action: 'payment.create',
+            entity: 'payments',
+            entityId: created.id,
+            clientId: p.clientId,
+            after: created,
+            summary: `청구 등록 — ${p.billingMonth} · ${p.amount.toLocaleString()}원`,
+          })
+        })
+        return payment
+      }
+      setData((d) => ({ ...d, payments: [...d.payments, payment] }))
+      return payment
+    },
+    [live, runLive],
+  )
 
   const updatePayment = useCallback(
     (id: string, patch: Partial<Payment>) => {
