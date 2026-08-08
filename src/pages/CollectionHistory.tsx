@@ -151,7 +151,11 @@ export function CollectionHistory() {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="px-3 py-4 text-center text-navy-400">조건에 맞는 이력이 없습니다.</td></tr>
+              <tr><td colSpan={10} className="px-3 py-4 text-center text-navy-400">
+                {data.schedules.length === 0
+                  ? '아직 수거 기록이 없습니다. 첫 수거를 입력하면 여기에 쌓입니다.'
+                  : '조건에 맞는 이력이 없습니다.'}
+              </td></tr>
             )}
           </tbody>
         </table>

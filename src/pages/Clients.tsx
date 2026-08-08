@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, SearchX} from 'lucide-react'
+import { Building2, ChevronRight, SearchX } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
@@ -33,7 +33,8 @@ function matchFilter(c: Client, f: Filter): boolean {
 }
 
 export function Clients() {
-  const { data, addClient, clientSet, setClientSet } = useData()
+  const { data, addClient, clientSet, setClientSet, mode } = useData()
+  const live = mode === 'live'
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('전체')
   const [query, setQuery] = useState('')
@@ -62,7 +63,7 @@ export function Clients() {
     <div>
       <PageHeader
         title="거래처 관리"
-        subtitle={`총 ${data.clients.length}곳 · 실제 ${realCount} / 시연용 ${demoCount}`}
+        subtitle={live ? `총 ${data.clients.length}곳` : `총 ${data.clients.length}곳 · 실제 ${realCount} / 시연용 ${demoCount}`}
         action={
           <button className="btn-primary" onClick={() => { setForm(emptyClientForm); setAdding(true) }}>
             ＋ 추가
@@ -70,7 +71,10 @@ export function Clients() {
         }
       />
 
-      {/* 거래처 데이터 세트 — segmented control */}
+      {/* 거래처 데이터 세트 — 시연 전용.
+          실제 운영 DB 에서는 동작하지 않는 데다("시연용 데이터" 문구까지 보입니다)
+          고객사 화면에 시연 흔적을 남기므로 아예 그리지 않습니다. */}
+      {!live && (
       <div className="mb-4">
         <div className="mb-1.5 flex items-center justify-between px-1">
           <p className="text-[1.03rem] font-bold text-navy-700">거래처 데이터 세트</p>
@@ -96,6 +100,7 @@ export function Clients() {
           기본 5곳은 실제 주요거래처, 확장(+10/20/30)은 서울·경기권 시연용 데이터입니다.
         </p>
       </div>
+      )}
 
       <input className="field-input mb-3" placeholder="거래처명 · 주소 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
 
@@ -106,7 +111,16 @@ export function Clients() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {/* 아직 한 곳도 없는 것(신규 고객사 1일차)과 필터에 안 걸린 것은 다른 상황입니다.
+          전자는 "등록하세요", 후자는 "조건을 바꾸세요"가 맞는 안내입니다. */}
+      {data.clients.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title="아직 등록된 거래처가 없습니다"
+          subtitle="거래처를 등록하면 수거 일정·이력·월간 리포트가 함께 만들어집니다."
+          action={{ label: '첫 거래처 등록', onClick: () => { setForm(emptyClientForm); setAdding(true) } }}
+        />
+      ) : filtered.length === 0 ? (
         <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">

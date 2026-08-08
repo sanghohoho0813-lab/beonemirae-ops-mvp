@@ -261,10 +261,17 @@ export function EmptyState({
   icon: Icon = Inbox,
   title,
   subtitle,
+  action,
 }: {
   icon?: LucideIcon
   title: string
   subtitle?: string
+  /**
+   * 다음에 할 일. 신규 고객사는 모든 화면이 0건에서 시작하므로,
+   * "없다"만 말하고 끝내면 무엇을 해야 할지 알 수 없습니다.
+   * 사용자가 지금 할 수 있는 행동이 있을 때만 넣습니다.
+   */
+  action?: { label: string; onClick: () => void }
 }) {
   return (
     <div className="card flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -273,6 +280,11 @@ export function EmptyState({
       </span>
       <p className="t-card mt-3.5 break-keep text-navy-700">{title}</p>
       {subtitle && <p className="t-body mt-1.5 max-w-md break-keep text-navy-400">{subtitle}</p>}
+      {action && (
+        <button onClick={action.onClick} className="btn-primary mt-5">
+          {action.label}
+        </button>
+      )}
     </div>
   )
 }

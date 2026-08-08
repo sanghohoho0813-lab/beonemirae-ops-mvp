@@ -7,6 +7,12 @@
 > 아래 절차를 한 번 수행하면 실제 로그인·DB 저장·다중 기기 동기화가 동작합니다.
 > 설정 전에는 앱이 기존과 동일하게 **시연 모드(브라우저 저장)** 로 동작합니다.
 
+> **새 고객사를 구축하는 경우** 이 문서 대신
+> [`docs/onboarding/`](./docs/onboarding/README.md) 를 보세요.
+> 프로젝트 생성부터 계정 발급·검증까지 STEP 1~9 로 정리되어 있고,
+> 고객사별로 복사해서 쓰는 프로필·체크리스트 양식이 함께 있습니다.
+> 이 문서는 비원미래 기준 상세 설명으로 남겨 둡니다.
+
 ---
 
 ## 1. Supabase 프로젝트 생성
@@ -49,11 +55,16 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 5 | `supabase/migrations/0005_client_role.sql` | 병원 고객 역할(`client`) 추가 |
 | 6 | `supabase/migrations/0006_portal.sql` | 병원 요청 테이블 · 포털 RLS · 제안 응답 함수 |
 | 7 | `supabase/migrations/0007_integrity.sql` | 중복 수거 차단(추가 수거는 허용) · 재고 음수 차단 |
+| 8 | `supabase/migrations/0008_guard_message.sql` | 병원 계정 권한 거부 문구 정정 |
+| 9 | `supabase/migrations/0009_actor_stamp.sql` | `created_by` / `updated_by` 자동 기록 |
+| 10 | `supabase/migrations/0010_request_handler.sql` | 병원 요청 처리자(`handled_by`) 자동 기록 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
 
-> 이 파일들은 로컬 Supabase(Postgres 17.6) 및 PostgreSQL 16 에서 **실제로 적용·검증**되었습니다.
+> 이 파일들은 PostgreSQL 16 + GoTrue + PostgREST 로 구성한 실제 Supabase 스택에서
+> **빈 데이터베이스에 0001~0010 을 순서대로 적용해 검증**했습니다.
+> (결과: 테이블 17 · RLS 활성 17 · 정책 51 · 트리거 23 · 초기 데이터 0건)
 
 Supabase CLI를 쓰는 경우:
 

@@ -77,7 +77,13 @@ export function Receivables() {
         ))}
       </div>
 
-      {list.length === 0 ? (
+      {data.payments.length === 0 ? (
+        <EmptyState
+          icon={ReceiptText}
+          title="아직 청구 내역이 없습니다"
+          subtitle="수거 실적이 쌓이면 거래처별 청구·입금 현황이 여기에 표시됩니다."
+        />
+      ) : list.length === 0 ? (
         <EmptyState icon={ReceiptText} title="조건에 맞는 청구 내역이 없어요" subtitle="다른 필터를 선택해 보세요." />
       ) : (
         <Stagger className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:items-start">
