@@ -58,13 +58,14 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 8 | `supabase/migrations/0008_guard_message.sql` | 병원 계정 권한 거부 문구 정정 |
 | 9 | `supabase/migrations/0009_actor_stamp.sql` | `created_by` / `updated_by` 자동 기록 |
 | 10 | `supabase/migrations/0010_request_handler.sql` | 병원 요청 처리자(`handled_by`) 자동 기록 |
+| 11 | `supabase/migrations/0011_billing.sql` | 거래처 계약·단가 · 규격별 자재 공급 · 거래처 문서함 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
 
 > 이 파일들은 PostgreSQL 16 + GoTrue + PostgREST 로 구성한 실제 Supabase 스택에서
 > **빈 데이터베이스에 0001~0010 을 순서대로 적용해 검증**했습니다.
-> (결과: 테이블 17 · RLS 활성 17 · 정책 51 · 트리거 23 · 초기 데이터 0건)
+> (결과: 테이블 18 · RLS 활성 18 · 정책 55 · 초기 데이터 0건)
 
 Supabase CLI를 쓰는 경우:
 

@@ -63,11 +63,25 @@ export const seedVehicles: Vehicle[] = [
 // [이름, 유형, 의료폐기물, 기저귀, 창고크기, 수거주기, 담당부서, 권역(서울·경기권 시연 주소)]
 type ClientSeed = [string, ClientType, boolean, boolean, StorageSize, string, string, string]
 
-// 실제 주요거래처 5곳 (사업계획서 기재) — 서울·경기권, 담당자는 부서명, 사업자번호 미표시
+// 실제로 확인된 거래처
+//
+//  「실제」로 표시하는 기준은 하나입니다 — 실제 업무자료에서 확인되었는가.
+//  더원요양병원은 거래처 관리 엑셀(정산금 세부내역·거래명세서)에 계약일·단가·
+//  월별 수거량이 들어 있어 실제 거래처로 확인됩니다.
+//
+//  나머지 이름은 사업계획서에서 가져온 것으로 실제 거래 여부를 확인하지 못했습니다.
+//  확인되지 않은 것을 「실제」로 표시하면 나중에 그 숫자가 근거로 쓰입니다.
+//  그래서 시연용으로 내렸습니다. 확인되면 그때 올리면 됩니다.
+//
+//  이 시드는 시연 모드 전용입니다 — 실제 운영 DB 에는 들어가지 않습니다.
 const REAL_CLIENT_SEEDS: ClientSeed[] = [
+  ['더원요양병원', '요양병원', true, true, '보통', '주 2회', '시설팀', '경기 용인시 기흥구'],
+]
+
+/** 실제 확인 전까지 시연용으로 두는 거래처 (사업계획서 기재, 거래 확인 필요) */
+const UNVERIFIED_CLIENT_SEEDS: ClientSeed[] = [
   ['의료법인한양의료재단', '병원', true, false, '큼', '주 3회', '원무과', '경기 남양주시 오남읍'],
   ['센트럴서울요양병원', '요양병원', true, true, '큼', '주 2회', '관리팀', '서울 영등포구 문래동'],
-  ['더원요양병원', '요양병원', true, true, '보통', '주 2회', '시설팀', '경기 용인시 기흥구'],
   ['남양주백병원', '병원', true, false, '보통', '주 2회', '총무팀', '경기 남양주시 다산동'],
   ['에이스병원', '병원', true, false, '보통', '주 1회', '원무과', '경기 구리시 인창동'],
 ]
@@ -124,11 +138,15 @@ function seedToClient([name, type, medical, diaper, storage, cycle, dept, region
   }
 }
 
-/** 거래처 = 실제 5곳 + 시연용 demoCount곳 */
+/**
+ * 거래처 = 확인된 실제 거래처 + 확인 전 거래처(시연) + 시연용 확장
+ * 기본 5곳이라는 화면 문구를 유지하기 위해 확인 전 4곳을 앞쪽에 둡니다.
+ */
 export function buildClients(demoCount = 0): Client[] {
   const real = REAL_CLIENT_SEEDS.map((s, i) => seedToClient(s, i, false))
+  const unverified = UNVERIFIED_CLIENT_SEEDS.map((s, i) => seedToClient(s, i + 100, true))
   const demo = DEMO_CLIENT_SEEDS.slice(0, Math.max(0, demoCount)).map((s, i) => seedToClient(s, i, true))
-  return [...real, ...demo]
+  return [...real, ...unverified, ...demo]
 }
 
 /** 실제 5곳 */

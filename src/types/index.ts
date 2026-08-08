@@ -106,6 +106,21 @@ export interface Client {
   storageSize: StorageSize // 자재 보관창고 크기
   note: string // 특이사항
   isDemoGenerated: boolean // true=시연용 확장 거래처, false=실제 주요거래처
+
+  // ── v8: 계약·정산 (실제 거래처 관리 엑셀을 흡수) ──
+  // 매월 같은 값을 다시 적지 않도록 거래처에 한 번만 정해 둡니다.
+  /** 계약 시작일 (YYYY-MM-DD) */
+  contractStart?: string | null
+  /** 계약 종료일 — 만료 알림의 근거가 됩니다 */
+  contractEnd?: string | null
+  /** 결제조건 문구 (예: 익월 20일 현금) — 거래명세서에 그대로 나갑니다 */
+  paymentTerms?: string
+  /** 결제일 규칙 — 익월 며칠. 예: 20 → 익월 20일 */
+  paymentDueDay?: number | null
+  /** 월정액 계약이면 금액 (kg 단가 대신 쓰는 거래처용). 없으면 null */
+  monthlyFlatFee?: number | null
+  /** 품목별 단가. 없는 품목은 기본 단가를 씁니다 (lib/billing.ts) */
+  pricing?: Record<string, { sale?: number | null; cost?: number | null }>
 }
 
 // ── 차량 ─────────────────────────────────────────────────────────────────────
@@ -150,11 +165,17 @@ export interface MaterialSupply {
   id: string
   date: string // 날짜 (YYYY-MM-DD)
   clientId: string // 거래처
-  boxCount: number // 박스 수량
+  boxCount: number // 박스 수량 (규격 합계 — 기존 화면·통계 호환용)
   vinylCount: number // 비닐 수량
   needleBoxCount: number // 합성수지 바늘통 수량
   isAdditionalRequest: boolean // 추가요청 여부
   memo: string // 메모
+  /**
+   * 규격별 공급 수량 (v8). 예: { box63: 180, box12: 400, plastic20: 30 }
+   * 정산·거래명세서는 이 값을 씁니다. 단가가 규격마다 다르기 때문입니다.
+   * 이 필드가 생기기 전 기록은 위 3칸에서 대표 규격으로 읽습니다.
+   */
+  items?: Record<string, number>
 }
 
 // ── 결제관리 ─────────────────────────────────────────────────────────────────

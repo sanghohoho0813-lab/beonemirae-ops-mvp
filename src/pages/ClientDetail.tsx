@@ -37,12 +37,15 @@ import {
   type UsageStatus,
   type BillStatus,
 } from '../lib/ops'
-import { prettyDate, weight, won, wonShort } from '../lib/format'
+import { prettyDate, thisMonth, today, weight, won, wonShort } from '../lib/format'
 import { nextActionsFor, clientMonthlyReport } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
 import { LeadStageControl } from '../components/LeadStage'
 import { ClientLeadHistory } from '../components/LeadHistory'
 import { MonthlyReportView } from '../components/MonthlyReport'
+import { SettlementPanel } from '../components/Settlement'
+import { InvoiceView } from '../components/InvoiceView'
+import { invoiceFor, contractState } from '../lib/billing'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import type { Client } from '../types'
 
@@ -71,6 +74,7 @@ const billStyle: Record<BillStatus, string> = {
 
 const TABS = [
   { id: 'ops', label: '운영조건' },
+  { id: 'settlement', label: '월 정산·명세서' },
   { id: 'report', label: '월간 리포트' },
   { id: 'notes', label: '현장 메모' },
   { id: 'history', label: '수거이력' },
@@ -94,6 +98,8 @@ export function ClientDetail() {
   })
   const [logOpen, setLogOpen] = useState(false)
   const [tab, setTab] = useState<TabId>('ops')
+  const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
 
   if (!client) {
     return (
@@ -324,6 +330,20 @@ export function ClientDetail() {
         ))}
       </div>
 
+      {/* ── 월 정산 · 거래명세서 ──
+          거래처별 엑셀에서 매달 하던 계산입니다.
+          수량은 전부 현장 입력에서 오고, 여기서는 확인만 합니다. */}
+      {tab === 'settlement' && (
+        <SettlementPanel
+          data={data}
+          client={client}
+          month={settleMonth}
+          onMonthChange={setSettleMonth}
+          onOpenInvoice={() => setInvoiceOpen(true)}
+          onSavePricing={(pricing) => updateClient(client.id, { pricing })}
+        />
+      )}
+
       {/* ── 월간 운영 리포트 ── */}
       {tab === 'report' && <MonthlyReportView report={report} />}
 
@@ -339,6 +359,12 @@ export function ClientDetail() {
             {client.collectsDiaper && <Cond label="일회용기저귀 차량" tone="teal" />}
             <Cond label={`보관창고 ${client.storageSize}`} />
             {client.storageSize === '작음' && <Cond label="자재 동시공급 권장" tone="amber" />}
+            {(() => {
+              // 계약 상태 — 만료가 가까우면 색으로 먼저 보입니다
+              const cs = contractState(client, today())
+              return cs ? <Cond label={`계약 ${cs.label}`} tone={cs.tone} /> : null
+            })()}
+            {client.paymentDueDay && <Cond label={`결제 익월 ${client.paymentDueDay}일`} />}
           </div>
           <div className="card p-4 sm:p-5">
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -526,6 +552,13 @@ export function ClientDetail() {
       </Modal>
 
       {/* 수거대장 미리보기 */}
+      {invoiceOpen && (
+        <InvoiceView
+          invoice={invoiceFor(data, client.id, settleMonth)}
+          onClose={() => setInvoiceOpen(false)}
+        />
+      )}
+
       <Modal
         open={logOpen}
         title="수거대장 미리보기"

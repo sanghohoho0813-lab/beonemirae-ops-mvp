@@ -49,6 +49,12 @@ export interface CollectionCompletionInput {
   containers: ContainerBreakdown
   handoverStatus: HandoverStatus
   supplied: SuppliedMaterials
+  /**
+   * 규격별 공급 수량 (v8) — 예: { box63: 10, plastic20: 3 }
+   * 정산·거래명세서가 이 값을 씁니다(규격마다 단가가 다르기 때문). 재고는
+   * 위 supplied(4칸)로 차감하며, 두 값은 화면에서 함께 만들어집니다.
+   */
+  suppliedItems?: Record<string, number>
   isAdditional: boolean
   memo: string
   role: EventRole
@@ -213,6 +219,7 @@ export function applyCollectionCompletion(data: AppData, input: CollectionComple
       needleBoxCount: input.supplied.plasticContainer + input.supplied.needleBox,
       isAdditionalRequest: input.isAdditional,
       memo: '수거 완료 시 동시공급',
+      items: input.suppliedItems,
     }
     materialIds.push(m.id)
     materials = [...data.materials, m]

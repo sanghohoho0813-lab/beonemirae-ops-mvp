@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { MetricCard } from '../components/ui'
+import { MonthlyBusiness } from '../components/MonthlyBusiness'
 import { WasteBadge } from '../components/Badge'
 import { additionalMaterialCount, monthlyCollected } from '../lib/selectors'
 import { num, weight } from '../lib/format'
@@ -50,7 +51,10 @@ export function Statistics() {
 
   return (
     <div>
-      <PageHeader title="통계" subtitle="이번 달 운영 지표" />
+      <PageHeader title="통계" subtitle="이번 달 운영 지표 · 경영 요약" />
+
+      {/* 경영 요약 — 거래처별 정산 합계 (엑셀 전체 거래처 파일에 해당) */}
+      <MonthlyBusiness data={data} />
 
       {/* 월별 수거량 요약 */}
       <section className="mb-5">

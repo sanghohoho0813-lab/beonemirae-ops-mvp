@@ -60,6 +60,12 @@ const toClient = (r: Row): Client => ({
   storageSize: r.storage_size,
   note: r.note ?? '',
   isDemoGenerated: !!r.is_demo_generated,
+  contractStart: r.contract_start ?? null,
+  contractEnd: r.contract_end ?? null,
+  paymentTerms: r.payment_terms ?? '',
+  paymentDueDay: r.payment_due_day ?? null,
+  monthlyFlatFee: r.monthly_flat_fee ?? null,
+  pricing: r.pricing ?? undefined,
 })
 
 const toVehicle = (r: Row): Vehicle => ({
@@ -102,6 +108,7 @@ const toMaterial = (r: Row): MaterialSupply => ({
   needleBoxCount: r.needle_box_count ?? 0,
   isAdditionalRequest: !!r.is_additional_request,
   memo: r.memo ?? '',
+  items: r.items ?? undefined,
 })
 
 const toPayment = (r: Row): Payment => ({
@@ -303,6 +310,12 @@ const clientRow = (c: Partial<Client>) => ({
   collects_diaper: c.collectsDiaper,
   storage_size: c.storageSize,
   note: c.note,
+  contract_start: c.contractStart,
+  contract_end: c.contractEnd,
+  payment_terms: c.paymentTerms,
+  payment_due_day: c.paymentDueDay,
+  monthly_flat_fee: c.monthlyFlatFee,
+  pricing: c.pricing,
 })
 
 const clean = (o: Record<string, unknown>) =>
@@ -417,6 +430,7 @@ export async function insertMaterial(m: Omit<MaterialSupply, 'id'>): Promise<Mat
         needle_box_count: m.needleBoxCount,
         is_additional_request: m.isAdditionalRequest,
         memo: m.memo,
+        items: m.items ?? null,
       })
       .select(),
   )
@@ -632,6 +646,7 @@ export async function completeCollection(input: CollectionCompletionInput): Prom
       containers: input.containers,
       handoverStatus: input.handoverStatus,
       supplied: input.supplied,
+      suppliedItems: input.suppliedItems ?? null,
       isAdditional: input.isAdditional,
       memo: input.memo,
       screen: input.screen,

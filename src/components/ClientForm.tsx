@@ -28,6 +28,10 @@ export const emptyClientForm: Omit<Client, 'id'> = {
   storageSize: '보통',
   note: '',
   isDemoGenerated: false,
+  contractStart: null,
+  contractEnd: null,
+  paymentTerms: '',
+  paymentDueDay: null,
 }
 
 export function ClientForm({
@@ -106,6 +110,50 @@ export function ClientForm({
           />
           일회용기저귀 수거
         </label>
+      </div>
+      {/* 계약 — 매달 다시 적지 않도록 여기서 한 번만 정합니다.
+          거래명세서의 결제기한과 계약 만료 안내가 이 값에서 나옵니다. */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label">계약 시작일</label>
+          <input
+            type="date"
+            className="field-input"
+            value={form.contractStart ?? ''}
+            onChange={(e) => set('contractStart', e.target.value || null)}
+          />
+        </div>
+        <div>
+          <label className="field-label">계약 종료일</label>
+          <input
+            type="date"
+            className="field-input"
+            value={form.contractEnd ?? ''}
+            onChange={(e) => set('contractEnd', e.target.value || null)}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label">결제일 (익월 며칠)</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            className="field-input"
+            value={form.paymentDueDay ?? ''}
+            onChange={(e) => set('paymentDueDay', e.target.value === '' ? null : Number(e.target.value))}
+            placeholder="예: 20"
+          />
+        </div>
+        <div>
+          <label className="field-label">결제조건</label>
+          <input
+            className="field-input"
+            value={form.paymentTerms ?? ''}
+            onChange={(e) => set('paymentTerms', e.target.value)}
+            placeholder="예: 현금 (상호로 입금)"
+          />
+        </div>
       </div>
       <div>
         <label className="field-label">특이사항</label>

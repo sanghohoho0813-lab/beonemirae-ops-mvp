@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
+import { SUPPLY_ITEMS, stockDeltaOf, type ItemCounts } from '../lib/billing'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { schedulesOn } from '../lib/selectors'
@@ -143,7 +144,9 @@ export function CollectionInput() {
   const [amount, setAmount] = useState('')
   const [time, setTime] = useState(nowTime())
   const [containers, setContainers] = useState<ContainerBreakdown>({ ...EMPTY_CONTAINERS })
-  const [supplied, setSupplied] = useState({ ...EMPTY_SUPPLIED })
+  // 규격별 공급 수량. 단가가 규격마다 다르므로 여기서부터 규격으로 받습니다.
+  // 재고(4칸) 차감량은 이 값에서 계산합니다 — 현장이 두 번 적지 않게.
+  const [suppliedItems, setSuppliedItems] = useState<ItemCounts>({})
   const [isAdditional, setIsAdditional] = useState(false)
   const [handover, setHandover] = useState<HandoverStatus>('수거 완료')
   const [memo, setMemo] = useState('')
@@ -205,6 +208,8 @@ export function CollectionInput() {
   }, [wasteType])
 
   const stock = data.officeStock
+  // 규격별 입력 → 재고 4칸 차감량
+  const supplied = { ...EMPTY_SUPPLIED, ...stockDeltaOf(suppliedItems) }
   const overStock = SUPPLY_KEYS.some(({ key }) => supplied[key] > stock[key])
   const suppliedSum = suppliedTotal(supplied)
   const containerSum = containerTotal(containers)
@@ -221,6 +226,7 @@ export function CollectionInput() {
       containers,
       handoverStatus: handover,
       supplied,
+      suppliedItems,
       isAdditional,
       memo,
       role: '현장 담당자',
@@ -250,7 +256,7 @@ export function CollectionInput() {
     setClientId('')
     setAmount('')
     setContainers({ ...EMPTY_CONTAINERS })
-    setSupplied({ ...EMPTY_SUPPLIED })
+    setSuppliedItems({})
     setIsAdditional(false)
     setHandover('수거 완료')
     setMemo('')
@@ -502,21 +508,43 @@ export function CollectionInput() {
 
         {/* 5. 자재 동시공급 */}
         <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
+          {/* 규격별로 받습니다 — 63L 박스와 12L 박스는 단가가 다르고,
+              그 차이가 그대로 거래처 정산·거래명세서로 갑니다. */}
           <div data-tour="collect-supply" className="grid grid-cols-2 gap-3">
-            {SUPPLY_KEYS.map(({ key, label }) => {
-              const over = supplied[key] > stock[key]
+            {SUPPLY_ITEMS.map((it) => {
+              const bucket = it.bucket!
+              const over = supplied[bucket] > stock[bucket]
               return (
                 <NumField
-                  key={key}
-                  label={label}
-                  value={supplied[key]}
+                  key={it.key}
+                  label={it.label}
+                  value={suppliedItems[it.key] ?? 0}
                   suffix="개"
                   danger={over}
-                  hint={over ? `재고 ${stock[key]} 초과` : `재고 ${stock[key]}`}
-                  onChange={(v) => setSupplied((s) => ({ ...s, [key]: v }))}
+                  hint={it.billable ? '유상' : '무상'}
+                  onChange={(v) =>
+                    setSuppliedItems((cur) => {
+                      const next = { ...cur }
+                      if (v > 0) next[it.key] = v
+                      else delete next[it.key]
+                      return next
+                    })
+                  }
                 />
               )
             })}
+          </div>
+          {/* 재고는 규격이 아니라 종류 단위로 관리하므로 여기서 함께 보여 줍니다 */}
+          <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+            {SUPPLY_KEYS.map(({ key, label }) => (
+              <span
+                key={key}
+                className={`t-muted tabular-nums ${supplied[key] > stock[key] ? 'font-bold text-rose-600' : ''}`}
+              >
+                {label} 재고 {stock[key] - supplied[key]}
+                {supplied[key] > 0 && <span className="text-navy-400"> (-{supplied[key]})</span>}
+              </span>
+            ))}
           </div>
           {suppliedSum > 0 && (
             <label className="mt-3 flex items-center gap-2 text-[1.08rem] font-semibold text-navy-600">
