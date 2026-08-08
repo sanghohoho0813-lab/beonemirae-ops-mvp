@@ -97,10 +97,15 @@ export function TourOverlay() {
   const step = steps[index]
 
   // ── 1) 단계가 요구하는 화면으로 이동 ─────────────────────────────────────
+  //
+  //  active 를 반드시 함께 봅니다. 아래 return null 은 '그리지 않는다'일 뿐,
+  //  훅은 규칙상 그보다 위에 있어야 해서 투어가 꺼져 있어도 계속 돕니다.
+  //  step 만 보고 판단하면, 투어를 한 번 열었던 사용자는 그 뒤로 메뉴를 누를
+  //  때마다 이 effect 가 1단계 화면(대시보드)으로 도로 끌고 갔습니다.
   useEffect(() => {
-    if (!step) return
+    if (!active || !step) return
     if (pathname !== step.route) navigate(step.route)
-  }, [step, pathname, navigate])
+  }, [active, step, pathname, navigate])
 
   // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {

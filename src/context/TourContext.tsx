@@ -43,9 +43,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
     [myTour],
   )
 
+  // 끝낼 때는 steps 까지 비웁니다.
+  // active 만 지우면 steps[0] 이 그대로 남아, 투어를 소비하는 쪽에서
+  // "아직 1단계가 있다"고 오해할 수 있습니다. 실제로 그 때문에 투어를 닫은
+  // 뒤에도 화면이 1단계 경로로 되돌아가는 문제가 있었습니다.
   const stop = useCallback(() => {
     if (active) markTourSeen(active.id)
     setActive(null)
+    setSteps([])
     setIndex(0)
   }, [active])
 
@@ -55,6 +60,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       if (i + 1 >= steps.length) {
         markTourSeen(active.id)
         setActive(null)
+        setSteps([])
         return 0
       }
       return i + 1

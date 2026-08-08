@@ -1,5 +1,6 @@
 import { Lightbulb, PlayCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTour } from '../context/TourContext'
 import { markTourSeen, shouldShowIntro, snoozeToday, TOURS, type TourId } from '../lib/tour'
 
@@ -73,22 +74,37 @@ export function TourBanner({ tourId }: { tourId?: TourId }) {
 }
 
 /**
- * 이 시스템을 만든 이유 — 사업 전환 스토리.
+ * 이 시스템을 만든 이유 — 기획·사업 설명 화면으로 갑니다.
  *
- * 대표·사무실 투어가 곧 그 스토리라(8단계) 같은 것을 실행합니다.
- * 현장·병원 담당자도 궁금하면 여기서 볼 수 있게 역할과 무관하게 열어 둡니다.
+ * 전에는 이 버튼이 대표·사무실 투어를 그대로 실행했습니다. 그래서 「사용 방법」과
+ * 눌러 보면 같은 것이 나왔습니다. 두 가지는 목적이 다릅니다.
+ *
+ *   사용 방법  화면에서 무엇을 누르는지 (투어)
+ *   만든 이유  왜 시작했고 회사가 어디로 가려는지 (읽는 글)
+ *
+ * 대표 내외와 외부 설명 대상이 읽는 글이라 투어처럼 화면을 짚는 형식이 맞지
+ * 않습니다. 조용히 읽고 되돌아갈 수 있는 화면으로 뺐습니다.
  */
-export function TourWhyButton({ className = '', label = '이 시스템을 만든 이유' }: { className?: string; label?: string }) {
-  const { start } = useTour()
+export function TourWhyButton({
+  className = '',
+  label = '이 시스템을 만든 이유',
+  /** 넘기면 라벨 대신 이 내용을 씁니다 (더보기처럼 설명을 함께 두는 자리) */
+  children,
+}: {
+  className?: string
+  label?: string
+  children?: ReactNode
+}) {
+  const navigate = useNavigate()
   return (
     <button
       data-tour-why
-      onClick={() => start(TOURS.staff)}
+      onClick={() => navigate('/why')}
       className={className}
-      title="기존 업무가 어떻게 바뀌는지 8단계로 봅니다"
+      title="왜 이 시스템을 만들었고 회사가 어디로 가려는지"
     >
       <Lightbulb size={17} strokeWidth={2.3} className="shrink-0" />
-      <span className="whitespace-nowrap">{label}</span>
+      {children ?? <span className="whitespace-nowrap">{label}</span>}
     </button>
   )
 }
@@ -101,11 +117,14 @@ export function TourButton({
   compact = false,
   /** 특정 투어를 지정 (포털에서는 병원 담당자용) */
   tourId,
+  /** 넘기면 라벨 대신 이 내용을 씁니다 */
+  children,
 }: {
   className?: string
   label?: string
   compact?: boolean
   tourId?: TourId
+  children?: ReactNode
 }) {
   const { start } = useTour()
   return (
@@ -116,7 +135,9 @@ export function TourButton({
       title="사용 방법 다시 보기"
     >
       <PlayCircle size={17} strokeWidth={2.3} className="shrink-0" />
-      <span className={compact ? 'hidden whitespace-nowrap sm:inline' : 'whitespace-nowrap'}>{label}</span>
+      {children ?? (
+        <span className={compact ? 'hidden whitespace-nowrap sm:inline' : 'whitespace-nowrap'}>{label}</span>
+      )}
     </button>
   )
 }

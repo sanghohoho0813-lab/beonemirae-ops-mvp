@@ -162,8 +162,8 @@ export function Settings() {
         <div className="min-w-0 flex-1">
           <h2 className="t-card break-keep text-navy-900">도움말</h2>
           <p className="t-muted mt-1 break-keep">
-            「사용 방법」은 화면을 하나씩 짚어 역할에 맞게 안내합니다.
-            「이 시스템을 만든 이유」는 기존 업무가 어떻게 바뀌는지 전체 흐름을 봅니다.
+            「사용 방법」은 화면을 하나씩 짚어 어디에 무엇을 입력하는지 역할에 맞게 안내합니다.
+            「이 시스템을 만든 이유」는 왜 시작했고 회사가 어디로 가려는지 읽는 글입니다 — 목적이 다릅니다.
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">

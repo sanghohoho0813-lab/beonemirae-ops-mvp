@@ -161,11 +161,31 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
           </div>
           <ChevronRight size={18} className="ml-auto text-navy-300" />
         </Tappable>
-        <TourButton
-        className="card mb-2.5 flex w-full cursor-pointer items-center gap-3 p-4 text-left text-[1.12rem] font-bold text-navy-800"
-        label="사용 방법 보기"
-      />
-      <TourWhyButton className="card mb-2.5 flex w-full cursor-pointer items-center gap-3 p-4 text-left text-[1.12rem] font-bold text-navy-800" />
+        {/* 도움말 두 가지 — 목적이 달라서 설명을 붙여 구분합니다.
+            글자만 나란히 두면 폰에서는 둘이 같은 것으로 보입니다. */}
+        <div className="card mb-2.5 divide-y divide-navy-50 overflow-hidden">
+          <TourButton
+            className="flex w-full cursor-pointer items-center gap-3 p-4 text-left"
+            label=""
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block break-keep font-bold text-navy-900">사용 방법</span>
+              <span className="block break-keep text-[0.98rem] text-navy-400">
+                화면을 짚어가며 어디에 무엇을 입력하는지
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-navy-300" />
+          </TourButton>
+          <TourWhyButton className="flex w-full cursor-pointer items-center gap-3 p-4 text-left" label="">
+            <span className="min-w-0 flex-1">
+              <span className="block break-keep font-bold text-navy-900">이 시스템을 만든 이유</span>
+              <span className="block break-keep text-[0.98rem] text-navy-400">
+                왜 시작했고 회사가 어디로 가려는지
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-navy-300" />
+          </TourWhyButton>
+        </div>
       <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
           <IconChip icon={SlidersHorizontal} tone="teal" />
           <div className="min-w-0">

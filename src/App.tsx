@@ -13,6 +13,7 @@ import { Statistics } from './pages/Statistics'
 import { Reports } from './pages/Reports'
 import { More } from './pages/More'
 import { Settings } from './pages/Settings'
+import { Purpose } from './pages/Purpose'
 import { Performance } from './pages/Performance'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
@@ -83,6 +84,7 @@ export default function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="more" element={<More />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="why" element={<Purpose />} />
           <Route path="performance" element={<Performance />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="demo" element={<DemoSummary />} />
