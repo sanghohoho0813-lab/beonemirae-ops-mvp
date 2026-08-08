@@ -182,6 +182,48 @@ psql -d rlsqa -f supabase/test/03_portal.sql
 
 ---
 
+## 6-2. 라이브 검증 (실제 프로젝트에서 한 번에 확인)
+
+위 SQL 검증은 DB 안에서 세션을 흉내 내 확인합니다.
+`supabase/test/05_live.mjs` 는 그 바깥, **앱이 실제로 통신하는 경로**를 확인합니다.
+
+- 로그인 → GoTrue (`/auth/v1/token`, refresh 포함)
+- 데이터 접근 → PostgREST (`/rest/v1/…`) + 실제 발급된 JWT
+- 권한 → 메뉴 숨김이 아니라 **서버 응답 코드**로 차단되는지
+- 수거 완료 → `complete_collection` 결과가 DB 에 전부 남는지
+- 두 세션 동기화 · demo/live 분리
+
+### 실행
+
+```bash
+# 1) 키는 셸에만 넣습니다 (파일로 저장하거나 커밋하지 마세요)
+export SUPABASE_URL="https://xxxx.supabase.co"
+export SUPABASE_ANON_KEY="eyJ..."            # 프론트와 같은 공개 키
+export SUPABASE_SERVICE_ROLE_KEY="eyJ..."    # 이 스크립트에서만 사용
+export TEST_ADMIN_PW='…' TEST_OFFICE_PW='…' TEST_FIELD_PW='…' TEST_CLIENT_PW='…'
+
+# 2) 검증용 계정·데이터 준비 (이미 있으면 건너뜁니다)
+node supabase/test/05_live.mjs --setup
+
+# 3) 검증  — 마지막에 YES/NO 표가 출력됩니다
+node supabase/test/05_live.mjs
+
+# 4) 검증용 데이터 정리
+node supabase/test/05_live.mjs --cleanup
+```
+
+`SERVICE_ROLE` 키는 계정 생성과 "DB 에 실제로 남았는지" 확인에만 씁니다.
+**프론트엔드 번들에는 들어가지 않습니다.** 검증이 끝나면 셸을 닫거나 `unset` 하세요.
+
+검증용으로 만든 거래처·차량은 이름에 `[검증]` 접두사가 붙고 `--cleanup` 이 그것만
+지우므로 실제 운영 데이터와 섞이지 않습니다.
+
+> `--cleanup` 은 병원 계정의 소속 병원을 지우면서 역할을 `field` 로 되돌립니다.
+> (`profiles` 에 "병원 계정은 소속 병원이 있어야 한다"는 제약이 있기 때문입니다)
+> 다시 `--setup` 을 실행하면 원래대로 돌아옵니다.
+
+---
+
 ## 7. 동작 확인 체크리스트
 
 - [ ] 로그아웃 상태에서 `/` 접속 → 로그인 화면으로 이동
