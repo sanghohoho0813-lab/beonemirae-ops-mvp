@@ -3,8 +3,14 @@ import type { UserRole } from '../context/AuthContext'
 // ─────────────────────────────────────────────────────────────────────────────
 // 제품 투어 (사용 방법 보기)
 //
-//  설명서가 아니라 "지금 무엇을 하면 되는지" 알려주는 도구입니다.
-//  그래서 한 단계에 문장이 두 개뿐입니다.
+//  두 가지를 같이 설명합니다.
+//
+//    쓰는 법   지금 무엇을 하면 되는지 (직원)
+//    만든 이유 이 일이 회사를 어떻게 바꾸는지 (대표·심사자·외부 설명)
+//
+//  둘을 따로 두면 직원은 앞부분만, 심사자는 뒷부분만 보게 되어
+//  "이 버튼이 왜 있는지"가 끝내 연결되지 않습니다. 그래서 한 줄기로 엮되
+//  한 단계에 문장은 두세 개를 넘기지 않습니다.
 //
 //    action  지금 하면 되는 일 (명령형 한 줄 — 이 단계의 주인공)
 //    result  그러면 무엇이 바뀌는지 (→ 한 줄)
@@ -72,69 +78,112 @@ export function stepsFor(tour: Tour, width: number): TourStep[] {
 }
 
 // ── A. 대표 · 사무실 담당자 ──────────────────────────────────────────────────
+//
+//  8단계 — 기존 업무의 문제에서 시작해 사업이 어떻게 넓어지는지까지.
+//  중간 여섯 단계는 실제 화면을 짚습니다. 설명만 하는 단계는 처음과 끝뿐입니다.
 const STAFF: Tour = {
   id: 'staff',
   label: '대표 · 사무실 담당자용',
-  minutes: '1분',
-  intro: '수거 입력 한 번이 병원 서비스와 추가 매출로 이어지는 흐름을 4단계로 봅니다.',
+  minutes: '2분',
+  intro: '왜 만들었고, 어떻게 쓰며, 그래서 무엇이 달라지는지 8단계로 봅니다.',
   steps: [
     {
       route: '/',
-      anchor: 'today-board',
-      title: '오늘 할 일',
-      action: '남은 수거를 바로 입력하고, 오른쪽 목록을 위에서부터 처리하세요.',
-      result: '일정·이력·자재·통계·대장이 함께 갱신됩니다. 옮겨 적지 않습니다.',
+      title: '흩어져 있던 업무를 한 줄로',
+      action: '전화·카톡으로 받은 요청, 종이에 적은 수거량, 엑셀에 옮긴 정산 — 지금은 같은 내용을 여러 번 적습니다.',
+      result: '이 시스템은 그 반복을 없애려고 만들었습니다.',
+      why: '한 번 적은 것을 다시 적지 않는 것이 전부입니다.',
+    },
+    {
+      route: '/collection',
+      anchor: 'collect-form',
+      title: '현장에서 한 번만 입력',
+      action: '수거량과 공급한 물품을 규격별로 적습니다.',
+      result: '여기가 전체의 출발점입니다. 뒤의 모든 것이 이 한 번에서 나옵니다.',
+    },
+    {
+      route: '/collection',
+      anchor: 'collect-save',
+      title: '저장하면 알아서 이어집니다',
+      action: '저장 한 번에 일정·수거이력·자재 재고·병원 요청·정산이 함께 갱신됩니다.',
+      result: '사무실이 옮겨 적을 것이 없습니다.',
+    },
+    {
+      route: '/clients',
+      anchor: 'client-list',
+      title: '거래처별로 쌓입니다',
+      action: '수거량·자재 사용량·요청·매출이 병원마다 계속 모입니다.',
+      result: '지금까지 사람 머릿속에 있던 것이 기록으로 남습니다.',
+    },
+    {
+      route: '/stats',
+      anchor: 'business-summary',
+      title: '월 정산과 거래명세서',
+      action: '쌓인 데이터로 매출·처리비·자재비·예상 영업이익이 계산됩니다.',
+      result: '거래명세서도 거래처 화면에서 그대로 만들어 PDF 로 저장합니다.',
+      why: '매달 거래처별 엑셀을 다시 쓰던 일이 사라집니다.',
     },
     {
       route: '/requests',
       anchor: 'requests-list',
-      title: '병원 요청',
-      action: '병원이 올린 요청의 상태를 바꾸고 회신을 남기세요.',
-      result: '바뀐 상태와 회신이 병원 화면에 그대로 보입니다.',
+      title: '병원이 직접 요청합니다',
+      action: '병원 담당자가 포털에서 수거·소모품을 올리고 처리 상태를 스스로 봅니다.',
+      result: '전화를 받아 적는 일이 줄고, 병원은 기다리지 않습니다.',
+      why: '내부 프로그램에서 끝나지 않고 병원에 제공하는 서비스가 되는 지점입니다.',
     },
     {
       route: '/',
       anchor: 'customer',
-      title: '병원 서비스 전환',
-      action: '요청 → 처리 → 제안 → 수락 → 매출, 이 줄의 숫자를 보세요.',
-      result: '비어 있는 칸이 지금 할 일입니다. 그 자리에서 바로 이어갑니다.',
+      title: '데이터로 먼저 파악합니다',
+      action: '수거 주기·자재 사용량·요청 이력을 보고 추가 수거, 소모품, 교육이 필요한 곳을 찾습니다.',
+      result: '요청 → 처리 → 제안 → 수락 → 실제 매출까지 한 줄에서 확인합니다.',
+      why: '예측이 아니라 쌓인 기록을 규칙으로 정리한 것입니다.',
     },
     {
-      route: '/performance',
-      anchor: 'perf-model',
-      title: 'AX 도입 성과',
-      action: '수거료 외 매출 다섯 가지의 진행 단계를 확인하세요.',
-      result: '아직 만들지 않은 것은 개발 예정으로 표시되고 성과에 넣지 않습니다.',
-      why: '심사에서 가장 많이 받는 질문이 "무엇으로 돈을 버느냐"입니다.',
+      route: '/',
+      anchor: 'story',
+      title: '그래서 무엇이 달라지는가',
+      action: '현장 1회 입력 → 업무 자동 연결 → 거래처 데이터 축적 → 병원이 직접 확인·요청 → 데이터 기반 제안 → 추가 매출.',
+      result: '수거만 하던 회사에서, 병원에 필요한 것을 함께 관리하는 회사로 넓히는 것이 목표입니다.',
     },
   ],
   stepsMobile: [
     {
       route: '/',
+      title: '흩어진 업무를 한 줄로',
+      action: '전화·종이·엑셀에 같은 내용을 여러 번 적던 일을 없애려고 만들었습니다.',
+      result: '한 번 적으면 끝입니다.',
+    },
+    {
+      route: '/',
       anchor: 'today-focus',
       title: '오늘 할 일',
       action: '남은 수거를 바로 입력하세요.',
-      result: '일정·이력·자재·통계가 함께 갱신됩니다.',
+      result: '일정·이력·자재·정산이 함께 갱신됩니다.',
     },
     {
       route: '/requests',
       anchor: 'requests-list',
       title: '병원 요청',
-      action: '요청 상태를 바꾸고 회신을 남기세요.',
+      action: '병원이 직접 올린 요청을 처리하고 회신합니다.',
       result: '병원 화면에 그대로 보입니다.',
     },
     {
       route: '/',
       anchor: 'today-focus',
-      title: '더보기',
-      action: '매출·성과는 더보기에 있습니다.',
-      result: '폰에서는 오늘 할 일만 남겼습니다.',
+      title: '그래서 무엇이 달라지는가',
+      action: '현장 1회 입력 → 자동 연결 → 병원 서비스 → 추가 매출.',
+      result: '자세한 내용은 더보기 → AX 도입 성과에 있습니다.',
     },
   ],
   finish: { label: '운영현황 보기', to: '/' },
 }
 
-// ── B. 현장 담당자 ───────────────────────────────────────────────────────────
+// ── B. 현장 담당자 ────────────────────────────────────────────────────────────
+//
+//  현장은 하는 일이 하나뿐이라 짧게 갑니다. 다만 마지막에
+//  "내가 적은 것이 어디로 가는지"를 한 줄 넣었습니다 —
+//  그걸 알아야 대충 적지 않습니다.
 const FIELD: Tour = {
   id: 'field',
   label: '현장 담당자용',
@@ -158,9 +207,9 @@ const FIELD: Tour = {
     {
       route: '/collection',
       anchor: 'collect-supply',
-      title: '자재 동시 공급',
-      action: '용기를 주고 왔다면 가져다준 수량만 함께 적으세요.',
-      result: '사무실 재고가 줄고, 그 병원의 소모품 요청도 함께 완료됩니다.',
+      title: '자재는 규격별로',
+      action: '가져다준 물품을 규격별로 적으세요. − + 로 세거나 직접 숫자를 넣으면 됩니다.',
+      result: '63L 박스와 12L 박스는 값이 달라서, 규격을 적어야 정산이 맞습니다.',
     },
     {
       route: '/collection',
@@ -168,6 +217,12 @@ const FIELD: Tour = {
       title: '저장',
       action: '저장을 누르세요.',
       result: '자동 처리된 항목이 그 자리에 뜨고, 잘못 눌렀으면 취소됩니다.',
+    },
+    {
+      route: '/today',
+      title: '내가 적은 것이 가는 곳',
+      action: '이 한 번의 입력으로 사무실의 일정·수거대장·자재 재고·월 정산·병원 안내가 함께 채워집니다.',
+      result: '현장에서 정확히 적을수록 뒤에서 다시 묻는 일이 없어집니다.',
     },
   ],
   stepsMobile: [
@@ -187,16 +242,26 @@ const FIELD: Tour = {
     },
     {
       route: '/collection',
+      anchor: 'collect-supply',
+      title: '자재는 규격별로',
+      action: '− + 로 세거나 숫자를 직접 넣으세요.',
+      result: '규격마다 값이 달라 정산에 그대로 쓰입니다.',
+    },
+    {
+      route: '/collection',
       anchor: 'collect-save',
       title: '저장',
-      action: '수거량을 적고 저장을 누르세요.',
-      result: '자동 처리된 항목이 그 자리에 뜹니다.',
+      action: '저장을 누르면 끝입니다.',
+      result: '사무실 일정·대장·재고·정산이 함께 채워집니다.',
     },
   ],
   finish: { label: '오늘 일정 보기', to: '/today' },
 }
 
 // ── C. 병원 담당자 ───────────────────────────────────────────────────────────
+//
+//  병원은 우리 직원이 아니라 고객입니다. 그래서 "이 회사가 무엇을 하는지"가
+//  아니라 "여기서 무엇을 하실 수 있는지"만 말합니다.
 const CLIENT: Tour = {
   id: 'client',
   label: '병원 담당자용',
@@ -223,6 +288,13 @@ const CLIENT: Tour = {
       title: '우리 병원 현황',
       action: '다음 수거일과 이번 달 배출량을 확인하세요.',
       result: '월간 리포트와 수거 이력은 인증·실사 자료로 바로 쓰실 수 있습니다.',
+    },
+    {
+      route: '/portal',
+      anchor: 'portal-report',
+      title: '전화 대신 화면으로',
+      action: '요청·진행 상태·배출 기록이 한곳에 모여 있어, 필요할 때 직접 확인하시면 됩니다.',
+      result: '병원 담당자가 바뀌어도 기록은 그대로 남습니다.',
     },
   ],
   stepsMobile: [
@@ -261,6 +333,45 @@ export function tourFor(role: UserRole | null): Tour {
 }
 
 const SEEN_KEY = 'beonemirae-ops:tour-seen'
+const SNOOZE_KEY = 'beonemirae-ops:tour-snooze'
+
+/**
+ * 오늘 하루 숨김.
+ *
+ * "다시 보지 않기"(영구)와 다릅니다. 오늘은 바쁘니 내일 다시 보여 달라는
+ * 뜻이라, 날짜만 적어 두고 날이 바뀌면 저절로 풀립니다.
+ *
+ * 지금은 브라우저에만 저장합니다. 나중에 사용자별 설정으로 옮기려면
+ * 이 두 함수만 바꾸면 되도록 저장 위치를 여기 한 곳에 모아 두었습니다.
+ */
+function todayKey(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export function snoozeToday(id: TourId): void {
+  try {
+    const cur = JSON.parse(localStorage.getItem(SNOOZE_KEY) ?? '{}') as Record<string, string>
+    cur[id] = todayKey()
+    localStorage.setItem(SNOOZE_KEY, JSON.stringify(cur))
+  } catch {
+    /* noop */
+  }
+}
+
+export function snoozedToday(id: TourId): boolean {
+  try {
+    const cur = JSON.parse(localStorage.getItem(SNOOZE_KEY) ?? '{}') as Record<string, string>
+    return cur[id] === todayKey()
+  } catch {
+    return false
+  }
+}
+
+/** 안내 배너를 지금 띄울지 — 영구 숨김도, 오늘 숨김도 아닐 때만 */
+export function shouldShowIntro(id: TourId): boolean {
+  return !tourSeen(id) && !snoozedToday(id)
+}
 
 /** 이 역할의 투어를 이미 보았는지 (안내 배너 노출 판단용) */
 export function tourSeen(id: TourId): boolean {

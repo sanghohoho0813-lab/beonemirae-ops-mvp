@@ -54,7 +54,7 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
         </div>
       ) : (
         <>
-          <div className="card mb-3 overflow-hidden">
+          <div data-tour="business-summary" className="card mb-3 overflow-hidden">
             <div className="grid grid-cols-2 divide-x divide-navy-100 sm:grid-cols-4">
               <Cell label="매출" v={r.revenue} />
               <Cell label="처리비" v={-r.disposalCost} />

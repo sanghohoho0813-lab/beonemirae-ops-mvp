@@ -124,13 +124,13 @@ export function Clients() {
         <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-          {filtered.map((c) => {
+          {filtered.map((c, ci) => {
             const unpaid = clientOutstanding(data, c.id) > 0
             // 이 거래처의 최우선 추천 (수거이력·자재·청구 데이터 기반)
             const topAction = nextActionsFor(data, c)[0]
             const meta = topAction ? actionMeta[topAction.kind] : null
             return (
-              <li key={c.id}>
+              <li key={c.id} data-tour={ci === 0 ? 'client-list' : undefined}>
                 <button onClick={() => navigate(`/clients/${c.id}`)} className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">

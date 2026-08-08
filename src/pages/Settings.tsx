@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TourButton } from '../components/TourEntry'
+import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
   Type,
   Building2,
@@ -160,13 +160,16 @@ export function Settings() {
           <PlayCircle size={22} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="t-card break-keep text-navy-900">사용 방법 다시 보기</h2>
+          <h2 className="t-card break-keep text-navy-900">도움말</h2>
           <p className="t-muted mt-1 break-keep">
-            화면을 하나씩 짚어가며 "왜 필요한지 · 어떻게 쓰는지 · 무엇이 바뀌는지"를 안내합니다. 역할에 맞는
-            내용으로 보여집니다.
+            「사용 방법」은 화면을 하나씩 짚어 역할에 맞게 안내합니다.
+            「이 시스템을 만든 이유」는 기존 업무가 어떻게 바뀌는지 전체 흐름을 봅니다.
           </p>
         </div>
-        <TourButton className="btn-primary shrink-0" label="사용 방법 보기" />
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <TourWhyButton className="btn-ghost" />
+          <TourButton className="btn-primary" label="사용 방법 보기" />
+        </div>
       </section>
 
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start xl:gap-5">

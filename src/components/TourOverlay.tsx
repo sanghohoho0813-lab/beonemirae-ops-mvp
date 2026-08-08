@@ -62,6 +62,15 @@ export function TourOverlay() {
   /** 본문이 넘쳐서 스크롤이 필요한 상태인지 (아래쪽 페이드 표시용) */
   const bodyRef = useRef<HTMLDivElement>(null)
   const [more, setMore] = useState(false)
+  /**
+   * 배치 계산은 스크롤·재측정을 기다리느라 수백 ms 걸립니다. 그 사이에 사용자가
+   * 「다음」을 누르면 이전 단계의 계산이 아직 돌고 있고, 그 계산이 붙잡고 있던
+   * 대상은 화면이 바뀌면서 이미 사라진 상태입니다. 사라진 요소를 재면 전부 0이
+   * 나오고, 그 0 이 새 단계가 맞게 잡아 둔 위치를 나중에 덮어씁니다.
+   * (강조 테두리가 화면 왼쪽 위에 한 줄로 굳는 증상이 이것이었습니다)
+   * 그래서 계산마다 번호를 붙이고, 최신 번호가 아니면 결과를 버립니다.
+   */
+  const runRef = useRef(0)
 
   const step = steps[index]
 
@@ -73,6 +82,7 @@ export function TourOverlay() {
 
   // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {
+    runRef.current += 1 // 이전 단계의 배치 계산을 무효로 만듭니다
     setReady(false)
     setCard(null)
     setRect(null)
@@ -92,12 +102,15 @@ export function TourOverlay() {
         if (!cancelled) setAnchorH(0)
         return
       }
-      let el: HTMLElement | null = null
-      for (let i = 0; i < 40 && !el; i++) {
-        el = document.querySelector<HTMLElement>(`[data-tour="${step.anchor}"]`)
-        if (!el) await wait(50)
+      // 존재만 확인하고 재면 아직 그려지기 전이라 0 이 나옵니다.
+      // 그 0 이 설명 박스 상한과 배치 계산에 그대로 흘러들어갑니다.
+      let h = 0
+      for (let i = 0; i < 40 && h <= 0; i++) {
+        const el = document.querySelector<HTMLElement>(`[data-tour="${step.anchor}"]`)
+        h = el ? el.getBoundingClientRect().height : 0
+        if (h <= 0) await wait(50)
       }
-      if (!cancelled) setAnchorH(el ? el.getBoundingClientRect().height : 0)
+      if (!cancelled) setAnchorH(h)
     })()
     return () => {
       cancelled = true
@@ -121,9 +134,11 @@ export function TourOverlay() {
 
   // ── 3) 배치 계산 + 스크롤 ────────────────────────────────────────────────
   const layout = useCallback(
-    async (anchor: string | undefined, ch: number, cw: number, doScroll: boolean) => {
+    async (anchor: string | undefined, ch: number, cw: number, doScroll: boolean, run: number) => {
       const vw = window.innerWidth
       const vh = window.innerHeight
+      /** 계산 도중 단계가 넘어갔는가 — 그러면 이 계산의 결과는 버립니다 */
+      const stale = () => runRef.current !== run
 
       if (!anchor) {
         setRect(null)
@@ -132,12 +147,20 @@ export function TourOverlay() {
         return
       }
 
-      // 라우트 전환 직후에는 대상이 아직 없을 수 있습니다.
+      // 라우트 전환 직후에는 대상이 아직 없거나, 있어도 아직 그려지지 않았습니다.
+      // 높이가 0인 상태로 재면 강조 테두리가 한 줄로 찌그러지므로
+      // "존재하고 + 크기가 잡힐 때까지" 기다립니다.
       let el: HTMLElement | null = null
-      for (let i = 0; i < 40 && !el; i++) {
-        el = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`)
-        if (!el) await wait(50)
+      for (let i = 0; i < 40; i++) {
+        if (stale()) return
+        const found = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`)
+        if (found && found.getBoundingClientRect().height > 0) {
+          el = found
+          break
+        }
+        await wait(50)
       }
+      if (stale()) return
       if (!el) {
         setRect(null)
         setPlacement('center')
@@ -209,14 +232,35 @@ export function TourOverlay() {
         ]
         for (const c of candidates) {
           await scrollTo(Math.max(EDGE, c))
+          if (stale()) return
           if (ok()) break
         }
         if (!ok() && sideFits) want = 'right'
       } else if (doScroll) {
-        await scrollTo(wantTop)
+        // 아래 배치와 마찬가지로 화면 위 끝을 넘지 않게 막습니다.
+        // 넘기면 강조 테두리 윗변이 화면 밖으로 잘립니다.
+        await scrollTo(Math.max(EDGE, wantTop))
       }
 
-      const r = el.getBoundingClientRect()
+      // 스크롤·대기 사이에 화면이 다시 그려지면서 노드가 교체되거나 잠깐 크기가
+      // 0 이 되는 순간이 있습니다. 그때 재면 강조 테두리가 화면 왼쪽 위에 한 줄로
+      // 찌그러진 채 굳습니다 — 스크롤이 없으면 다시 잴 기회도 없습니다.
+      // 그래서 크기가 잡힐 때까지 잠깐 더 기다렸다가 잽니다.
+      let r = el.getBoundingClientRect()
+      for (let i = 0; i < 12 && r.height <= 0; i++) {
+        await wait(50)
+        if (stale()) return
+        const again = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`)
+        if (again) r = again.getBoundingClientRect()
+      }
+      // 끝까지 크기가 잡히지 않으면 0 을 쓰지 않고 강조 없이 둡니다.
+      // 0 을 쓰면 화면 왼쪽 위에 얇은 띠가 남습니다.
+      if (r.height <= 0 || r.width <= 0) {
+        setRect(null)
+        setPlacement('center')
+        setReady(true)
+        return
+      }
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
       setPlacement(want)
       setReady(true)
@@ -227,7 +271,8 @@ export function TourOverlay() {
   useEffect(() => {
     if (!active || !step || !card || anchorH === null) return
     if (pathname !== step.route) return
-    void layout(step.anchor, card.h, card.w, true)
+    const run = (runRef.current += 1)
+    void layout(step.anchor, card.h, card.w, true, run)
     // card 크기는 단계마다 한 번만 바뀌므로 재실행 루프가 생기지 않습니다.
   }, [active, step, pathname, card, anchorH, layout])
 
@@ -238,6 +283,9 @@ export function TourOverlay() {
       const el = document.querySelector<HTMLElement>(`[data-tour="${step.anchor}"]`)
       if (!el) return
       const r = el.getBoundingClientRect()
+      // 다시 그려지는 도중에는 크기가 잠깐 0 이 됩니다.
+      // 그 값으로 덮어쓰면 강조 테두리가 왼쪽 위에 한 줄로 굳어 버리므로 무시합니다.
+      if (r.height <= 0 || r.width <= 0) return
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
     }
     const onResize = () => setAnchorH(null) // 상한부터 다시 계산 → 이어서 배치가 다시 돕니다
