@@ -240,3 +240,22 @@
     break-inside: avoid;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   수량 입력
+
+   브라우저 기본 증감 화살표(▲▼)를 끕니다.
+   현장에서 누르기에 너무 작고, 단위 글자와 겹쳐 읽기도 어려웠습니다.
+   대신 좌우에 충분히 큰 [−] [+] 버튼을 둡니다 (components/ui.tsx QtyField).
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ChevronRight, Inbox, Lock, type LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, Inbox, Lock, Minus, Plus, type LucideIcon } from 'lucide-react'
 import { TONE, type Tone } from '../lib/tone'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,6 +53,129 @@ const numberTone: Record<NumberTone, string> = {
   amber: 'text-amber-500',
   rose: 'text-rose-500',
   emerald: 'text-emerald-500',
+}
+
+/**
+ * 수량 입력 — 현장에서 가장 많이 만지는 컨트롤
+ *
+ *  이전에는 숫자 input 하나에 단위(개)를 안쪽 오른쪽에 겹쳐 두었습니다.
+ *  그러면 브라우저 기본 증감 화살표와 단위 글자가 같은 자리에 놓여
+ *  읽기도 누르기도 어려웠습니다. 특히 장갑 낀 손으로는 거의 못 누릅니다.
+ *
+ *  그래서 셋을 분리했습니다.
+ *
+ *      [ − ]   180   [ + ]   개
+ *       누름   숫자   누름   단위
+ *
+ *  · 증감 버튼은 44px 이상 — 엄지로 눌리는 크기
+ *  · 단위는 입력칸 밖 오른쪽 — 숫자와 겹치지 않습니다
+ *  · 직접 타이핑도 그대로 됩니다 (많은 수량은 치는 게 빠릅니다)
+ *  · inputMode="numeric" 으로 폰에서 숫자 키패드가 열립니다
+ */
+export function QtyField({
+  label,
+  value,
+  onChange,
+  unit = '개',
+  step = 1,
+  max,
+  hint,
+  danger,
+  badge,
+  quick,
+  row,
+}: {
+  label?: string
+  value: number
+  onChange: (n: number) => void
+  unit?: string
+  step?: number
+  max?: number
+  hint?: string
+  danger?: boolean
+  /** 라벨 옆 작은 배지 (예: 유상 / 무상) */
+  badge?: ReactNode
+  /** 한 번에 채우는 값 — 직전 공급량처럼 근거가 있을 때만 씁니다 */
+  quick?: { label: string; value: number }
+  /**
+   * 한 줄 배치 — 라벨 왼쪽, 컨트롤 오른쪽.
+   * 품목이 여러 개일 때 씁니다. 좁은 칸에 2열로 늘어놓으면 라벨이 두 줄로
+   * 접히고 입력칸이 눌러 붙어서, 한 줄씩 내려 쓰는 편이 훨씬 잘 읽힙니다.
+   */
+  row?: boolean
+}) {
+  const set = (n: number) => onChange(Math.max(0, max != null ? Math.min(max, n) : n))
+  // 44px — 손가락으로 확실히 눌리는 최소 크기입니다. 이보다 줄이지 않습니다.
+  const btn =
+    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-100 text-navy-600 transition hover:bg-navy-200 active:scale-95 disabled:opacity-35 disabled:hover:bg-navy-100'
+
+  const control = (
+    <>
+      <div className={`flex items-center ${row ? 'gap-1.5' : 'gap-2'}`}>
+        <button type="button" aria-label={`${label ?? ''} 빼기`} className={btn} onClick={() => set(value - step)} disabled={value <= 0}>
+          <Minus size={20} strokeWidth={3} />
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={max}
+          aria-label={label}
+          className={`field-input no-spinner px-1 py-3 text-center text-[1.24rem] font-extrabold tabular-nums ${
+            row ? 'w-[3.9rem] shrink-0' : 'min-w-0 flex-1'
+          } ${danger ? 'bg-rose-50 ring-1 ring-rose-300' : ''}`}
+          value={value === 0 ? '' : value}
+          onChange={(e) => set(Math.round(Number(e.target.value) || 0))}
+          onFocus={(e) => e.currentTarget.select()}
+          placeholder="0"
+        />
+        <button type="button" aria-label={`${label ?? ''} 더하기`} className={btn} onClick={() => set(value + step)}>
+          <Plus size={20} strokeWidth={3} />
+        </button>
+        <span className={`shrink-0 text-[1.05rem] font-bold text-navy-400 ${row ? 'ml-0.5' : 'w-6'}`}>{unit}</span>
+      </div>
+      {(hint || (quick && quick.value > 0 && quick.value !== value)) && (
+        <div className="mt-1 flex items-center gap-2">
+          {hint && (
+            <p className={`text-[0.95rem] ${danger ? 'font-bold text-rose-500' : 'text-navy-400'}`}>{hint}</p>
+          )}
+          {quick && quick.value > 0 && quick.value !== value && (
+            <button
+              type="button"
+              onClick={() => set(quick.value)}
+              className="ml-auto shrink-0 rounded-full bg-teal-50 px-2.5 py-1 text-[0.92rem] font-bold text-teal-700 transition hover:bg-teal-100"
+            >
+              {quick.label} {quick.value}
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  )
+
+  if (row) {
+    return (
+      <div className="flex items-center gap-3 py-1.5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <span className="break-keep text-[1.06rem] font-bold text-navy-800">{label}</span>
+          {badge}
+        </div>
+        <div className="shrink-0">{control}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {label && (
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <label className="text-[1.03rem] font-semibold text-navy-500">{label}</label>
+          {badge}
+        </div>
+      )}
+      {control}
+    </div>
+  )
 }
 
 /** 지표 카드 — 큰 숫자 중심 */

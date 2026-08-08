@@ -13,9 +13,10 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { NoteChips } from '../components/SiteNotes'
-import { SUPPLY_ITEMS, stockDeltaOf, type ItemCounts } from '../lib/billing'
+import { SUPPLY_ITEMS, stockDeltaOf, itemsOf, type ItemCounts, type ItemKey } from '../lib/billing'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
+import { QtyField } from '../components/ui'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import {
@@ -53,46 +54,6 @@ const CONTAINER_KEYS: { key: keyof ContainerBreakdown; label: string }[] = [
   { key: 'bag', label: '전용 봉투' },
   { key: 'etc', label: '기타' },
 ]
-
-/** 라벨 + 숫자 입력 (모바일 숫자 키패드) */
-function NumField({
-  label,
-  value,
-  onChange,
-  suffix,
-  hint,
-  danger,
-}: {
-  label: string
-  value: number
-  onChange: (n: number) => void
-  suffix?: string
-  hint?: string
-  danger?: boolean
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-[1.03rem] font-semibold text-navy-500">{label}</label>
-      <div className="relative">
-        <input
-          type="number"
-          inputMode="numeric"
-          min={0}
-          className={`field-input ${danger ? 'ring-1 ring-rose-300' : ''}`}
-          value={value === 0 ? '' : value}
-          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-          placeholder="0"
-        />
-        {suffix && (
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[0.98rem] font-semibold text-navy-300">
-            {suffix}
-          </span>
-        )}
-      </div>
-      {hint && <p className={`mt-1 text-[0.95rem] ${danger ? 'text-rose-500' : 'text-navy-400'}`}>{hint}</p>}
-    </div>
-  )
-}
 
 function Section({
   n,
@@ -206,6 +167,17 @@ export function CollectionInput() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasteType])
+
+  // 이 거래처에 직전에 공급한 규격별 수량.
+  // 현장은 대체로 비슷한 양을 다시 채워 주므로, 한 번 눌러 채울 수 있게 합니다.
+  // 근거가 있을 때만(실제 직전 기록이 있을 때만) 표시합니다.
+  const lastSupply = useMemo<ItemCounts>(() => {
+    if (!clientId) return {}
+    const prev = data.materials
+      .filter((m) => m.clientId === clientId)
+      .sort((a, b) => b.date.localeCompare(a.date))[0]
+    return prev ? itemsOf(prev) : {}
+  }, [data.materials, clientId])
 
   const stock = data.officeStock
   // 규격별 입력 → 재고 4칸 차감량
@@ -480,13 +452,13 @@ export function CollectionInput() {
 
         {/* 4. 용기별 배출 수량 */}
         <Section n={4} title="용기별 배출 수량" desc="수거대장 초안에 그대로 반영됩니다">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="divide-y divide-navy-50">
             {CONTAINER_KEYS.map(({ key, label }) => (
-              <NumField
+              <QtyField
                 key={key}
+                row
                 label={label}
                 value={containers[key]}
-                suffix="개"
                 onChange={(v) => setContainers((c) => ({ ...c, [key]: v }))}
               />
             ))}
@@ -510,23 +482,30 @@ export function CollectionInput() {
         <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
           {/* 규격별로 받습니다 — 63L 박스와 12L 박스는 단가가 다르고,
               그 차이가 그대로 거래처 정산·거래명세서로 갑니다. */}
-          <div data-tour="collect-supply" className="grid grid-cols-2 gap-3">
+          <div data-tour="collect-supply" className="divide-y divide-navy-50">
             {SUPPLY_ITEMS.map((it) => {
               const bucket = it.bucket!
               const over = supplied[bucket] > stock[bucket]
+              const last = lastSupply[it.key] ?? 0
               return (
-                <NumField
+                <QtyField
                   key={it.key}
+                  row
                   label={it.label}
                   value={suppliedItems[it.key] ?? 0}
-                  suffix="개"
                   danger={over}
-                  hint={it.billable ? '유상' : '무상'}
+                  hint={over ? `재고 ${stock[bucket]} 초과` : undefined}
+                  badge={
+                    <span className={`pill ${it.billable ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
+                      {it.billable ? '유상' : '무상'}
+                    </span>
+                  }
+                  quick={last > 0 ? { label: '지난번', value: last } : undefined}
                   onChange={(v) =>
                     setSuppliedItems((cur) => {
                       const next = { ...cur }
-                      if (v > 0) next[it.key] = v
-                      else delete next[it.key]
+                      if (v > 0) next[it.key as ItemKey] = v
+                      else delete next[it.key as ItemKey]
                       return next
                     })
                   }
