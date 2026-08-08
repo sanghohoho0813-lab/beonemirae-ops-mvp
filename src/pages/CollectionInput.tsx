@@ -483,11 +483,11 @@ export function CollectionInput() {
           {/* 규격별로 받습니다 — 63L 박스와 12L 박스는 단가가 다르고,
               그 차이가 그대로 거래처 정산·거래명세서로 갑니다. */}
           <div data-tour="collect-supply" className="divide-y divide-navy-50">
-            {SUPPLY_ITEMS.map((it) => {
+            {SUPPLY_ITEMS.map((it, si) => {
               const bucket = it.bucket!
               const over = supplied[bucket] > stock[bucket]
               const last = lastSupply[it.key] ?? 0
-              return (
+              const field = (
                 <QtyField
                   key={it.key}
                   row
@@ -510,6 +510,16 @@ export function CollectionInput() {
                     })
                   }
                 />
+              )
+              // 폰에서는 이 목록 전체(10줄, 1000px 남짓)가 화면에 들어가지 않아
+              // 투어가 강조할 수 없습니다. 첫 줄만 따로 대상으로 둡니다 —
+              // 어차피 설명해야 할 것은 "규격마다 한 줄, ± 로 센다" 하나입니다.
+              return si === 0 ? (
+                <div key={it.key} data-tour="collect-supply-row">
+                  {field}
+                </div>
+              ) : (
+                field
               )
             })}
           </div>

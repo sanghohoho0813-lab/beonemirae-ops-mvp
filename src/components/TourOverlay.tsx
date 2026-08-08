@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, ChevronLeft, X } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft, Link2, X } from 'lucide-react'
 import { useTour } from '../context/TourContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,8 +55,16 @@ export function TourOverlay() {
   const [rect, setRect] = useState<Rect | null>(null)
   const [placement, setPlacement] = useState<Placement>('center')
   const [ready, setReady] = useState(false)
-  /** 설명 박스 실제 크기 — 배치 계산의 입력값이라 먼저 재야 합니다 */
-  const [card, setCard] = useState<{ w: number; h: number } | null>(null)
+  /**
+   * 설명 박스 크기 — 배치 계산의 입력값이라 먼저 재야 합니다.
+   *
+   * h 는 지금 그려진 높이, natural 은 상한이 없었다면 됐을 높이입니다.
+   * 배치는 natural 로 판단해야 합니다. 잘린 높이로 판단하면 "아래에 들어간다"고
+   * 착각하고 그 자리에 밀어 넣은 뒤, 정작 본문은 상자 안에서 잘립니다.
+   * (거래처 목록처럼 화면보다 짧아 더 스크롤할 수 없는 페이지에서 그랬습니다.
+   *  옆에 500px 가 비어 있는데도 아래에 끼워 넣고 본문 227px 를 감췄습니다)
+   */
+  const [card, setCard] = useState<{ w: number; h: number; natural: number } | null>(null)
   /** 강조 대상의 높이 — 설명 박스가 커질 수 있는 한도를 여기서 먼저 정합니다 */
   const [anchorH, setAnchorH] = useState<number | null>(null)
   /** 본문이 넘쳐서 스크롤이 필요한 상태인지 (아래쪽 페이드 표시용) */
@@ -71,6 +79,20 @@ export function TourOverlay() {
    * 그래서 계산마다 번호를 붙이고, 최신 번호가 아니면 결과를 버립니다.
    */
   const runRef = useRef(0)
+  /**
+   * 이 단계의 배치를 이미 잡았는지.
+   *
+   * 배치는 페이지를 스크롤합니다 → 스크롤을 따라가는 핸들러가 강조 위치를 고칩니다
+   * → 그 위치로 설명 박스 상한이 다시 계산됩니다 → 박스 크기가 바뀝니다
+   * → 크기가 바뀌었으니 배치를 다시 잡습니다 → ... 이렇게 서로를 물고 돌았습니다.
+   *
+   * 매번 새 계산이 직전 계산을 무효로 만드는 바람에 어떤 계산도 끝나지 못했고,
+   * 그 단계의 배치는 이전 단계 값이 그대로 남았습니다. 거래처 목록 단계에서
+   * 설명이 엉뚱한 자리에 서고 본문이 잘려 보이던 원인입니다.
+   *
+   * 스크롤을 동반한 배치는 한 단계에 한 번이면 충분합니다.
+   */
+  const laidOutRef = useRef('')
 
   const step = steps[index]
 
@@ -83,6 +105,7 @@ export function TourOverlay() {
   // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {
     runRef.current += 1 // 이전 단계의 배치 계산을 무효로 만듭니다
+    laidOutRef.current = ''
     setReady(false)
     setCard(null)
     setRect(null)
@@ -122,12 +145,20 @@ export function TourOverlay() {
     const el = cardRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    if (!card || Math.abs(r.width - card.w) > 1 || Math.abs(r.height - card.h) > 1) {
-      setCard({ w: r.width, h: r.height })
-    }
     const b = bodyRef.current
+    // 상한 때문에 감춰진 높이를 되돌려 "원래 필요했던 높이"를 구합니다.
+    const hiddenH = b ? Math.max(0, b.scrollHeight - b.clientHeight) : 0
+    const natural = r.height + hiddenH
+    if (
+      !card ||
+      Math.abs(r.width - card.w) > 1 ||
+      Math.abs(r.height - card.h) > 1 ||
+      Math.abs(natural - card.natural) > 1
+    ) {
+      setCard({ w: r.width, h: r.height, natural })
+    }
     if (b) {
-      const over = b.scrollHeight - b.clientHeight > 2 && b.scrollTop + b.clientHeight < b.scrollHeight - 2
+      const over = hiddenH > 2 && b.scrollTop + b.clientHeight < b.scrollHeight - 2
       if (over !== more) setMore(over)
     }
   })
@@ -271,10 +302,13 @@ export function TourOverlay() {
   useEffect(() => {
     if (!active || !step || !card || anchorH === null) return
     if (pathname !== step.route) return
+    // 첫 측정값(상한이 넉넉할 때 잰 자연 높이)으로 한 번만 잡습니다.
+    const sig = `${active.id}:${index}:${window.innerWidth}x${window.innerHeight}`
+    if (laidOutRef.current === sig) return
+    laidOutRef.current = sig
     const run = (runRef.current += 1)
-    void layout(step.anchor, card.h, card.w, true, run)
-    // card 크기는 단계마다 한 번만 바뀌므로 재실행 루프가 생기지 않습니다.
-  }, [active, step, pathname, card, anchorH, layout])
+    void layout(step.anchor, card.natural, card.w, true, run)
+  }, [active, index, step, pathname, card, anchorH, layout])
 
   // 사용자가 스크롤·리사이즈하면 강조 위치만 따라갑니다 (다시 스크롤하지 않음).
   useEffect(() => {
@@ -288,7 +322,11 @@ export function TourOverlay() {
       if (r.height <= 0 || r.width <= 0) return
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
     }
-    const onResize = () => setAnchorH(null) // 상한부터 다시 계산 → 이어서 배치가 다시 돕니다
+    const onResize = () => {
+      // 화면 크기가 바뀌면 처음부터 다시 — 이때는 다시 잡는 것이 맞습니다
+      laidOutRef.current = ''
+      setAnchorH(null)
+    }
     window.addEventListener('scroll', follow, true)
     window.addEventListener('resize', onResize)
     return () => {
@@ -368,6 +406,15 @@ export function TourOverlay() {
   // 글자를 키운 만큼 박스가 커졌기 때문에, 대상이 큰 화면에서는 이 상한이
   // 있어야 설명이 대상을 덮지 않습니다. (넘치는 본문만 박스 안에서 스크롤됩니다)
   const MIN_CARD = 300
+  /**
+   * 남는 자리가 이보다도 좁으면 상자를 더 줄입니다.
+   *
+   * 폰에서 「다음 방문」처럼 화면을 거의 채우는 카드를 짚을 때, 아래에 남는 자리가
+   * 243px 뿐인데 상자를 300px 로 우기면 그 차이만큼 대상을 덮습니다.
+   * 상자가 조금 작아지는 것보다 설명이 대상을 가리는 쪽이 훨씬 나쁩니다 —
+   * 넘치는 본문은 상자 안에서 스크롤되지만, 가려진 대상은 볼 방법이 없습니다.
+   */
+  const FLOOR_CARD = 170
   const cardMaxH = (() => {
     const hard = vh * (vw < 640 ? 0.84 : 0.9)
     // 옆에 세우는 배치에서는 대상과 세로로 겹칠 일이 없으므로 줄이지 않습니다.
@@ -379,11 +426,12 @@ export function TourOverlay() {
       // 페이지 맨 아래처럼 더 스크롤할 수 없는 경우까지 여기서 반영됩니다.
       const roomBelow = vh - (rect.top + rect.height + PAD) - GAP - BOT
       const roomAbove = rect.top - PAD - GAP - EDGE
-      return Math.min(hard, Math.max(MIN_CARD, Math.max(roomBelow, roomAbove) - 2))
+      const room = Math.max(roomBelow, roomAbove) - 2
+      return Math.min(hard, Math.max(room >= MIN_CARD ? MIN_CARD : FLOOR_CARD, room))
     }
     if (!anchorH) return hard
     const room = vh - (anchorH + PAD * 2) - GAP - EDGE - BOT - 2
-    return Math.min(hard, Math.max(MIN_CARD, room))
+    return Math.min(hard, Math.max(room >= MIN_CARD ? MIN_CARD : FLOOR_CARD, room))
   })()
 
   return (
@@ -438,7 +486,10 @@ export function TourOverlay() {
         </div>
 
         {/* 이 단계에서 무엇을 하는 곳인지 — 실제 화면의 섹션·버튼 이름과 같습니다 */}
-        <p className="mt-2 shrink-0 truncate text-[1.18rem] font-extrabold text-teal-600 sm:text-[1.26rem]">
+        <p
+          data-tour-title
+          className="mt-2 shrink-0 truncate text-[1.18rem] font-extrabold text-teal-600 sm:text-[1.26rem]"
+        >
           {step.title}
         </p>
 
@@ -452,15 +503,40 @@ export function TourOverlay() {
           }}
           className="relative mt-0.5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
         >
-          <h2 className="break-keep text-[1.72rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[2.1rem]">
+          {/* 어떻게 사용하는가 */}
+          <h2
+            data-tour-action
+            // 폰은 카드 폭이 370px 뿐이라 같은 rem 이라도 줄 수가 훨씬 많아집니다.
+            // PC 크기 그대로 두면 본문이 상자를 넘겨 스크롤해야 읽힙니다.
+            className="break-keep text-[1.5rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[2.1rem]"
+          >
             {step.action}
           </h2>
-          <p className="mt-2.5 flex items-start gap-2 break-keep text-[1.28rem] leading-snug text-navy-500 sm:text-[1.42rem]">
+          {/* 무엇과 연결되는가 — 이 화면에서 한 일이 어디로 가는지.
+              "한 번 입력하면 나머지가 따라온다"는 이 제품의 전부라,
+              단계마다 그 자리를 눈에 보이게 따로 뒀습니다. */}
+          {step.linked && (
+            <p
+              data-tour-linked
+              className="mt-2 flex items-start gap-2 break-keep rounded-xl bg-teal-50/70 px-2.5 py-1.5 text-[1.04rem] leading-snug text-teal-800 sm:mt-2.5 sm:px-3 sm:py-2 sm:text-[1.2rem]"
+            >
+              <Link2 size={18} strokeWidth={2.5} className="mt-0.5 shrink-0 text-teal-600" />
+              <span className="min-w-0">{step.linked}</span>
+            </p>
+          )}
+          {/* 그래서 무엇이 좋아지는가 */}
+          <p
+            data-tour-result
+            className="mt-2 flex items-start gap-2 break-keep text-[1.16rem] leading-snug text-navy-500 sm:mt-2.5 sm:text-[1.42rem]"
+          >
             <ArrowRight size={20} strokeWidth={2.6} className="mt-1 shrink-0 text-teal-500" />
             <span className="min-w-0">{step.result}</span>
           </p>
           {step.why && (
-            <p className="mt-2.5 break-keep border-l-2 border-navy-100 pl-3 text-[1.05rem] leading-snug text-navy-400 sm:text-[1.12rem]">
+            <p
+              data-tour-why
+              className="mt-2 break-keep border-l-2 border-navy-100 pl-2.5 text-[0.98rem] leading-snug text-navy-400 sm:mt-2.5 sm:pl-3 sm:text-[1.12rem]"
+            >
               {step.why}
             </p>
           )}
