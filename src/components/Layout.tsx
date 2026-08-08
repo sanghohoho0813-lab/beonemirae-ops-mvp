@@ -26,6 +26,7 @@ import {
   Gauge,
   Inbox,
   LogOut,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -38,6 +39,7 @@ import { SyncBar } from './SyncBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { TourButton, TourWhyButton } from './TourEntry'
+import { HelpSheet } from './HelpSheet'
 import { PageMotion } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -346,7 +348,7 @@ function Sidebar() {
 }
 
 // ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
-function MobileHeader() {
+function MobileHeader({ onHelp }: { onHelp: () => void }) {
   const { mode, profile } = useAuth()
   const live = mode === 'live'
   return (
@@ -375,13 +377,18 @@ function MobileHeader() {
             {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '운영관리'}
           </p>
         </div>
-        {/* 아이콘만 두었더니 무엇인지 알 수 없어서 아무도 누르지 않았습니다.
-            글자를 붙여 헤더에서 바로 보이게 합니다 — 안내를 닫은 사람이
-            다시 찾을 수 있는 자리가 폰에서는 여기와 「더보기」 두 곳입니다. */}
-        <TourButton
+        {/* 도움말은 두 갈래입니다 — 사용 방법 / 만든 이유.
+            폰 헤더에는 둘을 나란히 둘 자리가 없습니다. 하나만 내놓았더니
+            나머지는 더보기를 뒤져야 나오는 상태가 됐습니다.
+            그래서 여기는 「도움말」 하나로 두고, 누르면 두 갈래를 함께 보여줍니다. */}
+        <button
+          data-help-open
+          onClick={onHelp}
           className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-white px-3 py-2 text-[0.95rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition active:bg-navy-50"
-          label="사용법"
-        />
+        >
+          <HelpCircle size={17} strokeWidth={2.3} className="shrink-0" />
+          도움말
+        </button>
         {/* 실제 운영 데이터를 시연 데이터로 오인하지 않도록 배지를 구분합니다 */}
         <span
           className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.9rem] font-bold ring-1 ${
@@ -451,6 +458,7 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
 export function Layout() {
   const { pathname } = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   return (
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
@@ -459,7 +467,7 @@ export function Layout() {
         <div className="min-w-0 flex-1 overflow-x-hidden">
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
           <SyncBar />
-          <MobileHeader />
+          <MobileHeader onHelp={() => setHelpOpen(true)} />
           <main className="w-full px-4 pb-24 pt-4 lg:px-[40px] lg:pb-14 lg:pt-8 2xl:px-[56px]">
             {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
                 사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
@@ -483,6 +491,9 @@ export function Layout() {
       <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
         <MoreMenu variant="mobile" onNavigate={() => setMoreOpen(false)} />
       </BottomSheet>
+
+      {/* 도움말 — 사용 방법 / 만든 이유 두 갈래 (폰) */}
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }

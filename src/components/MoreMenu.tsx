@@ -46,6 +46,35 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
 
   return (
     <div className="space-y-5">
+      {/* 도움말 — 두 갈래를 맨 위에 둡니다.
+          아래로 내려두면 폰에서는 있는 줄도 모릅니다.
+          네 가지 설명 화면의 역할이 겹치지 않게 한 줄로 구분해 둡니다.
+            사용 방법  어떻게 쓰는가        만든 이유  왜 만들었고 어디로 가는가
+            AX 성과    얼마나 좋아졌는가    시연 요약  발표용 핵심 숫자 */}
+      <section>
+        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">도움말</h3>
+        <div className="card divide-y divide-navy-50 overflow-hidden">
+          <TourButton className="flex w-full cursor-pointer items-start gap-3 p-4 text-left" label="">
+            <span className="min-w-0 flex-1">
+              <span className="block break-keep font-bold text-navy-900">사용 방법</span>
+              <span className="mt-0.5 block break-keep text-[0.98rem] text-navy-400">
+                실제 화면과 기능을 어떻게 쓰는지 안내합니다
+              </span>
+            </span>
+            <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
+          </TourButton>
+          <TourWhyButton className="flex w-full cursor-pointer items-start gap-3 p-4 text-left" label="">
+            <span className="min-w-0 flex-1">
+              <span className="block break-keep font-bold text-navy-900">이 시스템을 만든 이유</span>
+              <span className="mt-0.5 block break-keep text-[0.98rem] text-navy-400">
+                AX 전환 · 정책자금 · 사업고도화 · 향후 개발 방향
+              </span>
+            </span>
+            <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
+          </TourWhyButton>
+        </div>
+      </section>
+
       {/* 시연용 핵심 요약 */}
       <Tappable
         as="div"
@@ -57,7 +86,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
         </span>
         <div className="min-w-0">
           <p className="font-bold">시연용 핵심 요약</p>
-          <p className="text-[0.95rem] text-navy-300">회사 규모 · 수거 실적 · 기술개발/특허</p>
+          <p className="text-[0.95rem] text-navy-300">발표할 때 쓰는 숫자 — 회사 규모 · 수거 실적 · 기술개발</p>
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
       </Tappable>
@@ -73,7 +102,7 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
         </span>
         <div className="min-w-0">
           <p className="font-bold">활용 계획 · 업무흐름도</p>
-          <p className="text-[0.95rem] text-teal-100">일일 업무 흐름 · 단계별 활용 로드맵</p>
+          <p className="text-[0.95rem] text-teal-100">어떤 기능을 언제 쓰는지 — 화면 단위 도입 순서</p>
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/70" />
       </Tappable>
@@ -157,35 +186,10 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
           <IconChip icon={Gauge} tone="teal" />
           <div className="min-w-0">
             <p className="font-bold text-navy-900">AX 도입 성과</p>
-            <p className="text-[0.98rem] text-navy-400">도입 전 → 도입 후 업무 효율 비교</p>
+            <p className="text-[0.98rem] text-navy-400">실제로 얼마나 좋아졌는지 — 도입 전 → 후 측정값</p>
           </div>
           <ChevronRight size={18} className="ml-auto text-navy-300" />
         </Tappable>
-        {/* 도움말 두 가지 — 목적이 달라서 설명을 붙여 구분합니다.
-            글자만 나란히 두면 폰에서는 둘이 같은 것으로 보입니다. */}
-        <div className="card mb-2.5 divide-y divide-navy-50 overflow-hidden">
-          <TourButton
-            className="flex w-full cursor-pointer items-center gap-3 p-4 text-left"
-            label=""
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block break-keep font-bold text-navy-900">사용 방법</span>
-              <span className="block break-keep text-[0.98rem] text-navy-400">
-                화면을 짚어가며 어디에 무엇을 입력하는지
-              </span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-navy-300" />
-          </TourButton>
-          <TourWhyButton className="flex w-full cursor-pointer items-center gap-3 p-4 text-left" label="">
-            <span className="min-w-0 flex-1">
-              <span className="block break-keep font-bold text-navy-900">이 시스템을 만든 이유</span>
-              <span className="block break-keep text-[0.98rem] text-navy-400">
-                왜 시작했고 회사가 어디로 가려는지
-              </span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-navy-300" />
-          </TourWhyButton>
-        </div>
       <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
           <IconChip icon={SlidersHorizontal} tone="teal" />
           <div className="min-w-0">
