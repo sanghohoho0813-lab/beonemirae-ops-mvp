@@ -176,13 +176,24 @@ export function CollectionInput() {
   }
 
   // 최초 진입 시 ?schedule= 프리필 (오늘 일정 '수거 완료'에서 넘어옴)
+  //
+  // 실제 운영에서는 일정이 서버에서 오므로, 화면이 뜬 순간에는 아직 목록이
+  // 비어 있습니다. 그때 한 번만 확인하고 끝내면 링크로 바로 들어오거나
+  // 새로고침했을 때 프리필이 조용히 사라져, 현장에서 거래처·차량·시간을
+  // 다시 고르게 됩니다. 그래서 일정이 도착할 때까지 기다렸다가 한 번만 채웁니다.
+  const prefilledRef = useRef(false)
   useEffect(() => {
+    if (prefilledRef.current) return
     const pre = params.get('schedule')
-    if (pre && data.schedules.some((s) => s.id === pre && s.status !== '완료')) {
-      applySchedule(pre)
+    if (!pre) {
+      prefilledRef.current = true
+      return
     }
+    if (!data.schedules.some((s) => s.id === pre && s.status !== '완료')) return
+    prefilledRef.current = true
+    applySchedule(pre)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [data.schedules])
 
   // 폐기물 구분이 바뀌면 해당 구분 차량으로 기본 배차
   useEffect(() => {

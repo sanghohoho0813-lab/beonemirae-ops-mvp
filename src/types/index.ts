@@ -369,6 +369,31 @@ export const DEMO_BASELINE: BaselineMetrics = {
 
 export const EMPTY_EXPERIMENT: ExperimentConfig = { startDate: null }
 
+/**
+ * 데이터가 아직 하나도 없는 상태.
+ *
+ * 실사용(live) 모드에서 서버 응답을 기다리는 동안 화면에 무엇을 보여줄지의
+ * 기준입니다. 이 자리에 시연 데이터를 두면 존재하지 않는 병원과 일정이
+ * 실제 데이터처럼 보이고, 불러오기가 실패하면 그대로 남습니다.
+ * 그래서 서버가 원본인 동안에는 "비어 있음"에서 시작합니다.
+ */
+export const EMPTY_APP_DATA: AppData = {
+  clients: [],
+  vehicles: [],
+  schedules: [],
+  materials: [],
+  payments: [],
+  officeStock: { corrugatedBox: 0, plasticContainer: 0, bag: 0, needleBox: 0 },
+  events: [],
+  requestOverrides: [],
+  demoSession: null,
+  notes: [],
+  baseline: EMPTY_BASELINE,
+  experiment: EMPTY_EXPERIMENT,
+  leads: [],
+  requests: [],
+}
+
 /** 저장 스키마 버전 (마이그레이션 판단용) */
 export const SCHEMA_VERSION = 2
 

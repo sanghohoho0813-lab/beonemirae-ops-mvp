@@ -23,6 +23,7 @@ import type {
   RequestKind,
   RequestStatus,
 } from '../types'
+import { EMPTY_APP_DATA } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 import {
   applyCollectionCompletion,
@@ -35,7 +36,7 @@ import { leadKey } from '../lib/sales'
 import type { NextAction } from '../lib/insights'
 import { thisMonth } from '../lib/format'
 import { useAuth } from './AuthContext'
-import { friendlyError } from '../lib/supabase'
+import { friendlyError, isSupabaseConfigured } from '../lib/supabase'
 import * as repo from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,7 +130,12 @@ const DataContext = createContext<DataContextValue | null>(null)
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { mode } = useAuth()
-  const [data, setData] = useState<AppData>(() => loadData())
+  // 서버가 연결된 환경에서는 시연 데이터로 시작하지 않습니다.
+  // (로그인 직후 서버 응답을 기다리는 동안 존재하지 않는 병원·일정이
+  //  실제 데이터처럼 보이면 안 됩니다)
+  const [data, setData] = useState<AppData>(() =>
+    isSupabaseConfigured ? EMPTY_APP_DATA : loadData(),
+  )
   const [clientSet, setClientSetState] = useState<ClientSetSize>(() => loadClientSet())
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -139,11 +145,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const pending = useRef<null | (() => Promise<void>)>(null)
   const live = mode === 'live'
 
-  // 변경 시 영속화 — 실제 운영(live) 모드에서는 서버가 원본이므로 저장하지 않습니다.
-  // (시연 데이터가 실제 데이터를 덮어쓰지 않게 하는 안전장치이기도 합니다.)
+  // 변경 시 영속화 — 서버가 연결된 환경에서는 원본이 서버이므로 저장하지 않습니다.
+  // (시연 데이터가 실제 데이터를 덮어쓰지 않게 하는 안전장치이기도 합니다.
+  //  로그아웃 상태에서도 저장하지 않아, 실사용 브라우저에 시연 데이터가
+  //  쌓이지 않습니다.)
   useEffect(() => {
-    if (!live) saveData(data)
-  }, [data, live])
+    if (!isSupabaseConfigured) saveData(data)
+  }, [data])
 
   /** 서버에서 전체 운영 데이터를 다시 읽어옵니다. */
   const reload = useCallback(async () => {
@@ -160,9 +168,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [mode])
 
   // 로그인/로그아웃 시 데이터 원본을 전환합니다.
+  // 서버가 연결된 환경에서 로그아웃하면 화면을 비웁니다 — 앞사람의 운영 데이터가
+  // 남아 있어서도, 그 자리를 시연 데이터가 채워서도 안 됩니다.
   useEffect(() => {
     if (live) void reload()
-    else setData(loadData())
+    else setData(isSupabaseConfigured ? EMPTY_APP_DATA : loadData())
   }, [live, reload])
 
   /**
