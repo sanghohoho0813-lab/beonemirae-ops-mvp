@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 19 를 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 20 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -79,6 +79,8 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" --experimental-strip-types "$HERE/18_settlement_screen.mjs"
   run "19 · 사용자 관리 · 역할 변경" \
     "$NODE" "$HERE/19_user_admin.mjs"
+  run "20 · 통계·성과·대시보드 숫자" \
+    "$NODE" "$HERE/20_stats_screens.mjs"
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -92,6 +94,7 @@ else
   NAMES+=("17 · 자재 재고 관리"); RESULTS+=("SKIP")
   NAMES+=("18 · 정산·거래명세서 화면"); RESULTS+=("SKIP")
   NAMES+=("19 · 사용자 관리 · 역할 변경"); RESULTS+=("SKIP")
+  NAMES+=("20 · 통계·성과·대시보드 숫자"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."

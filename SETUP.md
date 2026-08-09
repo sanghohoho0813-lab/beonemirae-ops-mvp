@@ -256,6 +256,7 @@ node supabase/test/05_live.mjs --cleanup
 | `17_materials_stock.mjs` | 두 공급 경로의 재고·원장 비교 | 창고 숫자와 실물이 어긋나는 지점 |
 | `18_settlement_screen.mjs` | 정산 화면 숫자 = 계산 결과 | 거래처에 나가는 것은 화면 쪽입니다 |
 | `19_user_admin.mjs` | 역할 변경 · 계정 비활성 | 계정 권한의 마지막 문입니다 |
+| `20_stats_screens.mjs` | 통계·성과·대시보드 숫자 | 아무도 손으로 검산하지 않는 숫자들입니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
