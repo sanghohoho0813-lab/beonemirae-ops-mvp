@@ -13,6 +13,7 @@
 | 3 | [`03_LIVE_TEST_CHECKLIST.md`](./03_LIVE_TEST_CHECKLIST.md) | 계정 전달 **전** 반드시 |
 | 4 | [`04_CLIENT_SPECIFIC.md`](./04_CLIENT_SPECIFIC.md) | 고객사에 맞게 고쳐야 하는 곳 목록 |
 | 5 | [`05_VERCEL_HANDOFF.md`](./05_VERCEL_HANDOFF.md) | 고객사가 정식 운영을 결정했을 때 |
+| 7 | [`07_RUN4_SECURITY_FIX.md`](./07_RUN4_SECURITY_FIX.md) | **비원미래 진행 중** — RUN_4 실행 후 최종 확인 |
 
 ## 소요 시간 (비원미래 기준 실측)
 

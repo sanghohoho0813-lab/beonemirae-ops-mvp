@@ -25,8 +25,13 @@ Supabase 대시보드 → SQL Editor 에서 아래 순서로 **각각 한 번씩
 4번을 Run 하면 막힙니다. 확인:
 
 ```
-node supabase/test/06_cross_client.mjs   # 8/8 이면 정상
+node supabase/test/06_cross_client.mjs   # 「소속 병원 바꿔치기 차단」 이 PASS 로
+bash supabase/test/run_all.sh            # 05~08 전체 + READY 판정
 ```
+
+실행 절차와 그 뒤에 할 일은
+[`docs/onboarding/07_RUN4_SECURITY_FIX.md`](../../docs/onboarding/07_RUN4_SECURITY_FIX.md)
+에 정리해 두었습니다.
 
 **2번을 따로 두는 이유**: `ALTER TYPE ... ADD VALUE` 는 같은 트랜잭션 안에서
 그 값을 쓸 수 없습니다. 2번을 먼저 커밋해야 3번이 `client` 역할을 참조할 수 있습니다.

@@ -161,7 +161,8 @@ async function main() {
   const blocked = now?.client_id !== c2.id
   ok(blocked, '병원A → 소속 병원 바꿔치기 차단', `(${hijack.status})`)
 
-  // 뚫렸다면 확인만 하고 반드시 원래대로 되돌립니다.
+  // 뚫렸다면 확인만 하고 여기서 바로 되돌립니다.
+  // (뒤따르는 검사들이 "소속이 바뀐 상태"에서 돌면 결과를 믿을 수 없습니다)
   if (!blocked) {
     await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}`, {
       method: 'PATCH',
@@ -169,6 +170,97 @@ async function main() {
     })
     const restored = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=client_id`)).body?.[0]
     ok(restored?.client_id === before.client_id, '(복구) 원래 소속으로 되돌림')
+  }
+
+  // ── 소속 말고 다른 길로도 올라갈 수 있는가 ────────────────────────────
+  //
+  //  소속 바꿔치기를 막아도, 같은 목적지로 가는 다른 문이 열려 있으면 의미가
+  //  없습니다. 실제로 열어 볼 수 있는 문을 하나씩 밀어 봅니다.
+
+  // (1) 가입할 때 쓰는 user_metadata.role 을 나중에 바꿔 역할을 올릴 수 있는가
+  //     handle_new_user() 는 insert 시점에만 metadata 를 읽고, 그 뒤의 판단은
+  //     전부 profiles 를 봅니다. 그래도 실제로 바꿔 보고 확인합니다.
+  const meBefore = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=role,client_id`)).body?.[0]
+  const metaTry = await fetch(`${U}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { apikey: A, Authorization: `Bearer ${t1}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { role: 'admin' } }),
+  }).then(json)
+  const meAfter = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=role`)).body?.[0]
+  ok(meAfter?.role === 'client',
+    'user_metadata 를 고쳐도 역할이 올라가지 않음', `metadata ${metaTry.status} · role ${meAfter?.role}`)
+  // 손댄 metadata 는 되돌립니다.
+  await fetch(`${U}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { apikey: A, Authorization: `Bearer ${t1}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { role: 'client', client_id: meBefore?.client_id } }),
+  })
+
+  // (2) 역할 자체를 profiles 에서 올릴 수 있는가 (0002 가 이미 막고 있어야 합니다)
+  await usr(t1, `/profiles?email=eq.${encodeURIComponent(EMAIL1)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role: 'admin' }),
+  })
+  const roleNow = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=role`)).body?.[0]
+  ok(roleNow?.role === 'client', '병원 계정 → 자기 역할 상승 차단', `role ${roleNow?.role}`)
+
+  // (3) 남의 병원 이름으로 요청을 넣을 수 있는가
+  const forge = await usr(t1, '/client_requests', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({
+      client_id: c2.id, kind: '추가수거', content: `${MARK}남의 병원으로 등록 시도`,
+      urgent: false, status: '접수', source: 'portal', requester_name: '검증',
+    }),
+  })
+  ok(!(Array.isArray(forge.body) && forge.body.length),
+    '병원A → 병원B 이름으로 요청 등록 차단', `(${forge.status})`)
+
+  // (4) 자기가 넣은 요청의 처리 상태를 스스로 바꿀 수 있는가 (update 정책 없음)
+  const mine = (await usr(t1, '/client_requests?select=id&limit=1')).body?.[0]
+  if (mine) {
+    const selfEdit = await usr(t1, `/client_requests?id=eq.${mine.id}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ status: '처리 완료' }),
+    })
+    ok(!(Array.isArray(selfEdit.body) && selfEdit.body.length),
+      '병원 계정 → 자기 요청의 처리 상태 변경 차단', `(${selfEdit.status})`)
+  }
+
+  // (5) 아직 공유하지 않은 내부 제안이 병원에 보이는가
+  const secret = (await svc('/sales_leads?select=id&shared_with_client=is.false&limit=1')).body?.[0]
+  if (secret) {
+    const peekLead = await usr(t1, `/sales_leads?id=eq.${secret.id}&select=id`)
+    ok(Array.isArray(peekLead.body) && peekLead.body.length === 0,
+      '공유 전 내부 제안은 병원에 보이지 않음', `${peekLead.body?.length ?? '?'}건`)
+  }
+
+  // (6) 막는 것만큼 중요한 것 — 본인이 원래 할 수 있어야 하는 일은 되는가
+  //
+  //  0012 는 신원 값을 고정합니다. 그 김에 이름·글자크기까지 막아 버리면
+  //  보안 수정이 기능을 깨는 셈입니다. 앱이 실제로 쓰는 경로(name, font_scale)를
+  //  그대로 눌러 보고, 끝나면 원래 값으로 되돌립니다.
+  const meNow = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=name,font_scale`)).body?.[0]
+  const edit = await usr(t1, `/profiles?email=eq.${encodeURIComponent(EMAIL1)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({ name: `${meNow?.name ?? '검증'} `.trim() + '·수정확인', font_scale: 'lg' }),
+  })
+  const edited = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=name,font_scale`)).body?.[0]
+  ok(edited?.name?.endsWith('·수정확인') && edited?.font_scale === 'lg',
+    '본인 이름·글자크기는 그대로 수정 가능', `(${edit.status}) ${edited?.name} · ${edited?.font_scale}`)
+  await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: meNow?.name, font_scale: meNow?.font_scale }),
+  })
+
+  // 검증이 만든 흔적 정리 — 남의 병원으로 넣으려다 만들어진 요청이 있으면 지웁니다.
+  const junk = (await svc(`/client_requests?select=id&content=like.*${encodeURIComponent('남의 병원으로 등록 시도')}*`)).body ?? []
+  for (const r of junk) await svc(`/client_requests?id=eq.${r.id}`, { method: 'DELETE' })
+  if (junk.length) console.log(`(정리) 검증용 요청 ${junk.length}건 삭제`)
+
+  if (!blocked) {
     console.log('\n  → supabase/bundles/RUN_4_security_fix.sql 을 SQL Editor 에서 실행하면 막힙니다.\n')
   }
 
