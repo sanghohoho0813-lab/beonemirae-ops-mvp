@@ -185,8 +185,13 @@ export SUPABASE_SERVICE_ROLE_KEY="…"   # 이 스크립트에서만. 끝나면 
 export TEST_ADMIN_PW='…' TEST_OFFICE_PW='…' TEST_FIELD_PW='…' TEST_CLIENT_PW='…'
 
 node supabase/test/05_live.mjs --setup     # 검증용 계정·데이터 준비
-node supabase/test/05_live.mjs             # 63건 + YES/NO 표
+node supabase/test/05_live.mjs             # 66건 + YES/NO 표
 node supabase/test/05_live.mjs --cleanup   # 검증용 데이터만 삭제
+
+# 병원 간 격리 · 정산 연결 · 브라우저 종단 (자세한 건 SETUP.md 6-3)
+export TEST_CLIENT2_PW='…'
+node supabase/test/06_cross_client.mjs
+node --experimental-strip-types supabase/test/07_settlement.mjs
 ```
 
 - 검증용 거래처·차량은 이름에 `[검증]` 접두사가 붙고 `--cleanup` 이 그것만 지웁니다.

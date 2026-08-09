@@ -236,6 +236,40 @@ node supabase/test/05_live.mjs --cleanup
 
 ---
 
+## 6-3. 나머지 세 가지 검증
+
+`05_live.mjs` 가 확인하지 못하는 부분이 셋 있었습니다. 각각 따로 둡니다.
+
+| 스크립트 | 확인하는 것 | 왜 따로인가 |
+|---|---|---|
+| `06_cross_client.mjs` | 병원 A 가 병원 B 의 데이터를 못 보는가 | 병원이 하나뿐이면 교차 접근을 시험할 수 없습니다 |
+| `07_settlement.mjs` | 유상/무상 구분 · 월 정산 · 거래명세서 | 한 번 입력한 것이 재입력 없이 정산까지 가는지 |
+| `08_browser_live.mjs` | 브라우저에서 PC 입력 → 모바일 조회 | API 가 아니라 사람이 쓰는 경로 |
+
+```bash
+# 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
+export TEST_CLIENT2_PW='…'
+node supabase/test/06_cross_client.mjs
+
+# 유상/무상 · 월 정산 (Node 22 이상 — src/lib/billing.ts 를 그대로 읽습니다)
+node --experimental-strip-types supabase/test/07_settlement.mjs
+
+# 브라우저 종단 검증 — 미리 빌드하고 preview 를 띄워 둡니다
+npm run build && npx vite preview --port 4173 &
+node supabase/test/08_browser_live.mjs
+```
+
+`07` 은 화면이 쓰는 계산 함수(`src/lib/billing.ts`)를 그대로 불러 씁니다.
+검증용으로 바꾼 단가·결제조건은 끝나기 전에 원래 값으로 되돌립니다.
+
+`08` 은 `.env.local` 에 실제 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` 가
+있어야 합니다. 없으면 앱이 시연 모드로 떠서 로그인 화면이 나오지 않습니다.
+Playwright 경로가 다르면 `PLAYWRIGHT_MODULE` · `CHROMIUM_PATH` 로 지정합니다.
+방화벽이 Chromium 의 TLS 1.3 을 끊는 망에서는 `CHROMIUM_TLS12=1` 을 붙입니다
+(인증서 검증은 그대로 켜 둔 채 버전만 낮춥니다).
+
+---
+
 ## 7. 동작 확인 체크리스트
 
 - [ ] 로그아웃 상태에서 `/` 접속 → 로그인 화면으로 이동

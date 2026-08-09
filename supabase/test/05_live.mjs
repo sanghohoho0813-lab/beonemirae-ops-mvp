@@ -207,7 +207,9 @@ async function setup() {
   }
 
   const today = kstToday()
-  const sch = await truth(`/schedules?select=id&client_id=eq.${clientId}&date=eq.${today}&waste_type=eq.${encodeURIComponent('의료폐기물')}`)
+  // '예정' 이 남아 있는지로 판단합니다. 이미 완료된 것만 있으면 오늘 다시
+  // 돌릴 때 검증할 대상이 없어지므로 하나 더 만들어 둡니다.
+  const sch = await truth(`/schedules?select=id&client_id=eq.${clientId}&date=eq.${today}&waste_type=eq.${encodeURIComponent('의료폐기물')}&status=eq.${encodeURIComponent('예정')}`)
   if (!sch.body?.length) {
     await truth('/schedules', {
       method: 'POST',
@@ -317,7 +319,7 @@ async function verify() {
   //  권한 → 스키마 → 차단 순으로 확인합니다.
   section('0. 연결 · 권한 확인')
   if (SERVICE) {
-    const d = await db('/profiles?select=id&limit=1')
+    const d = await truth('/profiles?select=id&limit=1')
     ok(
       d.status === 200,
       d.status === 200
@@ -338,7 +340,7 @@ async function verify() {
                   'client_requests', 'office_stock', 'material_transactions']
     const missing = []
     for (const t of need) {
-      const r = await db(`/${t}?select=*&limit=1`)
+      const r = await truth(`/${t}?select=*&limit=1`)
       if (r.status === 404) missing.push(t)
     }
     ok(missing.length === 0, missing.length ? `테이블 없음: ${missing.join(', ')} — migration 을 먼저 적용하세요` : '필수 테이블 존재')
@@ -512,6 +514,17 @@ async function verify() {
   if (!sched) {
     ok(false, `오늘(${today}) 예정 일정이 없어 수거 완료를 검증하지 못했습니다 — --setup 을 먼저 실행하세요`)
   } else {
+    // 오늘 이 거래처의 정규 수거가 이미 저장돼 있으면(같은 날 두 번째 실행)
+    // 제품이 막는 것이 정상입니다. 그럴 때는 실제 업무와 같이 '추가 수거'로
+    // 저장합니다 — 검사를 우회하는 게 아니라 제품이 지원하는 경로입니다.
+    const doneToday = (await truth(
+      `/schedules?select=id&client_id=eq.${myClientId}&date=eq.${today}` +
+      `&waste_type=eq.${encodeURIComponent(sched.waste_type)}` +
+      `&status=eq.${encodeURIComponent('완료')}&is_additional=is.false`,
+    )).body?.length ?? 0
+    const revisit = doneToday > 0
+    if (revisit) console.log('  (오늘 정규 수거가 이미 있어 추가 수거로 저장합니다)')
+
     const stockBefore = (await truth('/office_stock?select=*&id=eq.1')).body?.[0]
     const evtBefore = (await truth('/collection_events?select=id')).body?.length ?? 0
     const audBefore = (await truth('/audit_logs?select=id')).body?.length ?? 0
@@ -528,7 +541,7 @@ async function verify() {
         containers: { corrugated: 3, plastic: 2, bag: 1, etc: 0 },
         handoverStatus: '수거 완료',
         supplied: { corrugatedBox: 2, plasticContainer: 0, bag: 0, needleBox: 1 },
-        isAdditional: false,
+        isAdditional: revisit,
         memo: `${MARK} 라이브 검증`,
         screen: 'collection',
         inputDurationMs: 48000,
@@ -566,7 +579,7 @@ async function verify() {
     ok(audAfter.every((a) => !!a.actor_id), '모든 감사로그에 실행자 기록')
 
     // 중복 저장 차단 — 같은 날 같은 병원·같은 구분
-    const dup = await rpc(T.field, 'complete_collection', payload({ scheduleId: null }))
+    const dup = await rpc(T.field, 'complete_collection', payload({ scheduleId: null, isAdditional: false }))
     ok(dup.status >= 400, `중복 완료 차단 (${dup.status})`)
     // 추가 수거는 허용
     const add = await rpc(T.field, 'complete_collection', payload({
