@@ -152,35 +152,44 @@ async function main() {
   check(!refreshAfter.body?.access_token, '로그아웃하면 갱신 토큰이 죽음 (기기 회수 가능)',
     `(${refreshAfter.status})`)
 
-  // 갱신 토큰 회전
+  // 갱신 토큰 회전과 재생 공격
+  //
+  //  여기서 한 번 헛짚었습니다. 회전 직후의 옛 토큰이 잠깐 같은 세션을
+  //  돌려주는 것을 문제로 봤는데, 그건 GoTrue 가 일부러 두는 재시도 보호입니다
+  //  (Refresh token reuse interval, 기본 10초). 현장에서 통신이 끊겨 같은
+  //  요청이 두 번 가는 일이 흔하기 때문입니다.
+  //
+  //  실제 재생 공격은 모양이 다릅니다. 토큰이 새어 나간 뒤 본인은 계속 쓰고,
+  //  체인이 앞으로 나아간 다음 공격자가 옛 토큰을 들이미는 것입니다.
+  //  그때 거부되는지, 그리고 본인 세션은 살아 있는지를 봐야 합니다.
   const s2 = await login(`field@${DOMAIN}`, process.env.TEST_FIELD_PW)
   const refresh = (t) => fetch(`${U}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST', headers: { apikey: A, 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: t }),
   }).then(json)
 
-  const first = await refresh(s2.refresh_token)
-  check(!!first.body?.access_token, '정상 갱신은 동작', `(${first.status})`)
-  check(first.body?.refresh_token && first.body.refresh_token !== s2.refresh_token,
+  const tokenA = s2.refresh_token
+  const rB = await refresh(tokenA)
+  check(!!rB.body?.access_token, '정상 갱신은 동작', `(${rB.status})`)
+  check(rB.body?.refresh_token && rB.body.refresh_token !== tokenA,
     '갱신하면 새 갱신 토큰이 발급됨 (회전 켜져 있음)')
 
-  // 회전한 뒤 이전 토큰이 언제까지 사는지.
-  //
-  //  GoTrue 는 네트워크가 끊겨 재시도하는 경우를 위해 잠깐(기본 10초) 같은
-  //  세션을 돌려줍니다. 그 사이의 재사용은 정상 동작입니다. 하지만 그 창이
-  //  길면, 갱신 토큰이 새어 나갔을 때 훔친 쪽과 본인이 같은 세션을 나눠 쓰게
-  //  되고 서버가 그것을 이상 징후로 잡아내지 못합니다.
-  //
-  //  이건 코드가 아니라 프로젝트 설정입니다(Authentication → Sessions).
-  //  그래서 실패로 세지 않되, 조용히 넘기지도 않습니다.
-  await new Promise((r) => setTimeout(r, 30000))
-  const late = await refresh(s2.refresh_token)
-  if (late.body?.access_token) {
-    advise('회전 전 갱신 토큰이 30초 뒤에도 유효합니다',
-      'Authentication → Sessions 에서 「Detect and revoke potentially compromised refresh tokens」를 켜 주세요')
-  } else {
-    ok('회전한 뒤 이전 갱신 토큰은 무효', `(${late.status})`)
-  }
+  // 재시도 보호 — 창 안에서는 같은 세션을 돌려줍니다 (의도된 동작)
+  const retry = await refresh(tokenA)
+  check(retry.body?.refresh_token === rB.body?.refresh_token,
+    '통신이 끊겨 같은 요청이 두 번 가도 세션이 하나로 유지됨')
+
+  // 재생 공격 — 재사용 창(10초)을 넘기고, 체인을 한 칸 더 진행시킨 뒤 옛 토큰을 들이밉니다
+  await new Promise((r) => setTimeout(r, 12000))
+  const rC = await refresh(rB.body.refresh_token)
+  check(!!rC.body?.access_token, '본인은 계속 갱신 가능', `(${rC.status})`)
+
+  const replay = await refresh(tokenA)
+  check(!replay.body?.access_token, '새어 나간 옛 토큰의 재생은 거부',
+    `(${replay.status}) ${(replay.body?.error_code ?? replay.body?.msg ?? '').toString().slice(0, 50)}`)
+
+  const stillMine = await refresh(rC.body.refresh_token)
+  check(!!stillMine.body?.access_token, '재생 시도가 본인 세션을 끊지 않음', `(${stillMine.status})`)
 
   // ── 5. 키만으로는 아무것도 안 되는가 ──────────────────────────────────────
   section('5. 공개 키만 들고 왔을 때')
