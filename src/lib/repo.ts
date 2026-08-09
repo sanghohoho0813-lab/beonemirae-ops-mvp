@@ -752,8 +752,20 @@ export interface ProfileRow {
 
 export async function loadProfiles(): Promise<ProfileRow[]> {
   const sb = need()
+  // 어느 관계로 붙일지 반드시 지정해야 합니다.
+  //
+  //  profiles 와 clients 사이에는 외래키가 셋 있습니다.
+  //    profiles.client_id → clients      (병원 계정의 소속)
+  //    clients.created_by → profiles     (거래처를 등록한 사람)
+  //    clients.updated_by → profiles     (마지막으로 고친 사람)
+  //
+  //  그냥 clients(name) 이라고 쓰면 PostgREST 가 어느 것인지 고르지 못하고
+  //  요청 전체를 거절합니다. 그러면 사용자 계정 화면에 목록이 아예 안 뜨고,
+  //  관리자가 역할 변경도 계정 비활성화도 할 수 없습니다.
+  //  (0006 에서 client_id 가 생기면서부터 이랬는데, 관리자만 여는 화면이라
+  //   실제로 열어 보고서야 드러났습니다)
   const rows = unwrap<Row[]>(
-    await sb.from('profiles').select('*, clients(name)').order('created_at'),
+    await sb.from('profiles').select('*, clients!profiles_client_id_fkey(name)').order('created_at'),
   )
   return rows.map((r) => ({
     id: r.id,

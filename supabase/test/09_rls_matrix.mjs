@@ -275,6 +275,18 @@ async function main() {
     request_overrides: async () => ({
       request_id: `${MARK}RLS점검용`, status: '접수', by: '검증',
     }),
+    // 06 이 자기가 만든 요청을 모두 지우므로, 이 검사도 자기 표본을 직접 만듭니다.
+    // (표본이 없으면 읽기 차단 여부를 판정할 수 없어 조용히 넘어가게 됩니다)
+    client_requests: async () => {
+      // 병원 계정의 소속 거래처로 만듭니다. 남의 병원 것으로 만들면
+      // 병원 계정에게 0건이 보이고, 그것을 '차단'으로 잘못 읽게 됩니다.
+      const c = (await svc(`/clients?select=id&id=eq.${ctxClientId}`)).body?.[0]
+        ?? (await svc('/clients?select=id&limit=1')).body[0]
+      return {
+        client_id: c.id, kind: '추가수거', content: `${MARK}RLS점검용 요청`,
+        urgent: false, status: '접수', source: 'portal', requester_name: '검증',
+      }
+    },
     client_documents: async () => {
       const c = (await svc('/clients?select=id&limit=1')).body[0]
       return { client_id: c.id, kind: '기타', title: `${MARK}RLS점검용`, note: `${MARK}RLS점검용` }
