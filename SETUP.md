@@ -252,6 +252,9 @@ node supabase/test/05_live.mjs --cleanup
 | `13_multisession_audit.mjs` | 동시 수정 · 감사기록 | 두 사람이 같은 거래처를 고칠 때 값이 조용히 사라지는지 |
 | `14_portal_flow.mjs` | 병원 요청 → 사무실 회신 → 병원 확인 | 이 한 바퀴가 끊기면 병원은 전화를 겁니다 |
 | `15_field_offline.mjs` | 현장 입력 · 통신 끊김 · 되돌리기 | 지하 주차장에서 저장을 누르는 순간이 가장 위험합니다 |
+| `16_receivables_flow.mjs` | 청구 → 확인필요 → 입금완료 | 몇 달 뒤 "받았나 안 받았나"로 다투게 됩니다 |
+| `17_materials_stock.mjs` | 두 공급 경로의 재고·원장 비교 | 창고 숫자와 실물이 어긋나는 지점 |
+| `18_settlement_screen.mjs` | 정산 화면 숫자 = 계산 결과 | 거래처에 나가는 것은 화면 쪽입니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다

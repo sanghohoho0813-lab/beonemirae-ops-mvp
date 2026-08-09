@@ -293,8 +293,10 @@ async function main() {
     body: JSON.stringify({ name: meNow?.name, font_scale: meNow?.font_scale }),
   })
 
-  // 검증이 만든 흔적 정리 — 남의 병원으로 넣으려다 만들어진 요청이 있으면 지웁니다.
-  const junk = (await svc(`/client_requests?select=id&content=like.*${encodeURIComponent('남의 병원으로 등록 시도')}*`)).body ?? []
+  // 검증이 만든 흔적 정리.
+  //  남기면 병원 포털 화면에 '[검증]…' 요청이 그대로 보입니다.
+  //  (실제로 그렇게 쌓여 있는 것을 나중에 발견했습니다)
+  const junk = (await svc(`/client_requests?select=id&content=like.*${encodeURIComponent(MARK)}*`)).body ?? []
   for (const r of junk) await svc(`/client_requests?id=eq.${r.id}`, { method: 'DELETE' })
   if (junk.length) console.log(`(정리) 검증용 요청 ${junk.length}건 삭제`)
 
