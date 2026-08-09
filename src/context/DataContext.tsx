@@ -49,7 +49,7 @@ import * as repo from '../lib/repo'
 interface DataContextValue {
   data: AppData
   // 거래처
-  addClient: (c: Omit<Client, 'id'>) => Client
+  addClient: (c: Omit<Client, 'id'>) => Promise<Client | null>
   updateClient: (id: string, patch: Partial<Client>) => void
   removeClient: (id: string) => void
   // 현장 메모 / 특이사항 (병원별)
@@ -212,24 +212,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const clearSyncError = useCallback(() => setSyncError(null), [])
 
   // ── 거래처 ──────────────────────────────────────────────────────────────
+  //  서버가 발급한 id 를 돌려줍니다. 예전에는 여기서 만든 임시 id(c_…)를
+  //  돌려줘서, 등록 직후 화면이 '거래처를 찾을 수 없어요' 로 갔습니다.
+  //  저장은 됐는데 실패한 것처럼 보이니 한 번 더 등록해 같은 거래처가
+  //  둘이 되는 자리였습니다.
   const addClient = useCallback(
-    (c: Omit<Client, 'id'>) => {
-      const client: Client = { ...c, id: uid('c') }
+    async (c: Omit<Client, 'id'>): Promise<Client | null> => {
       if (live) {
-        void runLive(async () => {
-          const created = await repo.insertClient(c)
+        let created: Client | null = null
+        await runLive(async () => {
+          const row = await repo.insertClient(c)
+          created = row
           await repo.writeAudit({
             action: 'client.create',
             entity: 'clients',
-            entityId: created.id,
-            clientId: created.id,
-            clientName: created.name,
+            entityId: row.id,
+            clientId: row.id,
+            clientName: row.name,
             after: c,
-            summary: `거래처 등록 — ${created.name}`,
+            summary: `거래처 등록 — ${row.name}`,
           })
         })
-        return client
+        return created
       }
+      const client: Client = { ...c, id: uid('c') }
       setData((d) => ({ ...d, clients: [...d.clients, client] }))
       return client
     },

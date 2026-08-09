@@ -52,11 +52,13 @@ export function Clients() {
   const realCount = data.clients.filter((c) => !c.isDemoGenerated).length
   const demoCount = data.clients.length - realCount
 
-  function save() {
+  async function save() {
     if (!form.name.trim()) return
-    const created = addClient(form)
+    //  서버가 저장을 마치고 준 id 로 이동합니다. 저장이 실패하면 목록에
+    //  남고, 화면 위쪽의 저장 오류 안내가 그대로 보입니다.
+    const created = await addClient(form)
     setAdding(false)
-    navigate(`/clients/${created.id}`)
+    if (created) navigate(`/clients/${created.id}`)
   }
 
   return (

@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 25 를 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 26 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -11,7 +11,7 @@
 #           TEST_CLIENT_PW=... TEST_CLIENT2_PW=...
 #    bash supabase/test/run_all.sh
 #
-#  · 08·13~25(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
+#  · 08·13~26(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
 #    없으면 건너뛰고 그 사실을 표에 남깁니다 — 조용히 통과시키지 않습니다.
 #  · 키는 셸에만 둡니다. 끝나면 unset 하거나 셸을 닫으세요.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +91,8 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/24_proposal_flow.mjs"
   run "25 · 거래처 단가 화면 → 정산 반영" \
     "$NODE" "$HERE/25_price_editor.mjs"
+  run "26 · 거래처 신규 등록 (화면 → DB → 이동)" \
+    "$NODE" "$HERE/26_client_create.mjs"
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -110,6 +112,7 @@ else
   NAMES+=("23 · 현장 메모 · 수거 이력 · 감사로그"); RESULTS+=("SKIP")
   NAMES+=("24 · 제안 종단 (사무실 → 병원 수락 → 사무실)"); RESULTS+=("SKIP")
   NAMES+=("25 · 거래처 단가 화면 → 정산 반영"); RESULTS+=("SKIP")
+  NAMES+=("26 · 거래처 신규 등록 (화면 → DB → 이동)"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."
