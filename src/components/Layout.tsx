@@ -40,6 +40,7 @@ import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { HelpSheet } from './HelpSheet'
+import { PcViewBar, usePcViewport } from './PcViewBar'
 import { PageMotion } from './motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -459,6 +460,10 @@ export function Layout() {
   const { pathname } = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  // PC 화면으로 보기 — 잠깐 확인하는 용도라 저장하지 않습니다.
+  // 새로고침하면 언제나 모바일 화면으로 돌아옵니다.
+  const [pcView, setPcView] = useState(false)
+  usePcViewport(pcView)
 
   return (
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
@@ -468,7 +473,11 @@ export function Layout() {
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
           <SyncBar />
           <MobileHeader onHelp={() => setHelpOpen(true)} />
-          <main className="w-full px-4 pb-24 pt-4 lg:px-[40px] lg:pb-14 lg:pt-8 2xl:px-[56px]">
+          <main
+            className={`w-full px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px] ${
+              pcView ? 'pb-32' : 'pb-24 lg:pb-14'
+            }`}
+          >
             {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
                 사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
                 안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
@@ -489,11 +498,21 @@ export function Layout() {
       {/* 모바일 하단 탭 + 더보기 바텀시트 */}
       <BottomNav onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
       <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
-        <MoreMenu variant="mobile" onNavigate={() => setMoreOpen(false)} />
+        <MoreMenu
+          variant="mobile"
+          onNavigate={() => setMoreOpen(false)}
+          onPcView={() => {
+            setMoreOpen(false)
+            setPcView(true)
+          }}
+        />
       </BottomSheet>
 
       {/* 도움말 — 사용 방법 / 만든 이유 두 갈래 (폰) */}
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      {/* PC 화면으로 보기 중일 때만 — 돌아가는 길을 항상 띄워 둡니다 */}
+      {pcView && <PcViewBar onExit={() => setPcView(false)} />}
     </div>
   )
 }

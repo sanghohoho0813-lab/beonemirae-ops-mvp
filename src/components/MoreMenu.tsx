@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -37,7 +37,16 @@ const PLANNED_FEATURES = [
   'SaaS 서비스 확장',
 ]
 
-export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile' | 'desktop'; onNavigate?: () => void }) {
+export function MoreMenu({
+  variant = 'mobile',
+  onNavigate,
+  /** 폰에서만 넘어옵니다 — PC 화면 보기 모드로 전환 */
+  onPcView,
+}: {
+  variant?: 'mobile' | 'desktop'
+  onNavigate?: () => void
+  onPcView?: () => void
+}) {
   const navigate = useNavigate()
   function go(to: string) {
     onNavigate?.()
@@ -74,6 +83,22 @@ export function MoreMenu({ variant = 'mobile', onNavigate }: { variant?: 'mobile
           </TourWhyButton>
         </div>
       </section>
+
+      {/* PC 화면으로 보기 — 폰에서만. 실제 데스크톱 레이아웃을 그대로 그립니다.
+          업무용 기본 모드가 아니라 "PC 에서는 어떻게 보이는지" 확인하는 보기 기능입니다. */}
+      {onPcView && (
+        <section>
+          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">화면 보기</h3>
+          <Tappable as="div" onClick={onPcView} className="card flex cursor-pointer items-center gap-3 p-4">
+            <IconChip icon={Monitor} tone="navy" />
+            <div className="min-w-0">
+              <p data-pc-view-open className="font-bold text-navy-900">PC 화면으로 보기</p>
+              <p className="text-[0.98rem] text-navy-400">PC 에서 보이는 전체 화면 구성을 확인합니다</p>
+            </div>
+            <ChevronRight size={18} className="ml-auto text-navy-300" />
+          </Tappable>
+        </section>
+      )}
 
       {/* 시연용 핵심 요약 */}
       <Tappable
