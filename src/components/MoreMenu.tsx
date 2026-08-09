@@ -8,6 +8,8 @@ import { RnDCard } from './RnDCard'
 import { IconChip } from './ui'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { Tappable } from './motion'
+import { useAuth } from '../context/AuthContext'
+import { canAccess } from '../lib/access'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 콘텐츠 — 디바이스별 분리
@@ -48,6 +50,11 @@ export function MoreMenu({
   onPcView?: () => void
 }) {
   const navigate = useNavigate()
+  const { role } = useAuth()
+  //  현장 담당자에게는 미수금·통계·배차가 열리지 않습니다. 사이드바에서는
+  //  이미 숨기고 있었는데 폰의 더보기에는 그대로 남아 있어서, 눌렀다가
+  //  튕기는 메뉴가 보였습니다. 같은 규칙(canAccess)으로 맞춥니다.
+  const shortcuts = MOBILE_SHORTCUTS.filter((s) => canAccess(role, s.to))
   function go(to: string) {
     onNavigate?.()
     navigate(to)
@@ -158,7 +165,7 @@ export function MoreMenu({
             <ExternalLink size={16} className="ml-auto shrink-0 text-navy-300" />
           </a>
           {variant === 'mobile' &&
-            MOBILE_SHORTCUTS.map((s) => (
+            shortcuts.map((s) => (
               <Tappable key={s.to} as="div" onClick={() => go(s.to)} className="card flex cursor-pointer items-center gap-3 p-4">
                 <IconChip icon={s.icon} tone="navy" />
                 <div className="min-w-0">

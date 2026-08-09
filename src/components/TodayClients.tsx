@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, StickyNote } from 'lucide-react'
-import type { AppData } from '../types'
+import type { AppData, Client } from '../types'
 import { schedulesOn } from '../lib/selectors'
 import { nextActionsFor } from '../lib/insights'
 import { today, weight } from '../lib/format'
@@ -21,17 +21,23 @@ export function TodayClients({ data, limit = 4 }: { data: AppData; limit?: numbe
   const ids: string[] = []
   for (const s of list) if (!ids.includes(s.clientId)) ids.push(s.clientId)
 
-  const rows = ids.slice(0, limit).map((id) => {
-    const client = data.clients.find((c) => c.id === id)!
-    const mine = list.filter((s) => s.clientId === id)
-    const done = mine.filter((s) => s.status === '완료')
-    const doneKg = done.reduce((a, s) => a + (s.actualAmount ?? 0), 0)
-    const openNotes = notes.filter((n) => n.clientId === id && !n.done).length
-    const action = nextActionsFor(data, client).find((a) => a.kind !== '정기수거')
-    const materials = data.materials.filter((m) => m.clientId === id && m.date === t)
-    const materialCount = materials.reduce((a, m) => a + m.boxCount + m.vinylCount + m.needleBoxCount, 0)
-    return { client, total: mine.length, doneCount: done.length, doneKg, openNotes, action, materialCount }
-  })
+  //  그만둔 거래처에도 오늘 일정이 남아 있을 수 있습니다(오전에 일정을 잡고
+  //  오후에 거래를 정리한 경우). 그때 client 가 undefined 인 채로 아래까지
+  //  내려가면 화면이 통째로 죽을 수 있어서, 그 줄만 건너뜁니다.
+  const rows = ids
+    .map((id) => ({ id, client: data.clients.find((c) => c.id === id) }))
+    .filter((r): r is { id: string; client: Client } => !!r.client)
+    .slice(0, limit)
+    .map(({ id, client }) => {
+      const mine = list.filter((s) => s.clientId === id)
+      const done = mine.filter((s) => s.status === '완료')
+      const doneKg = done.reduce((a, s) => a + (s.actualAmount ?? 0), 0)
+      const openNotes = notes.filter((n) => n.clientId === id && !n.done).length
+      const action = nextActionsFor(data, client).find((a) => a.kind !== '정기수거')
+      const materials = data.materials.filter((m) => m.clientId === id && m.date === t)
+      const materialCount = materials.reduce((a, m) => a + m.boxCount + m.vinylCount + m.needleBoxCount, 0)
+      return { client, total: mine.length, doneCount: done.length, doneKg, openNotes, action, materialCount }
+    })
 
   if (rows.length === 0) return null
 

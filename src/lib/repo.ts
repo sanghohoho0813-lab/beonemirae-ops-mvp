@@ -225,7 +225,9 @@ export async function loadAppData(): Promise<AppData> {
   }
 
   const [clients, vehicles, schedules, materials, notes, events, stock, overrides, requests] = await Promise.all([
-    withRetry(async () => unwrap<Row[]>(await sb.from('clients').select('*').eq('active', true))),
+    // 그만둔 거래처까지 함께 읽습니다. 목록에는 활성만 넣고, 비활성은
+    // 청구·수거 기록의 이름을 되찾는 데만 씁니다(아래 retiredClients).
+    withRetry(async () => unwrap<Row[]>(await sb.from('clients').select('*'))),
     withRetry(async () => unwrap<Row[]>(await sb.from('vehicles').select('*').eq('active', true))),
     withRetry(async () => unwrap<Row[]>(await sb.from('schedules').select('*'))),
     withRetry(async () => unwrap<Row[]>(await sb.from('materials').select('*'))),
@@ -263,7 +265,8 @@ export async function loadAppData(): Promise<AppData> {
   )
 
   return {
-    clients: clients.map(toClient),
+    clients: clients.filter((c) => c.active).map(toClient),
+    retiredClients: clients.filter((c) => !c.active).map(toClient),
     vehicles: vehicles.map(toVehicle),
     schedules: schedules.map(toSchedule),
     materials: materials.map(toMaterial),

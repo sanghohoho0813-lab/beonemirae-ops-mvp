@@ -40,6 +40,11 @@ export function friendlyError(e: unknown): string {
     return '이 작업을 수행할 권한이 없습니다. 관리자에게 문의해 주세요.'
   if (/duplicate key|schedules_no_duplicate_completion/i.test(msg))
     return '이미 완료 처리된 수거입니다. (중복 등록 방지)'
+  // 비밀번호 재설정 메일 관련 — 그대로 두면 영문 원문이 직원에게 보입니다.
+  if (/email address .* is invalid|email_address_invalid/i.test(msg))
+    return '이 계정의 이메일 주소로는 메일을 보낼 수 없습니다. 관리자에게 문의해 주세요.'
+  if (/rate limit|only request this after/i.test(msg))
+    return '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.'
   return msg
 }
 

@@ -222,12 +222,21 @@ function completedIn(data: AppData, clientId: string, month: string) {
   )
 }
 
+//  거래처를 정리해도 그 달의 청구서는 다시 뽑을 수 있어야 합니다.
+//  활성 목록만 뒤지면 단가를 못 찾아 명세서가 0원으로 나옵니다.
+function findClient(data: AppData, clientId: string) {
+  return (
+    data.clients.find((c) => c.id === clientId) ??
+    data.retiredClients?.find((c) => c.id === clientId)
+  )
+}
+
 function suppliesIn(data: AppData, clientId: string, month: string) {
   return data.materials.filter((m) => m.clientId === clientId && monthOf(m.date) === month)
 }
 
 export function settlementFor(data: AppData, clientId: string, month: string): Settlement {
-  const client = data.clients.find((c) => c.id === clientId)
+  const client = findClient(data, clientId)
   const scheds = completedIn(data, clientId, month)
   const sups = suppliesIn(data, clientId, month)
 
@@ -314,7 +323,10 @@ export interface MonthlyRollup {
 }
 
 export function rollupFor(data: AppData, month: string): MonthlyRollup {
-  const rows = data.clients
+  //  그만둔 거래처도 넣습니다. 빼 버리면 거래를 정리한 순간 지난달 매출이
+  //  같이 줄어듭니다 — 이미 청구한 돈인데도요. 그 달에 실적이 없으면
+  //  아래 filter 에서 어차피 빠집니다.
+  const rows = [...data.clients, ...(data.retiredClients ?? [])]
     .map((c) => settlementFor(data, c.id, month))
     .filter((s) => s.revenue > 0 || s.cost > 0)
     .sort((a, b) => b.profit - a.profit)
@@ -401,7 +413,7 @@ export function dueDateOf(month: string, dueDay: number | null | undefined): str
 }
 
 export function invoiceFor(data: AppData, clientId: string, month: string): Invoice {
-  const client = data.clients.find((c) => c.id === clientId)
+  const client = findClient(data, clientId)
   const scheds = completedIn(data, clientId, month).slice().sort((a, b) => a.date.localeCompare(b.date))
   const sups = suppliesIn(data, clientId, month).slice().sort((a, b) => a.date.localeCompare(b.date))
 

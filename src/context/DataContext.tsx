@@ -1082,9 +1082,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live],
   )
 
+  //  그만둔 거래처도 찾습니다. 활성 목록에만 있으면, 비활성으로 돌린
+  //  거래처의 미수금이 '알 수 없음' 으로 남아 몇 달 뒤 주인을 못 찾습니다.
   const clientById = useCallback(
-    (id: string) => data.clients.find((c) => c.id === id),
-    [data.clients],
+    (id: string) =>
+      data.clients.find((c) => c.id === id) ?? data.retiredClients?.find((c) => c.id === id),
+    [data.clients, data.retiredClients],
   )
 
   const value = useMemo<DataContextValue>(

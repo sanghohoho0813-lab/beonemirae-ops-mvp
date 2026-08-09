@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 20 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 23 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -11,7 +11,7 @@
 #           TEST_CLIENT_PW=... TEST_CLIENT2_PW=...
 #    bash supabase/test/run_all.sh
 #
-#  · 08·13~18(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
+#  · 08·13~23(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
 #    없으면 건너뛰고 그 사실을 표에 남깁니다 — 조용히 통과시키지 않습니다.
 #  · 키는 셸에만 둡니다. 끝나면 unset 하거나 셸을 닫으세요.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -81,6 +81,12 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/19_user_admin.mjs"
   run "20 · 통계·성과·대시보드 숫자" \
     "$NODE" "$HERE/20_stats_screens.mjs"
+  run "21 · 차량 관리 · 비밀번호 변경" \
+    "$NODE" "$HERE/21_vehicle_password.mjs"
+  run "22 · 거래처를 그만둘 때 (미수금·이력 보존)" \
+    "$NODE" "$HERE/22_client_retire.mjs"
+  run "23 · 현장 메모 · 수거 이력 · 감사로그" \
+    "$NODE" "$HERE/23_notes_history.mjs"
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -95,6 +101,9 @@ else
   NAMES+=("18 · 정산·거래명세서 화면"); RESULTS+=("SKIP")
   NAMES+=("19 · 사용자 관리 · 역할 변경"); RESULTS+=("SKIP")
   NAMES+=("20 · 통계·성과·대시보드 숫자"); RESULTS+=("SKIP")
+  NAMES+=("21 · 차량 관리 · 비밀번호 변경"); RESULTS+=("SKIP")
+  NAMES+=("22 · 거래처를 그만둘 때 (미수금·이력 보존)"); RESULTS+=("SKIP")
+  NAMES+=("23 · 현장 메모 · 수거 이력 · 감사로그"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."

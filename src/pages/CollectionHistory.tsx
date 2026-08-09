@@ -25,7 +25,7 @@ function shift(days: number): string {
 }
 
 export function CollectionHistory() {
-  const { data } = useData()
+  const { data, clientById } = useData()
   const navigate = useNavigate()
   const [waste, setWaste] = useState<WasteFilter>('전체')
   const [kind, setKind] = useState<KindFilter>('전체')
@@ -38,7 +38,9 @@ export function CollectionHistory() {
     const month = t.slice(0, 7)
     return data.schedules
       .map((s) => {
-        const client = data.clients.find((c) => c.id === s.clientId)
+        //  그만둔 거래처의 과거 수거도 이름이 남아야 합니다.
+        //  활성 목록만 뒤지면 '거래처' 라는 이름으로 뭉개집니다.
+        const client = clientById(s.clientId)
         const v = data.vehicles.find((x) => x.id === s.vehicleId)
         const facility = facilityByWaste(s.wasteType)
         const done = s.status === '완료'
@@ -68,7 +70,7 @@ export function CollectionHistory() {
       .filter((r) => (period === '전체' ? true : period === '이번 달' ? r.date.startsWith(month) : r.date >= weekAgo && r.date <= t))
       .filter((r) => (query ? r.clientName.includes(query) : true))
       .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
-  }, [data, waste, kind, period, query])
+  }, [data, clientById, waste, kind, period, query])
 
   const completedRows = rows.filter((r) => r.completed)
   const totalKg = completedRows.reduce((s, r) => s + (r.amount ?? 0), 0)
