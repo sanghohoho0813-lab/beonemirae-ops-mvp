@@ -17,8 +17,10 @@
 //   1) 환경변수를 셸에만 넣습니다 (파일로 저장하지 말고, 커밋하지 마세요)
 //
 //      export SUPABASE_URL="https://xxxx.supabase.co"
-//      export SUPABASE_ANON_KEY="eyJ..."          # 공개 키 (프론트와 동일)
-//      export SUPABASE_SERVICE_ROLE_KEY="eyJ..."  # 이 스크립트에서만 사용
+//      export SUPABASE_ANON_KEY="sb_publishable_…"     # 공개 키 (프론트와 동일)
+//      export SUPABASE_SERVICE_ROLE_KEY="sb_secret_…"  # 이 스크립트에서만 사용
+//
+//      예전 JWT 형식(eyJ…) 키도 그대로 동작합니다.
 //      export TEST_ADMIN_PW=…  TEST_OFFICE_PW=…  TEST_FIELD_PW=…  TEST_CLIENT_PW=…
 //
 //      · SERVICE_ROLE 키는 계정 생성과 "DB 에 실제로 남았는지" 확인에만 씁니다.
@@ -64,11 +66,11 @@ if (!URL_ || !ANON) {
 const mode = process.argv[2] ?? '--verify'
 
 // ── 최소 HTTP 도우미 ─────────────────────────────────────────────────────────
-const rest = async (token, path, init = {}) => {
+const rest = async (token, path, init = {}, key = ANON) => {
   const r = await fetch(`${URL_}/rest/v1${path}`, {
     ...init,
     headers: {
-      apikey: ANON,
+      apikey: key,
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
       ...(init.headers || {}),
@@ -86,7 +88,14 @@ const rpc = (token, fn, args) => rest(token, `/rpc/${fn}`, { method: 'POST', bod
 /** service_role 로 읽습니다 — RLS 를 우회하므로 "DB 에 실제로 남았는가"의 기준입니다. */
 const truth = (path, init) => {
   if (!SERVICE) throw new Error('SUPABASE_SERVICE_ROLE_KEY 가 없어 DB 실제 상태를 확인할 수 없습니다.')
-  return rest(SERVICE, path, init)
+  // apikey 까지 secret 으로 보냅니다.
+  //
+  // 새 키 형식(sb_publishable_ / sb_secret_)에서는 게이트웨이가 apikey 로 역할을
+  // 정합니다. 예전처럼 apikey 에 공개키를 두고 Authorization 에만 secret 을
+  // 넣으면 권한이 조용히 anon 으로 떨어질 수 있습니다. 그러면 이 함수가
+  // "DB 에 실제로 남았는가"를 확인하지 못하는데 실패가 RLS 문제처럼 보여
+  // 원인을 엉뚱한 데서 찾게 됩니다.
+  return rest(SERVICE, path, init, SERVICE)
 }
 
 async function login(who) {
@@ -145,7 +154,7 @@ async function setup() {
     if (!a.pw) throw new Error(`TEST_${role.toUpperCase()}_PW 환경변수가 없습니다.`)
     const r = await fetch(`${URL_}/auth/v1/admin/users`, {
       method: 'POST',
-      headers: { apikey: ANON, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' },
+      headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: a.email,
         password: a.pw,
@@ -298,6 +307,48 @@ async function cleanup() {
 async function verify() {
   const T = {}
   const S = {}
+
+  // ── 0. 준비 상태 자기점검 ────────────────────────────────────────────────
+  //  아래 검증은 전부 "DB 에 실제로 남았는가"를 service 권한으로 확인합니다.
+  //  그 권한이 안 잡히면 멀쩡한 기능도 전부 실패로 나와 원인을 엉뚱한 데서
+  //  찾게 되므로, 시작 전에 한 번만 확인하고 넘어갑니다.
+  //  순서가 중요합니다. 스키마가 없으면 무엇을 물어도 404 라서,
+  //  "차단됐다"와 "테이블이 없다"를 구분하지 못합니다.
+  //  권한 → 스키마 → 차단 순으로 확인합니다.
+  section('0. 연결 · 권한 확인')
+  if (SERVICE) {
+    const d = await db('/profiles?select=id&limit=1')
+    ok(
+      d.status === 200,
+      d.status === 200
+        ? 'service 권한으로 DB 직접 확인 가능'
+        : `service 권한 확인 실패 (${d.status}) — SUPABASE_SERVICE_ROLE_KEY 를 확인하세요`,
+    )
+    if (d.status !== 200) {
+      console.log('\n  service 권한이 없으면 아래 검증은 모두 무의미합니다. 여기서 멈춥니다.\n')
+      return
+    }
+  } else {
+    ok(false, 'SUPABASE_SERVICE_ROLE_KEY 없음 — DB 실제 상태를 확인할 수 없습니다')
+    return
+  }
+  {
+    // 스키마가 적용되지 않은 상태에서 돌리면 전부 404 로 실패합니다.
+    const need = ['profiles', 'clients', 'schedules', 'materials', 'collection_events', 'audit_logs',
+                  'client_requests', 'office_stock', 'material_transactions']
+    const missing = []
+    for (const t of need) {
+      const r = await db(`/${t}?select=*&limit=1`)
+      if (r.status === 404) missing.push(t)
+    }
+    ok(missing.length === 0, missing.length ? `테이블 없음: ${missing.join(', ')} — migration 을 먼저 적용하세요` : '필수 테이블 존재')
+    if (missing.length) return
+  }
+  {
+    // 스키마가 있는 것을 확인한 뒤에야 "차단됐다"가 의미를 가집니다.
+    const probe = await fetch(`${URL_}/rest/v1/profiles?select=id&limit=1`, { headers: { apikey: ANON } })
+    ok(probe.status === 401 || probe.status === 403, `공개키만으로는 profiles 접근 차단 (${probe.status})`)
+  }
 
   section('1. 실제 Auth 로그인')
   for (const who of Object.keys(ACCOUNTS)) {
