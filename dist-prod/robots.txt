@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# TODO: 실제 도메인 연결 후 아래 Sitemap 주소를 실제 배포 도메인으로 수정할 것
+Sitemap: https://www.beonemirae.co.kr/sitemap.xml
