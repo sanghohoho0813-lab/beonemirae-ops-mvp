@@ -248,6 +248,7 @@ node supabase/test/05_live.mjs --cleanup
 | `09_rls_matrix.mjs` | 18개 테이블 × 4역할 × 4조작 전수 | 정책 목록에서 하나 빠진 것은 눈으로 안 보입니다 |
 | `10_integrity.mjs` | 동시 저장 · 값 검증 · 되돌리기 | 두 사람이 같은 순간에 누를 때가 사고 지점입니다 |
 | `11_auth_boundary.mjs` | 공개 가입 · 토큰 위조 · 로그아웃 | 로그인이 되는지가 아니라 **안 되어야 할 때 안 되는지** |
+| `12_settlement_edges.mjs` | 월 경계 · 규격 미상 · 단가 없음 | 월 마감 금액은 보통이 아닌 곳에서 틀립니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
@@ -269,6 +270,9 @@ node supabase/test/10_integrity.mjs
 
 # Auth 경계
 node supabase/test/11_auth_boundary.mjs
+
+# 정산 경계값
+node --experimental-strip-types supabase/test/12_settlement_edges.mjs
 
 # 위 전부를 한 번에 (05~09) + READY 판정
 bash supabase/test/run_all.sh

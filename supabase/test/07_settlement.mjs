@@ -342,11 +342,16 @@ async function main() {
   process.exit(fail === 0 ? 0 : 1)
 }
 
+/** 그 달의 마지막 날 — 11월에 -31 을 쓰면 PostgREST 가 오류를 냅니다 */
+const lastDay = (month) => {
+  const [y, m] = month.split('-').map(Number)
+  return `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+}
 async function loadData(clientId, month) {
   const [c, s, m] = await Promise.all([
     truth(`/clients?select=*&id=eq.${clientId}`),
-    truth(`/schedules?select=*&client_id=eq.${clientId}&date=gte.${month}-01&date=lte.${month}-31`),
-    truth(`/materials?select=*&client_id=eq.${clientId}&date=gte.${month}-01&date=lte.${month}-31`),
+    truth(`/schedules?select=*&client_id=eq.${clientId}&date=gte.${month}-01&date=lte.${lastDay(month)}`),
+    truth(`/materials?select=*&client_id=eq.${clientId}&date=gte.${month}-01&date=lte.${lastDay(month)}`),
   ])
   return {
     clients: (c.body || []).map(toClient),
