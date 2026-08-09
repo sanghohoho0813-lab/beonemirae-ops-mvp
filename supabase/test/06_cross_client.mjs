@@ -261,7 +261,20 @@ async function main() {
       '공유 전 내부 제안은 병원에 보이지 않음', `${peekLead.body?.length ?? '?'}건`)
   }
 
-  // (6) 막는 것만큼 중요한 것 — 본인이 원래 할 수 있어야 하는 일은 되는가
+  // (6) 0012 가 고정하는 나머지 값 — 이메일도 본인이 못 바꿉니다.
+  //     (이메일이 바뀌면 로그인 계정과 프로필이 어긋나고, 관리자 화면에서
+  //      누구인지 식별할 근거가 사라집니다)
+  await usr(t1, `/profiles?id=eq.${before.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ email: 'policy-probe@example.invalid' }),
+  })
+  const mailNow = (await svc(`/profiles?id=eq.${before.id}&select=email`)).body?.[0]
+  ok(mailNow?.email === EMAIL1, '본인 이메일 변경 차단', mailNow?.email)
+  if (mailNow?.email !== EMAIL1) {
+    await svc(`/profiles?id=eq.${before.id}`, { method: 'PATCH', body: JSON.stringify({ email: EMAIL1 }) })
+  }
+
+  // (7) 막는 것만큼 중요한 것 — 본인이 원래 할 수 있어야 하는 일은 되는가
   //
   //  0012 는 신원 값을 고정합니다. 그 김에 이름·글자크기까지 막아 버리면
   //  보안 수정이 기능을 깨는 셈입니다. 앱이 실제로 쓰는 경로(name, font_scale)를
