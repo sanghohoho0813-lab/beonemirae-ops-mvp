@@ -63,8 +63,8 @@ interface DataContextValue {
   removeSchedule: (id: string) => void
   completeSchedule: (id: string, actualAmount: number, memo?: string) => void
   // 수거 완료 통합 커맨드 (3단계) — 입력 한 번으로 일정/이력/자재/재고/요청/감사기록 연결
-  completeCollection: (input: CollectionCompletionInput) => CommandResult
-  revertCollection: (eventId: string) => CommandResult
+  completeCollection: (input: CollectionCompletionInput) => Promise<CommandResult>
+  revertCollection: (eventId: string) => Promise<CommandResult>
   // 시연 안정화 (3.5단계)
   resetDemo: () => void // 시연용 변경만 기준 상태로 복원
   startDemo: () => void // 기준 복원 + 새 시연 세션 시작
@@ -180,8 +180,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
    * 실패하면 화면 상태를 바꾸지 않고 오류만 노출해, 사용자가 입력한 내용이
    * 사라지지 않도록 합니다(재시도 가능).
    */
+  // 저장이 됐는지와 안 됐다면 왜인지를 함께 돌려줍니다.
+  // 부르는 쪽이 "저장됐다"고 화면에 쓰기 전에 이 결과를 봐야 합니다.
   const runLive = useCallback(
-    async (fn: () => Promise<void>): Promise<boolean> => {
+    async (fn: () => Promise<void>): Promise<{ ok: boolean; error: string | null }> => {
       setSaving(true)
       setSyncError(null)
       try {
@@ -189,11 +191,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setData(await repo.loadAppData())
         setLastSavedAt(new Date().toISOString())
         pending.current = null
-        return true
+        return { ok: true, error: null }
       } catch (e) {
-        setSyncError(friendlyError(e))
+        const message = friendlyError(e)
+        setSyncError(message)
         pending.current = fn
-        return false
+        return { ok: false, error: message }
       } finally {
         setSaving(false)
       }
@@ -454,18 +457,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── 수거 완료 통합 커맨드 (3단계) ───────────────────────────────────────
   // 검증→적용→저장을 한 번에 수행. 현재 커밋된 data 기준으로 계산(원자적)합니다.
   const completeCollection = useCallback(
-    (input: CollectionCompletionInput): CommandResult => {
+    async (input: CollectionCompletionInput): Promise<CommandResult> => {
       if (live) {
         // 실사용: 서버 함수(complete_collection)가 일정·이력·자재·재고·요청·감사기록을
-        // 한 트랜잭션에서 처리합니다. 여기서는 먼저 로컬 검증을 돌려 즉시 피드백을 주고,
+        // 한 트랜잭션에서 처리합니다. 먼저 로컬 검증으로 즉시 피드백을 주고,
         // 실제 반영은 서버가 다시 검증한 뒤 수행합니다(중복 완료·재고 초과는 서버가 최종 차단).
         const precheck = applyCollectionCompletion(data, { ...input, demoSessionId: null })
         if (!precheck.ok) return precheck
 
-        // 관련 병원 요청은 서버(complete_collection)가 같은 트랜잭션에서 직접 닫습니다.
-        void runLive(async () => {
+        // 서버 응답을 기다린 뒤에 성공을 돌려줍니다.
+        //
+        //  예전에는 여기서 바로 ok 를 돌려줬습니다. 지하 주차장처럼 통신이 끊기는
+        //  곳에서 저장을 누르면 "수거 완료가 반영되었습니다" 화면이 뜨고 입력값이
+        //  지워지는데, 실제로는 아무것도 저장되지 않았습니다. 기사는 저장된 줄
+        //  알고 떠나고 그 수거는 사라집니다. 현장에서 가장 위험한 종류입니다.
+        const saved = await runLive(async () => {
           await repo.completeCollection(input)
         })
+        if (!saved.ok) {
+          return {
+            ok: false,
+            errors: [saved.error ?? '저장하지 못했습니다. 통신 상태를 확인한 뒤 다시 시도해 주세요.'],
+            warnings: precheck.warnings,
+          }
+        }
         return { ok: true, errors: [], warnings: precheck.warnings }
       }
 
@@ -479,12 +494,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   const revertCollection = useCallback(
-    (eventId: string): CommandResult => {
+    async (eventId: string): Promise<CommandResult> => {
       if (live) {
         const e = data.events.find((x) => x.id === eventId)
         if (!e) return { ok: false, errors: ['취소할 입력을 찾을 수 없습니다.'], warnings: [] }
         if (e.reverted) return { ok: false, errors: ['이미 취소된 입력입니다.'], warnings: [] }
-        void runLive(async () => repo.revertCollection(eventId))
+        // 수거 완료와 같은 이유로 서버 결과를 기다립니다 —
+        // 되돌려지지 않았는데 "되돌렸습니다"라고 말하면 안 됩니다.
+        const done = await runLive(async () => repo.revertCollection(eventId))
+        if (!done.ok) {
+          return { ok: false, errors: [done.error ?? '되돌리지 못했습니다. 잠시 후 다시 시도해 주세요.'], warnings: [] }
+        }
         return { ok: true, errors: [], warnings: [] }
       }
       const result = rollbackCollectionCompletion(data, eventId)

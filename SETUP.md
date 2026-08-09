@@ -251,6 +251,7 @@ node supabase/test/05_live.mjs --cleanup
 | `12_settlement_edges.mjs` | 월 경계 · 규격 미상 · 단가 없음 | 월 마감 금액은 보통이 아닌 곳에서 틀립니다 |
 | `13_multisession_audit.mjs` | 동시 수정 · 감사기록 | 두 사람이 같은 거래처를 고칠 때 값이 조용히 사라지는지 |
 | `14_portal_flow.mjs` | 병원 요청 → 사무실 회신 → 병원 확인 | 이 한 바퀴가 끊기면 병원은 전화를 겁니다 |
+| `15_field_offline.mjs` | 현장 입력 · 통신 끊김 · 되돌리기 | 지하 주차장에서 저장을 누르는 순간이 가장 위험합니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
@@ -281,6 +282,9 @@ node supabase/test/13_multisession_audit.mjs
 
 # 병원 포털 실사용 흐름 (preview 필요)
 node supabase/test/14_portal_flow.mjs
+
+# 현장 흐름 · 통신 끊김 (preview 필요)
+node supabase/test/15_field_offline.mjs
 
 # 위 전부를 한 번에 (05~09) + READY 판정
 bash supabase/test/run_all.sh

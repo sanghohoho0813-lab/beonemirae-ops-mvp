@@ -83,11 +83,11 @@ export function TodaySchedule() {
     setQuick(null)
     setQuickResult(null)
   }
-  function submitQuick() {
+  async function submitQuick() {
     if (!quick) return
     const amt = Number(quickAmount) || quick.expectedAmount
     const vehicle = data.vehicles.find((v) => v.id === quick.vehicleId)
-    const result = completeCollection({
+    const result = await completeCollection({
       scheduleId: quick.id,
       clientId: quick.clientId,
       wasteType: quick.wasteType,

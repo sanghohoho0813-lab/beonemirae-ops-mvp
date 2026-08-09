@@ -208,8 +208,10 @@ export function CollectionInput() {
     }
   }
 
-  function submit() {
-    const result = completeCollection(buildInput())
+  async function submit() {
+    // 서버가 실제로 저장했는지 확인한 뒤에만 성공 화면으로 넘어갑니다.
+    // (통신이 끊긴 채로 성공 화면을 보여 주면 그 수거는 사라집니다)
+    const result = await completeCollection(buildInput())
     setWarnings(result.warnings)
     if (!result.ok) {
       setErrors(result.errors)
@@ -730,9 +732,9 @@ export function CollectionInput() {
             </button>
             <button
               className="btn-primary flex-1"
-              onClick={() => {
+              onClick={async () => {
                 if (confirmRevert) {
-                  const r = revertCollection(confirmRevert)
+                  const r = await revertCollection(confirmRevert)
                   if (!r.ok) setErrors(r.errors)
                 }
                 setConfirmRevert(null)
