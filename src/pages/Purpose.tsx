@@ -347,23 +347,28 @@ export function Purpose() {
 
       {/* ══ 최종 결론 ═══════════════════════════════════════════════════════
           이 화면에서 가장 중요한 한 덩어리라, 본문 카드와 확실히 다르게 둡니다.
-          밝은 배경 위의 짙은 카드 하나 — 광고 배너처럼 색을 늘어놓지 않고
-          위계만 올립니다. */}
-      <section id={SECTIONS[7].id} className="scroll-mt-4 overflow-hidden rounded-3xl bg-navy-950 shadow-xl">
-        <div className="flex items-start gap-3.5 border-b border-white/10 px-5 py-5 sm:px-7 sm:py-6">
+          처음에는 짙은 남색으로 깔았는데, 검은 덩어리가 오히려 눈을 밀어내서
+          글이 잘 안 읽혔습니다. 은은한 청록 바탕에 글자는 그대로 진하게 두고,
+          테두리로 경계를 세우는 쪽이 훨씬 잘 들어옵니다.
+          색은 바탕과 테두리에만 씁니다 — 광고 배너처럼 늘어놓지 않습니다. */}
+      <section
+        id={SECTIONS[7].id}
+        className="scroll-mt-4 overflow-hidden rounded-3xl bg-teal-50/70 shadow-lg ring-2 ring-teal-300"
+      >
+        <div className="flex items-start gap-3.5 border-b border-teal-200 bg-teal-100/70 px-5 py-5 sm:px-7 sm:py-6">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white">
             <Target size={24} strokeWidth={2.3} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="t-muted font-extrabold tracking-wide text-teal-300">
+            <p className="t-muted font-extrabold tracking-wide text-teal-700">
               {SECTIONS[7].n} · 사업 성장 — 이 이야기의 결론
             </p>
-            <h2 className="t-section mt-1 break-keep text-white">{SECTIONS[7].title}</h2>
+            <h2 className="t-section mt-1 break-keep text-navy-900">{SECTIONS[7].title}</h2>
           </div>
         </div>
 
         <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
-          <p className="t-body break-keep leading-relaxed text-navy-200">
+          <p className="t-body break-keep leading-relaxed text-navy-700">
             한 줄로 답하면, 프로그램을 도입해 일이 편해지는 것이 목적이 아닙니다. 의료폐기물을 수거하면서
             어차피 생기는 현장 데이터를 병원 운영지원 서비스와 추가 매출로 이어 붙이는 것이 목적입니다.
             그 과정이 아래 순서로 이어집니다.
@@ -376,16 +381,18 @@ export function Purpose() {
                 <span className="relative flex flex-col items-center">
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.85rem] font-black ${
-                      i === GROWTH.length - 1 ? 'bg-teal-400 text-navy-950' : 'bg-white/10 text-teal-300'
+                      i === GROWTH.length - 1
+                        ? 'bg-teal-500 text-white'
+                        : 'bg-white text-teal-700 ring-1 ring-teal-200'
                     }`}
                   >
                     {i + 1}
                   </span>
-                  {i < GROWTH.length - 1 && <span className="mt-1 w-px flex-1 bg-white/15" />}
+                  {i < GROWTH.length - 1 && <span className="mt-1 w-px flex-1 bg-teal-300" />}
                 </span>
                 <span className="min-w-0 flex-1 pb-1">
-                  <span className="t-body block break-keep font-extrabold text-white">{g.t}</span>
-                  <span className="t-muted mt-0.5 block break-keep leading-snug text-navy-300">{g.d}</span>
+                  <span className="t-body block break-keep font-extrabold text-navy-900">{g.t}</span>
+                  <span className="t-muted mt-0.5 block break-keep leading-snug text-navy-500">{g.d}</span>
                 </span>
               </li>
             ))}
@@ -398,23 +405,23 @@ export function Purpose() {
               { t: '고객서비스', d: '병원이 직접 요청하고 자기 운영정보를 확인합니다.' },
               { t: '사업성장', d: '거래처당 매출원이 수거료 하나에서 여럿으로 넓어집니다.' },
             ].map((x, i) => (
-              <div key={x.t} className="rounded-2xl bg-white/[0.06] p-4">
+              <div key={x.t} className="rounded-2xl bg-white p-4 ring-1 ring-teal-100">
                 <div className="flex items-center gap-2">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-[0.85rem] font-black text-white">
                     {i + 1}
                   </span>
-                  <p className="t-body font-extrabold text-white">{x.t}</p>
+                  <p className="t-body font-extrabold text-navy-900">{x.t}</p>
                 </div>
-                <p className="t-muted mt-1.5 break-keep leading-snug text-navy-300">{x.d}</p>
+                <p className="t-muted mt-1.5 break-keep leading-snug text-navy-500">{x.d}</p>
               </div>
             ))}
           </div>
 
-          <p className="t-body break-keep rounded-2xl border-l-4 border-teal-400 bg-white/[0.06] px-4 py-3.5 font-bold leading-relaxed text-white">
+          <p className="t-body break-keep rounded-2xl border-l-4 border-teal-500 bg-white px-4 py-3.5 font-bold leading-relaxed text-navy-900">
             의료폐기물 수거회사에서 끝나지 않고, 쌓인 데이터로 병원의 폐기물 업무를 함께 관리하는 운영지원
             회사로 넓히는 것 — 이것이 이 시스템을 만든 이유입니다.
           </p>
-          <p className="t-muted break-keep leading-snug text-navy-400">
+          <p className="t-muted break-keep leading-snug text-navy-500">
             아직 다 이룬 상태는 아닙니다. 지금은 이 구조를 실제로 돌려 보고, 줄어든 시간과 늘어난 매출을
             숫자로 남기는 단계입니다.
           </p>
