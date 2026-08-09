@@ -34,6 +34,7 @@ const ACTION_LABEL: Record<string, string> = {
   'profile.active': '계정 사용·중지',
   'request.handle': '병원 요청 처리',
   'proposal.share': '제안 공유',
+  'proposal.respond': '병원이 제안에 응답', // DB 함수(respond_to_proposal)가 남깁니다
   'lead.stage': '영업 진행상태 변경',
   'lead.revenue': '전환 매출 기록',
   'data.import': '데이터 가져오기',
