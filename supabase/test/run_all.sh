@@ -50,6 +50,9 @@ run "06 · 병원 간 격리 · 권한 상승 차단" \
 run "07 · 유상/무상 · 월 정산 · 거래명세서" \
   "$NODE" --experimental-strip-types "$HERE/07_settlement.mjs"
 
+run "09 · 역할 × 테이블 × 조작 전수" \
+  "$NODE" "$HERE/09_rls_matrix.mjs"
+
 if curl -sfo /dev/null --max-time 3 "$BASE"; then
   run "08 · 브라우저 종단 (PC 입력 → 모바일 조회)" \
     "$NODE" "$HERE/08_browser_live.mjs"

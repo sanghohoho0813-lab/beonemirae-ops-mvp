@@ -245,6 +245,7 @@ node supabase/test/05_live.mjs --cleanup
 | `06_cross_client.mjs` | 병원 A 가 병원 B 의 데이터를 못 보는가 | 병원이 하나뿐이면 교차 접근을 시험할 수 없습니다 |
 | `07_settlement.mjs` | 유상/무상 구분 · 월 정산 · 거래명세서 | 한 번 입력한 것이 재입력 없이 정산까지 가는지 |
 | `08_browser_live.mjs` | 브라우저에서 PC 입력 → 모바일 조회 | API 가 아니라 사람이 쓰는 경로 |
+| `09_rls_matrix.mjs` | 18개 테이블 × 4역할 × 4조작 전수 | 정책 목록에서 하나 빠진 것은 눈으로 안 보입니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
@@ -257,7 +258,20 @@ node --experimental-strip-types supabase/test/07_settlement.mjs
 # 브라우저 종단 검증 — 미리 빌드하고 preview 를 띄워 둡니다
 npm run build && npx vite preview --port 4173 &
 node supabase/test/08_browser_live.mjs
+
+# 역할별 권한 전수 점검
+node supabase/test/09_rls_matrix.mjs
+
+# 위 전부를 한 번에 (05~09) + READY 판정
+bash supabase/test/run_all.sh
 ```
+
+`09` 는 18개 테이블 각각에 대해 네 역할이 읽기·넣기·수정·지우기를 실제로
+시도하고, migration 을 읽어 옮긴 의도 표와 대조합니다. 판정은 응답 코드가
+아니라 **DB 에 실제로 무엇이 남았는지**로 합니다 — SELECT 는 RLS 에 걸려도
+200 + 빈 배열이고, 수정은 0건이어도 204 라서 응답만 보면 없는 안전을 있다고
+착각하게 됩니다. 넣고 지우는 시도는 이 검사가 만든 임시 행에만 하고, 끝나면
+계정 정보가 시작 때와 같은지 대조해 다르면 되돌립니다.
 
 `07` 은 화면이 쓰는 계산 함수(`src/lib/billing.ts`)를 그대로 불러 씁니다.
 검증용으로 바꾼 단가·결제조건은 끝나기 전에 원래 값으로 되돌립니다.
