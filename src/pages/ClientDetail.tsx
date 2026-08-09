@@ -91,11 +91,20 @@ export function ClientDetail() {
   const client = clientById(id)
 
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState<Omit<Client, 'id'>>(() => {
-    if (!client) return {} as Omit<Client, 'id'>
+  // 이 초기값은 첫 렌더에서 한 번만 계산됩니다. 서버에서 데이터를 받아오는
+  // 실사용에서는 그 시점에 client 가 아직 없어 빈 폼으로 굳었습니다.
+  // (브라우저 저장으로 도는 시연 모드에서는 첫 렌더에 이미 데이터가 있어
+  //  드러나지 않던 문제입니다)
+  // 그래서 폼은 '수정'을 누른 그 순간의 값으로 채웁니다 — 편집 중에 다른
+  // 기기의 갱신이 들어와도 입력하던 내용이 밀리지 않는다는 이점도 있습니다.
+  const [form, setForm] = useState<Omit<Client, 'id'>>({} as Omit<Client, 'id'>)
+
+  function openEdit() {
+    if (!client) return
     const { id: _id, ...rest } = client
-    return rest
-  })
+    setForm(rest)
+    setEditing(true)
+  }
   const [logOpen, setLogOpen] = useState(false)
   const [tab, setTab] = useState<TabId>('ops')
   const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
@@ -129,7 +138,9 @@ export function ClientDetail() {
   const report = clientMonthlyReport(data, client)
 
   function saveEdit() {
-    if (!form.name.trim()) return
+    // 폼이 비어 있으면 저장하지 않습니다. 예전에는 여기서 form.name 이
+    // undefined 라 .trim() 이 터지면서 화면이 통째로 날아갔습니다.
+    if (!form.name?.trim()) return
     updateClient(id, form)
     setEditing(false)
   }
@@ -186,7 +197,7 @@ export function ClientDetail() {
           </button>
         </div>
         <div className="mt-2 flex items-center justify-end gap-3">
-          <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={() => setEditing(true)}>
+          <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
             <Pencil size={14} /> 수정
           </button>
           <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
