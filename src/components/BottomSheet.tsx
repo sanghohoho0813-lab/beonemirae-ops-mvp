@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, useDragControls } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type ReactNode, useRef } from 'react'
 import { useHistoryDismiss } from '../lib/useHistoryDismiss'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,9 +19,22 @@ interface BottomSheetProps {
 
 export function BottomSheet({ open, title, onClose, children }: BottomSheetProps) {
   const dragControls = useDragControls()
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   // 뒤로 가기와 연동 (열릴 때 history push, 뒤로 가기 시 닫기)
   useHistoryDismiss(open, onClose)
+
+  // ESC 로도 닫습니다. 닫는 방법이 ✕·배경 탭·스와이프뿐이면
+  // 시트가 열린 줄 모르고 다른 곳을 누르다 막히는 일이 생깁니다.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   // 열려 있을 때 배경 스크롤 잠금
   useEffect(() => {
@@ -82,7 +95,9 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
               )}
             </div>
             {/* 스크롤 영역 */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2">
+            {/* 하단 탭바는 시트 위에 떠 있습니다(앱의 기본 이동 수단이라 항상 눌려야 합니다).
+                그만큼 아래에 자리를 비워 두지 않으면 마지막 항목이 탭바에 가립니다. */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(4.9rem+env(safe-area-inset-bottom))] pt-2">
               {children}
             </div>
           </motion.div>

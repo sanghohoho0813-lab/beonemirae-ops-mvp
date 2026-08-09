@@ -431,7 +431,25 @@ function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon:
   )
 }
 
-function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
+/**
+ * 하단 탭바.
+ *
+ * z-index 를 바텀시트(z-50)보다 높게 둡니다. 전에는 시트가 탭바를 덮고 있어서,
+ * 「더보기」를 연 상태로 「오늘」 탭을 누르면 그 자리에 있던 시트 카드가 눌렸습니다.
+ * 화면이 엉뚱한 곳으로 가거나(배경을 누르면) 시트만 닫히고 제자리에 남았습니다 —
+ * "메뉴를 눌렀는데 대시보드에 그대로 있다"고 보이던 증상이 이것이었습니다.
+ *
+ * 탭바는 앱의 기본 이동 수단이라 무엇이 떠 있든 항상 눌려야 합니다.
+ */
+function BottomNav({
+  onMore,
+  moreOpen,
+  onCloseSheets,
+}: {
+  onMore: () => void
+  moreOpen: boolean
+  onCloseSheets: () => void
+}) {
   const { role } = useAuth()
   const bottomNav = useVisibleNav(role === 'field' ? BOTTOM_NAV_FIELD : BOTTOM_NAV_STAFF)
   const { pathname } = useLocation()
@@ -440,14 +458,23 @@ function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 flex bg-white/95 shadow-nav backdrop-blur-lg lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-[55] flex bg-white/95 shadow-nav backdrop-blur-lg lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex w-full max-w-2xl">
         {bottomNav.map((item) => {
           const active = !moreActive && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to))
           return (
-            <NavTab key={item.to} active={active} icon={item.icon} label={item.label} onClick={() => navigate(item.to)} />
+            <NavTab
+              key={item.to}
+              active={active}
+              icon={item.icon}
+              label={item.label}
+              onClick={() => {
+                onCloseSheets()
+                navigate(item.to)
+              }}
+            />
           )
         })}
         <NavTab active={moreActive} icon={MoreHorizontal} label="더보기" onClick={onMore} />
@@ -496,7 +523,14 @@ export function Layout() {
       </div>
 
       {/* 모바일 하단 탭 + 더보기 바텀시트 */}
-      <BottomNav onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      <BottomNav
+        onMore={() => setMoreOpen(true)}
+        moreOpen={moreOpen}
+        onCloseSheets={() => {
+          setMoreOpen(false)
+          setHelpOpen(false)
+        }}
+      />
       <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
         <MoreMenu
           variant="mobile"

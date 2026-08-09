@@ -45,7 +45,12 @@ export function SectionTitle({
     <div className={`px-1 ${hint ? 'mb-3.5' : 'mb-3'}`}>
       {/* 좁은 폭에서 제목이 뭉개지지 않도록, 자리가 부족하면 액션이 아래 줄로 내려갑니다. */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-        <h2 className={`min-w-0 flex-1 text-navy-800 ${size === 'sub' ? 't-card' : 't-section'}`}>{children}</h2>
+        {/* min-w-0 만 두면 제목이 0 까지 줄어듭니다. 옆 배지가 넓은 화면(폰)에서
+            「B. 자동화」가 폭 17px 로 눌려 한 글자씩 세로로 떨어졌습니다.
+            최소 폭을 주면 대신 배지가 아랫줄로 내려갑니다 — 그게 맞는 동작입니다. */}
+        <h2 className={`min-w-[7.5rem] flex-1 break-keep text-navy-800 ${size === 'sub' ? 't-card' : 't-section'}`}>
+          {children}
+        </h2>
         {action && <div className="shrink-0">{action}</div>}
       </div>
       {hint && <p className="t-muted mt-1.5 break-keep leading-snug">{hint}</p>}
@@ -268,7 +273,7 @@ export function MetricCard({
           : ''
       }`}
     >
-      <span className={`order-2 mt-2 break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
+      <span className={`order-2 mt-2 hyphens-none break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-300">{unit}</span>}

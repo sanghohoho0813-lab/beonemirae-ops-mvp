@@ -81,6 +81,24 @@ const AFTER = ['현장 1회 입력', '관련 업무 자동연결', '거래처별
 /** 6절 — 기대하는 변화. 숫자는 재고 나서 적습니다 */
 const EFFECTS = ['반복입력 감소', '누락 · 재확인 감소', '거래처 기록 누적', '월말 정산시간 감소', '담당자 간 정보공유 개선']
 
+/**
+ * 8절 — 업무 효율화에서 사업 고도화까지 이어지는 사슬.
+ *
+ * 이 화면의 결론입니다. "프로그램을 넣어서 일이 편해진다"에서 끝나면
+ * 이 프로젝트를 할 이유가 절반밖에 설명되지 않습니다. 현장에서 얻는 데이터가
+ * 새로운 서비스와 매출로 이어지는 데까지 한 줄로 보이게 둡니다.
+ */
+const GROWTH: { t: string; d: string }[] = [
+  { t: '업무 효율화', d: '현장에서 한 번 입력하면 사무실이 다시 옮겨 적지 않습니다.' },
+  { t: '반복 입력 · 누락 감소', d: '같은 숫자를 여러 번 적지 않으니 어긋나거나 빠질 자리가 줄어듭니다.' },
+  { t: '거래처별 운영 데이터 축적', d: '수거량 · 자재 사용량 · 요청 · 계약이 병원마다 쌓입니다.' },
+  { t: '수익성과 이용 패턴 파악', d: '어느 거래처가 얼마나 남고, 무엇을 얼마나 자주 쓰는지 보입니다.' },
+  { t: '필요한 서비스를 체계적으로 제공', d: '추가 수거 · 소모품 · 교육 · 운영지원을 짐작이 아니라 기록을 보고 제안합니다.' },
+  { t: '수거료 외 추가 매출원 확대', d: '거래처를 새로 늘리지 않아도 거래처당 매출이 넓어집니다.' },
+  { t: '운영성과 · 사업전환 실적 축적', d: '줄어든 시간과 늘어난 매출이 주장이 아니라 기록으로 남습니다.' },
+  { t: '외부자금을 활용한 추가 고도화', d: '그 실적을 근거로 정책자금 · 보증 등을 사업을 더 키우는 데 씁니다.' },
+]
+
 /** 10절 — 지금부터의 순서 */
 const ROADMAP = [
   '실제 비원미래 Supabase 데이터베이스 연결',
@@ -211,10 +229,19 @@ export function Purpose() {
           2026년 스마트서비스 지원사업처럼 AX · DX 를 기반으로 한 서비스 혁신과 사업 고도화를 돕는 사업들도
           이런 방향에 있습니다.
         </P>
+        <P>
+          비원미래도 같은 숙제를 안고 있습니다. 전화 · 메신저 · 엑셀 중심으로 돌아가던 영업현장의 업무를
+          정리해야 하고, 그동안 쌓여 온 거래처 데이터를 새로운 서비스와 매출로 이어야 합니다.
+        </P>
         <Key>
-          정부가 밀어 주니까 시작한 일이 아닙니다. 비원미래가 실제로 필요로 하던 사업 고도화 방향과 정책이
-          보는 방향이 서로 맞아 가고 있다는 뜻입니다.
+          그래서 이 프로젝트는 두 가지를 함께 노립니다. 회사의 실제 사업 고도화, 그리고 지금 정책지원이
+          중점적으로 보는 AX · 사업전환 방향입니다. 이 둘을 같이 가져가면 1억원 이상의 정책자금이나 보증부
+          자금 조달까지 연결할 수 있는 기반이 만들어집니다.
         </Key>
+        <Note>
+          물론 프로그램을 갖췄다고 자금이 나오는 것은 아닙니다. 실제로 쓰고, 달라진 것을 숫자로 보여 줄 수
+          있어야 심사에서 근거가 됩니다. 그 근거를 만드는 것이 이 프로젝트의 목적입니다.
+        </Note>
         <Note>
           구체적인 사업명 · 지원조건 · 신청시기는 해마다 바뀝니다. 실제로 신청할 때는 그 해 공고를 다시
           확인해야 합니다.
@@ -318,38 +345,81 @@ export function Purpose() {
         <Key>수거료만 받는 구조에서, 기존 거래처에 여러 서비스를 함께 제공하는 구조로 넓히는 것입니다.</Key>
       </Section>
 
-      <Section s={SECTIONS[7]}>
-        <div className="space-y-3">
-          {[
-            {
-              t: '회사 운영',
-              d: '반복업무를 줄이고, 현장과 사무실의 일을 하나의 데이터로 잇습니다.',
-            },
-            {
-              t: '고객서비스',
-              d: '병원이 필요한 요청을 더 쉽게 보내고, 자기 운영정보를 직접 확인할 수 있게 합니다.',
-            },
-            {
-              t: '사업성장',
-              d: '기존 고객 데이터를 근거로 추가수거 · 소모품 · 교육 · 운영지원 같은 새로운 매출원을 만듭니다.',
-            },
-          ].map((x, i) => (
-            <div key={x.t} className="rounded-2xl border border-navy-100 p-4">
-              <div className="flex items-center gap-2">
-                <span className="t-label flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-white">
-                  {i + 1}
-                </span>
-                <p className="t-card text-navy-900">{x.t}</p>
-              </div>
-              <p className="t-body mt-1.5 break-keep leading-relaxed text-navy-600">{x.d}</p>
-            </div>
-          ))}
+      {/* ══ 최종 결론 ═══════════════════════════════════════════════════════
+          이 화면에서 가장 중요한 한 덩어리라, 본문 카드와 확실히 다르게 둡니다.
+          밝은 배경 위의 짙은 카드 하나 — 광고 배너처럼 색을 늘어놓지 않고
+          위계만 올립니다. */}
+      <section id={SECTIONS[7].id} className="scroll-mt-4 overflow-hidden rounded-3xl bg-navy-950 shadow-xl">
+        <div className="flex items-start gap-3.5 border-b border-white/10 px-5 py-5 sm:px-7 sm:py-6">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white">
+            <Target size={24} strokeWidth={2.3} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="t-muted font-extrabold tracking-wide text-teal-300">
+              {SECTIONS[7].n} · 사업 성장 — 이 이야기의 결론
+            </p>
+            <h2 className="t-section mt-1 break-keep text-white">{SECTIONS[7].title}</h2>
+          </div>
         </div>
-        <Key>
-          의료폐기물 수거회사에서 끝나지 않고, 데이터를 활용해 병원의 폐기물 업무를 함께 관리하는 운영지원
-          회사로 발전하는 기반을 만드는 것입니다.
-        </Key>
-      </Section>
+
+        <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+          <p className="t-body break-keep leading-relaxed text-navy-200">
+            한 줄로 답하면, 프로그램을 도입해 일이 편해지는 것이 목적이 아닙니다. 의료폐기물을 수거하면서
+            어차피 생기는 현장 데이터를 병원 운영지원 서비스와 추가 매출로 이어 붙이는 것이 목적입니다.
+            그 과정이 아래 순서로 이어집니다.
+          </p>
+
+          {/* 여덟 단계 — 세로로 이어지는 한 줄기 */}
+          <ol className="relative space-y-3 pl-1">
+            {GROWTH.map((g, i) => (
+              <li key={g.t} className="relative flex gap-3.5">
+                <span className="relative flex flex-col items-center">
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.85rem] font-black ${
+                      i === GROWTH.length - 1 ? 'bg-teal-400 text-navy-950' : 'bg-white/10 text-teal-300'
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  {i < GROWTH.length - 1 && <span className="mt-1 w-px flex-1 bg-white/15" />}
+                </span>
+                <span className="min-w-0 flex-1 pb-1">
+                  <span className="t-body block break-keep font-extrabold text-white">{g.t}</span>
+                  <span className="t-muted mt-0.5 block break-keep leading-snug text-navy-300">{g.d}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          {/* 세 갈래로 정리 */}
+          <div className="grid gap-2.5 sm:grid-cols-3">
+            {[
+              { t: '회사 운영', d: '현장과 사무실의 일이 하나의 데이터로 이어집니다.' },
+              { t: '고객서비스', d: '병원이 직접 요청하고 자기 운영정보를 확인합니다.' },
+              { t: '사업성장', d: '거래처당 매출원이 수거료 하나에서 여럿으로 넓어집니다.' },
+            ].map((x, i) => (
+              <div key={x.t} className="rounded-2xl bg-white/[0.06] p-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-[0.85rem] font-black text-white">
+                    {i + 1}
+                  </span>
+                  <p className="t-body font-extrabold text-white">{x.t}</p>
+                </div>
+                <p className="t-muted mt-1.5 break-keep leading-snug text-navy-300">{x.d}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="t-body break-keep rounded-2xl border-l-4 border-teal-400 bg-white/[0.06] px-4 py-3.5 font-bold leading-relaxed text-white">
+            의료폐기물 수거회사에서 끝나지 않고, 쌓인 데이터로 병원의 폐기물 업무를 함께 관리하는 운영지원
+            회사로 넓히는 것 — 이것이 이 시스템을 만든 이유입니다.
+          </p>
+          <p className="t-muted break-keep leading-snug text-navy-400">
+            아직 다 이룬 상태는 아닙니다. 지금은 이 구조를 실제로 돌려 보고, 줄어든 시간과 늘어난 매출을
+            숫자로 남기는 단계입니다.
+          </p>
+        </div>
+      </section>
 
       <Section s={SECTIONS[8]}>
         <P>

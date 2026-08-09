@@ -59,7 +59,9 @@ export function Statistics() {
       {/* 월별 수거량 요약 */}
       <section className="mb-5">
         <h2 className="mb-2 text-[1.08rem] font-semibold text-navy-500">이번 달 수거량</h2>
-        <div className="grid grid-cols-3 gap-3">
+        {/* 폰에서 세 칸으로 나누면 칸 폭이 105px 남짓이라 「총 수거량」이 한 글자씩
+            세로로 떨어졌습니다. 글자를 줄이는 대신 좁은 화면에서는 두 칸으로 둡니다. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" />
           <MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" />
           <MetricCard label="총 수거량" value={weight(total)} tone="navy" hint="월평균 목표 105톤" />
