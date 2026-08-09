@@ -246,6 +246,7 @@ node supabase/test/05_live.mjs --cleanup
 | `07_settlement.mjs` | 유상/무상 구분 · 월 정산 · 거래명세서 | 한 번 입력한 것이 재입력 없이 정산까지 가는지 |
 | `08_browser_live.mjs` | 브라우저에서 PC 입력 → 모바일 조회 | API 가 아니라 사람이 쓰는 경로 |
 | `09_rls_matrix.mjs` | 18개 테이블 × 4역할 × 4조작 전수 | 정책 목록에서 하나 빠진 것은 눈으로 안 보입니다 |
+| `10_integrity.mjs` | 동시 저장 · 값 검증 · 되돌리기 | 두 사람이 같은 순간에 누를 때가 사고 지점입니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
@@ -261,6 +262,9 @@ node supabase/test/08_browser_live.mjs
 
 # 역할별 권한 전수 점검
 node supabase/test/09_rls_matrix.mjs
+
+# 동시 저장 · 무결성
+node supabase/test/10_integrity.mjs
 
 # 위 전부를 한 번에 (05~09) + READY 판정
 bash supabase/test/run_all.sh

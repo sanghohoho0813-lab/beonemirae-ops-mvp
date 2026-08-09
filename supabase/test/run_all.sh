@@ -53,6 +53,9 @@ run "07 · 유상/무상 · 월 정산 · 거래명세서" \
 run "09 · 역할 × 테이블 × 조작 전수" \
   "$NODE" "$HERE/09_rls_matrix.mjs"
 
+run "10 · 동시 저장 · 무결성" \
+  "$NODE" "$HERE/10_integrity.mjs"
+
 if curl -sfo /dev/null --max-time 3 "$BASE"; then
   run "08 · 브라우저 종단 (PC 입력 → 모바일 조회)" \
     "$NODE" "$HERE/08_browser_live.mjs"
