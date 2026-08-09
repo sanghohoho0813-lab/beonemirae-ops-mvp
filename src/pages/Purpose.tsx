@@ -130,6 +130,16 @@ function Section({ s, children }: { s: Sec; children: React.ReactNode }) {
   )
 }
 
+/**
+ * 핵심 낱말 강조.
+ *
+ * 문장 전체를 굵게 하면 결국 아무것도 강조되지 않습니다. 스크롤하면서
+ * 굵은 부분만 훑어도 사업 방향이 대략 읽히도록, 한 문단에 한두 군데만 씁니다.
+ */
+const B = ({ children }: { children: React.ReactNode }) => (
+  <strong className="font-extrabold text-navy-900">{children}</strong>
+)
+
 const P = ({ children }: { children: React.ReactNode }) => (
   <p className="t-body break-keep leading-relaxed text-navy-600">{children}</p>
 )
@@ -192,17 +202,17 @@ export function Purpose() {
           가까웠습니다. 하는 일은 그대로인데 도구만 바뀐 셈입니다.
         </P>
         <P>
-          최근에는 여기서 한 걸음 더 나갑니다. 회사가 이미 가지고 있는 데이터를 이용해 반복업무를 줄이고,
-          필요한 정보를 자동으로 이어 주고, 직원이 판단할 때 근거를 먼저 보여 주고, 나아가 고객에게 새로운
-          서비스를 제공하는 쪽으로 옮겨 가고 있습니다.
+          최근에는 여기서 한 걸음 더 나갑니다. 회사가 이미 가지고 있는 데이터를 이용해 <B>반복업무를 줄이고</B>,
+          필요한 정보를 <B>자동으로 이어 주고</B>, 직원이 판단할 때 근거를 먼저 보여 주고, 나아가 고객에게
+          <B>새로운 서비스</B>를 제공하는 쪽으로 옮겨 가고 있습니다.
         </P>
         <P>이렇게 일하는 방식 자체를 바꾸는 변화를 요즘 AX 라고 부릅니다.</P>
       </Section>
 
       <Section s={SECTIONS[1]}>
         <P>
-          AX 는 AI Transformation 의 줄임말이고, 우리말로는 인공지능 전환이라고 합니다. 중소벤처기업부에서도
-          이 표현을 씁니다.
+          AX 는 <B>AI Transformation</B> 의 줄임말이고, 우리말로는 <B>인공지능 전환</B>이라고 합니다.
+          중소벤처기업부에서도 이 표현을 씁니다.
         </P>
         <P>
           다만 챗봇을 하나 붙이거나 AI 기능 하나를 얹는 것을 AX 라고 하지는 않습니다. 그건 기능 추가에
@@ -214,16 +224,16 @@ export function Purpose() {
           연락했습니다. 같은 내용을 여러 번 다루는 구조입니다.
         </P>
         <P>
-          AX 가 적용된 구조에서는 한 번 입력된 데이터가 다음 업무로 이어서 쓰이고, 챙겨야 할 일이나 이상한
-          점은 시스템이 먼저 보여 줍니다. 사람이 기억하고 옮겨 적는 자리를 줄이는 것입니다.
+          AX 가 적용된 구조에서는 <B>한 번 입력된 데이터가 다음 업무로 이어서</B> 쓰이고, 챙겨야 할 일이나
+          이상한 점은 시스템이 먼저 보여 줍니다. 사람이 기억하고 옮겨 적는 자리를 줄이는 것입니다.
         </P>
       </Section>
 
       <Section s={SECTIONS[2]}>
         <P>
           정부와 정책기관에서도 중소기업의 AI · 디지털 기술 활용을 지원하는 흐름이 넓어지고 있습니다. 단순히
-          전산화를 지원하는 것이 아니라, 그 기술로 생산성이 올라갔는지와 새로운 사업 · 서비스가 생겼는지를
-          함께 봅니다.
+          전산화를 지원하는 것이 아니라, 그 기술로 <B>생산성이 올라갔는지</B>와 <B>새로운 사업 · 서비스</B>가
+          생겼는지를 함께 봅니다.
         </P>
         <P>
           2026년 스마트서비스 지원사업처럼 AX · DX 를 기반으로 한 서비스 혁신과 사업 고도화를 돕는 사업들도
@@ -254,9 +264,9 @@ export function Purpose() {
           용기와 자재를 공급하고, 거래처를 관리하고, 월말에 정산해서 거래명세서를 만듭니다.
         </P>
         <P>
-          그런데 이 정보가 전화 · 메신저 · 종이 · 엑셀 · 담당자별 파일로 나뉘어 있으면, 한 번 생긴 정보를
-          여러 번 다시 적게 됩니다. 옮겨 적는 시간도 시간이지만, 옮기는 사이에 빠지거나 어긋날 여지가
-          생깁니다.
+          그런데 이 정보가 <B>전화 · 메신저 · 종이 · 엑셀</B> · 담당자별 파일로 나뉘어 있으면, 한 번 생긴
+          정보를 <B>여러 번 다시 적게</B> 됩니다. 옮겨 적는 시간도 시간이지만, 옮기는 사이에 빠지거나 어긋날
+          여지가 생깁니다.
         </P>
         <P>
           더 아쉬운 것은 그 다음입니다. 거래처별 수거량, 자재 사용량, 요청 이력, 매출이 분명히 쌓이고 있는데도
@@ -278,8 +288,8 @@ export function Purpose() {
           ))}
         </ol>
         <P>
-          실제로는 이렇습니다. 현장에서 의료폐기물 수거량과 20L 용기 30개 공급을 입력하면, 그 숫자가 수거이력,
-          거래처 기록, 자재 사용량, 월 정산으로 이어서 쓰입니다.
+          실제로는 이렇습니다. 현장에서 의료폐기물 수거량과 <B>20L 용기 30개</B> 공급을 입력하면, 그 숫자가
+          <B>수거이력 · 거래처 기록 · 자재 사용량 · 월 정산</B>으로 이어서 쓰입니다.
         </P>
         <P>목표는 단순합니다. 같은 숫자를 여러 번 다시 입력하지 않는 것입니다.</P>
       </Section>
@@ -309,7 +319,10 @@ export function Purpose() {
             </ul>
           </div>
         </div>
-        <P>월말에 하는 일이 「다시 입력하기」에서 「확인하고 마감하기」로 바뀌는 것이 가장 큰 차이입니다.</P>
+        <P>
+          월말에 하는 일이 「다시 입력하기」에서 <B>「확인하고 마감하기」</B>로 바뀌는 것이 가장 큰
+          차이입니다.
+        </P>
         <p className="t-label text-navy-500">기대하는 변화</p>
         <ul className="flex flex-wrap gap-1.5">
           {EFFECTS.map((t) => (
@@ -330,8 +343,8 @@ export function Purpose() {
           있습니다.
         </P>
         <P>
-          거래처 데이터가 쌓이면 병원마다 수거량이 어떻게 변하는지, 자재를 얼마나 쓰는지, 어떤 요청을 자주
-          하는지, 계약이 어떻게 되어 있는지가 보입니다.
+          <B>거래처별 데이터가 쌓이면</B> 병원마다 수거량이 어떻게 변하는지, 자재를 얼마나 쓰는지, 어떤
+          요청을 자주 하는지, 계약이 어떻게 되어 있는지가 보입니다.
         </P>
         <P>그러면 그 병원에 지금 필요한 것이 무엇인지 먼저 알 수 있습니다. 예를 들면 이런 것들입니다.</P>
         <ul className="grid gap-1.5 sm:grid-cols-2">
@@ -355,23 +368,27 @@ export function Purpose() {
         id={SECTIONS[7].id}
         className="scroll-mt-4 overflow-hidden rounded-3xl bg-teal-50/70 shadow-lg ring-2 ring-teal-300"
       >
-        <div className="flex items-start gap-3.5 border-b border-teal-200 bg-teal-100/70 px-5 py-5 sm:px-7 sm:py-6">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-white">
-            <Target size={24} strokeWidth={2.3} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="t-muted font-extrabold tracking-wide text-teal-700">
+        {/* 머리글 — 위는 작은 라벨, 아래는 이 페이지의 핵심 질문.
+            글자만 키우지 않고 여백·굵기·색 대비로 차이를 냅니다. */}
+        <div className="border-b border-teal-200 bg-teal-100/70 px-5 py-6 sm:px-7 sm:py-7">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
+              <Target size={19} strokeWidth={2.5} />
+            </span>
+            <p className="t-muted min-w-0 font-extrabold tracking-wide text-teal-700">
               {SECTIONS[7].n} · 사업 성장 — 이 이야기의 결론
             </p>
-            <h2 className="t-section mt-1 break-keep text-navy-900">{SECTIONS[7].title}</h2>
           </div>
+          <h2 className="t-page mt-3 break-keep leading-tight text-navy-900 sm:text-[2.1rem]">
+            {SECTIONS[7].title}
+          </h2>
         </div>
 
         <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
           <p className="t-body break-keep leading-relaxed text-navy-700">
             한 줄로 답하면, 프로그램을 도입해 일이 편해지는 것이 목적이 아닙니다. 의료폐기물을 수거하면서
-            어차피 생기는 현장 데이터를 병원 운영지원 서비스와 추가 매출로 이어 붙이는 것이 목적입니다.
-            그 과정이 아래 순서로 이어집니다.
+            어차피 생기는 <B>현장 데이터</B>를 <B>병원 운영지원</B> 서비스와 <B>추가 매출</B>로 이어 붙이는
+            것이 목적입니다. 그 과정이 아래 순서로 이어집니다.
           </p>
 
           {/* 여덟 단계 — 세로로 이어지는 한 줄기 */}
@@ -401,9 +418,32 @@ export function Purpose() {
           {/* 세 갈래로 정리 */}
           <div className="grid gap-2.5 sm:grid-cols-3">
             {[
-              { t: '회사 운영', d: '현장과 사무실의 일이 하나의 데이터로 이어집니다.' },
-              { t: '고객서비스', d: '병원이 직접 요청하고 자기 운영정보를 확인합니다.' },
-              { t: '사업성장', d: '거래처당 매출원이 수거료 하나에서 여럿으로 넓어집니다.' },
+              {
+                t: '업무 효율',
+                d: (
+                  <>
+                    <B>반복입력</B>과 <B>누락</B>을 줄이고, 현장과 사무실 업무를 하나로 잇습니다.
+                  </>
+                ),
+              },
+              {
+                t: '매출 확대',
+                d: (
+                  <>
+                    수거료뿐 아니라 <B>소모품</B> · <B>추가 수거</B> · <B>교육</B> · <B>운영지원</B>까지,
+                    거래처당 매출원이 넓어집니다.
+                  </>
+                ),
+              },
+              {
+                t: '사업 고도화 근거',
+                d: (
+                  <>
+                    <B>실제 운영성과</B>와 매출 데이터를 쌓아 <B>정책자금 · 보증</B>과 사업확장의 근거로
+                    씁니다.
+                  </>
+                ),
+              },
             ].map((x, i) => (
               <div key={x.t} className="rounded-2xl bg-white p-4 ring-1 ring-teal-100">
                 <div className="flex items-center gap-2">
@@ -412,14 +452,14 @@ export function Purpose() {
                   </span>
                   <p className="t-body font-extrabold text-navy-900">{x.t}</p>
                 </div>
-                <p className="t-muted mt-1.5 break-keep leading-snug text-navy-500">{x.d}</p>
+                <p className="t-muted mt-1.5 break-keep leading-snug text-navy-600">{x.d}</p>
               </div>
             ))}
           </div>
 
           <p className="t-body break-keep rounded-2xl border-l-4 border-teal-500 bg-white px-4 py-3.5 font-bold leading-relaxed text-navy-900">
-            의료폐기물 수거회사에서 끝나지 않고, 쌓인 데이터로 병원의 폐기물 업무를 함께 관리하는 운영지원
-            회사로 넓히는 것 — 이것이 이 시스템을 만든 이유입니다.
+            의료폐기물 수거회사에서 끝나지 않고, 쌓인 데이터로 병원의 폐기물 업무를 함께 관리하는{' '}
+            <B>운영지원 회사</B>로 넓히는 것 — 이것이 이 시스템을 만든 이유입니다.
           </p>
           <p className="t-muted break-keep leading-snug text-navy-500">
             아직 다 이룬 상태는 아닙니다. 지금은 이 구조를 실제로 돌려 보고, 줄어든 시간과 늘어난 매출을
@@ -434,12 +474,12 @@ export function Purpose() {
           있습니다. 다만 순서가 중요합니다.
         </P>
         <P>
-          정책자금을 받으려고 프로그램을 만드는 것이 아닙니다. 회사가 실제로 생산성을 높이고, 데이터를
-          쌓고, 새로운 고객서비스를 만들고, 추가 매출원을 확보하는 과정을 먼저 만듭니다.
+          정책자금을 받으려고 프로그램을 만드는 것이 아닙니다. 회사가 실제로 <B>생산성을 높이고</B>,
+          데이터를 쌓고, 새로운 고객서비스를 만들고, <B>추가 매출원</B>을 확보하는 과정을 먼저 만듭니다.
         </P>
         <P>
-          그 다음에 실제로 달라진 것과 그 근거를 가지고 정책자금과 보증을 활용해 사업을 더 크게 키우는
-          것입니다.
+          그 다음에 <B>실제 운영성과</B>와 그 근거를 가지고 <B>정책자금 · 보증</B>을 활용해 사업을 더 크게
+          키우는 것입니다.
         </P>
         <Key>
           자금을 먼저 받아 사업을 만드는 구조가 아니라, 사업을 실제로 바꾸고 그 성과를 근거로 성장자금을
@@ -452,7 +492,9 @@ export function Purpose() {
       </Section>
 
       <Section s={SECTIONS[9]}>
-        <P>지금은 실제 업무에 적용하기 위한 MVP 단계입니다. 앞으로는 이 순서로 갑니다.</P>
+        <P>
+          지금은 실제 업무에 적용하기 위한 <B>MVP 단계</B>입니다. 앞으로는 이 순서로 갑니다.
+        </P>
         <ol className="space-y-2">
           {ROADMAP.map((t, i) => (
             <li key={t} className="flex items-start gap-2.5">
