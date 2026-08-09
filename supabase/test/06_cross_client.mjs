@@ -151,7 +151,7 @@ async function main() {
   //
   //  역할(role)이 아니라 소속(client_id)을 바꾸는 경로입니다. 성공하면 그 뒤의
   //  모든 RLS 판단이 남의 병원 기준으로 돌아갑니다. 0012 가 이것을 막습니다.
-  const before = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=client_id`)).body?.[0]
+  const before = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=id,client_id`)).body?.[0]
   const hijack = await usr(t1, `/profiles?email=eq.${encodeURIComponent(EMAIL1)}`, {
     method: 'PATCH',
     headers: { Prefer: 'return=representation' },
@@ -160,6 +160,31 @@ async function main() {
   const now = (await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL1)}&select=client_id`)).body?.[0]
   const blocked = now?.client_id !== c2.id
   ok(blocked, '병원A → 소속 병원 바꿔치기 차단', `(${hijack.status})`)
+
+  // 어떤 정책이 실제로 걸려 있는지 — 「안 걸었다」와 「걸었는데 안 먹는다」는
+  // 대응이 다릅니다. email 은 0012 만 고정하므로 판별에 씁니다.
+  //  · email 이 바뀌면  → 0002(구) 정책이 그대로입니다 (RUN_4 미적용)
+  //  · email 이 막히면  → 0012 는 적용됐는데 client_id 만 새는 것입니다
+  let generation = '0012 (신)'
+  if (!blocked) {
+    const emailBefore = EMAIL1
+    await usr(t1, `/profiles?email=eq.${encodeURIComponent(emailBefore)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ email: 'policy-probe@example.invalid' }),
+    })
+    const probed = (await svc(`/profiles?id=eq.${before.id}&select=email`)).body?.[0]
+    if (probed?.email === 'policy-probe@example.invalid') {
+      generation = '0002 (구)'
+      await svc(`/profiles?id=eq.${before.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ email: emailBefore }),
+      })
+    }
+    console.log(`\n  현재 profiles_update_self 정책: ${generation}`)
+    console.log(generation === '0002 (구)'
+      ? '  → RUN_4_security_fix.sql 이 아직 이 프로젝트에 적용되지 않았습니다.'
+      : '  → 0012 는 적용됐는데 client_id 가 새고 있습니다. 정책 본문을 확인하세요.')
+  }
 
   // 뚫렸다면 확인만 하고 여기서 바로 되돌립니다.
   // (뒤따르는 검사들이 "소속이 바뀐 상태"에서 돌면 결과를 믿을 수 없습니다)
