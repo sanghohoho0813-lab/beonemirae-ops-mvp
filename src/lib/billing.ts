@@ -1,4 +1,4 @@
-import type { AppData, Client, MaterialSupply } from '../types'
+import type { AppData, Client, MaterialSupply, Payment } from '../types'
 
 /** 'YYYY-MM-DD' → 'YYYY-MM' */
 const monthOf = (date: string) => date.slice(0, 7)
@@ -216,9 +216,23 @@ export interface Settlement {
 }
 
 /** 완료된 수거만 집계합니다 (예정은 매출이 아닙니다) */
-function completedIn(data: AppData, clientId: string, month: string) {
+/**
+ * 이미 청구한 수거·공급을 빼고 계산하기 위한 제외 목록.
+ * 청구를 확정하면 그 청구가 덮은 id 들이 여기에 들어옵니다.
+ */
+export interface BilledIds {
+  scheduleIds?: string[]
+  materialIds?: string[]
+}
+
+function completedIn(data: AppData, clientId: string, month: string, billed?: BilledIds) {
+  const skip = new Set(billed?.scheduleIds ?? [])
   return data.schedules.filter(
-    (s) => s.clientId === clientId && s.status === '완료' && monthOf(s.date) === month,
+    (s) =>
+      s.clientId === clientId &&
+      s.status === '완료' &&
+      monthOf(s.date) === month &&
+      !skip.has(s.id),
   )
 }
 
@@ -231,14 +245,29 @@ function findClient(data: AppData, clientId: string) {
   )
 }
 
-function suppliesIn(data: AppData, clientId: string, month: string) {
-  return data.materials.filter((m) => m.clientId === clientId && monthOf(m.date) === month)
+function suppliesIn(data: AppData, clientId: string, month: string, billed?: BilledIds) {
+  const skip = new Set(billed?.materialIds ?? [])
+  return data.materials.filter(
+    (m) => m.clientId === clientId && monthOf(m.date) === month && !skip.has(m.id),
+  )
 }
 
-export function settlementFor(data: AppData, clientId: string, month: string): Settlement {
+/**
+ * 월 정산.
+ *
+ *  billed 를 주면 이미 청구한 수거·공급을 빼고 계산합니다. 청구를 확정한
+ *  뒤에 들어온 추가 수거만 모아 「추가 청구」를 만들 때 씁니다 — 확정한
+ *  청구에 뒤늦게 섞여 금액이 바뀌는 일이 없어야 하기 때문입니다.
+ */
+export function settlementFor(
+  data: AppData,
+  clientId: string,
+  month: string,
+  billed?: BilledIds,
+): Settlement {
   const client = findClient(data, clientId)
-  const scheds = completedIn(data, clientId, month)
-  const sups = suppliesIn(data, clientId, month)
+  const scheds = completedIn(data, clientId, month, billed)
+  const sups = suppliesIn(data, clientId, month, billed)
 
   // 폐기물 — 완료된 수거의 실제 수거량(kg)
   const kg: Record<'medical' | 'diaper', number> = { medical: 0, diaper: 0 }
@@ -429,10 +458,15 @@ export function dueDateOf(month: string, dueDay: number | null | undefined): str
   return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(day)}`
 }
 
-export function invoiceFor(data: AppData, clientId: string, month: string): Invoice {
+export function invoiceFor(
+  data: AppData,
+  clientId: string,
+  month: string,
+  billed?: BilledIds,
+): Invoice {
   const client = findClient(data, clientId)
-  const scheds = completedIn(data, clientId, month).slice().sort((a, b) => a.date.localeCompare(b.date))
-  const sups = suppliesIn(data, clientId, month).slice().sort((a, b) => a.date.localeCompare(b.date))
+  const scheds = completedIn(data, clientId, month, billed).slice().sort((a, b) => a.date.localeCompare(b.date))
+  const sups = suppliesIn(data, clientId, month, billed).slice().sort((a, b) => a.date.localeCompare(b.date))
 
   const medicalLines: InvoiceLine[] = []
   const diaperLines: InvoiceLine[] = []
@@ -600,4 +634,146 @@ export function contractState(
   if (d <= 30) return { label: `만료 ${d}일 전`, tone: 'rose' }
   if (d <= 90) return { label: `만료 ${d}일 전`, tone: 'amber' }
   return { label: `~ ${client.contractEnd}`, tone: 'teal' }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 청구 확정
+//
+//  사무실이 월 정산을 눈으로 확인한 뒤 「청구 확정」을 누르면, 그 순간의
+//  정산·명세서 내용이 그대로 굳습니다. 굳히는 이유는 하나입니다 — 이미
+//  병원에 보낸 금액이 나중에 바뀌면 안 되기 때문입니다.
+//
+//  지금은 단가를 바꾸면 지난달 명세서 금액까지 같이 바뀝니다(실측: 7월
+//  100kg 수거가 95,000원 → 단가를 1,500원으로 바꾸자 같은 7월이 150,000원).
+//  청구를 확정해 두면 그 청구와 그 달의 명세서는 흔들리지 않습니다.
+//
+//  확정 뒤에 그 달의 수거가 더 들어오면, 기존 청구는 그대로 두고 남은 것만
+//  모아 「추가 청구」로 냅니다. 그래서 스냅샷에 '이 청구가 덮은 id' 를
+//  함께 담아 둡니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 청구 확정 시점에 굳혀 두는 내용 */
+export interface BillingSnapshot {
+  /** 확정 시각 (ISO) */
+  confirmedAt: string
+  /** 이 청구가 덮은 수거 id — 다음 청구는 이걸 빼고 계산합니다 */
+  scheduleIds: string[]
+  /** 이 청구가 덮은 자재 공급 id */
+  materialIds: string[]
+  /** 확정 당시의 거래명세서 (나중에 그대로 다시 뽑을 수 있습니다) */
+  invoice: Invoice
+  /** 확정 당시의 손익 (매출·원가·이익) */
+  revenue: number
+  cost: number
+  profit: number
+  /** 정기 청구인지, 확정 뒤 추가분에 대한 청구인지 */
+  kind: '정기' | '추가'
+}
+
+/** 취소되지 않은 청구만 — 취소한 청구는 없는 것으로 봅니다 */
+export function liveBills(data: AppData, clientId: string, month: string): Payment[] {
+  return data.payments.filter(
+    (p) => p.clientId === clientId && p.billingMonth === month && p.status !== '취소',
+  )
+}
+
+/** 그 달에 이미 청구한 수거·공급 id 를 모읍니다 */
+export function billedIdsOf(data: AppData, clientId: string, month: string): BilledIds {
+  const scheduleIds: string[] = []
+  const materialIds: string[] = []
+  for (const p of liveBills(data, clientId, month)) {
+    const snap = p.snapshot
+    if (!snap) continue
+    scheduleIds.push(...(snap.scheduleIds ?? []))
+    materialIds.push(...(snap.materialIds ?? []))
+  }
+  return { scheduleIds, materialIds }
+}
+
+/** 청구 화면이 알아야 할 것 — 얼마를 청구했고, 아직 얼마가 남았는가 */
+export interface BillingState {
+  /** 이미 확정한 청구 (취소분 제외) */
+  bills: Payment[]
+  /** 이미 청구한 금액 합계 */
+  billedAmount: number
+  /** 아직 청구하지 않은 수거·공급으로 계산한 정산 */
+  pending: Settlement
+  /** 지금 확정하면 만들어질 청구 금액 */
+  pendingAmount: number
+  /** 확정할 것이 남아 있는가 */
+  canConfirm: boolean
+  /** 이번에 만들 청구의 종류 */
+  nextKind: '정기' | '추가'
+  /**
+   * 스냅샷이 없는 옛 청구가 섞여 있는가.
+   * 그런 청구는 무엇을 덮었는지 알 수 없어 남은 금액을 정확히 못 셉니다.
+   */
+  hasLegacyBill: boolean
+}
+
+export function billingStateFor(data: AppData, clientId: string, month: string): BillingState {
+  const bills = liveBills(data, clientId, month)
+  const billedAmount = bills.reduce((a, p) => a + p.amount, 0)
+  const billed = billedIdsOf(data, clientId, month)
+  const pending = settlementFor(data, clientId, month, billed)
+  const hasLegacyBill = bills.some((p) => !p.snapshot)
+  return {
+    bills,
+    billedAmount,
+    pending,
+    pendingAmount: pending.revenue,
+    //  남은 수거·공급이 있어야 확정할 수 있습니다. 없으면 버튼이 잠깁니다
+    //  (같은 달을 두 번 청구하는 것을 이걸로 막습니다).
+    canConfirm: pending.collections + pending.supplies > 0,
+    nextKind: bills.length > 0 ? '추가' : '정기',
+    hasLegacyBill,
+  }
+}
+
+/**
+ * 지금 확정하면 어떤 청구가 되는지 만들어 봅니다 (저장은 하지 않습니다).
+ * 화면 미리보기와 실제 저장이 같은 함수를 쓰도록 여기 한 곳에 둡니다.
+ */
+export function buildBillingSnapshot(
+  data: AppData,
+  clientId: string,
+  month: string,
+  now: string,
+): { snapshot: BillingSnapshot; amount: number } | null {
+  const state = billingStateFor(data, clientId, month)
+  if (!state.canConfirm) return null
+  const billed = billedIdsOf(data, clientId, month)
+  const invoice = invoiceFor(data, clientId, month, billed)
+  const skipS = new Set(billed.scheduleIds ?? [])
+  const skipM = new Set(billed.materialIds ?? [])
+  const snapshot: BillingSnapshot = {
+    confirmedAt: now,
+    scheduleIds: data.schedules
+      .filter((s) => s.clientId === clientId && s.status === '완료' && s.date.slice(0, 7) === month && !skipS.has(s.id))
+      .map((s) => s.id),
+    materialIds: data.materials
+      .filter((m) => m.clientId === clientId && m.date.slice(0, 7) === month && !skipM.has(m.id))
+      .map((m) => m.id),
+    invoice,
+    revenue: state.pending.revenue,
+    cost: state.pending.cost,
+    profit: state.pending.profit,
+    kind: state.nextKind,
+  }
+  return { snapshot, amount: state.pending.revenue }
+}
+
+/**
+ * 그 달의 거래명세서.
+ *
+ *  청구를 확정했으면 확정 당시에 굳혀 둔 명세서를 그대로 돌려줍니다.
+ *  아직 확정 전이면 지금 값으로 계산합니다. 청구가 여러 건(정기 + 추가)이면
+ *  각각의 명세서가 있으므로, 여기서는 가장 최근 것을 돌려줍니다 — 화면은
+ *  청구 목록에서 원하는 건을 골라 열 수 있습니다.
+ */
+export function invoiceForBilled(data: AppData, clientId: string, month: string): Invoice {
+  const bills = liveBills(data, clientId, month).filter((p) => p.snapshot?.invoice)
+  if (bills.length === 0) return invoiceFor(data, clientId, month)
+  const last = bills[bills.length - 1]
+  return last.snapshot!.invoice
 }

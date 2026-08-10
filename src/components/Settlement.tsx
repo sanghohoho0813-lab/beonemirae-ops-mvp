@@ -21,6 +21,7 @@ import {
   type ItemKey,
 } from '../lib/billing'
 import { won } from '../lib/format'
+import { BillingConfirmCard } from './BillingConfirm'
 import { Modal } from './Modal'
 import { SectionTitle } from './ui'
 
@@ -94,6 +95,9 @@ export function SettlementPanel({
           <FileText size={17} strokeWidth={2.4} /> 거래명세서
         </button>
       </div>
+
+      {/* 청구 — 정산을 확인한 뒤 여기서 확정합니다 (예전에는 이 자리가 없었습니다) */}
+      {!empty && <BillingConfirmCard data={data} client={client} month={month} />}
 
       {empty ? (
         <div className="card px-6 py-10 text-center">

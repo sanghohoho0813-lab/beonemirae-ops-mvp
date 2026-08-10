@@ -49,7 +49,9 @@ export function cycleDays(cycle: string): number {
 
 /** 이번 달 실제 청구액 ÷ 수거량으로 구한 kg당 평균 단가 (데이터 부족 시 기준 단가) */
 export function unitPricePerKg(data: AppData, month = thisMonth()): number {
-  const billed = data.payments.filter((p) => p.billingMonth === month).reduce((s, p) => s + p.amount, 0)
+  const billed = data.payments
+    .filter((p) => p.billingMonth === month && p.status !== '취소')
+    .reduce((s, p) => s + p.amount, 0)
   const kg = data.schedules
     .filter((s) => s.date.startsWith(month) && s.status === '완료' && s.actualAmount != null)
     .reduce((s, x) => s + (x.actualAmount ?? 0), 0)

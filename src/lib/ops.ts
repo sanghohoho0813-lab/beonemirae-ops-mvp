@@ -231,7 +231,7 @@ export function clientMonthlyAvg(data: AppData, clientId: string): number {
 
 export function clientOutstanding(data: AppData, clientId: string): number {
   return data.payments
-    .filter((p) => p.clientId === clientId && p.status !== '입금완료')
+    .filter((p) => p.clientId === clientId && p.status !== '입금완료' && p.status !== '취소')
     .reduce((s, p) => s + p.amount, 0)
 }
 
@@ -602,7 +602,7 @@ export function clientMaterialSummary(data: AppData, clientId: string, month = t
 }
 
 // ── 거래처 결제·미수금 행 ─────────────────────────────────────────────────────
-export type BillStatus = '정상' | '입금 예정' | '확인 필요' | '장기 미수'
+export type BillStatus = '정상' | '입금 예정' | '확인 필요' | '장기 미수' | '취소'
 export interface BillRow {
   id: string
   month: string
@@ -619,7 +619,13 @@ export function clientPaymentRows(data: AppData, clientId: string): BillRow[] {
     .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth))
     .map((p) => {
       const paid = p.status === '입금완료' ? p.amount : 0
-      const status: BillStatus = p.status === '입금완료' ? '정상' : p.status === '확인필요' ? '확인 필요' : '입금 예정'
-      return { id: p.id, month: p.billingMonth, amount: p.amount, paid, outstanding: p.amount - paid, status, invoiceIssued: true, note: p.memo }
+      //  취소한 청구는 받을 돈이 아닙니다. 표에는 남기되 미수 금액은 0 으로 둡니다.
+      const status: BillStatus =
+        p.status === '취소' ? '취소'
+        : p.status === '입금완료' ? '정상'
+        : p.status === '확인필요' ? '확인 필요'
+        : '입금 예정'
+      const outstanding = p.status === '취소' ? 0 : p.amount - paid
+      return { id: p.id, month: p.billingMonth, amount: p.amount, paid, outstanding, status, invoiceIssued: true, note: p.memo }
     })
 }

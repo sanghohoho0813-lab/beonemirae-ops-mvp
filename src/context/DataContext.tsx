@@ -32,7 +32,7 @@ import {
   type CollectionCompletionInput,
   type CommandResult,
 } from '../lib/collection'
-import { itemsOf, stockDeltaOf } from '../lib/billing'
+import { buildBillingSnapshot, itemsOf, stockDeltaOf } from '../lib/billing'
 import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
 import { leadKey } from '../lib/sales'
 import type { NextAction } from '../lib/insights'
@@ -84,6 +84,10 @@ interface DataContextValue {
   receiveStock: (patch: Partial<OfficeStock>, memo: string) => void
   // 결제
   addPayment: (p: Omit<Payment, 'id'>) => Payment
+  /** 월 정산을 확인한 뒤 청구로 확정합니다 (금액·명세서를 그 순간으로 고정) */
+  confirmBilling: (clientId: string, month: string) => Promise<{ ok: boolean; error: string | null }>
+  /** 잘못 만든 청구 — 지우지 않고 취소로 남깁니다 */
+  cancelPayment: (id: string, reason: string) => void
   updatePayment: (id: string, patch: Partial<Payment>) => void
   markPaid: (id: string) => void
   // 거래처 조회 헬퍼
@@ -1096,6 +1100,82 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive],
   )
 
+  //  ── 청구 확정 ──────────────────────────────────────────────────────────
+  //  사무실이 월 정산을 눈으로 확인한 뒤 누릅니다. 그 순간의 정산·명세서를
+  //  통째로 담아 두므로, 나중에 단가를 바꾸거나 그 달 수거가 더 들어와도
+  //  이 청구는 흔들리지 않습니다. 남은 수거·공급이 없으면 만들지 않습니다
+  //  (같은 달을 두 번 청구하는 것을 이걸로 막습니다).
+  const confirmBilling = useCallback(
+    async (clientId: string, month: string): Promise<{ ok: boolean; error: string | null }> => {
+      const built = buildBillingSnapshot(data, clientId, month, new Date().toISOString())
+      if (!built) {
+        return { ok: false, error: '이 달에는 새로 청구할 수거·공급이 없습니다.' }
+      }
+      const name = findClientName(data, clientId)
+      const payload: Omit<Payment, 'id'> = {
+        clientId,
+        billingMonth: month,
+        amount: built.amount,
+        status: '미수금',
+        method: '무통장',
+        paidAt: null,
+        memo: `${built.snapshot.kind} 청구`,
+        snapshot: built.snapshot,
+      }
+      if (live) {
+        return await runLive(async () => {
+          const created = await repo.insertPayment(payload)
+          await repo.writeAudit({
+            action: 'payment.confirm',
+            entity: 'payments',
+            entityId: created.id,
+            clientId,
+            after: { amount: created.amount, month, kind: built.snapshot.kind },
+            summary:
+              `${name} ${month} ${built.snapshot.kind} 청구 확정 — ` +
+              `${built.amount.toLocaleString('ko-KR')}원 ` +
+              `(수거 ${built.snapshot.scheduleIds.length}건 · 공급 ${built.snapshot.materialIds.length}건)`,
+          })
+        })
+      }
+      setData((d) => ({ ...d, payments: [...d.payments, { ...payload, id: uid('p') }] }))
+      return { ok: true, error: null }
+    },
+    [live, runLive, data],
+  )
+
+  //  잘못 만든 청구는 지우지 않습니다. 지워 버리면 "그런 청구는 없었다" 가
+  //  되어, 병원과 금액을 두고 다툴 때 근거가 남지 않습니다.
+  const cancelPayment = useCallback(
+    (id: string, reason: string) => {
+      const before = data.payments.find((p) => p.id === id)
+      const name = before ? findClientName(data, before.clientId) : '거래처'
+      const canceledAt = new Date().toISOString()
+      if (live) {
+        void runLive(async () => {
+          await repo.updatePayment(id, { status: '취소', canceledAt })
+          await repo.writeAudit({
+            action: 'payment.cancel',
+            entity: 'payments',
+            entityId: id,
+            clientId: before?.clientId,
+            before,
+            summary: before
+              ? `${name} ${before.billingMonth} 청구 ${before.amount.toLocaleString('ko-KR')}원 취소` +
+                `${reason ? ` — ${reason}` : ''}`
+              : '청구 취소',
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        payments: d.payments.map((p) => (p.id === id ? { ...p, status: '취소', canceledAt } : p)),
+      }))
+    },
+    [live, runLive, data],
+  )
+
   const updatePayment = useCallback(
     (id: string, patch: Partial<Payment>) => {
       if (live) {
@@ -1221,6 +1301,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeMaterial,
       receiveStock,
       addPayment,
+      confirmBilling,
+      cancelPayment,
       updatePayment,
       markPaid,
       clientById,
@@ -1268,6 +1350,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeMaterial,
       receiveStock,
       addPayment,
+      confirmBilling,
+      cancelPayment,
       updatePayment,
       markPaid,
       clientById,

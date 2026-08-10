@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 39 를 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 41 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -11,7 +11,7 @@
 #           TEST_CLIENT_PW=... TEST_CLIENT2_PW=...
 #    bash supabase/test/run_all.sh
 #
-#  · 08·13~39(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
+#  · 08·13~40(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
 #    없으면 건너뛰고 그 사실을 표에 남깁니다 — 조용히 통과시키지 않습니다.
 #  · 키는 셸에만 둡니다. 끝나면 unset 하거나 셸을 닫으세요.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -78,6 +78,10 @@ run "37 · 관리자 잠김 방지 (아무도 못 들어오게 되는 것)" \
 run "38 · 이사님 엑셀과 정산 금액 대조 (더원요양병원)" \
   "$NODE" --experimental-strip-types "$HERE/38_excel_parity.mjs"
 
+# 41 도 DB·브라우저 없이 계산만 봅니다 (청구를 확정하면 정말 굳는가).
+run "41 · 청구 확정·고정 규칙 (단가변경·추가수거·취소)" \
+  "$NODE" --experimental-strip-types "$HERE/41_billing_freeze.mjs"
+
 if curl -sfo /dev/null --max-time 3 "$BASE"; then
   run "08 · 브라우저 종단 (PC 입력 → 모바일 조회)" \
     "$NODE" "$HERE/08_browser_live.mjs"
@@ -125,6 +129,8 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/36_print_invoice.mjs"
   run "39 · 한 번 입력 → 월말까지 (엑셀 업무 흐름)" \
     "$NODE" "$HERE/39_one_entry_chain.mjs"
+  run "40 · 청구 확정 → 미수금 → 입금 → 명세서" \
+    "$NODE" "$HERE/40_billing_confirm.mjs"
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -153,6 +159,7 @@ else
   NAMES+=("35 · 폰 화면 (밀림·잘림 · 글자 크기 3가지)"); RESULTS+=("SKIP")
   NAMES+=("36 · 거래명세서 인쇄 (병원에 보낼 PDF)"); RESULTS+=("SKIP")
   NAMES+=("39 · 한 번 입력 → 월말까지 (엑셀 업무 흐름)"); RESULTS+=("SKIP")
+  NAMES+=("40 · 청구 확정 → 미수금 → 입금 → 명세서"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."

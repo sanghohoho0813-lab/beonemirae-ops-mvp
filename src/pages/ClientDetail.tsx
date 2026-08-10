@@ -45,7 +45,7 @@ import { ClientLeadHistory } from '../components/LeadHistory'
 import { MonthlyReportView } from '../components/MonthlyReport'
 import { SettlementPanel } from '../components/Settlement'
 import { InvoiceView } from '../components/InvoiceView'
-import { invoiceFor, contractState } from '../lib/billing'
+import { invoiceForBilled, contractState } from '../lib/billing'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import type { Client } from '../types'
 
@@ -70,6 +70,7 @@ const billStyle: Record<BillStatus, string> = {
   '입금 예정': 'bg-navy-100 text-navy-600',
   '확인 필요': 'bg-amber-50 text-amber-600',
   '장기 미수': 'bg-rose-50 text-rose-500',
+  취소: 'bg-navy-100 text-navy-400 line-through',
 }
 
 const TABS = [
@@ -574,7 +575,12 @@ export function ClientDetail() {
       {/* 수거대장 미리보기 */}
       {invoiceOpen && (
         <InvoiceView
-          invoice={invoiceFor(data, client.id, settleMonth)}
+          /*
+            청구를 확정했으면 그때 굳혀 둔 명세서를 그대로 엽니다. 지금 값으로
+            다시 계산하면, 단가를 바꾼 뒤 다시 뽑았을 때 이미 병원에 보낸
+            금액과 달라집니다.
+          */
+          invoice={invoiceForBilled(data, client.id, settleMonth)}
           onClose={() => setInvoiceOpen(false)}
         />
       )}

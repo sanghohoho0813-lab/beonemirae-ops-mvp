@@ -45,6 +45,13 @@ export function friendlyError(e: unknown): string {
     return '이 계정의 이메일 주소로는 메일을 보낼 수 없습니다. 관리자에게 문의해 주세요.'
   if (/rate limit|only request this after/i.test(msg))
     return '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.'
+  //  서버(DB)에 아직 없는 항목을 쓰려 할 때 나오는 오류입니다. 화면은
+  //  새로 배포됐는데 DB 업데이트(migration)가 아직인 경우입니다. 그대로 두면
+  //  "Could not find the 'snapshot' column of 'payments' in the schema cache"
+  //  같은 영문이 직원에게 보입니다 — 무슨 뜻인지도, 무엇을 해야 하는지도
+  //  알 수 없습니다.
+  if (/Could not find the .* column|schema cache|column .* does not exist/i.test(msg))
+    return '이 기능에 필요한 항목이 서버에 아직 준비되지 않았습니다. 관리자에게 DB 업데이트를 요청해 주세요.'
   return msg
 }
 

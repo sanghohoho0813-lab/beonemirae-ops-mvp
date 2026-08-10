@@ -1,3 +1,7 @@
+//  청구 확정 스냅샷은 정산·명세서 모양 그대로 담기므로 lib/billing 에
+//  정의된 타입을 그대로 씁니다 (타입만 가져오므로 순환 참조가 남지 않습니다).
+import type { BillingSnapshot } from '../lib/billing'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 도메인 타입 정의
 //
@@ -26,7 +30,7 @@ export type StorageSize = '큼' | '보통' | '작음'
 export type ScheduleStatus = '예정' | '완료' | '지연' | '긴급'
 
 /** 입금상태 */
-export type PaymentStatus = '입금완료' | '미수금' | '확인필요'
+export type PaymentStatus = '입금완료' | '미수금' | '확인필요' | '취소'
 
 /** 결제방식 */
 export type PaymentMethod = '무통장' | '카드요청' | '기타'
@@ -188,6 +192,16 @@ export interface Payment {
   method: PaymentMethod // 결제방식
   paidAt: string | null // 입금 완료 시간 (ISO) — 미입금 시 null
   memo: string // 메모
+
+  // ── v9: 청구 확정 (0017 migration) ──
+  /**
+   * 확정한 순간의 정산·거래명세서 내용과, 이 청구가 덮은 수거·공급 id.
+   * 나중에 단가를 바꾸거나 수거가 더 들어와도 이 청구는 흔들리지 않습니다.
+   * 값이 없으면 이 기능 이전에 만들어진 청구입니다.
+   */
+  snapshot?: BillingSnapshot | null
+  /** 청구를 취소한 시각 (지우지 않고 취소로 남깁니다) */
+  canceledAt?: string | null
 }
 
 // ── 병원 요청 상태 오버라이드 (자동 처리 결과 영속화) ────────────────────────

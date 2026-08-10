@@ -13,7 +13,7 @@ import type { PaymentStatus } from '../types'
 // 미수금 관리 — 거래처별 청구금액 / 입금상태 / 미수금 합계 / 입금완료 처리
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FILTERS: Array<PaymentStatus | '전체'> = ['전체', '미수금', '확인필요', '입금완료']
+const FILTERS: Array<PaymentStatus | '전체'> = ['전체', '미수금', '확인필요', '입금완료', '취소']
 
 export function Receivables() {
   const { data, clientById, markPaid, updatePayment } = useData()
@@ -41,7 +41,11 @@ export function Receivables() {
   }
 
   const outstanding = outstandingTotal(data)
-  const billedTotal = data.payments.reduce((s, p) => s + p.amount, 0)
+  //  취소한 청구는 청구한 적 없는 것으로 셉니다. 안 그러면 '입금 완료' 가
+  //  받지도 않은 돈만큼 부풀려집니다.
+  const billedTotal = data.payments
+    .filter((p) => p.status !== '취소')
+    .reduce((s, p) => s + p.amount, 0)
   const collected = billedTotal - outstanding
 
   return (
@@ -113,7 +117,8 @@ export function Receivables() {
                   <p className="shrink-0 text-right text-lg font-extrabold text-navy-900">{won(p.amount)}</p>
                 </div>
 
-                {p.status !== '입금완료' && (
+                {/* 취소한 청구는 더 손대지 않습니다 — 기록으로만 남습니다 */}
+                {p.status !== '입금완료' && p.status !== '취소' && (
                   <div className="mt-3 flex items-center justify-end gap-2">
                     {p.status === '미수금' && (
                       <button

@@ -36,10 +36,11 @@ export function todaySummary(data: AppData, date = today()) {
   }
 }
 
-/** 미수금 합계 (입금완료가 아닌 모든 청구) */
+/** 미수금 합계 (입금완료·취소가 아닌 모든 청구) */
 export function outstandingTotal(data: AppData): number {
+  //  취소한 청구는 없던 것으로 봅니다. 기록은 남기지만 받을 돈은 아닙니다.
   return data.payments
-    .filter((p) => p.status !== '입금완료')
+    .filter((p) => p.status !== '입금완료' && p.status !== '취소')
     .reduce((sum, p) => sum + p.amount, 0)
 }
 

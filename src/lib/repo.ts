@@ -120,6 +120,8 @@ const toPayment = (r: Row): Payment => ({
   method: r.method,
   paidAt: r.paid_at ?? null,
   memo: r.memo ?? '',
+  snapshot: r.snapshot ?? null,
+  canceledAt: r.canceled_at ?? null,
 })
 
 const toNote = (r: Row): SiteNote => ({
@@ -499,6 +501,9 @@ export async function insertPayment(p: Omit<Payment, 'id'>): Promise<Payment> {
         method: p.method,
         paid_at: p.paidAt,
         memo: p.memo,
+        //  확정 당시의 정산·명세서를 그대로 담아 둡니다. 이후 단가 변경이나
+        //  추가 수거가 이 청구를 바꾸지 못하게 하는 근거가 됩니다.
+        snapshot: p.snapshot ?? null,
       })
       .select(),
   )
@@ -517,6 +522,7 @@ export async function updatePayment(id: string, patch: Partial<Payment>): Promis
           paid_at: patch.paidAt,
           amount: patch.amount,
           memo: patch.memo,
+          canceled_at: patch.canceledAt,
         }),
       )
       .eq('id', id)
