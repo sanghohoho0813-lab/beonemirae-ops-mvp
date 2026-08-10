@@ -356,12 +356,23 @@ async function main() {
       //  요구해서, 넣기는 되는데 읽기가 막힌 테이블(감사로그)이 403 으로 보입니다.
       //  앱도 RETURNING 없이 넣습니다. 그래서 응답이 아니라 DB 를 보고 판정합니다.
       if (sample && !SINGLETON.has(t) && !IDENTITY.has(t)) {
-        const keysBefore = new Set(((await svc(`/${t}?select=${pk}&limit=1000`)).body ?? []).map((x) => x[pk]))
+        //  1000줄은 PostgREST 가 한 번에 돌려주는 최대치입니다. 순서를 정하지
+        //  않고 1000줄을 받으면 '가장 먼저 들어온 1000줄'이 옵니다. 그래서
+        //  표가 1000줄을 넘는 순간(감사로그가 1056줄이 됐습니다) 방금 넣은
+        //  줄은 그 창 밖에 있어, 넣기가 막힌 것처럼 보였습니다. 실제로는
+        //  잘 들어가 있었습니다. 새로 들어온 쪽부터 봅니다.
+        const order =
+          sample.created_at !== undefined ? '&order=created_at.desc'
+          : sample.at !== undefined ? '&order=at.desc'
+          : typeof sample[pk] === 'number' ? `&order=${pk}.desc`
+          : ''
+        const newest = `/${t}?select=${pk}${order}&limit=1000`
+        const keysBefore = new Set(((await svc(newest)).body ?? []).map((x) => x[pk]))
         const ins = await as(tok[role], `/${t}`, {
           method: 'POST',
           body: JSON.stringify(cloneFor(t, sample, pk, `RLS-${role}`)),
         })
-        const rowsAfter = (await svc(`/${t}?select=${pk}&limit=1000`)).body ?? []
+        const rowsAfter = (await svc(newest)).body ?? []
         const added = rowsAfter.filter((x) => !keysBefore.has(x[pk]))
         if (added.length) got.i = 1
         else if (classify(ins) === 'deny') got.i = 0

@@ -98,6 +98,21 @@ const truth = (path, init) => {
   return rest(SERVICE, path, init, SERVICE)
 }
 
+/**
+ * 표에 실제로 몇 줄이 있는가.
+ *
+ *  받아 온 줄을 세면 안 됩니다. PostgREST 는 한 번에 1000줄까지만 돌려주므로,
+ *  표가 그보다 커지면 늘어나도 늘 1000 으로 보입니다. 감사로그가 1056줄이
+ *  되자 "감사로그 증가 (1000 → 1000)" 로 실패했습니다 — 잘 쌓이고
+ *  있었습니다. 개수는 서버에 물어봅니다.
+ */
+const countOf = async (path) => {
+  const r = await fetch(`${URL_}/rest/v1${path}`, {
+    headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, Prefer: 'count=exact', Range: '0-0' },
+  })
+  return Number(r.headers.get('content-range')?.split('/')[1] ?? 0)
+}
+
 async function login(who) {
   const a = ACCOUNTS[who]
   if (!a.pw) throw new Error(`TEST_${who.toUpperCase()}_PW 환경변수가 없습니다.`)
@@ -532,7 +547,7 @@ async function verify() {
 
     const stockBefore = (await truth('/office_stock?select=*&id=eq.1')).body?.[0]
     const evtBefore = (await truth('/collection_events?select=id')).body?.length ?? 0
-    const audBefore = (await truth('/audit_logs?select=id')).body?.length ?? 0
+    const audBefore = await countOf('/audit_logs?select=id')
 
     const payload = (over = {}) => ({
       p: {
@@ -578,8 +593,9 @@ async function verify() {
     const reqs = (await truth(`/client_requests?select=status&client_id=eq.${myClientId}`)).body ?? []
     ok(reqs.some((x) => x.status === '처리 완료'), `관련 병원 요청 자동 처리 (${reqs.map((x) => x.status).join(', ')})`)
 
-    const audAfter = (await truth('/audit_logs?select=action,actor_id&order=id.desc')).body ?? []
-    ok(audAfter.length > audBefore, `감사로그 증가 (${audBefore} → ${audAfter.length})`)
+    const audAfter = (await truth('/audit_logs?select=action,actor_id&order=id.desc&limit=200')).body ?? []
+    const audTotal = await countOf('/audit_logs?select=id')
+    ok(audTotal > audBefore, `감사로그 증가 (${audBefore} → ${audTotal})`)
     ok(audAfter.some((a) => a.action === 'collection.complete'), '수거 완료 감사로그 기록')
     ok(audAfter.every((a) => !!a.actor_id), '모든 감사로그에 실행자 기록')
 

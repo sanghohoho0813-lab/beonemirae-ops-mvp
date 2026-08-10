@@ -52,6 +52,20 @@ const svc = (path, init = {}) =>
     ...init,
     headers: { apikey: S, Authorization: `Bearer ${S}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(init.headers || {}) },
   }).then(json)
+/**
+ * 표에 실제로 몇 줄이 있는가.
+ *
+ *  받아 온 줄을 세면 안 됩니다. PostgREST 는 한 번에 1000줄까지만 돌려주기
+ *  때문에, 표가 그 이상 커지면 늘어나도 늘 1000 으로 보입니다. 감사로그가
+ *  1056줄이 되자 "감사기록이 안 남는다" 는 실패가 났습니다 — 잘 남고
+ *  있었습니다. 개수는 서버에 물어봅니다.
+ */
+const countOf = async (path) => {
+  const r = await fetch(`${U}/rest/v1${path}`, {
+    headers: { apikey: S, Authorization: `Bearer ${S}`, Prefer: 'count=exact', Range: '0-0' },
+  })
+  return Number(r.headers.get('content-range')?.split('/')[1] ?? 0)
+}
 const asUser = (token, path, init = {}) =>
   fetch(`${U}/rest/v1${path}`, {
     ...init,
@@ -128,7 +142,7 @@ async function main() {
 
     // ── 4. 돈에 관계된 변경이 감사기록에 남는가 ───────────────────────────
     section('4. 돈에 관계된 변경이 감사기록에 남는가')
-    const auditBefore = ((await svc('/audit_logs?select=id')).body ?? []).length
+    const auditBefore = await countOf('/audit_logs?select=id')
 
     const pw = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
     const browser = await pw.default.chromium.launch({
@@ -166,7 +180,7 @@ async function main() {
     check(saved === newManager, '수정이 DB 에 저장됨', `"${saved}"`)
 
     const auditAfter = (await svc('/audit_logs?select=id,action,summary&order=id.desc&limit=10')).body ?? []
-    const total = ((await svc('/audit_logs?select=id')).body ?? []).length
+    const total = await countOf('/audit_logs?select=id')
     const clientAudit = auditAfter.find((a) => a.action?.startsWith('client.'))
     check(total > auditBefore && !!clientAudit, '거래처 수정이 감사기록에 남음',
       clientAudit ? `${clientAudit.action} · ${clientAudit.summary?.slice(0, 60)}` : `감사기록 ${auditBefore}건 그대로 — 누가 바꿨는지 추적 불가`)
