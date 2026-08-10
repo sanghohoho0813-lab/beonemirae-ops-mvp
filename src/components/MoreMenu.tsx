@@ -3,6 +3,7 @@ import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Spar
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
+import { FontSizeControl } from './FontSizeControl'
 import { InfoBanner } from './InfoBanner'
 import { RnDCard } from './RnDCard'
 import { IconChip } from './ui'
@@ -212,24 +213,45 @@ export function MoreMenu({
       </section>
 
       {/* 설정 — 글자 크기 · 데이터 백업 · 시연 데이터 관리 */}
+      {/*
+        여기도 위 바로가기와 같은 문제가 있었습니다. '설정'·'AX 도입 성과' 카드가
+        모든 역할에게 보였는데 두 화면 모두 열리지 않아서, 누르면 "접근 권한이
+        없는 화면입니다" 만 떴습니다. 실제로 현장·사무실 계정에서 재현했습니다.
+
+        더 곤란한 것은 글자 크기였습니다. 글자 크기를 바꾸는 곳이 설정 화면
+        한 군데뿐인데 그 화면이 관리자 전용이라, 정작 폰으로만 일하는 현장
+        담당자는 글자를 키울 방법이 아예 없었습니다. 그래서 설정 화면에 못
+        들어가는 분에게는 같은 조절기를 더보기 안에 그대로 놓아 둡니다.
+      */}
       <section>
-        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">성과 · 설정</h3>
-        <Tappable as="div" onClick={() => go('/performance')} className="card mb-2.5 flex cursor-pointer items-center gap-3 p-4">
-          <IconChip icon={Gauge} tone="teal" />
-          <div className="min-w-0">
-            <p className="font-bold text-navy-900">AX 도입 성과</p>
-            <p className="text-[0.98rem] text-navy-400">실제로 얼마나 좋아졌는지 — 도입 전 → 후 측정값</p>
+        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">
+          {canAccess(role, '/settings') ? '성과 · 설정' : '글자 크기'}
+        </h3>
+        {canAccess(role, '/performance') && (
+          <Tappable as="div" onClick={() => go('/performance')} className="card mb-2.5 flex cursor-pointer items-center gap-3 p-4">
+            <IconChip icon={Gauge} tone="teal" />
+            <div className="min-w-0">
+              <p className="font-bold text-navy-900">AX 도입 성과</p>
+              <p className="text-[0.98rem] text-navy-400">실제로 얼마나 좋아졌는지 — 도입 전 → 후 측정값</p>
+            </div>
+            <ChevronRight size={18} className="ml-auto text-navy-300" />
+          </Tappable>
+        )}
+        {canAccess(role, '/settings') ? (
+          <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
+            <IconChip icon={SlidersHorizontal} tone="teal" />
+            <div className="min-w-0">
+              <p className="font-bold text-navy-900">설정</p>
+              <p className="text-[0.98rem] text-navy-400">글자 크기 · 거래처 세트 · 데이터 백업 · 초기화</p>
+            </div>
+            <ChevronRight size={18} className="ml-auto text-navy-300" />
+          </Tappable>
+        ) : (
+          <div className="card p-4">
+            <p className="mb-2.5 text-[0.98rem] text-navy-400">화면 글자가 작으면 크기를 올리세요</p>
+            <FontSizeControl />
           </div>
-          <ChevronRight size={18} className="ml-auto text-navy-300" />
-        </Tappable>
-      <Tappable as="div" onClick={() => go('/settings')} className="card flex cursor-pointer items-center gap-3 p-4">
-          <IconChip icon={SlidersHorizontal} tone="teal" />
-          <div className="min-w-0">
-            <p className="font-bold text-navy-900">설정</p>
-            <p className="text-[0.98rem] text-navy-400">글자 크기 · 거래처 세트 · 데이터 백업 · 초기화</p>
-          </div>
-          <ChevronRight size={18} className="ml-auto text-navy-300" />
-        </Tappable>
+        )}
       </section>
 
       {/* 기술개발 현황 */}

@@ -366,7 +366,7 @@ export function CollectionInput() {
 
       {/* PC 는 좌(입력 대상·수거량) / 우(현장 정보·저장) 2열, 모바일은 1열로 자연스럽게 내려감 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
         {/* 1. 오늘 일정 선택 */}
         <Section n={1} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
           <div className="flex flex-wrap gap-2">
@@ -500,7 +500,7 @@ export function CollectionInput() {
         </div>
 
         {/* ── 우측: 현장 정보 · 자재 · 차량 · 저장 ── */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
         {/* 현장 메모 — 이 거래처에 기록해둔 특이사항 */}
         {client && notesFor(client.id).some((n) => !n.done) && (
           <div className="card p-5">
