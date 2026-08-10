@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
@@ -108,6 +108,23 @@ export function Settings() {
   const live = mode === 'live'
   const demoActive = data.demoSession?.active !== false
   const navigate = useNavigate()
+
+  //  기준값 칸은 타이핑 중에는 화면에만 담아 두고, 칸을 벗어날 때 한 번 저장합니다.
+  //  예전에는 글자를 칠 때마다 서버에 쓰고 전체 데이터를 다시 읽어 왔는데,
+  //  그 응답이 늦게 도착하면서 입력하던 숫자를 덮어썼습니다.
+  //  (실제로 '120' 을 치면 '2' 가 저장됐습니다)
+  const [blDraft, setBlDraft] = useState<Record<string, string>>({})
+  //  저장이 끝나 서버 값이 새로 오면 임시 입력값은 비웁니다.
+  useEffect(() => setBlDraft({}), [data.baseline])
+
+  function commitBaseline(key: (typeof BASELINE_FIELDS)[number]['key']) {
+    const raw = blDraft[key]
+    if (raw === undefined) return
+    const next = raw.trim() === '' ? null : Number(raw)
+    if (next !== null && !Number.isFinite(next)) return
+    if (next === (data.baseline[key] ?? null)) return
+    setBaseline({ [key]: next, source: 'user' } as Partial<BaselineMetrics>)
+  }
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [confirmKind, setConfirmKind] = useState<null | 'demo' | 'reset'>(null)
@@ -226,10 +243,11 @@ export function Settings() {
                     inputMode="decimal"
                     className="field-input"
                     placeholder="미입력"
-                    value={data.baseline[f.key] ?? ''}
-                    onChange={(e) => {
-                      const raw = e.target.value
-                      setBaseline({ [f.key]: raw === '' ? null : Number(raw), source: 'user' } as Partial<BaselineMetrics>)
+                    value={blDraft[f.key] ?? (data.baseline[f.key] ?? '')}
+                    onChange={(e) => setBlDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                    onBlur={() => commitBaseline(f.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
                     }}
                   />
                   <p className="t-muted mt-1.5">{f.hint}</p>
