@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처를 그만둘 때 (실제 브라우저 · 실제 DB)
 //
-//  거래처 화면의 「삭제」는 진짜 지우지 않고 비활성으로 둡니다. 지워 버리면
+//  거래처 화면의 「거래 종료」는 진짜 지우지 않고 비활성으로 둡니다. 지워 버리면
 //  과거 수거·정산이 함께 사라지기 때문입니다. 문제는 그 다음입니다.
 //
 //   · 앱은 활성 거래처만 읽어 옵니다(clients.active = true).
@@ -12,7 +12,7 @@
 //
 //  여기서는 그 자리를 실제로 밟아 봅니다.
 //   1) 검증용 거래처를 만들고 미수금 청구를 하나 붙인다
-//   2) 화면에서 「삭제」를 누른다
+//   2) 화면에서 「거래 종료」를 누른다
 //   3) 미수금 화면에서 그 줄이 어떻게 보이는지 본다
 //   4) 과거 수거 이력이 DB 에 남아 있는지 본다
 //
@@ -127,8 +127,8 @@ async function main() {
     check(!!paid, `미수금 ${AMOUNT.toLocaleString('ko-KR')}원 청구를 붙임`)
     if (paid) paymentId = paid.id
 
-    // ── 2. 화면에서 「삭제」를 누른다 ────────────────────────────────────
-    section('2. 관리자가 거래처 화면에서 「삭제」를 누른다')
+    // ── 2. 화면에서 「거래 종료」를 누른다 ──────────────────────────────
+    section('2. 관리자가 거래처 화면에서 「거래 종료」를 누른다')
     const admin = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
     admin.on('pageerror', (e) => errors.push(`[관리자] ${e.message}`))
     admin.on('console', (m) => { if (m.type() === 'error') errors.push(`[관리자] ${m.text()}`) })
@@ -143,11 +143,16 @@ async function main() {
     check(detailText.includes(AMOUNT.toLocaleString('ko-KR')),
       '상세 화면에 미수금 금액이 보임', AMOUNT.toLocaleString('ko-KR'))
 
-    admin.once('dialog', (d) => d.accept())
-    const delBtn = admin.locator('button:has-text("삭제")').first()
-    check(await delBtn.count() > 0, '「삭제」 버튼이 있음')
+    //  묻는 말이 실제로 일어나는 일과 같은지도 봅니다. "삭제할까요" 라고만
+    //  물으면 기록까지 없어지는 줄 알고 못 누르게 됩니다.
+    let asked = ''
+    admin.once('dialog', (d) => { asked = d.message(); d.accept() })
+    const delBtn = admin.locator('button:has-text("거래 종료")').first()
+    check(await delBtn.count() > 0, '「거래 종료」 버튼이 있음')
     await delBtn.click()
     await admin.waitForTimeout(3500)
+    check(/기록은 그대로 남습니다/.test(asked), '무슨 일이 일어나는지 그대로 묻고 있음',
+      asked.replace(/\n/g, ' ').slice(0, 70))
 
     const row = (await svc(`/clients?select=active&id=eq.${clientId}`)).body?.[0]
     check(row && row.active === false, '거래처가 지워지지 않고 비활성으로 바뀜',

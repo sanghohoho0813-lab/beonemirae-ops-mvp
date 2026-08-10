@@ -53,7 +53,23 @@ export function Clients() {
   const demoCount = data.clients.length - realCount
 
   async function save() {
-    if (!form.name.trim()) return
+    const name = form.name.trim()
+    if (!name) return
+    //  같은 이름으로 하나 더 만들면 수거도 정산도 둘로 갈립니다. 나중에
+    //  어느 쪽이 진짜인지 알 수 없게 되고, 명세서가 두 장 나갑니다.
+    //  막지는 않습니다 — 실제로 상호가 같은 다른 병원일 수 있습니다.
+    const dupActive = data.clients.find((c) => c.name.trim() === name)
+    const dupRetired = data.retiredClients?.find((c) => c.name.trim() === name)
+    if (dupActive || dupRetired) {
+      const okToAdd = window.confirm(
+        dupActive
+          ? `'${name}' 은(는) 이미 거래처 목록에 있습니다.\n` +
+              '같은 이름으로 하나 더 만들면 수거와 정산이 둘로 갈립니다. 그래도 만들까요?'
+          : `'${name}' 은(는) 거래를 종료한 거래처로 남아 있습니다.\n` +
+              '새로 만들면 지난 수거·미수금 기록과 이어지지 않고 따로 시작됩니다. 그래도 만들까요?',
+      )
+      if (!okToAdd) return
+    }
     //  서버가 저장을 마치고 준 id 로 이동합니다. 저장이 실패하면 목록에
     //  남고, 화면 위쪽의 저장 오류 안내가 그대로 보입니다.
     const created = await addClient(form)

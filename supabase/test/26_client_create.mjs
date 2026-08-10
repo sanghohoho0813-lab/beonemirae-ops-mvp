@@ -154,6 +154,27 @@ async function main() {
     await office.waitForTimeout(1200)
     check((await office.locator('body').innerText()).includes(name), '이름으로 검색해도 나옴')
 
+    // ── 5-1. 같은 이름으로 한 번 더 등록하려 할 때 ─────────────────────
+    //  같은 병원이 둘이 되면 수거도 정산도 갈립니다. 명세서가 두 장 나가고,
+    //  나중에 어느 쪽이 진짜인지 알 수 없게 됩니다. 막지는 않되 알려 줘야
+    //  합니다(상호가 같은 다른 병원일 수도 있으므로).
+    section('5-1. 같은 이름으로 또 등록')
+    await office.locator('input[placeholder="거래처명 · 주소 검색"]').first().fill('')
+    await office.waitForTimeout(800)
+    let asked = ''
+    office.once('dialog', (d) => { asked = d.message(); d.dismiss() })
+    await office.locator('button:has-text("＋ 추가")').first().click()
+    await office.waitForTimeout(1200)
+    await dialog.locator('label:text-is("거래처명 *")').locator('xpath=following-sibling::input[1]').fill(name)
+    await dialog.locator('button:has-text("저장")').first().click()
+    await office.waitForTimeout(2500)
+    check(/이미 거래처 목록에 있습니다/.test(asked), '이미 있는 이름이라고 알려 줌',
+      asked.replace(/\n/g, ' ').slice(0, 60))
+    const dupRows = (await svc(`/clients?select=id&name=eq.${encodeURIComponent(name)}`)).body ?? []
+    check(dupRows.length === 1, '취소하면 같은 이름이 하나 더 생기지 않음', `${dupRows.length}곳`)
+    await dialog.locator('button:has-text("취소")').first().click().catch(() => {})
+    await office.waitForTimeout(800)
+
     // ── 6. 화면 오류 ───────────────────────────────────────────────────
     section('6. 콘솔 오류')
     const real = errors.filter((e) => !/favicon|jsdelivr|pretendard|Failed to load resource|net::ERR_/.test(e))

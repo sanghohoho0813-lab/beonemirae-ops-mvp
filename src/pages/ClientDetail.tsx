@@ -145,7 +145,16 @@ export function ClientDetail() {
     setEditing(false)
   }
   function confirmRemove() {
-    if (window.confirm(`'${client?.name}' 거래처를 삭제할까요?`)) {
+    //  실제로는 지우지 않고 '그만둔 거래처' 로 돌립니다. 과거 수거·미수금·
+    //  명세서가 그대로 남아야 하기 때문입니다. 그런데 "삭제할까요" 라고만
+    //  물어서, 기록까지 없어지는 줄 알고 못 누르거나 반대로 정말 지워진 줄
+    //  알게 됩니다. 무슨 일이 일어나는지 그대로 적습니다.
+    if (
+      window.confirm(
+        `'${client?.name}' 거래처를 거래 종료 처리할까요?\n` +
+          '목록에서는 빠지지만 지난 수거·미수금·명세서 기록은 그대로 남습니다.',
+      )
+    ) {
       removeClient(id)
       navigate('/clients')
     }
@@ -201,7 +210,7 @@ export function ClientDetail() {
             <Pencil size={14} /> 수정
           </button>
           <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
-            <Trash2 size={14} /> 삭제
+            <Trash2 size={14} /> 거래 종료
           </button>
         </div>
       </div>
