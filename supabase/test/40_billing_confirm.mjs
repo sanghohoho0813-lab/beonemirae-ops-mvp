@@ -225,7 +225,9 @@ async function main() {
     check(recv.includes(name), '미수금 화면에 이 거래처 청구가 보임')
     check(numbersIn(recv).includes(EXPECT_FIRST), '청구 금액이 그대로 보임', won(EXPECT_FIRST))
 
-    const row = office.locator('div').filter({ hasText: name }).last()
+    //  `div` 로 훑으면 이름이 든 가장 안쪽 줄(업체명 + 상태 배지)이 잡혀서
+    //  버튼이 없는 것처럼 보였습니다. 청구 한 건은 카드 한 장이므로 카드로 집습니다.
+    const row = office.locator('.card').filter({ hasText: name }).first()
     const payBtn = row.locator('button:has-text("입금완료 처리")').first()
     const hasPay = (await payBtn.count()) > 0
     check(hasPay, '「입금완료 처리」 버튼이 있음')
