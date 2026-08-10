@@ -150,9 +150,17 @@ async function main() {
     await office.waitForTimeout(2500)
     check((await office.locator('body').innerText()).includes(name), '목록에 새 거래처가 보임')
 
-    await office.locator('input[placeholder="거래처명 · 주소 검색"]').first().fill(name.slice(-8))
+    const search = office.locator('input[placeholder="거래처명 · 주소 검색"]').first()
+    await search.fill(name.slice(-8))
     await office.waitForTimeout(1200)
     check((await office.locator('body').innerText()).includes(name), '이름으로 검색해도 나옴')
+
+    //  폰 자판은 낱말 뒤에 공백을 붙여 주는 일이 잦습니다. 분명히 있는
+    //  거래처인데 "없어요" 가 나오면 사무실은 없는 줄 알고 또 등록합니다.
+    await search.fill(` ${name.slice(-8)} `)
+    await office.waitForTimeout(1200)
+    check((await office.locator('body').innerText()).includes(name),
+      '앞뒤에 공백이 붙어도 검색됨')
 
     // ── 5-1. 같은 이름으로 한 번 더 등록하려 할 때 ─────────────────────
     //  같은 병원이 둘이 되면 수거도 정산도 갈립니다. 명세서가 두 장 나가고,

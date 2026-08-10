@@ -68,7 +68,11 @@ export function CollectionHistory() {
       .filter((r) => (waste === '전체' ? true : r.wasteType === waste))
       .filter((r) => (kind === '전체' ? true : r.kind === kind))
       .filter((r) => (period === '전체' ? true : period === '이번 달' ? r.date.startsWith(month) : r.date >= weekAgo && r.date <= t))
-      .filter((r) => (query ? r.clientName.includes(query) : true))
+      //  거래처 검색과 같은 이유로 앞뒤 공백을 떼고 대소문자를 가리지 않습니다.
+      .filter((r) => {
+        const q = query.trim().toLowerCase()
+        return q ? r.clientName.toLowerCase().includes(q) : true
+      })
       .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
   }, [data, clientById, waste, kind, period, query])
 

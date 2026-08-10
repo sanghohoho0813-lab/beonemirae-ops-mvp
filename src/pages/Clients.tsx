@@ -42,9 +42,13 @@ export function Clients() {
   const [form, setForm] = useState<Omit<Client, 'id'>>(emptyClientForm)
 
   const filtered = useMemo(() => {
+    //  폰 자판은 낱말 뒤에 공백을 붙여 주는 일이 잦습니다. 그대로 비교하면
+    //  분명히 있는 거래처인데 "없어요" 가 나옵니다. 앞뒤 공백을 떼고,
+    //  영문 대소문자도 가리지 않습니다.
+    const q = query.trim().toLowerCase()
     return data.clients.filter((c) => {
       if (!matchFilter(c, filter)) return false
-      if (query && !c.name.includes(query) && !c.address.includes(query)) return false
+      if (q && !c.name.toLowerCase().includes(q) && !c.address.toLowerCase().includes(q)) return false
       return true
     })
   }, [data.clients, filter, query])
