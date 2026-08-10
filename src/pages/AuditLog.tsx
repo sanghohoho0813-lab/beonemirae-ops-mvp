@@ -27,6 +27,7 @@ const ACTION_LABEL: Record<string, string> = {
   'material.delete': '자재 공급 삭제',
   'payment.create': '청구 등록',
   'payment.paid': '입금 완료',
+  'payment.update': '청구 상태 변경',
   'vehicle.create': '차량 등록',
   'vehicle.update': '차량 수정',
   'vehicle.deactivate': '차량 비활성화',

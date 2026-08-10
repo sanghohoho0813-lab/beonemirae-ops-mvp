@@ -128,6 +128,17 @@ interface DataContextValue {
 
 const DataContext = createContext<DataContextValue | null>(null)
 
+/**
+ * 감사기록에 남길 거래처 이름 — 그만둔 거래처도 찾습니다.
+ * (돈 기록에 "거래처" 라고만 남으면 나중에 아무 소용이 없습니다)
+ */
+function findClientName(data: AppData, clientId: string): string {
+  const c =
+    data.clients.find((x) => x.id === clientId) ??
+    data.retiredClients?.find((x) => x.id === clientId)
+  return c?.name ?? '거래처'
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const { mode } = useAuth()
   // 서버가 연결된 환경에서는 시연 데이터로 시작하지 않습니다.
@@ -1031,7 +1042,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updatePayment = useCallback(
     (id: string, patch: Partial<Payment>) => {
       if (live) {
-        void runLive(async () => repo.updatePayment(id, patch))
+        //  돈에 관한 상태 변경인데 아무 기록도 남지 않았습니다. 나중에
+        //  "누가 이걸 확인필요로 바꿨나" 를 물으면 답할 수가 없습니다.
+        const before = data.payments.find((p) => p.id === id)
+        const name = before ? findClientName(data, before.clientId) : '거래처'
+        void runLive(async () => {
+          await repo.updatePayment(id, patch)
+          await repo.writeAudit({
+            action: 'payment.update',
+            entity: 'payments',
+            entityId: id,
+            clientId: before?.clientId,
+            before,
+            after: before ? { ...before, ...patch } : patch,
+            summary: before
+              ? `${name} ${before.billingMonth} 청구 ${before.amount.toLocaleString('ko-KR')}원 — ` +
+                `${patch.status ? `${before.status} → ${patch.status}` : '내용 수정'}`
+              : '청구 내용 수정',
+          })
+        })
         return
       }
       setData((d) => ({
@@ -1039,20 +1068,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
         payments: d.payments.map((p) => (p.id === id ? { ...p, ...patch } : p)),
       }))
     },
-    [live, runLive],
+    [live, runLive, data],
   )
 
   const markPaid = useCallback(
     (id: string) => {
       const paidAt = new Date().toISOString()
       if (live) {
+        //  기록에 "입금 완료 처리" 여섯 글자만 남아 있어서, 감사로그만 보고는
+        //  어느 병원의 몇 월치 얼마인지 알 수 없었습니다. 돈 기록입니다.
+        const before = data.payments.find((p) => p.id === id)
+        const name = before ? findClientName(data, before.clientId) : '거래처'
         void runLive(async () => {
           await repo.updatePayment(id, { status: '입금완료', paidAt })
           await repo.writeAudit({
             action: 'payment.paid',
             entity: 'payments',
             entityId: id,
-            summary: '입금 완료 처리',
+            clientId: before?.clientId,
+            before,
+            after: before ? { ...before, status: '입금완료', paidAt } : null,
+            summary: before
+              ? `${name} ${before.billingMonth} 청구 ${before.amount.toLocaleString('ko-KR')}원 입금 완료 처리`
+              : '입금 완료 처리',
           })
         })
         return
@@ -1062,7 +1100,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         payments: d.payments.map((p) => (p.id === id ? { ...p, status: '입금완료', paidAt } : p)),
       }))
     },
-    [live, runLive],
+    [live, runLive, data],
   )
 
   // 아래 세 가지는 시연/로컬 데이터 전용입니다.

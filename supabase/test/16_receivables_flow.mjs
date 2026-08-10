@@ -177,7 +177,20 @@ async function main() {
     check(!!payBtn, '「입금완료 처리」 버튼을 그 줄에서 찾음')
     if (!payBtn) await dumpButtons('입금완료 처리 못 찾음')
     if (payBtn) {
+      //  한 번 입금완료로 바꾸면 화면에서는 되돌릴 수 없습니다. 그래서
+      //  먼저 확인을 받고, '아니오' 를 누르면 아무 일도 없어야 합니다.
+      let asked = ''
+      office.once('dialog', (d) => { asked = d.message(); d.dismiss() })
       await payBtn.click()
+      await office.waitForTimeout(2000)
+      check(/되돌릴 수 없습니다/.test(asked), '입금완료 전에 확인을 받음',
+        asked.replace(/\n/g, ' ').slice(0, 60))
+      const notYet = (await svc(`/payments?select=status&id=eq.${paymentId}`)).body?.[0]
+      check(notYet?.status !== '입금완료', '확인에서 취소하면 아무것도 바뀌지 않음', notYet?.status)
+
+      const payBtn2 = await rowBtn('입금완료 처리')
+      office.once('dialog', (d) => d.accept())
+      await (payBtn2 ?? payBtn).click()
       await office.waitForTimeout(3000)
     }
     const paid = (await svc(`/payments?select=status,paid_at,updated_by&id=eq.${paymentId}`)).body?.[0]
@@ -195,6 +208,12 @@ async function main() {
     const payAudit = audits.find((a) => a.action === 'payment.paid')
     check(!!payAudit, '입금 처리가 감사기록에 남음', payAudit?.summary ?? '없음')
     check(!!payAudit?.actor_id, '누가 처리했는지 남음')
+    //  기록에 "입금 완료 처리" 여섯 글자만 남으면 나중에 아무 소용이 없습니다.
+    //  어느 병원의 몇 월치 얼마인지가 같이 남아야 합니다.
+    check(/\d{4}-\d{2}/.test(payAudit?.summary ?? '') && /원/.test(payAudit?.summary ?? ''),
+      '기록에 거래처·청구월·금액이 같이 남음', payAudit?.summary ?? '없음')
+    const updAudit = audits.find((a) => a.action === 'payment.update')
+    check(!!updAudit, '「확인필요」로 바꾼 것도 기록에 남음', updAudit?.summary ?? '없음')
 
     // ── 4. 다른 기기(관리자) ──────────────────────────────────────────────
     section('4. 관리자가 다른 기기에서 확인')

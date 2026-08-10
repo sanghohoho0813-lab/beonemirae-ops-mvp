@@ -246,6 +246,24 @@
   table {
     break-inside: avoid;
   }
+
+  /* 명세서·수거대장을 열고 인쇄할 때, 뒤에 있던 화면은 빼고 찍습니다.
+     (lib/usePrintIsolate.ts 가 표시를 붙입니다 — 붙이기 전에는 아무 영향 없음)
+     이게 없으면 A4 5장 중 앞 3장이 거래처 상세 화면으로 나갑니다. */
+  .print-drop {
+    display: none !important;
+  }
+
+  /* 명세서를 감싸고 있던 칸들 — 화면용 여백·최소높이를 인쇄에서는 없앱니다.
+     남겨 두면 내용이 끝난 뒤 빈 종이가 한 장 더 나옵니다. */
+  .print-keep {
+    display: block !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

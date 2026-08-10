@@ -1,6 +1,8 @@
+import { useRef } from 'react'
 import { Printer, X } from 'lucide-react'
 import type { Invoice } from '../lib/billing'
 import { won } from '../lib/format'
+import { usePrintIsolate } from '../lib/usePrintIsolate'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래명세서
@@ -11,6 +13,11 @@ import { won } from '../lib/format'
 //  PDF 는 브라우저 인쇄로 만듭니다. 라이브러리를 새로 넣지 않아도
 //  「인쇄 → PDF 로 저장」이면 거래처에 보낼 파일이 나옵니다.
 //  (@media print 에서 화면 UI 를 숨기고 명세서만 A4 로 남깁니다)
+//
+//  실제로 뽑아 보니 A4 5장이 나왔고 앞 3장이 거래처 상세 화면이었습니다.
+//  명세서는 화면 위에 덮여 있을 뿐 문서 안에서는 여전히 그 화면 '다음' 에
+//  있어서, 인쇄하면 순서대로 다 찍혔던 것입니다. usePrintIsolate 로
+//  인쇄할 때만 뒤 화면을 뺍니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -49,9 +56,11 @@ const md = (iso: string) => {
 export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
   const inv = invoice
   const [y, m] = inv.month.split('-')
+  const sheetRef = useRef<HTMLDivElement>(null)
+  usePrintIsolate(sheetRef, true)
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/60 print:static print:bg-white">
+    <div ref={sheetRef} className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/60 print:static print:bg-white">
       {/* 조작 바 — 인쇄에는 나오지 않습니다 */}
       <div className="sticky top-0 z-10 flex items-center gap-2 bg-navy-900 px-4 py-3 text-white print:hidden sm:px-6">
         <p className="t-body min-w-0 flex-1 break-keep font-bold">

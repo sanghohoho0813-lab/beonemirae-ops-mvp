@@ -32,6 +32,14 @@ export function Receivables() {
       .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth) || b.amount - a.amount)
   }, [data.payments, filter, month])
 
+  //  입금완료로 바꾸면 화면에서 되돌릴 방법이 없습니다(돈 기록입니다).
+  //  그래서 누구의 얼마인지 한 번 보여 주고 확인을 받습니다.
+  function confirmPaid(id: string, name: string, month: string, amount: number) {
+    if (window.confirm(`${name} ${month} 청구 ${won(amount)}\n입금완료로 바꿀까요? 화면에서는 되돌릴 수 없습니다.`)) {
+      markPaid(id)
+    }
+  }
+
   const outstanding = outstandingTotal(data)
   const billedTotal = data.payments.reduce((s, p) => s + p.amount, 0)
   const collected = billedTotal - outstanding
@@ -117,7 +125,7 @@ export function Receivables() {
                     )}
                     <button
                       className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
-                      onClick={() => markPaid(p.id)}
+                      onClick={() => confirmPaid(p.id, client?.name ?? '거래처', p.billingMonth, p.amount)}
                     >
                       <Check size={16} strokeWidth={2.6} /> 입금완료 처리
                     </button>

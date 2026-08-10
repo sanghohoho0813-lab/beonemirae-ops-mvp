@@ -112,8 +112,10 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/30_request_offline.mjs"
   run "32 · 공용 PC 계정 전환 (앞사람 데이터 잔상)" \
     "$NODE" "$HERE/32_shared_pc.mjs"
-  run "35 · 폰 화면 (밀림·잘림)" \
+  run "35 · 폰 화면 (밀림·잘림 · 글자 크기 3가지)" \
     "$NODE" "$HERE/35_mobile_layout.mjs"
+  run "36 · 거래명세서 인쇄 (병원에 보낼 PDF)" \
+    "$NODE" "$HERE/36_print_invoice.mjs"
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -139,7 +141,8 @@ else
   NAMES+=("29 · 수거량 자릿수 오타 · 추가 수거"); RESULTS+=("SKIP")
   NAMES+=("30 · 통신 끊김 시 요청 (병원·사무실)"); RESULTS+=("SKIP")
   NAMES+=("32 · 공용 PC 계정 전환 (앞사람 데이터 잔상)"); RESULTS+=("SKIP")
-  NAMES+=("35 · 폰 화면 (밀림·잘림)"); RESULTS+=("SKIP")
+  NAMES+=("35 · 폰 화면 (밀림·잘림 · 글자 크기 3가지)"); RESULTS+=("SKIP")
+  NAMES+=("36 · 거래명세서 인쇄 (병원에 보낼 PDF)"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."

@@ -573,6 +573,7 @@ export function ClientDetail() {
       <Modal
         open={logOpen}
         title="수거대장 미리보기"
+        printable
         onClose={() => setLogOpen(false)}
         footer={
           <>
