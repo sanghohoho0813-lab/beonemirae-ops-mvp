@@ -140,6 +140,14 @@ export function Settings() {
     if (!file) return
     try {
       const imported = await parseImportFile(file)
+      //  실사용(서버 연결)에서는 가져오기가 동작하지 않습니다(replaceAll 이
+      //  live 에서 아무것도 하지 않습니다). 그런데도 "성공적으로 가져왔습니다"
+      //  라고 알려 주고 있었습니다. 백업에서 되돌릴 수 있다고 믿고 있다가
+      //  정작 필요할 때 아무 일도 일어나지 않습니다. 사실대로 말합니다.
+      if (live) {
+        flash('err', '실사용 데이터는 이 화면에서 되돌릴 수 없습니다. 내보낸 파일은 보관용입니다.')
+        return
+      }
       if (window.confirm('가져온 데이터로 현재 데이터를 덮어쓸까요?')) {
         replaceAll(imported)
         flash('ok', '데이터를 성공적으로 가져왔습니다.')
@@ -340,19 +348,29 @@ export function Settings() {
         <div className="space-y-4 xl:space-y-5">
           <SettingCard
             icon={Download}
-            title="데이터 백업 · 복원"
-            desc="전체 운영 데이터를 JSON 파일로 내보내거나, 백업 파일에서 되돌릴 수 있습니다."
+            title={live ? '데이터 백업' : '데이터 백업 · 복원'}
+            desc={
+              live
+                ? '전체 운영 데이터를 JSON 파일로 내려받아 보관합니다.'
+                : '전체 운영 데이터를 JSON 파일로 내보내거나, 백업 파일에서 되돌릴 수 있습니다.'
+            }
           >
             <div className="space-y-2.5">
               <button className="btn-navy w-full" onClick={() => exportData(data)}>
                 <Download size={18} strokeWidth={2.4} /> 전체 데이터 JSON 내보내기
               </button>
-              <button className="btn-ghost w-full" onClick={() => fileRef.current?.click()}>
-                <Upload size={18} strokeWidth={2.4} /> JSON 파일 가져오기
-              </button>
+              {!live && (
+                <button className="btn-ghost w-full" onClick={() => fileRef.current?.click()}>
+                  <Upload size={18} strokeWidth={2.4} /> JSON 파일 가져오기
+                </button>
+              )}
               <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
             </div>
-            <p className="t-muted mt-3">가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.</p>
+            <p className="t-muted mt-3">
+              {live
+                ? '내려받은 파일은 보관용입니다. 이 화면으로 실사용 데이터를 되돌리는 기능은 아직 없습니다.'
+                : '가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.'}
+            </p>
           </SettingCard>
 
           {/* 차량 — 한 대도 없으면 수거 완료 입력이 불가능합니다 */}

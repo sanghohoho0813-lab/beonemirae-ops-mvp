@@ -13,6 +13,11 @@ import { friendlyError } from '../lib/supabase'
 //  복잡한 관리자 시스템을 만들지 않고, 조회와 새로고침만 제공합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
+//  화면에 한 번에 불러오는 건수. 이 수만큼 찼으면 그 이전 기록이 더 있다는
+//  뜻이므로 아래 안내 문구가 달라집니다("최근 200건" 만 적어 두면 그게
+//  전부인 줄 알고 "그런 기록은 없다" 고 판단하게 됩니다).
+const AUDIT_LIMIT = 200
+
 const ACTION_LABEL: Record<string, string> = {
   'collection.complete': '수거 완료',
   'collection.revert': '수거 완료 취소',
@@ -59,7 +64,7 @@ export function AuditLog() {
     setLoading(true)
     setError(null)
     try {
-      setRows(await loadAuditLogs(200))
+      setRows(await loadAuditLogs(AUDIT_LIMIT))
     } catch (e) {
       setError(friendlyError(e))
     } finally {
@@ -125,7 +130,9 @@ export function AuditLog() {
           </div>
           <p className="t-muted border-t border-navy-100 px-5 py-3.5">
             <ScrollText size={14} className="mr-1.5 inline -translate-y-px" />
-            최근 {rows.length}건. 감사로그는 수정·삭제할 수 없습니다{role === 'admin' ? ' (관리자도 동일)' : ''}.
+            최근 {rows.length}건
+            {rows.length >= AUDIT_LIMIT && '만 화면에 나옵니다 (그 이전 기록도 서버에는 그대로 남아 있습니다)'}.
+            감사로그는 수정·삭제할 수 없습니다{role === 'admin' ? ' (관리자도 동일)' : ''}.
           </p>
         </div>
       )}
