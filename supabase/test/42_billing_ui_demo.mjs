@@ -239,6 +239,74 @@ async function main() {
       check(!/NaN|undefined/.test(billText), '표에 이상한 값이 없음')
     }
 
+    // ── 4-3. 폰에서 청구 카드가 깨지지 않는가 ─────────────────────────────
+    //  청구 줄에는 종류·금액·상태·명세서·취소가 한 줄에 들어갑니다. 글자를
+    //  키우면 가장 먼저 밀려 나갈 자리라, 실제 값이 들어간 상태로 좁은 폰
+    //  (390px) + 「매우 크게」 에서 재 봅니다. 35번은 실사용 DB 로 도는데
+    //  거기에는 아직 청구가 없어 이 줄이 그려지지 않습니다.
+    section('4-3. 폰(390px) · 매우 크게 — 청구 카드')
+    const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    const mp = await mob.newPage()
+    mp.on('pageerror', (e) => errors.push(`[폰] ${e.message}`))
+    await mp.goto(`${BASE}/clients`, { waitUntil: 'networkidle' })
+    await mp.evaluate(() => localStorage.setItem('beonemirae-ops:font-scale', 'xlarge'))
+    await mp.goto(`${BASE}/clients`, { waitUntil: 'networkidle' })
+    await mp.waitForTimeout(2000)
+    await mp.locator(`text="${firstName}"`).first().click()
+    await mp.waitForTimeout(2200)
+    const mtab = mp.locator('button', { hasText: '월 정산·명세서' }).first()
+    await mtab.waitFor({ state: 'attached', timeout: 20000 }).catch(() => {})
+    await mtab.click()
+    await mp.waitForTimeout(2500)
+
+    //  이 창은 앞의 창과 저장소가 따로라 아직 확정한 청구가 없습니다.
+    //  여기서 한 번 확정해야 종류·금액·상태·「명세서」·「취소」가 모두 붙은
+    //  줄이 생깁니다 — 그 줄이 가장 잘 밀려 나가는 자리입니다.
+    const mConfirm = mp.locator('button', { hasText: '청구 확정' }).first()
+    if ((await mConfirm.count()) > 0 && (await mConfirm.isEnabled())) {
+      mp.once('dialog', (d) => d.accept())
+      await mConfirm.click()
+      await mp.waitForTimeout(3000)
+    }
+
+    const m = await mp.evaluate(() => {
+      const inScroller = (el) => {
+        let n = el.parentElement
+        while (n && n !== document.body) {
+          const s = getComputedStyle(n)
+          if (/auto|scroll/.test(s.overflowX) && n.scrollWidth > n.clientWidth + 1) return true
+          n = n.parentElement
+        }
+        return false
+      }
+      const stuck = []
+      for (const el of document.querySelectorAll('body *')) {
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.right > window.innerWidth + 1 && !inScroller(el)) {
+          stuck.push(`<${el.tagName}> ${(el.textContent || '').trim().slice(0, 26)}`)
+        }
+      }
+      return {
+        width: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        fontSize: getComputedStyle(document.documentElement).fontSize,
+        billRows: [...document.querySelectorAll('li')].filter((li) => /명세서|취소/.test(li.innerText)).length,
+        //  버튼이 다 붙은 줄(명세서 + 취소)이 실제로 있어야 의미가 있습니다.
+        fullRows: [...document.querySelectorAll('li')]
+          .filter((li) => /명세서/.test(li.innerText) && /취소/.test(li.innerText)).length,
+        stuck: stuck.slice(0, 3),
+        count: stuck.length,
+      }
+    })
+    check(m.fontSize !== '17.8px', '「매우 크게」로 재고 있음', m.fontSize)
+    check(m.billRows > 0, '청구 줄이 실제로 그려진 상태에서 잼', `${m.billRows}줄`)
+    check(m.fullRows > 0, '「명세서」·「취소」가 모두 붙은 줄로 잼 (가장 잘 밀려 나가는 자리)',
+      `${m.fullRows}줄`)
+    check(m.scrollWidth <= m.width + 1, '페이지가 옆으로 밀리지 않음',
+      m.scrollWidth > m.width + 1 ? `scrollWidth ${m.scrollWidth} > ${m.width}` : '')
+    check(m.count === 0, '잘려서 못 보는 요소 없음', m.count ? `${m.count}개: ${m.stuck.join(' / ')}` : '')
+    await mob.close()
+
     // ── 5. 화면 오류 ──────────────────────────────────────────────────────
     section('5. 콘솔 오류')
     const real = errors.filter((e) => !/favicon|jsdelivr|pretendard|Failed to load resource|net::ERR_/.test(e))
