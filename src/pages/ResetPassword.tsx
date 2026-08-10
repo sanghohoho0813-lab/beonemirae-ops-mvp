@@ -23,6 +23,13 @@ export function ResetPassword() {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
+    //  화면에는 "8자 이상" 이라고 적어 두고 실제로는 6자도 그대로 저장됐습니다
+    //  (서버 기본값이 6자). 적어 둔 규칙은 지켜야 합니다 — 게다가 이 화면은
+    //  비밀번호를 잊어버린 뒤에 오는 자리라 가장 짧게 정하기 쉬운 곳입니다.
+    if (pw.length < 8) {
+      setError('비밀번호는 8자 이상으로 정해 주세요.')
+      return
+    }
     if (pw !== pw2) {
       setError('두 번 입력한 비밀번호가 서로 다릅니다.')
       return
