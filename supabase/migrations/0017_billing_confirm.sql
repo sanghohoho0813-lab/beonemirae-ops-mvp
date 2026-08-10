@@ -39,7 +39,26 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1) '취소' 상태 허용 ---------------------------------------------------------
-alter table public.payments drop constraint if exists payments_status_check;
+--  status 검사는 0001 에서 칸에 붙여 만들었습니다. 그때 붙은 이름이 환경에
+--  따라 다를 수 있어, 이름을 찾아서 떼어 냅니다(이름을 찍어 두면 다른
+--  환경에서 "그런 제약 없음" 으로 조용히 넘어가 '취소' 가 안 들어갑니다).
+do $$
+declare c text;
+begin
+  for c in
+    select con.conname
+      from pg_constraint con
+      join pg_class rel on rel.oid = con.conrelid
+      join pg_namespace nsp on nsp.oid = rel.relnamespace
+     where nsp.nspname = 'public'
+       and rel.relname = 'payments'
+       and con.contype = 'c'
+       and pg_get_constraintdef(con.oid) like '%status%'
+  loop
+    execute format('alter table public.payments drop constraint %I', c);
+  end loop;
+end $$;
+
 alter table public.payments
   add constraint payments_status_check
   check (status in ('입금완료', '미수금', '확인필요', '취소'));
