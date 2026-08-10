@@ -309,6 +309,11 @@ async function cleanup() {
 async function verify() {
   const T = {}
   const S = {}
+  //  이 검증은 수거를 완료하며 자재를 함께 공급합니다(골판지 2 · 침통 1).
+  //  그만큼 사무실 재고가 줄어드는데 되돌리지 않고 끝났습니다. 전체 회귀를
+  //  돌릴 때마다 조용히 사라져 창고 숫자가 실제와 벌어졌습니다. 시작값을
+  //  들고 있다가 끝에 되돌립니다.
+  const stockStart = SERVICE ? (await truth('/office_stock?select=*&id=eq.1')).body?.[0] : null
 
   // ── 0. 준비 상태 자기점검 ────────────────────────────────────────────────
   //  아래 검증은 전부 "DB 에 실제로 남았는가"를 service 권한으로 확인합니다.
@@ -633,6 +638,25 @@ async function verify() {
     const res = await rpc(T.admin, 'reset_demo_records', { p_session_id: 'live-verify-nonexistent-session' })
     const afterCount = (await truth('/schedules?select=id')).body?.length ?? 0
     ok(before === afterCount, `시연 초기화가 실제 데이터를 건드리지 않음 (${before} → ${afterCount}, rpc ${res.status})`)
+  }
+
+  // ── 정리 ──────────────────────────────────────────────────────────────
+  if (stockStart) {
+    section('정리')
+    await truth('/office_stock?id=eq.1', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        corrugated_box: stockStart.corrugated_box,
+        plastic_container: stockStart.plastic_container,
+        bag: stockStart.bag,
+        needle_box: stockStart.needle_box,
+      }),
+    })
+    const back = (await truth('/office_stock?select=*&id=eq.1')).body?.[0]
+    ok(
+      back?.corrugated_box === stockStart.corrugated_box && back?.needle_box === stockStart.needle_box,
+      `사무실 재고를 검사 전으로 되돌림 (골판지 ${back?.corrugated_box} · 침통 ${back?.needle_box})`,
+    )
   }
 
   section('결과')

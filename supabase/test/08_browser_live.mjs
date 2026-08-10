@@ -73,7 +73,30 @@ async function isBlocked(page) {
     : false
 }
 
+/**
+ * 사무실 재고를 검사 전으로 되돌립니다.
+ *
+ *  이 검사는 화면에서 수거를 완료하면서 자재를 함께 공급합니다. 그러면
+ *  사무실 재고가 줄어드는데, 되돌리지 않고 끝났습니다. 검사 한 번에
+ *  박스 3개·합성수지 2개씩 조용히 사라져, 전체 회귀를 돌릴 때마다 창고
+ *  숫자가 실제와 벌어졌습니다(두 번 돌린 사이에 박스 10개가 줄어 있었고,
+ *  그 절반이 여기였습니다). 검사가 남긴 자국은 검사가 지웁니다.
+ */
 async function main() {
+  const stock0 = (await truth('/office_stock?select=*&id=eq.1')).body?.[0]
+  const restoreStock = async () => {
+    if (!stock0) return
+    await truth('/office_stock?id=eq.1', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        corrugated_box: stock0.corrugated_box,
+        plastic_container: stock0.plastic_container,
+        bag: stock0.bag,
+        needle_box: stock0.needle_box,
+      }),
+    })
+  }
+
   const browser = await pw.chromium.launch({
     ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
     // CHROMIUM_TLS12=1 : 방화벽이 Chromium 의 TLS 1.3 핸드셰이크를 끊는 망에서만
@@ -292,6 +315,19 @@ async function main() {
   check(real.length === 0, '브라우저 콘솔 오류 없음', real.slice(0, 3).join(' | '))
 
   await browser.close()
+
+  // ── 정리 ────────────────────────────────────────────────────────────────
+  section('정리')
+  await restoreStock()
+  const stock1 = (await truth('/office_stock?select=*&id=eq.1')).body?.[0]
+  const same =
+    stock1?.corrugated_box === stock0?.corrugated_box &&
+    stock1?.plastic_container === stock0?.plastic_container &&
+    stock1?.bag === stock0?.bag &&
+    stock1?.needle_box === stock0?.needle_box
+  check(same, '사무실 재고를 검사 전으로 되돌림',
+    `박스 ${stock1?.corrugated_box} · 합성수지 ${stock1?.plastic_container}`)
+
   console.log(`\n════ ${pass} PASS / ${fail} FAIL ════`)
   process.exit(fail === 0 ? 0 : 1)
 }
