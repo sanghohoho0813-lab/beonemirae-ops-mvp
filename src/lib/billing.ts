@@ -722,9 +722,11 @@ export function billingStateFor(data: AppData, clientId: string, month: string):
     billedAmount,
     pending,
     pendingAmount: pending.revenue,
-    //  남은 수거·공급이 있어야 확정할 수 있습니다. 없으면 버튼이 잠깁니다
-    //  (같은 달을 두 번 청구하는 것을 이걸로 막습니다).
-    canConfirm: pending.collections + pending.supplies > 0,
+    //  남은 수거·공급이 있고, 그것으로 받을 금액이 있어야 확정합니다.
+    //   · 남은 것이 없으면 = 이미 다 청구했으므로 잠금 (같은 달 중복 차단)
+    //   · 남은 것은 있는데 금액이 0원이면 = 무상 물품만 나간 달입니다.
+    //     0원짜리 청구를 만들면 미수금 목록에 뜻 없는 줄만 늘어납니다.
+    canConfirm: pending.collections + pending.supplies > 0 && pending.revenue > 0,
     nextKind: bills.length > 0 ? '추가' : '정기',
     hasLegacyBill,
   }

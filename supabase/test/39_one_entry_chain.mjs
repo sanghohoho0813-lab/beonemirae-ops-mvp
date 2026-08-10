@@ -248,14 +248,37 @@ async function main() {
     await office.locator('button[aria-label="닫기"]').first().click()
     await office.waitForTimeout(1200)
 
-    // ── 5. 미수금 — 정산 결과가 청구로 이어지는가 ─────────────────────────
-    section('5. 미수금 — 이 금액이 받을 돈으로 이어지는가')
+    // ── 5. 청구 — 정산 결과가 받을 돈으로 이어지는가 ─────────────────────
+    //  예전에는 여기가 끊겨 있었습니다. 정산 금액이 나와도 그것을 청구로
+    //  옮기는 길이 화면에 없어서, 미수금 화면이 비어 있었습니다.
+    section('5. 청구 — 이 금액이 받을 돈으로 이어지는가')
+    await office.goto(`${BASE}/clients/${clientId}`, { waitUntil: 'networkidle' })
+    await office.waitForTimeout(2000)
+    const stab = office.locator('button', { hasText: '월 정산·명세서' }).first()
+    await stab.waitFor({ state: 'attached', timeout: 20000 }).catch(() => {})
+    await stab.click()
+    await office.waitForTimeout(2500)
+
+    const confirmBtn = office.locator('button', { hasText: '청구 확정' }).first()
+    if ((await confirmBtn.count()) === 0) {
+      gap('정산 화면에 「청구 확정」이 없습니다 — 정산 금액을 받을 돈으로 옮길 길이 없습니다')
+    } else {
+      ok('정산 화면에서 바로 청구를 확정할 수 있음')
+      office.once('dialog', (d) => d.accept())
+      await confirmBtn.click()
+      await office.waitForTimeout(5000)
+    }
+
     const billed = (await svc(`/payments?select=id,amount,billing_month&client_id=eq.${clientId}`)).body ?? []
     if (billed.length > 0) {
       check(billed.some((p) => p.amount === EXPECT_REVENUE),
-        '정산 금액이 청구로 자동 등록됨', won(billed[0].amount))
+        '확정한 청구 금액이 정산 금액과 같음 — 다시 입력한 것 없음', won(billed[0].amount))
     } else {
-      gap('정산이 끝나도 청구(미수금)가 만들어지지 않습니다 — 이 금액을 받을 돈으로 옮기는 길이 화면에 없습니다')
+      //  아직 못 만드는 상태라면 화면에 뜬 이유를 그대로 옮겨 적습니다.
+      const why = (await office.locator('body').innerText())
+        .split('\n')
+        .find((l) => /준비되지 않았|못했습니다|없습니다/.test(l)) ?? ''
+      gap(`정산이 끝나도 청구(미수금)가 만들어지지 않습니다 — ${why.trim().slice(0, 80)}`)
     }
 
     await office.goto(`${BASE}/receivables`, { waitUntil: 'networkidle' })

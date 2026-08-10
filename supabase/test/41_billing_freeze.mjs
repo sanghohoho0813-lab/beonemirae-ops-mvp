@@ -184,6 +184,17 @@ const st5 = billingStateFor(legacy, CID, MONTH)
 check(st5.hasLegacyBill === true, '옛 청구가 섞여 있다는 것을 알려 줌')
 check(st5.billedAmount === 1000000, '그 금액은 청구액에 잡힘', won(st5.billedAmount))
 
+// ── 8. 무상 물품만 나간 달 ───────────────────────────────────────────────────
+section('8. 그 달에 무상 물품만 나갔을 때')
+//  박스·기저귀비닐은 매출에 잡히지 않습니다(엑셀도 명세서에 넣지 않습니다).
+//  그런 달에 0원짜리 청구를 만들면 미수금 목록에 뜻 없는 줄만 늘어납니다.
+const freeOnly = appData([], [supply('mf', '2026-02-10', { box63: 50, diaperBag40: 200 })])
+const st6 = billingStateFor(freeOnly, CID, MONTH)
+check(st6.pending.supplies === 1, '공급 기록은 잡힘', `${st6.pending.supplies}건`)
+check(st6.pendingAmount === 0, '청구할 금액은 0원', won(st6.pendingAmount))
+check(st6.canConfirm === false, '0원짜리 청구는 만들지 않음')
+check(buildBillingSnapshot(freeOnly, CID, MONTH, NOW) === null, '눌러도 만들어지지 않음')
+
 console.log(`\n════ ${pass} PASS / ${fail} FAIL ════`)
 console.log(`청구 확정·고정: ${fail === 0 ? 'YES' : 'NO'}`)
 process.exit(fail === 0 ? 0 : 1)

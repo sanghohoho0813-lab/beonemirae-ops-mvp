@@ -100,7 +100,13 @@ export function BillingConfirmCard({
       {!st.canConfirm && st.bills.length > 0 && (
         <p className="t-muted mt-3 break-keep">이 달은 청구를 마쳤습니다. 수거가 더 들어오면 추가 청구를 만들 수 있습니다.</p>
       )}
-      {!st.canConfirm && st.bills.length === 0 && (
+      {!st.canConfirm && st.bills.length === 0 && st.pending.collections + st.pending.supplies > 0 && (
+        <p className="t-muted mt-3 break-keep">
+          이 달에 나간 것은 무상 물품뿐이라 청구할 금액이 없습니다. (박스·기저귀비닐은 매출에 잡히지
+          않습니다)
+        </p>
+      )}
+      {!st.canConfirm && st.bills.length === 0 && st.pending.collections + st.pending.supplies === 0 && (
         <p className="t-muted mt-3 break-keep">이 달에는 아직 청구할 수거·공급이 없습니다.</p>
       )}
       {st.hasLegacyBill && (
