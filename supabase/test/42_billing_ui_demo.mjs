@@ -197,6 +197,48 @@ async function main() {
     const btn3 = page.locator('button', { hasText: '청구 확정' }).first()
     check(await btn3.isEnabled(), '취소 후에는 버튼이 다시 열림')
 
+    // ── 4-1. 취소한 청구가 다른 화면에서 어떻게 보이는가 ──────────────────
+    //  취소는 '없던 일' 이 아니라 '취소한 일' 입니다. 기록으로는 남되 받을
+    //  돈으로는 세지 않아야 하고, 다시 입금 처리할 수도 없어야 합니다.
+    section('4-1. 취소한 청구 — 미수금 화면')
+    await page.goto(`${BASE}/receivables`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(2500)
+
+    const clickFilter = async (label) => {
+      const f = page.locator('button', { hasText: new RegExp(`^${label}$`) }).first()
+      if (await f.count()) { await f.click(); await page.waitForTimeout(1200) }
+      return page.locator('body').innerText()
+    }
+
+    const canceledText = await clickFilter('취소')
+    check(/취소/.test(canceledText), '「취소」로 걸러 볼 수 있음')
+    check(!/입금완료 처리/.test(canceledText),
+      '취소한 청구에는 「입금완료 처리」 버튼이 없음 — 다시 입금 처리할 수 없습니다')
+
+    const unpaidText = await clickFilter('미수금')
+    const amountStr = startPending.toLocaleString('ko-KR')
+    check(!unpaidText.includes(amountStr),
+      '취소한 금액이 「미수금」 목록에 없음', `${amountStr}원`)
+
+    // ── 4-2. 거래처의 결제·미수금 탭 ──────────────────────────────────────
+    section('4-2. 취소한 청구 — 거래처 결제·미수금 탭')
+    await page.goBack()
+    await page.waitForTimeout(1500)
+    await page.goto(`${BASE}/clients`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(2000)
+    await page.locator(`text="${firstName}"`).first().click()
+    await page.waitForTimeout(2500)
+    const billTab = page.locator('button', { hasText: '결제·미수금' }).first()
+    if ((await billTab.count()) === 0) {
+      no('「결제·미수금」 탭을 찾지 못했습니다')
+    } else {
+      await billTab.click()
+      await page.waitForTimeout(2200)
+      const billText = await page.locator('body').innerText()
+      check(/취소/.test(billText), '표에 「취소」 상태로 남아 있음')
+      check(!/NaN|undefined/.test(billText), '표에 이상한 값이 없음')
+    }
+
     // ── 5. 화면 오류 ──────────────────────────────────────────────────────
     section('5. 콘솔 오류')
     const real = errors.filter((e) => !/favicon|jsdelivr|pretendard|Failed to load resource|net::ERR_/.test(e))
