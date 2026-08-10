@@ -27,6 +27,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { inflateSync } from 'node:zlib'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -51,6 +52,51 @@ const section = (t) => console.log(`\n── ${t} ${'─'.repeat(Math.max(0, 52 
 const pdfPages = (file) => {
   const m = readFileSync(file).toString('latin1').match(/\/Count (\d+)/)
   return m ? Number(m[1]) : -1
+}
+
+/**
+ * 장마다 글자가 몇 개 찍혔는가.
+ *
+ *  전에는 「내용 높이 ÷ 종이 높이」로 필요한 장수를 계산해서 실제 장수와
+ *  비교했습니다. 그런데 그 계산은 인쇄할 때 일어나는 밀림을 모릅니다 —
+ *  표의 한 줄이 장 경계에 걸리면 통째로 다음 장으로 내려가고(줄이 반 토막
+ *  나면 안 되니까 일부러 그렇게 해 두었습니다), 그만큼 뒤가 밀립니다.
+ *  그래서 높이로는 3장인데 실제로는 4장이 나오고, 검사는 그 4장째를 빈
+ *  종이라고 불렀습니다. 열어 보면 거래조건이 찍혀 있었습니다.
+ *
+ *  빈 종이인지는 장을 직접 열어 보면 됩니다. 글자를 그리는 명령(Tj/TJ)이
+ *  하나도 없는 장이 빈 종이입니다.
+ */
+const pdfGlyphsPerPage = (file) => {
+  const s = readFileSync(file).toString('latin1')
+  const objs = new Map()
+  const re = /(\d+)\s+0\s+obj([\s\S]*?)endobj/g
+  let m
+  while ((m = re.exec(s))) objs.set(Number(m[1]), { raw: m[2], at: m.index })
+
+  const streamOf = (o) => {
+    if (!o) return ''
+    const i = o.raw.indexOf('stream')
+    if (i < 0) return ''
+    let j = i + 6
+    if (o.raw[j] === '\r') j++
+    if (o.raw[j] === '\n') j++
+    const bytes = Buffer.from(o.raw.slice(j, o.raw.indexOf('endstream', j)), 'latin1')
+    try {
+      return inflateSync(bytes).toString('latin1')
+    } catch {
+      return bytes.toString('latin1')
+    }
+  }
+
+  const pages = []
+  for (const [, o] of objs) {
+    if (!/\/Type\s*\/Page[^s]/.test(o.raw)) continue
+    const c = o.raw.match(/\/Contents\s+(\d+)\s+0\s+R/)
+    const body = c ? streamOf(objs.get(Number(c[1]))) : ''
+    pages.push({ at: o.at, glyphs: (body.match(/\bTj\b|\bTJ\b/g) ?? []).length })
+  }
+  return pages.sort((a, b) => a.at - b.at).map((p) => p.glyphs)
 }
 
 /** 인쇄 모드에서 실제로 종이에 나오는 글자만 (숨겨진 조상 아래는 뺍니다) */
@@ -117,7 +163,7 @@ async function main() {
       const file = join(dir, `${tag}.pdf`)
       await page.pdf({ path: file, printBackground: true, preferCSSPageSize: true })
       await page.emulateMedia({ media: 'screen' })
-      return { ...seen, pages: pdfPages(file) }
+      return { ...seen, pages: pdfPages(file), glyphs: pdfGlyphsPerPage(file) }
     }
 
     // ── 1. 거래명세서 ──────────────────────────────────────────────────
@@ -139,9 +185,16 @@ async function main() {
       (inv.text.match(/대시보드|오늘 일정|거래처 목록|운영조건/) ?? [''])[0])
     check(!/인쇄 · PDF 저장/.test(inv.text), '조작 버튼은 인쇄되지 않음')
 
-    //  내용 높이로 계산한 장수와 실제 장수가 같아야 합니다. 크면 빈 종이입니다.
+    //  마지막 장을 열어 봅니다. 글자가 하나도 없으면 빈 종이입니다.
     const need = Math.max(1, Math.ceil(inv.bottom / PAPER.height))
-    check(inv.pages === need, '내용이 끝난 뒤 빈 종이가 나오지 않음',
+    const empty = inv.glyphs.map((g, i) => (g === 0 ? i + 1 : 0)).filter(Boolean)
+    check(empty.length === 0, '내용이 끝난 뒤 빈 종이가 나오지 않음',
+      `${inv.pages}장 · 장별 글자수 ${inv.glyphs.join(' / ')}${empty.length ? ` · 빈 장 ${empty.join(',')}` : ''}`)
+    //  줄이 장 경계에 걸리면 통째로 다음 장으로 내려갑니다. 그 밀림은 장마다
+    //  한 줄 남짓이라 한 장을 넘지 않아야 합니다. 그보다 커지면 어딘가에서
+    //  큰 덩어리가 통째로 밀리고 있다는 뜻입니다(예전에 표 전체에
+    //  break-inside:avoid 가 걸려 있을 때 그랬습니다).
+    check(inv.pages <= need + 1, '장 경계 밀림이 한 장을 넘지 않음',
       `실제 ${inv.pages}장 · 내용 기준 ${need}장 (높이 ${inv.bottom})`)
 
     //  달이 끝나기 전에 뽑는 일이 있습니다. 그때 월말 날짜를 그대로 적으면
@@ -184,7 +237,10 @@ async function main() {
       check(/수거대장/.test(log.text.slice(0, 40)), '첫 장이 수거대장으로 시작함', log.text.slice(0, 30))
       check(!/대시보드|거래처 목록|운영조건/.test(log.text), '뒤에 있던 화면이 섞여 나오지 않음')
       const needLog = Math.max(1, Math.ceil(log.bottom / PAPER.height))
-      check(log.pages === needLog, '내용이 끝난 뒤 빈 종이가 나오지 않음',
+      const emptyLog = log.glyphs.map((g, i) => (g === 0 ? i + 1 : 0)).filter(Boolean)
+      check(emptyLog.length === 0, '내용이 끝난 뒤 빈 종이가 나오지 않음',
+        `${log.pages}장 · 장별 글자수 ${log.glyphs.join(' / ')}${emptyLog.length ? ` · 빈 장 ${emptyLog.join(',')}` : ''}`)
+      check(log.pages <= needLog + 1, '장 경계 밀림이 한 장을 넘지 않음',
         `실제 ${log.pages}장 · 내용 기준 ${needLog}장`)
     }
     // ── 4. 폰에서 뒤로 가기 ────────────────────────────────────────────
