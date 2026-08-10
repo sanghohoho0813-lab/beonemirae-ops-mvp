@@ -16,6 +16,8 @@ import {
   Pin,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { canSeeDashboard } from '../lib/access'
 import { WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { PageShell, SectionTitle, MetricCard, EmptyState } from '../components/ui'
@@ -73,15 +75,22 @@ const billStyle: Record<BillStatus, string> = {
   취소: 'bg-navy-100 text-navy-400 line-through',
 }
 
+//  money: true 인 탭은 매출·원가·영업이익·청구가 보이는 자리입니다.
+//  현장 담당자에게는 대시보드·통계·미수금을 이미 막아 두었는데, 거래처
+//  상세의 이 탭들이 뒷문으로 열려 있었습니다 — 실제로 현장 계정에서
+//  매출 511,250원 · 원가 210,858원 · 영업이익 300,392원이 그대로 보였고,
+//  청구 확정 버튼까지 눌러졌습니다. 원가와 이익은 미수금보다 더 민감한
+//  숫자입니다. 정산은 수거·자재로 계산되는 값이라 RLS 로는 막을 수 없어
+//  화면에서 가려야 합니다.
 const TABS = [
-  { id: 'ops', label: '운영조건' },
-  { id: 'settlement', label: '월 정산·명세서' },
-  { id: 'report', label: '월간 리포트' },
-  { id: 'notes', label: '현장 메모' },
-  { id: 'history', label: '수거이력' },
-  { id: 'materials', label: '자재관리' },
-  { id: 'requests', label: '요청·알림' },
-  { id: 'billing', label: '결제·미수금' },
+  { id: 'ops', label: '운영조건', money: false },
+  { id: 'settlement', label: '월 정산·명세서', money: true },
+  { id: 'report', label: '월간 리포트', money: false },
+  { id: 'notes', label: '현장 메모', money: false },
+  { id: 'history', label: '수거이력', money: false },
+  { id: 'materials', label: '자재관리', money: false },
+  { id: 'requests', label: '요청·알림', money: false },
+  { id: 'billing', label: '결제·미수금', money: true },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
@@ -89,6 +98,7 @@ export function ClientDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data, clientById, updateClient, removeClient, notesFor } = useData()
+  const { role } = useAuth()
   const client = clientById(id)
 
   const [editing, setEditing] = useState(false)
@@ -108,6 +118,10 @@ export function ClientDetail() {
   }
   const [logOpen, setLogOpen] = useState(false)
   const [tab, setTab] = useState<TabId>('ops')
+  //  현장 담당자에게는 매출·원가·이익·청구가 보이는 탭을 열지 않습니다.
+  //  주소를 직접 쳐서 들어와도 탭이 없으므로 그 내용은 그려지지 않습니다.
+  const canSeeMoney = canSeeDashboard(role)
+  const visibleTabs = TABS.filter((t) => canSeeMoney || !t.money)
   const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
   const [invoiceOpen, setInvoiceOpen] = useState(false)
 
@@ -219,13 +233,20 @@ export function ClientDetail() {
       {/* 핵심 지표 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="월평균 수거량" value={weight(avg)} tone="navy" nowrap />
-        <MetricCard
-          label="미수금"
-          value={outstanding > 0 ? won(outstanding) : '없음'}
-          tone={outstanding > 0 ? 'rose' : 'emerald'}
-          hint="미수금 관리 →"
-          onClick={() => navigate('/receivables')}
-        />
+        {/*
+          미수금 칸도 현장 담당자에게는 열지 않습니다. 눌러도 미수금 화면은
+          막혀 있어 "접근 권한이 없는 화면입니다" 만 나오고, 무엇보다 이
+          숫자는 현장 업무에 필요하지 않습니다.
+        */}
+        {canSeeMoney && (
+          <MetricCard
+            label="미수금"
+            value={outstanding > 0 ? won(outstanding) : '없음'}
+            tone={outstanding > 0 ? 'rose' : 'emerald'}
+            hint="미수금 관리 →"
+            onClick={() => navigate('/receivables')}
+          />
+        )}
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">최근 수거일</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{last ? prettyDate(last.date) : '—'}</p>
@@ -336,9 +357,9 @@ export function ClientDetail() {
         </section>
       )}
 
-      {/* 탭 */}
+      {/* 탭 — 돈이 보이는 탭은 현장 담당자에게 열지 않습니다 */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -354,7 +375,7 @@ export function ClientDetail() {
       {/* ── 월 정산 · 거래명세서 ──
           거래처별 엑셀에서 매달 하던 계산입니다.
           수량은 전부 현장 입력에서 오고, 여기서는 확인만 합니다. */}
-      {tab === 'settlement' && (
+      {tab === 'settlement' && canSeeMoney && (
         <SettlementPanel
           data={data}
           client={client}
@@ -525,7 +546,7 @@ export function ClientDetail() {
       )}
 
       {/* ── 결제·미수금 ── */}
-      {tab === 'billing' && (
+      {tab === 'billing' && canSeeMoney && (
         <div className="space-y-3">
           <div className="card overflow-x-auto p-1">
             <table className="w-full border-collapse text-left text-[0.98rem]">

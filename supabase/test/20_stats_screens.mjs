@@ -224,6 +224,24 @@ async function main() {
         check(!flat(t).includes(flat(won(outstanding))), `  ${path} 에서 미수금 금액 노출 없음`)
       }
     }
+
+    //  화면 주소만 막는 것으로는 부족합니다. 거래처 상세의 「월 정산·명세서」
+    //  탭이 뒷문으로 열려 있어서, 현장 계정에서 매출·원가·영업이익이 그대로
+    //  보이고 청구 확정 버튼까지 눌러졌습니다(실측: 매출 511,250원 ·
+    //  원가 210,858원 · 영업이익 300,392원). 정산은 수거·자재로 계산되는
+    //  값이라 RLS 로는 막을 수 없어 화면에서 가려야 합니다.
+    const someClient = (await svc('/clients?select=id,name&active=eq.true&limit=1')).body?.[0]
+    if (!someClient) {
+      no('거래처 상세를 확인할 거래처가 없습니다')
+    } else {
+      await field.goto(`${BASE}/clients/${someClient.id}`, { waitUntil: 'networkidle' })
+      await field.waitForTimeout(2500)
+      const cd = await field.locator('body').innerText()
+      check(!cd.includes('월 정산·명세서'), '현장 계정에게 거래처 상세의 「월 정산·명세서」 탭이 없음')
+      check(!cd.includes('결제·미수금'), '현장 계정에게 「결제·미수금」 탭이 없음')
+      check(!/영업이익/.test(cd), '현장 계정 화면에 영업이익이 보이지 않음')
+      check(!/청구 확정/.test(cd), '현장 계정에게 청구 확정 버튼이 없음')
+    }
     await field.close()
 
     // ── 9. 화면 오류 ──────────────────────────────────────────────────────
