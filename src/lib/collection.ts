@@ -113,6 +113,17 @@ function validate(data: AppData, input: CollectionCompletionInput): { errors: st
     )
   }
 
+  //  차량이 실을 수 있는 양을 넘는 수거량은 거의 자릿수 오타입니다.
+  //  (88 을 880 으로 치면 그 거래처 그 달 매출이 열 배가 됩니다)
+  //  현장 사정을 시스템이 다 알 수는 없으니 막지는 않되, 반드시 알립니다.
+  if (vehicle && vehicle.nominalCapacity > 0 && input.actualAmount > vehicle.nominalCapacity) {
+    warnings.push(
+      `입력한 수거량 ${input.actualAmount.toLocaleString('ko-KR')}kg 이 ` +
+        `${vehicle.name} 최대 적재량 ${vehicle.nominalCapacity.toLocaleString('ko-KR')}kg 을 넘습니다. ` +
+        `자릿수를 확인해 주세요.`,
+    )
+  }
+
   // 거래처 배출 구분 확인 (차단은 아니고 경고)
   if (client) {
     if (input.wasteType === '일회용기저귀' && !client.collectsDiaper) {

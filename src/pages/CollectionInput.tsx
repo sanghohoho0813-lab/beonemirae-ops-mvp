@@ -184,6 +184,22 @@ export function CollectionInput() {
   const supplied = { ...EMPTY_SUPPLIED, ...stockDeltaOf(suppliedItems) }
   const overStock = SUPPLY_KEYS.some(({ key }) => supplied[key] > stock[key])
   const suppliedSum = suppliedTotal(supplied)
+
+  //  오늘 이 거래처의 같은 구분 수거가 이미 저장돼 있으면, 두 번째 방문은
+  //  '추가 수거'로만 저장할 수 있습니다. 그런데 그 선택칸이 자재를 공급할 때만
+  //  보여서, 자재 없이 다시 방문한 경우에는 화면이 시키는 대로 할 방법이
+  //  없었습니다 — 저장은 막히는데 푸는 길이 화면에 없는 상태였습니다.
+  const alreadyToday = useMemo(
+    () =>
+      data.schedules.some(
+        (s) =>
+          s.clientId === clientId &&
+          s.wasteType === wasteType &&
+          s.date === today() &&
+          s.status === '완료',
+      ),
+    [data.schedules, clientId, wasteType],
+  )
   const containerSum = containerTotal(containers)
 
   function buildInput(): CollectionCompletionInput {
@@ -262,6 +278,19 @@ export function CollectionInput() {
             {success.client} · {weight(success.amount)}
             {success.supplied > 0 && ` · 자재 ${success.supplied}점 동시공급`}
           </p>
+
+          {/* 경고 — 저장은 됐지만 확인이 필요한 것.
+              이 화면은 폼을 통째로 대신하므로, 여기에 다시 그리지 않으면
+              저장에 성공한 경우 경고를 아무도 보지 못합니다. */}
+          {warnings.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left">
+              {warnings.map((w) => (
+                <p key={w} className="t-body flex items-start gap-1.5 font-semibold text-amber-700">
+                  <AlertTriangle size={15} className="mt-0.5 shrink-0" /> {w}
+                </p>
+              ))}
+            </div>
+          )}
 
           <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-[1.08rem]">
             <p className="mb-1 text-[0.98rem] font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
@@ -537,7 +566,7 @@ export function CollectionInput() {
               </span>
             ))}
           </div>
-          {suppliedSum > 0 && (
+          {(suppliedSum > 0 || alreadyToday) && (
             <label className="mt-3 flex items-center gap-2 text-[1.08rem] font-semibold text-navy-600">
               <input
                 type="checkbox"
@@ -545,7 +574,7 @@ export function CollectionInput() {
                 checked={isAdditional}
                 onChange={(e) => setIsAdditional(e.target.checked)}
               />
-              추가요청 공급 (정기 외)
+              {alreadyToday ? '추가 수거 (오늘 이미 수거한 곳에 다시 방문)' : '추가요청 공급 (정기 외)'}
             </label>
           )}
           {overStock && (
