@@ -298,8 +298,15 @@ async function main() {
     const boxInput = dlg.locator('input[type="number"]').first()
     await boxInput.fill('4')
     await office2.waitForTimeout(400)
+    //  현장이 오늘 이미 자재를 함께 줬습니다. 같은 거래처·같은 날 또 넣는
+    //  것이므로 "이미 있습니다" 라고 알려 줘야 합니다 — 모르고 두 번 넣으면
+    //  공급도 재고도 두 번 잡힙니다.
+    let dupAsked = ''
+    office2.once('dialog', (d) => { dupAsked = d.message(); d.accept() })
     await dlg.locator('button:has-text("저장")').first().click()
     await office2.waitForTimeout(4500)
+    check(/이미/.test(dupAsked), '같은 날 같은 거래처에 또 넣으면 알려 줌',
+      dupAsked.replace(/\n/g, ' ').slice(0, 60))
 
     const matRow = (await svc(`/materials?select=box_count&client_id=eq.${clientId}&order=created_at.desc&limit=1`)).body?.[0]
     check(matRow?.box_count === 4, '자재 화면의 공급이 기록됨', `박스 ${matRow?.box_count}개`)

@@ -75,6 +75,18 @@ export function Materials() {
   function save() {
     if (!form.clientId) return
     if (overStock.length > 0) return
+    //  현장이 수거하면서 자재를 함께 주면 그 입력에서 이미 기록됩니다.
+    //  같은 거래처·같은 날짜로 여기서 또 넣으면 공급이 두 번 잡히고 재고도
+    //  두 번 빠집니다. 막지는 않습니다 — 정말 두 번 나간 날도 있습니다.
+    const already = data.materials.filter((m) => m.clientId === form.clientId && m.date === form.date)
+    if (already.length > 0) {
+      const name = clientById(form.clientId)?.name ?? '이 거래처'
+      const okToAdd = window.confirm(
+        `${name} ${prettyDate(form.date)} 자재 공급이 이미 ${already.length}건 있습니다.\n` +
+          '현장 수거 입력에서 함께 넣은 것일 수 있습니다. 그래도 하나 더 등록할까요?',
+      )
+      if (!okToAdd) return
+    }
     addMaterial({
       ...form,
       boxCount: Number(form.boxCount),
