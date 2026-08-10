@@ -47,7 +47,7 @@ import { ClientLeadHistory } from '../components/LeadHistory'
 import { MonthlyReportView } from '../components/MonthlyReport'
 import { SettlementPanel } from '../components/Settlement'
 import { InvoiceView } from '../components/InvoiceView'
-import { invoiceForBilled, contractState } from '../lib/billing'
+import { invoiceForBilled, contractState, type Invoice } from '../lib/billing'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import type { Client } from '../types'
 
@@ -127,6 +127,10 @@ export function ClientDetail() {
   const canSeeMoney = mode !== 'live' || canSeeDashboard(role)
   const visibleTabs = TABS.filter((t) => canSeeMoney || !t.money)
   const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
+  //  어떤 청구의 명세서를 열었는지 담아 둡니다. 청구가 여러 건이면
+  //  (정기 + 추가) 명세서도 건마다 다르기 때문입니다. 값이 없으면 아직
+  //  확정 전이라 지금 값으로 계산해서 보여 줍니다.
+  const [shownInvoice, setShownInvoice] = useState<Invoice | null>(null)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
 
   if (!client) {
@@ -385,7 +389,10 @@ export function ClientDetail() {
           client={client}
           month={settleMonth}
           onMonthChange={setSettleMonth}
-          onOpenInvoice={() => setInvoiceOpen(true)}
+          onOpenInvoice={(inv) => {
+            setShownInvoice(inv ?? null)
+            setInvoiceOpen(true)
+          }}
           onSavePricing={(pricing) => updateClient(client.id, { pricing })}
         />
       )}
@@ -605,8 +612,11 @@ export function ClientDetail() {
             다시 계산하면, 단가를 바꾼 뒤 다시 뽑았을 때 이미 병원에 보낸
             금액과 달라집니다.
           */
-          invoice={invoiceForBilled(data, client.id, settleMonth)}
-          onClose={() => setInvoiceOpen(false)}
+          invoice={shownInvoice ?? invoiceForBilled(data, client.id, settleMonth)}
+          onClose={() => {
+            setInvoiceOpen(false)
+            setShownInvoice(null)
+          }}
         />
       )}
 

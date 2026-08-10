@@ -147,8 +147,29 @@ async function main() {
     check(lastRowKind === askedKind, `목록에 「${askedKind}」 청구로 쌓임`,
       `물어본 종류 ${askedKind} · 목록 ${lastRowKind || '없음'}`)
 
+    // ── 2-1. 그 청구의 명세서 ─────────────────────────────────────────────
+    //  청구가 여러 건이면(정기 + 추가) 명세서도 건마다 따로 나갑니다.
+    //  위쪽 「거래명세서」 버튼 하나로는 마지막 것만 열리므로, 줄마다 그
+    //  청구의 명세서를 열 수 있어야 합니다.
+    section('2-1. 방금 확정한 청구의 명세서')
+    const invBtns = page.locator('button', { hasText: '명세서' })
+    const perBill = page.locator('li button', { hasText: '명세서' })
+    check((await perBill.count()) >= 1, '청구 줄에 「명세서」 버튼이 있음',
+      `${await perBill.count()}개 / 전체 ${await invBtns.count()}개`)
+    if ((await perBill.count()) >= 1) {
+      await perBill.last().click()
+      await page.waitForTimeout(2000)
+      const invText = await page.locator('body').innerText()
+      check(/거래명세서/.test(invText), '명세서가 열림')
+      check(invText.includes(startPending.toLocaleString('ko-KR')),
+        '확정한 금액 그대로 열림', `${startPending.toLocaleString('ko-KR')}원`)
+      const close = page.locator('button[aria-label="닫기"]').first()
+      if (await close.count()) { await close.click(); await page.waitForTimeout(1200) }
+    }
+
     // ── 3. 중복 차단 ──────────────────────────────────────────────────────
     section('3. 같은 달을 또 확정하려 할 때')
+    card = await page.evaluate(READ_CARD)
     const btn2 = page.locator('button', { hasText: '청구 확정' }).first()
     check(!(await btn2.isEnabled()), '버튼이 잠김')
     check(/청구를 마쳤습니다/.test(card.text), '이미 청구했다고 적혀 있음')

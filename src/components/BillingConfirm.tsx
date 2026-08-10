@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { CheckCircle2, Loader2, ReceiptText, Undo2 } from 'lucide-react'
+import { CheckCircle2, FileText, Loader2, ReceiptText, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
-import { billingStateFor } from '../lib/billing'
+import { billingStateFor, type Invoice } from '../lib/billing'
 import { won } from '../lib/format'
 import type { AppData, Client } from '../types'
 
@@ -26,10 +26,13 @@ export function BillingConfirmCard({
   data,
   client,
   month,
+  onOpenInvoice,
 }: {
   data: AppData
   client: Client
   month: string
+  /** 그 청구의 거래명세서를 엽니다 (확정 당시 굳혀 둔 내용 그대로) */
+  onOpenInvoice: (invoice: Invoice) => void
 }) {
   const { confirmBilling, cancelPayment } = useData()
   const [busy, setBusy] = useState(false)
@@ -123,6 +126,20 @@ export function BillingConfirmCard({
               <span className="t-label shrink-0 text-navy-500">{p.snapshot?.kind ?? '청구'}</span>
               <span className="t-cell min-w-0 flex-1 tabular-nums font-bold text-navy-900">{won(p.amount)}</span>
               <span className="t-muted shrink-0">{p.status}</span>
+              {/*
+                청구가 여러 건이면(정기 + 추가) 명세서도 건마다 따로 나갑니다.
+                위쪽 「거래명세서」 버튼 하나로는 마지막 것만 열리므로, 줄마다
+                그 청구의 명세서를 열 수 있게 둡니다.
+              */}
+              {p.snapshot?.invoice && (
+                <button
+                  className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[1rem] font-bold text-navy-500 transition hover:bg-navy-100"
+                  onClick={() => onOpenInvoice(p.snapshot!.invoice)}
+                >
+                  <FileText size={14} className="mr-1 inline -translate-y-px" />
+                  명세서
+                </button>
+              )}
               {p.status !== '입금완료' && (
                 <button
                   className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[1rem] font-bold text-navy-500 transition hover:bg-navy-100"

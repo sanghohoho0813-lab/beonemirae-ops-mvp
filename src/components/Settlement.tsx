@@ -18,6 +18,7 @@ import {
   priceOf,
   settlementFor,
   usageComparison,
+  type Invoice,
   type ItemKey,
 } from '../lib/billing'
 import { won } from '../lib/format'
@@ -59,7 +60,7 @@ export function SettlementPanel({
   client: Client
   month: string
   onMonthChange: (m: string) => void
-  onOpenInvoice: () => void
+  onOpenInvoice: (invoice?: Invoice) => void
   onSavePricing: (pricing: Client['pricing']) => void
 }) {
   const [priceOpen, setPriceOpen] = useState(false)
@@ -91,13 +92,15 @@ export function SettlementPanel({
         <button onClick={() => setPriceOpen(true)} className="btn-ghost shrink-0">
           <Pencil size={16} strokeWidth={2.4} /> 단가
         </button>
-        <button onClick={onOpenInvoice} disabled={empty} className="btn-primary shrink-0 disabled:opacity-40">
+        <button onClick={() => onOpenInvoice()} disabled={empty} className="btn-primary shrink-0 disabled:opacity-40">
           <FileText size={17} strokeWidth={2.4} /> 거래명세서
         </button>
       </div>
 
       {/* 청구 — 정산을 확인한 뒤 여기서 확정합니다 (예전에는 이 자리가 없었습니다) */}
-      {!empty && <BillingConfirmCard data={data} client={client} month={month} />}
+      {!empty && (
+        <BillingConfirmCard data={data} client={client} month={month} onOpenInvoice={onOpenInvoice} />
+      )}
 
       {empty ? (
         <div className="card px-6 py-10 text-center">
