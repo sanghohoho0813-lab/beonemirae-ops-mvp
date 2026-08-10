@@ -59,6 +59,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 9 | `supabase/migrations/0009_actor_stamp.sql` | `created_by` / `updated_by` 자동 기록 |
 | 10 | `supabase/migrations/0010_request_handler.sql` | 병원 요청 처리자(`handled_by`) 자동 기록 |
 | 11 | `supabase/migrations/0011_billing.sql` | 거래처 계약·단가 · 규격별 자재 공급 · 거래처 문서함 |
+| 12 | `supabase/migrations/0015_audit_actor_guard.sql` | 감사기록의 작성자를 서버가 정함 (이름 위조 차단) |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
@@ -270,6 +271,7 @@ node supabase/test/05_live.mjs --cleanup
 | `31_session_revoke.mjs` | 계정 중지·역할 변경이 열린 세션에 즉시 반영 | 퇴사자의 폰은 이미 로그인된 채 열려 있습니다 |
 | `32_shared_pc.mjs` | 공용 PC 계정 전환 시 앞사람 데이터 잔상 | 한 번 본 정보는 되돌릴 수 없습니다 |
 | `33_demo_reset_scope.mjs` | 시연 초기화가 실데이터를 건드리지 않는가 | 이 앱에서 데이터를 지우는 유일한 기능입니다 |
+| `34_audit_integrity.mjs` | 감사기록 수정·삭제·위조 차단 | 화면이 "고칠 수 없다"고 약속하고 있습니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다
