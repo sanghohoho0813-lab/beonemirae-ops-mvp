@@ -35,3 +35,4 @@ dist-ssr
 # Supabase 로컬 개발 산물
 supabase/.temp
 supabase/.branches
+dist-demo

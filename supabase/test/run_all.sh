@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 41 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 42 를 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -81,6 +81,17 @@ run "38 · 이사님 엑셀과 정산 금액 대조 (더원요양병원)" \
 # 41 도 DB·브라우저 없이 계산만 봅니다 (청구를 확정하면 정말 굳는가).
 run "41 · 청구 확정·고정 규칙 (단가변경·추가수거·취소)" \
   "$NODE" --experimental-strip-types "$HERE/41_billing_freeze.mjs"
+
+# 42 는 서버 없이 도는 시연 빌드로 청구 화면 자체를 눌러 봅니다.
+#   VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npx vite build --outDir dist-demo
+#   npx vite preview --outDir dist-demo --port 4174
+if curl -sfo /dev/null --max-time 3 "${DEMO_BASE:-http://localhost:4174}"; then
+  run "42 · 청구 화면 동작 (시연 모드 · DB 없이)" \
+    "$NODE" "$HERE/42_billing_ui_demo.mjs"
+else
+  NAMES+=("42 · 청구 화면 동작 (시연 모드 · DB 없이)")
+  RESULTS+=("SKIP")
+fi
 
 if curl -sfo /dev/null --max-time 3 "$BASE"; then
   run "08 · 브라우저 종단 (PC 입력 → 모바일 조회)" \

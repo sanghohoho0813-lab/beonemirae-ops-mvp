@@ -98,7 +98,7 @@ export function ClientDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data, clientById, updateClient, removeClient, notesFor } = useData()
-  const { role } = useAuth()
+  const { role, mode } = useAuth()
   const client = clientById(id)
 
   const [editing, setEditing] = useState(false)
@@ -120,7 +120,11 @@ export function ClientDetail() {
   const [tab, setTab] = useState<TabId>('ops')
   //  현장 담당자에게는 매출·원가·이익·청구가 보이는 탭을 열지 않습니다.
   //  주소를 직접 쳐서 들어와도 탭이 없으므로 그 내용은 그려지지 않습니다.
-  const canSeeMoney = canSeeDashboard(role)
+  //
+  //  시연 모드에는 로그인이 없어 role 이 null 입니다. 역할만 보고 가리면
+  //  시연에서 정산·명세서가 통째로 사라집니다 — 대표님께 보여 드리는
+  //  핵심이 없어지는 것이라, 시연에서는 가리지 않습니다.
+  const canSeeMoney = mode !== 'live' || canSeeDashboard(role)
   const visibleTabs = TABS.filter((t) => canSeeMoney || !t.money)
   const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
   const [invoiceOpen, setInvoiceOpen] = useState(false)
