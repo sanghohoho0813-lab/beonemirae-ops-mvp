@@ -201,9 +201,16 @@ async function main() {
             method: 'PATCH', body: JSON.stringify({ font_scale: scale.db }),
           })
           await page.goto(`${BASE}/clients/${first.id}`, { waitUntil: 'networkidle' })
-          await page.waitForTimeout(2000)
           const tab = page.locator('button', { hasText: '월 정산·명세서' }).first()
-          if ((await tab.count()) === 0) { no(`[${scale.label}] 월 정산 탭을 찾지 못함`); continue }
+          //  정해진 시간만 기다리면, 서버 응답이 조금 늦은 날 '탭이 없다' 고
+          //  틀린 실패를 냅니다(실제로 한 번 그렇게 났고 다시 돌리니 통과했습니다).
+          //  탭이 나타날 때까지 기다리고, 정말 안 나오면 그때 실패로 봅니다.
+          try {
+            await tab.waitFor({ state: 'attached', timeout: 20000 })
+          } catch {
+            no(`[${scale.label}] 월 정산 탭을 찾지 못함 (20초 기다림)`)
+            continue
+          }
           await tab.click()
           await page.waitForTimeout(2500)
           const m = await page.evaluate(MEASURE)
