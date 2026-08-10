@@ -21,6 +21,14 @@ NODE="${NODE:-node}"
 BASE="${BASE:-http://localhost:4173}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+#  검사용 브라우저도 한국 시각으로 돌립니다.
+#
+#  실제로 쓰는 사람은 전부 한국에 있고, 서버는 오늘이 며칠인지를 늘 한국
+#  시각으로 봅니다. 검사 기계가 UTC 로 돌면 한국 시각 09시(=UTC 0시) 이후에
+#  하루가 어긋나, 오늘 만든 일정이 '내일' 것으로 잡히며 멀쩡한 기능이
+#  실패로 나옵니다. 실제로 자정을 넘기며 돌린 회차에서 그 일이 났습니다.
+export TZ="${TZ:-Asia/Seoul}"
+
 for v in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
   if [ -z "${!v:-}" ]; then echo "환경변수 $v 가 필요합니다."; exit 1; fi
 done

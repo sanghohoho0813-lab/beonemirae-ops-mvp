@@ -158,11 +158,13 @@ async function main() {
     field.on('pageerror', (e) => errors.push(`[현장] ${e.message}`))
     await signIn(field, `field@${DOMAIN}`, process.env.TEST_FIELD_PW)
     await field.goto(`${BASE}/today`, { waitUntil: 'networkidle' })
-    await field.waitForTimeout(3000)
+    const seen = await until(field, async () =>
+      (await field.locator('body').innerText()).includes(noteText.slice(0, 14)))
     const fieldText = await field.locator('body').innerText()
-    check(fieldText.includes(noteText.slice(0, 14)),
-      '현장 화면에 사무실이 적은 메모가 그대로 보임',
-      fieldText.includes(client.name) ? '' : `${client.name} 이 오늘 일정에 없음`)
+    check(seen.ok, '현장 화면에 사무실이 적은 메모가 그대로 보임',
+      seen.ok
+        ? `${(seen.ms / 1000).toFixed(1)}초 만에 보임`
+        : fieldText.includes(client.name) ? '' : `${client.name} 이 오늘 일정에 없음`)
     await field.close()
 
     // ── 3. 완료 표시 → 보관 ────────────────────────────────────────────

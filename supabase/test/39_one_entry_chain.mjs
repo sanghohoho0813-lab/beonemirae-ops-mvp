@@ -95,6 +95,24 @@ async function signIn(page, email, password) {
 const numbersIn = (text) =>
   [...text.matchAll(/[\d,]{2,}/g)].map((m) => Number(m[0].replace(/,/g, ''))).filter(Number.isFinite)
 
+/**
+ * 화면이 그렇게 될 때까지 기다립니다.
+ *
+ *  이 앱은 화면을 열 때 거래처·일정·자재·수거기록을 통째로 읽습니다.
+ *  기록이 쌓이면 그 시간이 길어져, 몇 초를 정해 놓고 기다리면 화면이 아직
+ *  비어 있는 채로 검사가 진행됩니다. 그러면 멀쩡한 기능이 실패로 나옵니다
+ *  (자재 화면이 오늘 공급을 아직 못 읽은 상태에서 또 넣으니 "이미 있습니다"
+ *  경고가 안 뜬 것처럼 보였습니다). 시간이 아니라 결과를 기다립니다.
+ */
+async function until(page, want, ms = 30000) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) {
+    if (await want()) return { ok: true, ms: Date.now() - t0 }
+    await page.waitForTimeout(300)
+  }
+  return { ok: false, ms: Date.now() - t0 }
+}
+
 async function main() {
   console.log('\n════ 한 번 입력한 사실이 월말까지 그대로 가는가 ════')
 
@@ -313,7 +331,10 @@ async function main() {
     await signIn(office2, `office@${DOMAIN}`, process.env.TEST_OFFICE_PW)
     const beforeMat = (await svc('/office_stock?select=*&id=eq.1')).body?.[0]
     await office2.goto(`${BASE}/materials`, { waitUntil: 'networkidle' })
-    await office2.waitForTimeout(2500)
+    //  현장이 오늘 넣은 공급이 이 화면에 올라온 뒤에 열어야 합니다. 아직
+    //  못 읽은 상태에서 열면 '오늘 이미 있음'을 알 수 없어, 경고가 안 뜬
+    //  것이 아니라 뜰 수 없는 상태로 검사하게 됩니다.
+    await until(office2, async () => (await office2.locator('body').innerText()).includes(name))
     await office2.locator('button:has-text("공급 등록")').first().click()
     await office2.waitForTimeout(1200)
     const dlg = office2.locator('[role="dialog"]')

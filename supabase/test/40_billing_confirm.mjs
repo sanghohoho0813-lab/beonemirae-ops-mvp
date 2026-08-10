@@ -80,7 +80,12 @@ const numbersIn = (text) =>
   [...text.matchAll(/[\d,]{2,}/g)].map((m) => Number(m[0].replace(/,/g, ''))).filter(Number.isFinite)
 
 /** 현장 수거 입력 1회 (자재 동시공급 포함) */
-async function collect(page, clientName, kg, plastic20) {
+async function collect(page, clientName, kg, plastic20, clientId) {
+  //  화면에 "저장하지 못했습니다" 가 안 뜬 것만으로 저장됐다고 보면 안 됩니다.
+  //  DB 에 한 건 늘었는지로 판정합니다.
+  const before = clientId
+    ? ((await svc(`/schedules?select=id&client_id=eq.${clientId}&status=eq.${encodeURIComponent('완료')}`)).body ?? []).length
+    : null
   await page.goto(`${BASE}/collection`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(2500)
   const sel = page.locator('select').nth(0)
@@ -101,24 +106,60 @@ async function collect(page, clientName, kg, plastic20) {
     if (await input.count()) await input.fill(String(plastic20))
   }
   await page.waitForTimeout(500)
+  //  오늘 이 거래처 수거가 이미 있으면 서버가 정규 수거로는 안 받습니다.
+  //  화면도 그렇게 알려 주고 「추가 수거」 칸을 내어 줍니다 — 다만 그 칸은
+  //  앱이 오늘 일정을 다 읽은 뒤에 나타납니다. 예전에는 아직 안 나온 칸을
+  //  조용히 건너뛰고 저장을 눌러, 제품이 제대로 막은 것을 검사가 '저장됨'
+  //  으로 읽었습니다. 있어야 할 칸이면 나올 때까지 기다립니다.
   const add = page.locator('label:has-text("추가 수거") input[type="checkbox"]').first()
-  if (await add.count()) await add.check()
+  if (before !== null && before > 0) {
+    const appeared = await until(page, async () => (await add.count()) > 0)
+    if (!appeared.ok) return { ok: false, why: '오늘 이미 수거가 있는데 「추가 수거」 칸이 화면에 나오지 않음' }
+    await add.check()
+  } else if (await add.count()) {
+    await add.check()
+  }
   const save = page.locator('button:has-text("수거 완료 저장")').first()
   if (await save.isDisabled()) return { ok: false, why: '저장 버튼이 잠김' }
   await save.click()
   await page.waitForTimeout(7000)
   const txt = await page.locator('body').innerText()
-  return { ok: !/저장하지 못했습니다/.test(txt), why: '' }
+  if (/저장하지 못했습니다/.test(txt)) return { ok: false, why: '화면이 저장 실패라고 함' }
+  if (before === null) return { ok: true, why: '' }
+  const after = ((await svc(`/schedules?select=id&client_id=eq.${clientId}&status=eq.${encodeURIComponent('완료')}`)).body ?? []).length
+  if (after === before + 1) return { ok: true, why: '' }
+  //  저장이 안 됐으면 화면이 뭐라고 하고 있었는지 함께 남깁니다. 아무 말도
+  //  없이 안 되는 것이 가장 나쁩니다 — 현장은 저장된 줄 알고 떠납니다.
+  const said = txt.replace(/\s+/g, ' ').slice(0, 400)
+  return { ok: false, why: `완료 수거가 ${before} → ${after} (늘지 않음) · 화면: ${said}` }
 }
 
 /** 거래처 상세 → 월 정산·명세서 탭 */
+/**
+ * 화면이 그렇게 될 때까지 기다립니다.
+ *
+ *  이 앱은 화면을 열 때 거래처·일정·자재·수거기록을 통째로 읽습니다.
+ *  기록이 쌓이면 그 시간이 길어져, 몇 초를 정해 놓고 기다리면 아직 옛
+ *  데이터가 붙은 화면을 보게 됩니다. 방금 들어온 추가 수거가 안 보이니
+ *  「추가 청구 확정」이 잠긴 채였고, 검사는 그 버튼을 30초 동안 누르려다
+ *  멈췄습니다. 시간이 아니라 결과를 기다립니다.
+ */
+async function until(page, want, ms = 30000) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) {
+    if (await want()) return { ok: true, ms: Date.now() - t0 }
+    await page.waitForTimeout(300)
+  }
+  return { ok: false, ms: Date.now() - t0 }
+}
+
 async function openSettlement(page, clientId) {
   await page.goto(`${BASE}/clients/${clientId}`, { waitUntil: 'networkidle' })
-  await page.waitForTimeout(2200)
   const tab = page.locator('button', { hasText: '월 정산·명세서' }).first()
-  await tab.waitFor({ state: 'attached', timeout: 20000 })
+  await tab.waitFor({ state: 'attached', timeout: 30000 })
   await tab.click()
-  await page.waitForTimeout(2500)
+  //  청구 카드가 실제로 그려질 때까지 (숫자가 붙어야 읽을 수 있습니다)
+  await until(page, async () => /아직 청구하지 않은 금액/.test(await page.locator('body').innerText()))
 }
 
 async function main() {
@@ -170,7 +211,7 @@ async function main() {
     })).newPage()
     field.on('pageerror', (e) => errors.push(`[현장] ${e.message}`))
     await signIn(field, `field@${DOMAIN}`, process.env.TEST_FIELD_PW)
-    const r1 = await collect(field, name, KG, PLASTIC20)
+    const r1 = await collect(field, name, KG, PLASTIC20, clientId)
     check(r1.ok, '수거 완료 저장', r1.why)
 
     // ── 2. 사무실이 정산을 보고 청구 확정 ──────────────────────────────
@@ -244,17 +285,21 @@ async function main() {
 
     // ── 5. 확정 뒤 추가 수거 → 추가 청구 ───────────────────────────────
     section('5. 확정 뒤에 그 달 수거가 더 들어왔을 때')
-    const r2 = await collect(field, name, EXTRA_KG, 0)
+    const r2 = await collect(field, name, EXTRA_KG, 0, clientId)
     check(r2.ok, '추가 수거를 저장', r2.why)
     await openSettlement(office, clientId)
-    const extraText = await office.locator('body').innerText()
-    check(numbersIn(extraText).includes(EXPECT_EXTRA), '추가분만 「아직 청구하지 않은 금액」으로 잡힘',
-      won(EXPECT_EXTRA))
+    //  방금 들어온 추가 수거가 화면에 올라올 때까지 기다립니다.
+    const gotExtra = await until(office, async () =>
+      numbersIn(await office.locator('body').innerText()).includes(EXPECT_EXTRA))
+    check(gotExtra.ok, '추가분만 「아직 청구하지 않은 금액」으로 잡힘',
+      `${won(EXPECT_EXTRA)}${gotExtra.ok ? ` · ${(gotExtra.ms / 1000).toFixed(1)}초` : ''}`)
     const addBtn = office.locator('button', { hasText: '추가 청구 확정' }).first()
     check((await addBtn.count()) > 0, '버튼이 「추가 청구 확정」으로 바뀜')
+    await until(office, async () => await addBtn.isEnabled().catch(() => false))
     office.once('dialog', (d) => d.accept())
     await addBtn.click()
-    await office.waitForTimeout(5000)
+    await until(office, async () =>
+      ((await svc(`/payments?select=id&client_id=eq.${clientId}`)).body ?? []).length === 2)
 
     const bills2 = (await svc(`/payments?select=*&client_id=eq.${clientId}&order=created_at.asc`)).body ?? []
     check(bills2.length === 2, '청구가 두 건이 됨 (정기 + 추가)', `${bills2.length}건`)
