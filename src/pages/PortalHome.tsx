@@ -89,8 +89,10 @@ export function PortalHome() {
   const [urgent, setUrgent] = useState(false)
   const [desired, setDesired] = useState('')
   const [sent, setSent] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   const start = useCallback((k: RequestKind) => {
+    setSendError(null)
     setKind(k)
     setUrgent(k === '긴급수거')
     setContent('')
@@ -120,9 +122,12 @@ export function PortalHome() {
     )
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (!content.trim()) return
-    addRequest({
+    //  서버가 실제로 받았을 때만 '접수되었습니다' 를 보여 줍니다.
+    //  예전에는 결과를 기다리지 않아서, 통신이 끊긴 채로 보내도 접수된
+    //  것처럼 보였습니다. 병원은 기다리는데 요청은 없는 상태가 됩니다.
+    const res = await addRequest({
       clientId: client.id,
       kind,
       content: content.trim(),
@@ -131,6 +136,12 @@ export function PortalHome() {
       source: 'portal',
       requesterName: profile?.name ?? '병원 담당자',
     })
+    if (!res.ok) {
+      //  적은 내용을 지우지 않고 창을 열어 둡니다 — 다시 보내면 됩니다.
+      setSendError(res.error ?? '요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      return
+    }
+    setSendError(null)
     setContent('')
     setUrgent(false)
     setDesired('')
@@ -431,13 +442,25 @@ export function PortalHome() {
             <button onClick={() => setOpen(false)} className="btn-ghost flex-1">
               취소
             </button>
-            <button onClick={submit} disabled={!content.trim()} className="btn-primary flex-1 disabled:opacity-50">
+            <button
+              onClick={() => void submit()}
+              disabled={!content.trim()}
+              className="btn-primary flex-1 disabled:opacity-50"
+            >
               <Send size={17} strokeWidth={2.4} /> 요청 보내기
             </button>
           </div>
         }
       >
         <div className="space-y-4">
+          {sendError && (
+            <div className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
+              <p className="t-body break-keep font-bold text-rose-700">{sendError}</p>
+              <p className="t-muted mt-1 break-keep">
+                적으신 내용은 그대로 있습니다. 통신 상태를 확인한 뒤 다시 보내 주세요.
+              </p>
+            </div>
+          )}
           <div>
             <label className="field-label">무엇이 필요하신가요?</label>
             <div className="flex flex-wrap gap-2">

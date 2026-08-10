@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 29 를 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 30 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -11,7 +11,7 @@
 #           TEST_CLIENT_PW=... TEST_CLIENT2_PW=...
 #    bash supabase/test/run_all.sh
 #
-#  · 08·13~29(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
+#  · 08·13~30(브라우저)은 http://localhost:4173 이 떠 있을 때만 돌립니다.
 #    없으면 건너뛰고 그 사실을 표에 남깁니다 — 조용히 통과시키지 않습니다.
 #  · 키는 셸에만 둡니다. 끝나면 unset 하거나 셸을 닫으세요.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,6 +99,8 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/28_staff_request.mjs"
   run "29 · 수거량 자릿수 오타 · 추가 수거" \
     "$NODE" "$HERE/29_amount_typo.mjs"
+  run "30 · 통신 끊김 시 요청 (병원·사무실)" \
+    "$NODE" "$HERE/30_request_offline.mjs"
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -122,6 +124,7 @@ else
   NAMES+=("27 · 기준값 입력 → 성과 화면 기준선"); RESULTS+=("SKIP")
   NAMES+=("28 · 전화 요청 대행 접수 → 병원 확인"); RESULTS+=("SKIP")
   NAMES+=("29 · 수거량 자릿수 오타 · 추가 수거"); RESULTS+=("SKIP")
+  NAMES+=("30 · 통신 끊김 시 요청 (병원·사무실)"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."

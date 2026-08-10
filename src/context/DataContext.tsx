@@ -107,7 +107,7 @@ interface DataContextValue {
     urgent?: boolean
     source?: 'portal' | 'staff'
     requesterName?: string
-  }) => void
+  }) => Promise<{ ok: boolean; error: string | null }>
   /** 비원미래 담당자의 요청 처리 (상태 변경 · 병원에 보이는 회신) */
   handleRequest: (id: string, patch: { status?: RequestStatus; reply?: string }) => void
   /** 추천을 병원 포털로 전달 — 이후 수락은 병원이 직접 누릅니다 */
@@ -674,7 +674,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // 병원 담당자가 포털에서 직접 올리거나, 전화·카톡으로 받은 것을 비원미래가
   // 대신 접수합니다. 어느 쪽이든 같은 기록으로 남아 오늘 일정·수거 입력과 연결됩니다.
   const addRequest = useCallback(
-    (r: {
+    async (r: {
       clientId: string
       kind: RequestKind
       content: string
@@ -682,7 +682,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       urgent?: boolean
       source?: 'portal' | 'staff'
       requesterName?: string
-    }) => {
+    }): Promise<{ ok: boolean; error: string | null }> => {
       const payload = {
         clientId: r.clientId,
         kind: r.kind,
@@ -693,8 +693,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         requesterName: r.requesterName ?? '',
       }
       if (live) {
-        void runLive(async () => repo.insertRequest(payload))
-        return
+        //  서버가 받았는지 확인한 뒤에 돌려줍니다. 예전에는 기다리지 않아서,
+        //  통신이 끊긴 채로 요청을 보내도 병원 화면에는 '접수되었습니다' 가
+        //  떴습니다. 병원은 접수된 줄 알고 기다리는데 아무것도 오지 않습니다.
+        return await runLive(async () => repo.insertRequest(payload))
       }
       const now = new Date().toISOString()
       setData((d) => ({
@@ -714,6 +716,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...(d.requests ?? []),
         ],
       }))
+      return { ok: true, error: null }
     },
     [live, runLive],
   )

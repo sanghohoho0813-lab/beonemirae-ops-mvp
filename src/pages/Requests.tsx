@@ -52,6 +52,7 @@ export function Requests() {
   const [replyTo, setReplyTo] = useState<RequestItem | null>(null)
   const [replyText, setReplyText] = useState('')
   const [newOpen, setNewOpen] = useState(false)
+  const [newError, setNewError] = useState<string | null>(null)
   const [nClient, setNClient] = useState('')
   const [nKind, setNKind] = useState<RequestKind>('추가수거')
   const [nContent, setNContent] = useState('')
@@ -73,15 +74,22 @@ export function Requests() {
     setReplyText('')
   }
 
-  const submitNew = () => {
+  const submitNew = async () => {
     if (!nClient || !nContent.trim()) return
-    addRequest({
+    //  전화로 받아 적은 내용입니다. 저장되지 않았는데 창이 닫히면
+    //  그 통화 내용은 어디에도 남지 않습니다. 서버가 받은 뒤에 닫습니다.
+    const res = await addRequest({
       clientId: nClient,
       kind: nKind,
       content: nContent.trim(),
       source: 'staff',
       requesterName: '전화·카톡 접수',
     })
+    if (!res.ok) {
+      setNewError(res.error ?? '접수하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      return
+    }
+    setNewError(null)
     setNContent('')
     setNewOpen(false)
   }
@@ -92,7 +100,7 @@ export function Requests() {
         title="병원 요청"
         subtitle="병원이 직접 올린 요청과 전화·카톡으로 받은 요청을 한 곳에서 처리합니다"
         action={
-          <button onClick={() => setNewOpen(true)} className="btn-primary">
+          <button onClick={() => { setNewError(null); setNewOpen(true) }} className="btn-primary">
             <PlusCircle size={19} strokeWidth={2.4} /> 전화 요청 접수
           </button>
         }
@@ -269,7 +277,7 @@ export function Requests() {
               취소
             </button>
             <button
-              onClick={submitNew}
+              onClick={() => void submitNew()}
               disabled={!nClient || !nContent.trim()}
               className="btn-primary flex-1 disabled:opacity-50"
             >
@@ -279,6 +287,12 @@ export function Requests() {
         }
       >
         <div className="space-y-4">
+          {newError && (
+            <div className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
+              <p className="t-body break-keep font-bold text-rose-700">{newError}</p>
+              <p className="t-muted mt-1 break-keep">적으신 내용은 그대로 있습니다.</p>
+            </div>
+          )}
           <div>
             <label className="field-label" htmlFor="nr-client">
               거래처
