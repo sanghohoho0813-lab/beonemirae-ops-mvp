@@ -800,27 +800,25 @@ export async function loadProfiles(): Promise<ProfileRow[]> {
   }))
 }
 
+/**
+ * 역할 변경.
+ *
+ *  감사기록은 여기서 남기지 않습니다 — DB 트리거가 남깁니다(0020). 화면이
+ *  남기게 두면 화면을 거치지 않는 변경(주소창·스크립트)은 흔적 없이
+ *  지나갑니다. 실제로 관리자 토큰으로 PATCH 한 번에 계정이 중지되는데
+ *  감사기록은 그대로였습니다.
+ */
 export async function setProfileRole(
   id: string,
   role: ProfileRow['role'],
   clientId?: string | null,
 ): Promise<void> {
   const sb = need()
-  // 변경 전 값을 먼저 읽어 감사기록에 남깁니다 — 권한 변경은 추적 대상입니다.
-  const { data: before } = await sb.from('profiles').select('name, role').eq('id', id).maybeSingle()
   //  병원 계정은 소속이 있어야 하고(DB 제약), 직원으로 돌아가면 소속을 비웁니다.
   //  두 값을 한 번에 보내지 않으면 제약에 걸려 저장이 통째로 실패합니다.
   const patch: Record<string, unknown> =
     role === 'client' ? { role, client_id: clientId ?? null } : { role, client_id: null }
   unwrap(await sb.from('profiles').update(patch).eq('id', id).select())
-  await writeAudit({
-    action: 'profile.role',
-    entity: 'profiles',
-    entityId: id,
-    before: { role: before?.role ?? null },
-    after: { role },
-    summary: `권한 변경 — ${before?.name ?? id} · ${before?.role ?? '?'} → ${role}`,
-  })
 }
 
 /**
@@ -830,26 +828,10 @@ export async function setProfileRole(
  *  소속이 바뀌면 그 사람이 포털에서 보는 병원이 통째로 바뀌므로 감사기록에
  *  남깁니다.
  */
+/** 병원 계정의 소속 거래처 변경 — 감사기록은 DB 트리거가 남깁니다(0020) */
 export async function setProfileClient(id: string, clientId: string): Promise<void> {
   const sb = need()
-  const { data: before } = await sb
-    .from('profiles')
-    .select('name, client_id, clients!profiles_client_id_fkey(name)')
-    .eq('id', id)
-    .maybeSingle()
   unwrap(await sb.from('profiles').update({ client_id: clientId }).eq('id', id).select())
-  const { data: after } = await sb.from('clients').select('name').eq('id', clientId).maybeSingle()
-  await writeAudit({
-    action: 'profile.client',
-    entity: 'profiles',
-    entityId: id,
-    screen: 'users',
-    before: { clientId: before?.client_id ?? null },
-    after: { clientId },
-    summary: `병원 계정 소속 변경 — ${before?.name ?? id} · ${
-      (before as { clients?: { name?: string } } | null)?.clients?.name ?? '없음'
-    } → ${after?.name ?? clientId}`,
-  })
 }
 
 /**
@@ -914,18 +896,10 @@ export async function resetUserPassword(id: string, password: string): Promise<v
   if (error) throw new Error(error.message)
 }
 
+/** 계정 사용/중지 — 감사기록은 DB 트리거가 남깁니다(0020) */
 export async function setProfileActive(id: string, active: boolean): Promise<void> {
   const sb = need()
-  const { data: before } = await sb.from('profiles').select('name, active').eq('id', id).maybeSingle()
   unwrap(await sb.from('profiles').update({ active }).eq('id', id).select())
-  await writeAudit({
-    action: 'profile.active',
-    entity: 'profiles',
-    entityId: id,
-    before: { active: before?.active ?? null },
-    after: { active },
-    summary: `계정 ${active ? '사용' : '중지'} — ${before?.name ?? id}`,
-  })
 }
 
 // ── 시연 데이터 초기화 (실제 운영 데이터는 건드리지 않음) ───────────────────

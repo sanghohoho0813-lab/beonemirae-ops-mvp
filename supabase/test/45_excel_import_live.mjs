@@ -233,12 +233,23 @@ async function main() {
 
     // ── 4. 엑셀 합계 ↔ 시스템 합계 ─────────────────────────────────────
     section('4. 엑셀 합계와 시스템 합계가 원 단위까지 같은가')
+    check(/엑셀 합계 ↔ 시스템 합계/.test(await admin.locator('body').innerText()), '대조표를 자동으로 보여 줌')
+    //  넣은 직후에는 앱이 전체 데이터를 다시 읽는 중이라 시스템 쪽이 잠시 0원
+    //  으로 보입니다. 다 읽고 나서 판정합니다 — 읽는 중을 결함으로 세면 안 됩니다.
+    const settled = await until(admin, async () =>
+      /같음/.test((await admin.locator('body').innerText()).match(/엑셀 합계 ↔ 시스템 합계[\s\S]{0,400}/)?.[0] ?? ''))
     const t4 = await admin.locator('body').innerText()
-    check(/엑셀 합계 ↔ 시스템 합계/.test(t4), '대조표를 자동으로 보여 줌')
-    check(/같음/.test(t4), '차이 없음으로 나옴', (t4.match(/2026-08[\s\S]{0,80}/) ?? [''])[0].replace(/\n/g, ' ').slice(0, 70))
+    //  대조표만 잘라 냅니다. 그냥 400자를 집으면 아래 「한 줄씩」 표까지
+    //  딸려 와서 수거 줄의 날짜(2026-08-05)가 달로 잡힙니다.
+    const table = (t4.match(/엑셀 합계 ↔ 시스템 합계[\s\S]*?날짜가 없어 넣지 못한 달은/) ?? [''])[0]
+    check(settled.ok, '차이 없음으로 나옴',
+      `${(settled.ms / 1000).toFixed(1)}초 · ${(table.match(/2026-08[^\n]*/) ?? [''])[0]}`)
     check(numbersIn(t4).includes(2296600), '8월 매출 2,296,600원이 화면에 있음', won(2296600))
-    check(!/[-−]\s?\d/.test((t4.match(/엑셀 합계 ↔ 시스템 합계[\s\S]{0,400}/) ?? [''])[0].replace(/[\d,]+원/g, '')),
-      '대조표에 음수 차이가 없음')
+    //  달마다 한 줄씩 — 마지막 칸이 「같음」이어야 합니다. (금액에서 부호만
+    //  찾으면 날짜의 '2026-08' 하이픈이 걸립니다 — 실제로 그래서 헛실패했습니다)
+    const monthLines = table.split('\n').filter((l) => /^\d{4}-\d{2}(?!-)/.test(l.trim()))
+    check(monthLines.length > 0 && monthLines.every((l) => /같음/.test(l)),
+      '대조한 모든 달이 「같음」', monthLines.map((l) => l.trim()).join(' / ') || '대조한 달 없음')
 
     // ── 5. 같은 파일을 다시 ────────────────────────────────────────────
     section('5. 같은 파일을 다시 올렸을 때')
@@ -328,11 +339,15 @@ async function main() {
 
     // ── 9. 감사기록 ────────────────────────────────────────────────────
     section('9. 가져오기가 감사기록에 남는가')
-    const logs = (await svc(`/audit_logs?select=action,summary,actor_id&client_id=eq.${clientId}&order=id.desc&limit=10`)).body ?? []
-    const imp = logs.find((l) => l.action === 'import.excel')
-    check(!!imp, '가져오기가 감사기록에 남음', imp?.summary?.slice(0, 60) ?? '없음')
-    check(!!imp?.actor_id, '누가 했는지 남음')
-    check(/등록 4건/.test(imp?.summary ?? ''), '몇 건 넣었는지 남음', imp?.summary?.slice(0, 60) ?? '')
+    const logs = (await svc(`/audit_logs?select=action,summary,actor_id&client_id=eq.${clientId}&order=id.desc&limit=20`)).body ?? []
+    const imports = logs.filter((l) => l.action === 'import.excel')
+    check(imports.length > 0, '가져오기가 감사기록에 남음', imports[0]?.summary?.slice(0, 60) ?? '없음')
+    check(imports.every((l) => !!l.actor_id), '누가 했는지 남음')
+    //  이 검사는 일부러 여러 번 부릅니다(재업로드·강제 시도). 그중 진짜로
+    //  넣은 회차의 줄을 찾습니다 — 가장 최근 줄만 보면 강제 시도가 잡힙니다.
+    const realImport = imports.find((l) => /등록 4건/.test(l.summary ?? ''))
+    check(!!realImport, '몇 건 넣었는지 남음',
+      realImport?.summary?.slice(0, 70) ?? imports.map((l) => l.summary?.slice(0, 40)).join(' | '))
 
     // ── 10. 폰(390) ────────────────────────────────────────────────────
     section('10. 폰(390) 에서 화면이 밀리지 않는가')
@@ -356,8 +371,11 @@ async function main() {
       }
       return { docW: doc.clientWidth, scrollW: doc.scrollWidth, bad: bad.slice(0, 3) }
     })
-    check(over.scrollW <= over.docW + 2, '폰에서 옆으로 밀리지 않음',
-      over.bad.join(' | ') || `${over.scrollW} ≤ ${over.docW}`)
+    //  넓은 표는 자기 상자 안에서 가로로 스크롤됩니다(의도한 것). 페이지
+    //  자체가 밀리는지만 봅니다.
+    const slides = over.scrollW <= over.docW + 2
+    check(slides, '폰에서 옆으로 밀리지 않음',
+      slides ? `${over.scrollW} ≤ ${over.docW}` : over.bad.join(' | '))
     await phone.close()
 
     // ── 11. 콘솔 오류 ──────────────────────────────────────────────────

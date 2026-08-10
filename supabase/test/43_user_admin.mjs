@@ -161,6 +161,10 @@ async function main() {
   const [homeA, homeB] = client1
 
   const startProfiles = ((await svc('/profiles?select=id')).body ?? []).length
+  //  감사기록은 **이번 회차에 생긴 것만** 봅니다. 그냥 최근 것을 훑으면
+  //  앞서 돈 다른 검사가 남긴 줄이 잡혀서, 이번에 안 남았는데도 남은 것처럼
+  //  보입니다(실제로 그래서 '역할 변경'이 통과하고 있었습니다).
+  const startAudit = (await svc('/audit_logs?select=id&order=id.desc&limit=1')).body?.[0]?.id ?? 0
 
   try {
     const pw = (await import(process.env.PLAYWRIGHT_MODULE || 'playwright')).default
@@ -371,7 +375,7 @@ async function main() {
 
     // ── 8. 감사기록 ────────────────────────────────────────────────────
     section('8. 모든 변경이 감사기록에 남는가')
-    const logs = (await svc('/audit_logs?select=action,summary,actor_id,actor_role&order=id.desc&limit=60')).body ?? []
+    const logs = (await svc(`/audit_logs?select=action,summary,actor_id,actor_role&id=gt.${startAudit}&order=id.desc&limit=200`)).body ?? []
     const has = (a) => logs.find((l) => l.action === a)
     check(!!has('profile.create'), '계정 생성이 남음', has('profile.create')?.summary?.slice(0, 46) ?? '없음')
     check(!!has('profile.role'), '역할 변경이 남음', has('profile.role')?.summary?.slice(0, 46) ?? '없음')
