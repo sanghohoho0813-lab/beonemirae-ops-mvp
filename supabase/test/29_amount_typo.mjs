@@ -212,8 +212,51 @@ async function main() {
       if (ok2?.event_id) madeEvents.push(ok2.event_id)
     }
 
-    // ── 5. 화면 오류 ───────────────────────────────────────────────────
-    section('5. 콘솔 오류')
+    // ── 5. 오늘 일정의 '빠른 완료' 에서도 경고가 보이는가 ────────────────
+    section("5. 빠른 완료에서도 같은 경고가 보이는가")
+    //  현장은 수거 입력 화면보다 오늘 일정의 '빠른 완료' 를 더 많이 씁니다.
+    //  이 길에서 경고가 사라지면 자릿수 오타를 잡을 방법이 없습니다.
+    const pend = (await svc(
+      `/schedules?select=id&status=eq.예정&date=eq.${todayStr}&limit=1`,
+    )).body?.[0]
+    if (!pend) {
+      console.log('  참고  오늘 남은 예정 수거가 없어 빠른 완료는 건너뜁니다')
+    } else {
+      //  「빠른 완료」 는 넓은 화면 전용입니다(카드가 hidden lg:block 안에 있습니다).
+      //  폰에서는 일정 줄을 누르면 수거 입력 화면으로 넘어가는 것이 정상 흐름이라,
+      //  이 확인만 넓은 화면에서 합니다. 저장 경로 자체는 같은 코드입니다.
+      const wide = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
+      wide.on('pageerror', (e) => errors.push(`[현장PC] ${e.message}`))
+      await signIn(wide, `field@${DOMAIN}`, process.env.TEST_FIELD_PW)
+      await wide.goto(`${BASE}/today`, { waitUntil: 'networkidle' })
+      await wide.waitForTimeout(3000)
+      //  일정 카드는 가로로 스크롤되는 띠 안에 있어서, 버튼이 화면 밖에
+      //  있을 수 있습니다. 스크롤해서 끌어온 뒤 누릅니다.
+      const quickBtn = wide.locator('button:has-text("빠른 완료")').last()
+      if ((await quickBtn.count()) === 0) {
+        console.log('  참고  「빠른 완료」 버튼이 없어 건너뜁니다')
+      } else {
+        await quickBtn.scrollIntoViewIfNeeded().catch(() => {})
+        await quickBtn.click()
+        await wide.waitForTimeout(1500)
+        const qAmount = wide.locator('[role="dialog"] input[type="number"]').first()
+        await qAmount.fill(String(TYPO))
+        await wide.waitForTimeout(500)
+        await wide.locator('button:has-text("완료 처리")').first().click()
+        await wide.waitForTimeout(6000)
+        const qtxt = await wide.locator('body').innerText()
+        check(/자릿수를 확인/.test(qtxt), '빠른 완료에서도 자릿수 안내가 보임',
+          /자릿수를 확인/.test(qtxt) ? '' : '경고가 사라졌습니다')
+        const qSaved = (await svc(
+          `/schedules?select=event_id,actual_amount&id=eq.${pend.id}`,
+        )).body?.[0]
+        if (qSaved?.event_id && qSaved.actual_amount === TYPO) madeEvents.push(qSaved.event_id)
+      }
+      await wide.close()
+    }
+
+    // ── 6. 화면 오류 ───────────────────────────────────────────────────
+    section('6. 콘솔 오류')
     const real = errors.filter((e) => !/favicon|jsdelivr|pretendard|Failed to load resource|net::ERR_/.test(e))
     check(real.length === 0, '자바스크립트 오류 없음', real.slice(0, 3).join(' | '))
     await field.close()

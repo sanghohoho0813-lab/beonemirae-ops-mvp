@@ -55,6 +55,9 @@ export function TodaySchedule() {
   const [quickError, setQuickError] = useState('')
   // null = 입력 단계, 값 = 완료 성공 단계(같은 모달 안에서 전환)
   const [quickResult, setQuickResult] = useState<{ clientId: string; name: string; amount: number } | null>(null)
+  //  빠른 완료도 경고를 받아 둡니다. 예전에는 result.warnings 를 아예 읽지
+  //  않아서, 자릿수를 잘못 쳐도 이 화면에서는 아무 표시가 없었습니다.
+  const [quickWarnings, setQuickWarnings] = useState<string[]>([])
   const [flash, setFlash] = useState(false)
 
   const list = useMemo(() => schedulesOn(data, date), [data, date])
@@ -77,11 +80,13 @@ export function TodaySchedule() {
     setQuickMemo(s.memo)
     setQuickError('')
     setQuickResult(null)
+    setQuickWarnings([])
   }
   function closeQuick() {
     quickStartRef.current = null
     setQuick(null)
     setQuickResult(null)
+    setQuickWarnings([])
   }
   async function submitQuick() {
     if (!quick) return
@@ -105,6 +110,7 @@ export function TodaySchedule() {
       // 성과측정: 빠른 완료 모달 진입 → 저장까지의 실제 경과시간
       inputDurationMs: quickStartRef.current ? Date.now() - quickStartRef.current : null,
     })
+    setQuickWarnings(result.warnings)
     if (!result.ok) {
       setQuickError(result.errors.join(' '))
       return
@@ -421,6 +427,15 @@ export function TodaySchedule() {
               </p>
               <p className="text-[0.98rem] text-navy-500">수거정보가 여러 운영 화면에 자동 반영되었습니다.</p>
             </div>
+            {quickWarnings.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+                {quickWarnings.map((w) => (
+                  <p key={w} className="flex items-start gap-1.5 text-[1.02rem] font-semibold text-amber-700">
+                    <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {w}
+                  </p>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-2">
               <button
                 className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
