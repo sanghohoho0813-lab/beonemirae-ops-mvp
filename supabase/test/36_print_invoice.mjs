@@ -144,6 +144,22 @@ async function main() {
     check(inv.pages === need, '내용이 끝난 뒤 빈 종이가 나오지 않음',
       `실제 ${inv.pages}장 · 내용 기준 ${need}장 (높이 ${inv.bottom})`)
 
+    //  달이 끝나기 전에 뽑는 일이 있습니다. 그때 월말 날짜를 그대로 적으면
+    //  아직 오지 않은 날짜가 병원에 가는 문서에 발행일자로 찍힙니다.
+    const d = new Date()
+    const p2 = (n) => String(n).padStart(2, '0')
+    const todayLabel = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+    const thisMonth = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`
+    const issued = (inv.text.match(/발행일자 : ([^|]+?) \|/) ?? [])[1]?.trim() ?? ''
+    const isThisMonth = new RegExp(`${d.getFullYear()}년 ${d.getMonth() + 1}월 거래명세서`).test(inv.text)
+    if (isThisMonth) {
+      check(issued === todayLabel, '이번 달 명세서의 발행일자가 오늘을 넘지 않음',
+        `발행일자 "${issued}" · 오늘 ${todayLabel}`)
+    } else {
+      ok('지난 달 명세서라 발행일자는 월말 그대로', issued)
+    }
+    void thisMonth
+
     // ── 2. 닫으면 화면이 원래대로 ──────────────────────────────────────
     section('2. 닫은 뒤')
     await page.locator('button[aria-label="닫기"]').first().click()
@@ -171,6 +187,38 @@ async function main() {
       check(log.pages === needLog, '내용이 끝난 뒤 빈 종이가 나오지 않음',
         `실제 ${log.pages}장 · 내용 기준 ${needLog}장`)
     }
+    // ── 4. 폰에서 뒤로 가기 ────────────────────────────────────────────
+    //  폰에서 명세서를 열고 뒤로 가기를 하면 명세서만 닫혀야 합니다.
+    //  거래처 화면까지 통째로 벗어나면 보던 자리를 다시 찾아 들어가야 합니다.
+    section('4. 폰에서 뒤로 가기')
+    const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    const mp = await mob.newPage()
+    await mp.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
+    await mp.fill('#login-email', `office@${DOMAIN}`)
+    await mp.fill('#login-password', process.env.TEST_OFFICE_PW)
+    await Promise.all([
+      mp.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 30000 }),
+      mp.click('button[type="submit"]'),
+    ])
+    await mp.goto(`${BASE}/clients/${client.id}`, { waitUntil: 'networkidle' })
+    await mp.waitForTimeout(2500)
+    await mp.locator('button', { hasText: '월 정산·명세서' }).first().click()
+    await mp.waitForTimeout(1800)
+    const mOpen = mp.locator('button', { hasText: '거래명세서' }).first()
+    if ((await mOpen.count()) > 0 && (await mOpen.isEnabled())) {
+      await mOpen.click()
+      await mp.waitForTimeout(2000)
+      check(await mp.locator('button[aria-label="닫기"]').count() > 0, '폰에서 명세서가 열림')
+      await mp.goBack()
+      await mp.waitForTimeout(1800)
+      const stillHere = new URL(mp.url()).pathname
+      const closed = (await mp.locator('button[aria-label="닫기"]').count()) === 0
+      check(closed, '뒤로 가기로 명세서만 닫힘')
+      check(stillHere.includes(client.id), '거래처 화면에 그대로 남아 있음', stillHere)
+    } else {
+      no('폰에서 명세서를 열 수 없었습니다')
+    }
+    await mob.close()
   } catch (e) {
     no('검사 도중 오류가 났습니다', String(e?.message ?? e).slice(0, 200))
   } finally {

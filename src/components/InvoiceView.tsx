@@ -3,6 +3,7 @@ import { Printer, X } from 'lucide-react'
 import type { Invoice } from '../lib/billing'
 import { won } from '../lib/format'
 import { usePrintIsolate } from '../lib/usePrintIsolate'
+import { useHistoryDismiss } from '../lib/useHistoryDismiss'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래명세서
@@ -58,6 +59,9 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
   const [y, m] = inv.month.split('-')
   const sheetRef = useRef<HTMLDivElement>(null)
   usePrintIsolate(sheetRef, true)
+  //  폰에서 뒤로 가기를 하면 명세서만 닫혀야 합니다. 이게 없으면 거래처
+  //  화면까지 통째로 벗어납니다(수거대장 미리보기는 이미 이렇게 동작합니다).
+  useHistoryDismiss(true, onClose)
 
   return (
     <div ref={sheetRef} className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/60 print:static print:bg-white">

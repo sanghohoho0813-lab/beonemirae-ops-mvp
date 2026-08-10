@@ -399,6 +399,23 @@ export function lastDayOf(month: string): string {
 }
 
 /**
+ * 명세서에 적을 '오늘까지' 의 마지막 날.
+ *
+ *  달이 끝나기 전에 명세서를 뽑는 일이 있습니다(중간 확인·선청구). 그때
+ *  월말 날짜를 그대로 적으면 아직 오지 않은 날짜가 발행일자·거래일자로
+ *  나갑니다. 8월 10일에 뽑았는데 "발행일자 2026년 8월 31일 · 거래일자
+ *  8월 1일 ~ 31일" 이라고 적힌 문서가 병원에 갑니다. 지난 달 명세서는
+ *  그대로 월말입니다.
+ */
+function throughToday(month: string): string {
+  const end = lastDayOf(month)
+  const d = new Date()
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+  const today = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+  return today < end && today.slice(0, 7) === month ? today : end
+}
+
+/**
  * 결제기한 계산.
  * 거래처의 결제일 규칙(`paymentDueDay`)을 씁니다. 예: 20 → 익월 20일.
  * 규칙이 없으면 null (명세서에 「거래처와 협의」로 표시).
@@ -476,8 +493,8 @@ export function invoiceFor(data: AppData, clientId: string, month: string): Invo
     manager: client?.manager ?? '',
     month,
     from: `${month}-01`,
-    to: lastDayOf(month),
-    issuedAt: lastDayOf(month),
+    to: throughToday(month),
+    issuedAt: throughToday(month),
     dueDate: dueDateOf(month, client?.paymentDueDay),
     paymentTerms: client?.paymentTerms ?? '',
     medicalLines,
