@@ -451,6 +451,7 @@ export async function adjustStock(
   kind: '입고' | '조정' | '공급',
   memo: string,
   clientId?: string,
+  materialId?: string,
 ): Promise<OfficeStock> {
   const sb = need()
   const current = toStock(unwrapOne(await sb.from('office_stock').select('*').eq('id', 1).maybeSingle()))
@@ -475,6 +476,10 @@ export async function adjustStock(
       qty: next[k] - current[k],
       memo,
       ...(clientId ? { client_id: clientId } : {}),
+      //  어느 공급 기록에서 나온 출고인지 이어 둡니다. 수거 입력 경로
+      //  (complete_collection)도 같은 칸을 채웁니다 — 나중에 원장만 보고
+      //  "이 3개가 왜 빠졌지" 를 되짚을 수 있어야 합니다.
+      ...(materialId ? { material_id: materialId } : {}),
     }))
   if (tx.length) unwrap(await sb.from('material_transactions').insert(tx).select())
   return next

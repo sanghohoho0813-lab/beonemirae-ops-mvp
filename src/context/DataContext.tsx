@@ -996,12 +996,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const delta = stockDeltaOf(itemsOf(m as MaterialSupply))
         const name = findClientName(data, m.clientId)
         void runLive(async () => {
-          await repo.insertMaterial(m)
+          const created = await repo.insertMaterial(m)
           const moved = (Object.keys(delta) as (keyof typeof delta)[]).filter((k) => delta[k] > 0)
           if (moved.length) {
             const next: Partial<OfficeStock> = {}
             for (const k of moved) next[k] = (data.officeStock?.[k] ?? 0) - delta[k]
-            await repo.adjustStock(next, '공급', `자재 화면에서 ${name} 공급 등록`, m.clientId)
+            await repo.adjustStock(next, '공급', `자재 화면에서 ${name} 공급 등록`, m.clientId, created.id)
           }
           await repo.writeAudit({
             action: 'material.supply',

@@ -139,8 +139,12 @@ async function main() {
     if (await boxInput.count()) await boxInput.fill('3')
     else if (await numInputs.count()) await numInputs.first().fill('3')
 
+    //  오늘 같은 거래처에 이미 공급이 있으면 "이미 있습니다" 하고 물어봅니다
+    //  (현장 수거 입력에서 함께 넣은 것을 사무실이 모르고 또 넣는 것을 막는
+    //  안내입니다). 여기서는 일부러 하나 더 넣는 상황이므로 예 를 누릅니다.
+    office.once('dialog', (d) => d.accept())
     await office.locator('button:has-text("저장"), button:has-text("등록")').last().click()
-    await office.waitForTimeout(3000)
+    await office.waitForTimeout(3500)
 
     const newMats = ((await svc(`/materials?select=id,box_count,items,created_at&client_id=eq.${client.id}&order=created_at.desc&limit=3`)).body ?? [])
     const viaScreen = newMats.find((m) => !mats0.includes(m.id))
@@ -179,14 +183,16 @@ async function main() {
     check(stockMovedB === 3, '동시공급은 재고를 실제로 차감', `${stockMovedB}개`)
     check(ledgerB > 0, '동시공급은 자재 원장에 남음', `${ledgerB}건`)
 
-    if (stockMovedA !== stockMovedB || (ledgerA > 0) !== (ledgerB > 0)) {
-      note('두 경로의 결과가 다릅니다 — 자재 관리 화면의 공급 등록은 창고 숫자를 줄이지 않고 원장에도 남지 않습니다.')
-      note(`  화면 등록: 재고 ${stockMovedA}개 차감 · 원장 ${ledgerA}건 / 동시공급: 재고 ${stockMovedB}개 차감 · 원장 ${ledgerB}건`)
-      note('  자재 관리 화면은 재고를 보여 주지도 않습니다. "지난 공급을 나중에 적는 장부"로 쓰는 중이라면 의도된 것이고,')
-      note('  창고에서 실제로 꺼내 주며 적는 화면으로 쓰면 재고가 실물보다 계속 많게 남습니다.')
-    } else {
-      ok('두 경로가 같은 결과를 남김')
-    }
+    //  예전에는 여기서 '두 경로의 결과가 다르다' 고 적어 두기만 했습니다.
+    //  같은 물건이 같은 만큼 나갔는데 한쪽만 창고 숫자가 줄면 재고는 반드시
+    //  실물과 어긋납니다. 이제 두 경로 다 줄이고 원장에도 남기므로, 다르면
+    //  통과가 아니라 실패여야 합니다.
+    check(stockMovedA === stockMovedB,
+      '어느 화면에서 넣든 재고가 같은 만큼 줄어듦',
+      `화면 등록 ${stockMovedA}개 · 동시공급 ${stockMovedB}개`)
+    check(ledgerA > 0 && ledgerB > 0,
+      '어느 화면에서 넣든 자재 원장에 남음',
+      `화면 등록 ${ledgerA}건 · 동시공급 ${ledgerB}건`)
 
     // ── 4. 재고가 화면에 보이는 곳 ────────────────────────────────────────
     section('4. 재고를 볼 수 있는 곳')
