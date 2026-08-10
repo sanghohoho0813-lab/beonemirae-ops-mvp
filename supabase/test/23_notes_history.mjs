@@ -67,6 +67,24 @@ async function signIn(page, email, password) {
   await page.waitForTimeout(1200)
 }
 
+/**
+ * 화면이 그렇게 될 때까지 기다립니다 (걸린 시간도 돌려줍니다).
+ *
+ *  전에는 저장을 누르고 3초를 기다린 뒤 화면을 봤습니다. 그런데 이 앱은
+ *  무엇을 저장하든 저장 후 전체 데이터를 다시 읽습니다. 검증을 오래 돌려
+ *  DB 가 커지면 그 다시 읽기가 3초를 넘고, 화면은 멀쩡한데 검사만 실패
+ *  했습니다(실제로 전체 회귀 도중에만 두 줄이 FAIL 로 나왔고, 같은 검사를
+ *  따로 돌리면 통과했습니다). 시간이 아니라 결과를 기다립니다.
+ */
+async function until(page, want, ms = 25000) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) {
+    if (await want()) return { ok: true, ms: Date.now() - t0 }
+    await page.waitForTimeout(300)
+  }
+  return { ok: false, ms: Date.now() - t0 }
+}
+
 async function main() {
   console.log('\n════ 현장 메모 · 수거 이력 · 감사로그 ════')
 
@@ -111,7 +129,7 @@ async function main() {
     await noteForm.locator('button:has-text("자재")').first().click()
     await noteInput.fill(noteText)
     await noteForm.locator('button:has-text("기록")').first().click()
-    await office.waitForTimeout(3000)
+    const shown = await until(office, async () => (await office.locator(`text=${noteText}`).count()) > 0)
 
     const saved = (await svc(`/site_notes?select=*&content=eq.${encodeURIComponent(noteText)}`)).body?.[0]
     check(!!saved, '메모가 DB 에 저장됨', saved ? `${saved.kind} · done=${saved.done}` : '안 됨')
@@ -119,7 +137,7 @@ async function main() {
     check(saved?.kind === '자재', '고른 구분(자재)이 그대로 저장됨', saved?.kind ?? '')
     check(saved?.client_id === client.id, '그 거래처에 붙음')
 
-    check(await office.locator(`text=${noteText}`).count() > 0, '화면 목록에도 바로 보임')
+    check(shown.ok, '화면 목록에도 바로 보임', `${(shown.ms / 1000).toFixed(1)}초 만에 보임`)
 
     // ── 2. 현장 사람이 오늘 일정에서 그 메모를 보는가 ──────────────────
     section('2. 현장(모바일) 오늘 일정에서 보이는가')
@@ -162,16 +180,19 @@ async function main() {
         .filter({ has: office.locator(`button[title="${label}"]`) })
         .last()
     await rowOf('처리 완료').locator('button[title="처리 완료"]').first().click()
-    await office.waitForTimeout(3000)
+    await until(office, async () =>
+      (await svc(`/site_notes?select=done&id=eq.${noteId}`)).body?.[0]?.done === true)
     const done = (await svc(`/site_notes?select=done,archived&id=eq.${noteId}`)).body?.[0]
     check(done?.done === true, '완료 표시가 DB 에 반영')
 
     await rowOf('삭제').locator('button[title="삭제"]').first().click()
-    await office.waitForTimeout(3000)
+    await until(office, async () =>
+      (await svc(`/site_notes?select=archived&id=eq.${noteId}`)).body?.[0]?.archived === true)
     const archived = (await svc(`/site_notes?select=archived&id=eq.${noteId}`)).body?.[0]
     check(archived?.archived === true, '삭제가 아니라 보관으로 남음 (기록은 지워지지 않음)',
       `archived=${archived?.archived}`)
-    check(await office.locator(`text=${noteText}`).count() === 0, '보관한 메모는 화면에서 빠짐')
+    const gone = await until(office, async () => (await office.locator(`text=${noteText}`).count()) === 0)
+    check(gone.ok, '보관한 메모는 화면에서 빠짐', `${(gone.ms / 1000).toFixed(1)}초 만에 빠짐`)
 
     // ── 4. 수거 이력 검색·필터 ─────────────────────────────────────────
     section('4. 수거 이력 검색·필터')
