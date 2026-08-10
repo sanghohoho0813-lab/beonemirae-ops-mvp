@@ -115,6 +115,32 @@ async function main() {
     const afterReload = await admin.locator('#bl-adminMinutesPerCollection').first().inputValue()
     check(afterReload === TYPED, '새로고침해도 값이 남아 있음', `"${afterReload}"`)
 
+    // ── 3-2. 실증 시작일 ───────────────────────────────────────────────
+    section('3-2. 실증 시작일 입력')
+    //  이 날짜 이후의 입력만 '도입 후 성과' 로 집계합니다. 하루만 어긋나도
+    //  성과 구간이 통째로 달라집니다. 날짜 칸도 기준값과 같은 방식(칸을 채우면
+    //  바로 저장)이라 실제로 그대로 들어가는지 봅니다.
+    const EXP = '2026-07-01'
+    const dateField = admin.locator('#exp-start').first()
+    check(await dateField.count() > 0, '실증 시작일 칸이 있음')
+    await dateField.fill(EXP)
+    await admin.waitForTimeout(5000)
+    const expSaved = (await svc('/experiment_settings?select=start_date&id=eq.1')).body?.[0]
+    check(expSaved?.start_date === EXP, '고른 날짜가 그대로 DB 에 저장됨',
+      `${expSaved?.start_date} (기대 ${EXP})`)
+
+    await admin.reload({ waitUntil: 'networkidle' })
+    await admin.waitForTimeout(3000)
+    check((await admin.locator('#exp-start').first().inputValue()) === EXP,
+      '새로고침해도 실증 시작일이 남아 있음')
+
+    //  해제하면 전체 기간 집계로 돌아가야 합니다.
+    await admin.locator('button:has-text("해제")').first().click()
+    await admin.waitForTimeout(4000)
+    const expCleared = (await svc('/experiment_settings?select=start_date&id=eq.1')).body?.[0]
+    check(expCleared?.start_date === null, '「해제」 를 누르면 비워짐',
+      `${expCleared?.start_date}`)
+
     // ── 4. 그 숫자가 성과 화면의 기준선으로 쓰이는가 ────────────────────
     section('4. 성과 화면에 기준선으로 반영')
     await admin.goto(`${BASE}/performance`, { waitUntil: 'networkidle' })
