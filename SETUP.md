@@ -62,6 +62,8 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 12 | `supabase/migrations/0015_audit_actor_guard.sql` | 감사기록의 작성자를 서버가 정함 (이름 위조 차단) |
 | 13 | `supabase/migrations/0016_admin_lockout_guard.sql` | 마지막 관리자가 스스로 잠기는 것을 서버가 막음 |
 | 14 | `supabase/migrations/0017_billing_confirm.sql` | 청구 확정 — 확정 시점의 금액·명세서를 고정, 취소 상태 추가 |
+| 15 | `supabase/migrations/0018_user_admin.sql` | 관리자가 앱에서 계정 생성·비밀번호 초기화 (service_role 키를 브라우저에 두지 않기 위해 서버에 둡니다) |
+| 16 | `supabase/migrations/0019_excel_import.sql` | 기존 거래처 엑셀 가져오기 — 한 트랜잭션으로 넣고, 이미 있는 기록은 덮어쓰지 않습니다 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
@@ -282,6 +284,9 @@ node supabase/test/05_live.mjs --cleanup
 | `40_billing_confirm.mjs` | 청구 확정 → 미수금 → 입금 → 명세서 종단 | 정산에서 끊겨 있던 자리를 이은 흐름 전체 |
 | `41_billing_freeze.mjs` | 확정한 청구가 단가 변경·추가 수거에도 굳어 있는가 | 이미 병원에 보낸 금액이 나중에 바뀌면 안 됩니다 |
 | `42_billing_ui_demo.mjs` | 청구 화면이 실제로 눌리는가 (시연 빌드 · DB 없이) | DB 업데이트 전에도 화면 쪽은 미리 확인할 수 있어야 합니다 |
+| `43_user_admin.mjs` | 관리자가 앱에서 계정을 만들고 관리하는 한 바퀴 (0018 필요) | 계정 만드는 힘을 서버에만 두었으니, 서버가 정말 막는지 4개 역할로 확인합니다 |
+| `44_excel_import_plan.mjs` | **실제 엑셀 파일**을 읽어 무엇을 넣을지 정하는 판단과 금액 대조 | 날짜 없는 달을 지어내지 않는지, 엑셀 합계와 원 단위까지 같은지 |
+| `45_excel_import_live.mjs` | 엑셀 가져오기 종단 — 올리기 → 미리보기 → 등록 → 대조 (0019 필요) | 중간에 실패하면 반쯤 들어간 상태가 남지 않는지까지 봅니다 |
 
 ```bash
 # 병원 간 격리 — 두 번째 검증 병원·계정을 만들고 서로를 찔러 봅니다

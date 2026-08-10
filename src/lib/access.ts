@@ -40,6 +40,7 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/settings', roles: ['admin'] },
   { prefix: '/audit', roles: ['admin'] },
   { prefix: '/users', roles: ['admin'] },
+  { prefix: '/import', roles: ['admin'] },
   // 대시보드는 경영 지표가 포함되므로 현장 담당자에게는 오늘 일정이 첫 화면입니다.
   { prefix: '/demo', roles: ['admin'] },
   { prefix: '/presentation', roles: ['admin'] },

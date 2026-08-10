@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # 라이브 검증 전체 실행
 #
-#  05 ~ 43 을 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
+#  05 ~ 45 를 순서대로 돌리고 마지막에 한 장짜리 표를 찍습니다.
 #  마이그레이션을 적용한 뒤, 그리고 실사용 테스트에 넘기기 전에 한 번 돌립니다.
 #
 #  실행
@@ -90,6 +90,15 @@ run "38 · 이사님 엑셀과 정산 금액 대조 (더원요양병원)" \
 run "41 · 청구 확정·고정 규칙 (단가변경·추가수거·취소)" \
   "$NODE" --experimental-strip-types "$HERE/41_billing_freeze.mjs"
 
+# 44 는 실제 엑셀 파일을 읽어 무엇을 넣을지 정하는 부분만 봅니다 (DB·브라우저 없음).
+#   원본 경로는 SAMPLE_XLSX 로 지정합니다. 없으면 건너뜁니다.
+if [ -f "${SAMPLE_XLSX:-}" ]; then
+  run "44 · 엑셀 가져오기 판정·금액 대조 (원본 파일)" \
+    "$NODE" --experimental-strip-types "$HERE/44_excel_import_plan.mjs"
+else
+  NAMES+=("44 · 엑셀 가져오기 판정·금액 대조 (원본 파일)"); RESULTS+=("SKIP")
+fi
+
 # 42 는 서버 없이 도는 시연 빌드로 청구 화면 자체를 눌러 봅니다.
 #   VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npx vite build --outDir dist-demo
 #   npx vite preview --outDir dist-demo --port 4174
@@ -152,6 +161,12 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/40_billing_confirm.mjs"
   run "43 · 사용자·권한 관리 (계정 생성·역할·중지·비밀번호)" \
     "$NODE" "$HERE/43_user_admin.mjs"
+  if [ -f "${SAMPLE_XLSX:-}" ]; then
+    run "45 · 엑셀 가져오기 종단 (미리보기 → 등록 → 대조)" \
+      "$NODE" "$HERE/45_excel_import_live.mjs"
+  else
+    NAMES+=("45 · 엑셀 가져오기 종단 (미리보기 → 등록 → 대조)"); RESULTS+=("SKIP")
+  fi
 else
   NAMES+=("08 · 브라우저 종단 (PC 입력 → 모바일 조회)")
   RESULTS+=("SKIP")
@@ -182,6 +197,7 @@ else
   NAMES+=("39 · 한 번 입력 → 월말까지 (엑셀 업무 흐름)"); RESULTS+=("SKIP")
   NAMES+=("40 · 청구 확정 → 미수금 → 입금 → 명세서"); RESULTS+=("SKIP")
   NAMES+=("43 · 사용자·권한 관리 (계정 생성·역할·중지·비밀번호)"); RESULTS+=("SKIP")
+  NAMES+=("45 · 엑셀 가져오기 종단 (미리보기 → 등록 → 대조)"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
   echo "  npm run build && npx vite preview --port 4173  후 다시 실행하세요."

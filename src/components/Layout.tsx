@@ -29,6 +29,7 @@ import {
   HelpCircle,
   type LucideIcon,
   UserCog,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
@@ -89,6 +90,7 @@ const TOOL_NAV: NavItem[] = [
 /** 관리 — 관리자만 보이는 영역 */
 const ADMIN_NAV: NavItem[] = [
   { to: '/users', label: '사용자 관리', icon: UserCog, desc: '', tone: 'navy' },
+  { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '', tone: 'navy' },
   { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '', tone: 'navy' },
   { to: '/audit', label: '감사로그', icon: ScrollText, desc: '', tone: 'navy' },
 ]

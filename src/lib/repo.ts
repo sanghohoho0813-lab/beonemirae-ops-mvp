@@ -881,6 +881,32 @@ export async function createUser(input: {
   return data as string
 }
 
+/**
+ * 엑셀에서 옮겨 온 기록을 한 번에 넣습니다 (관리자만).
+ *
+ *  한 줄씩 넣으면 중간에 하나가 걸렸을 때 앞의 절반만 들어간 상태가
+ *  남습니다. 서버 함수 하나가 곧 트랜잭션 하나라, 무엇이든 잘못되면
+ *  하나도 안 들어간 상태로 되돌아갑니다(0019).
+ */
+export async function importExcelRows(input: {
+  clientId: string
+  rows: unknown[]
+  clientPatch: unknown
+  file: string
+  summary: unknown
+}): Promise<{ inserted: number; skipped: number; conflict: number; clientFields: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('import_excel_rows', {
+    p_client_id: input.clientId,
+    p_rows: input.rows,
+    p_client_patch: input.clientPatch,
+    p_file: input.file,
+    p_summary: input.summary,
+  })
+  if (error) throw new Error(error.message)
+  return data as { inserted: number; skipped: number; conflict: number; clientFields: number }
+}
+
 /** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */
 export async function resetUserPassword(id: string, password: string): Promise<void> {
   const sb = need()
