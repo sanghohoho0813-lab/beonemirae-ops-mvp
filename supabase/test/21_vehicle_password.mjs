@@ -49,11 +49,23 @@ const svc = (path, init = {}) =>
     ...init,
     headers: { apikey: S, Authorization: `Bearer ${S}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(init.headers || {}) },
   }).then(json)
-const tokenFor = (email, password) =>
-  fetch(`${U}/auth/v1/token?grant_type=password`, {
-    method: 'POST', headers: { apikey: A, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  }).then(json)
+//  로그인 시도가 잦으면 GoTrue 가 잠깐 막습니다(429). 그걸 '비밀번호가
+//  틀렸다' 로 읽으면 판단이 통째로 뒤집힙니다 — 실제로 이 검사에서
+//  "새 비밀번호로 로그인됨" 이 거짓으로 실패했고, 그 바람에 아래 정리
+//  단계가 비밀번호를 되돌리지 않고 넘어가서 관리자 계정이 잠겼습니다.
+//  그래서 막힌 것과 틀린 것을 구분하고, 막힌 경우에는 기다렸다 다시 봅니다.
+const tokenFor = async (email, password, tries = 4) => {
+  for (let i = 0; i < tries; i++) {
+    const r = await fetch(`${U}/auth/v1/token?grant_type=password`, {
+      method: 'POST', headers: { apikey: A, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }).then(json)
+    const blocked = r.status === 429 || /rate limit|too many/i.test(JSON.stringify(r.body ?? ''))
+    if (!blocked) return r
+    if (i < tries - 1) await new Promise((res) => setTimeout(res, 4000 * (i + 1)))
+  }
+  return { status: 429, body: null, rateLimited: true }
+}
 
 async function signIn(page, email, password) {
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
@@ -277,16 +289,28 @@ async function main() {
     await admin.close()
   } finally {
     section('정리')
-    // 비밀번호 되돌리기 — service 권한으로 확실하게
-    if (pwChanged) {
+    //  비밀번호 되돌리기 — service 권한으로, 조건 없이 항상.
+    //
+    //  예전에는 '바뀐 것을 확인했을 때만' 되돌렸습니다. 그런데 바뀌었는지
+    //  확인하는 로그인이 잠깐 막히면(429) 안 바뀐 것으로 읽고 되돌리지
+    //  않은 채 끝났습니다. 실제로 그렇게 관리자 계정이 잠겼고, service 키로
+    //  손수 풀어야 했습니다. 원래 값으로 덮어쓰는 것은 안 바뀌었어도
+    //  해가 없으므로, 이제는 언제나 되돌립니다.
+    void pwChanged
+    {
       const uid = (await svc(`/profiles?select=id&email=eq.${encodeURIComponent(`admin@${DOMAIN}`)}`)).body?.[0]?.id
-      await fetch(`${U}/auth/v1/admin/users/${uid}`, {
-        method: 'PUT',
-        headers: { apikey: S, Authorization: `Bearer ${S}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: process.env.TEST_ADMIN_PW }),
-      })
-      const back = await tokenFor(`admin@${DOMAIN}`, process.env.TEST_ADMIN_PW)
-      check(!!back.body?.access_token, '관리자 비밀번호를 원래대로 되돌림')
+      if (uid) {
+        await fetch(`${U}/auth/v1/admin/users/${uid}`, {
+          method: 'PUT',
+          headers: { apikey: S, Authorization: `Bearer ${S}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: process.env.TEST_ADMIN_PW }),
+        })
+        const back = await tokenFor(`admin@${DOMAIN}`, process.env.TEST_ADMIN_PW)
+        check(!!back.body?.access_token, '관리자 비밀번호를 원래대로 되돌림',
+          back.rateLimited ? '★ 확인이 막혔습니다 — 직접 로그인해 보세요' : '')
+      } else {
+        no('관리자 계정을 찾지 못해 비밀번호를 되돌리지 못했습니다')
+      }
     }
     if (madeVehicleId) await svc(`/vehicles?id=eq.${madeVehicleId}`, { method: 'DELETE' })
     await svc(`/schedules?memo=like.*${encodeURIComponent('차량비활성확인')}*`, { method: 'DELETE' })
