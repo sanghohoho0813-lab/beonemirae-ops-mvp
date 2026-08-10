@@ -195,7 +195,13 @@ async function main() {
     // ── 7. 감사기록 화면 ──────────────────────────────────────────────────
     section('7. 감사기록 화면')
     await admin.goto(`${BASE}/audit`, { waitUntil: 'networkidle' })
-    await admin.waitForTimeout(2500)
+    //  정해진 시간만 기다리면 목록이 아직 안 그려진 화면을 읽고 '기록이 없다'
+    //  고 틀린 실패를 냅니다. 목록이 실제로 그려질 때까지 기다립니다.
+    //  (화면 아래에 "최근 N건" 이 찍히면 다 그려진 것입니다)
+    await admin.locator('text=/최근 \\d+건/').first()
+      .waitFor({ state: 'attached', timeout: 20000 })
+      .catch(() => {})
+    await admin.waitForTimeout(1200)
     const aud = await admin.locator('body').innerText()
     const latest = (await svc('/audit_logs?select=summary,action&order=id.desc&limit=1')).body?.[0]
     check(!!latest && (aud.includes(latest.summary?.slice(0, 20) ?? '') || aud.includes(latest.action)),
