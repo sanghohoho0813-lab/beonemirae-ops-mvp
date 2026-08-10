@@ -800,11 +800,19 @@ export async function loadProfiles(): Promise<ProfileRow[]> {
   }))
 }
 
-export async function setProfileRole(id: string, role: ProfileRow['role']): Promise<void> {
+export async function setProfileRole(
+  id: string,
+  role: ProfileRow['role'],
+  clientId?: string | null,
+): Promise<void> {
   const sb = need()
   // 변경 전 값을 먼저 읽어 감사기록에 남깁니다 — 권한 변경은 추적 대상입니다.
   const { data: before } = await sb.from('profiles').select('name, role').eq('id', id).maybeSingle()
-  unwrap(await sb.from('profiles').update({ role }).eq('id', id).select())
+  //  병원 계정은 소속이 있어야 하고(DB 제약), 직원으로 돌아가면 소속을 비웁니다.
+  //  두 값을 한 번에 보내지 않으면 제약에 걸려 저장이 통째로 실패합니다.
+  const patch: Record<string, unknown> =
+    role === 'client' ? { role, client_id: clientId ?? null } : { role, client_id: null }
+  unwrap(await sb.from('profiles').update(patch).eq('id', id).select())
   await writeAudit({
     action: 'profile.role',
     entity: 'profiles',
@@ -813,6 +821,71 @@ export async function setProfileRole(id: string, role: ProfileRow['role']): Prom
     after: { role },
     summary: `권한 변경 — ${before?.name ?? id} · ${before?.role ?? '?'} → ${role}`,
   })
+}
+
+/**
+ * 병원 계정의 소속 거래처를 바꿉니다.
+ *
+ *  병원 담당자가 다른 병원으로 옮기거나, 처음에 잘못 연결했을 때 씁니다.
+ *  소속이 바뀌면 그 사람이 포털에서 보는 병원이 통째로 바뀌므로 감사기록에
+ *  남깁니다.
+ */
+export async function setProfileClient(id: string, clientId: string): Promise<void> {
+  const sb = need()
+  const { data: before } = await sb
+    .from('profiles')
+    .select('name, client_id, clients!profiles_client_id_fkey(name)')
+    .eq('id', id)
+    .maybeSingle()
+  unwrap(await sb.from('profiles').update({ client_id: clientId }).eq('id', id).select())
+  const { data: after } = await sb.from('clients').select('name').eq('id', clientId).maybeSingle()
+  await writeAudit({
+    action: 'profile.client',
+    entity: 'profiles',
+    entityId: id,
+    screen: 'users',
+    before: { clientId: before?.client_id ?? null },
+    after: { clientId },
+    summary: `병원 계정 소속 변경 — ${before?.name ?? id} · ${
+      (before as { clients?: { name?: string } } | null)?.clients?.name ?? '없음'
+    } → ${after?.name ?? clientId}`,
+  })
+}
+
+/**
+ * 계정을 새로 만듭니다 (관리자만).
+ *
+ *  계정을 만드는 힘은 service_role 키에 있는데, 그 키를 브라우저에 두면 RLS 가
+ *  통째로 무의미해집니다. 그래서 그 일은 서버(DB 함수)가 하고, 앱은 부탁만
+ *  합니다 — '관리자인가'는 서버가 다시 확인합니다(0018).
+ *
+ *  임시 비밀번호는 만든 사람이 직접 전달합니다. 서버에도 감사기록에도
+ *  원문은 남지 않습니다.
+ */
+export async function createUser(input: {
+  email: string
+  password: string
+  name: string
+  role: ProfileRow['role']
+  clientId?: string | null
+}): Promise<string> {
+  const sb = need()
+  const { data, error } = await sb.rpc('admin_create_user', {
+    p_email: input.email,
+    p_password: input.password,
+    p_name: input.name,
+    p_role: input.role,
+    p_client_id: input.role === 'client' ? (input.clientId ?? null) : null,
+  })
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
+/** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */
+export async function resetUserPassword(id: string, password: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('admin_reset_password', { p_user_id: id, p_password: password })
+  if (error) throw new Error(error.message)
 }
 
 export async function setProfileActive(id: string, active: boolean): Promise<void> {

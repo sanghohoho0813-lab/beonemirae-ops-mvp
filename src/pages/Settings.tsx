@@ -23,7 +23,8 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
-import { UserManagementCard, ImportLocalCard } from '../components/AdminPanels'
+import { ImportLocalCard } from '../components/AdminPanels'
+import { UserAdmin } from '../components/UserAdmin'
 import { VehicleManager } from '../components/VehicleManager'
 import { StockCard } from '../components/StockCard'
 import { PasswordCard } from '../components/PasswordCard'
@@ -412,10 +413,10 @@ export function Settings() {
               <SettingCard
                 icon={Users}
                 title="사용자 계정"
-                desc="직원 계정의 역할과 사용 여부를 관리합니다."
+                desc="계정 만들기 · 역할 · 사용/중지 · 비밀번호 초기화."
                 tone="navy"
               >
-                <UserManagementCard />
+                <UserAdmin />
               </SettingCard>
 
               <SettingCard

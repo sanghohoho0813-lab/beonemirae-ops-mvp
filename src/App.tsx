@@ -24,6 +24,7 @@ import { CompanyHomePage } from './pages/CompanyHomePage'
 import { Login } from './pages/Login'
 import { ResetPassword } from './pages/ResetPassword'
 import { AuditLog } from './pages/AuditLog'
+import { Users } from './pages/Users'
 import { Requests } from './pages/Requests'
 import { PortalLayout } from './components/PortalLayout'
 import { PortalHome } from './pages/PortalHome'
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="why" element={<Purpose />} />
           <Route path="performance" element={<Performance />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="users" element={<Users />} />
           <Route path="demo" element={<DemoSummary />} />
           <Route path="roadmap" element={<Roadmap />} />
           <Route path="presentation" element={<Presentation />} />

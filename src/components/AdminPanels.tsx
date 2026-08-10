@@ -1,145 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Database, Loader2, RefreshCw, UserCog } from 'lucide-react'
-import { useAuth, ROLE_LABEL, type UserRole } from '../context/AuthContext'
+import { useState } from 'react'
+import { AlertTriangle, Database, Loader2, UserCog } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { loadData } from '../lib/storage'
-import {
-  importFromLocal,
-  loadProfiles,
-  previewImport,
-  setProfileActive,
-  setProfileRole,
-  type ImportPreview,
-  type ProfileRow,
-} from '../lib/repo'
+import { importFromLocal, previewImport, type ImportPreview } from '../lib/repo'
 import { friendlyError } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 관리자 설정 패널 — 사용자 계정 / 브라우저 데이터 가져오기
+// 관리자 설정 패널 — 브라우저 데이터 가져오기
 //
-//  복잡한 SaaS 관리자 패널은 만들지 않습니다. 실제 운영에 꼭 필요한
-//  "누가 어떤 역할인지"와 "기존 브라우저 데이터를 서버로 올리기"만 제공합니다.
+//  사용자 계정은 components/UserAdmin.tsx 로 옮겼습니다 (계정 생성·비밀번호
+//  초기화까지 들어가면서 한 카드에 담기에 커졌습니다).
 // ─────────────────────────────────────────────────────────────────────────────
-
-// 화면에서 바꿀 수 있는 역할은 내부 직원 역할뿐입니다.
-// 병원 계정(client)은 소속 거래처가 반드시 있어야 해서 초대 시 지정합니다.
-const ROLES: UserRole[] = ['admin', 'office', 'field']
-
-/** 사용자 계정 현황 + 역할 변경 */
-export function UserManagementCard() {
-  const { mode, profile } = useAuth()
-  const [rows, setRows] = useState<ProfileRow[]>([])
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    if (mode !== 'live') return
-    setBusy(true)
-    setError(null)
-    try {
-      setRows(await loadProfiles())
-    } catch (e) {
-      setError(friendlyError(e))
-    } finally {
-      setBusy(false)
-    }
-  }, [mode])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  const change = async (fn: () => Promise<void>) => {
-    setBusy(true)
-    setError(null)
-    try {
-      await fn()
-      await load()
-    } catch (e) {
-      setError(friendlyError(e))
-      setBusy(false)
-    }
-  }
-
-  if (mode !== 'live') {
-    return (
-      <p className="t-body break-keep font-bold text-navy-400">
-        사용자 계정 관리는 서버에 로그인한 실제 운영 모드에서만 사용할 수 있습니다.
-      </p>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <button onClick={load} disabled={busy} className="btn-ghost disabled:opacity-60">
-          {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} strokeWidth={2.4} />}
-          새로고침
-        </button>
-        <span className="t-muted ml-auto font-bold text-navy-400">{rows.length}개 계정</span>
-      </div>
-
-      {error && <p className="t-body break-keep font-bold text-rose-600">{error}</p>}
-
-      <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50/60">
-        {rows.map((r) => (
-          <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-white px-4 py-3.5">
-            <div className="min-w-0 flex-1">
-              <p className="t-body break-keep font-extrabold text-navy-900">
-                {r.name || r.email}
-                {r.id === profile?.id && <span className="ml-2 font-bold text-teal-600">본인</span>}
-              </p>
-              <p className="t-muted break-keep">{r.email}</p>
-            </div>
-
-            {r.role === 'client' ? (
-              <span className="pill shrink-0 bg-sky-50 text-sky-700">
-                병원 계정 · {r.clientName || '소속 미지정'}
-              </span>
-            ) : (
-            <div className="flex flex-wrap gap-1">
-              {ROLES.map((role) => (
-                <button
-                  key={role}
-                  disabled={busy || r.id === profile?.id}
-                  onClick={() => void change(() => setProfileRole(r.id, role))}
-                  title={r.id === profile?.id ? '본인 역할은 변경할 수 없습니다' : ROLE_LABEL[role]}
-                  className={`rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-50 ${
-                    r.role === role ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500 hover:text-navy-700'
-                  }`}
-                >
-                  {ROLE_LABEL[role]}
-                </button>
-              ))}
-            </div>
-            )}
-
-            <button
-              disabled={busy || r.id === profile?.id}
-              onClick={() => void change(() => setProfileActive(r.id, !r.active))}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-50 ${
-                r.active ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'
-              }`}
-            >
-              {r.active ? '사용 중' : '비활성'}
-            </button>
-          </div>
-        ))}
-        {rows.length === 0 && !busy && (
-          <p className="t-body bg-white px-4 py-4 text-navy-400">계정이 없습니다.</p>
-        )}
-      </div>
-
-      <p className="t-muted break-keep">
-        계정 생성은 Supabase 대시보드(Authentication → Users)에서 초대하거나 직접 추가합니다. 공개 가입은
-        제공하지 않으며, 비밀번호는 이 시스템에 저장되지 않습니다. 본인 계정의 역할·활성 상태는 실수를 막기 위해
-        스스로 바꿀 수 없습니다. 병원 담당자 계정은 초대할 때 User Metadata 에
-        {'{'} "role": "client", "client_id": "거래처 id" {'}'} 를 함께 넣어야 만들어집니다 — 소속 병원이 없는
-        병원 계정은 생성되지 않습니다.
-      </p>
-    </div>
-  )
-}
 
 /** 브라우저(localStorage) 데이터 → 서버 가져오기 */
 export function ImportLocalCard() {

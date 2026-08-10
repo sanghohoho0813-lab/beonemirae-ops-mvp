@@ -132,10 +132,11 @@ async function main() {
     // div:has-text 는 그 글을 품은 가장 안쪽 요소까지 다 잡습니다. 그대로 쓰면
     // 이메일이 든 작은 칸이 잡히고, 역할 버튼은 그 밖에 있어 안 보입니다.
     // 이메일 문단에서 위로 두 단계 올라가 줄 전체를 잡습니다.
+    //  줄 하나를 통째로 집습니다. 예전에는 "이메일이 적힌 곳에서 div 를 두 번
+    //  올라간 자리" 로 집었는데, 줄 안에 무엇이 하나 늘어나자(소속 병원 칸)
+    //  윗도리만 잡혀서 아래쪽을 못 봤습니다. 화면이 붙여 둔 표시로 집습니다.
     const rowOf = async (email) => {
-      const p = admin.locator(`p:has-text("${email}")`).first()
-      if (!(await p.count())) return null
-      const row = p.locator('xpath=ancestor::div[2]')
+      const row = admin.locator(`[data-user-row]:has(p:text-is("${email}"))`)
       return (await row.count()) ? row.first() : null
     }
     const fieldRow = await rowOf(`field@${DOMAIN}`)
@@ -213,12 +214,23 @@ async function main() {
     const on = (await svc(`/profiles?select=active&id=eq.${fieldId}`)).body?.[0]
     check(on?.active === true, '(복구) 현장 계정 다시 활성화')
 
-    // ── 5. 병원 계정은 역할 버튼이 없다 ──────────────────────────────────
+    // ── 5. 병원 계정 줄은 소속 병원을 보여 주고 바꿀 수 있다 ─────────────
+    //
+    //  예전에는 「병원 계정 · 병원이름」 이라고 글자로만 보여 줬습니다. 소속을
+    //  바꾸려면 Supabase 대시보드에서 uuid 를 손으로 고쳐야 했습니다. 지금은
+    //  그 자리에서 고르게 되어 있습니다.
     section('5. 병원 계정 줄')
     const clientRow = await rowOf(`client@${DOMAIN}`)
     if (clientRow) {
       const t = await clientRow.innerText()
-      check(/병원 계정/.test(t), '병원 계정은 역할 버튼 대신 소속으로 표시', t.split('\n').slice(-1)[0]?.slice(0, 40))
+      check(/소속 병원/.test(t), '병원 계정 줄에 소속 병원이 보임', t.split('\n').slice(-1)[0]?.slice(0, 40))
+      const picker = clientRow.locator('select')
+      check((await picker.count()) > 0, '소속 병원을 그 자리에서 바꿀 수 있음')
+      if (await picker.count()) {
+        const mine = (await svc(`/profiles?select=client_id&email=eq.${encodeURIComponent(`client@${DOMAIN}`)}`))
+          .body?.[0]?.client_id
+        check((await picker.first().inputValue()) === mine, '지금 소속이 골라져 있음')
+      }
     } else {
       note('병원 계정 줄을 화면에서 찾지 못했습니다')
     }
