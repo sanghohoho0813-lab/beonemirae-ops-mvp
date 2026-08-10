@@ -249,6 +249,11 @@ async function main() {
     const live = (await svc(`/schedules?select=id,status&client_id=eq.${client.id}`)).body ?? []
     const stillCounted = live.filter((s) => ids.has(s.id) && s.status === '완료')
     check(stillCounted.length === 0, '되돌린 건이 완료 상태로 남아 있지 않음', `${stillCounted.length}건`)
+  } catch (e) {
+    //  중간에 터지면 여기서 붙잡아 실패로 남깁니다. 예전에는 catch 가 없어서,
+    //  터진 뒤 finally 의 process.exit(0) 이 그대로 실행되며 '통과' 로 끝났습니다.
+    //  (관리자 로그인이 막혔을 때 이 검사가 4건만 하고 YES 를 찍었습니다)
+    no('검사 도중 오류가 났습니다', String(e?.message ?? e).slice(0, 200))
   } finally {
     section('정리')
     await restorePricing()
