@@ -30,6 +30,7 @@ const ACTION_LABEL: Record<string, string> = {
   'schedule.complete': '수거 완료 처리',
   'material.supply': '자재 공급',
   'material.delete': '자재 공급 삭제',
+  'stock.receive': '자재 입고',
   'payment.create': '청구 등록',
   'payment.paid': '입금 완료',
   'payment.update': '청구 상태 변경',

@@ -448,8 +448,9 @@ export async function deleteMaterial(id: string): Promise<void> {
 
 export async function adjustStock(
   patch: Partial<OfficeStock>,
-  kind: '입고' | '조정',
+  kind: '입고' | '조정' | '공급',
   memo: string,
+  clientId?: string,
 ): Promise<OfficeStock> {
   const sb = need()
   const current = toStock(unwrapOne(await sb.from('office_stock').select('*').eq('id', 1).maybeSingle()))
@@ -468,7 +469,13 @@ export async function adjustStock(
   )
   const tx = (Object.keys(next) as (keyof OfficeStock)[])
     .filter((k) => next[k] !== current[k])
-    .map((k) => ({ kind, item: k, qty: next[k] - current[k], memo }))
+    .map((k) => ({
+      kind,
+      item: k,
+      qty: next[k] - current[k],
+      memo,
+      ...(clientId ? { client_id: clientId } : {}),
+    }))
   if (tx.length) unwrap(await sb.from('material_transactions').insert(tx).select())
   return next
 }

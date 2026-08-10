@@ -20,7 +20,7 @@ import {
   usageComparison,
   type ItemKey,
 } from '../lib/billing'
-import { won, wonShort } from '../lib/format'
+import { won } from '../lib/format'
 import { Modal } from './Modal'
 import { SectionTitle } from './ui'
 
@@ -250,10 +250,15 @@ function Cell({
   tone: string
   sub?: string
 }) {
+  //  이 세 숫자는 병원에 청구할 금액을 확인하는 자리입니다. 예전에는
+  //  만원 단위로 줄여 적었는데(144,150원 → "14만원"), 그러면 이사님이
+  //  이 화면만 보고는 얼마를 청구할지 알 수 없어 결국 엑셀을 다시 펴게
+  //  됩니다. 원 단위로 그대로 적고, 칸이 좁으면 글자가 줄어듭니다
+  //  (kpi-box + t-stat 은 칸 폭에 맞춰 자동으로 작아집니다).
   return (
-    <div className="px-4 py-4 text-center sm:px-5">
+    <div className="kpi-box px-4 py-4 text-center sm:px-5">
       <p className="t-label text-navy-500">{label}</p>
-      <p className={`t-kpi-sm mt-1 tabular-nums ${tone}`}>{wonShort(value)}</p>
+      <p className={`t-stat mt-1 tabular-nums ${tone}`}>{won(value)}</p>
       {sub && <p className="t-muted mt-0.5">{sub}</p>}
     </div>
   )

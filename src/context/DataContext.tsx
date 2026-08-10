@@ -13,6 +13,7 @@ import type {
   Client,
   MaterialSupply,
   NoteKind,
+  OfficeStock,
   Payment,
   Schedule,
   SiteNote,
@@ -31,6 +32,7 @@ import {
   type CollectionCompletionInput,
   type CommandResult,
 } from '../lib/collection'
+import { itemsOf, stockDeltaOf } from '../lib/billing'
 import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
 import { leadKey } from '../lib/sales'
 import type { NextAction } from '../lib/insights'
@@ -78,6 +80,8 @@ interface DataContextValue {
   // 자재공급
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
+  /** 사무실 자재 입고 — 재고는 공급으로 줄기만 하므로 채우는 길이 필요합니다 */
+  receiveStock: (patch: Partial<OfficeStock>, memo: string) => void
   // 결제
   addPayment: (p: Omit<Payment, 'id'>) => Payment
   updatePayment: (id: string, patch: Partial<Payment>) => void
@@ -127,6 +131,14 @@ interface DataContextValue {
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
+
+/** 사무실 재고 4칸의 화면 이름 (감사기록에 그대로 적습니다) */
+const STOCK_LABEL: Record<keyof OfficeStock, string> = {
+  corrugatedBox: '골판지 전용박스',
+  plasticContainer: '합성수지 전용용기',
+  bag: '전용 봉투',
+  needleBox: '합성수지 바늘통',
+}
 
 /**
  * 감사기록에 남길 거래처 이름 — 그만둔 거래처도 찾습니다.
@@ -976,8 +988,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (m: Omit<MaterialSupply, 'id'>) => {
       const material: MaterialSupply = { ...m, id: uid('m') }
       if (live) {
+        //  같은 사실(자재를 병원에 줬다)인데 어디서 넣느냐에 따라 결과가
+        //  달랐습니다. 수거 입력의 동시공급은 사무실 재고를 줄이고 원장에도
+        //  남는데, 자재 화면의 공급 등록은 둘 다 하지 않았습니다. 그러면
+        //  재고 숫자가 조용히 실제와 어긋나고, 「자재 소진 위험」도 틀립니다.
+        //  같은 사실은 같은 결과가 되도록 여기서도 줄이고 원장에 남깁니다.
+        const delta = stockDeltaOf(itemsOf(m as MaterialSupply))
+        const name = findClientName(data, m.clientId)
         void runLive(async () => {
           await repo.insertMaterial(m)
+          const moved = (Object.keys(delta) as (keyof typeof delta)[]).filter((k) => delta[k] > 0)
+          if (moved.length) {
+            const next: Partial<OfficeStock> = {}
+            for (const k of moved) next[k] = (data.officeStock?.[k] ?? 0) - delta[k]
+            await repo.adjustStock(next, '공급', `자재 화면에서 ${name} 공급 등록`, m.clientId)
+          }
           await repo.writeAudit({
             action: 'material.supply',
             entity: 'materials',
@@ -990,7 +1015,39 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData((d) => ({ ...d, materials: [...d.materials, material] }))
       return material
     },
-    [live, runLive],
+    [live, runLive, data],
+  )
+
+  //  사무실 재고는 수거 입력의 동시공급으로 줄기만 하고, 채우는 길이 화면에
+  //  없었습니다. 그대로 두면 재고가 0 이 되는 순간 서버가 "재고보다 많이
+  //  공급할 수 없습니다" 로 막아 현장이 실제로 준 자재를 기록조차 못 하게
+  //  됩니다. 더원요양병원 한 달 사용량(63L 180개·12L 400개·비닐 800개)이면
+  //  지금 재고로는 한 달을 못 넘깁니다. 원장에는 '입고' 로 남깁니다.
+  const receiveStock = useCallback(
+    (patch: Partial<OfficeStock>, memo: string) => {
+      const next: Partial<OfficeStock> = {}
+      for (const [k, v] of Object.entries(patch)) {
+        const add = Number(v ?? 0)
+        if (add > 0) next[k as keyof OfficeStock] = (data.officeStock?.[k as keyof OfficeStock] ?? 0) + add
+      }
+      if (Object.keys(next).length === 0) return
+      if (live) {
+        void runLive(async () => {
+          await repo.adjustStock(next, '입고', memo || '자재 입고')
+          await repo.writeAudit({
+            action: 'stock.receive',
+            entity: 'office_stock',
+            summary: `자재 입고 — ${Object.entries(patch)
+              .filter(([, v]) => Number(v ?? 0) > 0)
+              .map(([k, v]) => `${STOCK_LABEL[k as keyof OfficeStock]} +${v}`)
+              .join(' · ')}${memo ? ` (${memo})` : ''}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({ ...d, officeStock: { ...d.officeStock, ...next } }))
+    },
+    [live, runLive, data],
   )
 
   const removeMaterial = useCallback(
@@ -1162,6 +1219,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeVehicle,
       addMaterial,
       removeMaterial,
+      receiveStock,
       addPayment,
       updatePayment,
       markPaid,
@@ -1208,6 +1266,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeVehicle,
       addMaterial,
       removeMaterial,
+      receiveStock,
       addPayment,
       updatePayment,
       markPaid,

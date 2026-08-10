@@ -16,6 +16,7 @@ import {
   Gauge,
   Users,
   Truck,
+  Package,
   KeyRound,
   ArrowRight,
   type LucideIcon,
@@ -24,6 +25,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { UserManagementCard, ImportLocalCard } from '../components/AdminPanels'
 import { VehicleManager } from '../components/VehicleManager'
+import { StockCard } from '../components/StockCard'
 import { PasswordCard } from '../components/PasswordCard'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
 import { PageShell } from '../components/ui'
@@ -371,6 +373,15 @@ export function Settings() {
                 ? '내려받은 파일은 보관용입니다. 이 화면으로 실사용 데이터를 되돌리는 기능은 아직 없습니다.'
                 : '가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.'}
             </p>
+          </SettingCard>
+
+          {/* 사무실 자재 재고 — 공급으로 줄기만 하던 것을 채울 수 있게 합니다 */}
+          <SettingCard
+            icon={Package}
+            title="사무실 자재 재고"
+            desc="지금 창고에 남은 수량입니다. 새로 들어온 만큼 적어 주세요."
+          >
+            <StockCard />
           </SettingCard>
 
           {/* 차량 — 한 대도 없으면 수거 완료 입력이 불가능합니다 */}

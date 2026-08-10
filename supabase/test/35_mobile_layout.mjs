@@ -168,10 +168,56 @@ async function main() {
   try {
     await visit('field', process.env.TEST_FIELD_PW,
       ['/today', '/collection', '/history', '/requests'], '현장 담당자 (폰)')
+    //  '/settlement' 을 넣어 뒀었는데 그런 주소는 없습니다. 없는 주소는
+    //  대시보드로 떨어지므로, 정산 화면을 본다고 적어 놓고 실제로는 대시보드를
+    //  한 번 더 재고 있었습니다. 월 정산은 거래처 상세의 탭이라 아래에서 따로
+    //  열어 봅니다.
     await visit('office', process.env.TEST_OFFICE_PW,
-      ['/', '/clients', '/receivables', '/materials', '/requests', '/settlement'], '사무실 담당자 (폰)')
+      ['/', '/clients', '/receivables', '/materials', '/requests'], '사무실 담당자 (폰)')
     await visit('client', process.env.TEST_CLIENT_PW,
       ['/portal', '/portal/history', '/portal/report'], '병원 담당자 (폰)')
+
+    // ── 월 정산·명세서 탭 (거래처 상세 안에 있습니다) ──────────────────
+    //  월말에 돈을 확인하는 화면입니다. 금액이 길어서 좁은 폰에서 가장 잘
+    //  깨지는 자리이기도 합니다.
+    section('월 정산·명세서 탭 (폰)')
+    {
+      const first = (await svc('/clients?select=id,name&active=eq.true&limit=1'))?.[0]
+      if (!first) {
+        no('정산 탭을 열어 볼 거래처가 없습니다')
+      } else {
+        const ctx = await browser.newContext({ viewport: PHONE, isMobile: true, hasTouch: true })
+        const page = await ctx.newPage()
+        page.on('pageerror', (e) => errors.push(`[정산탭] ${e.message}`))
+        await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
+        await page.fill('#login-email', `office@${DOMAIN}`)
+        await page.fill('#login-password', process.env.TEST_OFFICE_PW)
+        await Promise.all([
+          page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 30000 }),
+          page.click('button[type="submit"]'),
+        ])
+        for (const scale of SCALES) {
+          await svc(`/profiles?email=eq.${encodeURIComponent(`office@${DOMAIN}`)}`, {
+            method: 'PATCH', body: JSON.stringify({ font_scale: scale.db }),
+          })
+          await page.goto(`${BASE}/clients/${first.id}`, { waitUntil: 'networkidle' })
+          await page.waitForTimeout(2000)
+          const tab = page.locator('button', { hasText: '월 정산·명세서' }).first()
+          if ((await tab.count()) === 0) { no(`[${scale.label}] 월 정산 탭을 찾지 못함`); continue }
+          await tab.click()
+          await page.waitForTimeout(2500)
+          const m = await page.evaluate(MEASURE)
+          check(m.scrollWidth <= m.width + 1, `[${scale.label}] 월 정산 탭 — 페이지가 옆으로 밀리지 않음`,
+            m.scrollWidth > m.width + 1 ? `scrollWidth ${m.scrollWidth} > ${m.width}` : '')
+          check(m.count === 0, `[${scale.label}] 월 정산 탭 — 잘려서 못 보는 요소 없음`,
+            m.count ? `${m.count}개: ${m.stuck.join(' / ')}` : '')
+        }
+        await svc(`/profiles?email=eq.${encodeURIComponent(`office@${DOMAIN}`)}`, {
+          method: 'PATCH', body: JSON.stringify({ font_scale: 'normal' }),
+        })
+        await ctx.close()
+      }
+    }
 
     // ── 폰에서 글자 크기를 바꿀 수 있는가 ────────────────────────────────
     //  글자 크기를 바꾸는 곳이 설정 화면 한 군데뿐이었는데 그 화면은 관리자

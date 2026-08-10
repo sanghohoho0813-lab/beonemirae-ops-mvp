@@ -53,8 +53,28 @@ export function Materials() {
     { box: 0, vinyl: 0, needle: 0 },
   )
 
+  //  이 화면의 공급도 이제 사무실 재고에서 빠집니다(수거 입력과 같은 결과).
+  //  그래서 남은 것보다 많이 넣으면 서버가 재고 음수를 막아 기록만 남고
+  //  재고는 안 빠지는 어긋난 상태가 됩니다. 저장 전에 여기서 걸러 냅니다.
+  const overStock = (() => {
+    const stock = data.officeStock
+    const need = {
+      corrugatedBox: Number(form.boxCount) || 0,
+      bag: Number(form.vinylCount) || 0,
+      plasticContainer: Number(form.needleBoxCount) || 0,
+    }
+    const over = []
+    if (need.corrugatedBox > (stock?.corrugatedBox ?? 0))
+      over.push(`골판지 전용박스 (남은 ${stock?.corrugatedBox ?? 0}개)`)
+    if (need.bag > (stock?.bag ?? 0)) over.push(`전용 봉투 (남은 ${stock?.bag ?? 0}개)`)
+    if (need.plasticContainer > (stock?.plasticContainer ?? 0))
+      over.push(`합성수지 전용용기 (남은 ${stock?.plasticContainer ?? 0}개)`)
+    return over
+  })()
+
   function save() {
     if (!form.clientId) return
+    if (overStock.length > 0) return
     addMaterial({
       ...form,
       boxCount: Number(form.boxCount),
@@ -163,7 +183,7 @@ export function Materials() {
             <button className="btn-ghost flex-1" onClick={() => setOpen(false)}>
               취소
             </button>
-            <button className="btn-primary flex-1" onClick={save}>
+            <button className="btn-primary flex-1 disabled:opacity-40" disabled={overStock.length > 0} onClick={save}>
               저장
             </button>
           </>
@@ -222,6 +242,14 @@ export function Materials() {
             />
           </div>
         </div>
+        {overStock.length > 0 && (
+          <p className="t-body break-keep rounded-2xl bg-rose-50 px-3.5 py-3 font-bold text-rose-600">
+            사무실 재고보다 많이 공급할 수 없습니다 — {overStock.join(' · ')}
+            <span className="mt-1 block font-medium">
+              창고에 들어온 자재는 설정 &gt; 사무실 자재 재고에서 입고로 먼저 적어 주세요.
+            </span>
+          </p>
+        )}
         <label className="flex items-center gap-2 text-[1.08rem] font-medium text-navy-700">
           <input
             type="checkbox"

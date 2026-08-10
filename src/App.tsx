@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from './components/ScrollToTop'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
@@ -90,7 +90,18 @@ export default function App() {
           <Route path="demo" element={<DemoSummary />} />
           <Route path="roadmap" element={<Roadmap />} />
           <Route path="presentation" element={<Presentation />} />
-          <Route path="*" element={<Dashboard />} />
+          {/*
+            없는 주소로 들어왔을 때 대시보드를 그려 주고 있었습니다. 그런데
+            역할 확인은 '아는 주소' 에만 걸려 있어서(access.ts 는 목록에 없는
+            경로를 허용으로 봅니다), 현장 담당자가 주소창에 아무 글자나 넣으면
+            대시보드가 그대로 열렸습니다 — 매출·미수금·경영지표가 있는,
+            현장에는 열지 않기로 한 바로 그 화면입니다. 실제로 재현했습니다.
+            (/settlement · /aaa-none 등 모두 열렸습니다)
+
+            없는 주소는 각자의 첫 업무 화면으로 보냅니다. '/' 는 RequireAuth 가
+            역할별로 갈라 주므로, 현장은 오늘 일정으로 갑니다.
+          */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </>
