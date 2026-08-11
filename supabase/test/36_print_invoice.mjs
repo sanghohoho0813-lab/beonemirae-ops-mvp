@@ -48,6 +48,22 @@ const no = (t, e = '') => { fail++; console.log(`  FAIL  ${t}${e ? '  ' + e : ''
 const check = (c, t, e = '') => (c ? ok(t, e) : no(t, e))
 const section = (t) => console.log(`\n── ${t} ${'─'.repeat(Math.max(0, 52 - t.length))}`)
 
+/** 서비스 키로 읽고 쓰기 (검사 준비·정리용 — 화면 검사는 사무실 계정으로 합니다) */
+const svc = async (path, init = {}) => {
+  const r = await fetch(`${U}/rest/v1${path}`, {
+    ...init,
+    headers: {
+      apikey: S,
+      Authorization: `Bearer ${S}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+      ...(init.headers || {}),
+    },
+  })
+  const t = await r.text()
+  try { return JSON.parse(t) } catch { return [] }
+}
+
 /** PDF 안의 장수 (/Count) */
 const pdfPages = (file) => {
   const m = readFileSync(file).toString('latin1').match(/\/Count (\d+)/)
@@ -123,15 +139,75 @@ const PRINTED = () => {
 async function main() {
   console.log('\n════ 거래명세서를 뽑아서 병원에 보낼 수 있는가 ════')
 
-  const client = (await fetch(`${U}/rest/v1/clients?select=id,name&active=eq.true&limit=1`, {
-    headers: { apikey: S, Authorization: `Bearer ${S}` },
-  }).then((r) => r.json()))?.[0]
-  if (!client) {
+  //  이 달에 집계할 것이 있는 거래처를 고릅니다.
+  //
+  //  예전에는 활성 거래처 아무거나 하나(limit=1) 집었습니다. 그런데
+  //  「거래명세서」 버튼은 그 달에 수거·공급이 하나도 없으면 눌리지 않습니다
+  //  (그게 맞는 동작입니다 — 빈 명세서를 병원에 보낼 수는 없으니까요).
+  //  그래서 마침 이번 달 기록이 없는 거래처가 집히면, 인쇄는 멀쩡한데
+  //  검사만 실패했습니다. 실제로 그렇게 한 번 틀렸습니다.
+  const month = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 7)
+  const lastDay = (() => {
+    const [y, m] = month.split('-').map(Number)
+    return `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+  })()
+  const clients = await svc(`/clients?select=id,name&active=eq.true&order=name`)
+  if (!clients.length) {
     no('명세서를 뽑을 거래처가 없습니다')
     console.log(`\n════ ${pass} PASS / ${fail} FAIL ════`)
     process.exit(1)
   }
-  console.log(`검증 대상 거래처: ${client.name}`)
+  let client = null
+  for (const c of clients) {
+    const [sch, mat] = await Promise.all([
+      svc(`/schedules?select=id&client_id=eq.${c.id}&status=eq.${encodeURIComponent('완료')}` +
+        `&date=gte.${month}-01&date=lte.${lastDay}&limit=1`),
+      svc(`/materials?select=id&client_id=eq.${c.id}&date=gte.${month}-01&date=lte.${lastDay}&limit=1`),
+    ])
+    if (sch.length || mat.length) { client = c; break }
+  }
+
+  //  아무 거래처도 이번 달 기록이 없으면(정리 직후가 그렇습니다) 이 검사가
+  //  직접 한 건 만들고, 끝나면 그 한 건만 id 로 지웁니다.
+  let seeded = null
+  if (!client) {
+    client = clients[0]
+    const vehicle = (await svc(`/vehicles?select=id,waste_type&active=eq.true&order=name&limit=1`))?.[0]
+    if (!vehicle) {
+      no('인쇄에 쓸 수거 기록도 차량도 없습니다')
+      console.log(`\n════ ${pass} PASS / ${fail} FAIL ════`)
+      process.exit(1)
+    }
+    //  오늘 날짜를 피합니다 — 오늘 것은 다른 검사가 쓰는 자리이고,
+    //  같은 날 같은 구분은 하나만 완료될 수 있습니다.
+    const day = new Date().getDate() > 3 ? '02' : '27'
+    const date = day === '27' ? `${month}-27` : `${month}-02`
+    const made = await svc('/schedules', {
+      method: 'POST',
+      body: JSON.stringify({
+        client_id: client.id,
+        date,
+        waste_type: vehicle.waste_type,
+        vehicle_id: vehicle.id,
+        scheduled_time: '10:00',
+        status: '완료',
+        expected_amount: 40,
+        actual_amount: 40,
+        completed_at: `${date}T01:00:00+00:00`,
+        memo: '',
+        //  origin 은 seed/field/demo/migrated/system 만 허용됩니다.
+        origin: 'seed',
+      }),
+    })
+    seeded = made?.[0]?.id ?? null
+    if (!seeded) {
+      no('인쇄용 수거 기록을 만들지 못했습니다')
+      console.log(`\n════ ${pass} PASS / ${fail} FAIL ════`)
+      process.exit(1)
+    }
+    console.log(`  (이번 달 기록이 없어 ${date} 40kg 한 건을 임시로 만들었습니다)`)
+  }
+  console.log(`검증 대상 거래처: ${client.name} · ${month}`)
 
   const dir = mkdtempSync(join(tmpdir(), 'print-'))
   const pw = (await import(process.env.PLAYWRIGHT_MODULE || 'playwright')).default
@@ -280,6 +356,8 @@ async function main() {
   } finally {
     await browser.close()
     rmSync(dir, { recursive: true, force: true })
+    //  이 검사가 만든 한 건만 지웁니다 (없으면 아무것도 건드리지 않습니다).
+    if (seeded) await svc(`/schedules?id=eq.${seeded}`, { method: 'DELETE' }).catch(() => {})
     console.log(`\n════ ${pass} PASS / ${fail} FAIL ════`)
     console.log(`명세서 인쇄: ${fail === 0 ? 'YES' : 'NO'}`)
     process.exit(fail === 0 ? 0 : 1)

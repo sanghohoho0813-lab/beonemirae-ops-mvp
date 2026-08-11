@@ -209,15 +209,29 @@ async function main() {
       check(!/자릿수를 확인/.test(body2), '평범한 수거량에는 안내가 뜨지 않음')
       const ok2 = (await svc(`/schedules?select=id,actual_amount,event_id&client_id=eq.${client.id}&actual_amount=eq.${NORMAL}&order=id.desc&limit=1`)).body?.[0]
       check(ok2?.actual_amount === NORMAL, '정상 수거는 그대로 저장됨', `${ok2?.actual_amount}kg`)
-      if (ok2?.event_id) madeEvents.push(ok2.event_id)
+      //  다음 단계로 넘어가기 전에 이 수거를 되돌립니다.
+      //
+      //  같은 거래처를 같은 날 두 번 저장하면 DB 가 막습니다("이미 저장되어
+      //  있습니다 — 추가 수거로 저장해 주세요"). 정상 동작입니다. 그런데 이
+      //  수거를 남겨 둔 채 5번의 빠른 완료를 하면 그 막힘에 걸려 저장 자체가
+      //  안 되고, 저장이 안 되니 자릿수 경고도 나올 자리가 없습니다.
+      //  검사가 스스로 만든 상황 때문에 멀쩡한 기능이 실패로 찍혔습니다.
+      if (ok2?.event_id) {
+        const back = await revert(ok2.event_id)
+        if (back.status !== 200) madeEvents.push(ok2.event_id)
+      }
     }
 
     // ── 5. 오늘 일정의 '빠른 완료' 에서도 경고가 보이는가 ────────────────
     section("5. 빠른 완료에서도 같은 경고가 보이는가")
     //  현장은 수거 입력 화면보다 오늘 일정의 '빠른 완료' 를 더 많이 씁니다.
     //  이 길에서 경고가 사라지면 자릿수 오타를 잡을 방법이 없습니다.
+    //
+    //  일정은 이 검사가 보는 그 거래처 것이어야 합니다. 다른 거래처 일정을
+    //  집으면 그 차량 적재량이 달라 경고 기준부터 어긋납니다.
     const pend = (await svc(
-      `/schedules?select=id&status=eq.예정&date=eq.${todayStr}&limit=1`,
+      `/schedules?select=id&status=eq.예정&date=eq.${todayStr}&client_id=eq.${client.id}` +
+        `&waste_type=eq.${encodeURIComponent(vehicle.waste_type)}&limit=1`,
     )).body?.[0]
     if (!pend) {
       console.log('  참고  오늘 남은 예정 수거가 없어 빠른 완료는 건너뜁니다')
@@ -232,7 +246,13 @@ async function main() {
       await wide.waitForTimeout(3000)
       //  일정 카드는 가로로 스크롤되는 띠 안에 있어서, 버튼이 화면 밖에
       //  있을 수 있습니다. 스크롤해서 끌어온 뒤 누릅니다.
-      const quickBtn = wide.locator('button:has-text("빠른 완료")').last()
+      //  그 거래처 카드의 버튼을 눌러야 합니다. 아무 버튼이나 누르면 다른
+      //  거래처 일정이 열리고, 그 차량 적재량이 달라 경고 기준이 어긋납니다.
+      const mine = wide.locator('.card').filter({ hasText: client.name })
+        .locator('button:has-text("빠른 완료")')
+      const quickBtn = (await mine.count()) > 0
+        ? mine.last()
+        : wide.locator('button:has-text("빠른 완료")').last()
       if ((await quickBtn.count()) === 0) {
         console.log('  참고  「빠른 완료」 버튼이 없어 건너뜁니다')
       } else {
@@ -245,8 +265,13 @@ async function main() {
         await wide.locator('button:has-text("완료 처리")').first().click()
         await wide.waitForTimeout(6000)
         const qtxt = await wide.locator('body').innerText()
+        //  실패했을 때 창에 뭐라고 떠 있었는지 같이 남깁니다. 예전에는
+        //  「경고가 사라졌습니다」 한 줄뿐이라, 실제로는 저장이 막혀서
+        //  경고가 나올 자리가 없었던 것을 알아채는 데 오래 걸렸습니다.
+        const qdlg = (await wide.locator('[role="dialog"]').first().innerText().catch(() => ''))
+          .replace(/\n+/g, ' · ').slice(0, 160)
         check(/자릿수를 확인/.test(qtxt), '빠른 완료에서도 자릿수 안내가 보임',
-          /자릿수를 확인/.test(qtxt) ? '' : '경고가 사라졌습니다')
+          /자릿수를 확인/.test(qtxt) ? '' : `경고가 사라졌습니다 — 창: ${qdlg}`)
         const qSaved = (await svc(
           `/schedules?select=event_id,actual_amount&id=eq.${pend.id}`,
         )).body?.[0]
