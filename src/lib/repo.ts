@@ -46,6 +46,39 @@ function unwrapOne(res: { data: Row | null; error: { message: string } | null })
   return res.data
 }
 
+/**
+ * 표 하나를 **끝까지** 읽습니다.
+ *
+ *  서버(PostgREST)는 한 번에 1000줄까지만 돌려줍니다. 그런데 앱은 돌려받은
+ *  것을 전부라고 믿고 있었습니다. 그래서 수거 기록이 1000건을 넘는 순간부터
+ *  **일부 거래처가 화면에서 통째로 사라졌습니다.**
+ *
+ *  실제로 재현했습니다 — 거래처 20곳에 6개월치(수거 1,461건)를 넣으니
+ *  6곳의 수거가 0kg 으로 보였고, 매출로 2억 3,900만원이 화면에서 빠졌습니다.
+ *  오류도 경고도 없이 조용히 틀립니다. 정산·통계·거래명세서가 전부 그
+ *  값을 씁니다.
+ *
+ *  거래처 18곳이면 넉 달이면 1000건을 넘습니다. 즉 실사용 몇 달 뒤에
+ *  반드시 일어날 일이었습니다.
+ *
+ *  1000줄씩 나눠 끝까지 읽습니다. 마지막 장이 1000줄보다 적으면 끝입니다.
+ *  나눠 읽을 때는 순서가 고정돼야 합니다 — 정렬 없이 나누면 어떤 줄은 두 번
+ *  오고 어떤 줄은 영영 안 옵니다. 그래서 모든 조회에 정렬을 붙였습니다.
+ */
+const PAGE = 1000
+async function pageAll(
+  make: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
+): Promise<Row[]> {
+  const out: Row[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await make(from, from + PAGE - 1)
+    if (error) throw new Error(error.message)
+    const rows = data ?? []
+    out.push(...rows)
+    if (rows.length < PAGE) return out
+  }
+}
+
 // ── 행 → 도메인 매핑 ─────────────────────────────────────────────────────────
 const toClient = (r: Row): Client => ({
   id: r.id,
@@ -229,32 +262,47 @@ export async function loadAppData(): Promise<AppData> {
   const [clients, vehicles, schedules, materials, notes, events, stock, overrides, requests] = await Promise.all([
     // 그만둔 거래처까지 함께 읽습니다. 목록에는 활성만 넣고, 비활성은
     // 청구·수거 기록의 이름을 되찾는 데만 씁니다(아래 retiredClients).
-    withRetry(async () => unwrap<Row[]>(await sb.from('clients').select('*'))),
-    withRetry(async () => unwrap<Row[]>(await sb.from('vehicles').select('*').eq('active', true))),
-    withRetry(async () => unwrap<Row[]>(await sb.from('schedules').select('*'))),
-    withRetry(async () => unwrap<Row[]>(await sb.from('materials').select('*'))),
-    withRetry(async () => unwrap<Row[]>(await sb.from('site_notes').select('*').eq('archived', false))),
+    withRetry(async () => pageAll((f, t) => sb.from('clients').select('*').order('id').range(f, t))),
     withRetry(async () =>
-      unwrap<Row[]>(await sb.from('collection_events').select('*').order('at', { ascending: false })),
+      pageAll((f, t) => sb.from('vehicles').select('*').eq('active', true).order('id').range(f, t)),
+    ),
+    withRetry(async () => pageAll((f, t) => sb.from('schedules').select('*').order('id').range(f, t))),
+    withRetry(async () => pageAll((f, t) => sb.from('materials').select('*').order('id').range(f, t))),
+    withRetry(async () =>
+      pageAll((f, t) => sb.from('site_notes').select('*').eq('archived', false).order('id').range(f, t)),
+    ),
+    withRetry(async () =>
+      pageAll((f, t) =>
+        sb.from('collection_events').select('*').order('at', { ascending: false }).order('id').range(f, t),
+      ),
     ),
     withRetry(async () => unwrapOne(await sb.from('office_stock').select('*').eq('id', 1).maybeSingle())),
-    withRetry(async () => unwrap<Row[]>(await sb.from('request_overrides').select('*'))),
+    //  이 표의 기본키는 id 가 아니라 request_id 입니다. 없는 칸으로 정렬하면
+    //  400 이 나고, 전체 로드가 통째로 실패해 화면이 아예 안 뜹니다.
     withRetry(async () =>
-      unwrap<Row[]>(
-        await sb
+      pageAll((f, t) => sb.from('request_overrides').select('*').order('request_id').range(f, t)),
+    ),
+    withRetry(async () =>
+      pageAll((f, t) =>
+        sb
           .from('client_requests')
           .select('*, clients(name)')
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(f, t),
       ),
     ),
   ])
 
   const payments = await soft(
-    async () => unwrap<Row[]>(await sb.from('payments').select('*')),
+    async () => pageAll((f, t) => sb.from('payments').select('*').order('id').range(f, t)),
     [] as Row[],
   )
   const leads = await soft(
-    async () => unwrap<Row[]>(await sb.from('sales_leads').select('*, sales_lead_events(stage, at)')),
+    async () =>
+      pageAll((f, t) =>
+        sb.from('sales_leads').select('*, sales_lead_events(stage, at)').order('id').range(f, t),
+      ),
     [] as Row[],
   )
   const baselineRow = await soft(
