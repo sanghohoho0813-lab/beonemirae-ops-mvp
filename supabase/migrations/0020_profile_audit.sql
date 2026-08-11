@@ -42,6 +42,18 @@ declare
   v_old_cli text;
   v_new_cli text;
 begin
+  --  로그인한 사람이 없는 경로(service 키로 도는 서버 작업·검증 스크립트)는
+  --  남기지 않습니다. 그쪽은 '누가' 를 특정할 수 없어서, 남기면 실행자가 빈
+  --  기록이 생깁니다. 감사기록은 "누가 했는가" 가 전부인 자료라, 실행자가
+  --  없는 줄이 섞이면 그 약속이 깨집니다. 0015(누구를 서버가 정함)와
+  --  0016(잠김 방지)도 같은 자리에서 같은 이유로 비켜섭니다.
+  --
+  --  이 함수가 막으려던 구멍은 그대로 막힙니다 — 관리자가 자기 토큰으로
+  --  화면을 거치지 않고 보내는 경우에는 auth.uid() 가 있습니다.
+  if auth.uid() is null then
+    return new;
+  end if;
+
   -- 역할
   if new.role is distinct from old.role then
     insert into public.audit_logs
