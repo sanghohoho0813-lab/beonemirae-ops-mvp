@@ -256,6 +256,15 @@ async function setup() {
       `&date=lt.${today}&date=gte.${shiftDay(today, -35)}`,
   )
   if (!past.body?.length) {
+    //  완료 일정에는 반드시 짝이 되는 수거 이벤트가 있어야 합니다.
+    //  하나라도 짝이 없으면 「중간만 저장된 상태」로 잡힙니다 (05·10번이
+    //  보는 무결성 조건입니다). 실제로 일정만 넣었다가 4건이 걸렸습니다.
+    //  되돌리기까지 되도록 before_state 도 complete_collection 과 같은
+    //  모양으로 넣어 둡니다.
+    const fieldProfile = (await truth(
+      `/profiles?select=id,name&email=eq.${encodeURIComponent(ACCOUNTS.field.email)}`,
+    )).body?.[0]
+    const clientName = `${MARK}한마음요양병원`
     let made = 0
     for (const [ago, kg] of [[21, 96], [14, 104], [7, 112], [3, 58]]) {
       const date = shiftDay(today, -ago)
@@ -264,8 +273,30 @@ async function setup() {
           `&waste_type=eq.${encodeURIComponent('의료폐기물')}&status=eq.${encodeURIComponent('완료')}`,
       )
       if (dup.body?.length) continue
+      const at = `${date}T02:20:00+00:00`
+      const ev = await truth('/collection_events', {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          at,
+          actor_id: fieldProfile?.id ?? null,
+          actor_name: fieldProfile?.name ?? '검증 현장',
+          actor_role: 'field',
+          screen: '검증 준비',
+          action: '수거 완료',
+          created_schedule: true,
+          client_id: clientId,
+          client_name: clientName,
+          waste_type: '의료폐기물',
+          amount_kg: kg,
+          before_state: { status: '예정', actualAmount: null, handoverStatus: null },
+        }),
+      })
+      const eventId = ev.body?.[0]?.id
+      if (!eventId) continue
       const r = await truth('/schedules', {
         method: 'POST',
+        headers: { Prefer: 'return=representation' },
         body: JSON.stringify({
           date,
           client_id: clientId,
@@ -276,11 +307,23 @@ async function setup() {
           actual_amount: kg,
           actual_time: '11:20',
           status: '완료',
-          completed_at: `${date}T02:20:00+00:00`,
+          handover_status: '수거 완료',
+          completed_at: at,
+          event_id: eventId,
           origin: 'seed',
         }),
       })
-      if (r.status < 300) made++
+      const schedId = r.body?.[0]?.id
+      if (!schedId) {
+        //  일정이 안 들어갔으면 짝 없는 이벤트만 남습니다. 지웁니다.
+        await truth(`/collection_events?id=eq.${eventId}`, { method: 'DELETE' })
+        continue
+      }
+      await truth(`/collection_events?id=eq.${eventId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ schedule_id: schedId }),
+      })
+      made++
     }
     if (made) console.log(`지난 수거 기록 ${made}건 생성 (추천·명세서가 나올 최소 이력)`)
   }
