@@ -54,6 +54,23 @@ const svc = (path, init = {}) =>
     headers: { apikey: S, Authorization: `Bearer ${S}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(init.headers || {}) },
   }).then(json)
 
+/**
+ * 화면이 그렇게 될 때까지 기다립니다.
+ *
+ *  이 앱은 저장이 끝나면 거래처·일정·자재·수거기록을 통째로 다시 읽고,
+ *  그 다음에 새 거래처 화면으로 넘어갑니다. 기록이 쌓이면 그 다시 읽기가
+ *  길어져서, 몇 초를 정해 놓고 기다리면 아직 목록에 서 있는 화면을 보게
+ *  됩니다. 저장도 이동도 멀쩡한데 검사만 실패합니다.
+ */
+async function until(page, want, ms = 30000) {
+  const t0 = Date.now()
+  while (Date.now() - t0 < ms) {
+    if (await want()) return { ok: true, ms: Date.now() - t0 }
+    await page.waitForTimeout(300)
+  }
+  return { ok: false, ms: Date.now() - t0 }
+}
+
 async function signIn(page, email, password) {
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
   await page.fill('#login-email', email)
@@ -116,7 +133,11 @@ async function main() {
     void fieldByLabel
 
     await dialog.locator('button:has-text("저장")').first().click()
-    await office.waitForTimeout(4000)
+    //  저장 → 전체 데이터 다시 읽기 → 새 거래처 화면으로 이동. 마지막까지
+    //  기다립니다(창이 닫히기만 한 상태에서 판정하면 안 됩니다).
+    const moved = await until(office, async () =>
+      /\/clients\/[0-9a-f-]{36}/.test(office.url()))
+    if (!moved.ok) await office.waitForTimeout(2000)
 
     // ── 3. DB 확인 ─────────────────────────────────────────────────────
     section('3. DB 확인')
@@ -140,7 +161,7 @@ async function main() {
     check(!body.includes('거래처를 찾을 수 없'),
       "저장 직후 '거래처를 찾을 수 없어요' 가 뜨지 않음",
       body.includes('거래처를 찾을 수 없') ? url.replace(BASE, '') : '')
-    check(url.includes(madeId), '방금 만든 거래처의 상세 화면으로 이동',
+    check(url.includes(madeId), `방금 만든 거래처의 상세 화면으로 이동 (${(moved.ms / 1000).toFixed(1)}초)`,
       url.includes(madeId) ? '' : `${url.replace(BASE, '')} (기대 /clients/${madeId})`)
     check(body.includes(name), '그 화면에 방금 넣은 이름이 보임')
 
