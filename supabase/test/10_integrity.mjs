@@ -78,6 +78,14 @@ async function main() {
   const office = await login(`office@${DOMAIN}`, process.env.TEST_OFFICE_PW)
   const field = await login(`field@${DOMAIN}`, process.env.TEST_FIELD_PW)
 
+  //  감사기록은 **이번 검사가 새로 남긴 것만** 봅니다.
+  //
+  //  '최근 40건' 을 훑으면 과거에 남은 줄까지 같이 잡힙니다. 지금 시스템이
+  //  제대로 남기고 있어도, 옛날에 잘못 남은 줄 하나 때문에 계속 빨간불이
+  //  됩니다(실제로 몇 시간 전 잔재 때문에 그랬습니다). 이 검사가 묻고 싶은
+  //  것은 "지금 이 시스템이 실행자 없는 기록을 만드는가" 입니다.
+  const auditStart = (await svc('/audit_logs?select=id&order=id.desc&limit=1')).body?.[0]?.id ?? 0
+
   const clients = (await svc(`/clients?select=id,name&name=like.${encodeURIComponent(MARK + '*')}&order=name`)).body ?? []
   if (clients.length < 1) { console.error('검증용 거래처가 없습니다. 05_live.mjs --setup 을 먼저 실행하세요.'); process.exit(1) }
   const vehicle = (await svc(`/vehicles?select=id,waste_type&name=like.${encodeURIComponent(MARK + '*')}`)).body?.[0]
@@ -256,8 +264,10 @@ async function main() {
 
     // ── 7. 감사기록이 빠짐없이 남는가 ──────────────────────────────────────
     section('7. 감사기록')
-    const audits = (await svc('/audit_logs?select=actor_id,action,at&order=id.desc&limit=40')).body ?? []
-    check(audits.every((x) => !!x.actor_id), '최근 감사기록 모두에 실행자', `${audits.length}건 확인`)
+    const audits = (await svc(`/audit_logs?select=actor_id,action,at&id=gt.${auditStart}&order=id.desc&limit=200`)).body ?? []
+    const noActor = audits.filter((x) => !x.actor_id)
+    check(noActor.length === 0, '이번 검사가 남긴 감사기록 모두에 실행자',
+      noActor.length ? `${noActor.length}건 없음 (${noActor.map((x) => x.action).join(', ')})` : `${audits.length}건 확인`)
     check(audits.some((x) => x.action === 'collection.complete'), '수거 완료가 감사기록에 남음')
     check(audits.some((x) => x.action?.startsWith('collection.revert')), '되돌리기도 감사기록에 남음',
       audits.filter((x) => x.action?.includes('revert')).length + '건')
