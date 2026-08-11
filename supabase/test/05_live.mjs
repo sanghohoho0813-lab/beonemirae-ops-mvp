@@ -548,6 +548,7 @@ async function verify() {
     const stockBefore = (await truth('/office_stock?select=*&id=eq.1')).body?.[0]
     const evtBefore = (await truth('/collection_events?select=id')).body?.length ?? 0
     const audBefore = await countOf('/audit_logs?select=id')
+    const audStartId = (await truth('/audit_logs?select=id&order=id.desc&limit=1')).body?.[0]?.id ?? 0
 
     const payload = (over = {}) => ({
       p: {
@@ -597,7 +598,14 @@ async function verify() {
     const audTotal = await countOf('/audit_logs?select=id')
     ok(audTotal > audBefore, `감사로그 증가 (${audBefore} → ${audTotal})`)
     ok(audAfter.some((a) => a.action === 'collection.complete'), '수거 완료 감사로그 기록')
-    ok(audAfter.every((a) => !!a.actor_id), '모든 감사로그에 실행자 기록')
+    //  실행자는 **이번 검사가 남긴 것**만 봅니다. 최근 200건을 훑으면 과거에
+    //  잘못 남은 줄까지 잡혀서, 지금 시스템이 제대로 남기고 있어도 계속
+    //  빨간불이 됩니다. 이 줄이 묻는 것은 "지금 실행자 없는 기록을 만드는가".
+    const audNew = (await truth(`/audit_logs?select=action,actor_id&id=gt.${audStartId}&order=id.desc&limit=200`)).body ?? []
+    const audNoActor = audNew.filter((a) => !a.actor_id)
+    ok(audNoActor.length === 0,
+      `이번 검사가 남긴 감사로그 모두에 실행자 기록 (${audNew.length}건${
+        audNoActor.length ? ` · 없음 ${audNoActor.map((a) => a.action).join(', ')}` : ''})`)
 
     // 중복 저장 차단 — 같은 날 같은 병원·같은 구분
     const dup = await rpc(T.field, 'complete_collection', payload({ scheduleId: null, isAdditional: false }))
