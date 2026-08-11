@@ -208,8 +208,15 @@ async function main() {
     check(staff?.active === true, '바로 쓸 수 있는 상태')
 
     //  임시 비밀번호는 만든 사람만 압니다 — 화면에 한 번 보여 줘야 전달할 수 있습니다.
-    const shown = await admin.locator('body').innerText()
-    check(shown.includes(TEMP_PW), '임시 비밀번호를 화면에서 전달할 수 있음')
+    //
+    //  DB 에 행이 생긴 순간과 화면에 문구가 뜨는 순간은 다릅니다. 계정을
+    //  만든 뒤 목록을 다시 읽고 나서야 안내 문구가 그려지는데, 위의
+    //  until() 은 행이 생기자마자 끝납니다. 곧바로 본문을 읽으면 아직
+    //  없을 때가 있어, 멀쩡한 화면이 회차에 따라 실패로 찍혔습니다.
+    const shownPw = await until(admin, async () =>
+      (await admin.locator('body').innerText()).includes(TEMP_PW))
+    check(shownPw.ok, '임시 비밀번호를 화면에서 전달할 수 있음',
+      shownPw.ok ? `${(shownPw.ms / 1000).toFixed(1)}초` : '화면에 나타나지 않았습니다')
 
     // ── 2. 만든 계정으로 실제 로그인 ───────────────────────────────────
     section('2. 만든 계정으로 실제로 로그인되는가')
