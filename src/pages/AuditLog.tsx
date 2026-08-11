@@ -18,6 +18,10 @@ import { friendlyError } from '../lib/supabase'
 //  전부인 줄 알고 "그런 기록은 없다" 고 판단하게 됩니다).
 const AUDIT_LIMIT = 200
 
+//  감사기록에 새 동작을 추가하면 **여기에 한국어 이름도 같이 넣어야 합니다.**
+//  빠뜨리면 화면에 'profile.create' 같은 영어 코드가 그대로 나가고, 직원은
+//  그게 무슨 일인지 알 수 없습니다. (23번 검사가 이것을 잡습니다 — 실제로
+//  계정 관리·엑셀 가져오기를 만들면서 네 개를 빠뜨렸습니다)
 const ACTION_LABEL: Record<string, string> = {
   'collection.complete': '수거 완료',
   'collection.revert': '수거 완료 취소',
@@ -39,8 +43,12 @@ const ACTION_LABEL: Record<string, string> = {
   'vehicle.create': '차량 등록',
   'vehicle.update': '차량 수정',
   'vehicle.deactivate': '차량 비활성화',
+  'profile.create': '계정 생성',
   'profile.role': '역할 변경',
   'profile.active': '계정 사용·중지',
+  'profile.password': '비밀번호 초기화',
+  'profile.client': '병원 계정 소속 변경',
+  'import.excel': '엑셀 가져오기',
   'request.handle': '병원 요청 처리',
   'proposal.share': '제안 공유',
   'proposal.respond': '병원이 제안에 응답', // DB 함수(respond_to_proposal)가 남깁니다
