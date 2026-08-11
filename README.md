@@ -15,6 +15,8 @@
 |---|---|
 | [`docs/onboarding/`](./docs/onboarding/README.md) | **새 고객사 구축 가이드** — Supabase 세팅 · 역할 매트릭스 · 라이브 검증 체크리스트 · Vercel 이관 |
 | [`SETUP.md`](./SETUP.md) | 비원미래 기준 실사용 전환 상세 절차 |
+| [`GO_LIVE.md`](./GO_LIVE.md) | 실운영 시작 — 무엇을 어떤 순서로 입력하는가 · 첫날 시나리오 · 첫 주 지표 |
+| [`HANDOVER.md`](./HANDOVER.md) | 실운영 **계정** 전환 — 만드는 순서 · 계정별 확인 · `[검증]` 정리 목록 |
 | `supabase/test/` | DB 검증 SQL + 라이브 검증 스크립트(`05_live.mjs`) |
 
 ---
