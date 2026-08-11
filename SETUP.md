@@ -64,6 +64,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 14 | `supabase/migrations/0017_billing_confirm.sql` | 청구 확정 — 확정 시점의 금액·명세서를 고정, 취소 상태 추가 |
 | 15 | `supabase/migrations/0018_user_admin.sql` | 관리자가 앱에서 계정 생성·비밀번호 초기화 (service_role 키를 브라우저에 두지 않기 위해 서버에 둡니다) |
 | 16 | `supabase/migrations/0019_excel_import.sql` | 기존 거래처 엑셀 가져오기 — 한 트랜잭션으로 넣고, 이미 있는 기록은 덮어쓰지 않습니다 |
+| 17 | `supabase/migrations/0020_profile_audit.sql` | 계정의 역할·사용여부·병원소속 변경을 **서버가** 감사기록에 남깁니다 (화면을 거치지 않아도) |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
