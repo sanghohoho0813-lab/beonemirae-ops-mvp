@@ -79,9 +79,21 @@ node supabase/test/handover_status.mjs
 
 4. **로그아웃** — PC 는 왼쪽 아래, **폰은 「더보기」 맨 아래 계정 칸**에 있습니다
 
-이 네 가지를 다섯 역할 모두에서 실제로 밟아 본 기록이 `49_account_handover.mjs`
-입니다. 절차 자체가 되는지 다시 확인하고 싶으면 아무 때나 돌리세요 — 리허설
-계정을 만들었다가 끝나면 스스로 지웁니다.
+네 가지를 사람 대신 확인해 주는 명령도 있습니다. 계정을 하나 만들 때마다
+한 번씩 돌리세요. 비밀번호는 셸에만 두고 끝나면 `unset` 하면 됩니다 —
+화면에도 로그에도 찍지 않습니다.
+
+```bash
+ACCOUNT_EMAIL='hong@회사도메인' ACCOUNT_PW='발급한 임시 비밀번호' \
+  node supabase/test/verify_account.mjs
+```
+
+역할은 계정에 저장된 값을 그대로 읽어 판단합니다. 관리자면 「사용자 관리 ·
+감사로그 · 설정 · 엑셀 가져오기」가 열리는지까지 봅니다. 검증용 도메인
+(`@beonemirae.test`)으로 만들어 두면 그것도 짚어 줍니다.
+
+절차 전체가 되는지 다시 확인하고 싶으면 `49_account_handover.mjs` 를 돌리세요 —
+리허설 계정을 만들었다가 끝나면 스스로 지웁니다.
 
 ```bash
 node supabase/test/49_account_handover.mjs
