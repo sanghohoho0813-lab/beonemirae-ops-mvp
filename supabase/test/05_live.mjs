@@ -242,6 +242,49 @@ async function setup() {
     console.log(`오늘(${today}) 검증용 일정 생성`)
   }
 
+  // 4-1) 지난 몇 주치 수거 기록 — 화면이 '처음 보는 거래처'가 아니게 만듭니다.
+  //
+  //  예전에는 오늘 예정 일정 하나만 만들었습니다. 그래서 --cleanup 으로
+  //  정리한 직후에 검사를 돌리면, 이력이 하나도 없는 거래처가 됩니다.
+  //  그 상태에서는 다음 수거일을 예측할 수 없어 추천이 하나도 안 나오고
+  //  (그게 맞는 동작입니다), 그 달에 집계할 것이 없어 거래명세서 버튼도
+  //  잠깁니다. 제품은 멀쩡한데 24·36 번 검사가 밟을 길이 사라졌습니다.
+  //  최소한의 이력을 깔아 둡니다 — 전부 [검증] 거래처 것이라 --cleanup 이
+  //  통째로 지웁니다.
+  const past = await truth(
+    `/schedules?select=id&client_id=eq.${clientId}&status=eq.${encodeURIComponent('완료')}` +
+      `&date=lt.${today}&date=gte.${shiftDay(today, -35)}`,
+  )
+  if (!past.body?.length) {
+    let made = 0
+    for (const [ago, kg] of [[21, 96], [14, 104], [7, 112], [3, 58]]) {
+      const date = shiftDay(today, -ago)
+      const dup = await truth(
+        `/schedules?select=id&client_id=eq.${clientId}&date=eq.${date}` +
+          `&waste_type=eq.${encodeURIComponent('의료폐기물')}&status=eq.${encodeURIComponent('완료')}`,
+      )
+      if (dup.body?.length) continue
+      const r = await truth('/schedules', {
+        method: 'POST',
+        body: JSON.stringify({
+          date,
+          client_id: clientId,
+          waste_type: '의료폐기물',
+          vehicle_id: vehicleId,
+          scheduled_time: '11:00',
+          expected_amount: kg,
+          actual_amount: kg,
+          actual_time: '11:20',
+          status: '완료',
+          completed_at: `${date}T02:20:00+00:00`,
+          origin: 'seed',
+        }),
+      })
+      if (r.status < 300) made++
+    }
+    if (made) console.log(`지난 수거 기록 ${made}건 생성 (추천·명세서가 나올 최소 이력)`)
+  }
+
   const req = await truth(`/client_requests?select=id&client_id=eq.${clientId}`)
   if (!req.body?.length) {
     await truth('/client_requests', {
@@ -273,6 +316,13 @@ async function setup() {
   }
 
   console.log('\n준비 완료 — 이제 `node supabase/test/05_live.mjs` 로 검증하세요.')
+}
+
+/** 'YYYY-MM-DD' 에서 며칠 앞뒤 (UTC 기준으로만 더하므로 시간대에 흔들리지 않습니다) */
+function shiftDay(date, days) {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
 }
 
 /** 서버(KST) 기준 오늘 — complete_collection 이 쓰는 기준과 같습니다 */
