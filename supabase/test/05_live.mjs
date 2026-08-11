@@ -328,6 +328,30 @@ async function setup() {
     if (made) console.log(`지난 수거 기록 ${made}건 생성 (추천·명세서가 나올 최소 이력)`)
   }
 
+  //  4-2) 자재 공급 한 건.
+  //
+  //   09 번(역할 × 테이블 전수)은 각 테이블에서 "남의 행이 안 보이는가"를
+  //   봅니다. 그런데 행이 하나도 없으면 안 보이는 것인지 원래 없는 것인지
+  //   구분할 수 없어 「판정 불가」로 끝납니다. 정리 직후에 자재가 0건이라
+  //   실제로 그렇게 멈췄습니다. 판정할 거리를 하나 남겨 둡니다.
+  const mat = await truth(`/materials?select=id&client_id=eq.${clientId}`)
+  if (!mat.body?.length) {
+    const r = await truth('/materials', {
+      method: 'POST',
+      body: JSON.stringify({
+        date: shiftDay(today, -7),
+        client_id: clientId,
+        box_count: 4,
+        vinyl_count: 2,
+        needle_box_count: 1,
+        is_additional_request: false,
+        memo: '검증용 공급 기록',
+        origin: 'seed',
+      }),
+    })
+    if (r.status < 300) console.log('자재 공급 기록 1건 생성 (권한 판정에 필요한 최소 행)')
+  }
+
   const req = await truth(`/client_requests?select=id&client_id=eq.${clientId}`)
   if (!req.body?.length) {
     await truth('/client_requests', {
