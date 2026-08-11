@@ -41,8 +41,22 @@ export default function App() {
       {/* 제품 투어 — 어느 화면에서든 실행되고, 단계마다 필요한 화면으로 이동합니다 */}
       <TourOverlay />
       <Routes>
-        {/* 시연 전용 — Layout(사이드바/탭) 바깥의 독립 전체화면 라우트 */}
-        <Route path="mobile-preview" element={<MobilePreview />} />
+        {/*
+          시연 전용 — Layout(사이드바/탭) 바깥의 독립 전체화면 라우트.
+
+          로그인 밖에 두었더니 주소만 알면 누구나 열 수 있었습니다. 안쪽
+          폰 프레임은 로그인 화면을 띄우므로 데이터가 새지는 않았지만,
+          로그인하지 않은 사람에게 회사 내부 화면이 하나 열려 있는 것은
+          맞지 않습니다. 다른 내부 주소와 같은 자리에 둡니다.
+        */}
+        <Route
+          path="mobile-preview"
+          element={
+            <RequireAuth>
+              <MobilePreview />
+            </RequireAuth>
+          }
+        />
         {/* 공개용 회사 홈페이지 — Layout 바깥의 독립 전체화면 라우트 */}
         <Route path="company" element={<CompanyHomePage />} />
         {/* 로그인 — Layout 바깥의 독립 전체화면 라우트 */}

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { landingPath } from '../lib/access'
+import { canAccess, landingPath } from '../lib/access'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 로그인 — 비원미래 운영관리 시스템
@@ -22,9 +22,15 @@ export function Login() {
   const [resetMsg, setResetMsg] = useState<string | null>(null)
 
   // 이미 로그인되어 있으면 원래 가려던 곳(또는 역할별 첫 화면)으로
+  //
+  //  단, 그 역할이 열 수 없는 화면이었다면 첫 업무 화면으로 보냅니다.
+  //  누가 미수금 화면 주소를 현장 담당자에게 보내면, 로그인하자마자
+  //  「접근 권한이 없는 화면입니다」 벽을 보게 됩니다 — 로그인은 됐는데
+  //  자기 업무 화면은 직접 찾아 들어가야 했습니다.
   if (!loading && session && profile) {
     const from = (location.state as { from?: string } | null)?.from
-    return <Navigate to={from && from !== '/login' ? from : landingPath(role)} replace />
+    const back = from && from !== '/login' && canAccess(role, from) ? from : landingPath(role)
+    return <Navigate to={back} replace />
   }
 
   const onSubmit = async (e: FormEvent) => {

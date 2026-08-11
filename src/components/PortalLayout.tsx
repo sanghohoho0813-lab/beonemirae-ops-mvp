@@ -70,6 +70,7 @@ export function PortalLayout() {
                 navigate('/login')
               }}
               title="로그아웃"
+              aria-label="로그아웃"
               className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             >
               <LogOut size={17} strokeWidth={2.3} />

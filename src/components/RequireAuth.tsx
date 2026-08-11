@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Loader2, LogOut, ShieldAlert } from 'lucide-react'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 
@@ -19,8 +19,9 @@ function FullScreen({ children }: { children: ReactNode }) {
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { configured, loading, session, profile, role } = useAuth()
+  const { configured, loading, session, profile, role, signOut } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
 
   // 시연 모드(서버 미설정) — 기존 동작 유지
   if (!configured) return <>{children}</>
@@ -40,14 +41,26 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!profile.active) {
+    //  예전에는 이 화면에 버튼이 하나도 없었습니다. 중지된 계정으로 로그인하면
+    //  여기서 더 갈 데가 없고, 로그아웃도 못 해서 다음 사람이 로그인하려면
+    //  브라우저 기록을 지워야 했습니다. 사무실 공용 PC 에서는 그대로 막힙니다.
     return (
       <FullScreen>
         <div className="card max-w-[32rem] p-6 text-center sm:p-8">
           <ShieldAlert size={40} className="mx-auto text-amber-500" />
           <p className="t-card mt-4 break-keep text-navy-900">비활성화된 계정입니다</p>
           <p className="t-body mt-2 break-keep font-medium text-navy-500">
-            관리자에게 계정 활성화를 요청해 주세요.
+            관리자에게 계정 활성화를 요청해 주세요. ({profile.email})
           </p>
+          <button
+            onClick={() => {
+              void signOut()
+              navigate('/login', { replace: true })
+            }}
+            className="btn-navy mt-5 inline-flex"
+          >
+            <LogOut size={17} strokeWidth={2.4} /> 로그아웃 · 다른 계정으로 로그인
+          </button>
         </div>
       </FullScreen>
     )

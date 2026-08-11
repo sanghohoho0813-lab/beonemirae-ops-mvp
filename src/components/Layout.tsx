@@ -308,6 +308,7 @@ function Sidebar() {
                 navigate('/login')
               }}
               title="로그아웃"
+              aria-label="로그아웃"
               className="shrink-0 rounded-lg p-2 text-navy-300 transition hover:bg-white/10 hover:text-white"
             >
               <LogOut size={16} strokeWidth={2.2} />

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -51,7 +51,7 @@ export function MoreMenu({
   onPcView?: () => void
 }) {
   const navigate = useNavigate()
-  const { role } = useAuth()
+  const { role, profile, signOut } = useAuth()
   //  현장 담당자에게는 미수금·통계·배차가 열리지 않습니다. 사이드바에서는
   //  이미 숨기고 있었는데 폰의 더보기에는 그대로 남아 있어서, 눌렀다가
   //  튕기는 메뉴가 보였습니다. 같은 규칙(canAccess)으로 맞춥니다.
@@ -261,6 +261,31 @@ export function MoreMenu({
       </section>
 
       <InfoBanner />
+
+      {/* 계정 — 폰에는 사이드바가 없어 로그아웃할 곳이 여기뿐입니다.
+          예전에는 로그아웃 버튼이 PC 전용 사이드바(hidden lg:flex)에만
+          있어서, 폰만 쓰는 현장 담당자는 로그아웃할 방법이 아예 없었습니다.
+          공용 폰을 넘겨줄 때 앞사람 계정이 그대로 남았습니다. */}
+      {profile && (
+        <section>
+          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">계정</h3>
+          <div className="card p-4">
+            <p className="t-body break-keep font-bold text-navy-900">{profile.name}</p>
+            <p className="t-muted mt-0.5 break-all">{profile.email}</p>
+            <button
+              onClick={() => {
+                onNavigate?.()
+                void signOut()
+                navigate('/login', { replace: true })
+              }}
+              aria-label="로그아웃"
+              className="btn-ghost mt-3 w-full justify-center"
+            >
+              <LogOut size={17} strokeWidth={2.4} /> 로그아웃
+            </button>
+          </div>
+        </section>
+      )}
 
       <p className="pb-1 text-center text-[0.98rem] text-navy-300">㈜비원미래 · beonemirae ops · 시연용 MVP</p>
     </div>

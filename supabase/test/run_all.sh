@@ -165,6 +165,8 @@ if curl -sfo /dev/null --max-time 3 "$BASE"; then
     "$NODE" "$HERE/40_billing_confirm.mjs"
   run "43 · 사용자·권한 관리 (계정 생성·역할·중지·비밀번호)" \
     "$NODE" "$HERE/43_user_admin.mjs"
+  run "48 · 로그인·계정 진입 (첫 화면·역할별 이동·세션·중지 계정)" \
+    "$NODE" "$HERE/48_login_gate.mjs"
   if [ -f "${SAMPLE_XLSX:-}" ]; then
     run "45 · 엑셀 가져오기 종단 (미리보기 → 등록 → 대조)" \
       "$NODE" "$HERE/45_excel_import_live.mjs"
@@ -201,6 +203,7 @@ else
   NAMES+=("39 · 한 번 입력 → 월말까지 (엑셀 업무 흐름)"); RESULTS+=("SKIP")
   NAMES+=("40 · 청구 확정 → 미수금 → 입금 → 명세서"); RESULTS+=("SKIP")
   NAMES+=("43 · 사용자·권한 관리 (계정 생성·역할·중지·비밀번호)"); RESULTS+=("SKIP")
+  NAMES+=("48 · 로그인·계정 진입 (첫 화면·역할별 이동·세션·중지 계정)"); RESULTS+=("SKIP")
   NAMES+=("45 · 엑셀 가져오기 종단 (미리보기 → 등록 → 대조)"); RESULTS+=("SKIP")
   echo
   echo "08 건너뜀 — $BASE 에 preview 가 없습니다."
