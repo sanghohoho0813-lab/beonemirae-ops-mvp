@@ -18,7 +18,7 @@
 //   5) 취소하면 사유를 묻고, 목록에서 「취소」로 남으며, 다시 청구할 수 있다
 //
 //  실행
-//    VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npx vite build --outDir dist-demo
+//    VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= VITE_DEMO_MODE=1 npx vite build --outDir dist-demo
 //    npx vite preview --outDir dist-demo --port 4174
 //    node supabase/test/42_billing_ui_demo.mjs
 //

@@ -15,6 +15,20 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 /** Supabase 연결 설정이 실제로 존재하는지 */
 export const isSupabaseConfigured = Boolean(url && anonKey)
 
+/**
+ * 시연 모드 — 로그인 없이 로컬 데이터로만 도는 모드.
+ *
+ *  **반드시 명시적으로 켜야 합니다.** 예전에는 "Supabase 설정이 없으면
+ *  시연 모드" 였습니다. 그 규칙이 배포본에서 그대로 적용되어, Vercel 에
+ *  환경변수를 넣지 않은 것만으로 운영 화면 전체가 로그인 없이 열렸습니다.
+ *  대시보드·거래처·미수금·감사로그가 주소만 알면 다 보였습니다.
+ *
+ *  설정이 없다는 것은 "아직 연결되지 않았다"는 뜻이지 "인증을 건너뛰어도
+ *  된다"는 뜻이 아닙니다. 이제 시연은 VITE_DEMO_MODE=1 로 빌드한 것만
+ *  시연으로 봅니다. 배포본에는 이 값을 넣지 마세요.
+ */
+export const isDemoMode = import.meta.env.VITE_DEMO_MODE?.trim() === '1' && !isSupabaseConfigured
+
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(url!, anonKey!, {
       auth: {

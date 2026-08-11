@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Loader2, LogOut, ShieldAlert } from 'lucide-react'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
+import { isDemoMode } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 라우트 보호
@@ -23,8 +24,18 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // 시연 모드(서버 미설정) — 기존 동작 유지
-  if (!configured) return <>{children}</>
+  //  시연 모드로 빌드한 것만 로그인 없이 엽니다 (VITE_DEMO_MODE=1).
+  if (isDemoMode) return <>{children}</>
+
+  //  설정이 없으면 — 열어 주는 게 아니라 닫습니다.
+  //
+  //  예전에는 여기서 children 을 그대로 돌려줬습니다. 그래서 Vercel 에
+  //  환경변수를 넣지 않은 배포본이 로그인 없이 전부 열렸습니다. 로그인한
+  //  적 없는 사람에게 대시보드가 그대로 보였고, 로그인한 계정이 없으니
+  //  로그아웃 버튼도 없었습니다. 실제로 그렇게 배포되어 있었습니다.
+  //  로그인 화면으로 보내면 거기서 무엇이 빠졌는지 알려 줍니다.
+  if (!configured) return <Navigate to="/login" replace />
+
 
   if (loading) {
     return (

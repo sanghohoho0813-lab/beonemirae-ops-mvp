@@ -104,7 +104,7 @@ run "46 · 엑셀 형식이 달라도 추측하지 않는가" \
   "$NODE" --experimental-strip-types "$HERE/46_excel_variants.mjs"
 
 # 42 는 서버 없이 도는 시연 빌드로 청구 화면 자체를 눌러 봅니다.
-#   VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npx vite build --outDir dist-demo
+#   VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= VITE_DEMO_MODE=1 npx vite build --outDir dist-demo
 #   npx vite preview --outDir dist-demo --port 4174
 if curl -sfo /dev/null --max-time 3 "${DEMO_BASE:-http://localhost:4174}"; then
   run "42 · 청구 화면 동작 (시연 모드 · DB 없이)" \

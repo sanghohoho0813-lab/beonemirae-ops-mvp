@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
+import { isDemoMode } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 로그인 — 비원미래 운영관리 시스템
@@ -78,12 +79,25 @@ export function Login() {
                   </p>
                 </div>
               </div>
-              <button onClick={() => navigate('/')} className="btn-navy w-full">
-                시연 모드로 둘러보기
-              </button>
-              <p className="t-muted break-keep text-center">
-                시연 모드는 이 브라우저에만 저장되며 실제 운영 데이터와 섞이지 않습니다.
-              </p>
+              {/*
+                「둘러보기」는 시연용으로 빌드했을 때만 나옵니다.
+                환경변수를 빠뜨린 배포본에서 이 버튼이 보이면, 로그인한 적
+                없는 사람이 눌러서 운영 화면을 그대로 열게 됩니다.
+              */}
+              {isDemoMode ? (
+                <>
+                  <button onClick={() => navigate('/')} className="btn-navy w-full">
+                    시연 모드로 둘러보기
+                  </button>
+                  <p className="t-muted break-keep text-center">
+                    시연 모드는 이 브라우저에만 저장되며 실제 운영 데이터와 섞이지 않습니다.
+                  </p>
+                </>
+              ) : (
+                <p className="t-muted break-keep text-center">
+                  설정이 끝나기 전에는 로그인할 수 없습니다. 관리자에게 문의해 주세요.
+                </p>
+              )}
             </div>
           ) : (
             <form onSubmit={onSubmit} className="space-y-5">
