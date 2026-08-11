@@ -99,6 +99,10 @@ else
   NAMES+=("44 · 엑셀 가져오기 판정·금액 대조 (원본 파일)"); RESULTS+=("SKIP")
 fi
 
+# 46 은 형식이 다른 엑셀 세 개를 넣어 봅니다 (DB·브라우저 없음).
+run "46 · 엑셀 형식이 달라도 추측하지 않는가" \
+  "$NODE" --experimental-strip-types "$HERE/46_excel_variants.mjs"
+
 # 42 는 서버 없이 도는 시연 빌드로 청구 화면 자체를 눌러 봅니다.
 #   VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npx vite build --outDir dist-demo
 #   npx vite preview --outDir dist-demo --port 4174
