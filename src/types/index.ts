@@ -302,10 +302,36 @@ export interface AppData {
   //  기록은 그대로 남기 때문에, 이름을 못 찾으면 미수금이 '알 수 없음' 으로
   //  보입니다. 목록 화면에는 넣지 않고 이름을 되찾는 용도로만 씁니다.
   retiredClients?: Client[]
+  /**
+   * 엑셀에서 가져온 월 실적 (0025).
+   *
+   *  거래처 관리 엑셀의 「정산금 세부내역」에는 월 합계만 있는 달이 많습니다.
+   *  날짜를 알 수 없어 수거 기록으로 만들 수 없지만, 그 달의 수거량·매출은
+   *  회사의 실제 실적입니다. 날짜별 기록과 섞지 않고 따로 들고 있다가
+   *  화면에서 「엑셀에서 가져온 월 실적」으로 구분해 보여 줍니다.
+   */
+  monthlyActuals?: ClientMonthlyActual[]
   // ── 사용 중지한 차량 ──
   //  차량도 지우지 않고 비활성으로 둡니다(과거 배차 이력 때문에).
   //  되돌릴 수 있어야 하므로 목록과 따로 담아 둡니다.
   retiredVehicles?: Vehicle[]
+}
+
+/** 엑셀 정산 시트의 월 합계 — 날짜별 수거로 바꾸지 않고 월 단위 그대로 */
+export interface ClientMonthlyActual {
+  id: string
+  clientId: string
+  /** 'YYYY-MM' */
+  month: string
+  medicalKg: number
+  diaperKg: number
+  revenue: number
+  cost: number
+  profit: number
+  /** 이 달에 날짜별 수거 기록도 함께 있는가 (있으면 시스템 계산을 우선) */
+  hasDated: boolean
+  /** 어느 파일에서 왔는지 */
+  sourceFile: string
 }
 
 // ── 매출 전환 실증 (v5) ──────────────────────────────────────────────────────

@@ -222,11 +222,50 @@ export function nextSchedule(data: AppData, clientId: string) {
     .sort((a, b) => (a.date + a.scheduledTime).localeCompare(b.date + b.scheduledTime))[0]
 }
 
+/**
+ * 이 거래처의 엑셀 월 실적 (0025) — 최근 달부터.
+ *
+ *  엑셀 정산 시트의 월 합계입니다. 날짜별 수거 기록이 아니라 월 단위 값이라,
+ *  시스템이 수거에서 계산한 값과 섞지 않고 따로 씁니다.
+ */
+export function monthlyActualsFor(data: AppData, clientId: string) {
+  return (data.monthlyActuals ?? [])
+    .filter((m) => m.clientId === clientId)
+    .slice()
+    .sort((a, b) => b.month.localeCompare(a.month))
+}
+
+/**
+ * 월평균 수거량 (kg).
+ *
+ *  예전에는 완료된 수거 기록의 **건별 평균**이었습니다. 이름은 「월평균」인데
+ *  실제로는 1회 평균이라 뜻이 어긋났고, 무엇보다 엑셀에서 옮겨 온 거래처는
+ *  0kg 으로 보였습니다 — 명세서에 날짜가 없는 거래처(오남한양·남양주백)는
+ *  수거 기록이 한 건도 없기 때문입니다. 엑셀에는 8개월치가 멀쩡히 있는데도
+ *  화면만 비어 있었습니다.
+ *
+ *  이제 달 단위로 셉니다.
+ *   · 수거 기록이 있는 달은 그 달의 합계
+ *   · 기록이 없고 엑셀 월 실적만 있는 달은 그 값
+ *  두 가지를 달 기준으로 합쳐 평균을 냅니다(같은 달을 두 번 세지 않습니다).
+ */
 export function clientMonthlyAvg(data: AppData, clientId: string): number {
-  const done = clientSchedules(data, clientId).filter((s) => s.status === '완료' && s.actualAmount != null)
-  if (done.length === 0) return 0
-  const sum = done.reduce((s, x) => s + (x.actualAmount ?? 0), 0)
-  return Math.round(sum / done.length)
+  const byMonth = new Map<string, number>()
+  for (const s of clientSchedules(data, clientId)) {
+    if (s.status !== '완료' || s.actualAmount == null) continue
+    const m = s.date.slice(0, 7)
+    byMonth.set(m, (byMonth.get(m) ?? 0) + s.actualAmount)
+  }
+  for (const a of data.monthlyActuals ?? []) {
+    if (a.clientId !== clientId) continue
+    //  같은 달에 수거 기록이 있으면 그쪽이 더 정확합니다 — 덮지 않습니다.
+    if (byMonth.has(a.month)) continue
+    const kg = a.medicalKg + a.diaperKg
+    if (kg > 0) byMonth.set(a.month, kg)
+  }
+  if (byMonth.size === 0) return 0
+  const sum = [...byMonth.values()].reduce((a, b) => a + b, 0)
+  return Math.round(sum / byMonth.size)
 }
 
 export function clientOutstanding(data: AppData, clientId: string): number {

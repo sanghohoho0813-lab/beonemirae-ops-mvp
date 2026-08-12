@@ -35,6 +35,7 @@ import {
   collectionHistorySummary,
   clientMaterialSummary,
   clientPaymentRows,
+  monthlyActualsFor,
   type RequestStatus,
   type UsageStatus,
   type BillStatus,
@@ -49,6 +50,7 @@ import { SettlementPanel } from '../components/Settlement'
 import { InvoiceView } from '../components/InvoiceView'
 import { invoiceForBilled, contractState, type Invoice } from '../lib/billing'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
+import { MonthlyActuals } from '../components/MonthlyActuals'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,6 +155,8 @@ export function ClientDetail() {
   const last = lastCollection(data, id)
   const next = nextSchedule(data, id)
   const avg = clientMonthlyAvg(data, id)
+  //  엑셀에서 가져온 월 실적 (0025). 날짜별 기록이 없는 달의 수거량·매출입니다.
+  const actuals = monthlyActualsFor(data, id)
   const outstanding = clientOutstanding(data, id)
   const logRows = collectionLog(data, id)
   const inspection = clientInspection(data, id)
@@ -416,9 +420,17 @@ export function ClientDetail() {
           onSavePricing={(pricing) => updateClient(client.id, { pricing })}
         />
       )}
+      {tab === 'settlement' && canSeeMoney && <MonthlyActuals rows={actuals} purpose="settlement" />}
 
       {/* ── 월간 운영 리포트 ── */}
-      {tab === 'report' && <MonthlyReportView report={report} />}
+      {tab === 'report' && (
+        <div className="space-y-4">
+          <MonthlyReportView report={report} />
+          {/*  날짜별 기록이 없어 리포트를 만들 수 없는 달도 실적은 있습니다.
+               「엑셀에서 가져온 월 실적」으로 그대로 보여 줍니다. */}
+          <MonthlyActuals rows={actuals} purpose="report" showMoney={canSeeMoney} />
+        </div>
+      )}
 
       {/* ── 현장 메모 / 특이사항 ── */}
       {tab === 'notes' && <SiteNotesPanel clientId={id} />}
@@ -616,6 +628,10 @@ export function ClientDetail() {
               </tbody>
             </table>
           </div>
+          {/*  엑셀에서 가져온 달의 매출. 어느 달이 입금됐는지는 파일에 없어
+               청구로 만들지 않았습니다 — 여기서 눈으로 확인하고 「미수금
+               관리」에서 잡으시면 됩니다. 지어내서 미수금을 만들지 않습니다. */}
+          <MonthlyActuals rows={actuals} purpose="billing" />
           <button onClick={() => navigate('/receivables')} className="btn-ghost w-full">미수금 관리에서 보기</button>
         </div>
       )}

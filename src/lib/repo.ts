@@ -11,6 +11,7 @@ import type {
   SalesLead,
   SiteNote,
   Vehicle,
+  ClientMonthlyActual,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry } from './supabase'
@@ -295,6 +296,13 @@ export async function loadAppData(): Promise<AppData> {
     ),
   ])
 
+  //  엑셀에서 가져온 월 실적 (0025). 아직 마이그레이션을 적용하지 않은
+  //  환경에서는 표가 없으므로, 실패해도 화면 전체가 멈추지 않게 soft 로 읽습니다.
+  const monthlyActuals = await soft(
+    async () => pageAll((f, t) => sb.from('client_monthly_actuals').select('*').order('month').range(f, t)),
+    [] as Row[],
+  )
+
   const payments = await soft(
     async () => pageAll((f, t) => sb.from('payments').select('*').order('id').range(f, t)),
     [] as Row[],
@@ -320,6 +328,20 @@ export async function loadAppData(): Promise<AppData> {
     retiredClients: clients.filter((c) => !c.active).map(toClient),
     vehicles: vehicles.filter((v) => v.active).map(toVehicle),
     retiredVehicles: vehicles.filter((v) => !v.active).map(toVehicle),
+    monthlyActuals: monthlyActuals.map(
+      (r): ClientMonthlyActual => ({
+        id: r.id,
+        clientId: r.client_id,
+        month: r.month,
+        medicalKg: Number(r.medical_kg ?? 0),
+        diaperKg: Number(r.diaper_kg ?? 0),
+        revenue: Number(r.revenue ?? 0),
+        cost: Number(r.cost ?? 0),
+        profit: Number(r.profit ?? 0),
+        hasDated: Boolean(r.has_dated),
+        sourceFile: r.source_file ?? '',
+      }),
+    ),
     schedules: schedules.map(toSchedule),
     materials: materials.map(toMaterial),
     payments: payments.map(toPayment),
@@ -1000,7 +1022,9 @@ export async function importExcelRows(input: {
   clientPatch: unknown
   file: string
   summary: unknown
-}): Promise<{ inserted: number; skipped: number; conflict: number; clientFields: number }> {
+  /** 엑셀 정산 시트의 월 합계 — 날짜별 수거로 바꾸지 않고 월 단위로 저장됩니다(0025) */
+  monthly: unknown[]
+}): Promise<{ inserted: number; skipped: number; conflict: number; clientFields: number; months: number }> {
   const sb = need()
   const { data, error } = await sb.rpc('import_excel_rows', {
     p_client_id: input.clientId,
@@ -1008,9 +1032,10 @@ export async function importExcelRows(input: {
     p_client_patch: input.clientPatch,
     p_file: input.file,
     p_summary: input.summary,
+    p_monthly: input.monthly,
   })
   if (error) throw new Error(error.message)
-  return data as { inserted: number; skipped: number; conflict: number; clientFields: number }
+  return data as { inserted: number; skipped: number; conflict: number; clientFields: number; months: number }
 }
 
 /** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */

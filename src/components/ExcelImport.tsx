@@ -45,7 +45,7 @@ export function ExcelImport() {
   const [plan, setPlan] = useState<ImportPlan | null>(null)
   const [clientId, setClientId] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ inserted: number; skipped: number; conflict: number; clientFields: number } | null>(null)
+  const [result, setResult] = useState<{ inserted: number; skipped: number; conflict: number; clientFields: number; months: number } | null>(null)
   const [creating, setCreating] = useState(false)
 
   const clients = useMemo(
@@ -152,6 +152,9 @@ export function ExcelImport() {
         clientPatch: checked.client ? clientPatch(checked.client, target) : null,
         file: checked.fileName,
         summary: { months: checked.monthly, counts: c },
+        //  월 합계 — 날짜가 없어 수거로 만들 수 없는 달의 실적입니다.
+        //  이것을 넘기지 않으면 거래처 화면이 텅 빈 채로 남습니다(0025).
+        monthly: checked.monthly,
       })
       setResult(res)
       await reload()
