@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, FileSpreadsheet, Loader2, Upload } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, FileSpreadsheet, Loader2, Upload } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { readWorkbook } from '../lib/xlsx'
@@ -8,6 +8,7 @@ import {
   clientPatch,
   planCounts,
   reconcile,
+  type ImportIssue,
   type ImportPlan,
   type PlannedRow,
 } from '../lib/excelImport'
@@ -378,6 +379,18 @@ function RowTable({ rows }: { rows: PlannedRow[] }) {
 }
 
 function IssueList({ plan }: { plan: ImportPlan }) {
+  //  같은 이유가 여러 줄로 나오는 것은 한 줄로 접습니다(excelImport.ts 의 group).
+  //  더원요양병원 파일은 8줄 중 6줄이 "이 달은 수거 날짜가 없다" 로 같습니다.
+  //  실제로 판단할 것은 3가지인데 8가지처럼 보이면, 처음 보는 분은 손도 대기
+  //  어렵습니다. 몇 년치를 올리면 수십 줄이 됩니다. 접어 두기만 하고 내용은
+  //  하나도 줄이지 않습니다 — 눌러서 전부 보실 수 있습니다.
+  const blocks: { group: string | null; items: ImportIssue[] }[] = []
+  for (const it of plan.issues) {
+    const last = blocks[blocks.length - 1]
+    if (it.group && last && last.group === it.group) last.items.push(it)
+    else blocks.push({ group: it.group ?? null, items: [it] })
+  }
+
   return (
     <div className="card p-4 sm:p-5">
       <p className="t-card mb-1 break-keep text-navy-900">넣지 않은 것 — 사람이 정해야 합니다</p>
@@ -385,23 +398,68 @@ function IssueList({ plan }: { plan: ImportPlan }) {
         시스템이 임의로 정할 수 없는 것들입니다. 지어내서 넣지 않고 그대로 보여 드립니다.
       </p>
       <ul className="space-y-2">
-        {plan.issues.map((it, i) => (
-          <li key={i} className="rounded-2xl bg-navy-50 px-3.5 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`pill shrink-0 ${it.level === '오류' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'}`}>
-                {it.level === '오류' ? (
-                  <AlertTriangle size={13} className="mr-1 inline -translate-y-px" />
-                ) : null}
-                {it.level}
-              </span>
-              <span className="t-muted shrink-0 font-bold text-navy-400">{it.where}</span>
-            </div>
-            <p className="t-body mt-1 break-keep font-bold text-navy-900">{it.what}</p>
-            {it.hint && <p className="t-muted mt-0.5 break-keep">{it.hint}</p>}
-          </li>
-        ))}
+        {blocks.map((b, i) =>
+          b.group && b.items.length > 1 ? (
+            <IssueGroup key={i} group={b.group} items={b.items} />
+          ) : (
+            b.items.map((it, j) => <IssueRow key={`${i}-${j}`} issue={it} />)
+          ),
+        )}
       </ul>
     </div>
+  )
+}
+
+/** 같은 이유가 여러 줄 — 접어 두고 눌러서 펼칩니다 */
+function IssueGroup({ group, items }: { group: string; items: ImportIssue[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <li data-issue-group={group} className="overflow-hidden rounded-2xl bg-navy-50">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3.5 py-3 text-left transition hover:bg-navy-100"
+      >
+        <span className="pill shrink-0 bg-amber-50 text-amber-700">확인 필요</span>
+        <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-900">
+          {group} {items.length}건
+        </span>
+        <ChevronDown
+          size={17}
+          className={`shrink-0 text-navy-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {/* 접혀 있을 때도 무엇인지 알 수 있게 첫 줄의 설명을 남겨 둡니다 */}
+      {!open && items[0].hint && (
+        <p className="t-muted -mt-1 break-keep px-3.5 pb-3 text-navy-500">{items[0].hint}</p>
+      )}
+      {open && (
+        <ul className="space-y-1.5 border-t border-navy-200/60 px-3.5 py-3">
+          {items.map((it, i) => (
+            <li key={i}>
+              <span className="t-muted mr-2 font-bold text-navy-400">{it.where}</span>
+              <span className="t-body break-keep font-bold text-navy-900">{it.what}</span>
+              {it.hint && <p className="t-muted mt-0.5 break-keep">{it.hint}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+function IssueRow({ issue: it }: { issue: ImportIssue }) {
+  return (
+    <li className="rounded-2xl bg-navy-50 px-3.5 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`pill shrink-0 ${it.level === '오류' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'}`}>
+          {it.level === '오류' ? <AlertTriangle size={13} className="mr-1 inline -translate-y-px" /> : null}
+          {it.level}
+        </span>
+        <span className="t-muted shrink-0 font-bold text-navy-400">{it.where}</span>
+      </div>
+      <p className="t-body mt-1 break-keep font-bold text-navy-900">{it.what}</p>
+      {it.hint && <p className="t-muted mt-0.5 break-keep">{it.hint}</p>}
+    </li>
   )
 }
 

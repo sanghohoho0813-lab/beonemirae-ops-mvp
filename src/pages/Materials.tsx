@@ -170,7 +170,23 @@ export function Materials() {
                     </div>
                     <p className="mt-0.5 t-caption">{prettyDate(m.date)}</p>
                   </div>
-                  <button className="text-[0.98rem] font-medium text-navy-300 hover:text-rose-500" onClick={() => removeMaterial(m.id)}>
+                  {/*  이제 실제로 지워지고 재고가 돌아옵니다(0023). 되돌릴 수
+                       없으므로 무엇이 지워지는지 보여 주고 한 번 확인합니다. */}
+                  <button
+                    className="text-[0.98rem] font-medium text-navy-300 hover:text-rose-500"
+                    onClick={() => {
+                      const who = client?.name ?? '알 수 없음'
+                      if (
+                        window.confirm(
+                          `${who} · ${prettyDate(m.date)} 공급 기록을 지웁니다.\n\n` +
+                            `박스 ${m.boxCount} · 비닐 ${m.vinylCount} · 바늘통 ${m.needleBoxCount}\n\n` +
+                            '공급하며 깎였던 사무실 재고는 되돌립니다. 되돌릴 수 없습니다. 진행할까요?',
+                        )
+                      ) {
+                        removeMaterial(m.id)
+                      }
+                    }}
+                  >
                     삭제
                   </button>
                 </div>

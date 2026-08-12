@@ -491,9 +491,23 @@ export async function insertMaterial(m: Omit<MaterialSupply, 'id'>): Promise<Mat
 }
 
 /** 자재 입고 / 재고 조정 — 원장에 사유를 함께 남깁니다. */
-export async function deleteMaterial(id: string): Promise<void> {
+/**
+ * 자재 공급 기록 삭제 (0023).
+ *
+ *  예전에는 `from('materials').delete()` 였습니다. materials 에는 DELETE 정책이
+ *  없어서 **아무도(관리자 포함) 지울 수 없었는데**, RLS 는 거부를 오류가 아니라
+ *  "해당 행 없음"으로 처리합니다. 그래서 오류 없이 0건이 지워지고, 화면은
+ *  성공한 줄 알고 감사기록에 「삭제」를 남겼습니다 — 실제로는 안 지워졌는데.
+ *
+ *  이제 서버 함수가 지웁니다. 지우면서 원장에 적힌 만큼 재고를 되돌리고,
+ *  되돌린 것을 원장과 감사기록에 남깁니다. 되돌린 수량을 돌려주므로 화면에서
+ *  "무엇이 얼마나 돌아왔는지" 그대로 보여 줄 수 있습니다.
+ */
+export async function deleteMaterial(id: string): Promise<Record<string, number>> {
   const sb = need()
-  unwrap(await sb.from('materials').delete().eq('id', id).select())
+  const { data, error } = await sb.rpc('delete_material', { p_material_id: id })
+  if (error) throw new Error(error.message)
+  return ((data as { restored?: Record<string, number> } | null)?.restored ?? {}) as Record<string, number>
 }
 
 export async function adjustStock(

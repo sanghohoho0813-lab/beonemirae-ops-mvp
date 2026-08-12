@@ -71,6 +71,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 17 | `supabase/migrations/0020_profile_audit.sql` | 계정의 역할·사용여부·병원소속 변경을 **서버가** 감사기록에 남깁니다 (화면을 거치지 않아도) |
 | 18 | `supabase/migrations/0021_signup_approval.sql` | 본인 가입 신청 + 관리자 승인. 역할을 신청자가 정할 수 없도록 읽는 자리를 `app_metadata` 로 옮깁니다 |
 | 19 | `supabase/migrations/0022_dev_requests.sql` | 개발자에게 요청하기 — 역할별 점검 항목 + 자유 의견, 관리자 요청함 |
+| 20 | `supabase/migrations/0023_material_delete.sql` | 자재 공급 기록 삭제 — 눌러도 안 지워지던 버튼. 지우면 재고를 원장 기준으로 원복 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
@@ -234,6 +235,7 @@ psql "$DB_URL" -f supabase/test/01_verify.sql   # RLS·트랜잭션·감사로�
 psql "$DB_URL" -f supabase/test/03_portal.sql   # 병원 포털 RLS 27건
 psql "$DB_URL" -f supabase/test/04_signup_approval.sql  # 가입 승인 31건
 psql "$DB_URL" -f supabase/test/05_dev_requests.sql     # 개발 요청함 21건
+psql "$DB_URL" -f supabase/test/06_material_delete.sql  # 자재 삭제 20건
 PGDATABASE=... bash supabase/test/02_concurrency.sh  # 동시 완료 방지 6건
 ```
 
@@ -251,6 +253,7 @@ psql -d rlsqa -f supabase/test/01_verify.sql
 psql -d rlsqa -f supabase/test/03_portal.sql
 psql -d rlsqa -f supabase/test/04_signup_approval.sql
 psql -d rlsqa -f supabase/test/05_dev_requests.sql
+psql -d rlsqa -f supabase/test/06_material_delete.sql
 ```
 
 > `00_harness.sql` 은 순수 PostgreSQL 검증 전용입니다.

@@ -1110,17 +1110,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const removeMaterial = useCallback(
     (id: string) => {
       if (live) {
-        const before = data.materials.find((m) => m.id === id)
+        //  감사기록은 서버가 남깁니다(0023). 화면에서 따로 남기면, 실제로는
+        //  지워지지 않았는데 「지웠다」가 기록되는 일이 다시 생깁니다.
         void runLive(async () => {
           await repo.deleteMaterial(id)
-          await repo.writeAudit({
-            action: 'material.delete',
-            entity: 'materials',
-            entityId: id,
-            clientId: before?.clientId,
-            before,
-            summary: `자재 공급 기록 삭제 — ${before?.date ?? id}`,
-          })
         })
         return
       }

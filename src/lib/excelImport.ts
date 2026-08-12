@@ -35,6 +35,17 @@ export interface ImportIssue {
   where: string
   what: string
   hint?: string
+  /**
+   * 같은 이유로 여러 줄이 나올 때 묶는 이름.
+   *
+   *  더원요양병원 파일은 「확인 필요」가 8줄인데 그중 6줄이 "이 달은 수거
+   *  날짜가 없다" 로 똑같습니다. 달마다 한 줄씩 늘어서, 실제로 판단할 것은
+   *  3가지인데 화면은 8가지처럼 보였습니다. 몇 년치를 올리면 수십 줄이 됩니다.
+   *
+   *  같은 group 끼리 한 줄로 접고, 눌러서 펼쳐 보게 합니다. 내용은 하나도
+   *  줄이지 않습니다 — 접어 두기만 합니다.
+   */
+  group?: string
 }
 
 export interface PlannedCollection {
@@ -342,6 +353,7 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
       plan.issues.push({
         level: '확인 필요',
         where,
+        group: '날짜가 비어 있는 줄',
         what: `${lastItem || '품목 미상'} ${qty} — 날짜가 비어 있습니다`,
         hint: '언제 수거했는지 알 수 없어 기록으로 만들지 않았습니다.',
       })
@@ -392,6 +404,7 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
     plan.issues.push({
       level: '확인 필요',
       where,
+      group: '모르는 품목',
       what: `모르는 품목 「${lastItem}」 ${qty}`,
       hint: '시스템에 같은 품목이 없어 옮기지 않았습니다.',
     })
@@ -478,6 +491,8 @@ export function analyzeWorkbook(sheets: Sheet[], fileName: string): ImportPlan {
     if (!m.hasDated) {
       plan.issues.push({
         level: '확인 필요',
+        //  달마다 한 줄씩 늘어나므로 묶어 둡니다. 화면에서 한 줄로 접힙니다.
+        group: '수거 날짜가 없는 달',
         where: `${m.month} 정산`,
         what: `매출 ${Math.round(m.revenue).toLocaleString()}원 · 의료폐기물 ${m.medicalKg.toLocaleString()}kg · 기저귀 ${m.diaperKg.toLocaleString()}kg`,
         hint: '이 달은 엑셀에 수거 날짜가 없어(월 합계만 있음) 수거 기록으로 만들지 않았습니다. 월 정산 대조에는 그대로 씁니다.',
