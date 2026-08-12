@@ -133,7 +133,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return
-    await supabase.auth.signOut()
+    //  이 기기에서만 로그아웃합니다.
+    //
+    //  supabase-js 의 기본값은 scope:'global' 이라, 로그아웃 한 번에 그 계정의
+    //  '모든 기기' 세션이 끊깁니다. 한 계정을 두 사람이 각자 폰에서 쓰는
+    //  경우(대표님 부부의 공용 메일이 그렇습니다) 한 사람이 로그아웃하면
+    //  다른 사람이 일하다가 튕깁니다. 실제로 재현했습니다 — A 가 로그아웃한
+    //  순간 B 의 갱신 토큰이 죽었습니다.
+    //
+    //  「로그아웃」은 "이 폰에서 나간다"는 뜻이지 "내 모든 기기를 끊는다"는
+    //  뜻이 아닙니다. 기기를 잃어버렸을 때는 관리자가 계정을 중지하면 되고,
+    //  그건 즉시 반영됩니다.
+    await supabase.auth.signOut({ scope: 'local' })
     setProfile(null)
   }, [])
 
