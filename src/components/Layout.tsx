@@ -23,6 +23,7 @@ import {
   ChevronDown,
   SlidersHorizontal,
   ScrollText,
+  MessageSquarePlus,
   Gauge,
   Inbox,
   LogOut,
@@ -42,6 +43,7 @@ import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { HelpSheet } from './HelpSheet'
+import { DevRequestButton, DevRequestSheet } from './DevRequestSheet'
 import { PcViewBar, usePcViewport } from './PcViewBar'
 import { PageMotion } from './motion'
 
@@ -90,6 +92,7 @@ const TOOL_NAV: NavItem[] = [
 /** 관리 — 관리자만 보이는 영역 */
 const ADMIN_NAV: NavItem[] = [
   { to: '/users', label: '사용자 관리', icon: UserCog, desc: '', tone: 'navy' },
+  { to: '/dev-requests', label: '개발 요청함', icon: MessageSquarePlus, desc: '', tone: 'navy' },
   { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '', tone: 'navy' },
   { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '', tone: 'navy' },
   { to: '/audit', label: '감사로그', icon: ScrollText, desc: '', tone: 'navy' },
@@ -331,6 +334,10 @@ function Sidebar() {
           )}
         </div>
         <TourButton className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-3 py-3 text-[1.05rem] font-bold text-navy-200 transition hover:bg-white/10 hover:text-white" />
+        {/*  개발자에게 요청하기 — 「사용 방법」 바로 아래, 전화번호 위.
+             불편한 것이 생기는 순간은 화면을 보고 있을 때입니다. 그때 눈에
+             들어오는 자리에 두어야 합니다(0022). */}
+        <DevRequestButton className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-3 py-3 text-[1.05rem] font-bold text-navy-200 transition hover:bg-white/10 hover:text-white" />
         <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
           <Headset size={16} className="shrink-0 text-teal-300" />
           <div className="min-w-0 leading-tight">
@@ -510,6 +517,8 @@ export function Layout() {
   const showWhy = !configured || canAccess(role, '/why')
   const [moreOpen, setMoreOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  //  더보기 시트 안에서 열면 시트가 닫힐 때 함께 사라집니다 — 여기서 소유합니다.
+  const [devOpen, setDevOpen] = useState(false)
   // PC 화면으로 보기 — 잠깐 확인하는 용도라 저장하지 않습니다.
   // 새로고침하면 언제나 모바일 화면으로 돌아옵니다.
   const [pcView, setPcView] = useState(false)
@@ -561,6 +570,11 @@ export function Layout() {
         <MoreMenu
           variant="mobile"
           onNavigate={() => setMoreOpen(false)}
+          onDevRequest={() => {
+            //  시트가 닫히고 나서 엽니다. 바로 열면 시트가 닫히며 되돌리는
+            //  히스토리에 모달까지 함께 걸려 곧바로 닫힙니다(도움말 시트와 같은 이유).
+            window.setTimeout(() => setDevOpen(true), 320)
+          }}
           onPcView={() => {
             setMoreOpen(false)
             setPcView(true)
@@ -570,6 +584,9 @@ export function Layout() {
 
       {/* 도움말 — 사용 방법 / 만든 이유 두 갈래 (폰) */}
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      {/* 개발자에게 요청하기 — 더보기 시트 바깥에 두어야 시트가 닫혀도 남습니다 */}
+      <DevRequestSheet open={devOpen} onClose={() => setDevOpen(false)} />
 
       {/* PC 화면으로 보기 중일 때만 — 돌아가는 길을 항상 띄워 둡니다 */}
       {pcView && <PcViewBar onExit={() => setPcView(false)} />}

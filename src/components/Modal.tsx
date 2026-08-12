@@ -34,7 +34,15 @@ export function Modal({ open, title, onClose, children, footer, printable = fals
       {open && (
         <div
           ref={boxRef}
-          className={`fixed inset-0 z-50 flex items-end justify-center sm:items-center${
+          /*  z-[60] — 하단 탭바(z-[55])보다 위입니다.
+              전에는 모달이 z-50 이라 탭바가 모달을 덮었습니다. 폰에서 모달은
+              화면 아래에 붙어 열리는데(items-end), 하단 버튼이 정확히 탭바
+              자리에 놓입니다. 그래서 「보내기」·「저장」 같은 버튼이 눌리지
+              않았습니다 — 눌리지 않는 것이 아니라 탭바가 대신 눌렸습니다.
+              탭바가 시트보다 위여야 하는 이유(z-[55])는 그대로 두고,
+              모달만 그보다 위로 올립니다. 모달은 지금 하는 일 하나에
+              집중하는 화면이라 탭바에 가려서는 안 됩니다. */
+          className={`fixed inset-0 z-[60] flex items-end justify-center sm:items-center${
             printable ? ' print:static print:block' : ''
           }`}
           role="dialog"

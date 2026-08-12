@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, MessageSquarePlus, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -11,6 +11,7 @@ import { TourButton, TourWhyButton } from './TourEntry'
 import { Tappable } from './motion'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, canSeeShowcase } from '../lib/access'
+import { canSendDevRequest } from '../lib/devRequests'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 콘텐츠 — 디바이스별 분리
@@ -45,10 +46,19 @@ export function MoreMenu({
   onNavigate,
   /** 폰에서만 넘어옵니다 — PC 화면 보기 모드로 전환 */
   onPcView,
+  /**
+   * 개발자에게 요청하기.
+   *
+   *  이 시트 안에서 모달을 직접 띄우면 안 됩니다. 버튼을 누르면 시트가 닫히고,
+   *  닫히면 이 컴포넌트가 통째로 언마운트되면서 모달도 함께 사라집니다.
+   *  그래서 여는 일은 Layout 이 합니다.
+   */
+  onDevRequest,
 }: {
   variant?: 'mobile' | 'desktop'
   onNavigate?: () => void
   onPcView?: () => void
+  onDevRequest?: () => void
 }) {
   const navigate = useNavigate()
   const { role, profile, signOut } = useAuth()
@@ -99,6 +109,34 @@ export function MoreMenu({
           )}
         </div>
       </section>
+
+      {/*  개발자에게 요청하기 — 폰에서 이 자리가 유일한 통로입니다.
+           현장 담당자는 사이드바가 없어 더보기밖에 열 곳이 없습니다(0022). */}
+      {onDevRequest && canSendDevRequest(role) && (
+      <section>
+        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">요청</h3>
+        <div data-dev-request-more className="card overflow-hidden">
+          <Tappable
+            as="div"
+            onClick={() => {
+              onNavigate?.()
+              onDevRequest()
+            }}
+            className="flex cursor-pointer items-center gap-3 p-4"
+          >
+            <IconChip icon={MessageSquarePlus} tone="teal" />
+            <div className="min-w-0">
+              <p className="font-bold text-navy-900">개발자에게 요청하기</p>
+              <p className="text-[0.98rem] text-navy-400">불편한 것·실제와 다른 것을 알려 주세요</p>
+            </div>
+            <ChevronRight size={18} className="ml-auto text-navy-300" />
+          </Tappable>
+        </div>
+        <p className="t-muted mt-1.5 break-keep px-1">
+          해당하는 항목을 고르기만 하셔도 됩니다. 대표님이 요청함에서 확인합니다.
+        </p>
+      </section>
+      )}
 
       {/* PC 화면으로 보기 — 폰에서만. 실제 데스크톱 레이아웃을 그대로 그립니다.
           업무용 기본 모드가 아니라 "PC 에서는 어떻게 보이는지" 확인하는 보기 기능입니다. */}

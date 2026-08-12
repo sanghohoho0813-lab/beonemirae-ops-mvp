@@ -992,6 +992,78 @@ export async function resetUserPassword(id: string, password: string): Promise<v
   if (error) throw new Error(error.message)
 }
 
+// ── 개발자에게 요청하기 (0022) ──────────────────────────────────────────────
+
+export interface DevRequestRow {
+  id: string
+  createdAt: string
+  requesterId: string
+  requesterName: string
+  requesterRole: 'admin' | 'office' | 'field' | 'client'
+  topics: string[]
+  message: string
+  status: '접수' | '확인' | '처리 완료' | '보류'
+  adminNote: string
+  handledAt: string | null
+}
+
+/**
+ * 요청 보내기.
+ *
+ *  누가 보냈는지는 넘기지 않습니다 — 서버가 로그인한 사람으로 채웁니다(0022).
+ *  여기서 이름을 실어 보내면 남의 이름으로 요청을 넣을 수 있습니다.
+ */
+export async function createDevRequest(input: {
+  topics: string[]
+  message: string
+}): Promise<void> {
+  const sb = need()
+  unwrap(
+    await sb
+      .from('dev_requests')
+      .insert({ topics: input.topics, message: input.message.trim() })
+      .select(),
+  )
+}
+
+/**
+ * 요청 목록.
+ *
+ *  RLS 가 걸러 줍니다 — 관리자는 전부, 나머지는 자기가 보낸 것만(0022).
+ *  화면에서 역할을 따져 나눌 필요가 없습니다.
+ */
+export async function loadDevRequests(): Promise<DevRequestRow[]> {
+  const sb = need()
+  const rows = unwrap<Row[]>(
+    await sb.from('dev_requests').select('*').order('created_at', { ascending: false }),
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    requesterId: r.requester_id,
+    requesterName: r.requester_name ?? '',
+    requesterRole: r.requester_role,
+    topics: (r.topics as string[] | null) ?? [],
+    message: r.message ?? '',
+    status: r.status,
+    adminNote: r.admin_note ?? '',
+    handledAt: r.handled_at ?? null,
+  }))
+}
+
+/** 처리 상태·메모 변경 (관리자만 — 서버가 다시 확인합니다) */
+export async function updateDevRequest(
+  id: string,
+  patch: { status?: DevRequestRow['status']; adminNote?: string },
+): Promise<void> {
+  const sb = need()
+  const row: Record<string, unknown> = {}
+  if (patch.status !== undefined) row.status = patch.status
+  if (patch.adminNote !== undefined) row.admin_note = patch.adminNote
+  if (Object.keys(row).length === 0) return
+  unwrap(await sb.from('dev_requests').update(row).eq('id', id).select())
+}
+
 /** 계정 사용/중지 — 감사기록은 DB 트리거가 남깁니다(0020) */
 export async function setProfileActive(id: string, active: boolean): Promise<void> {
   const sb = need()

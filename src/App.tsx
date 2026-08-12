@@ -26,6 +26,7 @@ import { Signup } from './pages/Signup'
 import { ResetPassword } from './pages/ResetPassword'
 import { AuditLog } from './pages/AuditLog'
 import { Users } from './pages/Users'
+import { DevRequests } from './pages/DevRequests'
 import { ImportExcel } from './pages/ImportExcel'
 import { Requests } from './pages/Requests'
 import { PortalLayout } from './components/PortalLayout'
@@ -106,6 +107,7 @@ export default function App() {
           <Route path="performance" element={<Performance />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="users" element={<Users />} />
+          <Route path="dev-requests" element={<DevRequests />} />
           <Route path="import" element={<ImportExcel />} />
           <Route path="demo" element={<DemoSummary />} />
           <Route path="roadmap" element={<Roadmap />} />

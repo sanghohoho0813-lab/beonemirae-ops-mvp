@@ -70,6 +70,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 16 | `supabase/migrations/0019_excel_import.sql` | 기존 거래처 엑셀 가져오기 — 한 트랜잭션으로 넣고, 이미 있는 기록은 덮어쓰지 않습니다 |
 | 17 | `supabase/migrations/0020_profile_audit.sql` | 계정의 역할·사용여부·병원소속 변경을 **서버가** 감사기록에 남깁니다 (화면을 거치지 않아도) |
 | 18 | `supabase/migrations/0021_signup_approval.sql` | 본인 가입 신청 + 관리자 승인. 역할을 신청자가 정할 수 없도록 읽는 자리를 `app_metadata` 로 옮깁니다 |
+| 19 | `supabase/migrations/0022_dev_requests.sql` | 개발자에게 요청하기 — 역할별 점검 항목 + 자유 의견, 관리자 요청함 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
@@ -231,7 +232,8 @@ insert into public.vehicles (name, waste_type, tonnage, nominal_capacity, expect
 npx supabase start                    # 또는 실제 프로젝트의 DB_URL
 psql "$DB_URL" -f supabase/test/01_verify.sql   # RLS·트랜잭션·감사로그 66건
 psql "$DB_URL" -f supabase/test/03_portal.sql   # 병원 포털 RLS 27건
-psql "$DB_URL" -f supabase/test/04_signup_approval.sql  # 가입 승인 30건
+psql "$DB_URL" -f supabase/test/04_signup_approval.sql  # 가입 승인 31건
+psql "$DB_URL" -f supabase/test/05_dev_requests.sql     # 개발 요청함 21건
 PGDATABASE=... bash supabase/test/02_concurrency.sh  # 동시 완료 방지 6건
 ```
 
@@ -248,6 +250,7 @@ for f in supabase/migrations/0*.sql; do psql -v ON_ERROR_STOP=1 -d rlsqa -f "$f"
 psql -d rlsqa -f supabase/test/01_verify.sql
 psql -d rlsqa -f supabase/test/03_portal.sql
 psql -d rlsqa -f supabase/test/04_signup_approval.sql
+psql -d rlsqa -f supabase/test/05_dev_requests.sql
 ```
 
 > `00_harness.sql` 은 순수 PostgreSQL 검증 전용입니다.
