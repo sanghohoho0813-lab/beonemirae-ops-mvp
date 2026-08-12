@@ -54,12 +54,15 @@ function SettingCard({
   title,
   desc,
   tone = 'navy',
+  anchor,
   children,
 }: {
   icon: LucideIcon
   title: string
   desc: string
   tone?: 'navy' | 'teal' | 'amber' | 'rose'
+  /** 주소 뒤에 #이름 을 붙여 바로 올 수 있게 (예: /settings#vehicles) */
+  anchor?: string
   children: React.ReactNode
 }) {
   const toneStyle = {
@@ -69,7 +72,7 @@ function SettingCard({
     rose: 'bg-rose-50 text-rose-500',
   }[tone]
   return (
-    <section className="card p-5 sm:p-6">
+    <section id={anchor} className="card scroll-mt-6 p-5 sm:p-6">
       <div className="flex items-start gap-3">
         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneStyle}`}>
           <Icon size={22} strokeWidth={2.2} />
@@ -180,6 +183,27 @@ export function Settings() {
           {msg.type === 'ok' ? <CheckCircle2 size={19} /> : <AlertTriangle size={19} />}
           <span className="t-body font-bold">{msg.text}</span>
         </div>
+      )}
+
+      {/*  차량이 한 대도 없으면 설정 화면 **맨 위**에 둡니다.
+           설정은 스크롤이 3,000px 을 넘습니다. 원래 자리는 1,300px 아래라
+           "차량 등록하는 곳이 없다"는 이야기를 들었습니다 — 있었는데 안 보인
+           것입니다. 아래 「화면 글자 크기」 앞에 놓아 봤지만 그것도 1,600px
+           이라 마찬가지였습니다.
+
+           차량이 없으면 현장에서 수거 입력 자체가 저장되지 않습니다. 설정에서
+           가장 급한 일이 맞으니 맨 위가 제자리입니다. 한 대라도 등록하면
+           아래 원래 자리로 내려갑니다. */}
+      {data.vehicles.length === 0 && (
+        <SettingCard
+          icon={Truck}
+          anchor="vehicles"
+          title="운행 차량 — 먼저 등록해 주세요"
+          desc="차량이 한 대도 없습니다. 차량이 없으면 현장에서 수거 입력을 저장할 수 없습니다."
+          tone="amber"
+        >
+          <VehicleManager />
+        </SettingCard>
       )}
 
       {/* 사용 방법 — 언제든 다시 실행 */}
@@ -385,15 +409,19 @@ export function Settings() {
             <StockCard />
           </SettingCard>
 
-          {/* 차량 — 한 대도 없으면 수거 완료 입력이 불가능합니다 */}
-          <SettingCard
-            icon={Truck}
-            title="운행 차량"
-            desc="수거에 사용하는 차량을 등록합니다. 차량이 없으면 수거 입력을 할 수 없습니다."
-            tone={data.vehicles.length === 0 ? 'amber' : 'navy'}
-          >
-            <VehicleManager />
-          </SettingCard>
+          {/*  차량 — 한 대도 없으면 수거 완료 입력이 불가능합니다.
+               차량이 0대일 때는 이 카드를 화면 맨 위로 올립니다(위쪽 참조).
+               여기 남는 것은 이미 등록이 끝난 뒤의 자리입니다. */}
+          {data.vehicles.length > 0 && (
+            <SettingCard
+              icon={Truck}
+              anchor="vehicles"
+              title="운행 차량"
+              desc="수거에 사용하는 차량을 등록합니다. 차량이 없으면 수거 입력을 할 수 없습니다."
+            >
+              <VehicleManager />
+            </SettingCard>
+          )}
 
           {/* 본인 비밀번호 변경 (실제 운영 모드에서만) */}
           {live && (

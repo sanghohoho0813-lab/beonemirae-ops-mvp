@@ -595,6 +595,18 @@ export function CollectionInput() {
 
         {/* 6. 차량 · 기사 */}
         <Section n={6} title="차량 · 기사">
+          {/*  차량이 한 대도 없으면 여기서 고를 것이 없고, 저장 버튼도
+               끝까지 잠깁니다. 예전에는 그 이유를 아무 데도 적어 두지 않아
+               현장에서는 "저장이 안 된다"만 알고 왜인지 몰랐습니다. */}
+          {data.vehicles.length === 0 && (
+            <div className="mb-3 flex items-start gap-2.5 rounded-2xl bg-amber-50 px-4 py-3.5">
+              <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+              <p className="t-body min-w-0 break-keep font-bold text-amber-800">
+                등록된 차량이 없어 저장할 수 없습니다. 관리자에게 「설정 → 운행 차량」에서 차량 등록을
+                요청해 주세요.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">배차 차량 *</label>

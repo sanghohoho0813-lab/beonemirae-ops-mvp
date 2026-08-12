@@ -33,7 +33,9 @@ export function StartHere({ data }: { data: AppData }) {
 
   const isAdmin = role === 'admin'
   const steps = [
-    { done: hasVehicles, label: '운행 차량 등록', desc: '차량이 없으면 수거 입력을 할 수 없습니다', to: '/settings', admin: true },
+    //  설정 화면은 스크롤이 길어서 그냥 '/settings' 로 보내면 차량 칸을
+    //  못 찾습니다. 앵커로 바로 데려갑니다(Settings.tsx 의 anchor="vehicles").
+    { done: hasVehicles, label: '운행 차량 등록', desc: '차량이 없으면 수거 입력을 할 수 없습니다', to: '/settings#vehicles', admin: true },
     { done: hasClients, label: '거래처 등록', desc: '실제 거래 병원을 추가합니다', to: '/clients', admin: false },
     { done: hasCollection, label: '첫 수거 완료 입력', desc: '입력 한 번이 여러 업무로 자동 연결됩니다', to: '/collection', admin: false },
     { done: hasBaseline, label: '도입 전 기준값 입력', desc: 'AX 성과를 비교할 기준이 됩니다', to: '/settings#baseline', admin: true },
