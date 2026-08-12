@@ -28,14 +28,24 @@ export function MonthGlance({ data }: { data: AppData }) {
   const unpaid = outstandingTotal(data)
 
   const cells = [
-    { key: 'kg', label: '수거량', value: weight(kg), tone: 'text-navy-900', mobile: false },
-    { key: 'rev', label: '매출', value: wonShort(r.revenue), tone: 'text-navy-900', mobile: true },
+    //  숫자마다 무엇이 포함되는지 한 줄로 적습니다. 대표님은 DB 가 아니라
+    //  이 숫자를 보고 판단하므로, 무엇이 빠졌는지 모르는 숫자는 위험합니다.
+    {
+      key: 'kg', label: '수거량', value: weight(kg), tone: 'text-navy-900', mobile: false,
+      sub: '완료된 수거 기록만',
+    },
+    {
+      key: 'rev', label: '매출', value: wonShort(r.revenue), tone: 'text-navy-900', mobile: true,
+      sub: '확정 청구 + 미확정 정산',
+    },
     {
       key: 'profit',
-      label: '예상 영업이익',
+      //  처리비·자재비만 뺀 값입니다 — 운송비·인건비는 시스템에 없습니다.
+      //  「영업이익」이라고 적으면 대표님이 실제보다 높은 이익으로 읽습니다.
+      label: '기여이익',
       value: wonShort(r.profit),
       tone: r.profit >= 0 ? 'text-emerald-600' : 'text-rose-600',
-      sub: r.margin != null ? `${Math.round(r.margin * 100)}%` : undefined,
+      sub: (r.margin != null ? `${Math.round(r.margin * 100)}% · ` : '') + '운송비·인건비 제외',
       mobile: true,
     },
     {
@@ -44,6 +54,7 @@ export function MonthGlance({ data }: { data: AppData }) {
       value: wonShort(unpaid),
       tone: unpaid > 0 ? 'text-amber-600' : 'text-navy-900',
       mobile: false,
+      sub: '확정 청구 중 미입금액',
     },
   ]
 

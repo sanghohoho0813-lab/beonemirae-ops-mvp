@@ -26,6 +26,7 @@ import {
   lastCollection,
   nextSchedule,
   clientMonthlyAvg,
+  clientMonthlyAvgDetail,
   clientOutstanding,
   collectionLog,
   clientInspection,
@@ -51,6 +52,7 @@ import { InvoiceView } from '../components/InvoiceView'
 import { invoiceForBilled, contractState, type Invoice } from '../lib/billing'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import { MonthlyActuals } from '../components/MonthlyActuals'
+import { ReceiptPanel } from '../components/Receipts'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,6 +73,7 @@ const usageStyle: Record<UsageStatus, string> = {
 }
 const billStyle: Record<BillStatus, string> = {
   정상: 'bg-emerald-50 text-emerald-600',
+  부분입금: 'bg-sky-50 text-sky-600',
   '입금 예정': 'bg-navy-100 text-navy-600',
   '확인 필요': 'bg-amber-50 text-amber-600',
   '장기 미수': 'bg-rose-50 text-rose-500',
@@ -155,6 +158,9 @@ export function ClientDetail() {
   const last = lastCollection(data, id)
   const next = nextSchedule(data, id)
   const avg = clientMonthlyAvg(data, id)
+  //  숫자의 근거를 화면에 함께 적습니다 — 「7.4톤」만 있으면 어디서 온
+  //  값인지 알 수 없습니다.
+  const avgDetail = clientMonthlyAvgDetail(data, id)
   //  엑셀에서 가져온 월 실적 (0025). 날짜별 기록이 없는 달의 수거량·매출입니다.
   const actuals = monthlyActualsFor(data, id)
   const outstanding = clientOutstanding(data, id)
@@ -259,7 +265,20 @@ export function ClientDetail() {
 
       {/* 핵심 지표 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="월평균 수거량" value={weight(avg)} tone="navy" nowrap />
+        <MetricCard
+          label="월평균 수거량"
+          value={weight(avg)}
+          tone="navy"
+          nowrap
+          hint={
+            avgDetail.months === 0
+              ? '아직 기록이 없습니다'
+              : `${avgDetail.months}개월 평균` +
+                (avgDetail.fromExcel > 0
+                  ? ` · 수거기록 ${avgDetail.fromRecords}달 + 엑셀 ${avgDetail.fromExcel}달`
+                  : '')
+          }
+        />
         {/*
           미수금 칸도 현장 담당자에게는 열지 않습니다. 눌러도 미수금 화면은
           막혀 있어 "접근 권한이 없는 화면입니다" 만 나오고, 무엇보다 이
@@ -628,6 +647,19 @@ export function ClientDetail() {
               </tbody>
             </table>
           </div>
+
+          {/*  청구별 입금 기록 (0026).
+               100만원 청구에 30만원만 들어오는 일이 실제로 있습니다. 표의
+               「입금·미수금」 칸은 결과만 보여 주므로, 언제 얼마가 어떻게
+               들어왔는지는 여기서 넣고 확인합니다. */}
+          {bills
+            .filter((b) => b.status !== '취소')
+            .map((b) => (
+              <div key={`r-${b.id}`}>
+                <p className="t-muted mb-1.5 break-keep px-1 font-bold text-navy-500">{b.month} 청구</p>
+                <ReceiptPanel paymentId={b.id} billed={b.amount} paid={b.paid} canceled={false} />
+              </div>
+            ))}
           {/*  엑셀에서 가져온 달의 매출. 어느 달이 입금됐는지는 파일에 없어
                청구로 만들지 않았습니다 — 여기서 눈으로 확인하고 「미수금
                관리」에서 잡으시면 됩니다. 지어내서 미수금을 만들지 않습니다. */}

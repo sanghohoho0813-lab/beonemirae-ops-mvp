@@ -60,6 +60,20 @@ export function ExcelImport() {
   const counts = checked ? planCounts(checked) : null
   const target = clients.find((c) => c.id === clientId)
 
+  //  이 파일에서 실제로 저장될 것 — 날짜별 기록 + 월 실적.
+  //
+  //   예전에는 날짜별 기록만 셌습니다. 그래서 오남한양병원처럼 명세서에
+  //   날짜가 없는 파일은 「등록 예정 0건」이 되어 **가져오기 버튼이 잠겼고**,
+  //   8개월치 월 실적을 저장할 방법이 아예 없었습니다. 이미 한 번 넣은
+  //   파일을 다시 올릴 때도 전부 「건너뜀」이라 같은 상태가 됐습니다.
+  //   월 실적 기능을 정작 필요한 경우에 쓸 수 없었던 것입니다.
+  const newMonths = checked
+    ? checked.monthly.filter(
+        (m) => !(data.monthlyActuals ?? []).some((a) => a.clientId === clientId && a.month === m.month),
+      ).length
+    : 0
+  const savable = (counts?.willImport ?? 0) + newMonths
+
   //  파일의 거래처가 아직 시스템에 없을 때, 이름이 비슷한 곳이 있는지 봅니다.
   //  「서울인화스포츠마취통증」과 「…의학과의원」처럼 한쪽이 다른 쪽의 앞부분인
   //  경우가 실제로 있어, 그대로 새로 만들면 같은 병원이 둘이 됩니다.
@@ -135,8 +149,10 @@ export function ExcelImport() {
     const c = planCounts(checked)
     if (
       !window.confirm(
-        `${target?.name} 에 ${rows.length}건을 넣습니다.\n\n` +
-          `등록 ${c.willImport}건 · 건너뜀 ${c.skip}건 · 충돌 ${c.conflict}건 · 오류 ${c.error}건\n` +
+        `${target?.name} 에 넣습니다.\n\n` +
+          `수거·자재 ${rows.length}건` +
+          (newMonths > 0 ? `\n엑셀 월 실적 ${newMonths}개월` : '') +
+          `\n\n건너뜀 ${c.skip}건 · 충돌 ${c.conflict}건 · 오류 ${c.error}건\n` +
           `확인 필요 ${c.needsCheck}건은 넣지 않습니다.\n\n` +
           '이미 있는 기록은 덮어쓰지 않습니다. 진행할까요?',
       )
@@ -320,8 +336,9 @@ export function ExcelImport() {
                    것(충돌·확인 필요)이 하나도 없으면 그대로 옮겨도 되는 파일입니다. */}
               <Verdict counts={counts} name={target?.name ?? ''} />
               <p className="t-card mb-3 mt-4 break-keep text-navy-900">넣기 전에 확인하세요</p>
-              <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-6">
                 <Count label="등록 예정" n={counts.willImport} tone="teal" />
+                <Count label="월 실적" n={newMonths} tone="teal" />
                 <Count label="건너뜀" n={counts.skip} tone="navy" />
                 <Count label="충돌" n={counts.conflict} tone="amber" />
                 <Count label="오류" n={counts.error} tone="rose" />
@@ -334,8 +351,9 @@ export function ExcelImport() {
 
               {phase !== '완료' && (
                 <button
+                  data-import-run
                   className="btn-navy mt-4 disabled:opacity-40"
-                  disabled={counts.willImport === 0 || phase === '넣는 중'}
+                  disabled={savable === 0 || phase === '넣는 중'}
                   onClick={() => void run()}
                 >
                   {phase === '넣는 중' ? (
@@ -343,9 +361,18 @@ export function ExcelImport() {
                   ) : (
                     <CheckCircle2 size={17} strokeWidth={2.4} />
                   )}
-                  {counts.error + counts.conflict + counts.needsCheck === 0
-                    ? `이상 없음 — ${counts.willImport}건 그대로 옮기기`
-                    : `${counts.willImport}건 가져오기`}
+                  {(() => {
+                    //  무엇이 저장되는지 그대로 적습니다 — 날짜 기록이 없고
+                    //  월 실적만 있는 파일이 실제로 있습니다(오남한양·남양주백).
+                    const parts = [
+                      counts.willImport > 0 ? `${counts.willImport}건` : '',
+                      newMonths > 0 ? `월 실적 ${newMonths}개월` : '',
+                    ].filter(Boolean)
+                    const what = parts.join(' + ') || '가져올 것 없음'
+                    return counts.error + counts.conflict + counts.needsCheck === 0
+                      ? `이상 없음 — ${what} 그대로 옮기기`
+                      : `${what} 가져오기`
+                  })()}
                 </button>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { FileSpreadsheet } from 'lucide-react'
 import type { ClientMonthlyActual } from '../types'
+import { useData } from '../context/DataContext'
 import { won, weight } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,8 +37,19 @@ export function MonthlyActuals({
   purpose: Purpose
   showMoney?: boolean
 }) {
+  const { data } = useData()
   if (rows.length === 0) return null
   const sorted = rows.slice().sort((a, b) => b.month.localeCompare(a.month))
+
+  //  「날짜별 기록 있음」은 저장된 표시가 아니라 **지금 DB 상태**로 판정합니다.
+  //  가져올 당시에는 없던 달에 나중에 현장 입력이 들어올 수 있고, 그때 저장된
+  //  표시는 그대로라 화면이 틀린 말을 하게 됩니다.
+  const clientId = sorted[0]?.clientId
+  const datedMonths = new Set(
+    data.schedules
+      .filter((s) => s.clientId === clientId && s.status === '완료' && s.actualAmount != null)
+      .map((s) => s.date.slice(0, 7)),
+  )
   //  파일 이름은 보통 하나입니다. 여러 개면 전부 적습니다.
   const files = [...new Set(sorted.map((r) => r.sourceFile).filter(Boolean))]
 
@@ -82,7 +94,7 @@ export function MonthlyActuals({
                 <td className="px-2.5 py-2 text-left">
                   {/*  날짜별 기록이 함께 있는 달인지 밝힙니다. 있는 달은 시스템이
                        계산한 정산·명세서가 따로 있고, 그쪽이 근거가 더 낫습니다. */}
-                  {r.hasDated ? (
+                  {datedMonths.has(r.month) ? (
                     <span className="t-muted text-teal-700">날짜별 기록 있음</span>
                   ) : (
                     <span className="t-muted text-navy-400">월 합계만</span>

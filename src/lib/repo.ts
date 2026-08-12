@@ -12,6 +12,7 @@ import type {
   SiteNote,
   Vehicle,
   ClientMonthlyActual,
+  PaymentReceipt,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry } from './supabase'
@@ -303,6 +304,12 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  입금 기록 (0026). 현장 담당자는 RLS 로 막혀 있으므로 soft 로 읽습니다.
+  const receipts = await soft(
+    async () => pageAll((f, t) => sb.from('payment_receipts').select('*').order('received_on').range(f, t)),
+    [] as Row[],
+  )
+
   const payments = await soft(
     async () => pageAll((f, t) => sb.from('payments').select('*').order('id').range(f, t)),
     [] as Row[],
@@ -328,6 +335,18 @@ export async function loadAppData(): Promise<AppData> {
     retiredClients: clients.filter((c) => !c.active).map(toClient),
     vehicles: vehicles.filter((v) => v.active).map(toVehicle),
     retiredVehicles: vehicles.filter((v) => !v.active).map(toVehicle),
+    receipts: receipts.map(
+      (r): PaymentReceipt => ({
+        id: r.id,
+        paymentId: r.payment_id,
+        receivedOn: r.received_on,
+        amount: Number(r.amount ?? 0),
+        method: r.method,
+        memo: r.memo ?? '',
+        actorName: r.actor_name ?? '',
+        createdAt: r.created_at,
+      }),
+    ),
     monthlyActuals: monthlyActuals.map(
       (r): ClientMonthlyActual => ({
         id: r.id,
@@ -1036,6 +1055,33 @@ export async function importExcelRows(input: {
   })
   if (error) throw new Error(error.message)
   return data as { inserted: number; skipped: number; conflict: number; clientFields: number; months: number }
+}
+
+/** 입금 기록 (0026) — 청구 상태까지 서버가 한 트랜잭션에서 맞춥니다 */
+export async function addPaymentReceipt(input: {
+  paymentId: string
+  receivedOn: string
+  amount: number
+  method: string
+  memo: string
+}): Promise<{ paidTotal: number; outstanding: number; status: string }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('add_payment_receipt', {
+    p_payment_id: input.paymentId,
+    p_received_on: input.receivedOn,
+    p_amount: input.amount,
+    p_method: input.method,
+    p_memo: input.memo,
+  })
+  if (error) throw new Error(error.message)
+  return data as { paidTotal: number; outstanding: number; status: string }
+}
+
+/** 잘못 넣은 입금 취소 — 청구 상태도 함께 되돌립니다 */
+export async function deletePaymentReceipt(id: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('delete_payment_receipt', { p_receipt_id: id })
+  if (error) throw new Error(error.message)
 }
 
 /** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */

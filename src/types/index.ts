@@ -311,10 +311,33 @@ export interface AppData {
    *  화면에서 「엑셀에서 가져온 월 실적」으로 구분해 보여 줍니다.
    */
   monthlyActuals?: ClientMonthlyActual[]
+  /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */
+  receipts?: PaymentReceipt[]
   // ── 사용 중지한 차량 ──
   //  차량도 지우지 않고 비활성으로 둡니다(과거 배차 이력 때문에).
   //  되돌릴 수 있어야 하므로 목록과 따로 담아 둡니다.
   retiredVehicles?: Vehicle[]
+}
+
+/** 결제수단 — 실제 업무에 있는 것만 (0026) */
+export type ReceiptMethod = '계좌이체' | '카드' | '현금' | '기타'
+
+/**
+ * 입금 한 건 (0026).
+ *
+ *  청구 하나에 여러 건이 달릴 수 있습니다. 100만원 청구에 30만원이 먼저
+ *  들어오고 나중에 70만원이 들어오는 것이 실제 업무입니다.
+ */
+export interface PaymentReceipt {
+  id: string
+  paymentId: string
+  /** 통장에 찍힌 날 (YYYY-MM-DD) */
+  receivedOn: string
+  amount: number
+  method: ReceiptMethod
+  memo: string
+  actorName: string
+  createdAt: string
 }
 
 /** 엑셀 정산 시트의 월 합계 — 날짜별 수거로 바꾸지 않고 월 단위 그대로 */

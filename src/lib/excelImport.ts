@@ -1,4 +1,5 @@
 import type { CellValue, Sheet } from './xlsx'
+import { today as todayKst } from './format'
 import type { ItemKey } from './billing'
 import type { AppData, Client } from '../types'
 
@@ -564,7 +565,12 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
   //  오늘 — 미래 날짜 가드용. 실제 파일에서 연도가 밀려 적힌 명세서를
   //  봤습니다(서울인화 「2025년 12월~」 명세서의 날짜가 2026-12 로 적힘).
   //  아직 오지 않은 날짜의 수거를 기록으로 만들면 안 됩니다.
-  const today = new Date().toISOString().slice(0, 10)
+  //
+  //  **한국 시각 기준**이어야 합니다. UTC 로 재면 한국 시각 00:00~09:00 사이에
+  //  UTC 는 아직 어제라, **오늘 수거한 것이 「아직 오지 않은 날짜」로 거부됩니다.**
+  //  새벽에 전날 명세서를 정리하는 시간대라 실제로 걸리는 자리입니다.
+  //  (앱의 나머지 부분은 이미 lib/format 의 today() 로 한국 시각을 씁니다)
+  const today = todayKst()
   //  월정액 검산용 — 정산 시트에서 읽은 이 거래처의 월정액.
   const feeOf = (type: '의료폐기물' | '일회용기저귀'): number | null => {
     const v = plan.client?.pricing[type === '의료폐기물' ? 'medicalMonthly' : 'diaperMonthly']?.sale

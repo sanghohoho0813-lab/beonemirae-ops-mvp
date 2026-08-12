@@ -60,7 +60,7 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
               <Cell label="처리비" v={-r.disposalCost} />
               <Cell label="자재비" v={-r.materialCost} />
               <Cell
-                label="예상 영업이익"
+                label="기여이익"
                 v={r.profit}
                 tone={r.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}
                 sub={r.margin != null ? `${Math.round(r.margin * 100)}%` : undefined}
@@ -78,9 +78,9 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
                   <tr>
                     <th className="px-4 py-2.5">거래처</th>
                     <th className="px-4 py-2.5 text-right">매출</th>
-                    <th className="px-4 py-2.5 text-right">원가</th>
-                    <th className="px-4 py-2.5 text-right">영업이익</th>
-                    <th className="px-4 py-2.5 text-right">이익률</th>
+                    <th className="px-4 py-2.5 text-right">직접원가</th>
+                    <th className="px-4 py-2.5 text-right">기여이익</th>
+                    <th className="px-4 py-2.5 text-right">기여이익률</th>
                     <th className="w-8" />
                   </tr>
                 </thead>

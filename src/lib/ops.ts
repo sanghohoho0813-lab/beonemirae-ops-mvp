@@ -6,6 +6,7 @@ import type {
   RequestSource,
   RequestStatus,
   WasteType,
+  Payment,
 } from '../types'
 import { facilityByWaste } from '../data/ops'
 import { schedulesOn, todaySummary, additionalMaterialCount } from './selectors'
@@ -249,6 +250,40 @@ export function monthlyActualsFor(data: AppData, clientId: string) {
  *   · 기록이 없고 엑셀 월 실적만 있는 달은 그 값
  *  두 가지를 달 기준으로 합쳐 평균을 냅니다(같은 달을 두 번 세지 않습니다).
  */
+/**
+ * 월평균 수거량과 **그 근거**.
+ *
+ *  화면에 「7.4톤」만 뜨면 대표님은 그 숫자가 어디서 왔는지 알 수 없습니다.
+ *  몇 달치를 무엇으로 계산했는지 함께 돌려줍니다.
+ */
+export function clientMonthlyAvgDetail(data: AppData, clientId: string): {
+  avg: number
+  months: number
+  fromRecords: number
+  fromExcel: number
+} {
+  const byMonth = new Map<string, { kg: number; src: '기록' | '엑셀' }>()
+  for (const s of clientSchedules(data, clientId)) {
+    if (s.status !== '완료' || s.actualAmount == null) continue
+    const m = s.date.slice(0, 7)
+    const cur = byMonth.get(m)
+    byMonth.set(m, { kg: (cur?.kg ?? 0) + s.actualAmount, src: '기록' })
+  }
+  for (const a of data.monthlyActuals ?? []) {
+    if (a.clientId !== clientId || byMonth.has(a.month)) continue
+    const kg = a.medicalKg + a.diaperKg
+    if (kg > 0) byMonth.set(a.month, { kg, src: '엑셀' })
+  }
+  const vals = [...byMonth.values()]
+  const sum = vals.reduce((s, v) => s + v.kg, 0)
+  return {
+    avg: vals.length ? Math.round(sum / vals.length) : 0,
+    months: vals.length,
+    fromRecords: vals.filter((v) => v.src === '기록').length,
+    fromExcel: vals.filter((v) => v.src === '엑셀').length,
+  }
+}
+
 export function clientMonthlyAvg(data: AppData, clientId: string): number {
   const byMonth = new Map<string, number>()
   for (const s of clientSchedules(data, clientId)) {
@@ -528,23 +563,54 @@ export interface ClientProfile {
   pickupWindow: string
   facility: string
 }
+/**
+ * 거래처 운영조건.
+ *
+ *  예전에는 이 값들을 **거래처 id 로 만들어 냈습니다.** 거래 시작일은
+ *  id 글자 합을 4로 나눈 나머지로 연도를 정했고, 결제조건·수거 가능시간·
+ *  처리장은 유형별 고정 문구였습니다.
+ *
+ *  그래서 오남한양병원 화면에는 엑셀에 「계약일 2025-05-01 · 익월 25일」이
+ *  적혀 있는데도 **「거래 시작일 2022.02 · 월말 마감 · 익월 15일 입금」**
+ *  이라고 떴습니다. 화면 위 계약 뱃지(실제값)와 아래 표(지어낸 값)가
+ *  서로 다른 말을 하고 있었던 것입니다.
+ *
+ *  운영 시스템에서 지어낸 값은 없는 값보다 나쁩니다. 이제 실제로 저장된
+ *  것만 쓰고, 없으면 없다고 적습니다.
+ */
 export function clientProfile(client: Client): ClientProfile {
-  const seed = [...client.id].reduce((s, ch) => s + ch.charCodeAt(0), 0)
-  const startY = 2021 + (seed % 4)
-  const startM = 1 + (seed % 12)
   const roleByType: Record<string, string> = {
     병원: '원무과 담당', 요양병원: '시설관리 담당', 요양원: '시설관리 담당', 의원: '접수실 담당',
     치과: '접수실 담당', 한의원: '접수실 담당', 한방병원: '원무과 담당', 장례식장: '시설관리 담당',
   }
+  //  계약 시작일 — 엑셀·거래처 정보에 있는 값만
+  const start = client.contractStart
+    ? `${client.contractStart.slice(0, 4)}.${client.contractStart.slice(5, 7)}`
+    : '미등록'
+  //  계약 상태 — 종료일이 지났으면 만료입니다. 늘 「정기 계약」이라고
+  //  적어 두면 만료된 계약도 정상으로 보입니다.
+  const contractStatus = (() => {
+    if (!client.contractStart && !client.contractEnd) return '미등록'
+    if (client.contractEnd && client.contractEnd < today()) return `만료 (${client.contractEnd})`
+    return client.contractEnd ? `정기 계약 (~${client.contractEnd})` : '정기 계약'
+  })()
   return {
-    startDate: `${startY}.${pad2(startM)}`,
-    contractStatus: '정기 계약',
-    paymentTerm: client.type === '병원' || client.type === '요양병원' ? '월말 마감 · 익월 15일 입금' : '월말 마감 · 익월 10일 입금',
-    roleManager: roleByType[client.type] ?? '병원 폐기물 담당',
-    medicalCycle: client.collectsMedicalWaste ? client.collectionCycle : '해당 없음',
-    diaperCycle: client.collectsDiaper ? (client.collectionCycle === '주 3회' ? '주 2회' : client.collectionCycle) : '해당 없음',
-    pickupWindow: '평일 09:00 ~ 17:00',
-    facility: client.collectsMedicalWaste ? '수도권 의료폐기물 처리장 A' : '수도권 일회용기저귀 처리장 B',
+    startDate: start,
+    contractStatus,
+    //  결제조건은 거래처에 저장된 문구 그대로. 없으면 없다고 씁니다.
+    paymentTerm: client.paymentTerms?.trim()
+      ? client.paymentTerms
+      : client.paymentDueDay
+        ? `익월 ${client.paymentDueDay}일`
+        : '미등록',
+    //  담당자 이름이 있으면 그것을, 없으면 유형별 통상 부서명을 씁니다
+    //  (이건 사람 이름이 아니라 "어느 부서와 이야기하는지"의 안내입니다).
+    roleManager: client.manager?.trim() || roleByType[client.type] || '병원 폐기물 담당',
+    medicalCycle: client.collectsMedicalWaste ? client.collectionCycle || '미등록' : '해당 없음',
+    diaperCycle: client.collectsDiaper ? client.collectionCycle || '미등록' : '해당 없음',
+    //  수거 가능시간·처리장은 저장하는 칸이 아직 없습니다. 있는 척하지 않습니다.
+    pickupWindow: '미등록',
+    facility: '미등록',
   }
 }
 
@@ -641,7 +707,7 @@ export function clientMaterialSummary(data: AppData, clientId: string, month = t
 }
 
 // ── 거래처 결제·미수금 행 ─────────────────────────────────────────────────────
-export type BillStatus = '정상' | '입금 예정' | '확인 필요' | '장기 미수' | '취소'
+export type BillStatus = '정상' | '부분입금' | '입금 예정' | '확인 필요' | '장기 미수' | '취소'
 export interface BillRow {
   id: string
   month: string
@@ -652,19 +718,43 @@ export interface BillRow {
   invoiceIssued: boolean
   note: string
 }
+/**
+ * 이 청구에 실제로 들어온 돈 (0026).
+ *
+ *  입금 기록이 있으면 그 합계입니다. 기록이 없는데 상태가 「입금완료」면
+ *  0026 이전에 만들어진 청구이므로 전액 받은 것으로 봅니다 — 과거 기록을
+ *  고치지 않으면서 새 방식이 함께 동작하게 하는 유일한 지점입니다.
+ */
+export function paidTotalOf(data: AppData, payment: Payment): number {
+  const rs = (data.receipts ?? []).filter((r) => r.paymentId === payment.id)
+  if (rs.length > 0) return rs.reduce((s, r) => s + r.amount, 0)
+  return payment.status === '입금완료' ? payment.amount : 0
+}
+
+/** 이 청구의 입금 기록 (최근 순) */
+export function receiptsOf(data: AppData, paymentId: string) {
+  return (data.receipts ?? [])
+    .filter((r) => r.paymentId === paymentId)
+    .slice()
+    .sort((a, b) => b.receivedOn.localeCompare(a.receivedOn))
+}
+
 export function clientPaymentRows(data: AppData, clientId: string): BillRow[] {
   return data.payments
     .filter((p) => p.clientId === clientId)
     .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth))
     .map((p) => {
-      const paid = p.status === '입금완료' ? p.amount : 0
+      const paid = p.status === '취소' ? 0 : paidTotalOf(data, p)
+      const outstanding = p.status === '취소' ? 0 : p.amount - paid
       //  취소한 청구는 받을 돈이 아닙니다. 표에는 남기되 미수 금액은 0 으로 둡니다.
+      //  「부분입금」은 받은 돈이 있는데 아직 남은 상태입니다 — 「입금 예정」과
+      //  다릅니다. 한 푼도 안 들어온 것과 절반 들어온 것을 같게 보면 안 됩니다.
       const status: BillStatus =
         p.status === '취소' ? '취소'
-        : p.status === '입금완료' ? '정상'
+        : outstanding <= 0 ? '정상'
         : p.status === '확인필요' ? '확인 필요'
+        : paid > 0 ? '부분입금'
         : '입금 예정'
-      const outstanding = p.status === '취소' ? 0 : p.amount - paid
       return { id: p.id, month: p.billingMonth, amount: p.amount, paid, outstanding, status, invoiceIssued: true, note: p.memo }
     })
 }

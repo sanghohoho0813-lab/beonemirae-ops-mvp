@@ -115,9 +115,15 @@ export function SettlementPanel({
           <section className="card overflow-hidden">
             <div className="grid grid-cols-3 divide-x divide-navy-100">
               <Cell label="매출" value={s.revenue} tone="text-navy-900" />
-              <Cell label="원가" value={s.cost} tone="text-navy-500" />
+              <Cell label="직접원가" value={s.cost} tone="text-navy-500" />
+              {/*  「영업이익」이라고 적으면 안 됩니다.
+                   여기서 빼는 원가는 처리비(소각비)와 자재 매입가 두 가지뿐입니다.
+                   운송비·인건비·차량 유지비는 시스템에 저장되는 곳이 아예 없어
+                   계산에 들어가지 않습니다. 실제 영업이익은 이 값보다 낮습니다.
+                   이사님 엑셀도 「영업이익 (물류비제외)」라고 적어 두었습니다 —
+                   같은 뜻이 되도록 이름을 맞춥니다. */}
               <Cell
-                label="예상 영업이익"
+                label="기여이익"
                 value={s.profit}
                 tone={s.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}
                 sub={s.margin != null ? `${Math.round(s.margin * 100)}%` : undefined}
@@ -129,6 +135,10 @@ export function SettlementPanel({
               <Small label="처리비" v={-s.disposalCost} />
               <Small label="자재비" v={-s.materialCost} />
             </div>
+            <p data-profit-note className="t-muted break-keep border-t border-navy-100 px-5 py-2.5 text-navy-400">
+              기여이익 = 매출 − 처리비 − 자재비. <b className="text-navy-500">운송비·인건비·차량 유지비는
+              빠져 있습니다</b> — 시스템에 그 값을 넣는 곳이 아직 없습니다. 실제 영업이익은 이보다 낮습니다.
+            </p>
           </section>
 
           {s.hasLegacySupply && (

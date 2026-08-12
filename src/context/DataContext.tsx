@@ -94,6 +94,16 @@ interface DataContextValue {
   cancelPayment: (id: string, reason: string) => void
   updatePayment: (id: string, patch: Partial<Payment>) => void
   markPaid: (id: string) => void
+  /** 입금 한 건 기록 (0026) — 부분입금. 서버가 청구 상태까지 맞춥니다 */
+  addReceipt: (input: {
+    paymentId: string
+    receivedOn: string
+    amount: number
+    method: string
+    memo: string
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 잘못 넣은 입금 취소 */
+  removeReceipt: (id: string) => Promise<{ ok: boolean; error: string | null }>
   // 거래처 조회 헬퍼
   clientById: (id: string) => Client | undefined
   // 데이터 초기화
@@ -1325,6 +1335,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, data],
   )
 
+  /**
+   * 입금 한 건 기록 (0026).
+   *
+   *  서버 함수가 입금 저장 + 청구 상태 갱신 + 감사기록을 한 트랜잭션에서
+   *  합니다. 화면에서 따로따로 부르면 중간에 끊겼을 때 입금은 들어갔는데
+   *  청구는 미수로 남는 상태가 생깁니다 — 돈 기록에서 가장 나쁜 경우입니다.
+   */
+  const addReceipt = useCallback(
+    async (input: { paymentId: string; receivedOn: string; amount: number; method: string; memo: string }) => {
+      if (!live) return { ok: false, error: '입금 기록은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.addPaymentReceipt(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const removeReceipt = useCallback(
+    async (id: string) => {
+      if (!live) return { ok: false, error: '입금 기록은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.deletePaymentReceipt(id)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const markPaid = useCallback(
     (id: string) => {
       const paidAt = new Date().toISOString()
@@ -1424,6 +1465,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       cancelPayment,
       updatePayment,
       markPaid,
+      addReceipt,
+      removeReceipt,
       clientById,
       reset,
       replaceAll,
@@ -1475,6 +1518,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       cancelPayment,
       updatePayment,
       markPaid,
+      addReceipt,
+      removeReceipt,
       clientById,
       reset,
       replaceAll,
