@@ -294,6 +294,15 @@ function PricingModal({
   onSave: (p: Client['pricing']) => void
 }) {
   const [draft, setDraft] = useState<Record<string, { sale: string; cost: string }>>(() => build(client))
+  //  정산 규칙 — 월정액·부가세 별도 (실제 계약: 오남한양 월 900만,
+  //  해올 의료 130만 + 지정 300만, 목동현대웰 지정 부가세 10% 별도)
+  const ruleStr = (c: Client, k: string) => {
+    const v = c.pricing?.[k]?.sale
+    return typeof v === 'number' && v > 0 ? String(v) : ''
+  }
+  const [feeMed, setFeeMed] = useState(() => ruleStr(client, 'medicalMonthly'))
+  const [feeDia, setFeeDia] = useState(() => ruleStr(client, 'diaperMonthly'))
+  const [vatDia, setVatDia] = useState(() => ruleStr(client, 'diaperVatPct'))
 
   function build(c: Client) {
     const out: Record<string, { sale: string; cost: string }> = {}
@@ -315,6 +324,14 @@ function PricingModal({
       if (sale === base.sale && cost === base.cost) continue
       pricing[it.key] = { sale, cost }
     }
+    //  정산 규칙 — 비워 두면 저장하지 않습니다 (kg·개당 단가 정산)
+    const rule = (v: string) => (v.trim() === '' || Number(v) <= 0 ? null : Number(v))
+    const fm = rule(feeMed)
+    const fd = rule(feeDia)
+    const vd = rule(vatDia)
+    if (fm != null) pricing.medicalMonthly = { sale: fm, cost: null }
+    if (fd != null) pricing.diaperMonthly = { sale: fd, cost: null }
+    if (vd != null) pricing.diaperVatPct = { sale: vd, cost: null }
     onSave(pricing)
   }
 
@@ -392,12 +409,46 @@ function PricingModal({
               <SectionTitle>물품</SectionTitle>
             </td>
           </tr>
-          {SUPPLY_ITEMS.map((i) => row(i.key, i.label, i.unit, i.billable))}
+          {/*  박스도 판매단가를 열어 둡니다 — 서울온케어(35L 8,000원)·서울인화
+              (30L 10,000원)·삼성서울연합(63L 18,000원)처럼 박스 개당으로
+              정산하는 거래처가 실제로 있습니다. 비워 두면 무상 공급입니다. */}
+          {SUPPLY_ITEMS.map((i) => row(i.key, i.label, i.unit, true))}
         </tbody>
       </table>
 
+      {/*  정산 규칙 — kg 단가가 아닌 거래처를 위한 칸.
+           월정액을 넣으면 그 구분의 kg 는 매출로 잡히지 않고, 수거가 있는
+           달에 월정액 한 줄이 청구됩니다. */}
+      <div className="rounded-2xl bg-navy-50/60 p-4">
+        <p className="t-body mb-2 break-keep font-extrabold text-navy-800">정산 규칙 (해당할 때만)</p>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <div>
+            <label className="field-label" htmlFor="fee-med">의료폐기물 월정액 (원/월)</label>
+            <input id="fee-med" type="number" inputMode="numeric" className="field-input text-right"
+              value={feeMed} onChange={(e) => setFeeMed(e.target.value)} placeholder="없음 (kg 단가)" />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="fee-dia">지정폐기물 월정액 (원/월)</label>
+            <input id="fee-dia" type="number" inputMode="numeric" className="field-input text-right"
+              value={feeDia} onChange={(e) => setFeeDia(e.target.value)} placeholder="없음 (kg 단가)" />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="vat-dia">지정폐기물 부가세 별도 (%)</label>
+            <input id="vat-dia" type="number" inputMode="numeric" className="field-input text-right"
+              value={vatDia} onChange={(e) => setVatDia(e.target.value)} placeholder="없음 (면세·포함)" />
+          </div>
+        </div>
+        <p className="t-muted mt-2 break-keep">
+          월정액을 넣으면 kg 단가 대신 매달 정해진 금액으로 청구합니다. 부가세 별도는 지정폐기물
+          공급가에 세액을 더해 청구합니다 (예: 목동현대웰병원 10%).
+        </p>
+      </div>
+
       <button
-        onClick={() => setDraft(build({ ...client, pricing: undefined }))}
+        onClick={() => {
+          setDraft(build({ ...client, pricing: undefined }))
+          setFeeMed(''); setFeeDia(''); setVatDia('')
+        }}
         className="btn-ghost w-full"
       >
         <RotateCcw size={16} strokeWidth={2.4} /> 기본 단가로 되돌리기

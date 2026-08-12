@@ -57,6 +57,9 @@ const md = (iso: string) => {
 export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
   const inv = invoice
   const [y, m] = inv.month.split('-')
+  //  부가세 별도 거래처(예: 목동현대웰병원 지정폐기물 10%)만 세액 칸을
+  //  그립니다. 나머지 거래처의 명세서 모양은 그대로 둡니다.
+  const hasVat = (inv.vatTotal ?? 0) > 0
   const sheetRef = useRef<HTMLDivElement>(null)
   usePrintIsolate(sheetRef, true)
   //  폰에서 뒤로 가기를 하면 명세서만 닫혀야 합니다. 이게 없으면 거래처
@@ -125,6 +128,7 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
               <Th className="w-[5rem] text-right">수량</Th>
               <Th className="w-[5.5rem] text-right">단가</Th>
               <Th className="w-[7rem] text-right">공급가액</Th>
+              {hasVat && <Th className="w-[6rem] text-right">세액</Th>}
               <Th className="text-left">비고</Th>
             </tr>
           </thead>
@@ -135,8 +139,9 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
                 <Td className="text-left font-bold text-navy-800">{l.label}</Td>
                 <Td className="text-center text-navy-500">{l.unit}</Td>
                 <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
-                <Td className="text-right tabular-nums text-navy-500">{l.price.toLocaleString()}</Td>
-                <Td className="text-right font-bold tabular-nums">{l.amount.toLocaleString()}</Td>
+                <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
+                <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
+                {hasVat && <Td className="text-right tabular-nums">{(l.vat ?? 0) > 0 ? (l.vat ?? 0).toLocaleString() : ''}</Td>}
                 <Td className="text-left text-navy-400">{l.note}</Td>
               </tr>
             ))}
@@ -148,6 +153,7 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
                 <Td className="text-right tabular-nums">{inv.medicalKg.toLocaleString()}</Td>
                 <Td />
                 <Td className="text-right tabular-nums">{inv.medicalSubtotal.toLocaleString()}</Td>
+                {hasVat && <Td />}
                 <Td />
               </tr>
             )}
@@ -155,11 +161,14 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
             {inv.diaperLines.map((l, i) => (
               <tr key={`d${i}`} className="border-b border-navy-100">
                 <Td className="text-center">{md(l.date)}</Td>
-                <Td className="text-left font-bold text-navy-800">의료기관일회용기저귀</Td>
+                <Td className="text-left font-bold text-navy-800">
+                  {l.label === '일회용기저귀' ? '의료기관일회용기저귀' : l.label}
+                </Td>
                 <Td className="text-center text-navy-500">{l.unit}</Td>
                 <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
-                <Td className="text-right tabular-nums text-navy-500">{l.price.toLocaleString()}</Td>
-                <Td className="text-right font-bold tabular-nums">{l.amount.toLocaleString()}</Td>
+                <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
+                <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
+                {hasVat && <Td className="text-right tabular-nums">{(l.vat ?? 0) > 0 ? (l.vat ?? 0).toLocaleString() : ''}</Td>}
                 <Td className="text-left text-navy-400">{l.note}</Td>
               </tr>
             ))}
@@ -171,13 +180,14 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
                 <Td className="text-right tabular-nums">{inv.diaperKg.toLocaleString()}</Td>
                 <Td />
                 <Td className="text-right tabular-nums">{inv.diaperSubtotal.toLocaleString()}</Td>
+                {hasVat && <Td className="text-right tabular-nums">{inv.vatTotal.toLocaleString()}</Td>}
                 <Td />
               </tr>
             )}
 
             <tr className="bg-navy-900 font-extrabold text-white">
-              <Td colSpan={5} className="text-left">
-                합계
+              <Td colSpan={hasVat ? 6 : 5} className="text-left">
+                합계{hasVat ? ' (세액 포함)' : ''}
               </Td>
               <Td className="text-right tabular-nums">{inv.total.toLocaleString()}</Td>
               <Td />

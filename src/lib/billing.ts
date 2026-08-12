@@ -37,14 +37,19 @@ export type ItemKey =
   | 'diaper'       // 일회용기저귀 = 지정폐기물 (kg)
   | 'plastic2'     // 2L 합성수지 전용용기
   | 'plastic5'     // 5L 합성수지 전용용기
+  | 'plastic10'    // 10L 합성수지 전용용기 (서울본브릿지병원 계약에 실재)
   | 'plastic20'    // 20L 합성수지 전용용기
   | 'box63'        // 63L 골판지 전용박스
+  | 'box35'        // 35L 골판지 전용박스 (오남한양·서울온케어·신세계서울 엑셀에 실재)
   | 'box30'        // 30L 골판지 전용박스
   | 'box12'        // 12L 골판지 전용박스
   | 'box4'         // 4L 골판지 전용박스
+  | 'box79'        // 79L 골판지 전용박스 (엠에스병원 계약에 실재)
+  | 'diaperBoxM'   // 기저귀박스 중 (목동현대웰병원 엑셀에 실재)
+  | 'pouch12'      // 12L 봉투형용기 (남양주백병원 엑셀에 실재)
   | 'diaperBag40'  // 기저귀 전용 비닐 40L
 
-export type ItemUnit = 'kg' | '개'
+export type ItemUnit = 'kg' | '개' | '식'
 
 /** 재고 차감 대상 — office_stock 은 4칸이므로 품목을 그 칸에 대응시킵니다 */
 export type StockBucket = 'corrugatedBox' | 'plasticContainer' | 'bag' | 'needleBox'
@@ -72,11 +77,16 @@ export const ITEMS: ItemDef[] = [
   { key: 'diaper', label: '일회용기저귀', short: '기저귀', unit: 'kg', kind: 'waste', billable: true },
   { key: 'plastic2', label: '2L 합성수지', short: '2L', unit: '개', kind: 'supply', bucket: 'plasticContainer', billable: true },
   { key: 'plastic5', label: '5L 합성수지', short: '5L', unit: '개', kind: 'supply', bucket: 'plasticContainer', billable: true },
+  { key: 'plastic10', label: '10L 합성수지', short: '10L', unit: '개', kind: 'supply', bucket: 'plasticContainer', billable: true },
   { key: 'plastic20', label: '20L 합성수지', short: '20L', unit: '개', kind: 'supply', bucket: 'plasticContainer', billable: true },
   { key: 'box63', label: '63L 박스', short: '63L', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
+  { key: 'box35', label: '35L 박스', short: '35L', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
   { key: 'box30', label: '30L 박스', short: '30L', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
   { key: 'box12', label: '12L 박스', short: '12L', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
   { key: 'box4', label: '4L 박스', short: '4L', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
+  { key: 'box79', label: '79L 박스', short: '79L', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
+  { key: 'diaperBoxM', label: '기저귀박스 (중)', short: '기저귀박스', unit: '개', kind: 'supply', bucket: 'corrugatedBox', billable: false },
+  { key: 'pouch12', label: '12L 봉투형용기', short: '봉투12L', unit: '개', kind: 'supply', bucket: 'bag', billable: false },
   { key: 'diaperBag40', label: '기저귀비닐 40L', short: '비닐40L', unit: '개', kind: 'supply', bucket: 'bag', billable: false },
 ]
 
@@ -132,6 +142,43 @@ export function priceOf(client: Client | undefined, key: ItemKey): ItemPrice {
 /** 거래처가 단가를 직접 정했는지 (화면에서 「기본값」 배지를 붙일 판단용) */
 export function hasOwnPrice(client: Client | undefined, key: ItemKey): boolean {
   return client?.pricing?.[key] != null
+}
+
+// ── 거래처별 정산방식 ─────────────────────────────────────────────────────────
+//
+//  실제 거래처 엑셀 11개를 전수 확인한 결과, 정산은 한 방식이 아닙니다.
+//
+//   · kg 단가        더원 950 · 남양주백 900 · 신세계 860 · 목동(지정) 480 …
+//   · 월정액         오남한양 900만 / 해올 의료 130만 + 지정 300만 (두 건 분리)
+//   · 박스 개당      서울온케어 35L 8,000 · 서울인화 30L 10,000 · 삼성 63L 18,000
+//   · 부가세 별도    목동현대웰 — 지정폐기물 공급가의 10% 를 세액으로 따로 청구
+//   · 혼합           위의 조합 (kg + 용기 개당이 가장 흔함)
+//
+//  kg 단가와 개당 단가는 pricing 의 품목 단가로 이미 표현됩니다.
+//  월정액과 부가세는 품목이 아니라 **정산 규칙**이라, pricing(jsonb) 안의
+//  예약된 이름으로 저장합니다. 별도 컬럼을 늘리지 않는 이유: 이 값들은
+//  언제나 거래처 단위로 단가와 함께 읽고 쓰며, 품목 단가 편집 화면은
+//  ITEMS 목록만 돌기 때문에 예약 이름이 화면에 새지 않습니다.
+//
+//   pricing.medicalMonthly = { sale: 9000000 }  의료폐기물 월정액 (원/월)
+//   pricing.diaperMonthly  = { sale: 3000000 }  지정폐기물 월정액 (원/월)
+//   pricing.diaperVatPct   = { sale: 10 }       지정폐기물 부가세 별도 (%)
+//
+//  월정액 청구 규칙: 그 달에 해당 구분의 완료 수거가 1건 이상 있을 때만
+//  월정액 한 줄을 올립니다. 수거가 한 번도 없던 달(계약 전·해지 후)에
+//  기본요금이 저절로 나가는 사고를 막습니다. 엑셀 실측과도 일치합니다 —
+//  모든 월정액 파일에서 요금이 적힌 달은 수거 기록이 있는 달뿐이었습니다.
+
+/** 월정액 (원/월). 없으면 null — kg 단가 정산 */
+export function monthlyFeeOf(client: Client | undefined, waste: 'medical' | 'diaper'): number | null {
+  const v = client?.pricing?.[waste === 'medical' ? 'medicalMonthly' : 'diaperMonthly']?.sale
+  return typeof v === 'number' && v > 0 ? v : null
+}
+
+/** 지정폐기물 부가세 별도 % (0 = 부가세 없음·포함) */
+export function diaperVatPctOf(client: Client | undefined): number {
+  const v = client?.pricing?.diaperVatPct?.sale
+  return typeof v === 'number' && v > 0 ? v : 0
 }
 
 // ── 자재 공급 기록에서 품목별 수량 읽기 ──────────────────────────────────────
@@ -284,21 +331,34 @@ export function settlementFor(
     }
   }
 
+  //  정산방식 — 명세서(invoiceFor)와 반드시 같은 규칙이어야 합니다.
+  //  여기서 계산한 revenue 가 청구 금액이 되고, 명세서 합계와 다르면
+  //  병원에 보낸 종이와 미수금 장부가 어긋납니다.
+  const feeMed = monthlyFeeOf(client, 'medical')
+  const feeDia = monthlyFeeOf(client, 'diaper')
+  const vatPct = diaperVatPctOf(client)
+
   const line = (key: ItemKey, qty: number): SettlementLine => {
     const def = ITEM_BY_KEY[key]
     const p = priceOf(client, key)
-    const revenue = def.billable && p.sale != null ? qty * p.sale : 0
+    //  유상/무상은 거래처 단가가 정합니다 (invoiceFor 와 같은 규칙).
+    //  월정액 구분의 kg 는 매출 0 — 요금은 아래에서 월정액 한 줄로 잡습니다.
+    const flat = key === 'medical' ? feeMed != null : key === 'diaper' ? feeDia != null : false
+    //  부가세 별도 거래처의 지정폐기물 세액은 **수거 건 단위**로 계산해
+    //  더합니다(아래 diaperVat). 명세서(invoiceFor)가 줄 단위로 계산하므로
+    //  여기서 월 합계에 10% 를 곱하면 반올림이 1원 어긋날 수 있습니다.
+    const revenue = !flat && p.sale != null ? qty * p.sale : 0
     const cost = p.cost != null ? qty * p.cost : 0
     return {
       key,
       label: def.label,
       unit: def.unit,
       qty,
-      salePrice: def.billable ? p.sale : null,
+      salePrice: flat ? null : p.sale,
       costPrice: p.cost,
       revenue,
       cost,
-      billable: def.billable,
+      billable: !flat && p.sale != null,
     }
   }
 
@@ -310,7 +370,21 @@ export function settlementFor(
     .filter((d) => (counts[d.key] ?? 0) > 0)
     .map((d) => line(d.key, counts[d.key] ?? 0))
 
-  const wasteRevenue = wasteLines.reduce((a, l) => a + l.revenue, 0)
+  //  월정액 — 그 달에 해당 구분의 완료 수거가 있을 때만 (invoiceFor 와 동일)
+  const flatRevenue =
+    (feeMed != null && scheds.some((s) => s.wasteType === '의료폐기물') ? feeMed : 0) +
+    (feeDia != null && scheds.some((s) => s.wasteType === '일회용기저귀') ? feeDia : 0)
+
+  //  부가세 별도 — 수거 건 단위 반올림 (invoiceFor 의 줄 단위 계산과 동일)
+  const diaSale = priceOf(client, 'diaper').sale
+  const diaperVat =
+    vatPct > 0 && feeDia == null && diaSale != null
+      ? scheds
+          .filter((s) => s.wasteType === '일회용기저귀')
+          .reduce((a, s) => a + Math.round(((s.actualAmount ?? 0) * diaSale * vatPct) / 100), 0)
+      : 0
+
+  const wasteRevenue = wasteLines.reduce((a, l) => a + l.revenue, 0) + flatRevenue + diaperVat
   const supplyRevenue = supplyLines.reduce((a, l) => a + l.revenue, 0)
   const disposalCost = wasteLines.reduce((a, l) => a + l.cost, 0)
   const materialCost = supplyLines.reduce((a, l) => a + l.cost, 0)
@@ -393,6 +467,8 @@ export interface InvoiceLine {
   price: number
   amount: number
   note: string
+  /** 부가세 별도 거래처의 세액 (공급가액과 따로 청구). 없으면 0 취급 */
+  vat?: number
 }
 
 export interface Invoice {
@@ -414,6 +490,8 @@ export interface Invoice {
   diaperSubtotal: number
   medicalKg: number
   diaperKg: number
+  /** 세액 합 (부가세 별도 거래처만 0 이 아님). total 은 세액을 포함합니다 */
+  vatTotal: number
   total: number
   /** 무상으로 공급한 물품 (매출 아님 — 참고 표기용) */
   freeSupplies: { label: string; qty: number; unit: ItemUnit }[]
@@ -471,11 +549,35 @@ export function invoiceFor(
   const medicalLines: InvoiceLine[] = []
   const diaperLines: InvoiceLine[] = []
 
+  //  월정액 거래처는 kg 줄 대신 「월정액」 한 줄로 청구합니다 (오남한양·해올).
+  //  그 달에 완료 수거가 있는 구분에만 올립니다 — 계약 전·해지 후 달에
+  //  기본요금이 저절로 나가지 않게 합니다.
+  const feeMed = monthlyFeeOf(client, 'medical')
+  const feeDia = monthlyFeeOf(client, 'diaper')
+  const vatPct = diaperVatPctOf(client)
+
   for (const s of scheds) {
     const key: ItemKey = s.wasteType === '의료폐기물' ? 'medical' : 'diaper'
+    //  월정액 구분의 kg 줄은 요금이 아니라 기록입니다 — 금액 없이 올립니다.
+    //  실제 종이 명세서(해올요양병원)도 날짜·kg 는 다 적고 금액은 월정액
+    //  한 줄에만 적습니다. 같은 모양으로 만듭니다.
+    if (key === 'medical' ? feeMed != null : feeDia != null) {
+      const qty = s.actualAmount ?? 0
+      if (qty > 0) {
+        ;(key === 'medical' ? medicalLines : diaperLines).push({
+          date: s.date, itemKey: key, label: ITEM_BY_KEY[key].label,
+          unit: 'kg', qty, price: 0, amount: 0, note: '월정액 포함',
+        })
+      }
+      continue
+    }
     const p = priceOf(client, key)
     const qty = s.actualAmount ?? 0
     if (qty <= 0 || p.sale == null) continue
+    const amount = qty * p.sale
+    //  부가세 별도 거래처(목동현대웰)는 지정폐기물 줄마다 세액 10% 를
+    //  따로 계산합니다. 엑셀과 같은 방식(줄 단위 계산)이어야 1원까지 맞습니다.
+    const vat = key === 'diaper' && vatPct > 0 ? Math.round((amount * vatPct) / 100) : 0
     const row: InvoiceLine = {
       date: s.date,
       itemKey: key,
@@ -483,25 +585,41 @@ export function invoiceFor(
       unit: 'kg',
       qty,
       price: p.sale,
-      amount: qty * p.sale,
+      amount,
       note: (s as { isAdditional?: boolean }).isAdditional ? '추가 수거' : '',
+      ...(vat > 0 ? { vat } : {}),
     }
     ;(key === 'medical' ? medicalLines : diaperLines).push(row)
   }
 
-  // 유상 물품 — 공급한 날짜에 매출로 올립니다
+  if (feeMed != null && scheds.some((s) => s.wasteType === '의료폐기물')) {
+    medicalLines.push({
+      date: `${month}-01`, itemKey: 'medical', label: '의료폐기물 수집·운반 (월정액)',
+      unit: '식', qty: 1, price: feeMed, amount: feeMed, note: '월정액',
+    })
+  }
+  if (feeDia != null && scheds.some((s) => s.wasteType === '일회용기저귀')) {
+    diaperLines.push({
+      date: `${month}-01`, itemKey: 'diaper', label: '일회용기저귀 수집·운반 (월정액)',
+      unit: '식', qty: 1, price: feeDia, amount: feeDia, note: '월정액',
+    })
+  }
+
+  // 유상 물품 — 공급한 날짜에 매출로 올립니다.
+  //  유상/무상은 품목이 아니라 **거래처의 단가**가 정합니다. 같은 63L 박스가
+  //  더원에는 무상(sale 없음)이고 삼성서울연합에는 개당 18,000원 유상입니다.
+  //  박스 개당 정산 거래처(서울온케어·서울인화·삼성)가 이 규칙 하나로 처리됩니다.
   const freeMap = new Map<ItemKey, number>()
   for (const m of sups) {
     for (const [k, n] of Object.entries(itemsOf(m))) {
       const key = k as ItemKey
       const def = ITEM_BY_KEY[key]
       if (!def || !n) continue
-      if (!def.billable) {
+      const p = priceOf(client, key)
+      if (p.sale == null) {
         freeMap.set(key, (freeMap.get(key) ?? 0) + n)
         continue
       }
-      const p = priceOf(client, key)
-      if (p.sale == null) continue
       medicalLines.push({
         date: m.date,
         itemKey: key,
@@ -520,6 +638,8 @@ export function invoiceFor(
 
   const medicalSubtotal = medicalLines.reduce((a, l) => a + l.amount, 0)
   const diaperSubtotal = diaperLines.reduce((a, l) => a + l.amount, 0)
+  //  세액은 줄 단위로 이미 계산돼 있습니다 — 여기서는 더하기만 합니다.
+  const vatTotal = [...medicalLines, ...diaperLines].reduce((a, l) => a + (l.vat ?? 0), 0)
 
   return {
     clientId,
@@ -535,9 +655,11 @@ export function invoiceFor(
     diaperLines,
     medicalSubtotal,
     diaperSubtotal,
-    medicalKg: medicalLines.filter((l) => l.itemKey === 'medical').reduce((a, l) => a + l.qty, 0),
-    diaperKg: diaperLines.reduce((a, l) => a + l.qty, 0),
-    total: medicalSubtotal + diaperSubtotal,
+    //  kg 합계에 월정액 줄(qty 1「식」)이 섞이면 안 됩니다 — kg 줄만 셉니다.
+    medicalKg: medicalLines.filter((l) => l.itemKey === 'medical' && l.unit === 'kg').reduce((a, l) => a + l.qty, 0),
+    diaperKg: diaperLines.filter((l) => l.unit === 'kg').reduce((a, l) => a + l.qty, 0),
+    vatTotal,
+    total: medicalSubtotal + diaperSubtotal + vatTotal,
     freeSupplies: [...freeMap.entries()].map(([k, qty]) => ({
       label: ITEM_BY_KEY[k].label,
       qty,

@@ -115,23 +115,68 @@ export interface PlanCounts {
 
 // ── 엑셀의 품목 이름 → 시스템 품목 ──────────────────────────────────────────
 //
-//  이름이 조금씩 다릅니다("의료폐기물 " 뒤 공백, "의료기관일회용기저귀").
-//  아는 이름만 받고, 모르는 이름은 조용히 버리지 않고 「확인 필요」로 올립니다.
-const WASTE_ALIAS: { re: RegExp; type: '의료폐기물' | '일회용기저귀' }[] = [
-  { re: /^의료폐기물$/, type: '의료폐기물' },
-  { re: /기저귀/, type: '일회용기저귀' },
-  { re: /^지정폐기물$/, type: '일회용기저귀' },
-]
-const SUPPLY_ALIAS: { re: RegExp; key: ItemKey }[] = [
-  { re: /^2\s*L?\s*(리터)?\s*합성수지$/, key: 'plastic2' },
-  { re: /^5\s*L?\s*(리터)?\s*합성수지$/, key: 'plastic5' },
-  { re: /^20\s*L?\s*(리터)?\s*합성수지$/, key: 'plastic20' },
-  { re: /^63\s*(리터|L)\s*박스$/, key: 'box63' },
-  { re: /^30\s*(리터|L)\s*박스$/, key: 'box30' },
-  { re: /^12\s*(리터|L)\s*박스$/, key: 'box12' },
-  { re: /^4\s*(리터|L)\s*박스$/, key: 'box4' },
-  { re: /기저귀비닐/, key: 'diaperBag40' },
-]
+//  실제 거래처 파일 11개를 전수 확인해 보면 같은 품목이 파일마다 다르게
+//  적혀 있습니다.
+//
+//   · "합성수지 2L" (더원 정산) = "2L 합성수지" (본브릿지 정산) =
+//     "2리터 합성수지" (원가 줄) = "합성수지용기" + 규격 "2L / 개" (남양주백 명세서)
+//   · "의료폐기물" = "의료폐기물 수집/운반" (남양주백·신세계·해올 명세서)
+//   · "의료폐기물 35L box" (온케어) = "의료폐기물 1box (30L)" (인화) —
+//     박스 개당 정산 거래처의 매출 품목
+//
+//  그래서 이름을 한 곳(resolveItem)에서 뜻으로 풉니다. 용량 숫자를 읽어
+//  아는 규격(박스 79·63·35·30·12·4L, 합성수지 2·5·10·20L)에만 붙이고,
+//  처음 보는 규격·이름은 비슷하다고 합치지 않고 null → 「확인 필요」입니다.
+
+const BOX_SIZES = new Set([79, 63, 35, 30, 12, 4])
+const PLASTIC_SIZES = new Set([2, 5, 10, 20])
+
+type Resolved =
+  | { kind: 'waste'; type: '의료폐기물' | '일회용기저귀' }
+  | { kind: 'supply'; key: ItemKey }
+  | null
+
+/**
+ * 품목 이름(+ 규격 칸)을 시스템 품목으로 풉니다.
+ * 확실하지 않으면 null — 절대 비슷한 것으로 합치지 않습니다.
+ */
+export function resolveItem(rawLabel: string, rawSpec = ''): Resolved {
+  //  공백을 정리하고 "리터"→L 로 통일합니다. 뜻은 바꾸지 않습니다.
+  const norm = (s: string) => s.replace(/리터/g, 'L').replace(/\s+/g, ' ').trim()
+  const label = norm(rawLabel)
+  const spec = norm(rawSpec)
+  if (!label) return null
+
+  //  기저귀 부속품 먼저 — "기저귀" 만 보고 폐기물로 오인하면 안 됩니다.
+  if (/기저귀\s*비닐/.test(label)) return { kind: 'supply', key: 'diaperBag40' }
+  if (/기저귀\s*박스/.test(label)) return { kind: 'supply', key: 'diaperBoxM' }
+  if (/봉투형\s*용기/.test(label)) {
+    const size = Number(/(\d+)\s*L/i.exec(label)?.[1] ?? /(\d+)\s*L/i.exec(spec)?.[1] ?? '')
+    return size === 12 ? { kind: 'supply', key: 'pouch12' } : null
+  }
+
+  //  합성수지 용기 — "2L 합성수지" / "합성수지 2L" / "합성수지용기"+규격 "2L / 개"
+  if (/합성수지/.test(label)) {
+    const size = Number(/(\d+)\s*L/i.exec(label)?.[1] ?? /(\d+)\s*L/i.exec(spec)?.[1] ?? '')
+    if (PLASTIC_SIZES.has(size)) return { kind: 'supply', key: `plastic${size}` as ItemKey }
+    return null // 모르는 규격 — 확인 필요
+  }
+
+  //  박스 — "63L 박스" / "의료폐기물 35L box" / "의료폐기물 1box (30L)"
+  if (/박스|box/i.test(label)) {
+    //  "1box (30L)" 처럼 개수(1)와 규격(30L)이 같이 있으면 L 붙은 쪽만 봅니다.
+    const size = Number(/(\d+)\s*L/i.exec(label)?.[1] ?? /(\d+)\s*L/i.exec(spec)?.[1] ?? '')
+    if (BOX_SIZES.has(size)) return { kind: 'supply', key: `box${size}` as ItemKey }
+    return null
+  }
+
+  //  폐기물 — 박스·용기 표기가 없는 것만
+  if (/^의료\s*폐기물(\s*수집\s*\/?\s*운반)?$/.test(label)) return { kind: 'waste', type: '의료폐기물' }
+  if (/^지정\s*폐기물$/.test(label)) return { kind: 'waste', type: '일회용기저귀' }
+  if (/기저귀/.test(label) && !/부가세/.test(label)) return { kind: 'waste', type: '일회용기저귀' }
+
+  return null
+}
 
 const txt = (v: CellValue): string => (v === null || v === undefined ? '' : String(v).trim())
 const num = (v: CellValue): number | null => {
@@ -195,28 +240,119 @@ function readSettlementSheet(sheet: Sheet, plan: ImportPlan) {
     return
   }
 
-  const price = (re: RegExp, col = 3) => num(rowByLabel(rows, re)?.[col] ?? null)
+  //  ── 시트를 구역으로 나눕니다 ─────────────────────────────────────────
+  //
+  //  11개 실제 파일이 전부 같은 뼈대입니다.
+  //
+  //   2행        거래처 정보 (이름·계약일·결제일 · 박스정산 거래처는 물량 kg)
+  //   3행~       [매출 구역]  품목별 단가(D)·월정액(E)와 월별 수량·금액
+  //   ── 경계 ──  「의료폐기물 합계」「전체매출」「…소각비용」 중 먼저 나오는 줄
+  //   …          [원가 구역]  소각비·「물품사용」 아래 물품별 매입단가
+  //   「영업이익」 끝
+  //
+  //  행 번호를 박지 않고 경계 라벨로 나눕니다. 구역 안의 품목은 이름으로
+  //  풀고(resolveItem), 모르는 이름은 「확인 필요」로 올립니다.
+  const labelAt = (r: number) => txt(rows[r]?.[0])
+  const findRow = (re: RegExp, from = 0) => {
+    for (let r = from; r < rows.length; r++) if (re.test(labelAt(r))) return r
+    return -1
+  }
+  const profitRow = findRow(/^영업이익/)
+  const revenueEnd = (() => {
+    for (let r = 2; r < rows.length; r++) {
+      if (/합계$|^전체매출$|소각비용/.test(labelAt(r)) || (profitRow >= 0 && r >= profitRow)) return r
+    }
+    return rows.length
+  })()
+  const goodsRow = findRow(/^물품사용$/)
+
   const pricing: ClientProfile['pricing'] = {}
-  const put = (key: ItemKey, sale: number | null, cost: number | null) => {
-    if (sale === null && cost === null) return
-    pricing[key] = { sale, cost }
+  const put = (key: string, side: 'sale' | 'cost', v: number | null) => {
+    if (v === null) return
+    const cur = pricing[key] ?? { sale: null, cost: null }
+    pricing[key] = { ...cur, [side]: v }
   }
   //  원가는 엑셀에 음수로 적혀 있습니다(-350). 시스템은 양수로 씁니다.
   const pos = (n: number | null) => (n === null ? null : Math.abs(n))
 
-  put('medical', price(/^의료폐기물$/), pos(price(/^의료폐기물소각비용$/)))
-  //  기저귀 원가는 소각비 + 부가세 두 줄로 나뉘어 있습니다.
-  const diaperCost = pos(price(/소각비용.*기저귀|기저귀.*소각/))
-  const diaperVat = pos(price(/^기저귀 부가세$/))
-  put('diaper', price(/^지정폐기물$/), diaperCost === null && diaperVat === null ? null : (diaperCost ?? 0) + (diaperVat ?? 0))
-  put('plastic2', price(/^합성수지 ?2L$/), pos(price(/^2리터 합성수지$/)))
-  put('plastic5', price(/^합성수지 ?5L$/), pos(price(/^5리터 합성수지$/)))
-  put('plastic20', price(/^합성수지 ?20L$/), pos(price(/^20리터 합성수지$/)))
-  put('box63', null, pos(price(/^63리터 박스$/)))
-  put('box30', null, pos(price(/^30리터 박스$/)))
-  put('box12', null, pos(price(/^12리터 박스$/)))
-  put('box4', null, pos(price(/^4리터 박스$/)))
-  put('diaperBag40', null, pos(price(/기저귀비닐/)))
+  //  [매출 구역] — D열 단가(kg 또는 개당), E열 월정액
+  let diaperSaleRow = -1
+  for (let r = 2; r < revenueEnd; r++) {
+    const label = labelAt(r)
+    if (!label) continue
+    const unitPrice = num(rows[r]?.[3] ?? null)
+    const flatFee = num(rows[r]?.[4] ?? null)
+
+    //  부가세 줄 — 지정폐기물 단가의 몇 % 인지 확인해서 규칙으로 저장합니다.
+    //  (목동현대웰: 지정 480원 + 부가세 48원 = 정확히 10%)
+    if (/부가세/.test(label)) {
+      if (unitPrice === null || unitPrice === 0) continue // 부가세 없음 (더원·해올)
+      const base = diaperSaleRow >= 0 ? num(rows[diaperSaleRow]?.[3] ?? null) : null
+      const pct = base ? Math.round((unitPrice / base) * 1000) / 10 : null
+      if (pct !== null && Number.isInteger(pct) && pct > 0 && pct <= 20) {
+        put('diaperVatPct', 'sale', pct)
+      } else {
+        plan.issues.push({
+          level: '확인 필요',
+          where: `${sheet.name} ${r + 1}행`,
+          what: `부가세 단가 ${unitPrice}원을 지정폐기물 단가의 몇 %인지 정하지 못했습니다`,
+          hint: '부가세 별도 거래처면 단가 설정에서 %를 직접 넣어 주세요.',
+        })
+      }
+      continue
+    }
+
+    const hit = resolveItem(label)
+    if (!hit) {
+      if (unitPrice !== null || flatFee !== null) {
+        plan.issues.push({
+          level: '확인 필요',
+          where: `${sheet.name} ${r + 1}행`,
+          group: '모르는 품목',
+          what: `모르는 품목 「${label}」 (단가 ${unitPrice ?? flatFee ?? '?'}원)`,
+          hint: '시스템에 같은 품목이 없어 단가를 옮기지 않았습니다.',
+        })
+      }
+      continue
+    }
+    if (hit.kind === 'waste') {
+      const key = hit.type === '의료폐기물' ? 'medical' : 'diaper'
+      if (key === 'diaper') diaperSaleRow = r
+      put(key, 'sale', unitPrice)
+      //  월정액 (E열) — 오남한양 900만, 해올 의료 130만 + 지정 300만
+      if (flatFee !== null && flatFee > 0) put(key === 'medical' ? 'medicalMonthly' : 'diaperMonthly', 'sale', flatFee)
+    } else {
+      //  박스·용기 매출 단가 (박스 개당 정산 거래처 포함)
+      put(hit.key, 'sale', unitPrice)
+    }
+  }
+
+  //  [원가 구역] — 소각비 (kg) 와 물품 매입단가 (개당)
+  put('medical', 'cost', pos(num(rowByLabel(rows, /^의료폐기물소각비용$/)?.[3] ?? null)))
+  const diaperBurn = pos(num(rowByLabel(rows, /소각비용.*기저귀|기저귀.*소각/)?.[3] ?? null))
+  const diaperVatCost = pos(num(rowByLabel(rows, /^기저귀 부가세$/)?.[3] ?? null))
+  if (diaperBurn !== null || diaperVatCost !== null) {
+    put('diaper', 'cost', (diaperBurn ?? 0) + (diaperVatCost ?? 0))
+  }
+  if (goodsRow >= 0 && profitRow > goodsRow) {
+    for (let r = goodsRow + 1; r < profitRow; r++) {
+      const label = labelAt(r)
+      if (!label) continue
+      const cost = pos(num(rows[r]?.[3] ?? null))
+      if (cost === null) continue
+      const hit = resolveItem(label, txt(rows[r]?.[1]))
+      if (hit && hit.kind === 'supply') put(hit.key, 'cost', cost)
+      else if (!hit) {
+        plan.issues.push({
+          level: '확인 필요',
+          where: `${sheet.name} ${r + 1}행`,
+          group: '모르는 품목',
+          what: `모르는 물품 「${label}」 (매입가 ${cost}원)`,
+          hint: '시스템에 같은 품목이 없어 매입단가를 옮기지 않았습니다.',
+        })
+      }
+    }
+  }
 
   const due = /(\d{1,2})\s*일/.exec(txt(info[5]))?.[1]
   plan.client = {
@@ -237,7 +373,12 @@ function readSettlementSheet(sheet: Sheet, plan: ImportPlan) {
     })
   }
 
-  // 월별 합계
+  // ── 월별 합계 ──────────────────────────────────────────────────────────
+  //
+  //  매출: 「전체매출」 줄이 있으면 그것, 없으면 「의료폐기물 합계」+「지정폐기물
+  //  합계」, 그것도 없으면(오남한양 — 월정액 한 줄뿐) 매출 구역 줄들의 합.
+  //  kg: 박스 개당 정산 거래처는 합계 줄의 수량이 kg 가 아니라 박스 수입니다.
+  //  실제 kg 는 2행(거래처 줄)의 물량 칸에 따로 적혀 있어 그쪽을 먼저 봅니다.
   const medical = rowByLabel(rows, /^의료폐기물 합계$/)
   const diaper = rowByLabel(rows, /^지정폐기물 합계$/)
   const revenue = rowByLabel(rows, /^전체매출$/)
@@ -246,10 +387,43 @@ function readSettlementSheet(sheet: Sheet, plan: ImportPlan) {
   const burnDia = rowByLabel(rows, /소각비용.*기저귀|기저귀.*소각/)
   const vat = rowByLabel(rows, /^기저귀 부가세$/)
   const goods = rowByLabel(rows, /^물품사용$/)
+  //  매출 구역에서 의료폐기물(kg) 줄을 기억해 둡니다 — kg 대체 출처.
+  const medicalRow = (() => {
+    for (let r = 2; r < revenueEnd; r++) {
+      const hit = resolveItem(labelAt(r))
+      if (hit?.kind === 'waste' && hit.type === '의료폐기물') return rows[r]
+    }
+    return null
+  })()
 
   for (const { month, qtyCol, amtCol } of months) {
-    const rev = num(revenue?.[amtCol] ?? null) ?? 0
-    const mKg = num(medical?.[qtyCol] ?? null) ?? 0
+    //  이 달에 물량(수량)이 한 칸이라도 있는가 — 없으면 아직 일이 없던 달입니다.
+    //  월정액 파일은 금액 수식이 12월까지 채워져 있어 금액만 보면 속습니다.
+    let anyQty = false
+    for (let r = 1; r < rows.length; r++) {
+      const q = num(rows[r]?.[qtyCol] ?? null)
+      if (q !== null && q !== 0) { anyQty = true; break }
+    }
+    if (!anyQty) continue
+    let rev = num(revenue?.[amtCol] ?? null)
+    if (rev === null) {
+      const m = num(medical?.[amtCol] ?? null)
+      const d = num(diaper?.[amtCol] ?? null)
+      if (m !== null || d !== null) rev = (m ?? 0) + (d ?? 0)
+    }
+    if (rev === null) {
+      //  합계 줄이 아예 없는 파일 — 매출 구역 금액을 그대로 더합니다.
+      let sum = 0
+      let any = false
+      for (let r = 2; r < revenueEnd; r++) {
+        const v = num(rows[r]?.[amtCol] ?? null)
+        if (v !== null) { sum += v; any = true }
+      }
+      rev = any ? sum : 0
+    }
+    //  kg — 2행 물량이 있으면 그것(박스 정산 거래처), 없으면 합계 줄 수량.
+    const infoKg = num(info[qtyCol] ?? null)
+    const mKg = infoKg ?? num(medical?.[qtyCol] ?? null) ?? num(medicalRow?.[qtyCol] ?? null) ?? 0
     const dKg = num(diaper?.[qtyCol] ?? null) ?? 0
     if (rev === 0 && mKg === 0 && dKg === 0) continue
     const cost =
@@ -283,6 +457,8 @@ function readSettlementSheet(sheet: Sheet, plan: ImportPlan) {
 
 function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
   const rows = sheet.rows
+  //  이 시트에서 만든 줄만 제목·합계 검산에 씁니다 (명세서 시트가 여러 개일 수 있음)
+  const rowStart = plan.rows.length
   //  머리글(월/일 · 품목 · 수량 · 단가 · 공급가액)이 있는 줄을 찾습니다.
   let head = -1
   for (let r = 0; r < rows.length; r++) {
@@ -301,15 +477,22 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
     })
     return
   }
-  const col = { date: 0, item: 1, qty: 3, price: 5, amount: 6 }
+  const col = { date: 0, item: 1, spec: 2, qty: 3, price: 5, amount: 6, vat: -1 }
+  //  단가 칸이 「단가 (월정액)」인 파일이 있습니다(해올요양병원) — 그 명세서의
+  //  금액 줄은 수량×단가가 아니라 월정액입니다. 검산 방식이 달라집니다.
+  let priceIsFlat = false
   const line = rows[head] ?? []
   for (let c = 0; c < line.length; c++) {
     const t = txt(line[c])
     if (/월\/일/.test(t)) col.date = c
     else if (/^품목$/.test(t)) col.item = c
+    else if (/규격/.test(t)) col.spec = c
     else if (/^수량$/.test(t)) col.qty = c
-    else if (/^단가$/.test(t)) col.price = c
-    else if (/공급가액/.test(t)) col.amount = c
+    else if (/^단가/.test(t)) {
+      col.price = c
+      if (/월정액/.test(t)) priceIsFlat = true
+    } else if (/공급가액/.test(t)) col.amount = c
+    else if (/^세액$/.test(t)) col.vat = c
   }
 
   //  제목의 연월과 실제 거래일자가 다른 경우가 있습니다(제목만 안 고친 파일).
@@ -331,6 +514,19 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
     { items: Partial<Record<ItemKey, number>>; amount: number; where: string[]; from: '직접' | '윗줄' }
   >()
 
+  //  오늘 — 미래 날짜 가드용. 실제 파일에서 연도가 밀려 적힌 명세서를
+  //  봤습니다(서울인화 「2025년 12월~」 명세서의 날짜가 2026-12 로 적힘).
+  //  아직 오지 않은 날짜의 수거를 기록으로 만들면 안 됩니다.
+  const today = new Date().toISOString().slice(0, 10)
+  //  월정액 검산용 — 정산 시트에서 읽은 이 거래처의 월정액.
+  const feeOf = (type: '의료폐기물' | '일회용기저귀'): number | null => {
+    const v = plan.client?.pricing[type === '의료폐기물' ? 'medicalMonthly' : 'diaperMonthly']?.sale
+    return typeof v === 'number' && v > 0 ? v : null
+  }
+  //  명세서에 월정액 줄이 있으면 「적힌 합계」 검산에 넣습니다 (아래).
+  let flatFeeSum = 0
+  let lastSpec = ''
+
   for (let r = head + 1; r < rows.length; r++) {
     const row = rows[r] ?? []
     const first = txt(row[col.date])
@@ -338,9 +534,46 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
       lastDate = null
       continue
     }
+    //  미납금액 이월 줄(서울인화) — 청구가 아니라 지난달 잔액입니다.
+    //  0 이면 지나가고, 값이 있으면 미수금은 손으로 잡도록 알립니다.
+    if (/미납/.test(first)) {
+      const carried = num(row[col.amount] ?? null) ?? 0
+      if (carried !== 0) {
+        plan.issues.push({
+          level: '확인 필요',
+          where: `${sheet.name} ${r + 1}행`,
+          what: `미납금액 ${Math.round(carried).toLocaleString()}원이 이월돼 있습니다`,
+          hint: '이월 미수금은 자동으로 만들지 않습니다. 「청구·미수금」에서 직접 확인해 주세요.',
+        })
+      }
+      lastDate = null
+      continue
+    }
 
     const label = txt(row[col.item])
-    if (label) lastItem = label
+    const ownSpec = txt(row[col.spec])
+    if (label) {
+      lastItem = label
+      lastSpec = ownSpec
+    } else if (ownSpec) {
+      //  라벨은 윗줄 것("합성수지 (니들통)")을 이어받고 규격(5L)만 바뀌는
+      //  줄이 실제 파일에 있습니다(서울본브릿지 명세서 28~31행).
+      lastSpec = ownSpec
+    }
+    //  요약·차감 줄은 품목이 아닙니다.
+    if (/합계|물품사용내역|물품공급/.test(lastItem)) continue
+    if (/무상제공/.test(lastItem)) {
+      const off = num(row[col.amount] ?? null) ?? 0
+      if (off !== 0) {
+        plan.issues.push({
+          level: '확인 필요',
+          where: `${sheet.name} ${r + 1}행`,
+          what: `「${lastItem}」 ${Math.round(off).toLocaleString()}원 — 무상 차감 줄입니다`,
+          hint: '이 명세서의 물품 줄은 청구가 아니라 참고 표기입니다. 옮기지 않았습니다.',
+        })
+      }
+      continue
+    }
     const qty = num(row[col.qty] ?? null)
     if (!qty) continue // 0 이거나 빈 줄
 
@@ -360,30 +593,76 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
       continue
     }
 
+    const hit = resolveItem(lastItem, lastSpec)
     const price = num(row[col.price] ?? null) ?? 0
-    const amount = num(row[col.amount] ?? null) ?? 0
-    //  금액 검증 — 수량 × 단가가 적힌 금액과 다르면 넣지 않습니다.
-    if (price > 0 && Math.round(qty * price) !== Math.round(amount)) {
+    const supplied = num(row[col.amount] ?? null) ?? 0
+    const vatCell = col.vat >= 0 ? (num(row[col.vat] ?? null) ?? 0) : 0
+    //  세액 칸이 있으면(부가세 별도 — 목동현대웰) 청구 총액은 공급가+세액입니다.
+    const amount = supplied + vatCell
+
+    //  미래 날짜 — 만들지 않습니다.
+    if (date > today) {
+      plan.rows.push({
+        kind: '수거', date, wasteType: '의료폐기물', kg: qty, amount, where, dateFrom,
+        status: '오류',
+        reason: `아직 오지 않은 날짜입니다 (오늘 ${today}). 원본의 연도를 확인해 주세요.`,
+      })
+      continue
+    }
+
+    //  월정액 줄 — 단가 칸이 「월정액」이거나, 금액이 정산 시트의 월정액과
+    //  정확히 같으면 수량×단가 검산 대상이 아닙니다. kg 기록만 가져오고
+    //  요금은 청구 확정에서 월정액 규칙으로 계산됩니다.
+    const wasteType = hit?.kind === 'waste' ? hit.type : null
+    const flatFee = wasteType ? feeOf(wasteType) : null
+    const isFlatLine = wasteType && flatFee !== null && (priceIsFlat || supplied === flatFee || supplied === 0)
+    if (isFlatLine) {
+      if (supplied !== 0 && supplied !== flatFee) {
+        plan.issues.push({
+          level: '확인 필요', where,
+          what: `월정액 줄 금액 ${Math.round(supplied).toLocaleString()}원이 정산 시트의 월정액 ${flatFee.toLocaleString()}원과 다릅니다`,
+          hint: '어느 쪽이 맞는지 확인한 뒤 가져오세요.',
+        })
+      }
+      if (supplied === flatFee) flatFeeSum += supplied
+      plan.rows.push({
+        kind: '수거', date, wasteType: wasteType!, kg: qty, amount: 0, where, dateFrom, status: '등록 예정',
+      })
+      continue
+    }
+
+    //  금액 검증 — 수량 × 단가가 적힌 공급가액과 다르면 넣지 않습니다.
+    if (price > 0 && Math.round(qty * price) !== Math.round(supplied)) {
       plan.rows.push({
         kind: '수거',
         date,
-        wasteType: '의료폐기물',
+        wasteType: wasteType ?? '의료폐기물',
         kg: qty,
         amount,
         where,
         dateFrom,
         status: '오류',
-        reason: `수량×단가 ${Math.round(qty * price).toLocaleString()}원 ≠ 적힌 금액 ${Math.round(amount).toLocaleString()}원`,
+        reason: `수량×단가 ${Math.round(qty * price).toLocaleString()}원 ≠ 적힌 금액 ${Math.round(supplied).toLocaleString()}원`,
       })
       continue
     }
+    //  세액 칸 검산 — 공급가의 몇 % 인지 (반올림 1원 단위까지)
+    if (vatCell !== 0) {
+      const pct = plan.client?.pricing.diaperVatPct?.sale
+      if (typeof pct === 'number' && Math.round((supplied * pct) / 100) !== Math.round(vatCell)) {
+        plan.issues.push({
+          level: '확인 필요', where,
+          what: `세액 ${Math.round(vatCell).toLocaleString()}원이 공급가 ${Math.round(supplied).toLocaleString()}원의 ${pct}% 와 다릅니다`,
+          hint: '세율이 바뀌었는지 원본을 확인해 주세요.',
+        })
+      }
+    }
 
-    const waste = WASTE_ALIAS.find((a) => a.re.test(lastItem.replace(/\s+/g, '')))
-    if (waste) {
+    if (wasteType) {
       plan.rows.push({
         kind: '수거',
         date,
-        wasteType: waste.type,
+        wasteType,
         kg: qty,
         amount,
         where,
@@ -392,10 +671,9 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
       })
       continue
     }
-    const supply = SUPPLY_ALIAS.find((a) => a.re.test(lastItem.replace(/\s+/g, ' ').trim()))
-    if (supply) {
+    if (hit && hit.kind === 'supply') {
       const cur = supplyByDate.get(date) ?? { items: {}, amount: 0, where: [], from: dateFrom }
-      cur.items[supply.key] = (cur.items[supply.key] ?? 0) + qty
+      cur.items[hit.key] = (cur.items[hit.key] ?? 0) + qty
       cur.amount += amount
       cur.where.push(where)
       supplyByDate.set(date, cur)
@@ -418,7 +696,7 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
   }
 
   //  제목과 실제 날짜가 어긋나는지
-  const first = plan.rows.find((r) => r.status === '등록 예정')
+  const first = plan.rows.slice(rowStart).find((r) => r.status === '등록 예정')
   if (titleYm && first) {
     const ym = `${titleYm[1]}-${String(Number(titleYm[2])).padStart(2, '0')}`
     if (first.date.slice(0, 7) !== ym) {
@@ -444,7 +722,11 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
     }
     return null
   })()
-  const summed = plan.rows.filter((r) => r.status === '등록 예정').reduce((s, r) => s + r.amount, 0)
+  //  월정액 줄은 kg 기록으로만 가져오고 금액은 0 으로 두므로,
+  //  「적힌 합계」와 맞추려면 명세서에 적혀 있던 월정액을 더해야 합니다.
+  const summed =
+    plan.rows.slice(rowStart).filter((r) => r.status === '등록 예정').reduce((s, r) => s + r.amount, 0) +
+    flatFeeSum
   if (stated !== null && Math.round(stated) !== Math.round(summed)) {
     plan.issues.push({
       level: '확인 필요',
@@ -464,7 +746,12 @@ export function analyzeWorkbook(sheets: Sheet[], fileName: string): ImportPlan {
   }
 
   const settlement = sheets.find((s) => /정산/.test(s.name)) ?? sheets.find((s) => /계약일/.test((s.rows[0] ?? []).map(txt).join('|')))
-  const invoice = sheets.find((s) => /명세서/.test(s.name)) ?? sheets.find((s) => /거래명세서/.test(txt(s.rows[0]?.[0])))
+  //  명세서 시트는 하나가 아닐 수 있습니다 — 실제로 서울인화 파일에는
+  //  「2026 거래명세서」와 「2026 거래명세서 (2)」(지난 분기 몫)가 함께 있습니다.
+  //  하나만 읽으면 나머지는 소리 없이 사라지므로 전부 읽습니다.
+  const invoices = sheets.filter(
+    (s) => /명세서/.test(s.name) || /거래명세서/.test(txt(s.rows[0]?.[0])),
+  )
 
   if (settlement) readSettlementSheet(settlement, plan)
   else
@@ -475,7 +762,7 @@ export function analyzeWorkbook(sheets: Sheet[], fileName: string): ImportPlan {
       hint: '거래처 정보·계약·단가를 가져오지 못했습니다.',
     })
 
-  if (invoice) readInvoiceSheet(invoice, plan)
+  if (invoices.length) for (const inv of invoices) readInvoiceSheet(inv, plan)
   else
     plan.issues.push({
       level: '확인 필요',
