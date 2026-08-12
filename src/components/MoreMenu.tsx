@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, MessageSquarePlus, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, Smartphone, Monitor, ChevronDown, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, MessageSquarePlus, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -62,6 +63,7 @@ export function MoreMenu({
 }) {
   const navigate = useNavigate()
   const { role, profile, signOut } = useAuth()
+  const [plannedOpen, setPlannedOpen] = useState(false)
   //  현장 담당자에게는 미수금·통계·배차가 열리지 않습니다. 사이드바에서는
   //  이미 숨기고 있었는데 폰의 더보기에는 그대로 남아 있어서, 눌렀다가
   //  튕기는 메뉴가 보였습니다. 같은 규칙(canAccess)으로 맞춥니다.
@@ -240,10 +242,26 @@ export function MoreMenu({
       </section>
 
       {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분.
-          아직 없는 기능 목록이라 현장 담당자의 폰에서는 자리만 차지합니다. */}
+          아직 없는 기능 목록이라 처음부터 펼쳐 두지 않습니다. PC 사이드바와
+          같은 규칙입니다(Layout.tsx 의 NavGroup). */}
       {showRoadmap && (
       <section>
-        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">추가 개발 예정</h3>
+        <button
+          type="button"
+          onClick={() => setPlannedOpen((v) => !v)}
+          aria-expanded={plannedOpen}
+          data-more-planned
+          className="mb-2 flex w-full items-center gap-2 px-1 text-left text-[1.08rem] font-semibold text-navy-500"
+        >
+          <span className="min-w-0 flex-1 break-keep">추가 개발 예정</span>
+          {!plannedOpen && (
+            <span className="shrink-0 rounded-md bg-navy-100 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-500">
+              {PLANNED_FEATURES.length}
+            </span>
+          )}
+          <ChevronDown size={16} className={`shrink-0 transition-transform ${plannedOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {plannedOpen && (
         <div className="card p-4">
           <div className="flex flex-wrap gap-1.5">
             {PLANNED_FEATURES.map((f) => (
@@ -262,6 +280,7 @@ export function MoreMenu({
             위 기능은 아직 실사용 단계가 아니며, 단계별 로드맵에 따라 개발 예정입니다.
           </p>
         </div>
+        )}
       </section>
       )}
 

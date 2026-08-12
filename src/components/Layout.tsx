@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -191,9 +191,113 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
   )
 }
 
+// ── 접히는 메뉴 묶음 ─────────────────────────────────────────────────────────
+//
+//  관리자 계정으로 들어오면 사이드바에 메뉴가 18개 펼쳐져 있었습니다.
+//  매일 쓰는 것은 위 7개뿐인데, 아래 11개(운영 도구 6 + 관리 5)가 항상
+//  같은 무게로 깔려 있어 "정신없다"는 이야기를 들었습니다.
+//
+//  그래서 아래 두 묶음은 접어 둡니다. 제목 줄을 누르면 펼쳐집니다.
+//   · 접힘/펼침은 이 브라우저에 기억해 둡니다 — 매번 다시 열게 하지 않습니다.
+//   · 지금 보고 있는 화면이 그 묶음 안에 있으면 저절로 펼쳐집니다.
+//     (접힌 채로 두면 "내가 지금 어디에 있는지" 표시가 사라집니다)
+
+const NAV_OPEN_KEY = 'beonemirae-ops:nav-open'
+
+function readNavOpen(id: string, fallback: boolean): boolean {
+  try {
+    const raw = window.localStorage.getItem(NAV_OPEN_KEY)
+    if (!raw) return fallback
+    const map = JSON.parse(raw) as Record<string, unknown>
+    return typeof map?.[id] === 'boolean' ? (map[id] as boolean) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeNavOpen(id: string, value: boolean) {
+  try {
+    const raw = window.localStorage.getItem(NAV_OPEN_KEY)
+    const map = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+    window.localStorage.setItem(NAV_OPEN_KEY, JSON.stringify({ ...map, [id]: value }))
+  } catch {
+    /* 저장이 안 되더라도 메뉴 자체는 그대로 동작해야 합니다 */
+  }
+}
+
+/** 접기/펼치기 제목 줄 — 접혀 있을 때는 안에 몇 개가 있는지 숫자로 알려 줍니다 */
+function GroupHeader({
+  title,
+  count,
+  open,
+  onToggle,
+  icon: Icon,
+}: {
+  title: string
+  count: number
+  open: boolean
+  onToggle: () => void
+  icon?: LucideIcon
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      data-nav-group-header={title}
+      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+    >
+      {Icon && <Icon size={13} className="shrink-0" />}
+      <span className="min-w-0 flex-1 break-keep text-left leading-snug">{title}</span>
+      {!open && (
+        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.9rem] font-bold text-navy-300">
+          {count}
+        </span>
+      )}
+      <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+    </button>
+  )
+}
+
+/** 접히는 메뉴 묶음 (링크 목록) */
+function NavGroup({ id, title, items }: { id: string; title: string; items: NavItem[] }) {
+  const { pathname } = useLocation()
+  const hasActive = items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))
+  const [open, setOpen] = useState(() => readNavOpen(id, false))
+
+  //  다른 곳에서 이 묶음 안의 화면으로 넘어오면(예: 대시보드의 바로가기)
+  //  접힌 채로 두지 않고 펼쳐 줍니다. 펼친 뒤에는 다시 접을 수 있습니다.
+  useEffect(() => {
+    if (hasActive) setOpen(true)
+  }, [hasActive])
+
+  return (
+    <>
+      <GroupHeader
+        title={title}
+        count={items.length}
+        open={open}
+        onToggle={() => {
+          setOpen((v) => {
+            writeNavOpen(id, !v)
+            return !v
+          })
+        }}
+      />
+      {open && (
+        <div data-nav-group={id} className="space-y-0.5">
+          {items.map((item) => (
+            <SidebarLink key={item.to} item={item} muted />
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 function Sidebar() {
   const navigate = useNavigate()
-  const [plannedOpen, setPlannedOpen] = useState(false)
+  const [plannedOpen, setPlannedOpen] = useState(() => readNavOpen('planned', false))
   const { configured, profile, signOut } = useAuth()
   const coreNav = useVisibleNav(CORE_NAV)
   const serviceNav = useVisibleNav(SERVICE_NAV)
@@ -245,29 +349,11 @@ function Sidebar() {
         {/*  현장 담당자에게는 이 묶음이 통째로 비어 있습니다(access.ts).
              빈 제목만 남으면 "여기 뭔가 있는데 안 열린다"로 읽힙니다. */}
         {toolNav.length > 0 && (
-          <>
-            <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">
-              운영 도구 · 추가 고도화 예정
-            </p>
-            <div className="space-y-0.5">
-              {toolNav.map((item) => (
-                <SidebarLink key={item.to} item={item} muted />
-              ))}
-            </div>
-          </>
+          <NavGroup id="tools" title="운영 도구 · 추가 고도화 예정" items={toolNav} />
         )}
 
         {/* 관리 — 관리자 전용 (추가 개발 예정 바로 위) */}
-        {adminNav.length > 0 && (
-          <>
-            <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">관리</p>
-            <div className="space-y-0.5">
-              {adminNav.map((item) => (
-                <SidebarLink key={item.to} item={item} muted />
-              ))}
-            </div>
-          </>
-        )}
+        {adminNav.length > 0 && <NavGroup id="admin" title="관리" items={adminNav} />}
 
         {/*  추가 개발 예정 — 접기/펼치기.
              누르면 「활용 계획」으로 가는 목록이라, 그 화면을 못 여는 역할에게는
@@ -275,14 +361,18 @@ function Sidebar() {
              눌러도 「접근 권한이 없는 화면입니다」만 나옵니다. */}
         {showPlanned && (
         <>
-        <button
-          onClick={() => setPlannedOpen((v) => !v)}
-          className="mt-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
-        >
-          <Sparkles size={13} />
-          추가 개발 예정
-          <ChevronDown size={13} className={`ml-auto transition-transform ${plannedOpen ? 'rotate-180' : ''}`} />
-        </button>
+        <GroupHeader
+          title="추가 개발 예정"
+          icon={Sparkles}
+          count={PLANNED.length}
+          open={plannedOpen}
+          onToggle={() => {
+            setPlannedOpen((v) => {
+              writeNavOpen('planned', !v)
+              return !v
+            })
+          }}
+        />
         {plannedOpen && (
           <div className="space-y-0.5 pb-2">
             {PLANNED.map((label) => (
