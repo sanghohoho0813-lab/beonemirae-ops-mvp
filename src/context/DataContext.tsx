@@ -54,6 +54,8 @@ interface DataContextValue {
   addClient: (c: Omit<Client, 'id'>) => Promise<Client | null>
   updateClient: (id: string, patch: Partial<Client>) => void
   removeClient: (id: string) => void
+  /** 거래 종료를 되돌립니다 (그만둔 거래처 → 다시 거래 중) */
+  restoreClient: (id: string) => void
   // 현장 메모 / 특이사항 (병원별)
   addNote: (clientId: string, kind: NoteKind, content: string) => SiteNote
   toggleNote: (id: string) => void
@@ -77,6 +79,8 @@ interface DataContextValue {
   addVehicle: (v: Omit<Vehicle, 'id'>) => Vehicle
   updateVehicle: (id: string, patch: Partial<Vehicle>) => void
   removeVehicle: (id: string) => void
+  /** 사용 중지를 되돌립니다 (사용 중지한 차량 → 다시 사용) */
+  restoreVehicle: (id: string) => void
   // 자재공급
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
@@ -371,10 +375,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData((d) => ({
         ...d,
         clients: d.clients.filter((c) => c.id !== id),
+        retiredClients: [...(d.retiredClients ?? []), ...d.clients.filter((c) => c.id === id)],
         notes: (d.notes ?? []).filter((n) => n.clientId !== id),
       }))
     },
     [live, runLive, data.clients],
+  )
+
+  /**
+   * 거래 종료를 되돌립니다.
+   *
+   *  거래처를 '거래 종료' 하면 목록에서 사라집니다. 되돌리는 길이 앱 안에
+   *  없어서, 실수로 눌렀거나 다시 거래를 시작하면 새로 만드는 수밖에
+   *  없었습니다. 새로 만들면 지난 수거·미수금이 이어지지 않고 갈립니다.
+   */
+  const restoreClient = useCallback(
+    (id: string) => {
+      const before = (data.retiredClients ?? []).find((c) => c.id === id)
+      if (!before) return
+      if (live) {
+        void runLive(async () => {
+          await repo.reactivateClient(id)
+          await repo.writeAudit({
+            action: 'client.reactivate',
+            entity: 'clients',
+            entityId: id,
+            clientId: id,
+            clientName: before.name,
+            summary: `거래 재개 — ${before.name}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        clients: [...d.clients, before],
+        retiredClients: (d.retiredClients ?? []).filter((c) => c.id !== id),
+      }))
+    },
+    [live, runLive, data.retiredClients],
   )
 
   // ── 현장 메모 / 특이사항 ────────────────────────────────────────────────
@@ -1040,6 +1079,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, data.vehicles],
   )
 
+  /**
+   * 사용 중지한 차량을 다시 씁니다.
+   *
+   *  「사용 중지」는 되돌릴 수 있어야 하는 동작인데, 예전에는 되돌릴 길이
+   *  앱 안에 아예 없었습니다. 목록에서 사라지면 끝이라, 차량 이름을 잘못
+   *  적고 지운 경우 SQL 을 직접 쓰는 수밖에 없었습니다.
+   */
+  const restoreVehicle = useCallback(
+    (id: string) => {
+      const before = (data.retiredVehicles ?? []).find((v) => v.id === id)
+      if (!before) return
+      if (live) {
+        void runLive(async () => {
+          await repo.reactivateVehicle(id)
+          await repo.writeAudit({
+            action: 'vehicle.reactivate',
+            entity: 'vehicles',
+            entityId: id,
+            summary: `차량 사용 재개 — ${before.name}`,
+          })
+        })
+        return
+      }
+      setData((d) => ({
+        ...d,
+        vehicles: [...d.vehicles, before],
+        retiredVehicles: (d.retiredVehicles ?? []).filter((v) => v.id !== id),
+      }))
+    },
+    [live, runLive, data.retiredVehicles],
+  )
+
   // ── 자재공급 ────────────────────────────────────────────────────────────
   const addMaterial = useCallback(
     (m: Omit<MaterialSupply, 'id'>) => {
@@ -1326,6 +1397,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addClient,
       updateClient,
       removeClient,
+      restoreClient,
       addNote,
       toggleNote,
       removeNote,
@@ -1343,6 +1415,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addVehicle,
       updateVehicle,
       removeVehicle,
+      restoreVehicle,
       addMaterial,
       removeMaterial,
       receiveStock,
@@ -1375,6 +1448,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addClient,
       updateClient,
       removeClient,
+      restoreClient,
       addNote,
       toggleNote,
       removeNote,
@@ -1392,6 +1466,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addVehicle,
       updateVehicle,
       removeVehicle,
+      restoreVehicle,
       addMaterial,
       removeMaterial,
       receiveStock,

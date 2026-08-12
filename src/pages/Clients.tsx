@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, ChevronRight, SearchX } from 'lucide-react'
+import { Building2, ChevronRight, RotateCcw, SearchX } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canSeeMoney } from '../lib/access'
@@ -35,7 +35,7 @@ function matchFilter(c: Client, f: Filter): boolean {
 }
 
 export function Clients() {
-  const { data, addClient, clientSet, setClientSet, mode } = useData()
+  const { data, addClient, restoreClient, clientSet, setClientSet, mode } = useData()
   const { configured, role } = useAuth()
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const showMoney = !configured || canSeeMoney(role)
@@ -58,6 +58,9 @@ export function Clients() {
       return true
     })
   }, [data.clients, filter, query])
+
+  //  거래를 종료한 곳 — 목록에는 없지만 되살릴 수 있어야 합니다.
+  const retired = data.retiredClients ?? []
 
   const realCount = data.clients.filter((c) => !c.isDemoGenerated).length
   const demoCount = data.clients.length - realCount
@@ -197,6 +200,47 @@ export function Clients() {
             )
           })}
         </ul>
+      )}
+
+      {/*  거래 종료한 거래처 — 되돌리는 길.
+           「거래 종료」는 목록에서 사라지기만 할 뿐 기록은 남습니다. 그런데
+           되돌리는 길이 앱 안에 없어서, 실수로 눌렀거나 다시 거래를 시작하면
+           새로 만드는 수밖에 없었습니다. 새로 만들면 지난 수거·미수금이
+           이어지지 않고 둘로 갈립니다.
+
+           거래처를 다시 살리는 것은 정산에 바로 영향을 주므로, 거래처를
+           추가할 수 있는 분(사무실·관리자)에게만 보여 줍니다. */}
+      {canAddClient && retired.length > 0 && (
+        <details data-retired-clients className="mt-4 rounded-2xl bg-navy-50/60 px-4 py-3">
+          <summary className="t-body cursor-pointer break-keep font-bold text-navy-600">
+            거래 종료한 거래처 {retired.length}곳
+          </summary>
+          <p className="t-muted mt-1.5 break-keep">
+            목록·오늘 일정·정산에서 빠져 있습니다. 다시 거래를 시작하면 「거래 재개」를 눌러 주세요 — 지난
+            수거·미수금 기록이 그대로 이어집니다.
+          </p>
+          <div className="mt-2.5 space-y-2">
+            {retired.map((c) => (
+              <div key={c.id} data-retired-client={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white px-4 py-3">
+                <div className="min-w-0 flex-1 basis-[9rem]">
+                  <p className="t-body break-keep font-bold text-navy-500">{c.name}</p>
+                  <p className="t-muted break-keep">
+                    {c.type}
+                    {c.address ? ` · ${c.address}` : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`'${c.name}' 을(를) 다시 거래 중으로 되돌릴까요?`)) restoreClient(c.id)
+                  }}
+                  className="btn-ghost shrink-0"
+                >
+                  <RotateCcw size={16} strokeWidth={2.4} /> 거래 재개
+                </button>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* 추가 폼 모달 */}

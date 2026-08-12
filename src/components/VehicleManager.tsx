@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Truck } from 'lucide-react'
+import { Plus, RotateCcw, Trash2, Truck } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import type { Vehicle, WasteType } from '../types'
 import { Modal } from './Modal'
@@ -22,7 +22,8 @@ const EMPTY: Omit<Vehicle, 'id'> = {
 }
 
 export function VehicleManager() {
-  const { data, addVehicle, updateVehicle, removeVehicle } = useData()
+  const { data, addVehicle, updateVehicle, removeVehicle, restoreVehicle } = useData()
+  const retired = data.retiredVehicles ?? []
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState<Omit<Vehicle, 'id'>>(EMPTY)
@@ -80,10 +81,18 @@ export function VehicleManager() {
             </button>
             <button
               onClick={() => {
-                if (window.confirm(`${v.name} 차량을 사용 중지할까요? 과거 수거 이력은 그대로 남습니다.`))
+                //  되돌릴 수 있다는 사실을 여기서 알려 줍니다. 예전에는
+                //  되돌리는 길이 아예 없어서, 이름을 잘못 적고 지우면
+                //  SQL 을 직접 쓰는 수밖에 없었습니다.
+                if (
+                  window.confirm(
+                    `${v.name} 차량을 사용 중지할까요?\n` +
+                      '과거 수거 이력은 그대로 남고, 아래 「사용 중지한 차량」에서 다시 되돌릴 수 있습니다.',
+                  )
+                )
                   removeVehicle(v.id)
               }}
-              title="사용 중지 (이력은 유지)"
+              title="사용 중지 (이력은 유지 · 되돌릴 수 있음)"
               className="shrink-0 rounded-2xl bg-rose-50 p-3 text-rose-500 transition hover:bg-rose-100"
             >
               <Trash2 size={18} strokeWidth={2.2} />
@@ -95,6 +104,37 @@ export function VehicleManager() {
       <button onClick={startAdd} className="btn-primary w-full">
         <Plus size={19} strokeWidth={2.6} /> 차량 추가
       </button>
+
+      {/*  사용 중지한 차량 — 되돌리는 길. 평소에는 접어 둡니다. */}
+      {retired.length > 0 && (
+        <details data-retired-vehicles className="rounded-2xl bg-navy-50/60 px-4 py-3">
+          <summary className="t-body cursor-pointer break-keep font-bold text-navy-600">
+            사용 중지한 차량 {retired.length}대
+          </summary>
+          <p className="t-muted mt-1.5 break-keep">
+            지금은 배차되지 않습니다. 다시 운행하면 「다시 사용」을 눌러 주세요.
+          </p>
+          <div className="mt-2.5 space-y-2">
+            {retired.map((v) => (
+              <div key={v.id} data-retired-vehicle={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white px-4 py-3">
+                <div className="min-w-0 flex-1 basis-[9rem]">
+                  <p className="t-body break-keep font-bold text-navy-500">{v.name}</p>
+                  <p className="t-muted break-keep">
+                    {v.wasteType} · {v.tonnage}톤{v.driver ? ` · ${v.driver}` : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => restoreVehicle(v.id)}
+                  className="btn-ghost shrink-0"
+                  title="다시 배차할 수 있게 되돌립니다"
+                >
+                  <RotateCcw size={16} strokeWidth={2.4} /> 다시 사용
+                </button>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       <Modal
         open={open}

@@ -263,9 +263,10 @@ export async function loadAppData(): Promise<AppData> {
     // 그만둔 거래처까지 함께 읽습니다. 목록에는 활성만 넣고, 비활성은
     // 청구·수거 기록의 이름을 되찾는 데만 씁니다(아래 retiredClients).
     withRetry(async () => pageAll((f, t) => sb.from('clients').select('*').order('id').range(f, t))),
-    withRetry(async () =>
-      pageAll((f, t) => sb.from('vehicles').select('*').eq('active', true).order('id').range(f, t)),
-    ),
+    //  사용 중지한 차량도 함께 읽습니다. 예전에는 여기서 active=true 로 걸러
+    //  버려서, 실수로 「사용 중지」를 누르면 앱 어디에서도 다시 꺼낼 수
+    //  없었습니다(SQL 을 직접 쓰는 수밖에). 아래에서 갈라 담습니다.
+    withRetry(async () => pageAll((f, t) => sb.from('vehicles').select('*').order('id').range(f, t))),
     withRetry(async () => pageAll((f, t) => sb.from('schedules').select('*').order('id').range(f, t))),
     withRetry(async () => pageAll((f, t) => sb.from('materials').select('*').order('id').range(f, t))),
     withRetry(async () =>
@@ -317,7 +318,8 @@ export async function loadAppData(): Promise<AppData> {
   return {
     clients: clients.filter((c) => c.active).map(toClient),
     retiredClients: clients.filter((c) => !c.active).map(toClient),
-    vehicles: vehicles.map(toVehicle),
+    vehicles: vehicles.filter((v) => v.active).map(toVehicle),
+    retiredVehicles: vehicles.filter((v) => !v.active).map(toVehicle),
     schedules: schedules.map(toSchedule),
     materials: materials.map(toMaterial),
     payments: payments.map(toPayment),
@@ -391,6 +393,12 @@ export async function deactivateClient(id: string): Promise<void> {
   unwrap(await sb.from('clients').update({ active: false }).eq('id', id).select())
 }
 
+/** 거래 종료를 되돌립니다 — 잘못 누른 것을 SQL 없이 되살릴 수 있어야 합니다. */
+export async function reactivateClient(id: string): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('clients').update({ active: true }).eq('id', id).select())
+}
+
 // ── 차량 ─────────────────────────────────────────────────────────────────────
 // 차량이 한 대도 없으면 수거 완료 입력 자체가 불가능하므로(배차 차량 필수),
 // 실사용 전환 시 반드시 앱에서 등록할 수 있어야 합니다.
@@ -418,6 +426,12 @@ export async function updateVehicle(id: string, patch: Partial<Vehicle>): Promis
 export async function deactivateVehicle(id: string): Promise<void> {
   const sb = need()
   unwrap(await sb.from('vehicles').update({ active: false }).eq('id', id).select())
+}
+
+/** 사용 중지를 되돌립니다 — 실수로 눌러도 앱 안에서 되살릴 수 있어야 합니다. */
+export async function reactivateVehicle(id: string): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('vehicles').update({ active: true }).eq('id', id).select())
 }
 
 // ── 수거일정 ─────────────────────────────────────────────────────────────────
