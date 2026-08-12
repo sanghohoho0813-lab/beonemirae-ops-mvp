@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Lightbulb, PlayCircle } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { useTour } from '../context/TourContext'
+import { useAuth } from '../context/AuthContext'
+import { canAccess } from '../lib/access'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 도움말 (폰 전용)
@@ -22,6 +24,12 @@ import { useTour } from '../context/TourContext'
 export function HelpSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { start } = useTour()
   const navigate = useNavigate()
+  const { configured, role } = useAuth()
+  //  「만든 이유」는 회사 이야기라 현장 담당자에게는 내립니다. 그러면 이 시트에
+  //  남는 것은 「사용 방법」 하나뿐이라, 두 갈래를 구분해 주던 아래 설명도
+  //  같이 뺍니다 — 하나만 있는데 "둘은 다른 내용입니다" 는 읽는 사람을
+  //  헷갈리게 합니다.
+  const showWhy = !configured || canAccess(role, '/why')
 
   return (
     <BottomSheet open={open} title="도움말" onClose={onClose}>
@@ -47,6 +55,7 @@ export function HelpSheet({ open, onClose }: { open: boolean; onClose: () => voi
           <ChevronRight size={20} className="mt-2 shrink-0 text-navy-300" />
         </button>
 
+        {showWhy && (
         <button
           data-tour-why
           onClick={() => {
@@ -66,10 +75,13 @@ export function HelpSheet({ open, onClose }: { open: boolean; onClose: () => voi
           </span>
           <ChevronRight size={20} className="mt-2 shrink-0 text-navy-300" />
         </button>
+        )}
 
-        <p className="t-muted break-keep px-1">
-          「사용 방법」은 어떻게 쓰는가, 「만든 이유」는 왜 만들었는가입니다. 둘은 다른 내용입니다.
-        </p>
+        {showWhy && (
+          <p className="t-muted break-keep px-1">
+            「사용 방법」은 어떻게 쓰는가, 「만든 이유」는 왜 만들었는가입니다. 둘은 다른 내용입니다.
+          </p>
+        )}
       </div>
     </BottomSheet>
   )

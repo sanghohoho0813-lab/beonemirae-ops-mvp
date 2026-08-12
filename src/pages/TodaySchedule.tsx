@@ -200,13 +200,19 @@ export function TodaySchedule() {
             return (
               <StaggerItem key={s.id} className="card overflow-hidden">
                 {/* 폰 — 한 줄 요약. 상세와 조작은 위 「다음 방문」 카드와 상세 화면에서 합니다 */}
+                {/*  폰에서 줄을 훑을 때 「끝난 곳 / 아직 갈 곳」이 한눈에 갈리도록
+                     왼쪽에 색 띠를 둡니다. 완료는 청록(accent), 남은 곳은 파랑 —
+                     완료 뱃지까지 같은 청록으로 맞춰 초록이 여러 가지로 갈리지
+                     않게 했습니다. 시간도 같은 색 옅은 칩에 넣어 먼저 눈에 닿게 합니다. */}
                 <button
                   onClick={() => (done ? openEdit(s) : navigate(`/collection?schedule=${s.id}`))}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition active:bg-navy-50 lg:hidden"
+                  className={`flex w-full items-center gap-3 border-l-[5px] py-3.5 pl-3 pr-4 text-left transition active:bg-navy-50 lg:hidden ${
+                    done ? 'border-accent-400 bg-accent-50/30' : 'border-teal-500'
+                  }`}
                 >
                   <span
-                    className={`w-[3.6rem] shrink-0 tabular-nums text-[1.15rem] font-extrabold ${
-                      done ? 'text-navy-300' : 'text-navy-900'
+                    className={`w-[3.6rem] shrink-0 rounded-lg py-1 text-center tabular-nums text-[1.15rem] font-extrabold ${
+                      done ? 'bg-accent-50 text-accent-700' : 'bg-teal-50 text-teal-700'
                     }`}
                   >
                     {s.scheduledTime}
@@ -225,7 +231,7 @@ export function TodaySchedule() {
                     </span>
                   </span>
                   {done ? (
-                    <span className="pill shrink-0 bg-emerald-50 text-emerald-700">완료</span>
+                    <span className="pill shrink-0 bg-accent-100 text-accent-800">완료</span>
                   ) : urgent ? (
                     <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급</span>
                   ) : (

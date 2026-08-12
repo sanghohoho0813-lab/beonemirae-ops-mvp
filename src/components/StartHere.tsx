@@ -14,6 +14,11 @@ import { useAuth } from '../context/AuthContext'
 export function StartHere({ data }: { data: AppData }) {
   const { mode, role } = useAuth()
   if (mode !== 'live') return null
+  //  이 체크리스트는 회사를 처음 세팅하는 사람을 위한 것입니다 — 차량 등록,
+  //  거래처 등록, 기준값 입력. 현장 담당자는 그중 무엇도 할 수 없습니다
+  //  (거래처 등록은 서버가 막고, 나머지는 관리자 전용입니다). 그런데 폰에서는
+  //  이 카드가 첫 화면의 절반을 차지해, 정작 오늘 갈 곳이 아래로 밀렸습니다.
+  if (role === 'field') return null
 
   const hasClients = data.clients.length > 0
   const hasVehicles = data.vehicles.length > 0

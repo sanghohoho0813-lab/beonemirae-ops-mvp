@@ -29,33 +29,55 @@ export function TourBanner({ tourId }: { tourId?: TourId }) {
   const [hidden, setHidden] = useState(() => !shouldShowIntro(tour.id))
   if (hidden) return null
 
+  //  폰에서 글자가 세로로 늘어지던 자리입니다.
+  //
+  //  아이콘과 본문이 한 줄에 나란히 놓여 있어서, 390px 화면에서는 본문이
+  //  240px 남짓한 좁은 칸에 갇혔습니다. 그 폭에 1.15rem 글자를 넣으면 한 줄에
+  //  열 자 남짓이라, 두 문장이 다섯 줄로 늘어나 카드가 화면 절반을 차지했고
+  //  정작 「오늘 일정」은 스크롤해야 나왔습니다.
+  //
+  //  아이콘 옆에는 제목만 두고, 본문은 카드 폭을 그대로 쓰게 내립니다.
+  //  넓은 화면(sm 이상)에서는 원래대로 한 줄에 나란히 놓입니다.
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3.5 px-5 py-5 sm:px-6">
-        <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-          <PlayCircle size={26} strokeWidth={2.2} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="t-card break-keep text-navy-900">비원미래 AX 운영시스템에 오신 것을 환영합니다</p>
-          <p className="t-body mt-1.5 break-keep text-navy-400">
-            현장에서 한 번 입력한 수거·자재 정보를 사무실 업무, 거래처 관리, 월 정산, 병원 서비스까지
-            연결하기 위해 만든 시스템입니다.
-          </p>
-          <p className="t-muted mt-1.5 break-keep">{tour.minutes} · {tour.intro}</p>
-        </div>
-        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
-          <button
-            onClick={() => {
-              markTourSeen(tour.id)
-              setHidden(true)
-            }}
-            className="btn-ghost order-2 sm:order-1"
-          >
-            바로 시작하기
-          </button>
-          <button data-tour-start onClick={() => start(tour)} className="btn-primary order-1 sm:order-2">
-            <PlayCircle size={19} strokeWidth={2.4} /> 사용 방법 보기
-          </button>
+      <div className="px-5 py-5 sm:px-6">
+        <div className="sm:flex sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-3.5">
+          <div className="flex items-center gap-3.5 sm:contents">
+            <span className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+              <PlayCircle size={26} strokeWidth={2.2} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="t-card break-keep text-navy-900">비원미래 AX 운영시스템</p>
+              <p className="t-body mt-1.5 hidden break-keep text-navy-400 sm:block">
+                현장에서 한 번 입력한 수거·자재 정보를 사무실 업무, 거래처 관리, 월 정산, 병원 서비스까지
+                연결하기 위해 만든 시스템입니다.
+              </p>
+              <p className="t-muted mt-1.5 hidden break-keep sm:block">{tour.minutes} · {tour.intro}</p>
+            </div>
+          </div>
+
+          {/* 폰 — 본문은 카드 폭 전체를 씁니다 */}
+          <div className="sm:hidden">
+            <p className="t-body mt-3 break-keep text-navy-400">
+              현장에서 한 번 입력한 수거·자재 정보가 사무실 업무·거래처 관리·월 정산까지 자동으로 연결됩니다.
+            </p>
+            <p className="t-muted mt-1.5 break-keep">{tour.minutes} · {tour.intro}</p>
+          </div>
+
+          <div className="mt-4 flex w-full shrink-0 flex-col gap-2 sm:mt-0 sm:w-auto sm:flex-row">
+            <button
+              onClick={() => {
+                markTourSeen(tour.id)
+                setHidden(true)
+              }}
+              className="btn-ghost order-2 sm:order-1"
+            >
+              바로 시작하기
+            </button>
+            <button data-tour-start onClick={() => start(tour)} className="btn-primary order-1 sm:order-2">
+              <PlayCircle size={19} strokeWidth={2.4} /> 사용 방법 보기
+            </button>
+          </div>
         </div>
       </div>
       {/* 오늘만 접어 두기 — 내일 다시 뜹니다 */}

@@ -202,6 +202,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
     else setData(isSupabaseConfigured ? EMPTY_APP_DATA : loadData())
   }, [live, reload])
 
+  // ── 남의 입력을 따라잡기 ────────────────────────────────────────────────
+  //
+  //  여기까지의 동작은 이랬습니다.
+  //
+  //    내가 저장한다        → runLive 가 곧바로 다시 읽어옴 → 내 화면은 최신
+  //    남이 저장한다        → 아무 일도 일어나지 않음      → 내 화면은 그대로
+  //
+  //  현장에서 수거를 입력해도, 사무실에서 화면을 켜 둔 사람은 브라우저를
+  //  새로고침하기 전까지 그 건을 보지 못했습니다. 로그인할 때 한 번 읽고
+  //  끝이었기 때문입니다. "실시간으로 넘어온다"고 알고 계시면 곤란한
+  //  동작입니다 — 사무실은 오지 않은 수거로 알고 병원에 전화하게 됩니다.
+  //
+  //  두 가지 계기로 다시 읽어옵니다.
+  //
+  //    화면으로 돌아올 때  다른 탭·앱에 갔다 오면 그 즉시
+  //    켜 두는 동안        45초마다 (보이는 상태일 때만)
+  //
+  //  Supabase Realtime 을 쓰면 더 빠르지만 대시보드에서 테이블마다 복제를
+  //  켜야 하고, 꺼져 있으면 조용히 아무것도 오지 않습니다. 이 방식은 서버
+  //  설정 없이 지금 그대로 동작합니다.
+  const savingRef = useRef(false)
+  savingRef.current = saving
+
+  /** 배경 갱신 — 화면을 깜빡이지 않도록 loading 을 건드리지 않습니다 */
+  const refreshQuiet = useCallback(async () => {
+    if (mode !== 'live') return
+    //  저장이 진행 중이면 건너뜁니다. 저장 직후 runLive 가 어차피 다시
+    //  읽어오고, 여기서 끼어들면 방금 넣은 값이 잠깐 사라졌다 돌아옵니다.
+    if (savingRef.current) return
+    try {
+      setData(await repo.loadAppData())
+    } catch {
+      //  배경 갱신 실패는 조용히 넘깁니다. 다음 차례에 다시 시도합니다.
+      //  여기서 오류 배너를 띄우면, 차를 타고 이동하며 신호가 끊길 때마다
+      //  현장 화면에 빨간 띠가 떴다 사라집니다.
+    }
+  }, [mode])
+
+  useEffect(() => {
+    if (!live) return
+    const wake = () => {
+      if (document.visibilityState === 'visible') void refreshQuiet()
+    }
+    const id = window.setInterval(wake, 45_000)
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('focus', wake)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('focus', wake)
+    }
+  }, [live, refreshQuiet])
+
   /**
    * 서버 반영 후 최신 상태를 다시 읽어옵니다.
    * 실패하면 화면 상태를 바꾸지 않고 오류만 노출해, 사용자가 입력한 내용이

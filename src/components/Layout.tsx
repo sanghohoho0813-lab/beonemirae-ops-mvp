@@ -505,6 +505,9 @@ function BottomNav({
 
 export function Layout() {
   const { pathname } = useLocation()
+  const { configured, role } = useAuth()
+  //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
+  const showWhy = !configured || canAccess(role, '/why')
   const [moreOpen, setMoreOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   // PC 화면으로 보기 — 잠깐 확인하는 용도라 저장하지 않습니다.
@@ -529,7 +532,10 @@ export function Layout() {
                 사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
                 안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
             <div className="mb-3 hidden items-center justify-end gap-2 lg:flex">
-              <TourWhyButton className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+              {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
+              {showWhy && (
+                <TourWhyButton className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+              )}
               <TourButton
                 className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
                 label="사용 방법"

@@ -10,7 +10,7 @@ import { IconChip } from './ui'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { Tappable } from './motion'
 import { useAuth } from '../context/AuthContext'
-import { canAccess } from '../lib/access'
+import { canAccess, canSeeShowcase } from '../lib/access'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 콘텐츠 — 디바이스별 분리
@@ -56,6 +56,12 @@ export function MoreMenu({
   //  이미 숨기고 있었는데 폰의 더보기에는 그대로 남아 있어서, 눌렀다가
   //  튕기는 메뉴가 보였습니다. 같은 규칙(canAccess)으로 맞춥니다.
   const shortcuts = MOBILE_SHORTCUTS.filter((s) => canAccess(role, s.to))
+  //  회사 이야기·시연 자료 묶음. PC 사이드바에서는 이미 내렸는데 폰의
+  //  「더보기」에는 그대로 남아 있었습니다 — 같은 규칙으로 맞춥니다.
+  const showcase = canSeeShowcase(role)
+  const showWhy = canAccess(role, '/why')
+  const showDemo = canAccess(role, '/demo')
+  const showRoadmap = canAccess(role, '/roadmap')
   function go(to: string) {
     onNavigate?.()
     navigate(to)
@@ -80,15 +86,17 @@ export function MoreMenu({
             </span>
             <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
           </TourButton>
-          <TourWhyButton className="flex w-full cursor-pointer items-start gap-3 p-4 text-left" label="">
-            <span className="min-w-0 flex-1">
-              <span className="block break-keep font-bold text-navy-900">이 시스템을 만든 이유</span>
-              <span className="mt-0.5 block break-keep text-[0.98rem] text-navy-400">
-                AX 전환 · 정책자금 · 사업고도화 · 향후 개발 방향
+          {showWhy && (
+            <TourWhyButton className="flex w-full cursor-pointer items-start gap-3 p-4 text-left" label="">
+              <span className="min-w-0 flex-1">
+                <span className="block break-keep font-bold text-navy-900">이 시스템을 만든 이유</span>
+                <span className="mt-0.5 block break-keep text-[0.98rem] text-navy-400">
+                  AX 전환 · 정책자금 · 사업고도화 · 향후 개발 방향
+                </span>
               </span>
-            </span>
-            <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
-          </TourWhyButton>
+              <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
+            </TourWhyButton>
+          )}
         </div>
       </section>
 
@@ -108,7 +116,8 @@ export function MoreMenu({
         </section>
       )}
 
-      {/* 시연용 핵심 요약 */}
+      {/* 시연용 핵심 요약 — 발표용 자료라 현장 담당자에게는 내립니다 */}
+      {showDemo && (
       <Tappable
         as="div"
         onClick={() => go('/demo')}
@@ -123,8 +132,10 @@ export function MoreMenu({
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
       </Tappable>
+      )}
 
       {/* 활용 계획·업무흐름도 — 대표·실사용 한눈에 보기 */}
+      {showRoadmap && (
       <Tappable
         as="div"
         onClick={() => go('/roadmap')}
@@ -139,6 +150,7 @@ export function MoreMenu({
         </div>
         <ChevronRight size={18} className="ml-auto shrink-0 text-white/70" />
       </Tappable>
+      )}
 
       {/* 바로가기 — 모바일: 배차·경로/자재/미수금/통계, 데스크톱: 모바일 미리보기 */}
       <section>
@@ -189,7 +201,9 @@ export function MoreMenu({
         </div>
       </section>
 
-      {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분 */}
+      {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분.
+          아직 없는 기능 목록이라 현장 담당자의 폰에서는 자리만 차지합니다. */}
+      {showRoadmap && (
       <section>
         <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">추가 개발 예정</h3>
         <div className="card p-4">
@@ -211,6 +225,7 @@ export function MoreMenu({
           </p>
         </div>
       </section>
+      )}
 
       {/* 설정 — 글자 크기 · 데이터 백업 · 시연 데이터 관리 */}
       {/*
@@ -254,13 +269,15 @@ export function MoreMenu({
         )}
       </section>
 
-      {/* 기술개발 현황 */}
-      <section>
-        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">기술개발 현황</h3>
-        <RnDCard />
-      </section>
+      {/* 기술개발 현황 — 회사 소개 자료입니다 (현장 담당자 제외) */}
+      {showcase && (
+        <section>
+          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">기술개발 현황</h3>
+          <RnDCard />
+        </section>
+      )}
 
-      <InfoBanner />
+      {showcase && <InfoBanner />}
 
       {/* 계정 — 폰에는 사이드바가 없어 로그아웃할 곳이 여기뿐입니다.
           예전에는 로그아웃 버튼이 PC 전용 사이드바(hidden lg:flex)에만
@@ -287,7 +304,11 @@ export function MoreMenu({
         </section>
       )}
 
-      <p className="pb-1 text-center text-[0.98rem] text-navy-300">㈜비원미래 · beonemirae ops · 시연용 MVP</p>
+      {/*  「시연용 MVP」는 실제로 운영에 쓰기 시작한 지금은 맞지 않는 문구입니다.
+           현장 담당자에게는 자기가 넣은 기록이 연습용처럼 읽힙니다. */}
+      <p className="pb-1 text-center text-[0.98rem] text-navy-300">
+        ㈜비원미래 · beonemirae ops{showcase ? ' · 시연용 MVP' : ''}
+      </p>
     </div>
   )
 }

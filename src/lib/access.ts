@@ -48,6 +48,15 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/materials', roles: ['admin', 'office'] },
   { prefix: '/history', roles: ['admin', 'office'] },
   { prefix: '/roadmap', roles: ['admin', 'office'] },
+  //  회사 이야기 · 시연 자료 — 업무 화면이 아닙니다.
+  //
+  //   /why             이 시스템을 만든 이유 (AX 전환·정책자금·사업고도화)
+  //   /mobile-preview  시연용 모바일 미리보기
+  //
+  //  현장 담당자가 폰으로 여는 것은 오늘 갈 곳과 입력 화면입니다. 발표용
+  //  자료가 같은 메뉴에 섞여 있으면 업무 화면을 찾기가 더 어려워집니다.
+  { prefix: '/why', roles: ['admin', 'office'] },
+  { prefix: '/mobile-preview', roles: ['admin', 'office'] },
   // 관리자 전용
   { prefix: '/settings', roles: ['admin'] },
   { prefix: '/audit', roles: ['admin'] },
@@ -110,5 +119,17 @@ export function canSeeDashboard(role: UserRole | null): boolean {
  *  나오는 값이라 RLS 로는 막을 수 없고, 여기서 막아야 합니다.
  */
 export function canSeeMoney(role: UserRole | null): boolean {
+  return role === 'admin' || role === 'office'
+}
+
+/**
+ * 회사 이야기·시연 자료를 볼 수 있는지 — 만든 이유 · 시연용 핵심 요약 ·
+ * 활용 계획 · 추가 개발 예정 목록 · 기술개발 현황 · 「시연용 MVP」 안내.
+ *
+ *  현장 담당자의 폰에서는 전부 내립니다. 업무에 쓰는 화면이 아니고, 폰은
+ *  자리가 좁아 이런 항목이 섞여 있으면 정작 오늘 할 일을 찾기 어렵습니다.
+ *  PC 사이드바에서는 이미 내렸는데 폰의 「더보기」에는 그대로 남아 있었습니다.
+ */
+export function canSeeShowcase(role: UserRole | null): boolean {
   return role === 'admin' || role === 'office'
 }
