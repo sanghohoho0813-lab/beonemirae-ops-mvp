@@ -35,6 +35,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/stats', roles: ['admin', 'office'] },
   { prefix: '/reports', roles: ['admin', 'office'] },
   { prefix: '/dispatch', roles: ['admin', 'office'] },
+  //  일정 편성은 「누가 어디를 도는가」를 정하는 자리입니다 — 사무실 업무입니다.
+  { prefix: '/plan', roles: ['admin', 'office'] },
   { prefix: '/requests', roles: ['admin', 'office', 'field'] },
   //  운영 도구 — 현장 담당자의 하루에 들어가지 않는 화면입니다.
   //

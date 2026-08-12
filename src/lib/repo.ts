@@ -1084,6 +1084,40 @@ export async function deletePaymentReceipt(id: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+// ── 수거 일정 자동 편성 (0028) ──────────────────────────────────────────────
+
+export interface PlanBatchResult {
+  batch: string
+  inserted: number
+  skipped: number
+  clients: number
+  from: string | null
+  to: string | null
+}
+
+/**
+ * 화면에서 확인한 예정 일정 목록을 저장합니다.
+ *
+ *  무슨 요일에 갈지 고르는 판단은 화면(lib/schedulePlan.ts)이 하고, 서버는
+ *  **확인된 목록만** 받습니다. 중복·과거 날짜는 서버가 다시 막습니다.
+ */
+export async function createPlannedSchedules(
+  rows: { clientId: string; date: string; wasteType: string; expectedAmount: number; basis: string }[],
+): Promise<PlanBatchResult> {
+  const sb = need()
+  const { data, error } = await sb.rpc('create_planned_schedules', { p_rows: rows })
+  if (error) throw new Error(error.message)
+  return data as PlanBatchResult
+}
+
+/** 편성 되돌리기 — 아직 손대지 않은 예정만 지웁니다 */
+export async function undoScheduleBatch(batch: string): Promise<{ deleted: number; kept: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('undo_schedule_batch', { p_batch: batch })
+  if (error) throw new Error(error.message)
+  return data as { deleted: number; kept: number }
+}
+
 /** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */
 export async function resetUserPassword(id: string, password: string): Promise<void> {
   const sb = need()

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import {
   LayoutGrid,
   CalendarClock,
+  CalendarPlus,
   Building2,
   PlusCircle,
   MoreHorizontal,
@@ -81,6 +82,7 @@ const SERVICE_NAV: NavItem[] = [
 
 /** 운영 도구 — 핵심 흐름을 보조하는 실사용 화면 */
 const TOOL_NAV: NavItem[] = [
+  { to: '/plan', label: '일정 편성', icon: CalendarPlus, desc: '', tone: 'navy' },
   { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '', tone: 'navy' },
   { to: '/materials', label: '자재 관리', icon: Boxes, desc: '', tone: 'navy' },
   { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '', tone: 'navy' },
@@ -131,7 +133,7 @@ const BOTTOM_NAV_FIELD: NavItem[] = [
 ]
 
 const MORE_PATHS = [
-  '/more', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
+  '/more', '/plan', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
   '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
   '/audit', '/requests',
 ]

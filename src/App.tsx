@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { TodaySchedule } from './pages/TodaySchedule'
 import { Dispatch } from './pages/Dispatch'
+import { SchedulePlan } from './pages/SchedulePlan'
 import { Clients } from './pages/Clients'
 import { ClientDetail } from './pages/ClientDetail'
 import { CollectionInput } from './pages/CollectionInput'
@@ -92,6 +93,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="today" element={<TodaySchedule />} />
           <Route path="dispatch" element={<Dispatch />} />
+          <Route path="plan" element={<SchedulePlan />} />
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
           <Route path="history" element={<CollectionHistory />} />

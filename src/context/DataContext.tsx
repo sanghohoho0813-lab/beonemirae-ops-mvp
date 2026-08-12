@@ -104,6 +104,14 @@ interface DataContextValue {
   }) => Promise<{ ok: boolean; error: string | null }>
   /** 잘못 넣은 입금 취소 */
   removeReceipt: (id: string) => Promise<{ ok: boolean; error: string | null }>
+  /** 확인된 예정 일정을 한 번에 저장 (0028) */
+  planSchedules: (
+    rows: { clientId: string; date: string; wasteType: string; expectedAmount: number; basis: string }[],
+  ) => Promise<{ ok: boolean; error: string | null; result: repo.PlanBatchResult | null }>
+  /** 방금 만든 편성 되돌리기 — 손대지 않은 예정만 지웁니다 */
+  undoPlan: (
+    batch: string,
+  ) => Promise<{ ok: boolean; error: string | null; result: { deleted: number; kept: number } | null }>
   // 거래처 조회 헬퍼
   clientById: (id: string) => Client | undefined
   // 데이터 초기화
@@ -1366,6 +1374,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /**
+   * 확인된 예정 일정을 한 번에 저장합니다 (0028).
+   *
+   *  화면에서 목록을 눈으로 확인한 뒤에만 부릅니다. 서버가 중복·과거
+   *  날짜를 다시 막고, 한 트랜잭션이라 중간에 끊기면 한 건도 남지 않습니다.
+   */
+  const planSchedules = useCallback(
+    async (rows: { clientId: string; date: string; wasteType: string; expectedAmount: number; basis: string }[]) => {
+      if (!live) return { ok: false, error: '일정 편성은 실제 운영 모드에서만 됩니다.', result: null }
+      let result: repo.PlanBatchResult | null = null
+      const r = await runLive(async () => {
+        result = await repo.createPlannedSchedules(rows)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null, result }
+    },
+    [live, runLive, reload],
+  )
+
+  const undoPlan = useCallback(
+    async (batch: string) => {
+      if (!live) return { ok: false, error: '일정 편성은 실제 운영 모드에서만 됩니다.', result: null }
+      let result: { deleted: number; kept: number } | null = null
+      const r = await runLive(async () => {
+        result = await repo.undoScheduleBatch(batch)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null, result }
+    },
+    [live, runLive, reload],
+  )
+
   const markPaid = useCallback(
     (id: string) => {
       const paidAt = new Date().toISOString()
@@ -1467,6 +1507,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       markPaid,
       addReceipt,
       removeReceipt,
+      planSchedules,
+      undoPlan,
       clientById,
       reset,
       replaceAll,
@@ -1520,6 +1562,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       markPaid,
       addReceipt,
       removeReceipt,
+      planSchedules,
+      undoPlan,
       clientById,
       reset,
       replaceAll,
