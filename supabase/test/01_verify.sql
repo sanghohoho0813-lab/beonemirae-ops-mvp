@@ -480,7 +480,20 @@ end $$;
 do $$
 declare v_client uuid; v_vehicle uuid; v_failed boolean := false; v_msg text; v_add_ok boolean := true;
 begin
-  select id into v_client from public.clients where active limit 1;
+  --  앞 구간(7-1 등)이 이미 오늘 수거를 저장한 거래처를 다시 고르면
+  --  ① 1회차부터 중복 차단에 걸려 이 블록 전체가 엎어집니다(실측).
+  --  오늘 완료 수거가 없는 거래처를 골라야 ①/②가 뜻대로 동작합니다.
+  select c.id into v_client from public.clients c
+   where c.active and not exists (
+     select 1 from public.schedules s
+      where s.client_id = c.id
+        and s.date = (now() at time zone 'Asia/Seoul')::date
+        and s.status = '완료' and s.waste_type = '의료폐기물')
+   limit 1;
+  if v_client is null then
+    insert into public.clients (name, type, address) values ('[중복검증] 병원', '병원', '')
+    returning id into v_client;
+  end if;
   select id into v_vehicle from public.vehicles where waste_type = '의료폐기물' limit 1;
   perform login_as('field@beonemirae.test');
 

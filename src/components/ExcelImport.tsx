@@ -12,7 +12,7 @@ import {
   type ImportPlan,
   type PlannedRow,
 } from '../lib/excelImport'
-import { settlementFor } from '../lib/billing'
+import { ITEM_BY_KEY, settlementFor, type ItemKey } from '../lib/billing'
 import { importExcelRows } from '../lib/repo'
 import { friendlyError } from '../lib/supabase'
 import { won } from '../lib/format'
@@ -175,6 +175,20 @@ export function ExcelImport() {
               />
               <Line k="단가" v={`${Object.keys(checked.client?.pricing ?? {}).length}개 품목`} />
               <Line k="월별 합계" v={`${checked.monthly.length}개 달`} />
+              {/*  정산 규칙 — 월정액·부가세 별도는 금액이 크게 달라지는 계약이라
+                   숨기지 않고 여기서 바로 보여 줍니다 (오남한양·해올·목동현대웰). */}
+              {(() => {
+                const p = checked.client?.pricing ?? {}
+                const fm = p.medicalMonthly?.sale
+                const fd = p.diaperMonthly?.sale
+                const vt = p.diaperVatPct?.sale
+                const parts = [
+                  fm ? `의료 월정액 ${fm.toLocaleString()}원` : '',
+                  fd ? `지정 월정액 ${fd.toLocaleString()}원` : '',
+                  vt ? `지정 부가세 별도 ${vt}%` : '',
+                ].filter(Boolean)
+                return parts.length ? <Line k="정산 규칙" v={parts.join(' · ')} /> : null
+              })()}
             </dl>
 
             <div className="mt-4">
@@ -361,7 +375,8 @@ function RowTable({ rows }: { rows: PlannedRow[] }) {
                   {r.kind === '수거'
                     ? `${r.wasteType} ${r.kg.toLocaleString()}kg`
                     : Object.entries(r.items)
-                        .map(([k, v]) => `${k} ${v}개`)
+                        //  화면에는 내부 이름(box35)이 아니라 품목 이름(35L 박스)을 보여 줍니다
+                        .map(([k, v]) => `${ITEM_BY_KEY[k as ItemKey]?.label ?? k} ${v}개`)
                         .join(' · ')}
                   <span className="t-muted block text-navy-400">{r.where}</span>
                 </Td>
