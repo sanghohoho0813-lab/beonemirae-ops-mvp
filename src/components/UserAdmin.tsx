@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { KeyRound, Loader2, RefreshCw, UserPlus, X } from 'lucide-react'
+import { Check, Clock, KeyRound, Loader2, RefreshCw, UserPlus, X } from 'lucide-react'
 import { useAuth, ROLE_LABEL, type UserRole } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import {
+  approveUser,
   createUser,
+  isPending,
   loadProfiles,
+  rejectUser,
   resetUserPassword,
   setProfileActive,
   setProfileClient,
@@ -20,8 +23,12 @@ import { friendlyError } from '../lib/supabase'
 //  병원 담당자면 거래처 uuid 를 손으로 복사해 붙여야 했습니다. 대표님이
 //  하실 수 있는 일이 아니었습니다.
 //
-//  여기서 다 됩니다 — 계정 만들기 · 역할 바꾸기 · 사용/중지 · 비밀번호
-//  초기화 · 병원 계정의 소속 거래처 바꾸기.
+//  여기서 다 됩니다 — 가입 신청 승인 · 계정 만들기 · 역할 바꾸기 · 사용/중지 ·
+//  비밀번호 초기화 · 병원 계정의 소속 거래처 바꾸기.
+//
+//  「승인 대기」를 맨 위에 따로 둡니다(0021). 목록에 섞어 두고 '비활성' 표시만
+//  달면, 신청이 들어온 줄 모르고 지나갑니다 — 신청한 사람은 로그인만 하면
+//  되는 줄 알고 기다리고 있습니다. 할 일이 있으면 화면 맨 위에 있어야 합니다.
 //
 //  화면에서 잠그는 것만으로 끝내지 않습니다. 계정을 만드는 힘(service_role)은
 //  브라우저에 두지 않고 서버에 두었고, 서버가 '부른 사람이 관리자인가'를
@@ -62,6 +69,13 @@ export function UserAdmin() {
     [data.clients],
   )
   const activeAdmins = rows.filter((r) => r.role === 'admin' && r.active).length
+
+  //  승인 대기는 먼저 신청한 순서로. 기다린 사람이 위에 옵니다.
+  const pendingRows = useMemo(
+    () => rows.filter(isPending).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    [rows],
+  )
+  const approvedRows = useMemo(() => rows.filter((r) => !isPending(r)), [rows])
 
   const load = useCallback(async () => {
     if (mode !== 'live') return
@@ -130,6 +144,38 @@ export function UserAdmin() {
         </span>
       </div>
 
+      {/* ── 승인 대기 ─────────────────────────────────────────────────────
+          본인이 가입 신청한 계정입니다. 승인하기 전까지는 로그인해도 서버가
+          모든 데이터를 막습니다(0021). 역할은 여기서 정합니다 — 신청자가
+          고른 값은 서버가 아예 읽지 않습니다. */}
+      {pendingRows.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border-2 border-teal-200 bg-teal-50/50">
+          <div className="flex items-center gap-2 border-b border-teal-200 bg-teal-50 px-4 py-3">
+            <Clock size={19} strokeWidth={2.4} className="shrink-0 text-teal-600" />
+            <p className="t-card break-keep text-teal-800">승인 대기 {pendingRows.length}명</p>
+          </div>
+          <div className="divide-y divide-teal-100">
+            {pendingRows.map((r) => (
+              <PendingRow
+                key={r.id}
+                row={r}
+                clients={clients}
+                busy={busy}
+                onApprove={(role, clientId) =>
+                  change(
+                    () => approveUser(r.id, role, clientId),
+                    `${r.name || r.email} 을(를) ${ROLE_LABEL[role]}(으)로 승인했습니다.`,
+                  )
+                }
+                onReject={() =>
+                  change(() => rejectUser(r.id), `${r.name || r.email} 의 가입 신청을 거절했습니다.`)
+                }
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {openForm && (
         <CreateUserForm
           clients={clients}
@@ -145,7 +191,7 @@ export function UserAdmin() {
       {done && <p className="t-body break-keep rounded-2xl bg-emerald-50 px-4 py-3 font-bold text-emerald-700">{done}</p>}
 
       <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50/60">
-        {rows.map((r) => {
+        {approvedRows.map((r) => {
           const self = r.id === profile?.id
           return (
             /*  줄 전체를 집을 수 있는 표시를 답니다. 없으면 검사가 "이메일이
@@ -219,14 +265,120 @@ export function UserAdmin() {
             </div>
           )
         })}
-        {rows.length === 0 && !busy && <p className="t-body bg-white px-4 py-4 text-navy-400">계정이 없습니다.</p>}
+        {approvedRows.length === 0 && !busy && (
+          <p className="t-body bg-white px-4 py-4 text-navy-400">사용 중인 계정이 없습니다.</p>
+        )}
       </div>
 
       <p className="t-muted break-keep">
         비밀번호는 이 시스템에 저장되지 않습니다. 임시 비밀번호는 만든 사람이 직접 전해 주시고, 받은 분은 첫
-        로그인 뒤 「설정 → 비밀번호 변경」에서 바꾸도록 안내해 주세요. 공개 가입은 열려 있지 않아, 여기서 만든
-        계정만 로그인할 수 있습니다.
+        로그인 뒤 「설정 → 비밀번호 변경」에서 바꾸도록 안내해 주세요. 본인이 가입 신청한 계정은 승인하기
+        전까지 로그인해도 아무 정보도 볼 수 없습니다 — 화면에서 가리는 것이 아니라 서버가 막습니다.
       </p>
+    </div>
+  )
+}
+
+/**
+ * 승인 대기 한 줄 — 역할을 정해서 들여보내거나, 거절합니다.
+ *
+ *  기본값은 현장 담당자입니다. 승인은 눌러야 하는 일이고, 잘못 눌렀을 때
+ *  피해가 가장 작은 쪽이 기본값이어야 합니다.
+ */
+function PendingRow({
+  row,
+  clients,
+  busy,
+  onApprove,
+  onReject,
+}: {
+  row: ProfileRow
+  clients: { id: string; name: string }[]
+  busy: boolean
+  onApprove: (role: UserRole, clientId: string | null) => void
+  onReject: () => void
+}) {
+  const [role, setRole] = useState<UserRole>('field')
+  const [clientId, setClientId] = useState('')
+  const missingClient = role === 'client' && !clientId
+
+  const applied = new Date(row.createdAt)
+  const appliedLabel = Number.isNaN(applied.getTime())
+    ? ''
+    : `${applied.getMonth() + 1}월 ${applied.getDate()}일 신청`
+
+  return (
+    <div data-pending-row={row.id} className="bg-white px-4 py-3.5">
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <p className="t-body break-keep font-extrabold text-navy-900">{row.name || row.email}</p>
+        <p className="t-muted break-keep">{row.email}</p>
+        {appliedLabel && <p className="t-muted ml-auto shrink-0 text-navy-400">{appliedLabel}</p>}
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <span className="t-muted shrink-0 font-bold text-navy-500">역할</span>
+        <div className="flex flex-wrap gap-1">
+          {ALL_ROLES.map((r) => (
+            <button
+              key={r}
+              disabled={busy}
+              onClick={() => setRole(r)}
+              className={`rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-40 ${
+                role === r ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500 hover:text-navy-700'
+              }`}
+            >
+              {ROLE_LABEL[r]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {role === 'client' && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-2xl bg-sky-50/70 px-3.5 py-2.5">
+          <span className="t-muted shrink-0 font-bold text-sky-700">소속 병원</span>
+          <select
+            disabled={busy}
+            aria-label={`${row.name || row.email} 소속 병원`}
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            className="min-w-0 flex-1 rounded-xl border border-sky-200 bg-white px-3 py-2 text-[1.02rem] font-bold text-navy-900"
+          >
+            <option value="">병원을 선택하세요</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          disabled={busy || missingClient}
+          title={missingClient ? '소속 병원을 골라 주세요' : ''}
+          onClick={() => onApprove(role, clientId || null)}
+          className="btn-primary disabled:opacity-40"
+        >
+          <Check size={17} strokeWidth={2.6} /> {ROLE_LABEL[role]}(으)로 승인
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => {
+            if (
+              window.confirm(
+                `${row.name || row.email} (${row.email}) 의 가입 신청을 거절합니다.\n\n` +
+                  '계정이 삭제되며, 본인은 필요하면 다시 신청할 수 있습니다. 진행할까요?',
+              )
+            ) {
+              onReject()
+            }
+          }}
+          className="btn-ghost text-rose-600 disabled:opacity-40"
+        >
+          <X size={17} strokeWidth={2.4} /> 거절
+        </button>
+      </div>
     </div>
   )
 }

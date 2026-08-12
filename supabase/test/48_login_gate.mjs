@@ -130,20 +130,35 @@ async function main() {
       }
       check(blocked.length === 0, '공개 주소(회사 홈페이지·로그인)는 그대로 열림', blocked.join(' · '))
 
-      // ── 2. 공개 회원가입이 없는가 ──────────────────────────────────────
-      section(`2. 공개 회원가입 경로가 없는가 (${W})`)
+      // ── 2. 가입 신청 화면 ──────────────────────────────────────────────
+      //
+      //  0021 전에는 "가입 경로가 없는가" 를 봤습니다. 이제는 있습니다.
+      //  대신 그 화면이 두 가지를 지키는지 봅니다.
+      //
+      //   · 역할을 신청자가 고를 수 없다 — 고르게 하면 서버가 읽지 않는데도
+      //     "고른 대로 될 것" 이라는 기대가 생깁니다. 애초에 칸이 없어야 합니다.
+      //   · 승인이 필요하다고 분명히 말한다 — 이 말이 없으면, 신청한 사람은
+      //     로그인만 하면 되는 줄 알고 기다리다가 고장 났다고 연락합니다.
+      section(`2. 가입 신청 화면 (${W})`)
       {
         const { ctx, page } = await open(wide)
         await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
         await page.waitForTimeout(800)
-        const body = await page.locator('body').innerText()
+        const loginBody = await page.locator('body').innerText()
         const hrefs = await page.locator('a').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''))
-        const signupWord = /회원가입|가입하기|계정 만들기|Sign ?up|Register|무료 체험/i.test(body)
-        const signupLink = hrefs.some((h) => /signup|sign-up|register|join/i.test(h))
-        check(!signupWord, '화면에 가입 문구가 없음', signupWord ? body.match(/[^\n]*가입[^\n]*/)?.[0] ?? '' : '')
-        check(!signupLink, '가입 링크가 없음', signupLink ? hrefs.filter((h) => /signup|register|join/i.test(h)).join(' ') : '')
-        check(/관리자가 발급/.test(body), '계정은 관리자가 발급한다고 안내함')
-        check(/비밀번호를 잊으셨나요/.test(body), '비밀번호 재설정 경로가 보임')
+        check(hrefs.some((h) => /signup/i.test(h)), '로그인 화면에 가입 신청 경로가 있음')
+        check(/승인/.test(loginBody), '로그인 화면이 승인이 필요함을 안내함')
+        check(/비밀번호를 잊으셨나요/.test(loginBody), '비밀번호 재설정 경로가 보임')
+
+        await page.goto(`${BASE}/signup`, { waitUntil: 'networkidle' })
+        await page.waitForTimeout(500)
+        const body = await page.locator('body').innerText()
+        const rolePicker = /대표 · 관리자|사무실 담당자|현장 담당자|병원 담당자/.test(body)
+        check(!rolePicker, '신청자가 역할을 고를 수 없음',
+          rolePicker ? body.match(/[^\n]*담당자[^\n]*/)?.[0] ?? '' : '')
+        check(/승인/.test(body), '승인이 필요하다고 안내함')
+        const selects = await page.locator('select').count()
+        check(selects === 0, '가입 화면에 선택 상자가 없음 (이름·이메일·비밀번호만)', `${selects}개`)
         await ctx.close()
       }
 

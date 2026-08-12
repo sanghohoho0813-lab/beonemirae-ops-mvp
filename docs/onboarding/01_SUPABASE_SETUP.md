@@ -115,23 +115,38 @@ where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;
 Authentication → Users → **Add user**
 
 - `Auto Confirm User` 켜기
-- User Metadata 에 역할을 적습니다:
+- **App Metadata** 에 역할을 적습니다:
 
 ```json
-{"name": "홍길동", "role": "admin"}
-{"name": "김사무", "role": "office"}
-{"name": "박현장", "role": "field"}
-{"name": "이간호", "role": "client", "client_id": "<clients 테이블의 병원 id>"}
+{"role": "admin"}
+{"role": "office"}
+{"role": "field"}
+{"role": "client", "client_id": "<clients 테이블의 병원 id>"}
+```
+
+- User Metadata 에는 이름만 넣습니다:
+
+```json
+{"name": "홍길동"}
 ```
 
 지켜야 할 것:
 
-1. **가장 먼저 만든 계정은 트리거가 자동으로 `admin` 이 됩니다.**
-   고객사 대표/이사 계정을 **첫 번째로** 만드세요.
-2. `client` 역할은 `client_id` 가 **반드시** 있어야 합니다.
+1. **역할은 `User Metadata` 가 아니라 `App Metadata` 입니다 (0021).**
+   `User Metadata` 는 가입하는 본인이 무엇이든 적어 넣을 수 있는 자리라,
+   트리거가 더 이상 그쪽에서 역할을 읽지 않습니다. `User Metadata` 에
+   `role` 을 넣으면 **무시되고 현장 담당자 + 승인 대기**로 만들어집니다.
+2. **`App Metadata` 에 역할이 없으면 승인 대기 계정이 됩니다.**
+   로그인은 되지만 아무 화면도 열리지 않습니다. 첫 관리자 계정을 만들 때
+   역할을 빠뜨리지 마세요 — 승인해 줄 관리자가 아직 없습니다.
+   ("첫 계정은 자동으로 admin" 규칙은 0021 에서 없앴습니다. 가입이 열린 뒤에는
+   profiles 가 어떤 이유로든 비면 그다음 가입자가 관리자가 되어 위험합니다.)
+3. `client` 역할은 `client_id` 가 **반드시** 있어야 합니다.
    없으면 트리거가 `field` 로 낮춥니다 (소속 없는 병원 계정을 만들지 않기 위해).
    → 병원 계정은 STEP 8 에서 거래처를 등록한 **뒤에** 만드세요.
-3. 비밀번호는 관리도구에 보관하고, 최초 로그인 후 변경을 안내합니다.
+4. 두 번째 계정부터는 대시보드를 쓰지 말고 **앱의 「사용자 관리 → 계정
+   만들기」** 를 쓰세요. 역할·소속을 목록에서 고르면 되고 uuid 가 필요 없습니다.
+5. 비밀번호는 관리도구에 보관하고, 최초 로그인 후 변경을 안내합니다.
 
 발급 후 확인:
 
@@ -210,4 +225,5 @@ node --experimental-strip-types supabase/test/07_settlement.mjs
 | 수거 입력에서 저장 버튼이 안 눌림 | 차량 미등록 | STEP 8-1 |
 | `type "user_role" already exists` | `0005` 를 먼저 실행함 | 번호 순서대로 |
 | `relation "auth.users" does not exist` | `auth` 스키마 없음 | 호스팅 Supabase 에서는 발생하지 않음 |
-| 첫 계정이 의도와 달리 admin 이 됨 | 트리거 사양 | 대표 계정을 첫 번째로 |
+| 계정이 만들어졌는데 아무 화면도 안 열림 | `App Metadata` 에 역할 없음 → 승인 대기 | STEP 6 — `App Metadata` 에 `{"role": "..."}` |
+| 역할을 적었는데 `field` 로 생성됨 | `User Metadata` 에 적음 (0021 부터 무시) | `App Metadata` 로 옮기기 |

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Loader2, LogOut, ShieldAlert } from 'lucide-react'
+import { Clock, Loader2, LogOut, ShieldAlert } from 'lucide-react'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
@@ -55,13 +55,32 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     //  예전에는 이 화면에 버튼이 하나도 없었습니다. 중지된 계정으로 로그인하면
     //  여기서 더 갈 데가 없고, 로그아웃도 못 해서 다음 사람이 로그인하려면
     //  브라우저 기록을 지워야 했습니다. 사무실 공용 PC 에서는 그대로 막힙니다.
+    //
+    //  「승인 대기」와 「중지」를 나눕니다(0021). 둘 다 active=false 지만
+    //  본인이 해야 할 일이 정반대입니다 — 하나는 기다리는 것이고, 하나는
+    //  담당자에게 왜 막혔는지 물어봐야 하는 것입니다. 한 문장으로 뭉뚱그리면
+    //  방금 가입한 사람이 자기 계정이 정지당했다고 읽습니다.
+    const pending = profile.approvedAt === null
     return (
       <FullScreen>
         <div className="card max-w-[32rem] p-6 text-center sm:p-8">
-          <ShieldAlert size={40} className="mx-auto text-amber-500" />
-          <p className="t-card mt-4 break-keep text-navy-900">비활성화된 계정입니다</p>
+          {pending ? (
+            <Clock size={40} className="mx-auto text-teal-500" />
+          ) : (
+            <ShieldAlert size={40} className="mx-auto text-amber-500" />
+          )}
+          <p className="t-card mt-4 break-keep text-navy-900">
+            {pending ? '승인을 기다리는 중입니다' : '비활성화된 계정입니다'}
+          </p>
           <p className="t-body mt-2 break-keep font-medium text-navy-500">
-            관리자에게 계정 활성화를 요청해 주세요. ({profile.email})
+            {pending ? (
+              <>
+                가입 신청이 접수되었습니다 ({profile.email}). 관리자가 승인하면 그때부터 업무 화면이
+                열립니다. 승인이 급하시면 담당자에게 직접 알려 주세요.
+              </>
+            ) : (
+              <>관리자에게 계정 활성화를 요청해 주세요. ({profile.email})</>
+            )}
           </p>
           <button
             onClick={() => {

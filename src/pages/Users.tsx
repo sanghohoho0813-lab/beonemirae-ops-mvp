@@ -12,7 +12,7 @@ import { UserAdmin } from '../components/UserAdmin'
 export function Users() {
   return (
     <div>
-      <PageHeader title="사용자 관리" subtitle="계정 만들기 · 역할 · 사용/중지 · 비밀번호 초기화" />
+      <PageHeader title="사용자 관리" subtitle="가입 승인 · 계정 만들기 · 역할 · 사용/중지 · 비밀번호 초기화" />
       <div className="card p-4 sm:p-5">
         <UserAdmin />
       </div>

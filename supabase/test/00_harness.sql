@@ -15,12 +15,32 @@
 
 create schema if not exists auth;
 
+--  raw_app_meta_data 는 0021 부터 반드시 있어야 합니다.
+--
+--  가입 트리거가 역할을 읽는 자리를 raw_user_meta_data(가입자가 씀)에서
+--  raw_app_meta_data(서버만 씀)로 옮겼습니다. 하네스에 이 칸이 없으면
+--  "역할을 조작할 수 있는가" 를 로컬에서 검증할 수 없습니다.
 create table if not exists auth.users (
   id                   uuid primary key default gen_random_uuid(),
   email                text unique not null,
   encrypted_password   text,
   raw_user_meta_data   jsonb default '{}'::jsonb,
+  raw_app_meta_data    jsonb default '{}'::jsonb,
   created_at           timestamptz not null default now()
+);
+
+--  admin_create_user(0018·0021)가 이메일 로그인 계정을 만들 때 함께 넣는
+--  줄입니다. 실제 Supabase 의 칸 구성을 그대로 두어, 로컬에서도 그 함수를
+--  끝까지 실행해 볼 수 있게 합니다.
+create table if not exists auth.identities (
+  provider_id     text not null,
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  identity_data   jsonb not null,
+  provider        text not null,
+  last_sign_in_at timestamptz,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  primary key (provider, provider_id)
 );
 
 -- Supabase 와 동일하게 JWT 클레임의 sub 를 현재 사용자 id 로 사용합니다.

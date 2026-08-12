@@ -69,6 +69,7 @@ Supabase 대시보드 → **SQL Editor** 에서 아래 순서대로 실행합니
 | 15 | `supabase/migrations/0018_user_admin.sql` | 관리자가 앱에서 계정 생성·비밀번호 초기화 (service_role 키를 브라우저에 두지 않기 위해 서버에 둡니다) |
 | 16 | `supabase/migrations/0019_excel_import.sql` | 기존 거래처 엑셀 가져오기 — 한 트랜잭션으로 넣고, 이미 있는 기록은 덮어쓰지 않습니다 |
 | 17 | `supabase/migrations/0020_profile_audit.sql` | 계정의 역할·사용여부·병원소속 변경을 **서버가** 감사기록에 남깁니다 (화면을 거치지 않아도) |
+| 18 | `supabase/migrations/0021_signup_approval.sql` | 본인 가입 신청 + 관리자 승인. 역할을 신청자가 정할 수 없도록 읽는 자리를 `app_metadata` 로 옮깁니다 |
 
 > **0005 와 0006 은 반드시 따로 실행해야 합니다.** Postgres 는 `ALTER TYPE ... ADD VALUE`
 > 로 추가한 enum 값을 같은 트랜잭션에서 쓸 수 없어, 값 추가와 이를 쓰는 정책을 분리했습니다.
@@ -86,45 +87,93 @@ supabase db push
 
 ---
 
-## 4. 공개 가입 차단
+## 4. 가입 · 승인
 
 **Authentication → Providers → Email** 에서
 
 - `Enable Email provider` : **켬**
-- `Allow new users to sign up` : **끔** ← 반드시 꺼야 외부인 가입이 막힙니다
 - `Confirm email` : 운영 정책에 따라 선택 (끄면 관리자가 만든 계정으로 바로 로그인 가능)
+- `Allow new users to sign up` :
+  - **끔** — 관리자가 만든 계정만 로그인합니다 (가장 좁은 설정)
+  - **켬** — 본인이 가입 신청하고 관리자가 승인합니다 (0021)
+
+### 켜기 전에 반드시 확인할 것
+
+**마이그레이션 `0021` 을 먼저 적용한 뒤에 켜세요.** 순서가 바뀌면 그 사이에
+가입한 계정이 승인 없이 들어옵니다.
+
+`0021` 이 적용되면 스스로 가입한 계정은 이렇게 됩니다.
+
+| | |
+|---|---|
+| 역할 | 무조건 `field` — 신청할 때 `role: "admin"` 을 넣어도 무시됩니다 |
+| 상태 | `active = false` · `approved_at = NULL` (승인 대기) |
+| 볼 수 있는 것 | **없음.** 거래처·수거·청구·감사기록 전부 RLS 가 막습니다 |
+| 열리는 시점 | 관리자가 「사용자 관리 → 승인 대기」에서 역할을 정해 승인할 때 |
+
+역할을 신청자가 정할 수 없는 이유는, 가입할 때 보내는 값(`user_metadata`)을
+서버가 더 이상 읽지 않기 때문입니다. 역할은 서버만 쓸 수 있는
+`app_metadata` 에서만 읽습니다. 자세한 내용은 `0021_signup_approval.sql`
+머리말에 있습니다.
+
+> **가입은 이메일 도메인을 가릴 수 없습니다.** 직원분들이 naver·gmail 개인
+> 메일을 쓰시는 한, 주소를 아는 누구나 신청 자체는 할 수 있습니다. 막는 것은
+> 승인이지 신청이 아닙니다. 모르는 이름이 승인 대기에 뜨면 거절하세요.
 
 ---
 
 ## 5. 계정 생성
 
-**Authentication → Users → Add user** 로 계정을 만듭니다.
+**앱 안에서 만드는 것이 정상 경로입니다.** 관리자로 로그인 → **사용자 관리 →
+계정 만들기**. 이름·이메일·임시 비밀번호·역할을 넣으면 끝이고, 병원 계정이면
+소속 거래처를 목록에서 고릅니다. uuid 를 손으로 복사할 일이 없습니다(0018).
+
+가입 신청을 열어 두셨다면 본인이 신청하고, 관리자가 **사용자 관리 → 승인
+대기** 에서 역할을 정해 승인합니다(0021).
+
 비밀번호는 Supabase 가 해시로 보관하며, 이 앱의 DB(`profiles`)에는 저장되지 않습니다.
 
-계정을 만들면 `profiles` 행이 자동 생성됩니다.
+### 대시보드에서 직접 만들어야 할 때 (최초 관리자)
 
-- **맨 처음 만든 계정은 자동으로 `admin`** 이 됩니다.
-- 이후 계정은 기본 `field`(현장 담당자)로 생성되며,
-  관리자가 앱의 **설정 → 사용자 계정** 에서 역할을 바꿉니다.
-
-계정 생성 시 `User Metadata` 에 아래를 넣으면 이름·역할이 처음부터 지정됩니다.
+계정이 하나도 없어 앱에 로그인할 수 없는 상태에서만 필요합니다.
+**Authentication → Users → Add user** 로 만든 뒤, **`App Metadata`** 에 역할을
+넣습니다.
 
 ```json
-{ "name": "홍길동", "role": "field" }
+{ "role": "admin" }
 ```
+
+> **`User Metadata` 가 아니라 `App Metadata` 입니다.** 0021 부터 가입 트리거는
+> 역할을 `App Metadata` 에서만 읽습니다. `User Metadata` 는 가입하는 본인이
+> 무엇이든 적어 넣을 수 있는 자리라, 거기서 역할을 읽으면 스스로 관리자가 될
+> 수 있습니다. `User Metadata` 에 `role` 을 넣으면 **무시되고 현장 담당자 +
+> 승인 대기** 로 만들어집니다.
+
+이름은 `User Metadata` 에 넣습니다 — 권한이 아니라 표시용이고, 본인이 나중에
+바꿀 수 있는 값입니다.
+
+```json
+{ "name": "홍길동" }
+```
+
+`App Metadata` 에 역할이 없으면 그 계정은 **승인 대기** 상태로 만들어집니다.
+최초 관리자를 이 방법으로 만드실 때 역할을 빠뜨리면 로그인은 되지만 아무
+화면도 열리지 않습니다.
 
 ### 병원 담당자 계정 (`client`)
 
-병원 계정은 **소속 거래처가 반드시 있어야** 만들어집니다. 먼저 앱에서 해당 병원을
-거래처로 등록한 뒤, `clients.id` 를 확인해 아래처럼 초대합니다.
+병원 계정은 **소속 거래처가 반드시 있어야** 만들어집니다. 앱의 「계정 만들기」에서
+만들면 목록에서 고르면 되고, 대시보드에서 직접 만들 때만 uuid 가 필요합니다.
 
 ```sql
 -- 거래처 id 확인
 select id, name from public.clients where name = '의료법인한양의료재단';
 ```
 
+`App Metadata` 에 넣습니다.
+
 ```json
-{ "name": "감염관리팀 김주현", "role": "client", "client_id": "위에서 확인한 uuid" }
+{ "role": "client", "client_id": "위에서 확인한 uuid" }
 ```
 
 - `client_id` 없이 `role: "client"` 로 초대하면 **병원 계정이 만들어지지 않고** 안전하게
@@ -182,6 +231,7 @@ insert into public.vehicles (name, waste_type, tonnage, nominal_capacity, expect
 npx supabase start                    # 또는 실제 프로젝트의 DB_URL
 psql "$DB_URL" -f supabase/test/01_verify.sql   # RLS·트랜잭션·감사로그 66건
 psql "$DB_URL" -f supabase/test/03_portal.sql   # 병원 포털 RLS 27건
+psql "$DB_URL" -f supabase/test/04_signup_approval.sql  # 가입 승인 30건
 PGDATABASE=... bash supabase/test/02_concurrency.sh  # 동시 완료 방지 6건
 ```
 
@@ -197,6 +247,7 @@ psql -d rlsqa -f supabase/test/00_harness.sql
 for f in supabase/migrations/0*.sql; do psql -v ON_ERROR_STOP=1 -d rlsqa -f "$f"; done
 psql -d rlsqa -f supabase/test/01_verify.sql
 psql -d rlsqa -f supabase/test/03_portal.sql
+psql -d rlsqa -f supabase/test/04_signup_approval.sql
 ```
 
 > `00_harness.sql` 은 순수 PostgreSQL 검증 전용입니다.
@@ -263,7 +314,7 @@ node supabase/test/05_live.mjs --cleanup
 | `08_browser_live.mjs` | 브라우저에서 PC 입력 → 모바일 조회 | API 가 아니라 사람이 쓰는 경로 |
 | `09_rls_matrix.mjs` | 18개 테이블 × 4역할 × 4조작 전수 | 정책 목록에서 하나 빠진 것은 눈으로 안 보입니다 |
 | `10_integrity.mjs` | 동시 저장 · 값 검증 · 되돌리기 | 두 사람이 같은 순간에 누를 때가 사고 지점입니다 |
-| `11_auth_boundary.mjs` | 공개 가입 · 토큰 위조 · 로그아웃 | 로그인이 되는지가 아니라 **안 되어야 할 때 안 되는지** |
+| `11_auth_boundary.mjs` | 가입 계정의 권한 · 토큰 위조 · 로그아웃 | 로그인이 되는지가 아니라 **안 되어야 할 때 안 되는지** |
 | `12_settlement_edges.mjs` | 월 경계 · 규격 미상 · 단가 없음 | 월 마감 금액은 보통이 아닌 곳에서 틀립니다 |
 | `13_multisession_audit.mjs` | 동시 수정 · 감사기록 | 두 사람이 같은 거래처를 고칠 때 값이 조용히 사라지는지 |
 | `14_portal_flow.mjs` | 병원 요청 → 사무실 회신 → 병원 확인 | 이 한 바퀴가 끊기면 병원은 전화를 겁니다 |

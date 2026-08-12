@@ -44,19 +44,25 @@ begin execute 'reset role'; end $$;
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 실제 Supabase 에서는 Auth 가 하는 일을 여기서는 auth.users 직접 삽입으로 재현.
 -- 비밀번호는 넣지 않습니다(auth.users 가 관리하며 이 프로젝트는 저장하지 않음).
-insert into auth.users (email, raw_user_meta_data) values
-  ('admin@beonemirae.test',  '{"name":"대표관리자"}'),
-  ('office@beonemirae.test', '{"name":"사무실담당","role":"office"}'),
-  ('field@beonemirae.test',  '{"name":"현장담당","role":"field"}');
+--
+--  역할은 raw_app_meta_data 에 넣습니다 (0021). 관리자가 만든 계정이 지나는
+--  길과 같습니다. raw_user_meta_data 는 가입하는 본인이 쓰는 자리라 트리거가
+--  더 이상 역할을 읽지 않습니다 — 읽으면 스스로 관리자가 될 수 있습니다.
+insert into auth.users (email, raw_user_meta_data, raw_app_meta_data) values
+  ('admin@beonemirae.test',  '{"name":"대표관리자"}',  '{"role":"admin"}'),
+  ('office@beonemirae.test', '{"name":"사무실담당"}',  '{"role":"office"}'),
+  ('field@beonemirae.test',  '{"name":"현장담당"}',    '{"role":"field"}');
 
 do $$ begin
   perform test_assert((select count(*) from public.profiles) = 3, '계정 3개 → profiles 자동 생성');
   perform test_assert((select role from public.profiles where email='admin@beonemirae.test') = 'admin',
-    '첫 계정은 자동으로 admin');
+    'app_metadata.role=admin 반영');
   perform test_assert((select role from public.profiles where email='office@beonemirae.test') = 'office',
-    'user_metadata.role=office 반영');
+    'app_metadata.role=office 반영');
   perform test_assert((select role from public.profiles where email='field@beonemirae.test') = 'field',
-    'user_metadata.role=field 반영');
+    'app_metadata.role=field 반영');
+  perform test_assert((select bool_and(active and approved_at is not null) from public.profiles),
+    '관리자가 만든 계정은 승인된 상태로 생성');
   perform test_assert((select count(*) from information_schema.columns
     where table_schema='public' and table_name='profiles'
       and column_name in ('password','encrypted_password','pw')) = 0,

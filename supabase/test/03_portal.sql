@@ -59,17 +59,25 @@ declare
   ok        boolean;
 begin
   -- ── 준비 (RLS 우회) ──────────────────────────────────────────────────────
-  insert into auth.users (id, email) values
-    (v_admin,  'admin@test.local'),
-    (v_office, 'office@test.local'),
-    (v_hosA,   'a@hospital.local'),
-    (v_hosB,   'b@hospital.local');
+  --  역할은 raw_app_meta_data 로 넣습니다 (0021). 관리자가 만든 계정이 지나는
+  --  길입니다. 이 자리가 비어 있으면 「스스로 가입」으로 보아 승인 대기
+  --  (active=false) 로 만들어지고, 그러면 아래 검사가 전부 0건이 됩니다 —
+  --  RLS 가 막아서인지 계정이 잠겨서인지 구분이 안 됩니다.
+  --
+  --  병원 계정은 여기서 role='client' 로 만들 수 없습니다. 소속 거래처가 아직
+  --  없어서 제약(profiles_client_needs_client_id)에 걸립니다. 거래처를 만든
+  --  뒤에 아래에서 바꿉니다.
+  insert into auth.users (id, email, raw_app_meta_data) values
+    (v_admin,  'admin@test.local',  '{"role":"admin"}'),
+    (v_office, 'office@test.local', '{"role":"office"}'),
+    (v_hosA,   'a@hospital.local',  '{"role":"field"}'),
+    (v_hosB,   'b@hospital.local',  '{"role":"field"}');
 
-  -- 트리거가 첫 계정을 admin 으로 만들었는지 확인
-  perform test_assert('첫 계정은 관리자',
-    (select role from public.profiles where id = v_admin) = 'admin');
-
-  update public.profiles set role = 'office' where id = v_office;
+  perform test_assert('app_metadata 로 지정한 역할이 반영됨',
+    (select role from public.profiles where id = v_admin) = 'admin'
+    and (select role from public.profiles where id = v_office) = 'office');
+  perform test_assert('관리자가 만든 계정은 승인된 상태 (바로 사용 가능)',
+    (select bool_and(active and approved_at is not null) from public.profiles));
 
   insert into public.clients (name, type, address, collection_cycle)
     values ('A병원', '병원', 'A로 1', '주 2회') returning id into v_cA;

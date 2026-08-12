@@ -174,7 +174,14 @@ async function setup() {
         email: a.email,
         password: a.pw,
         email_confirm: true,
-        user_metadata: { name: a.name, role, ...(role === 'client' ? { client_id: clientId } : {}) },
+        //  역할은 app_metadata 로 넣습니다 (0021).
+        //  가입 트리거가 역할을 읽는 자리가 user_metadata 에서 app_metadata 로
+        //  옮겨졌습니다 — user_metadata 는 가입자가 직접 넣을 수 있는 값이라
+        //  거기서 역할을 읽으면 스스로 관리자가 될 수 있었습니다.
+        //  여기서 user_metadata 에 role 을 넣으면 전부 field + 승인 대기로
+        //  만들어져, 검증 계정이 아무것도 못 하게 됩니다.
+        user_metadata: { name: a.name },
+        app_metadata: { role, ...(role === 'client' ? { client_id: clientId } : {}) },
       }),
     })
     const d = await r.json()

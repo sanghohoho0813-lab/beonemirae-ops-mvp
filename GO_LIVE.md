@@ -239,6 +239,7 @@ node supabase/test/05_live.mjs --cleanup
 3. 데이터가 이상하면 **지우지 마시고** 그대로 두고 알려 주세요 —
    지운 뒤에는 원인을 찾을 수 없습니다
 
-> 공개 가입은 꺼져 있어야 합니다
-> (Authentication → Providers → Email → `Allow new users to sign up` **끔**).
+> 가입을 열어 두셨다면(`Allow new users to sign up` 켬), **승인 대기 목록을
+> 주기적으로 확인하세요** — 「사용자 관리」 맨 위에 뜹니다. 모르는 이름이
+> 있으면 거절하시면 됩니다. 승인하지 않는 한 그 계정은 아무것도 보지 못합니다.
 > `service_role` 키는 어떤 경우에도 앱·브라우저·메신저에 넣지 마세요.

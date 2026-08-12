@@ -814,10 +814,21 @@ export interface ProfileRow {
   role: 'admin' | 'office' | 'field' | 'client'
   active: boolean
   createdAt: string
+  /**
+   * 관리자가 승인한 시각. null 이면 본인이 가입 신청만 하고 승인 대기 중인 계정.
+   *
+   *  active=false 만으로는 「승인 대기」와 「쓰다가 중지」가 구분되지 않습니다.
+   *  둘은 관리자가 해야 할 일이 정반대입니다 — 하나는 역할을 정해 들여보내는
+   *  일이고, 하나는 이미 정해진 계정을 다시 여는 일입니다.
+   */
+  approvedAt: string | null
   /** 병원 계정이면 소속 거래처 id */
   clientId: string | null
   clientName: string
 }
+
+/** 아직 승인되지 않은 가입 신청인가 */
+export const isPending = (r: ProfileRow): boolean => r.approvedAt === null
 
 export async function loadProfiles(): Promise<ProfileRow[]> {
   const sb = need()
@@ -843,9 +854,46 @@ export async function loadProfiles(): Promise<ProfileRow[]> {
     role: r.role,
     active: !!r.active,
     createdAt: r.created_at,
+    approvedAt: (r as { approved_at?: string | null }).approved_at ?? null,
     clientId: r.client_id ?? null,
     clientName: r.clients?.name ?? '',
   }))
+}
+
+/**
+ * 가입 신청 승인 — 역할 지정과 활성화를 한 번에 (0021).
+ *
+ *  「활성화」와 「역할 변경」을 두 번 나눠 보내면, 그 사이 짧은 순간 신청자가
+ *  기본 역할(현장)로 들어와 있게 됩니다. 관리자가 사무실 담당자로 승인하려던
+ *  중이었어도 마찬가지입니다. 서버 함수 하나로 한 트랜잭션에서 처리합니다.
+ *
+ *  '관리자인가' 는 화면이 아니라 서버가 확인합니다.
+ */
+export async function approveUser(
+  id: string,
+  role: ProfileRow['role'],
+  clientId?: string | null,
+): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('admin_approve_user', {
+    p_user_id: id,
+    p_role: role,
+    p_client_id: role === 'client' ? (clientId ?? null) : null,
+  })
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * 가입 신청 거절 — 계정을 삭제합니다 (0021).
+ *
+ *  승인된 적 없는 계정만 지울 수 있습니다. 쓰던 계정을 지우는 길이 아닙니다
+ *  (그건 '중지' 입니다 — 기록이 남아야 하므로 계정은 지우지 않습니다).
+ *  누가 신청했었는지는 지우기 전에 감사기록에 남습니다.
+ */
+export async function rejectUser(id: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('admin_reject_user', { p_user_id: id })
+  if (error) throw new Error(error.message)
 }
 
 /**

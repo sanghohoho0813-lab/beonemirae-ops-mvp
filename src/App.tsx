@@ -22,6 +22,7 @@ import { Presentation } from './pages/Presentation'
 import { MobilePreview } from './pages/MobilePreview'
 import { CompanyHomePage } from './pages/CompanyHomePage'
 import { Login } from './pages/Login'
+import { Signup } from './pages/Signup'
 import { ResetPassword } from './pages/ResetPassword'
 import { AuditLog } from './pages/AuditLog'
 import { Users } from './pages/Users'
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="company" element={<CompanyHomePage />} />
         {/* 로그인 — Layout 바깥의 독립 전체화면 라우트 */}
         <Route path="login" element={<Login />} />
+        <Route path="signup" element={<Signup />} />
         <Route path="reset-password" element={<ResetPassword />} />
 
         {/* 병원 고객 포털 — 내부 운영 레이아웃과 완전히 분리된 단순 화면 */}

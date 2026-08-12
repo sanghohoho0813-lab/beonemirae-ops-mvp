@@ -82,24 +82,77 @@ async function main() {
   console.log('\n════ Auth 경계 검증 ════')
 
   // ── 1. 공개 가입 ──────────────────────────────────────────────────────────
-  section('1. 공개 가입이 막혀 있는가')
+  //
+  //  0021 부터 물어보는 것이 달라졌습니다.
+  //
+  //   예전   "가입이 막혀 있는가"        — 열려 있으면 실패
+  //   지금   "가입해도 아무 힘이 없는가" — 열려 있어도 되지만, 스스로 가입한
+  //                                        계정은 승인 전까지 아무것도 못 봐야 합니다
+  //
+  //  가입 자체를 막는 것은 대시보드 설정 한 칸이고, 그 칸은 실수로 켜질 수
+  //  있습니다. 그때 무너지지 않는 것이 중요합니다. 그래서 실제로 가입해 보고,
+  //  그 계정으로 데이터를 요구해 봅니다.
+  section('1. 스스로 가입한 계정이 힘을 갖는가')
+  const probePw = `Probe-${Date.now()}!aA`
   const probeEmail = `signup-probe-${Date.now()}@beonemirae-probe.invalid`
   const signup = await fetch(`${U}/auth/v1/signup`, {
     method: 'POST', headers: { apikey: A, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: probeEmail, password: `Probe-${Date.now()}!aA` }),
+    //  공격자가 실제로 보낼 값입니다 — 스스로 관리자라고 적어서 보냅니다.
+    body: JSON.stringify({
+      email: probeEmail,
+      password: probePw,
+      data: { name: '가입검증', role: 'admin', client_id: '00000000-0000-0000-0000-000000000001' },
+    }),
   }).then(json)
-  const created = signup.status < 300 && (signup.body?.id || signup.body?.user?.id)
-  check(!created, '외부인이 계정을 만들 수 없음',
-    created ? `가입이 열려 있습니다 (${signup.status})` : `(${signup.status}) ${(signup.body?.msg ?? signup.body?.error_description ?? signup.body?.code ?? '').toString().slice(0, 70)}`)
-  if (created) {
-    // 열려 있었다면 확인 즉시 지웁니다
-    const uid = signup.body?.id ?? signup.body?.user?.id
+  const uid = signup.body?.id ?? signup.body?.user?.id
+  const created = signup.status < 300 && uid
+
+  if (!created) {
+    ok('공개 가입이 아직 닫혀 있음 (관리자가 만든 계정만 로그인)',
+      `(${signup.status}) ${(signup.body?.msg ?? signup.body?.error_description ?? signup.body?.code ?? '').toString().slice(0, 70)}`)
+  } else {
+    //  가입이 열려 있습니다. 여기서부터가 진짜 검증입니다.
+    const row = (await svc(`/profiles?select=role,active,approved_at,client_id&id=eq.${uid}`)).body?.[0]
+    check(row?.role === 'field', '스스로 admin 이라고 적어도 현장(field)으로 생성', `role=${row?.role}`)
+    check(row?.active === false, '승인 전에는 비활성', `active=${row?.active}`)
+    check(row?.approved_at === null, '승인 대기로 표시 (approved_at 없음)')
+    check(row?.client_id === null, 'client_id 를 적어 보내도 소속이 붙지 않음')
+
+    //  로그인은 됩니다. 그 토큰으로 무엇이 나오는지가 핵심입니다.
+    const probeTok = (await token(probeEmail, probePw)).body?.access_token
+    if (probeTok) {
+      const cl = await asUser(probeTok, '/clients?select=id&limit=5')
+      const au = await asUser(probeTok, '/audit_logs?select=id&limit=5')
+      const pf = await asUser(probeTok, '/profiles?select=id')
+      check(Array.isArray(cl.body) && cl.body.length === 0, '승인 대기 토큰으로 거래처 0건', `${cl.status}`)
+      check(Array.isArray(au.body) && au.body.length === 0, '승인 대기 토큰으로 감사기록 0건', `${au.status}`)
+      check(Array.isArray(pf.body) && pf.body.length <= 1, '계정 목록은 자기 것만', `${pf.body?.length}건`)
+
+      //  스스로 승인하기
+      const selfUp = await asUser(probeTok, `/profiles?id=eq.${uid}`, {
+        method: 'PATCH', body: JSON.stringify({ active: true, role: 'admin', approved_at: new Date().toISOString() }),
+      })
+      const after = (await svc(`/profiles?select=role,active&id=eq.${uid}`)).body?.[0]
+      check(after?.role === 'field' && after?.active === false,
+        '본인이 자기 계정을 승인·승격할 수 없음', `PATCH ${selfUp.status} · role=${after?.role} active=${after?.active}`)
+
+      //  승인 함수를 직접 부르기
+      const rpc = await fetch(`${U}/rest/v1/rpc/admin_approve_user`, {
+        method: 'POST',
+        headers: { apikey: A, Authorization: `Bearer ${probeTok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_user_id: uid, p_role: 'admin' }),
+      }).then(json)
+      check(rpc.status >= 400, '승인 함수를 직접 불러도 거절',
+        `${rpc.status} ${(rpc.body?.message ?? '').toString().slice(0, 50)}`)
+    } else {
+      advise('가입 계정으로 로그인 토큰을 받지 못해 권한 확인을 건너뜀 (이메일 인증 대기일 수 있습니다)')
+    }
+
+    //  검증용 계정은 지웁니다.
     await fetch(`${U}/auth/v1/admin/users/${uid}`, {
       method: 'DELETE', headers: { apikey: S, Authorization: `Bearer ${S}` },
     })
     await svc(`/profiles?email=eq.${encodeURIComponent(probeEmail)}`, { method: 'DELETE' })
-    console.log('        → 만들어진 계정을 지웠습니다. Supabase 대시보드에서')
-    console.log('          Authentication → Providers → Email → "Allow new users to sign up" 를 꺼 주세요.')
   }
 
   // ── 2. 로그인 실패 문구가 계정 존재를 흘리는가 ────────────────────────────

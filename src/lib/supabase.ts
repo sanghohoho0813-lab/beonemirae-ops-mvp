@@ -50,6 +50,16 @@ export function friendlyError(e: unknown): string {
   if (/Failed to fetch|NetworkError|fetch failed/i.test(msg))
     return '네트워크에 연결할 수 없습니다. 통신 상태를 확인한 뒤 다시 시도해 주세요.'
   if (/JWT expired|invalid claim/i.test(msg)) return '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.'
+  // ── 가입 신청 (0021) ──────────────────────────────────────────────────────
+  //  Supabase 대시보드에서 가입이 꺼져 있으면 영문 원문이 그대로 보입니다.
+  //  화면에는 가입 버튼이 있는데 누르면 영문 오류가 나는 상태라, 신청하는
+  //  사람은 자기가 뭘 잘못했는지 알 수 없습니다.
+  if (/[Ss]ignups? not allowed|signup_disabled/i.test(msg))
+    return '아직 가입 신청을 받고 있지 않습니다. 관리자에게 계정 생성을 요청해 주세요.'
+  if (/[Uu]ser already registered|already been registered/i.test(msg))
+    return '이미 가입된 이메일입니다. 로그인하거나, 승인을 기다리고 있다면 관리자에게 문의해 주세요.'
+  if (/[Pp]assword should be at least|weak.?password/i.test(msg))
+    return '비밀번호가 너무 짧습니다. 8자 이상으로 정해 주세요.'
   if (/row-level security|permission denied/i.test(msg))
     return '이 작업을 수행할 권한이 없습니다. 관리자에게 문의해 주세요.'
   if (/duplicate key|schedules_no_duplicate_completion/i.test(msg))

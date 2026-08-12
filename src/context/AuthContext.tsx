@@ -7,7 +7,9 @@ import { supabase, isSupabaseConfigured, friendlyError } from '../lib/supabase'
 //
 //  · Supabase Auth 이메일+비밀번호 로그인. 세션은 자동 저장·갱신되어 새로고침
 //    후에도 유지됩니다.
-//  · 공개 회원가입은 제공하지 않습니다. 관리자가 초대한 계정만 로그인합니다.
+//  · 가입은 본인이 신청하고 관리자가 승인합니다(0021). 신청만 한 계정은
+//    active=false 라 서버가 모든 데이터를 막습니다 — 화면에서 가리는 것이
+//    아니라 RLS 가 막습니다. 역할은 승인할 때 관리자가 지정합니다.
 //  · 역할은 profiles.role 에서 읽어옵니다(화면 노출 + DB RLS 양쪽에 사용).
 //  · Supabase 미설정이면 mode='demo' 로 두고 기존 로컬 시연 모드로 동작합니다.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,6 +35,13 @@ export interface Profile {
   role: UserRole
   fontScale: 'normal' | 'lg' | 'xl'
   active: boolean
+  /**
+   * 관리자가 승인한 시각. null 이면 가입 신청만 하고 아직 승인되지 않은 계정.
+   *
+   *  active=false 하나로는 「아직 승인 안 된 신규」와 「쓰다가 중지된 계정」이
+   *  구분되지 않습니다. 두 경우에 보여 줄 안내가 전혀 다릅니다.
+   */
+  approvedAt: string | null
   /** 병원 계정이면 소속 거래처 id (직원 계정은 null) */
   clientId: string | null
 }
@@ -50,6 +59,12 @@ interface AuthContextValue {
   role: UserRole | null
   mode: AppMode
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
+  /** 가입 신청 — 승인 전까지는 로그인해도 아무것도 열리지 않습니다 */
+  signUp: (input: {
+    email: string
+    password: string
+    name: string
+  }) => Promise<{ ok: boolean; error?: string }>
   signOut: () => Promise<void>
   /** 이름 / 글자크기 등 본인 프로필 수정 */
   updateProfile: (patch: Partial<Pick<Profile, 'name' | 'fontScale'>>) => Promise<void>
@@ -69,6 +84,7 @@ type ProfileRow = {
   role: UserRole
   font_scale: 'normal' | 'lg' | 'xl'
   active: boolean
+  approved_at: string | null
   client_id: string | null
 }
 
@@ -79,6 +95,7 @@ const toProfile = (r: ProfileRow): Profile => ({
   role: r.role,
   fontScale: r.font_scale,
   active: r.active,
+  approvedAt: r.approved_at ?? null,
   clientId: r.client_id ?? null,
 })
 
@@ -92,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return null
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, name, role, font_scale, active, client_id')
+      .select('id, email, name, role, font_scale, active, approved_at, client_id')
       .eq('id', userId)
       .maybeSingle()
     if (error || !data) return null
@@ -130,6 +147,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { ok: false, error: friendlyError(error) }
     return { ok: true }
   }, [])
+
+  //  가입 신청.
+  //
+  //   역할은 여기서 보내지 않습니다. 보낼 수 있는 자리(options.data)는
+  //   raw_user_meta_data 로 들어가는데, 그건 신청하는 사람이 무엇이든 적어 넣을
+  //   수 있는 값입니다. 서버의 가입 트리거는 0021 부터 그 자리를 읽지 않고
+  //   app_metadata(서버만 쓸 수 있는 자리)만 봅니다 — 그래서 여기서 role 을
+  //   실어 보내도, 보내지 않아도 결과는 같습니다: 현장 + 승인 대기.
+  //
+  //   이름만 넘깁니다. 관리자가 승인 목록에서 누가 신청했는지 알아야 합니다.
+  const signUp = useCallback(
+    async ({ email, password, name }: { email: string; password: string; name: string }) => {
+      if (!supabase) return { ok: false, error: 'Supabase 연결이 설정되지 않았습니다.' }
+      if (password.length < 8) return { ok: false, error: '비밀번호는 8자 이상이어야 합니다.' }
+      const { error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: { data: { name: name.trim() } },
+      })
+      if (error) return { ok: false, error: friendlyError(error) }
+      return { ok: true }
+    },
+    [],
+  )
 
   const signOut = useCallback(async () => {
     if (!supabase) return
@@ -192,13 +233,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 로그인된 상태에서만 실제 운영 모드입니다.
       mode: isSupabaseConfigured && !!session && !!profile ? 'live' : 'demo',
       signIn,
+      signUp,
       signOut,
       updateProfile,
       refreshProfile,
       sendPasswordReset,
       changePassword,
     }),
-    [loading, session, profile, signIn, signOut, updateProfile, refreshProfile, sendPasswordReset, changePassword],
+    [
+      loading,
+      session,
+      profile,
+      signIn,
+      signUp,
+      signOut,
+      updateProfile,
+      refreshProfile,
+      sendPasswordReset,
+      changePassword,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

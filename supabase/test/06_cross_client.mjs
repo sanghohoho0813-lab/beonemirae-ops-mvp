@@ -99,7 +99,10 @@ async function main() {
     headers: { apikey: S, Authorization: `Bearer ${S}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: EMAIL2, password: pw2, email_confirm: true,
-      user_metadata: { name: '검증병원2', role: 'client', client_id: c2.id },
+      //  역할·소속은 app_metadata 로 (0021). user_metadata 는 가입자가 바꿀 수
+      //  있는 값이라 트리거가 더 이상 읽지 않습니다.
+      user_metadata: { name: '검증병원2' },
+      app_metadata: { role: 'client', client_id: c2.id },
     }),
   })
   await svc(`/profiles?email=eq.${encodeURIComponent(EMAIL2)}`, {

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
@@ -182,10 +182,18 @@ export function Login() {
               </button>
               {resetMsg && <p className="t-body break-keep font-bold text-teal-600">{resetMsg}</p>}
 
+              <Link
+                to="/signup"
+                className="t-body block w-full text-center font-bold text-navy-500 underline underline-offset-4 transition hover:text-navy-700"
+              >
+                계정이 없으신가요? 가입 신청
+              </Link>
+
               <div className="flex items-start gap-2.5 border-t border-navy-100 pt-4">
                 <ShieldCheck size={19} className="mt-0.5 shrink-0 text-navy-300" />
                 <p className="t-muted min-w-0 break-keep">
-                  계정은 관리자가 발급합니다. 공개 가입은 제공하지 않으며, 비밀번호는 시스템에 저장되지 않습니다.
+                  가입 신청은 관리자가 승인해야 사용할 수 있습니다. 승인 전에는 어떤 정보도 열리지 않으며,
+                  비밀번호는 시스템에 저장되지 않습니다.
                 </p>
               </div>
             </form>

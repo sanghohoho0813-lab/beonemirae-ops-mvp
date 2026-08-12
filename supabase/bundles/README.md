@@ -13,6 +13,7 @@ Supabase 대시보드 → SQL Editor 에서 아래 순서로 **각각 한 번씩
 | 4 | `RUN_4_security_fix.sql` | 0012 본인 프로필 소속(client_id) 변경 차단 |
 | 5 | `RUN_5_supply_guard.sql` | 0013 공급 수량 음수 차단 — 없던 재고가 생기는 구멍 |
 | 6 | `RUN_6_request_handler.sql` | 0014 회신만 남겼을 때도 처리자 기록 |
+| 7 | `RUN_7_signup_approval.sql` | 0021 가입 신청 + 관리자 승인 · 역할 조작 차단 · 관리자 2계정 지정 |
 
 ### 4번은 왜 따로인가 — 실제 운영 DB 에서 찾은 구멍입니다
 
@@ -113,4 +114,67 @@ bash supabase/test/run_all.sh         # 05~10 전체 + READY 판정
 
 ```
 node supabase/test/14_portal_flow.mjs   # 「처리한 사람이 자동으로 기록됨」 이 PASS 로
+```
+
+
+---
+
+## 7번 — 가입 신청과 승인 (0021)
+
+직원이 자기 이메일로 가입 신청을 하고, 관리자가 「사용자 관리 → 승인 대기」에서
+역할을 정해 승인하는 길을 엽니다.
+
+### 열기 전에 막아야 했던 것
+
+가입을 열기 전 트리거는 역할을 이렇게 정했습니다.
+
+```
+v_requested := coalesce((new.raw_user_meta_data->>'role')::user_role, 'field')
+```
+
+`raw_user_meta_data` 는 **가입하는 사람이 직접 넣는 값**입니다. 관리자가 계정을
+만들 때 역할을 지정하려고 그렇게 둔 것인데, 공개 가입이 켜지는 순간 의미가
+뒤집힙니다. 브라우저에서 이 한 줄이면 됩니다.
+
+```js
+supabase.auth.signUp({ email, password, options: { data: { role: 'admin' } } })
+```
+
+주소만 아는 사람이 스스로 관리자가 됩니다. **승인제를 붙여도 그대로입니다** —
+관리자로 만들어진 계정을 승인하는 순간 관리자가 되니까요.
+
+7번은 역할을 읽는 자리를 `raw_user_meta_data`(가입자가 씀) 에서
+`raw_app_meta_data`(서버만 씀) 로 옮깁니다. 그러면 두 길이 갈립니다.
+
+| 어떻게 만들어졌나 | 결과 |
+|---|---|
+| 관리자가 「계정 만들기」로 | 지정한 역할 · 바로 사용 |
+| 본인이 가입 신청으로 | **무조건 현장 · 무조건 승인 대기** |
+
+승인 대기 계정은 화면에서 가리는 게 아니라 서버가 막습니다. 권한 판정이 전부
+`auth_role()` 한 곳을 지나가는데, 그 함수가 `active` 를 확인하기 때문입니다.
+거래처·수거·청구·자재·감사기록이 한꺼번에 닫히고, 열려 있는 것은 자기 프로필
+한 줄뿐입니다(승인 대기 안내를 띄우는 데 필요).
+
+### 함께 들어 있는 것
+
+- `approved_at` 컬럼 — 「승인 대기」와 「쓰다가 중지」를 구분합니다
+- `admin_approve_user` / `admin_reject_user` — 역할 지정과 활성화를 한 트랜잭션에서
+- `is_active_user()` 등이 NULL 대신 참/거짓만 돌려주도록 (검증 중 발견)
+- **관리자 2계정 지정** — `sanghohoho0813@gmail.com` · `beonemirae@naver.com`
+  그 외 관리자는 사무실 담당자로 내립니다. 지정한 계정이 관리자로 확보된
+  뒤에만 내리므로, 관리자가 0명이 되는 일은 없습니다.
+
+### 실행 순서
+
+**7번을 먼저 Run 한 뒤에** Supabase 대시보드에서
+`Authentication → Providers → Email → Allow new users to sign up` 을 켜세요.
+순서가 바뀌면 그 사이에 가입한 계정이 승인 없이 들어옵니다.
+
+확인:
+
+```
+psql -d rlsqa -f supabase/test/04_signup_approval.sql   # 30건 (로컬 PostgreSQL)
+node supabase/test/11_auth_boundary.mjs                 # 가입 계정이 힘을 갖는지
+bash supabase/test/run_all.sh                           # 전체 + READY 판정
 ```
