@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ChevronDown, FileSpreadsheet, Loader2, Upload } from 'lucide-react'
+import { AlertTriangle, Building2, CheckCircle2, ChevronDown, FileSpreadsheet, Loader2, Upload } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { readWorkbook } from '../lib/xlsx'
@@ -10,10 +10,12 @@ import {
   reconcile,
   type ImportIssue,
   type ImportPlan,
+  type PlanCounts,
   type PlannedRow,
 } from '../lib/excelImport'
 import { ITEM_BY_KEY, settlementFor, type ItemKey } from '../lib/billing'
 import { importExcelRows } from '../lib/repo'
+import { emptyClientForm } from './ClientForm'
 import { friendlyError } from '../lib/supabase'
 import { won } from '../lib/format'
 
@@ -37,13 +39,14 @@ type Phase = '대기' | '읽는 중' | '확인' | '넣는 중' | '완료'
 
 export function ExcelImport() {
   const { mode } = useAuth()
-  const { data, reload } = useData()
+  const { data, reload, addClient } = useData()
   const fileRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('대기')
   const [plan, setPlan] = useState<ImportPlan | null>(null)
   const [clientId, setClientId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ inserted: number; skipped: number; conflict: number; clientFields: number } | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const clients = useMemo(
     () => data.clients.slice().sort((a, b) => a.name.localeCompare(b.name, 'ko')),
@@ -56,6 +59,53 @@ export function ExcelImport() {
   )
   const counts = checked ? planCounts(checked) : null
   const target = clients.find((c) => c.id === clientId)
+
+  //  파일의 거래처가 아직 시스템에 없을 때, 이름이 비슷한 곳이 있는지 봅니다.
+  //  「서울인화스포츠마취통증」과 「…의학과의원」처럼 한쪽이 다른 쪽의 앞부분인
+  //  경우가 실제로 있어, 그대로 새로 만들면 같은 병원이 둘이 됩니다.
+  const fileName2 = (checked?.client?.name ?? '').replace(/\s/g, '')
+  const similar = fileName2
+    ? clients.filter((c) => {
+        const n = c.name.replace(/\s/g, '')
+        return n !== fileName2 && (n.startsWith(fileName2) || fileName2.startsWith(n))
+      })
+    : []
+
+  /**
+   * 파일 내용 그대로 거래처를 새로 만들고, 이어서 그 거래처로 가져옵니다.
+   *
+   *  예전에는 "「거래처」 화면에서 먼저 등록한 뒤 다시 오세요" 였습니다.
+   *  거래처가 10곳이면 상호·계약일·결제조건을 열 번 옮겨 적고 열 번 되돌아
+   *  와야 했습니다. 파일에 이미 다 적혀 있는 값입니다.
+   *
+   *  그래도 자동으로 만들지는 않습니다 — 누를 때만 만듭니다. 이름만 보고
+   *  말없이 만들면 같은 병원이 둘이 되는 사고가 그대로 남습니다.
+   */
+  async function createClientFromFile() {
+    const prof = checked?.client
+    if (!prof?.name) return
+    setCreating(true)
+    setError(null)
+    try {
+      const created = await addClient({
+        ...emptyClientForm,
+        name: prof.name,
+        contractStart: prof.contractStart,
+        contractEnd: prof.contractEnd,
+        paymentTerms: prof.paymentTerms,
+        paymentDueDay: prof.paymentDueDay,
+        //  단가·정산규칙도 파일에서 그대로. 여기서 넣어 두면 가져오기 직후
+        //  바로 이 거래처의 정산·명세서가 실제 계약대로 계산됩니다.
+        pricing: Object.keys(prof.pricing).length ? prof.pricing : undefined,
+      })
+      if (created) setClientId(created.id)
+      else setError('거래처를 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.')
+    } catch (e) {
+      setError(friendlyError(e))
+    } finally {
+      setCreating(false)
+    }
+  }
 
   async function pick(file: File) {
     setError(null)
@@ -208,11 +258,52 @@ export function ExcelImport() {
                   </option>
                 ))}
               </select>
-              {!clientId && (
-                <p className="t-muted mt-2 break-keep text-amber-700">
-                  같은 이름의 거래처를 찾지 못했습니다. 이름만 보고 새로 만들면 같은 병원이 둘이 될 수 있어,
-                  거래처는 만들지 않습니다 — 「거래처」 화면에서 먼저 등록한 뒤 다시 오세요.
-                </p>
+              {/*  파일의 거래처가 시스템에 없을 때.
+                   예전에는 "「거래처」 화면에서 먼저 등록한 뒤 다시 오세요" 라고만
+                   했습니다. 상호·계약일·결제조건·단가가 파일에 이미 다 적혀 있는데
+                   사람이 옮겨 적고 되돌아와야 했습니다. 여기서 바로 만듭니다 —
+                   다만 **누를 때만** 만듭니다. */}
+              {!clientId && checked.client?.name && (
+                <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3.5">
+                  <p className="t-body break-keep font-bold text-amber-800">
+                    「{checked.client.name}」 은(는) 아직 등록된 거래처가 아닙니다.
+                  </p>
+                  {similar.length > 0 ? (
+                    <>
+                      <p className="t-muted mt-1.5 break-keep text-amber-700">
+                        이름이 비슷한 거래처가 있습니다 — {similar.map((c) => `「${c.name}」`).join(', ')}.
+                        같은 병원이라면 위에서 그 거래처를 고르세요. 정말 다른 곳일 때만 새로 만드세요.
+                      </p>
+                      <button
+                        className="btn-ghost mt-2.5"
+                        disabled={creating}
+                        onClick={() => {
+                          if (window.confirm(`비슷한 이름의 거래처가 이미 있습니다.\n\n「${checked.client!.name}」 을(를) 그래도 새 거래처로 만들까요?`))
+                            void createClientFromFile()
+                        }}
+                      >
+                        {creating ? <Loader2 size={16} className="animate-spin" /> : null}
+                        그래도 새 거래처로 만들기
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="t-muted mt-1.5 break-keep text-amber-700">
+                        파일에 적힌 상호·계약기간·결제조건·단가를 그대로 넣어 새로 만듭니다. 만든 뒤에 바로
+                        이어서 가져올 수 있습니다.
+                      </p>
+                      <button
+                        data-create-client
+                        className="btn-navy mt-2.5"
+                        disabled={creating}
+                        onClick={() => void createClientFromFile()}
+                      >
+                        {creating ? <Loader2 size={16} className="animate-spin" /> : <Building2 size={16} strokeWidth={2.4} />}
+                        「{checked.client.name}」 거래처로 만들기
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -220,7 +311,12 @@ export function ExcelImport() {
           {/* 3. 넣기 전 건수 */}
           {clientId && counts && (
             <div className="card p-4 sm:p-5">
-              <p className="t-card mb-3 break-keep text-navy-900">넣기 전에 확인하세요</p>
+              {/*  판정 — "틀린 내용이 없는가"를 화면이 먼저 답합니다.
+                   건수 5칸만 보여 주면 그 숫자들이 괜찮은 것인지 사람이 매번
+                   판단해야 합니다. 넣지 못하는 것(오류)과 사람이 정해야 하는
+                   것(충돌·확인 필요)이 하나도 없으면 그대로 옮겨도 되는 파일입니다. */}
+              <Verdict counts={counts} name={target?.name ?? ''} />
+              <p className="t-card mb-3 mt-4 break-keep text-navy-900">넣기 전에 확인하세요</p>
               <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
                 <Count label="등록 예정" n={counts.willImport} tone="teal" />
                 <Count label="건너뜀" n={counts.skip} tone="navy" />
@@ -244,7 +340,9 @@ export function ExcelImport() {
                   ) : (
                     <CheckCircle2 size={17} strokeWidth={2.4} />
                   )}
-                  {counts.willImport}건 가져오기
+                  {counts.error + counts.conflict + counts.needsCheck === 0
+                    ? `이상 없음 — ${counts.willImport}건 그대로 옮기기`
+                    : `${counts.willImport}건 가져오기`}
                 </button>
               )}
             </div>
@@ -258,6 +356,58 @@ export function ExcelImport() {
           {checked.issues.length > 0 && <IssueList plan={checked} />}
         </>
       )}
+    </div>
+  )
+}
+
+/**
+ * 이 파일을 그대로 옮겨도 되는지에 대한 한 줄 답.
+ *
+ *  「틀린 내용 없으면 그대로 옮기고 싶다」가 실제 요구입니다. 그런데
+ *  건수 5칸(등록·건너뜀·충돌·오류·확인 필요)만 있으면, 그 숫자 조합이
+ *  괜찮은 것인지 사람이 매번 해석해야 합니다. 해석을 여기서 합니다.
+ *
+ *   · 오류      = 시스템이 넣을 수 없는 줄 (금액 안 맞음·미래 날짜 등)
+ *   · 충돌      = 이미 있는데 값이 다름 — 어느 쪽이 맞는지는 사람이 정함
+ *   · 확인 필요 = 날짜가 없는 등 임의로 정하면 안 되는 것
+ *
+ *  셋 다 0 이면 그대로 옮겨도 되는 파일입니다. 「건너뜀」은 이미 같은 값이
+ *  들어 있다는 뜻이라 문제가 아닙니다.
+ */
+function Verdict({ counts, name }: { counts: PlanCounts; name: string }) {
+  const needsEye = counts.error + counts.conflict + counts.needsCheck
+  const clean = needsEye === 0   // 「안내」는 판정을 막지 않습니다
+  const parts = [
+    counts.error > 0 ? `넣을 수 없는 줄 ${counts.error}건` : '',
+    counts.conflict > 0 ? `값이 다른 줄 ${counts.conflict}건` : '',
+    counts.needsCheck > 0 ? `확인 필요 ${counts.needsCheck}건` : '',
+  ].filter(Boolean)
+
+  return (
+    <div
+      data-verdict={clean ? 'clean' : 'check'}
+      className={`flex items-start gap-3 rounded-2xl px-4 py-3.5 ${clean ? 'bg-teal-50' : 'bg-amber-50'}`}
+    >
+      {clean ? (
+        <CheckCircle2 size={20} strokeWidth={2.4} className="mt-0.5 shrink-0 text-teal-600" />
+      ) : (
+        <AlertTriangle size={20} strokeWidth={2.4} className="mt-0.5 shrink-0 text-amber-600" />
+      )}
+      <div className="min-w-0">
+        <p className={`t-body break-keep font-extrabold ${clean ? 'text-teal-800' : 'text-amber-800'}`}>
+          {clean
+            ? `이상 없습니다 — ${name} 로 그대로 옮겨도 됩니다`
+            : `${parts.join(' · ')} — 아래에서 확인해 주세요`}
+        </p>
+        <p className={`t-muted mt-1 break-keep ${clean ? 'text-teal-700' : 'text-amber-700'}`}>
+          {clean
+            ? counts.skip > 0
+              ? `${counts.willImport}건이 새로 들어가고, 이미 있는 ${counts.skip}건은 그대로 둡니다.`
+              : `${counts.willImport}건이 새로 들어갑니다. 금액·수량은 파일과 하나도 다르지 않습니다.`
+            : '표시된 것들은 넣지 않습니다. 나머지는 그대로 옮길 수 있습니다.'}
+          {counts.info > 0 ? ` 옮기지 않는 항목 ${counts.info}건은 아래 「안내」에 적어 두었습니다.` : ''}
+        </p>
+      </div>
     </div>
   )
 }
@@ -405,13 +555,28 @@ function IssueList({ plan }: { plan: ImportPlan }) {
     if (it.group && last && last.group === it.group) last.items.push(it)
     else blocks.push({ group: it.group ?? null, items: [it] })
   }
+  const onlyInfo = plan.issues.every((i) => i.level === '안내')
 
   return (
     <div className="card p-4 sm:p-5">
-      <p className="t-card mb-1 break-keep text-navy-900">넣지 않은 것 — 사람이 정해야 합니다</p>
-      <p className="t-muted mb-3 break-keep">
-        시스템이 임의로 정할 수 없는 것들입니다. 지어내서 넣지 않고 그대로 보여 드립니다.
-      </p>
+      {/*  「안내」만 있을 때는 사람이 정할 것이 없습니다 — 제목이 맞아야 합니다.
+           남는 것이 안내뿐인데 "사람이 정해야 합니다" 라고 적혀 있으면,
+           이상 없는 파일인데도 뭔가 걸린 것처럼 읽힙니다. */}
+      {onlyInfo ? (
+        <>
+          <p className="t-card mb-1 break-keep text-navy-900">넣지 않은 것 — 알려만 드립니다</p>
+          <p className="t-muted mb-3 break-keep">
+            파일에 있지만 일부러 옮기지 않은 것입니다. 지금 하실 일은 없습니다.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="t-card mb-1 break-keep text-navy-900">넣지 않은 것 — 사람이 정해야 합니다</p>
+          <p className="t-muted mb-3 break-keep">
+            시스템이 임의로 정할 수 없는 것들입니다. 지어내서 넣지 않고 그대로 보여 드립니다.
+          </p>
+        </>
+      )}
       <ul className="space-y-2">
         {blocks.map((b, i) =>
           b.group && b.items.length > 1 ? (
@@ -466,7 +631,15 @@ function IssueRow({ issue: it }: { issue: ImportIssue }) {
   return (
     <li className="rounded-2xl bg-navy-50 px-3.5 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`pill shrink-0 ${it.level === '오류' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'}`}>
+        <span
+          className={`pill shrink-0 ${
+            it.level === '오류'
+              ? 'bg-rose-50 text-rose-600'
+              : it.level === '안내'
+                ? 'bg-navy-100 text-navy-500'
+                : 'bg-amber-50 text-amber-700'
+          }`}
+        >
           {it.level === '오류' ? <AlertTriangle size={13} className="mr-1 inline -translate-y-px" /> : null}
           {it.level}
         </span>

@@ -352,9 +352,6 @@ function Sidebar() {
           <NavGroup id="tools" title="운영 도구 · 추가 고도화 예정" items={toolNav} />
         )}
 
-        {/* 관리 — 관리자 전용 (추가 개발 예정 바로 위) */}
-        {adminNav.length > 0 && <NavGroup id="admin" title="관리" items={adminNav} />}
-
         {/*  추가 개발 예정 — 접기/펼치기.
              누르면 「활용 계획」으로 가는 목록이라, 그 화면을 못 여는 역할에게는
              띄우지 않습니다. 현장 담당자에게는 지금 할 일과 상관없는 목록이고,
@@ -393,6 +390,11 @@ function Sidebar() {
         )}
         </>
         )}
+
+        {/*  관리 — 관리자 전용. 아직 만들지 않은 「추가 개발 예정」보다 아래에
+             둡니다. 설정·계정·감사로그는 필요할 때만 찾아 들어가는 곳이라
+             메뉴의 마지막 자리가 맞습니다. */}
+        {adminNav.length > 0 && <NavGroup id="admin" title="관리" items={adminNav} />}
       </nav>
 
       {/* 하단 — 계정 / 바로가기 */}

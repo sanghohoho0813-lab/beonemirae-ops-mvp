@@ -26,7 +26,19 @@ import type { AppData, Client } from '../types'
 //  원본 파일은 읽기만 합니다. 어떤 경우에도 수정하지 않습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type IssueLevel = '오류' | '확인 필요'
+/**
+ * 알림 등급.
+ *
+ *  · 오류      넣을 수 없는 줄 — 반드시 봐야 합니다
+ *  · 확인 필요 파일에 있는데 뜻을 정할 수 없는 것 — 반드시 봐야 합니다
+ *  · 안내      뜻은 알지만 일부러 옮기지 않는 것 — 보기만 하면 됩니다
+ *
+ *  세 번째가 필요한 이유: 정산 시트 맨 끝 「미수금」 표시는 **11개 파일 전부**
+ *  에 있습니다. 어느 달 청구인지가 파일에 없어 미수금을 만들 수 없다는 사실은
+ *  알려 드려야 하지만, 이것을 「확인 필요」로 세면 어떤 파일도 "이상 없음"이
+ *  될 수 없습니다. 그러면 정작 진짜 확인할 것이 묻힙니다.
+ */
+export type IssueLevel = '오류' | '확인 필요' | '안내'
 export type RowStatus = '등록 예정' | '건너뜀' | '충돌' | '오류'
 
 export interface ImportIssue {
@@ -89,6 +101,17 @@ export interface MonthlyTotal {
 
 export interface ClientProfile {
   name: string
+  /**
+   * 거래명세서에 적힌 상호.
+   *
+   *  정산 시트의 이름은 칸 폭에 맞춰 잘려 있는 일이 있습니다 — 실제로
+   *  서울인화 파일은 정산 시트가 「서울인화스포츠마취통증」이고 명세서에만
+   *  「서울인화스포츠마취통증의학과의원」 전체가 적혀 있었습니다.
+   *  반대로 오남한양 파일은 명세서에 법인명(「의료법인 한양의료재단」)이
+   *  적혀 있어 사업장명과 아예 다릅니다. 그래서 합치지 않고 따로 들고 있다가,
+   *  한쪽이 다른 쪽의 앞부분일 때만(= 잘린 것이 분명할 때만) 긴 쪽을 씁니다.
+   */
+  nameOnInvoice: string | null
   contractStart: string | null
   contractEnd: string | null
   paymentTerms: string
@@ -111,6 +134,8 @@ export interface PlanCounts {
   conflict: number
   error: number
   needsCheck: number
+  /** 옮기지 않는다고 알려만 주는 것 — 판정을 막지 않습니다 */
+  info: number
 }
 
 // ── 엑셀의 품목 이름 → 시스템 품목 ──────────────────────────────────────────
@@ -354,21 +379,33 @@ function readSettlementSheet(sheet: Sheet, plan: ImportPlan) {
     }
   }
 
-  const due = /(\d{1,2})\s*일/.exec(txt(info[5]))?.[1]
+  //  결제일 규칙. 「익월20일」처럼 숫자가 있으면 그 날, 「익월 말일」이면 말일입니다.
+  //
+  //   말일을 31 로 둡니다. 청구 계산(dueDateOf)이 그 달의 마지막 날로 잘라
+  //   주므로(9월이면 30일, 2월이면 28일) 뜻이 정확히 같습니다. 실제 파일로
+  //   확인했습니다 — 해올·신세계의 「익월 말일」 계약에서 8월분 결제기한이
+  //   명세서에 2026년 9월 30일로 적혀 있고, 계산 결과도 같습니다.
+  //
+  //   11개 중 4개 파일이 「익월 말일」이라 이것을 못 읽으면 매번 사람이
+  //   결제기한을 손으로 넣어야 했습니다.
+  const terms = txt(info[5])
+  const dueRaw = /(\d{1,2})\s*일/.exec(terms)?.[1]
+  const due = dueRaw ?? (/말\s*일/.test(terms) ? '31' : undefined)
   plan.client = {
     name,
+    nameOnInvoice: null,
     contractStart: isDate(info[1]) ? info[1] : null,
     contractEnd: isDate(info[2]) ? info[2] : null,
-    paymentTerms: txt(info[5]),
+    paymentTerms: terms,
     paymentDueDay: due ? Number(due) : null,
     pricing,
   }
 
-  if (txt(info[5]) && !due) {
+  if (terms && !due) {
     plan.issues.push({
       level: '확인 필요',
       where: `${sheet.name} F2`,
-      what: `결제조건 "${txt(info[5])}" 에서 결제일을 읽지 못했습니다`,
+      what: `결제조건 "${terms}" 에서 결제일을 읽지 못했습니다`,
       hint: '「익월20일」처럼 날짜가 들어 있어야 결제기한을 자동으로 채웁니다. 지금은 비워 둡니다.',
     })
   }
@@ -445,7 +482,7 @@ function readSettlementSheet(sheet: Sheet, plan: ImportPlan) {
   const status = txt(info[30])
   if (status) {
     plan.issues.push({
-      level: '확인 필요',
+      level: '안내',
       where: `${sheet.name} AE2`,
       what: `정산 상태가 「${status}」 로 적혀 있습니다`,
       hint: '어느 달의 청구인지가 파일에 없어 미수금으로 만들지 않았습니다. 옮긴 뒤 「청구 확정」에서 직접 잡아 주세요.',
@@ -513,6 +550,16 @@ function readInvoiceSheet(sheet: Sheet, plan: ImportPlan) {
     string,
     { items: Partial<Record<ItemKey, number>>; amount: number; where: string[]; from: '직접' | '윗줄' }
   >()
+
+  //  이 명세서에 적힌 상호 — 「주식회사 비원미래」(공급자)가 적힌 줄의
+  //  A열이 공급받는 자(병원)입니다. 행 번호를 박지 않기 위해 이 짝으로 찾습니다.
+  for (let r = 0; r < Math.min(rows.length, 12); r++) {
+    const line = (rows[r] ?? []).map(txt)
+    if (line.some((c) => /비원미래/.test(c)) && txt(rows[r]?.[0])) {
+      if (plan.client && !plan.client.nameOnInvoice) plan.client.nameOnInvoice = txt(rows[r][0])
+      break
+    }
+  }
 
   //  오늘 — 미래 날짜 가드용. 실제 파일에서 연도가 밀려 적힌 명세서를
   //  봤습니다(서울인화 「2025년 12월~」 명세서의 날짜가 2026-12 로 적힘).
@@ -771,6 +818,33 @@ export function analyzeWorkbook(sheets: Sheet[], fileName: string): ImportPlan {
       hint: '날짜가 있는 기록이 없어 수거·자재는 가져오지 못했습니다.',
     })
 
+  //  ── 상호 맞춰 보기 ─────────────────────────────────────────────────
+  //
+  //  정산 시트의 이름과 명세서의 상호가 다를 수 있습니다. 실제 파일 두 가지
+  //  경우를 봤고, 둘을 다르게 다룹니다.
+  //
+  //   · 한쪽이 다른 쪽의 앞부분  = 칸 폭에 맞춰 잘린 것입니다.
+  //     (서울인화: 「…마취통증」 ⊂ 「…마취통증의학과의원」) → 긴 쪽을 씁니다.
+  //   · 아예 다름               = 법인명과 사업장명일 수 있습니다.
+  //     (오남한양병원 vs 의료법인 한양의료재단) → 합치지 않고 확인 필요로
+  //     올립니다. 어느 쪽이 거래처 이름인지는 사람이 정할 일입니다.
+  if (plan.client?.nameOnInvoice) {
+    const a = plan.client.name.replace(/\s/g, '')
+    const b = plan.client.nameOnInvoice.replace(/\s/g, '')
+    if (a !== b) {
+      if (b.startsWith(a)) {
+        plan.client.name = plan.client.nameOnInvoice
+      } else if (!a.startsWith(b)) {
+        plan.issues.push({
+          level: '확인 필요',
+          where: fileName,
+          what: `정산 시트는 「${plan.client.name}」, 거래명세서는 「${plan.client.nameOnInvoice}」 입니다`,
+          hint: '법인명과 사업장명일 수 있어 한쪽으로 합치지 않았습니다. 거래처 이름을 직접 확인해 주세요.',
+        })
+      }
+    }
+  }
+
   //  날짜가 있는 달을 표시하고, 없는 달은 왜 못 넣는지 알려 줍니다.
   const dated = new Set(plan.rows.filter((r) => r.status !== '오류').map((r) => r.date.slice(0, 7)))
   for (const m of plan.monthly) {
@@ -829,6 +903,7 @@ export function planCounts(plan: ImportPlan): PlanCounts {
     conflict: plan.rows.filter((r) => r.status === '충돌').length,
     error: plan.rows.filter((r) => r.status === '오류').length + plan.issues.filter((i) => i.level === '오류').length,
     needsCheck: plan.issues.filter((i) => i.level === '확인 필요').length,
+    info: plan.issues.filter((i) => i.level === '안내').length,
   }
 }
 
