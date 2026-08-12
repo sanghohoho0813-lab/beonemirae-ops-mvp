@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building2, ChevronRight, SearchX } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { canSeeMoney } from '../lib/access'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { FilterChip, EmptyState } from '../components/ui'
@@ -34,6 +36,10 @@ function matchFilter(c: Client, f: Filter): boolean {
 
 export function Clients() {
   const { data, addClient, clientSet, setClientSet, mode } = useData()
+  const { configured, role } = useAuth()
+  //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
+  const showMoney = !configured || canSeeMoney(role)
+  const canAddClient = !configured || canSeeMoney(role)
   const live = mode === 'live'
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('전체')
@@ -87,9 +93,13 @@ export function Clients() {
         title="거래처 관리"
         subtitle={live ? `총 ${data.clients.length}곳` : `총 ${data.clients.length}곳 · 실제 ${realCount} / 시연용 ${demoCount}`}
         action={
-          <button className="btn-primary" onClick={() => { setForm(emptyClientForm); setAdding(true) }}>
-            ＋ 추가
-          </button>
+          //  거래처 등록은 사무실·관리자 업무입니다. 서버도 막고 있어
+          //  (RLS: clients_write) 현장 담당자가 눌러도 저장되지 않습니다.
+          canAddClient ? (
+            <button className="btn-primary" onClick={() => { setForm(emptyClientForm); setAdding(true) }}>
+              ＋ 추가
+            </button>
+          ) : undefined
         }
       />
 
@@ -140,7 +150,7 @@ export function Clients() {
           icon={Building2}
           title="아직 등록된 거래처가 없습니다"
           subtitle="거래처를 등록하면 수거 일정·이력·월간 리포트가 함께 만들어집니다."
-          action={{ label: '첫 거래처 등록', onClick: () => { setForm(emptyClientForm); setAdding(true) } }}
+          action={canAddClient ? { label: '첫 거래처 등록', onClick: () => { setForm(emptyClientForm); setAdding(true) } } : undefined}
         />
       ) : filtered.length === 0 ? (
         <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
@@ -168,9 +178,12 @@ export function Clients() {
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-rose-500">의료</span>}
                       {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-teal-600">기저귀</span>}
-                      {unpaid && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-600">미수금</span>}
+                      {unpaid && showMoney && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-600">미수금</span>}
                     </div>
-                    {topAction && meta && topAction.kind !== '정기수거' && (
+                    {/*  추천은 영업 판단이고 금액이 함께 붙습니다(「추가 수거 제안 · +70만원」).
+                        현장 담당자에게는 띄우지 않습니다 — 방문해서 수거하는 데
+                        필요한 정보가 아니고, 병원 앞에서 열어 볼 수도 있는 화면입니다. */}
+                    {showMoney && topAction && meta && topAction.kind !== '정기수거' && (
                       <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.95rem] font-bold ${meta.chip}`}>
                         <meta.icon size={12} strokeWidth={2.6} className="shrink-0" />
                         <span className="break-keep">{topAction.title}</span>

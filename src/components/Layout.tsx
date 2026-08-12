@@ -196,6 +196,8 @@ function Sidebar() {
   const serviceNav = useVisibleNav(SERVICE_NAV)
   const toolNav = useVisibleNav(TOOL_NAV)
   const adminNav = !configured || profile?.role === 'admin' ? ADMIN_NAV : []
+  //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다 — useVisibleNav 과 같은 규칙.
+  const showPlanned = !configured || canAccess(profile?.role ?? null, '/roadmap')
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
@@ -237,14 +239,20 @@ function Sidebar() {
           </>
         )}
 
-        <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">
-          운영 도구 · 추가 고도화 예정
-        </p>
-        <div className="space-y-0.5">
-          {toolNav.map((item) => (
-            <SidebarLink key={item.to} item={item} muted />
-          ))}
-        </div>
+        {/*  현장 담당자에게는 이 묶음이 통째로 비어 있습니다(access.ts).
+             빈 제목만 남으면 "여기 뭔가 있는데 안 열린다"로 읽힙니다. */}
+        {toolNav.length > 0 && (
+          <>
+            <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-navy-400">
+              운영 도구 · 추가 고도화 예정
+            </p>
+            <div className="space-y-0.5">
+              {toolNav.map((item) => (
+                <SidebarLink key={item.to} item={item} muted />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* 관리 — 관리자 전용 (추가 개발 예정 바로 위) */}
         {adminNav.length > 0 && (
@@ -258,7 +266,12 @@ function Sidebar() {
           </>
         )}
 
-        {/* 추가 개발 예정 — 접기/펼치기 */}
+        {/*  추가 개발 예정 — 접기/펼치기.
+             누르면 「활용 계획」으로 가는 목록이라, 그 화면을 못 여는 역할에게는
+             띄우지 않습니다. 현장 담당자에게는 지금 할 일과 상관없는 목록이고,
+             눌러도 「접근 권한이 없는 화면입니다」만 나옵니다. */}
+        {showPlanned && (
+        <>
         <button
           onClick={() => setPlannedOpen((v) => !v)}
           className="mt-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-400 transition hover:text-navy-200"
@@ -284,6 +297,8 @@ function Sidebar() {
               </button>
             ))}
           </div>
+        )}
+        </>
         )}
       </nav>
 

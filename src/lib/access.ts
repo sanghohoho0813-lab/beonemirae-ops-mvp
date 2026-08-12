@@ -36,6 +36,18 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/reports', roles: ['admin', 'office'] },
   { prefix: '/dispatch', roles: ['admin', 'office'] },
   { prefix: '/requests', roles: ['admin', 'office', 'field'] },
+  //  운영 도구 — 현장 담당자의 하루에 들어가지 않는 화면입니다.
+  //
+  //   자재 관리   재고·공급 내역 관리는 사무실 업무입니다. 현장에서 자재를
+  //               건네는 일은 「수거 입력」 안에서 함께 처리됩니다.
+  //   수거이력    지난 기록 조회. 오늘 할 일은 「오늘 일정」에 있습니다.
+  //   활용 계획   개발 로드맵. 현장 업무와 무관합니다.
+  //
+  //  메뉴에서 지우는 것으로 끝내지 않고 경로도 함께 막습니다. 메뉴에만 없고
+  //  주소로는 열리면, 화면 안 바로가기 버튼으로 들어가지는 곳이 생깁니다.
+  { prefix: '/materials', roles: ['admin', 'office'] },
+  { prefix: '/history', roles: ['admin', 'office'] },
+  { prefix: '/roadmap', roles: ['admin', 'office'] },
   // 관리자 전용
   { prefix: '/settings', roles: ['admin'] },
   { prefix: '/audit', roles: ['admin'] },
@@ -77,5 +89,26 @@ export function landingPath(role: UserRole | null): string {
 
 /** 대시보드 자체를 볼 수 있는지 (현장 담당자는 경영 KPI 를 보지 않습니다) */
 export function canSeeDashboard(role: UserRole | null): boolean {
+  return role === 'admin' || role === 'office'
+}
+
+/**
+ * 돈에 관한 것을 볼 수 있는지 — 예상 매출·추천 제안·청구·미수금·영업 전환.
+ *
+ *  현장 담당자에게는 **금액이 붙은 것은 하나도 보이지 않아야 합니다.**
+ *  미수금·통계 같은 화면은 이미 막혀 있었지만, 거래처 목록과 거래처 상세에
+ *  「추가 수거 제안 · +70만원」처럼 금액이 함께 뜨고 있었습니다. 화면 자체는
+ *  현장 업무에 필요한 곳이라 열려 있고, 그 안에 영업용 정보가 섞여 있던
+ *  경우입니다.
+ *
+ *  청구·미수금 숫자는 서버(RLS)도 막고 있어 현장 토큰으로는 0건이 나옵니다.
+ *  다만 그러면 화면에는 「청구금액」 표가 빈 채로 남습니다 — 막혀서 비어
+ *  있는 것인지 거래가 없어서 비어 있는 것인지 알 수 없습니다. 아예 그리지
+ *  않습니다.
+ *
+ *  예상 매출(추천)은 서버가 아니라 화면에서 계산합니다. 수거이력만 있으면
+ *  나오는 값이라 RLS 로는 막을 수 없고, 여기서 막아야 합니다.
+ */
+export function canSeeMoney(role: UserRole | null): boolean {
   return role === 'admin' || role === 'office'
 }

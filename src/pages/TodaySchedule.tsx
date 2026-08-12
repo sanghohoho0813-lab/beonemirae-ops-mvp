@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin} from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { canAccess } from '../lib/access'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
 import { StartHere } from '../components/StartHere'
@@ -38,6 +40,10 @@ function defaultContainers(wasteType: WasteType, amount: number): ContainerBreak
 
 export function TodaySchedule() {
   const { data, clientById, completeSchedule, completeCollection, notesFor } = useData()
+  const { configured, role } = useAuth()
+  //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
+  const canGoHistory = !configured || canAccess(role, '/history')
+  const canGoMaterials = !configured || canAccess(role, '/materials')
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
 
@@ -443,18 +449,24 @@ export function TodaySchedule() {
               >
                 거래처 상세에서 확인 <ChevronRight size={16} className="text-navy-300" />
               </button>
-              <button
-                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
-                onClick={() => navigate('/materials')}
-              >
-                자재관리에서 확인 <ChevronRight size={16} className="text-navy-300" />
-              </button>
-              <button
-                className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
-                onClick={() => navigate('/history')}
-              >
-                전체 수거이력에서 확인 <ChevronRight size={16} className="text-navy-300" />
-              </button>
+              {/*  현장 담당자에게는 두 화면이 막혀 있습니다(access.ts).
+                   눌러도 차단 안내만 뜨는 버튼은 두지 않습니다. */}
+              {canGoMaterials && (
+                <button
+                  className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
+                  onClick={() => navigate('/materials')}
+                >
+                  자재관리에서 확인 <ChevronRight size={16} className="text-navy-300" />
+                </button>
+              )}
+              {canGoHistory && (
+                <button
+                  className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
+                  onClick={() => navigate('/history')}
+                >
+                  전체 수거이력에서 확인 <ChevronRight size={16} className="text-navy-300" />
+                </button>
+              )}
             </div>
           </>
         )}

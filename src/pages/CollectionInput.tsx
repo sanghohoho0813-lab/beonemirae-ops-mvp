@@ -12,6 +12,8 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { canAccess } from '../lib/access'
 import { NoteChips } from '../components/SiteNotes'
 import { SUPPLY_ITEMS, stockDeltaOf, itemsOf, type ItemCounts, type ItemKey } from '../lib/billing'
 import { PageHeader } from '../components/PageHeader'
@@ -87,6 +89,9 @@ function Section({
 
 export function CollectionInput() {
   const { data, completeCollection, revertCollection, notesFor, sync } = useData()
+  const { configured, role } = useAuth()
+  //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
+  const canGoHistory = !configured || canAccess(role, '/history')
   const [params] = useSearchParams()
   // 성과측정: 이 화면에 들어온 시각. 저장 시 경과시간을 '시스템 측정값'으로 남깁니다.
   const sessionStartRef = useRef<number>(Date.now())
@@ -326,13 +331,17 @@ export function CollectionInput() {
             </p>
           )}
 
-          <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          {/*  수거이력은 현장 담당자에게 막혀 있습니다(access.ts). 링크가 하나만
+               남으면 두 칸 격자가 어색해지므로 칸 수도 함께 맞춥니다. */}
+          <div className={`mt-2.5 grid gap-2.5 ${canGoHistory ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <Link to="/today" className="btn-ghost">
               오늘 일정
             </Link>
-            <Link to="/history" className="btn-ghost">
-              수거이력
-            </Link>
+            {canGoHistory && (
+              <Link to="/history" className="btn-ghost">
+                수거이력
+              </Link>
+            )}
           </div>
           <button className="mt-3 text-[1.08rem] font-bold text-navy-500" onClick={() => setSuccess(null)}>
             + 직접 골라서 입력

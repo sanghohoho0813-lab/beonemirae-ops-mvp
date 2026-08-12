@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
-import { canSeeDashboard } from '../lib/access'
+import { canAccess, canSeeDashboard } from '../lib/access'
 import { WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { PageShell, SectionTitle, MetricCard, EmptyState } from '../components/ui'
@@ -125,6 +125,12 @@ export function ClientDetail() {
   //  시연에서 정산·명세서가 통째로 사라집니다 — 대표님께 보여 드리는
   //  핵심이 없어지는 것이라, 시연에서는 가리지 않습니다.
   const canSeeMoney = mode !== 'live' || canSeeDashboard(role)
+  //  화면 안의 바로가기도 같은 규칙을 씁니다 — 못 여는 곳으로 보내지 않습니다.
+  const canGoHistory = mode !== 'live' || canAccess(role, '/history')
+  const canGoMaterials = mode !== 'live' || canAccess(role, '/materials')
+  const canGoDispatch = mode !== 'live' || canAccess(role, '/dispatch')
+  //  거래처 등록·수정·거래종료는 사무실·관리자만 (RLS: clients_update / clients_delete)
+  const canEditClient = mode !== 'live' || canSeeDashboard(role)
   const visibleTabs = TABS.filter((t) => canSeeMoney || !t.money)
   const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
   //  어떤 청구의 명세서를 열었는지 담아 둡니다. 청구가 여러 건이면
@@ -224,18 +230,26 @@ export function ClientDetail() {
           <button className="btn-primary flex-1" onClick={() => setLogOpen(true)}>
             <FileText size={17} strokeWidth={2.4} /> 수거대장 보기
           </button>
-          <button className="btn-ghost" onClick={() => navigate('/dispatch')}>
-            <Truck size={16} /> 배차 반영
-          </button>
+          {/* 배차 화면은 현장 담당자에게 막혀 있습니다 — 갈 수 없는 곳으로 보내지 않습니다 */}
+          {canGoDispatch && (
+            <button className="btn-ghost" onClick={() => navigate('/dispatch')}>
+              <Truck size={16} /> 배차 반영
+            </button>
+          )}
         </div>
-        <div className="mt-2 flex items-center justify-end gap-3">
-          <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
-            <Pencil size={14} /> 수정
-          </button>
-          <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
-            <Trash2 size={14} /> 거래 종료
-          </button>
-        </div>
+        {/*  거래처 정보 수정과 거래 종료는 사무실·관리자 업무입니다.
+             서버도 막고 있어(clients_update/clients_delete) 현장 담당자가
+             눌러도 저장되지 않습니다. 눌리는데 안 되는 버튼은 두지 않습니다. */}
+        {canEditClient && (
+          <div className="mt-2 flex items-center justify-end gap-3">
+            <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
+              <Pencil size={14} /> 수정
+            </button>
+            <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
+              <Trash2 size={14} /> 거래 종료
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 핵심 지표 */}
@@ -265,8 +279,11 @@ export function ClientDetail() {
         </div>
       </div>
 
-      {/* 다음 행동 추천 — 축적된 운영 데이터 기반 */}
-      {actions.length > 0 && (
+      {/*  다음 행동 추천 — 축적된 운영 데이터 기반.
+           항목마다 예상 매출이 붙습니다(「추가 수거 제안 · +70만원」). 현장
+           담당자에게는 띄우지 않습니다 — 영업 판단이고, 병원에 가서 여는
+           화면이라 금액이 상대방 눈에 들어갈 수도 있습니다. */}
+      {canSeeMoney && actions.length > 0 && (
         <section>
           <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">데이터 기반 추천</span>}>
             다음 행동 추천
@@ -333,13 +350,15 @@ export function ClientDetail() {
         </section>
       )}
 
-      {/* 영업 전환 이력 — 추천 → 제안 → 수락 → 실제 매출 */}
-      <section>
-        <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">담당자 기록 기준</span>}>
-          영업 전환 이력
-        </SectionTitle>
-        <ClientLeadHistory data={data} clientId={client.id} />
-      </section>
+      {/* 영업 전환 이력 — 추천 → 제안 → 수락 → 실제 매출 (현장 담당자 제외) */}
+      {canSeeMoney && (
+        <section>
+          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">담당자 기록 기준</span>}>
+            영업 전환 이력
+          </SectionTitle>
+          <ClientLeadHistory data={data} clientId={client.id} />
+        </section>
+      )}
 
       {/* 인증·실사 대응 (상시 노출) */}
       {inspection && (
@@ -424,7 +443,9 @@ export function ClientDetail() {
               {[
                 ['거래 시작일', profile.startDate],
                 ['계약 상태', profile.contractStatus],
-                ['결제조건', profile.paymentTerm],
+                //  결제조건은 돈에 관한 계약 내용입니다. 현장 담당자에게는 빼고,
+                //  나머지 운영조건(수거주기·가능시간·처리장)은 그대로 둡니다.
+                ...(canSeeMoney ? [['결제조건', profile.paymentTerm]] : []),
                 ['담당 역할', profile.roleManager],
                 ['의료폐기물 수거주기', profile.medicalCycle],
                 ['일회용기저귀 수거주기', profile.diaperCycle],
@@ -484,16 +505,21 @@ export function ClientDetail() {
               </tbody>
             </table>
           </div>
-          <button onClick={() => navigate('/history')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-              <FileText size={19} strokeWidth={2.2} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-navy-900">전체 수거이력 보기</p>
-              <p className="text-[0.98rem] text-navy-400">기간·차량·폐기물 구분 필터로 전체 이력을 확인합니다</p>
-            </div>
-            <ChevronRight size={18} className="shrink-0 text-navy-300" />
-          </button>
+          {/*  갈 수 없는 곳으로 보내는 버튼은 두지 않습니다. 현장 담당자에게는
+               수거이력 화면이 막혀 있어(access.ts) 누르면 차단 안내만 뜹니다.
+               이 탭 안에서 이 거래처의 이력은 이미 위 표에 다 나와 있습니다. */}
+          {canGoHistory && (
+            <button onClick={() => navigate('/history')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+                <FileText size={19} strokeWidth={2.2} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-navy-900">전체 수거이력 보기</p>
+                <p className="text-[0.98rem] text-navy-400">기간·차량·폐기물 구분 필터로 전체 이력을 확인합니다</p>
+              </div>
+              <ChevronRight size={18} className="shrink-0 text-navy-300" />
+            </button>
+          )}
         </div>
       )}
 
@@ -513,11 +539,15 @@ export function ClientDetail() {
               </div>
             ))}
           </div>
-          <p className="px-1 text-[0.98rem] leading-snug text-navy-400">
-            자재 공급량과 실제 배출량 비교는 <b className="text-navy-500">자재 관리</b> 화면에서 확인합니다. 확정 판단이 아닌
-            점검용 지표입니다.
-          </p>
-          <button onClick={() => navigate('/materials')} className="btn-ghost w-full">자재 관리에서 보기</button>
+          {canGoMaterials && (
+            <>
+              <p className="px-1 text-[0.98rem] leading-snug text-navy-400">
+                자재 공급량과 실제 배출량 비교는 <b className="text-navy-500">자재 관리</b> 화면에서 확인합니다. 확정 판단이 아닌
+                점검용 지표입니다.
+              </p>
+              <button onClick={() => navigate('/materials')} className="btn-ghost w-full">자재 관리에서 보기</button>
+            </>
+          )}
         </div>
       )}
 
