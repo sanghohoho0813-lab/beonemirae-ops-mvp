@@ -142,12 +142,20 @@ export function DevRequests() {
 
               {r.topics.length > 0 && (
                 <ul className="mt-3 space-y-1.5">
-                  {r.topics.map((t) => (
-                    <li key={t} className="flex items-start gap-2">
-                      <span className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
-                      <span className="t-body min-w-0 break-keep font-bold text-navy-800">{t}</span>
-                    </li>
-                  ))}
+                  {r.topics.map((t) => {
+                    //  「주제 › 선택지」로 저장됩니다(devRequests.ts). 주제를 앞에
+                    //  작게 붙여 두면 어디의 무엇인지 한눈에 읽힙니다. 예전 형식
+                    //  (주제 없이 한 줄)도 그대로 보이게 둡니다.
+                    const [subject, option] = t.includes(' › ') ? t.split(' › ') : ['', t]
+                    return (
+                      <li key={t} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        {subject && (
+                          <span className="pill shrink-0 bg-teal-50 text-teal-700">{subject}</span>
+                        )}
+                        <span className="t-body min-w-0 break-keep font-bold text-navy-800">{option}</span>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
 
