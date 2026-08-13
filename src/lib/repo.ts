@@ -12,6 +12,7 @@ import type {
   SiteNote,
   Vehicle,
   ClientMonthlyActual,
+  OperatingCost,
   PaymentReceipt,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
@@ -304,6 +305,13 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  월 운영비 (0030). 현장 담당자는 RLS 로 막혀 있고, 마이그레이션 전
+  //  환경에는 표가 없으므로 soft 로 읽습니다.
+  const operatingCosts = await soft(
+    async () => pageAll((f, t) => sb.from('operating_costs').select('*').order('month').range(f, t)),
+    [] as Row[],
+  )
+
   //  입금 기록 (0026). 현장 담당자는 RLS 로 막혀 있으므로 soft 로 읽습니다.
   const receipts = await soft(
     async () => pageAll((f, t) => sb.from('payment_receipts').select('*').order('received_on').range(f, t)),
@@ -359,6 +367,17 @@ export async function loadAppData(): Promise<AppData> {
         profit: Number(r.profit ?? 0),
         hasDated: Boolean(r.has_dated),
         sourceFile: r.source_file ?? '',
+      }),
+    ),
+    operatingCosts: operatingCosts.map(
+      (r): OperatingCost => ({
+        id: r.id,
+        month: r.month,
+        category: r.category,
+        amount: Number(r.amount ?? 0),
+        memo: r.memo ?? '',
+        actorName: r.actor_name ?? '',
+        updatedAt: r.updated_at,
       }),
     ),
     schedules: schedules.map(toSchedule),
@@ -1146,6 +1165,32 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
   const { data, error } = await sb.rpc('unassign_schedule_vehicles', { p_ids: ids })
   if (error) throw new Error(error.message)
   return data as { cleared: number; kept: number }
+}
+
+// ── 월 운영비 (0030) ────────────────────────────────────────────────────────
+
+/** 그 달 운영비 한 항목을 넣거나 고칩니다 (관리자) */
+export async function setOperatingCost(input: {
+  month: string
+  category: string
+  amount: number
+  memo: string
+}): Promise<{ monthTotal: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('set_operating_cost', {
+    p_month: input.month,
+    p_category: input.category,
+    p_amount: input.amount,
+    p_memo: input.memo,
+  })
+  if (error) throw new Error(error.message)
+  return data as { monthTotal: number }
+}
+
+export async function deleteOperatingCost(month: string, category: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('delete_operating_cost', { p_month: month, p_category: category })
+  if (error) throw new Error(error.message)
 }
 
 /** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */

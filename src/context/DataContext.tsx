@@ -120,6 +120,15 @@ interface DataContextValue {
   undoAssign: (
     ids: string[],
   ) => Promise<{ ok: boolean; error: string | null; result: { cleared: number; kept: number } | null }>
+  /** 그 달 운영비 한 항목 입력·수정 (0030, 관리자) */
+  setCost: (input: {
+    month: string
+    category: string
+    amount: number
+    memo: string
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 잘못 넣은 운영비 항목 삭제 */
+  removeCost: (month: string, category: string) => Promise<{ ok: boolean; error: string | null }>
   // 거래처 조회 헬퍼
   clientById: (id: string) => Client | undefined
   // 데이터 초기화
@@ -1446,6 +1455,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /**
+   * 월 운영비 (0030).
+   *
+   *  시스템이 추정하지 않습니다. 대표님이 실제 나간 돈을 넣고, 그 값이
+   *  있어야 영업이익이 계산됩니다.
+   */
+  const setCost = useCallback(
+    async (input: { month: string; category: string; amount: number; memo: string }) => {
+      if (!live) return { ok: false, error: '운영비 입력은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.setOperatingCost(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const removeCost = useCallback(
+    async (month: string, category: string) => {
+      if (!live) return { ok: false, error: '운영비 입력은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.deleteOperatingCost(month, category)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const markPaid = useCallback(
     (id: string) => {
       const paidAt = new Date().toISOString()
@@ -1551,6 +1590,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       undoPlan,
       assignVehicles,
       undoAssign,
+      setCost,
+      removeCost,
       clientById,
       reset,
       replaceAll,
@@ -1608,6 +1649,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       undoPlan,
       assignVehicles,
       undoAssign,
+      setCost,
+      removeCost,
       clientById,
       reset,
       replaceAll,

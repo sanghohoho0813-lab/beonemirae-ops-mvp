@@ -47,11 +47,19 @@ export function won(n: number): string {
   return `${n.toLocaleString('ko-KR')}원`
 }
 
-/** 원화 축약: 46500000 → "4,650만원", 120000000 → "1.2억" (작은 카드용) */
+/**
+ * 원화 축약: 46500000 → "4,650만원", 120000000 → "1.2억" (작은 카드용)
+ *
+ *  음수도 줄여 씁니다. 예전에는 양수만 줄여서, 같은 줄에 「매출 150만원」과
+ *  「처리비 -600,000원」이 나란히 붙었습니다. 비용 칸은 대부분 음수라
+ *  작은 카드에서 글자가 넘치고 자릿수도 눈으로 맞추기 어려웠습니다.
+ */
 export function wonShort(n: number): string {
-  if (n >= 100_000_000) return `${(n / 100_000_000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}억`
-  if (n >= 10_000) return `${Math.round(n / 10_000).toLocaleString('ko-KR')}만원`
-  return `${n.toLocaleString('ko-KR')}원`
+  const sign = n < 0 ? '-' : ''
+  const a = Math.abs(n)
+  if (a >= 100_000_000) return `${sign}${(a / 100_000_000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}억`
+  if (a >= 10_000) return `${sign}${Math.round(a / 10_000).toLocaleString('ko-KR')}만원`
+  return `${sign}${a.toLocaleString('ko-KR')}원`
 }
 
 /** kg → 보기 좋은 톤/킬로 표기: 105000 → "105.0톤", 350 → "350kg" */

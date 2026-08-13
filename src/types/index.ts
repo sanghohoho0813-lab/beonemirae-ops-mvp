@@ -313,10 +313,37 @@ export interface AppData {
   monthlyActuals?: ClientMonthlyActual[]
   /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */
   receipts?: PaymentReceipt[]
+  /**
+   * 월 운영비 (0030).
+   *
+   *  인건비·유류비처럼 회사 전체에 나가는 돈입니다. 시스템이 추정하지 않고
+   *  대표가 실제 나간 금액을 넣습니다. 이 값이 있어야 「기여이익」이
+   *  「영업이익」이 됩니다 — 없는 달은 영업이익을 계산하지 않습니다.
+   */
+  operatingCosts?: OperatingCost[]
   // ── 사용 중지한 차량 ──
   //  차량도 지우지 않고 비활성으로 둡니다(과거 배차 이력 때문에).
   //  되돌릴 수 있어야 하므로 목록과 따로 담아 둡니다.
   retiredVehicles?: Vehicle[]
+}
+
+/** 운영비 항목 (0030) — DB check 제약과 같은 목록 */
+export type CostCategoryName =
+  | '인건비'
+  | '유류비'
+  | '차량 유지비'
+  | '임차료·수수료'
+  | '기타 운영비'
+
+/** 월 운영비 한 줄 (0030). 같은 달·같은 항목은 한 줄만 있습니다. */
+export interface OperatingCost {
+  id: string
+  month: string // YYYY-MM
+  category: CostCategoryName
+  amount: number
+  memo: string
+  actorName: string
+  updatedAt: string
 }
 
 /** 결제수단 — 실제 업무에 있는 것만 (0026) */
