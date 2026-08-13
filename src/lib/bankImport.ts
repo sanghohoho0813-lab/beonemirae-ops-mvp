@@ -177,10 +177,24 @@ export function guessColumns(sheet: Sheet): ColumnGuess {
   return { date, amount, description, headerRow, headers }
 }
 
-/** 추정(또는 사람이 고친) 열 자리로 통장 줄을 읽습니다 */
+/**
+ * 추정(또는 사람이 고친) 열 자리로 통장 줄을 읽습니다.
+ *
+ *  같은 날 · 같은 금액 · 같은 적요가 두 줄 찍히는 일이 실제로 있습니다 —
+ *  한 병원이 6월분과 7월분을 같은 날 같은 금액으로 따로 이체하면 통장에는
+ *  똑같이 생긴 줄이 두 개 남습니다. 지문을 「날짜|금액|적요」로만 만들면
+ *  두 줄이 한 줄로 겹쳐, 둘째 입금을 영영 기록할 수 없고 그 달 미수금이
+ *  그대로 남습니다.
+ *
+ *  그래서 **파일 안에서 몇 번째로 나온 줄인지**를 뒤에 붙입니다. 첫 줄은
+ *  예전과 같은 지문을 그대로 씁니다 — 이미 기록해 둔 입금이 다시 살아나
+ *  두 번 들어가지 않게 하기 위해서입니다. 같은 파일을 다시 올리면 순번도
+ *  똑같이 매겨지므로 중복 차단은 그대로 동작합니다.
+ */
 export function readLines(sheet: Sheet, cols: ColumnGuess): BankLine[] {
   const t = today()
   const out: BankLine[] = []
+  const seen = new Map<string, number>()
   for (let r = cols.headerRow + 1; r < sheet.rows.length; r++) {
     const row = sheet.rows[r] ?? []
     const date = toDate(row[cols.date] ?? null)
@@ -190,7 +204,10 @@ export function readLines(sheet: Sheet, cols: ColumnGuess): BankLine[] {
     //  아직 오지 않은 날짜는 서버가 어차피 막습니다. 여기서 걸러 이유를 보여 줍니다.
     if (date > t) continue
     const description = txt(row[cols.description] ?? null)
-    out.push({ row: r, date, amount, description, ref: `${date}|${amount}|${description}` })
+    const base = `${date}|${amount}|${description}`
+    const n = (seen.get(base) ?? 0) + 1
+    seen.set(base, n)
+    out.push({ row: r, date, amount, description, ref: n === 1 ? base : `${base}|#${n}` })
   }
   return out
 }

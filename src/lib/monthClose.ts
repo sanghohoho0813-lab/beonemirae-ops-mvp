@@ -1,5 +1,5 @@
 import type { AppData, Client } from '../types'
-import { billingStateFor, hasOwnPrice, type ItemKey, type SettlementLine } from './billing'
+import { billingStateFor, hasOwnPrice, monthlyFeeOf, type ItemKey, type SettlementLine } from './billing'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월말 청구
@@ -50,6 +50,11 @@ export interface MonthClose {
   ready: CloseRow[]
   /** 확정할 것이 없는 거래처 (이유와 함께) */
   skipped: CloseRow[]
+  /**
+   * 사람이 봐야 하는 거래처 — 월정액 계약인데 그 달 수거가 없는 경우.
+   * 자동으로 청구하지 않습니다. 계약서를 시스템이 알 수 없기 때문입니다.
+   */
+  needsCheck: CloseRow[]
   /** ready 의 금액 합계 */
   total: number
   /** 기본 단가가 섞인 거래처 수 */
@@ -77,6 +82,7 @@ export function monthClose(data: AppData, month: string): MonthClose {
   const all = [...data.clients, ...(data.retiredClients ?? [])]
   const ready: CloseRow[] = []
   const skipped: CloseRow[] = []
+  const needsCheck: CloseRow[] = []
 
   for (const c of all) {
     const st = billingStateFor(data, c.id, month)
@@ -105,6 +111,34 @@ export function monthClose(data: AppData, month: string): MonthClose {
         : nothingLeft
           ? '이 달에 완료된 수거·공급이 없습니다'
           : '남은 수거·공급이 무상 항목뿐이라 청구 금액이 0원입니다'
+
+    //  월정액 계약인데 그 달 수거가 한 건도 없는 경우
+    //
+    //   시스템은 수거가 1건이라도 있어야 월정액을 청구합니다. 계약 전·해지
+    //   후의 달에 기본요금이 저절로 나가는 사고를 막기 위해서입니다. 실제
+    //   거래처 파일 11개를 전수 확인했을 때도 요금이 적힌 달은 모두 수거가
+    //   있던 달이었습니다.
+    //
+    //   그런데 지금까지는 그런 달에 거래처가 **목록에서 통째로 사라졌습니다.**
+    //   계약서상 받아야 할 돈이 있어도 대표님이 알아챌 길이 없었습니다.
+    //   자동으로 청구하지는 않되(계약서를 시스템이 알 수 없습니다), 화면에
+    //   남겨 사람이 확인하게 합니다.
+    const flats: string[] = []
+    if (monthlyFeeOf(c, 'medical') != null) flats.push('의료폐기물')
+    if (monthlyFeeOf(c, 'diaper') != null) flats.push('일회용기저귀')
+    if (nothingLeft && st.billedAmount === 0 && flats.length > 0) {
+      const fee =
+        (monthlyFeeOf(c, 'medical') ?? 0) + (monthlyFeeOf(c, 'diaper') ?? 0)
+      needsCheck.push({
+        ...base,
+        canConfirm: false,
+        reason:
+          `월정액 계약(${flats.join('·')} 월 ${fee.toLocaleString('ko-KR')}원)인데 ` +
+          '이 달 수거 기록이 없습니다 — 계약서상 청구 대상인지 확인해 주세요',
+      })
+      continue
+    }
+
     //  아무 일도 없던 거래처까지 목록에 올리면 화면이 의미 없이 길어집니다.
     if (nothingLeft && st.billedAmount === 0) continue
     skipped.push({ ...base, canConfirm: false, reason })
@@ -112,11 +146,13 @@ export function monthClose(data: AppData, month: string): MonthClose {
 
   ready.sort((a, b) => b.amount - a.amount)
   skipped.sort((a, b) => a.clientName.localeCompare(b.clientName, 'ko'))
+  needsCheck.sort((a, b) => a.clientName.localeCompare(b.clientName, 'ko'))
 
   return {
     month,
     ready,
     skipped,
+    needsCheck,
     total: ready.reduce((s, r) => s + r.amount, 0),
     defaultPricedCount: ready.filter((r) => r.defaultPriced.length > 0).length,
   }

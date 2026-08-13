@@ -54,12 +54,161 @@ const md = (iso: string) => {
   return `${Number(m)}/${Number(d)}`
 }
 
-export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+/**
+ * 명세서 한 장 (A4 본문).
+ *
+ *  모달로 한 장 보는 곳(InvoiceView)과 월말에 여러 장을 이어서 인쇄하는
+ *  곳(InvoiceBatch)이 **같은 종이**를 써야 합니다. 두 벌로 두면 한쪽만
+ *  고쳐져 병원마다 다른 모양의 명세서가 나갑니다.
+ */
+export function InvoiceSheet({ invoice }: { invoice: Invoice }) {
   const inv = invoice
   const [y, m] = inv.month.split('-')
   //  부가세 별도 거래처(예: 목동현대웰병원 지정폐기물 10%)만 세액 칸을
   //  그립니다. 나머지 거래처의 명세서 모양은 그대로 둡니다.
   const hasVat = (inv.vatTotal ?? 0) > 0
+  //  명세서는 **확정 당시에 굳혀 둔 JSON** 입니다. 예전 버전에서 확정한
+  //  청구에는 나중에 생긴 칸이 없을 수 있습니다. 없는 칸 하나 때문에 화면
+  //  전체가 죽으면 그 달 명세서를 아예 못 뽑습니다 — 빈 목록으로 봅니다.
+  const medicalLines = inv.medicalLines ?? []
+  const diaperLines = inv.diaperLines ?? []
+  const freeSupplies = inv.freeSupplies ?? []
+  return (
+    <div className="mx-auto my-4 max-w-[52rem] bg-white p-6 shadow-2xl print:my-0 print:max-w-none print:p-0 print:shadow-none sm:p-10">
+      <h1 className="text-center text-[1.6rem] font-black tracking-tight text-navy-900">
+        {y}년 {Number(m)}월 거래명세서
+      </h1>
+
+      {/* 공급받는 자 / 공급자 */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-[1.25rem] font-extrabold text-navy-900">{inv.clientName}</p>
+          {inv.manager && <p className="mt-1 text-[1.02rem] text-navy-600">담당자 : {inv.manager}</p>}
+          <p className="mt-3 text-[1.02rem] text-navy-600">발행일자 : {ymd(inv.issuedAt)}</p>
+          <p className="text-[1.02rem] text-navy-600">
+            거래일자 : {ymd(inv.from)} ~ {Number(inv.to.split('-')[2])}일
+          </p>
+          <p className="mt-2 text-[1.02rem] text-navy-500">아래와 같이 계산합니다.</p>
+        </div>
+        <div className="rounded-xl border border-navy-200 p-3 text-[0.98rem] leading-relaxed">
+          <p className="mb-1 text-[1.08rem] font-extrabold text-navy-900">{SUPPLIER.name}</p>
+          <Row k="대표자" v={SUPPLIER.ceo} />
+          <Row k="등록번호" v={SUPPLIER.bizNo} />
+          <Row k="소재지" v={SUPPLIER.address} />
+          <Row k="업태" v={`${SUPPLIER.category} · ${SUPPLIER.item}`} />
+          <Row k="담당자" v={`${SUPPLIER.manager} ${SUPPLIER.phone}`} />
+          <Row k="이메일" v={SUPPLIER.email} />
+        </div>
+      </div>
+
+      {/* 합계금액 */}
+      <div className="mt-6 flex items-center gap-4 rounded-xl bg-navy-900 px-5 py-4 text-white">
+        <span className="text-[1.08rem] font-bold">합계금액</span>
+        <span className="ml-auto text-[1.7rem] font-black tabular-nums">{won(inv.total)}</span>
+      </div>
+
+      {/* 명세 */}
+      <table className="mt-5 w-full border-collapse text-[0.98rem]">
+        <thead>
+          <tr className="bg-navy-50 text-navy-600">
+            <Th className="w-[4.5rem]">월/일</Th>
+            <Th className="text-left">품목</Th>
+            <Th className="w-[4rem]">단위</Th>
+            <Th className="w-[5rem] text-right">수량</Th>
+            <Th className="w-[5.5rem] text-right">단가</Th>
+            <Th className="w-[7rem] text-right">공급가액</Th>
+            {hasVat && <Th className="w-[6rem] text-right">세액</Th>}
+            <Th className="text-left">비고</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {medicalLines.map((l, i) => (
+            <tr key={`m${i}`} className="border-b border-navy-100">
+              <Td className="text-center">{md(l.date)}</Td>
+              <Td className="text-left font-bold text-navy-800">{l.label}</Td>
+              <Td className="text-center text-navy-500">{l.unit}</Td>
+              <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
+              <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
+              <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
+              {hasVat && <Td className="text-right tabular-nums">{(l.vat ?? 0) > 0 ? (l.vat ?? 0).toLocaleString() : ''}</Td>}
+              <Td className="text-left text-navy-400">{l.note}</Td>
+            </tr>
+          ))}
+          {medicalLines.length > 0 && (
+            <tr className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
+              <Td colSpan={3} className="text-left">
+                의료폐기물 수집운반비용 합계
+              </Td>
+              <Td className="text-right tabular-nums">{inv.medicalKg.toLocaleString()}</Td>
+              <Td />
+              <Td className="text-right tabular-nums">{inv.medicalSubtotal.toLocaleString()}</Td>
+              {hasVat && <Td />}
+              <Td />
+            </tr>
+          )}
+
+          {diaperLines.map((l, i) => (
+            <tr key={`d${i}`} className="border-b border-navy-100">
+              <Td className="text-center">{md(l.date)}</Td>
+              <Td className="text-left font-bold text-navy-800">
+                {l.label === '일회용기저귀' ? '의료기관일회용기저귀' : l.label}
+              </Td>
+              <Td className="text-center text-navy-500">{l.unit}</Td>
+              <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
+              <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
+              <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
+              {hasVat && <Td className="text-right tabular-nums">{(l.vat ?? 0) > 0 ? (l.vat ?? 0).toLocaleString() : ''}</Td>}
+              <Td className="text-left text-navy-400">{l.note}</Td>
+            </tr>
+          ))}
+          {diaperLines.length > 0 && (
+            <tr className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
+              <Td colSpan={3} className="text-left">
+                의료기관 일회용기저귀 수집운반비용 합계
+              </Td>
+              <Td className="text-right tabular-nums">{inv.diaperKg.toLocaleString()}</Td>
+              <Td />
+              <Td className="text-right tabular-nums">{inv.diaperSubtotal.toLocaleString()}</Td>
+              {hasVat && <Td className="text-right tabular-nums">{inv.vatTotal.toLocaleString()}</Td>}
+              <Td />
+            </tr>
+          )}
+
+          <tr className="bg-navy-900 font-extrabold text-white">
+            <Td colSpan={hasVat ? 6 : 5} className="text-left">
+              합계{hasVat ? ' (세액 포함)' : ''}
+            </Td>
+            <Td className="text-right tabular-nums">{inv.total.toLocaleString()}</Td>
+            <Td />
+          </tr>
+        </tbody>
+      </table>
+
+      {/* 무상 공급 — 매출이 아니므로 참고로만 */}
+      {freeSupplies.length > 0 && (
+        <p className="mt-3 break-keep text-[0.95rem] leading-relaxed text-navy-500">
+          <b className="text-navy-700">무상 공급 (매출 미포함)</b> ·{' '}
+          {freeSupplies.map((f) => `${f.label} ${f.qty.toLocaleString()}${f.unit}`).join(' · ')}
+        </p>
+      )}
+
+      {/* 거래조건 */}
+      <div className="mt-6 rounded-xl border border-navy-200 p-4 text-[0.98rem] leading-relaxed text-navy-700">
+        <p className="mb-1.5 font-extrabold text-navy-900">거래조건</p>
+        <p>1. 결제기한 : {inv.dueDate ? ymd(inv.dueDate) : '거래처와 협의'}</p>
+        <p>2. 대금 지불방법 : {inv.paymentTerms || '현금 (사업자 등록증 상 상호로 입금 부탁드립니다)'}</p>
+        <p>3. 계산서 (면세) : 익월 10일 발행</p>
+        <p>
+          4. 결제정보 · {SUPPLIER.bank} {SUPPLIER.account} · 예금주 {SUPPLIER.holder}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const inv = invoice
+  const [y, m] = inv.month.split('-')
   const sheetRef = useRef<HTMLDivElement>(null)
   usePrintIsolate(sheetRef, true)
   //  폰에서 뒤로 가기를 하면 명세서만 닫혀야 합니다. 이게 없으면 거래처
@@ -85,135 +234,7 @@ export function InvoiceView({ invoice, onClose }: { invoice: Invoice; onClose: (
         </button>
       </div>
 
-      <div className="mx-auto my-4 max-w-[52rem] bg-white p-6 shadow-2xl print:my-0 print:max-w-none print:p-0 print:shadow-none sm:p-10">
-        <h1 className="text-center text-[1.6rem] font-black tracking-tight text-navy-900">
-          {y}년 {Number(m)}월 거래명세서
-        </h1>
-
-        {/* 공급받는 자 / 공급자 */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-[1.25rem] font-extrabold text-navy-900">{inv.clientName}</p>
-            {inv.manager && <p className="mt-1 text-[1.02rem] text-navy-600">담당자 : {inv.manager}</p>}
-            <p className="mt-3 text-[1.02rem] text-navy-600">발행일자 : {ymd(inv.issuedAt)}</p>
-            <p className="text-[1.02rem] text-navy-600">
-              거래일자 : {ymd(inv.from)} ~ {Number(inv.to.split('-')[2])}일
-            </p>
-            <p className="mt-2 text-[1.02rem] text-navy-500">아래와 같이 계산합니다.</p>
-          </div>
-          <div className="rounded-xl border border-navy-200 p-3 text-[0.98rem] leading-relaxed">
-            <p className="mb-1 text-[1.08rem] font-extrabold text-navy-900">{SUPPLIER.name}</p>
-            <Row k="대표자" v={SUPPLIER.ceo} />
-            <Row k="등록번호" v={SUPPLIER.bizNo} />
-            <Row k="소재지" v={SUPPLIER.address} />
-            <Row k="업태" v={`${SUPPLIER.category} · ${SUPPLIER.item}`} />
-            <Row k="담당자" v={`${SUPPLIER.manager} ${SUPPLIER.phone}`} />
-            <Row k="이메일" v={SUPPLIER.email} />
-          </div>
-        </div>
-
-        {/* 합계금액 */}
-        <div className="mt-6 flex items-center gap-4 rounded-xl bg-navy-900 px-5 py-4 text-white">
-          <span className="text-[1.08rem] font-bold">합계금액</span>
-          <span className="ml-auto text-[1.7rem] font-black tabular-nums">{won(inv.total)}</span>
-        </div>
-
-        {/* 명세 */}
-        <table className="mt-5 w-full border-collapse text-[0.98rem]">
-          <thead>
-            <tr className="bg-navy-50 text-navy-600">
-              <Th className="w-[4.5rem]">월/일</Th>
-              <Th className="text-left">품목</Th>
-              <Th className="w-[4rem]">단위</Th>
-              <Th className="w-[5rem] text-right">수량</Th>
-              <Th className="w-[5.5rem] text-right">단가</Th>
-              <Th className="w-[7rem] text-right">공급가액</Th>
-              {hasVat && <Th className="w-[6rem] text-right">세액</Th>}
-              <Th className="text-left">비고</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {inv.medicalLines.map((l, i) => (
-              <tr key={`m${i}`} className="border-b border-navy-100">
-                <Td className="text-center">{md(l.date)}</Td>
-                <Td className="text-left font-bold text-navy-800">{l.label}</Td>
-                <Td className="text-center text-navy-500">{l.unit}</Td>
-                <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
-                <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
-                <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
-                {hasVat && <Td className="text-right tabular-nums">{(l.vat ?? 0) > 0 ? (l.vat ?? 0).toLocaleString() : ''}</Td>}
-                <Td className="text-left text-navy-400">{l.note}</Td>
-              </tr>
-            ))}
-            {inv.medicalLines.length > 0 && (
-              <tr className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
-                <Td colSpan={3} className="text-left">
-                  의료폐기물 수집운반비용 합계
-                </Td>
-                <Td className="text-right tabular-nums">{inv.medicalKg.toLocaleString()}</Td>
-                <Td />
-                <Td className="text-right tabular-nums">{inv.medicalSubtotal.toLocaleString()}</Td>
-                {hasVat && <Td />}
-                <Td />
-              </tr>
-            )}
-
-            {inv.diaperLines.map((l, i) => (
-              <tr key={`d${i}`} className="border-b border-navy-100">
-                <Td className="text-center">{md(l.date)}</Td>
-                <Td className="text-left font-bold text-navy-800">
-                  {l.label === '일회용기저귀' ? '의료기관일회용기저귀' : l.label}
-                </Td>
-                <Td className="text-center text-navy-500">{l.unit}</Td>
-                <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
-                <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
-                <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
-                {hasVat && <Td className="text-right tabular-nums">{(l.vat ?? 0) > 0 ? (l.vat ?? 0).toLocaleString() : ''}</Td>}
-                <Td className="text-left text-navy-400">{l.note}</Td>
-              </tr>
-            ))}
-            {inv.diaperLines.length > 0 && (
-              <tr className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
-                <Td colSpan={3} className="text-left">
-                  의료기관 일회용기저귀 수집운반비용 합계
-                </Td>
-                <Td className="text-right tabular-nums">{inv.diaperKg.toLocaleString()}</Td>
-                <Td />
-                <Td className="text-right tabular-nums">{inv.diaperSubtotal.toLocaleString()}</Td>
-                {hasVat && <Td className="text-right tabular-nums">{inv.vatTotal.toLocaleString()}</Td>}
-                <Td />
-              </tr>
-            )}
-
-            <tr className="bg-navy-900 font-extrabold text-white">
-              <Td colSpan={hasVat ? 6 : 5} className="text-left">
-                합계{hasVat ? ' (세액 포함)' : ''}
-              </Td>
-              <Td className="text-right tabular-nums">{inv.total.toLocaleString()}</Td>
-              <Td />
-            </tr>
-          </tbody>
-        </table>
-
-        {/* 무상 공급 — 매출이 아니므로 참고로만 */}
-        {inv.freeSupplies.length > 0 && (
-          <p className="mt-3 break-keep text-[0.95rem] leading-relaxed text-navy-500">
-            <b className="text-navy-700">무상 공급 (매출 미포함)</b> ·{' '}
-            {inv.freeSupplies.map((f) => `${f.label} ${f.qty.toLocaleString()}${f.unit}`).join(' · ')}
-          </p>
-        )}
-
-        {/* 거래조건 */}
-        <div className="mt-6 rounded-xl border border-navy-200 p-4 text-[0.98rem] leading-relaxed text-navy-700">
-          <p className="mb-1.5 font-extrabold text-navy-900">거래조건</p>
-          <p>1. 결제기한 : {inv.dueDate ? ymd(inv.dueDate) : '거래처와 협의'}</p>
-          <p>2. 대금 지불방법 : {inv.paymentTerms || '현금 (사업자 등록증 상 상호로 입금 부탁드립니다)'}</p>
-          <p>3. 계산서 (면세) : 익월 10일 발행</p>
-          <p>
-            4. 결제정보 · {SUPPLIER.bank} {SUPPLIER.account} · 예금주 {SUPPLIER.holder}
-          </p>
-        </div>
-      </div>
+      <InvoiceSheet invoice={invoice} />
     </div>
   )
 }

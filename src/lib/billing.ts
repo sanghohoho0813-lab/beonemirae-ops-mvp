@@ -1,4 +1,5 @@
 import type { AppData, Client, MaterialSupply, Payment } from '../types'
+import { today as todayKst } from './format'
 
 /** 'YYYY-MM-DD' → 'YYYY-MM' */
 const monthOf = (date: string) => date.slice(0, 7)
@@ -516,10 +517,12 @@ export function lastDayOf(month: string): string {
  */
 function throughToday(month: string): string {
   const end = lastDayOf(month)
-  const d = new Date()
-  const pad2 = (n: number) => String(n).padStart(2, '0')
-  const today = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-  return today < end && today.slice(0, 7) === month ? today : end
+  //  기기 시각이 아니라 **한국 시각**의 오늘입니다. 기기 시간대가 UTC 로
+  //  잡혀 있으면 한국 00~09시 사이에 하루 전으로 읽혀, 달이 바뀌는 새벽에
+  //  「발행일자 9월 30일」 같은 아직 오지 않은 날짜가 병원에 나가는
+  //  명세서에 찍힙니다.
+  const t = todayKst()
+  return t < end && t.slice(0, 7) === month ? t : end
 }
 
 /**

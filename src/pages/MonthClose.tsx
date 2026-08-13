@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, Info, ReceiptText } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Info, Printer, ReceiptText } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryButton, EmptyState } from '../components/ui'
 import { monthClose, recentMonths } from '../lib/monthClose'
+import { confirmedInvoices, InvoiceBatch } from '../components/InvoiceBatch'
 import { thisMonth, won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +32,9 @@ export function MonthClose() {
   const [result, setResult] = useState<{ ok: number; amount: number; failed: { name: string; error: string }[] } | null>(null)
 
   const close = useMemo(() => monthClose(data, month), [data, month])
+  //  확정한 청구의 명세서 — 병원에 보낼 문서입니다.
+  const invoices = useMemo(() => confirmedInvoices(data, month), [data, month])
+  const [batchOpen, setBatchOpen] = useState(false)
 
   //  기본 단가가 섞인 곳은 처음부터 꺼 둡니다. 그 상태를 이 달 목록에
   //  맞춰 계산합니다 (달을 바꾸면 다시 판단합니다).
@@ -188,6 +192,29 @@ export function MonthClose() {
         )}
       </div>
 
+      {/*
+        확정한 명세서를 한 번에 뽑습니다.
+
+         여기가 없으면 거래처 화면에 하나씩 들어가 달을 고르고 명세서를 열고
+         인쇄해야 합니다 — 열여덟 곳이면 열여덟 번입니다. 그래서 거래명세서
+         시트가 든 엑셀을 계속 함께 굴리게 됩니다.
+      */}
+      <div className="card flex flex-wrap items-center gap-3 p-4 sm:p-5">
+        <PrimaryButton onClick={() => setBatchOpen(true)} disabled={invoices.length === 0}>
+          <span data-close-batch className="flex items-center gap-1.5">
+            <Printer size={16} />
+            {invoices.length === 0
+              ? '보낼 명세서 없음'
+              : `확정한 명세서 ${invoices.length}장 한 번에 인쇄`}
+          </span>
+        </PrimaryButton>
+        <p className="min-w-0 flex-1 break-keep text-[1.02rem] text-navy-500">
+          {invoices.length === 0
+            ? '청구를 확정하면 그때 굳혀 둔 명세서를 여기서 한 번에 뽑을 수 있습니다.'
+            : '병원마다 A4 한 장씩 끊어집니다 — 인쇄 창에서 「PDF로 저장」을 고르면 그대로 파일이 됩니다.'}
+        </p>
+      </div>
+
       {close.defaultPricedCount > 0 && (
         <div data-close-warn className="card flex gap-3 border-amber-200 bg-amber-50/60 p-4 sm:p-5">
           <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-600" />
@@ -276,6 +303,33 @@ export function MonthClose() {
         )}
       </section>
 
+      {/* 월정액인데 그 달 수거가 없는 곳 — 사람이 봐야 합니다 */}
+      {close.needsCheck.length > 0 && (
+        <section>
+          <SectionTitle>확인이 필요한 거래처 {close.needsCheck.length}곳</SectionTitle>
+          <div className="card divide-y divide-navy-100" data-close-check>
+            {close.needsCheck.map((r) => (
+              <div key={r.clientId} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-4">
+                <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[0.95rem] font-bold text-amber-700">
+                  월정액
+                </span>
+                <Link
+                  to={`/clients/${r.clientId}`}
+                  className="min-w-0 flex-1 basis-[10rem] break-keep font-bold text-navy-900 hover:underline"
+                >
+                  {r.clientName}
+                </Link>
+                <span className="break-keep text-[0.98rem] text-navy-500">{r.reason}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 break-keep px-1 text-[0.98rem] text-navy-400">
+            수거가 한 건이라도 있어야 월정액을 청구합니다 — 계약 전·해지 후의 달에 기본요금이 저절로 나가지 않게 하는
+            규칙입니다. 계약서상 받아야 할 달이면 거래처 화면에서 직접 청구해 주세요. 시스템이 대신 판단하지 않습니다.
+          </p>
+        </section>
+      )}
+
       {/* 대상 아닌 곳 */}
       {close.skipped.length > 0 && (
         <section>
@@ -291,6 +345,10 @@ export function MonthClose() {
             </div>
           </ExpandableSection>
         </section>
+      )}
+
+      {batchOpen && (
+        <InvoiceBatch invoices={invoices} month={month} onClose={() => setBatchOpen(false)} />
       )}
 
       <p className="px-1 text-[0.98rem] text-navy-400">

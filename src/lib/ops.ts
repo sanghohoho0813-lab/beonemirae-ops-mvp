@@ -10,7 +10,7 @@ import type {
 } from '../types'
 import { facilityByWaste } from '../data/ops'
 import { schedulesOn, todaySummary, additionalMaterialCount } from './selectors'
-import { today, thisMonth } from './format'
+import { today, thisMonth, nowHm, shiftDays } from './format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 운영 파생 로직 (시연용 추천/위험 시뮬레이션)
@@ -170,11 +170,12 @@ export function todayChecklist(data: AppData): CheckItem[] {
   const confirmNeeded = data.payments.filter((p) => p.status === '확인필요').length
   const t = today()
   // 최근 7일 내 완료 거래처 수 (수거대장 작성 대상 proxy)
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
+  //  날짜 문자열끼리 비교합니다 — Date 로 바꿔 비교하면 'YYYY-MM-DD' 는 UTC
+  //  자정으로 파싱되고 기준값은 기기 시각이라 하루 어긋납니다.
+  const weekAgo = shiftDays(-7)
   const logTargets = new Set(
     data.schedules
-      .filter((s) => s.status === '완료' && s.date <= t && new Date(s.date) >= weekAgo)
+      .filter((s) => s.status === '완료' && s.date <= t && s.date >= weekAgo)
       .map((s) => s.clientId),
   ).size
   const isolation = isolationAlerts(data).filter((a) => a.kind === '격리').length
@@ -505,8 +506,9 @@ export function materialUsage(data: AppData, month = thisMonth()): MaterialUsage
 // ── 수거 완료 후 입력 대기 (오늘 방문 예정시간 지난 미완료 건) ────────────────
 export function pendingInputSchedules(data: AppData): typeof data.schedules {
   const t = today()
-  const now = new Date()
-  const hhmm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`
+  //  기기 시각이 아니라 한국 시각으로 비교합니다 — 시간대가 어긋난 기기에서
+  //  「입력 대기」가 아홉 시간 일찍/늦게 뜨지 않도록.
+  const hhmm = nowHm()
   return schedulesOn(data, t).filter((s) => s.status === '지연' || (s.status !== '완료' && s.scheduledTime < hhmm))
 }
 

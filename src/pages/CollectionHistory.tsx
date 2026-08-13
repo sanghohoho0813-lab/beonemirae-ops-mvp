@@ -5,7 +5,7 @@ import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { FilterChip } from '../components/ui'
 import { facilityByWaste } from '../data/ops'
-import { weight, today } from '../lib/format'
+import { weight, today, shiftDays } from '../lib/format'
 import type { WasteType } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,12 +17,8 @@ type WasteFilter = '전체' | WasteType
 type KindFilter = '전체' | '정기' | '추가' | '긴급'
 type PeriodFilter = '전체' | '최근 7일' | '이번 달'
 
-function shift(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
+//  기간 경계도 한국 시각 기준입니다 (lib/format).
+const shift = shiftDays
 
 export function CollectionHistory() {
   const { data, clientById } = useData()

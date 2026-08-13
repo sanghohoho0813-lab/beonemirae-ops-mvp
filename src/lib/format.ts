@@ -34,6 +34,29 @@ export function thisMonth(): string {
   return today().slice(0, 7)
 }
 
+/**
+ * 지금 시각 "HH:mm" — 역시 **한국 시각 기준**입니다.
+ *
+ *  수거 입력 화면이 실제 수거 시간을 이 값으로 채워 두고, 그대로 저장됩니다.
+ *  기기 시간대가 한국이 아니면 아홉 시간 어긋난 시간이 기록에 남습니다.
+ */
+export function nowHm(): string {
+  return new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+/** 오늘로부터 n일 뒤(음수면 이전) — 한국 시각 기준 */
+export function shiftDays(days: number): string {
+  const [y, m, d] = today().split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + days)
+  return dt.toISOString().slice(0, 10)
+}
+
 /** YYYY-MM-DD → "6월 30일 (월)" */
 export function prettyDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)

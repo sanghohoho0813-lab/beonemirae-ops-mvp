@@ -11,6 +11,7 @@ import {
   Truck,
   ArrowRight,
 } from 'lucide-react'
+import { nowHm } from '../lib/format'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -36,10 +37,8 @@ import type { ContainerBreakdown, HandoverStatus, OfficeStock, WasteType } from 
 //   자재 동시공급(재고 차감) → 차량·기사 → 처리장 인계 → 특이사항 → 요약 → 완료
 // ─────────────────────────────────────────────────────────────────────────────
 
-function nowTime(): string {
-  const d = new Date()
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
+//  저장되는 값이므로 기기 시각이 아니라 한국 시각을 씁니다 (lib/format).
+const nowTime = nowHm
 
 const HANDOVERS: HandoverStatus[] = ['수거 완료', '인계 대기', '인계 완료']
 
