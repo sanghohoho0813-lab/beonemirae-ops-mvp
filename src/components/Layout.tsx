@@ -42,6 +42,7 @@ import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
 import { TONE, type Tone } from '../lib/tone'
 import { SyncBar } from './SyncBar'
+import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
 import { TourButton, TourWhyButton } from './TourEntry'
@@ -628,6 +629,7 @@ export function Layout() {
         <Sidebar />
         <div className="min-w-0 flex-1 overflow-x-hidden">
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
+          <SchemaBar />
           <SyncBar />
           <MobileHeader onHelp={() => setHelpOpen(true)} />
           <main

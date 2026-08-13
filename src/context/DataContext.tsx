@@ -1282,7 +1282,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (!built) {
         return { ok: false, error: '이 달에는 새로 청구할 수거·공급이 없습니다.' }
       }
-      const name = findClientName(data, clientId)
       const payload: Omit<Payment, 'id'> = {
         clientId,
         billingMonth: month,
@@ -1294,18 +1293,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
         snapshot: built.snapshot,
       }
       if (live) {
+        //  서버 함수 한 번으로 끝냅니다 (0032).
+        //   · 이미 청구한 수거가 들어 있으면 서버가 거부합니다 — 두 사람이
+        //     동시에 눌러도 병원에 두 배로 청구되지 않습니다. 화면의 버튼
+        //     잠금은 내 브라우저에서만 도는 잠금이라 이걸 막지 못합니다.
+        //   · 청구 저장과 감사기록이 같은 트랜잭션입니다.
         return await runLive(async () => {
-          const created = await repo.insertPayment(payload)
-          await repo.writeAudit({
-            action: 'payment.confirm',
-            entity: 'payments',
-            entityId: created.id,
+          await repo.confirmBillingRpc({
             clientId,
-            after: { amount: created.amount, month, kind: built.snapshot.kind },
-            summary:
-              `${name} ${month} ${built.snapshot.kind} 청구 확정 — ` +
-              `${built.amount.toLocaleString('ko-KR')}원 ` +
-              `(수거 ${built.snapshot.scheduleIds.length}건 · 공급 ${built.snapshot.materialIds.length}건)`,
+            month,
+            amount: built.amount,
+            snapshot: built.snapshot,
           })
         }, opts?.quiet)
       }

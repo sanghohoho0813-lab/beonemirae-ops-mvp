@@ -1171,6 +1171,54 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
   return data as { cleared: number; kept: number }
 }
 
+// ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
+
+/** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
+export const EXPECTED_SCHEMA_VERSION = 32
+
+/**
+ * 서버 DB 의 스키마 버전.
+ *
+ *  함수 자체가 없으면(0032 이전) null 을 돌려줍니다 — 「구버전」이라는 뜻입니다.
+ *  마이그레이션을 실행하지 않은 채 새 화면을 열면 표가 없어 조용히 빈 값으로
+ *  보이기 때문에, 화면이 이 값을 보고 먼저 알려 줍니다.
+ */
+export async function schemaVersion(): Promise<number | null> {
+  const sb = supabase
+  if (!sb) return null
+  try {
+    const { data, error } = await sb.rpc('app_schema_version')
+    if (error) return null
+    return typeof data === 'number' ? data : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 청구 확정 (0032).
+ *
+ *  이미 청구한 수거·자재가 들어 있으면 서버가 거부합니다 — 두 사람이 동시에
+ *  월말 청구를 눌러도 병원에 두 배로 청구되지 않습니다. 청구 저장과
+ *  감사기록이 한 트랜잭션이라 중간에 끊겨도 근거 없는 청구가 남지 않습니다.
+ */
+export async function confirmBillingRpc(input: {
+  clientId: string
+  month: string
+  amount: number
+  snapshot: unknown
+}): Promise<{ id: string }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('confirm_billing', {
+    p_client_id: input.clientId,
+    p_month: input.month,
+    p_amount: input.amount,
+    p_snapshot: input.snapshot,
+  })
+  if (error) throw new Error(error.message)
+  return data as { id: string }
+}
+
 // ── 월 운영비 (0030) ────────────────────────────────────────────────────────
 
 /** 그 달 운영비 한 항목을 넣거나 고칩니다 (관리자) */
