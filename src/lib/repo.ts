@@ -1118,6 +1118,36 @@ export async function undoScheduleBatch(batch: string): Promise<{ deleted: numbe
   return data as { deleted: number; kept: number }
 }
 
+// ── 차량 배정 (0029) ────────────────────────────────────────────────────────
+
+export interface AssignResultRow {
+  assigned: number
+  skipped: number
+  vehicles: number
+  from: string | null
+  to: string | null
+  /** 되돌릴 때 쓰는 일정 id 목록 */
+  ids: string[]
+}
+
+/** 확인한 차량 배정을 저장합니다 — 구분이 다른 차량은 서버가 다시 막습니다 */
+export async function assignScheduleVehicles(
+  rows: { scheduleId: string; vehicleId: string }[],
+): Promise<AssignResultRow> {
+  const sb = need()
+  const { data, error } = await sb.rpc('assign_schedule_vehicles', { p_rows: rows })
+  if (error) throw new Error(error.message)
+  return data as AssignResultRow
+}
+
+/** 배정 되돌리기 — 아직 수거하지 않은 건만 풀립니다 */
+export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared: number; kept: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('unassign_schedule_vehicles', { p_ids: ids })
+  if (error) throw new Error(error.message)
+  return data as { cleared: number; kept: number }
+}
+
 /** 비밀번호 초기화 (관리자만) — 새 임시 비밀번호는 관리자가 직접 전달합니다 */
 export async function resetUserPassword(id: string, password: string): Promise<void> {
   const sb = need()

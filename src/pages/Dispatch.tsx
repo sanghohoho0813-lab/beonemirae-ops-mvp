@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Route, Siren, Package, Target, FlaskConical, ChevronDown } from 'lucide-react'
+import { Route, Siren, Package, Target, FlaskConical, ChevronDown, ChevronRight, Truck } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { WasteBadge } from '../components/Badge'
 import { PageShell, SectionTitle, ExpandableSection } from '../components/ui'
 import { SeparationNotice, VehicleFleetCard, FacilityCard, IsolationCard } from '../components/ops'
 import { dispatchPlans, type DispatchPlan } from '../lib/ops'
+import { today } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 배차·경로 추천 (시뮬레이션) — 특허 경로 산출부(150)/배차 추천부(160)
@@ -119,6 +121,12 @@ const fleetStatusStyle: Record<string, string> = {
 
 export function Dispatch() {
   const { data } = useData()
+  //  차가 정해지지 않은 오늘 일정은 아래 배차 추천에 아예 잡히지 않습니다.
+  //  「추천 차량 0대」만 보이면 일정이 없는 것인지 배정이 안 된 것인지
+  //  알 수 없어, 몇 건이 남았는지와 어디서 붙이는지를 먼저 알려 줍니다.
+  const unassignedToday = data.schedules.filter(
+    (s) => s.date === today() && s.status !== '완료' && !s.vehicleId,
+  ).length
   const allPlans = dispatchPlans(data)
   const plans = allPlans.filter((p) => p.stops.length > 0)
   const fleet = data.vehicles.map((v, i) => {
@@ -158,6 +166,23 @@ export function Dispatch() {
           ))}
         </div>
       </div>
+
+      {unassignedToday > 0 && (
+        <Link
+          to="/plan"
+          data-dispatch-unassigned
+          className="card flex items-center gap-3 border-amber-200 bg-amber-50/60 p-4 transition hover:bg-amber-50 sm:p-5"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+            <Truck size={20} />
+          </span>
+          <span className="min-w-0 flex-1 text-[1.05rem] leading-relaxed text-navy-700">
+            <b className="text-amber-700">오늘 차량이 정해지지 않은 일정 {unassignedToday}건</b>이 있습니다. 아래 배차 추천에는
+            잡히지 않습니다 — 「일정 편성 → ② 차량 배정」에서 붙여 주세요.
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-amber-500" />
+        </Link>
+      )}
 
       {/* 핵심 숫자 */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

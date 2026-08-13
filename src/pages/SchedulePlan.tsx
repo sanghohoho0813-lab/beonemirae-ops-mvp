@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarPlus, CalendarX2, CheckCircle2, Info, Undo2 } from 'lucide-react'
+import { CalendarPlus, CalendarX2, CheckCircle2, Info, Truck, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryButton, EmptyState } from '../components/ui'
@@ -7,7 +7,8 @@ import { WasteBadge } from '../components/Badge'
 import { today, prettyDate } from '../lib/format'
 import { addDays } from '../lib/performance'
 import { buildPlan, WEEKDAY_LABEL, type PlanResult } from '../lib/schedulePlan'
-import type { PlanBatchResult } from '../lib/repo'
+import { buildAssignment, dayLabel } from '../lib/vehiclePlan'
+import type { AssignResultRow, PlanBatchResult } from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 수거 일정 편성
@@ -40,6 +41,241 @@ function Stat({ label, value, unit, tone = 'navy' }: { label: string; value: num
         {value.toLocaleString('ko-KR')}
         <span className="ml-0.5 text-base text-navy-300">{unit}</span>
       </p>
+    </div>
+  )
+}
+
+/** 「① 일정 만들기」 처럼 지금 어느 단계인지 크게 알려 줍니다 */
+function StepTitle({ n, title, desc }: { n: number; title: string; desc: string }) {
+  return (
+    <div className="mt-4 flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-navy-800 text-[1.15rem] font-extrabold text-white">
+        {n}
+      </span>
+      <div className="min-w-0">
+        <p className="break-keep text-[1.25rem] font-extrabold text-navy-900">{title}</p>
+        <p className="break-keep text-[1.0rem] font-medium text-navy-400">{desc}</p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * ② 차량 배정.
+ *
+ *  ①에서 만든 예정에는 차가 비어 있습니다. 여기서 붙여야 오늘 일정에
+ *  「기사 미지정」이 사라지고 배차 화면에도 잡힙니다.
+ */
+function AssignStep({ from, to }: { from: string; to: string }) {
+  const { data, assignVehicles, undoAssign, sync } = useData()
+  const [done, setDone] = useState<AssignResultRow | null>(null)
+  const [undone, setUndone] = useState<{ cleared: number; kept: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const plan = useMemo(() => buildAssignment(data, from, to), [data, from, to])
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    setUndone(null)
+    const r = await assignVehicles(plan.rows.map((x) => ({ scheduleId: x.scheduleId, vehicleId: x.vehicleId })))
+    setBusy(false)
+    if (!r.ok) {
+      setError(r.error ?? '차량을 배정하지 못했습니다.')
+      return
+    }
+    setDone(r.result)
+  }
+
+  const undo = async () => {
+    if (!done) return
+    setBusy(true)
+    setError(null)
+    const r = await undoAssign(done.ids)
+    setBusy(false)
+    if (!r.ok) {
+      setError(r.error ?? '되돌리지 못했습니다.')
+      return
+    }
+    setUndone(r.result)
+    setDone(null)
+  }
+
+  //  날짜별로 묶어 보여 줍니다 — 하루 단위로 봐야 차가 모자란 날이 보입니다.
+  const days = [...new Set(plan.loads.map((l) => l.date))]
+
+  return (
+    <div data-assign-step className="contents">
+      <StepTitle n={2} title="차량 배정" desc="어느 차가 · 하루에 얼마나" />
+
+      <div className="card flex gap-3 p-4 sm:p-5">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-navy-50 text-navy-500">
+          <Truck size={18} />
+        </span>
+        <div className="min-w-0 space-y-2 text-[1.05rem] leading-relaxed text-navy-600">
+          <p>
+            <b className="text-navy-800">의료폐기물 차량과 기저귀 차량은 섞지 않습니다</b> — 법으로 분리 운행이라 규칙입니다. 그
+            안에서 ① 최근 12주 그 거래처를 실제로 담당한 차 ② 그날 적재 여유가 가장 많은 차 순으로 붙입니다. 적재량은 명목
+            적재량이 아니라 실적재 가능량(의료폐기물은 용기 부피 때문에 2/3 수준)을 씁니다.
+          </p>
+          <p className="rounded-xl bg-navy-50 px-3.5 py-2.5 text-[0.98rem] text-navy-500">
+            경로 순서·운행거리·도착시간은 만들지 않습니다 — 거래처 좌표가 없어 실제로 계산할 수 없습니다. 하루에 몇 곳까지
+            도는지의 상한도 실제 기록이 없어 두지 않았습니다. 대신 차량마다 정차 수를 함께 보여 드립니다.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" data-assign-summary>
+        <Stat label="배정할 일정" value={plan.rows.length} unit="건" tone="teal" />
+        <Stat label="쓰이는 차량" value={new Set(plan.rows.map((r) => r.vehicleId)).size} unit="대" />
+        <Stat label="배정 못 함" value={plan.unassigned.length} unit="건" tone="amber" />
+        <Stat label="대상 예정" value={plan.targets} unit="건" />
+      </div>
+
+      <div className="card flex flex-wrap items-center gap-3 p-4 sm:p-5">
+        <PrimaryButton onClick={save} disabled={busy || sync.saving || plan.rows.length === 0 || !!done}>
+          <span data-assign-save>
+            {busy ? '배정하는 중…' : `차량 ${plan.rows.length.toLocaleString('ko-KR')}건 배정하기`}
+          </span>
+        </PrimaryButton>
+        {done && (
+          <SecondaryButton onClick={undo} disabled={busy}>
+            <span data-assign-undo className="flex items-center gap-1.5">
+              <Undo2 size={16} /> 방금 배정 되돌리기
+            </span>
+          </SecondaryButton>
+        )}
+        {plan.rows.length === 0 && !done && (
+          <p className="break-keep text-[1.03rem] text-navy-400">
+            {plan.targets === 0 ? '차량이 비어 있는 예정이 없습니다.' : '붙일 수 있는 차량이 없습니다.'}
+          </p>
+        )}
+      </div>
+
+      {done && (
+        <div data-assign-result className="card flex gap-3 border-teal-200 bg-teal-50/60 p-4 sm:p-5">
+          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-600" />
+          <div className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
+            <p className="font-bold text-teal-700">
+              {done.assigned.toLocaleString('ko-KR')}건에 차량을 붙였습니다
+              {done.skipped > 0 && ` (이미 차가 있던 ${done.skipped.toLocaleString('ko-KR')}건은 건너뜀)`}
+            </p>
+            <p className="mt-1 text-navy-500">
+              차량 {done.vehicles}대{done.from && ` · ${done.from} ~ ${done.to}`} · 「오늘 일정」의 기사 표시와 「배차·경로」에 반영됩니다.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {undone && (
+        <div data-assign-undone className="card flex gap-3 p-4 sm:p-5">
+          <Undo2 size={20} className="mt-0.5 shrink-0 text-navy-400" />
+          <p className="min-w-0 text-[1.05rem] leading-relaxed text-navy-600">
+            {undone.cleared.toLocaleString('ko-KR')}건의 차량 배정을 풀었습니다.
+            {undone.kept > 0 && ` 그 사이 수거를 다녀온 ${undone.kept}건은 그대로 두었습니다.`}
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <div data-assign-error className="card border-rose-200 bg-rose-50/60 p-4 text-[1.05rem] font-semibold text-rose-600">
+          {error}
+        </div>
+      )}
+
+      {/* 날짜별 차량 적재 */}
+      {days.length > 0 && (
+        <section>
+          <SectionTitle>날짜별 차량 적재</SectionTitle>
+          <div className="space-y-3" data-assign-loads>
+            {days.map((d) => (
+              <div key={d} className="card p-4">
+                <p className="mb-2.5 break-keep font-extrabold text-navy-900">{dayLabel(d)}</p>
+                <div className="space-y-2">
+                  {plan.loads.filter((l) => l.date === d).map((l) => (
+                    <div
+                      key={`${l.vehicleId}|${l.date}`}
+                      data-assign-load={`${l.date}|${l.vehicleId}`}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-navy-50 px-3.5 py-3"
+                    >
+                      <WasteBadge type={l.wasteType} />
+                      <span className="min-w-0 flex-1 basis-[10rem] break-keep font-bold text-navy-800">
+                        {l.vehicleName} <span className="font-medium text-navy-400">· {l.driver}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-24 overflow-hidden rounded-full bg-navy-200">
+                          <span
+                            className={`block h-full rounded-full ${l.loadPct > 100 ? 'bg-rose-500' : 'bg-teal-500'}`}
+                            style={{ width: `${Math.min(100, l.loadPct)}%` }}
+                          />
+                        </span>
+                        <span className={`text-[0.98rem] font-bold ${l.loadPct > 100 ? 'text-rose-500' : 'text-teal-600'}`}>
+                          {l.loadPct}%
+                        </span>
+                      </span>
+                      <span className="break-keep text-[0.98rem] font-medium text-navy-500">
+                        {l.kg.toLocaleString('ko-KR')} / {l.capacity.toLocaleString('ko-KR')}kg · 정차 {l.stops}곳
+                        {l.added !== l.stops && ` (새로 ${l.added}곳)`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 배정 못 한 일정 — 차가 모자란 날을 미리 압니다 */}
+      {plan.unassigned.length > 0 && (
+        <section>
+          <SectionTitle>차량을 붙이지 못한 일정</SectionTitle>
+          <div className="card divide-y divide-navy-100" data-assign-unassigned>
+            {plan.unassigned.map((u) => (
+              <div key={u.scheduleId} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3.5">
+                <span className="shrink-0 rounded-lg bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-700">
+                  {dayLabel(u.date)}
+                </span>
+                <WasteBadge type={u.wasteType} />
+                <span className="min-w-0 flex-1 basis-[10rem] break-keep font-bold text-navy-700">{u.clientName}</span>
+                <span className="break-keep text-[0.98rem] text-navy-500">{u.reason}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 px-1 text-[0.98rem] text-navy-400">
+            그날 차가 모자랍니다. 용차를 부르거나 날짜를 옮겨야 합니다 — 억지로 실어 두지 않았습니다.
+          </p>
+        </section>
+      )}
+
+      {/* 어느 차에 왜 붙였는지 */}
+      {plan.rows.length > 0 && (
+        <section>
+          <SectionTitle>배정 근거 {plan.rows.length.toLocaleString('ko-KR')}건</SectionTitle>
+          <ExpandableSection label="한 건씩 확인하기">
+            <div className="card divide-y divide-navy-100">
+              {plan.rows.map((r) => (
+                <div
+                  key={r.scheduleId}
+                  data-assign-row={r.scheduleId}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3.5"
+                >
+                  <span className="shrink-0 rounded-lg bg-navy-50 px-2.5 py-1 text-[0.98rem] font-bold text-navy-700">
+                    {dayLabel(r.date)}
+                  </span>
+                  <WasteBadge type={r.wasteType} />
+                  <span className="min-w-0 flex-1 basis-[9rem] break-keep font-semibold text-navy-800">{r.clientName}</span>
+                  <span className="shrink-0 break-keep font-bold text-navy-700">{r.vehicleName}</span>
+                  <span className="break-keep text-[0.98rem] text-navy-400">
+                    예상 {r.expectedAmount.toLocaleString('ko-KR')}kg · {r.basis}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ExpandableSection>
+        </section>
+      )}
     </div>
   )
 }
@@ -114,7 +350,10 @@ export function SchedulePlan() {
   return (
     <PageShell>
       <div data-plan-page>
-        <PageHeader title="수거 일정 편성" subtitle="실제 수거 기록의 요일 패턴으로 앞으로의 예정을 한 번에 만듭니다" />
+        <PageHeader
+          title="수거 일정 편성"
+          subtitle="① 실제 기록의 요일로 예정을 만들고 → ② 차를 붙입니다"
+        />
       </div>
 
       {/* 무엇을 근거로 만드는지 — 먼저 밝힙니다 */}
@@ -165,6 +404,8 @@ export function SchedulePlan() {
           </div>
         </div>
       </section>
+
+      <StepTitle n={1} title="일정 만들기" desc="언제 · 어디를" />
 
       {/* 요약 */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" data-plan-summary>
@@ -347,8 +588,10 @@ export function SchedulePlan() {
         </section>
       )}
 
+      <AssignStep from={from} to={to} />
+
       <p className="flex items-center gap-1.5 px-1 text-[0.98rem] text-navy-400">
-        <CalendarPlus size={14} /> 만든 일정은 감사로그에 묶음으로 남습니다 — 언제 누가 몇 건을 만들었는지 확인할 수 있습니다.
+        <CalendarPlus size={14} /> 만든 일정과 배정은 감사로그에 묶음으로 남습니다 — 언제 누가 몇 건을 만들었는지 확인할 수 있습니다.
       </p>
     </PageShell>
   )

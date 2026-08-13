@@ -112,6 +112,14 @@ interface DataContextValue {
   undoPlan: (
     batch: string,
   ) => Promise<{ ok: boolean; error: string | null; result: { deleted: number; kept: number } | null }>
+  /** 확인한 차량 배정을 저장 (0029) */
+  assignVehicles: (
+    rows: { scheduleId: string; vehicleId: string }[],
+  ) => Promise<{ ok: boolean; error: string | null; result: repo.AssignResultRow | null }>
+  /** 차량 배정 되돌리기 — 아직 수거하지 않은 건만 풀립니다 */
+  undoAssign: (
+    ids: string[],
+  ) => Promise<{ ok: boolean; error: string | null; result: { cleared: number; kept: number } | null }>
   // 거래처 조회 헬퍼
   clientById: (id: string) => Client | undefined
   // 데이터 초기화
@@ -1406,6 +1414,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /**
+   * 확인한 차량 배정을 한 번에 저장합니다 (0029).
+   *
+   *  구분이 다른 차량(분리 운행 위반)은 서버가 다시 막습니다 — 화면 판단을
+   *  최종 근거로 삼지 않습니다.
+   */
+  const assignVehicles = useCallback(
+    async (rows: { scheduleId: string; vehicleId: string }[]) => {
+      if (!live) return { ok: false, error: '차량 배정은 실제 운영 모드에서만 됩니다.', result: null }
+      let result: repo.AssignResultRow | null = null
+      const r = await runLive(async () => {
+        result = await repo.assignScheduleVehicles(rows)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null, result }
+    },
+    [live, runLive, reload],
+  )
+
+  const undoAssign = useCallback(
+    async (ids: string[]) => {
+      if (!live) return { ok: false, error: '차량 배정은 실제 운영 모드에서만 됩니다.', result: null }
+      let result: { cleared: number; kept: number } | null = null
+      const r = await runLive(async () => {
+        result = await repo.unassignScheduleVehicles(ids)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null, result }
+    },
+    [live, runLive, reload],
+  )
+
   const markPaid = useCallback(
     (id: string) => {
       const paidAt = new Date().toISOString()
@@ -1509,6 +1549,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeReceipt,
       planSchedules,
       undoPlan,
+      assignVehicles,
+      undoAssign,
       clientById,
       reset,
       replaceAll,
@@ -1564,6 +1606,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeReceipt,
       planSchedules,
       undoPlan,
+      assignVehicles,
+      undoAssign,
       clientById,
       reset,
       replaceAll,
