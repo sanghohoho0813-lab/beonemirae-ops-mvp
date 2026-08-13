@@ -5,6 +5,8 @@ import { PageHeader } from '../components/PageHeader'
 import { FilterChip, EmptyState } from '../components/ui'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PaymentBadge } from '../components/Badge'
+import { DunningPanel } from '../components/DunningPanel'
+import { ageOf } from '../lib/dunning'
 import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
 import { won, today } from '../lib/format'
 import type { PaymentStatus } from '../types'
@@ -92,6 +94,9 @@ export function Receivables() {
         </div>
       </div>
 
+      {/*  독촉 대상 — 오래 밀린 곳부터. 미수가 없으면 아무것도 그리지 않습니다. */}
+      <DunningPanel />
+
       {/* 상태 필터 칩 */}
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => (
@@ -124,11 +129,24 @@ export function Receivables() {
         <Stagger className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:items-start">
           {list.map((p) => {
             const client = clientById(p.clientId)
+            //  얼마나 밀렸는지 — 청구월 경과(사실)와, 거래처에 결제일을 넣어
+            //  둔 경우에만 계산되는 기한 초과일. 없는 기한은 만들지 않습니다.
+            const age = ageOf(data, p)
+            const late =
+              restOf(p) > 0 && p.status !== '취소' &&
+              (age.monthsOld >= 1 || (age.daysPastDue != null && age.daysPastDue > 0))
             return (
               <StaggerItem key={p.id} className="card p-4">
                 {/* 업체명 — 항상 최우선, 첫 줄 전체를 사용해 잘리지 않게 */}
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0 flex-1 font-extrabold text-navy-900">{client?.name ?? '알 수 없음'}</span>
+                  {late && (
+                    <span data-late={p.id} className="pill shrink-0 bg-rose-100 text-rose-600">
+                      {age.daysPastDue != null && age.daysPastDue > 0
+                        ? `기한 ${age.daysPastDue}일 지남`
+                        : `${age.monthsOld}개월 경과`}
+                    </span>
+                  )}
                   <PaymentBadge status={p.status} />
                 </div>
                 {/* 금액 + 청구 정보 */}

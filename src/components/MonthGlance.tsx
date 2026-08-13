@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import type { AppData } from '../types'
 import { rollupFor } from '../lib/billing'
+import { dunningSummary } from '../lib/dunning'
 import { monthlyCollected, outstandingTotal } from '../lib/selectors'
 import { thisMonth, weight, wonShort } from '../lib/format'
 
@@ -26,6 +27,9 @@ export function MonthGlance({ data }: { data: AppData }) {
   const collected = useMemo(() => monthlyCollected(data), [data])
   const kg = collected.의료폐기물 + collected.일회용기저귀
   const unpaid = outstandingTotal(data)
+  //  미수금 총액만 보면 「이번 달 것이 아직 안 들어왔다」와 「석 달째
+  //  안 들어온다」가 구분되지 않습니다. 밀린 곳 수를 한 줄로 붙입니다.
+  const overdue = useMemo(() => dunningSummary(data), [data])
 
   const cells = [
     //  숫자마다 무엇이 포함되는지 한 줄로 적습니다. 대표님은 DB 가 아니라
@@ -54,7 +58,10 @@ export function MonthGlance({ data }: { data: AppData }) {
       value: wonShort(unpaid),
       tone: unpaid > 0 ? 'text-amber-600' : 'text-navy-900',
       mobile: false,
-      sub: '확정 청구 중 미입금액',
+      sub:
+        overdue.rows.length > 0
+          ? `밀린 곳 ${overdue.rows.length}곳 · ${wonShort(overdue.total)}`
+          : '확정 청구 중 미입금액',
     },
   ]
 
