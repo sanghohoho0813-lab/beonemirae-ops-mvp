@@ -89,7 +89,12 @@ interface DataContextValue {
   // 결제
   addPayment: (p: Omit<Payment, 'id'>) => Payment
   /** 월 정산을 확인한 뒤 청구로 확정합니다 (금액·명세서를 그 순간으로 고정) */
-  confirmBilling: (clientId: string, month: string) => Promise<{ ok: boolean; error: string | null }>
+  confirmBilling: (
+    clientId: string,
+    month: string,
+    /** quiet=true 면 건마다 전체를 다시 읽지 않습니다 (여러 건 연속 확정용) */
+    opts?: { quiet?: boolean },
+  ) => Promise<{ ok: boolean; error: string | null }>
   /** 잘못 만든 청구 — 지우지 않고 취소로 남깁니다 */
   cancelPayment: (id: string, reason: string) => void
   updatePayment: (id: string, patch: Partial<Payment>) => void
@@ -303,13 +308,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
    */
   // 저장이 됐는지와 안 됐다면 왜인지를 함께 돌려줍니다.
   // 부르는 쪽이 "저장됐다"고 화면에 쓰기 전에 이 결과를 봐야 합니다.
+  /**
+   * 서버 작업 한 건을 실행하고 화면을 새 데이터로 맞춥니다.
+   *
+   *  @param quiet 끝나고 다시 읽어오지 않습니다. 여러 건을 잇달아 처리하는
+   *   화면(월말 청구 등)에서 씁니다 — 건마다 전체를 다시 읽으면 거래처가
+   *   열여덟 곳일 때 전체 조회를 열여덟 번 하게 됩니다. 이 경우 부르는 쪽이
+   *   마지막에 reload() 를 한 번 합니다.
+   */
   const runLive = useCallback(
-    async (fn: () => Promise<void>): Promise<{ ok: boolean; error: string | null }> => {
+    async (fn: () => Promise<void>, quiet = false): Promise<{ ok: boolean; error: string | null }> => {
       setSaving(true)
       setSyncError(null)
       try {
         await fn()
-        setData(await repo.loadAppData())
+        if (!quiet) setData(await repo.loadAppData())
         setLastSavedAt(new Date().toISOString())
         pending.current = null
         return { ok: true, error: null }
@@ -1260,7 +1273,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   //  이 청구는 흔들리지 않습니다. 남은 수거·공급이 없으면 만들지 않습니다
   //  (같은 달을 두 번 청구하는 것을 이걸로 막습니다).
   const confirmBilling = useCallback(
-    async (clientId: string, month: string): Promise<{ ok: boolean; error: string | null }> => {
+    async (
+      clientId: string,
+      month: string,
+      opts?: { quiet?: boolean },
+    ): Promise<{ ok: boolean; error: string | null }> => {
       const built = buildBillingSnapshot(data, clientId, month, new Date().toISOString())
       if (!built) {
         return { ok: false, error: '이 달에는 새로 청구할 수거·공급이 없습니다.' }
@@ -1290,7 +1307,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               `${built.amount.toLocaleString('ko-KR')}원 ` +
               `(수거 ${built.snapshot.scheduleIds.length}건 · 공급 ${built.snapshot.materialIds.length}건)`,
           })
-        })
+        }, opts?.quiet)
       }
       setData((d) => ({ ...d, payments: [...d.payments, { ...payload, id: uid('p') }] }))
       return { ok: true, error: null }

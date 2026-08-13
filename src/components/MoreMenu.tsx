@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Wallet, PieChart, Truck, CalendarPlus, Landmark, Smartphone, Monitor, ChevronDown, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, MessageSquarePlus, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
+import { Boxes, Wallet, PieChart, Truck, CalendarPlus, Landmark, ReceiptText, Smartphone, Monitor, ChevronDown, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, FileBarChart, History, Lock, LogOut, MessageSquarePlus, SlidersHorizontal, Gauge, Inbox, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -26,6 +26,7 @@ const MOBILE_SHORTCUTS: { to: string; label: string; icon: LucideIcon; desc: str
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원별 월간 운영 리포트' },
   { to: '/stats', label: '통계', icon: PieChart, desc: '수거량·거래처·차량 실적' },
   { to: '/materials', label: '자재 관리', icon: Boxes, desc: '박스·비닐·바늘통 공급 내역' },
+  { to: '/billing', label: '월말 청구', icon: ReceiptText, desc: '그 달 전체를 한 번에 청구 확정' },
   { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구·입금 현황 및 미수금' },
   { to: '/bank', label: '통장 대사', icon: Landmark, desc: '통장 입금내역을 청구에 맞춰 붙이기' },
   { to: '/plan', label: '일정 편성', icon: CalendarPlus, desc: '실제 기록의 요일로 예정 만들기' },
