@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { TodaySchedule } from './pages/TodaySchedule'
 import { Dispatch } from './pages/Dispatch'
 import { SchedulePlan } from './pages/SchedulePlan'
+import { BankMatch } from './pages/BankMatch'
 import { Clients } from './pages/Clients'
 import { ClientDetail } from './pages/ClientDetail'
 import { CollectionInput } from './pages/CollectionInput'
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="requests" element={<Requests />} />
           <Route path="materials" element={<Materials />} />
           <Route path="receivables" element={<Receivables />} />
+          <Route path="bank" element={<BankMatch />} />
           <Route path="stats" element={<Statistics />} />
           <Route path="reports" element={<Reports />} />
           <Route path="more" element={<More />} />

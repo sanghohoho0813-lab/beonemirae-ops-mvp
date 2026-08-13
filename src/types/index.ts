@@ -365,6 +365,8 @@ export interface PaymentReceipt {
   memo: string
   actorName: string
   createdAt: string
+  /** 통장 대사로 들어온 입금이면 그 통장 줄의 지문 (0031). 손입력은 없음 */
+  sourceRef?: string | null
 }
 
 /** 엑셀 정산 시트의 월 합계 — 날짜별 수거로 바꾸지 않고 월 단위 그대로 */

@@ -101,6 +101,8 @@ interface DataContextValue {
     amount: number
     method: string
     memo: string
+    /** 통장 대사로 들어온 건이면 그 줄의 지문 (0031) */
+    sourceRef?: string | null
   }) => Promise<{ ok: boolean; error: string | null }>
   /** 잘못 넣은 입금 취소 */
   removeReceipt: (id: string) => Promise<{ ok: boolean; error: string | null }>
@@ -1368,7 +1370,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
    *  청구는 미수로 남는 상태가 생깁니다 — 돈 기록에서 가장 나쁜 경우입니다.
    */
   const addReceipt = useCallback(
-    async (input: { paymentId: string; receivedOn: string; amount: number; method: string; memo: string }) => {
+    async (input: {
+      paymentId: string
+      receivedOn: string
+      amount: number
+      method: string
+      memo: string
+      sourceRef?: string | null
+    }) => {
       if (!live) return { ok: false, error: '입금 기록은 실제 운영 모드에서만 됩니다.' }
       const r = await runLive(async () => {
         await repo.addPaymentReceipt(input)

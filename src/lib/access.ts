@@ -32,6 +32,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   // 경영 · 성과 · 매출
   { prefix: '/performance', roles: ['admin', 'office'] },
   { prefix: '/receivables', roles: ['admin', 'office'] },
+  //  통장 대사는 돈 기록입니다 — 사무실·관리자만.
+  { prefix: '/bank', roles: ['admin', 'office'] },
   { prefix: '/stats', roles: ['admin', 'office'] },
   { prefix: '/reports', roles: ['admin', 'office'] },
   { prefix: '/dispatch', roles: ['admin', 'office'] },

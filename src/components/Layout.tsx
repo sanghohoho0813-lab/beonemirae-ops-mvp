@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   CalendarClock,
   CalendarPlus,
+  Landmark,
   Building2,
   PlusCircle,
   MoreHorizontal,
@@ -86,6 +87,7 @@ const TOOL_NAV: NavItem[] = [
   { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '', tone: 'navy' },
   { to: '/materials', label: '자재 관리', icon: Boxes, desc: '', tone: 'navy' },
   { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '', tone: 'navy' },
+  { to: '/bank', label: '통장 대사', icon: Landmark, desc: '', tone: 'navy' },
   { to: '/history', label: '수거이력', icon: History, desc: '', tone: 'navy' },
   { to: '/stats', label: '통계', icon: PieChart, desc: '', tone: 'navy' },
   { to: '/roadmap', label: '활용 계획', icon: Workflow, desc: '', tone: 'navy' },
@@ -133,7 +135,7 @@ const BOTTOM_NAV_FIELD: NavItem[] = [
 ]
 
 const MORE_PATHS = [
-  '/more', '/plan', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
+  '/more', '/plan', '/bank', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
   '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
   '/audit', '/requests',
 ]

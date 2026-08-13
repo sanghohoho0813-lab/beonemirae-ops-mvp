@@ -353,6 +353,7 @@ export async function loadAppData(): Promise<AppData> {
         memo: r.memo ?? '',
         actorName: r.actor_name ?? '',
         createdAt: r.created_at,
+        sourceRef: r.source_ref ?? null,
       }),
     ),
     monthlyActuals: monthlyActuals.map(
@@ -1083,6 +1084,8 @@ export async function addPaymentReceipt(input: {
   amount: number
   method: string
   memo: string
+  /** 통장 대사로 들어온 건이면 그 줄의 지문 (0031) — 같은 줄이 두 번 들어오지 않게 */
+  sourceRef?: string | null
 }): Promise<{ paidTotal: number; outstanding: number; status: string }> {
   const sb = need()
   const { data, error } = await sb.rpc('add_payment_receipt', {
@@ -1091,6 +1094,7 @@ export async function addPaymentReceipt(input: {
     p_amount: input.amount,
     p_method: input.method,
     p_memo: input.memo,
+    p_source_ref: input.sourceRef ?? null,
   })
   if (error) throw new Error(error.message)
   return data as { paidTotal: number; outstanding: number; status: string }
