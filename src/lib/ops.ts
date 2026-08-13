@@ -6,10 +6,9 @@ import type {
   RequestSource,
   RequestStatus,
   WasteType,
-  Payment,
 } from '../types'
 import { facilityByWaste } from '../data/ops'
-import { schedulesOn, todaySummary, additionalMaterialCount } from './selectors'
+import { schedulesOn, todaySummary, additionalMaterialCount, outstandingOf, paidTotalOf } from './selectors'
 import { today, thisMonth, nowHm, shiftDays } from './format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -304,10 +303,11 @@ export function clientMonthlyAvg(data: AppData, clientId: string): number {
   return Math.round(sum / byMonth.size)
 }
 
+/** 이 거래처에서 아직 못 받은 돈 — 부분입금을 뺀 값 */
 export function clientOutstanding(data: AppData, clientId: string): number {
   return data.payments
-    .filter((p) => p.clientId === clientId && p.status !== '입금완료' && p.status !== '취소')
-    .reduce((s, p) => s + p.amount, 0)
+    .filter((p) => p.clientId === clientId)
+    .reduce((s, p) => s + outstandingOf(data, p), 0)
 }
 
 // ── 수거대장 행 (수거이력 + 자재공급 통합) ──────────────────────────────────
@@ -720,18 +720,9 @@ export interface BillRow {
   invoiceIssued: boolean
   note: string
 }
-/**
- * 이 청구에 실제로 들어온 돈 (0026).
- *
- *  입금 기록이 있으면 그 합계입니다. 기록이 없는데 상태가 「입금완료」면
- *  0026 이전에 만들어진 청구이므로 전액 받은 것으로 봅니다 — 과거 기록을
- *  고치지 않으면서 새 방식이 함께 동작하게 하는 유일한 지점입니다.
- */
-export function paidTotalOf(data: AppData, payment: Payment): number {
-  const rs = (data.receipts ?? []).filter((r) => r.paymentId === payment.id)
-  if (rs.length > 0) return rs.reduce((s, r) => s + r.amount, 0)
-  return payment.status === '입금완료' ? payment.amount : 0
-}
+//  계산은 selectors 한 곳에만 둡니다 — 미수금을 두 벌로 계산하다가
+//  화면마다 숫자가 갈렸던 자리입니다. 여기서는 이름만 다시 내보냅니다.
+export { paidTotalOf, outstandingOf } from './selectors'
 
 /** 이 청구의 입금 기록 (최근 순) */
 export function receiptsOf(data: AppData, paymentId: string) {
@@ -747,7 +738,7 @@ export function clientPaymentRows(data: AppData, clientId: string): BillRow[] {
     .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth))
     .map((p) => {
       const paid = p.status === '취소' ? 0 : paidTotalOf(data, p)
-      const outstanding = p.status === '취소' ? 0 : p.amount - paid
+      const outstanding = outstandingOf(data, p)
       //  취소한 청구는 받을 돈이 아닙니다. 표에는 남기되 미수 금액은 0 으로 둡니다.
       //  「부분입금」은 받은 돈이 있는데 아직 남은 상태입니다 — 「입금 예정」과
       //  다릅니다. 한 푼도 안 들어온 것과 절반 들어온 것을 같게 보면 안 됩니다.

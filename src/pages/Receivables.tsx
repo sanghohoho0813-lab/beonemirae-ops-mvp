@@ -5,8 +5,8 @@ import { PageHeader } from '../components/PageHeader'
 import { FilterChip, EmptyState } from '../components/ui'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PaymentBadge } from '../components/Badge'
-import { outstandingTotal } from '../lib/selectors'
-import { won } from '../lib/format'
+import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
+import { won, today } from '../lib/format'
 import type { PaymentStatus } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,6 +18,7 @@ const FILTERS: Array<PaymentStatus | '전체'> = ['전체', '미수금', '확인
 export function Receivables() {
   const { data, clientById, markPaid, updatePayment } = useData()
   const [filter, setFilter] = useState<PaymentStatus | '전체'>('미수금')
+  const [error, setError] = useState<string | null>(null)
 
   const months = useMemo(
     () => Array.from(new Set(data.payments.map((p) => p.billingMonth))).sort().reverse(),
@@ -32,31 +33,53 @@ export function Receivables() {
       .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth) || b.amount - a.amount)
   }, [data.payments, filter, month])
 
-  //  입금완료로 바꾸면 화면에서 되돌릴 방법이 없습니다(돈 기록입니다).
-  //  그래서 누구의 얼마인지 한 번 보여 주고 확인을 받습니다.
-  function confirmPaid(id: string, name: string, month: string, amount: number) {
-    if (window.confirm(`${name} ${month} 청구 ${won(amount)}\n입금완료로 바꿀까요? 화면에서는 되돌릴 수 없습니다.`)) {
-      markPaid(id)
+  //  돈 기록입니다 — 누구의 얼마를 오늘 날짜로 넣는지 한 번 보여 주고
+  //  확인을 받습니다. 실제 입금일이 오늘이 아니면 거래처 화면의 「입금
+  //  기록」으로 날짜를 넣어야 합니다.
+  async function confirmPaid(id: string, name: string, month: string, rest: number) {
+    if (
+      !window.confirm(
+        `${name} ${month} 청구 · 남은 ${won(rest)}\n\n` +
+          `오늘(${today()}) 받은 것으로 입금 기록을 남깁니다.\n` +
+          '실제 입금일이 다르면 거래처 화면의 「입금 기록」에서 날짜를 넣어 주세요.',
+      )
+    ) {
+      return
     }
+    const r = await markPaid(id)
+    if (!r.ok) setError(r.error ?? '기록하지 못했습니다.')
   }
 
+  //  부분입금을 뺀 실제 못 받은 돈 — 화면마다 다른 값이 나오지 않도록
+  //  계산은 selectors 한 곳만 씁니다.
+  const paidOf = (p: (typeof data.payments)[number]) => paidTotalOf(data, p)
+  const restOf = (p: (typeof data.payments)[number]) => outstandingOf(data, p)
   const outstanding = outstandingTotal(data)
   //  취소한 청구는 청구한 적 없는 것으로 셉니다. 안 그러면 '입금 완료' 가
   //  받지도 않은 돈만큼 부풀려집니다.
   const billedTotal = data.payments
     .filter((p) => p.status !== '취소')
     .reduce((s, p) => s + p.amount, 0)
-  const collected = billedTotal - outstanding
+  //  실제로 들어온 돈 — 부분입금까지 더합니다.
+  const collected = data.payments
+    .filter((p) => p.status !== '취소')
+    .reduce((s, p) => s + paidTotalOf(data, p), 0)
 
   return (
     <div>
       <PageHeader title="미수금 관리" subtitle="거래처별 청구 · 입금 현황" />
 
+      {error && (
+        <div data-pay-error className="card mb-4 border-rose-200 bg-rose-50/60 p-4 text-[1.05rem] font-semibold text-rose-600">
+          {error}
+        </div>
+      )}
+
       {/* 미수금 요약 — 하나의 카드로 압축 */}
       <div className="card mb-5 p-5">
         <p className="text-[1.03rem] font-semibold text-navy-400">미수금 합계</p>
         <p className="mt-1 text-[1.9rem] font-extrabold leading-none tracking-tight text-rose-500">{won(outstanding)}</p>
-        <p className="mt-1.5 text-[0.98rem] text-navy-400">입금완료 외 전체 청구</p>
+        <p className="mt-1.5 text-[0.98rem] text-navy-400">부분입금을 뺀 실제 못 받은 금액</p>
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-3">
           <div>
             <p className="text-[0.98rem] font-semibold text-navy-400">입금 완료</p>
@@ -117,8 +140,19 @@ export function Receivables() {
                   <p className="shrink-0 text-right text-lg font-extrabold text-navy-900">{won(p.amount)}</p>
                 </div>
 
+                {/*
+                  부분입금이 있으면 받은 돈과 남은 돈을 함께 보여 줍니다.
+                  청구액만 보이면 30만원이 들어온 100만원 청구가 아직 100만원
+                  받을 것처럼 읽힙니다.
+                */}
+                {paidOf(p) > 0 && restOf(p) > 0 && (
+                  <p data-partial={p.id} className="mt-1 text-right text-[1.0rem] font-semibold text-navy-500">
+                    받음 {won(paidOf(p))} · <b className="text-rose-500">남은 {won(restOf(p))}</b>
+                  </p>
+                )}
+
                 {/* 취소한 청구는 더 손대지 않습니다 — 기록으로만 남습니다 */}
-                {p.status !== '입금완료' && p.status !== '취소' && (
+                {restOf(p) > 0 && p.status !== '취소' && (
                   <div className="mt-3 flex items-center justify-end gap-2">
                     {p.status === '미수금' && (
                       <button
@@ -130,9 +164,11 @@ export function Receivables() {
                     )}
                     <button
                       className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
-                      onClick={() => confirmPaid(p.id, client?.name ?? '거래처', p.billingMonth, p.amount)}
+                      data-mark-paid={p.id}
+                      onClick={() => void confirmPaid(p.id, client?.name ?? '거래처', p.billingMonth, restOf(p))}
                     >
-                      <Check size={16} strokeWidth={2.6} /> 입금완료 처리
+                      <Check size={16} strokeWidth={2.6} />
+                      {paidOf(p) > 0 ? `남은 ${won(restOf(p))} 입금 처리` : '입금완료 처리'}
                     </button>
                   </div>
                 )}

@@ -35,8 +35,9 @@ import {
 import { buildBillingSnapshot, itemsOf, stockDeltaOf } from '../lib/billing'
 import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
 import { leadKey } from '../lib/sales'
+import { outstandingOf } from '../lib/selectors'
 import type { NextAction } from '../lib/insights'
-import { thisMonth } from '../lib/format'
+import { thisMonth, today } from '../lib/format'
 import { useAuth } from './AuthContext'
 import { friendlyError, isSupabaseConfigured } from '../lib/supabase'
 import * as repo from '../lib/repo'
@@ -98,7 +99,11 @@ interface DataContextValue {
   /** 잘못 만든 청구 — 지우지 않고 취소로 남깁니다 */
   cancelPayment: (id: string, reason: string) => void
   updatePayment: (id: string, patch: Partial<Payment>) => void
-  markPaid: (id: string) => void
+  /**
+   * 남은 금액을 받은 것으로 기록합니다 (입금일 = 오늘).
+   * 실제 입금일이 다르면 거래처 화면의 「입금 기록」을 씁니다.
+   */
+  markPaid: (id: string) => Promise<{ ok: boolean; error: string | null }>
   /** 입금 한 건 기록 (0026) — 부분입금. 서버가 청구 상태까지 맞춥니다 */
   addReceipt: (input: {
     paymentId: string
@@ -1509,34 +1514,49 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /**
+   * 남은 금액을 「받았다」로 처리합니다.
+   *
+   *  예전에는 상태만 입금완료로 바꿨습니다. 그러면
+   *   · 30만원만 들어온 100만원 청구를 눌렀을 때 남은 70만원이 장부에서
+   *     사라졌습니다 (미수금 합계가 그만큼 줄어듭니다)
+   *   · 입금일이 실제 입금일이 아니라 **버튼 누른 시각**으로 남았습니다
+   *   · 얼마를 어떻게 받았는지 근거가 없어 통장 대사가 붙을 자리도
+   *     없었습니다
+   *
+   *  이제 남은 금액만큼 실제 입금 기록을 남깁니다. 상태·입금일은 서버가
+   *  맞춰 줍니다(0031). 통장에서 온 것이 아니므로 지문(source_ref)은
+   *  없습니다 — 나중에 같은 건이 통장 파일로 들어와도 서로 막지 않습니다.
+   *
+   *  실제 입금일이 오늘이 아니면 거래처 화면의 「입금 기록」으로 날짜를
+   *  넣어야 합니다. 화면이 그렇게 안내합니다.
+   */
   const markPaid = useCallback(
-    (id: string) => {
-      const paidAt = new Date().toISOString()
-      if (live) {
-        //  기록에 "입금 완료 처리" 여섯 글자만 남아 있어서, 감사로그만 보고는
-        //  어느 병원의 몇 월치 얼마인지 알 수 없었습니다. 돈 기록입니다.
-        const before = data.payments.find((p) => p.id === id)
-        const name = before ? findClientName(data, before.clientId) : '거래처'
-        void runLive(async () => {
-          await repo.updatePayment(id, { status: '입금완료', paidAt })
-          await repo.writeAudit({
-            action: 'payment.paid',
-            entity: 'payments',
-            entityId: id,
-            clientId: before?.clientId,
-            before,
-            after: before ? { ...before, status: '입금완료', paidAt } : null,
-            summary: before
-              ? `${name} ${before.billingMonth} 청구 ${before.amount.toLocaleString('ko-KR')}원 입금 완료 처리`
-              : '입금 완료 처리',
-          })
-        })
-        return
+    async (id: string): Promise<{ ok: boolean; error: string | null }> => {
+      const bill = data.payments.find((p) => p.id === id)
+      if (!bill) return { ok: false, error: '청구를 찾을 수 없습니다.' }
+      const rest = outstandingOf(data, bill)
+      if (rest <= 0) return { ok: false, error: '이미 다 받은 청구입니다.' }
+      if (!live) {
+        setData((d) => ({
+          ...d,
+          payments: d.payments.map((p) =>
+            p.id === id ? { ...p, status: '입금완료', paidAt: new Date().toISOString() } : p,
+          ),
+        }))
+        return { ok: true, error: null }
       }
-      setData((d) => ({
-        ...d,
-        payments: d.payments.map((p) => (p.id === id ? { ...p, status: '입금완료', paidAt } : p)),
-      }))
+      const r = await runLive(async () => {
+        await repo.addPaymentReceipt({
+          paymentId: id,
+          receivedOn: today(),
+          amount: rest,
+          method: '기타',
+          memo: '완납 처리',
+          sourceRef: null,
+        })
+      })
+      return { ok: r.ok, error: r.error ?? null }
     },
     [live, runLive, data],
   )

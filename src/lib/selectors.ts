@@ -1,4 +1,4 @@
-import type { AppData, Schedule, WasteType } from '../types'
+import type { AppData, Payment, Schedule, WasteType } from '../types'
 import { thisMonth, today } from './format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,12 +36,37 @@ export function todaySummary(data: AppData, date = today()) {
   }
 }
 
-/** 미수금 합계 (입금완료·취소가 아닌 모든 청구) */
+/**
+ * 이 청구에 실제로 들어온 돈 (0026).
+ *
+ *  입금 기록이 있으면 그 합계입니다. 기록이 없는데 상태가 「입금완료」면
+ *  0026 이전에 만들어진 청구이므로 전액 받은 것으로 봅니다 — 과거 기록을
+ *  고치지 않으면서 새 방식이 함께 동작하게 하는 유일한 지점입니다.
+ */
+export function paidTotalOf(data: AppData, payment: Payment): number {
+  const rs = (data.receipts ?? []).filter((r) => r.paymentId === payment.id)
+  if (rs.length > 0) return rs.reduce((s, r) => s + r.amount, 0)
+  return payment.status === '입금완료' ? payment.amount : 0
+}
+
+/**
+ * 이 청구에서 아직 못 받은 돈.
+ *
+ *  **부분입금을 뺍니다.** 예전에는 「상태가 입금완료가 아니면 청구액 전부」로
+ *  셌습니다. 100만원 청구에 30만원이 들어와도 미수금이 100만원으로 잡혀,
+ *  받은 돈이 장부에서 사라졌습니다. 거래처 화면은 뺀 값(70만원)을 쓰고
+ *  대시보드·미수금 화면은 안 뺀 값(100만원)을 써서 같은 시스템 안에서
+ *  숫자가 갈렸습니다.
+ */
+export function outstandingOf(data: AppData, payment: Payment): number {
+  if (payment.status === '취소') return 0
+  return Math.max(0, payment.amount - paidTotalOf(data, payment))
+}
+
+/** 미수금 합계 — 부분입금을 뺀 실제 못 받은 돈 */
 export function outstandingTotal(data: AppData): number {
   //  취소한 청구는 없던 것으로 봅니다. 기록은 남기지만 받을 돈은 아닙니다.
-  return data.payments
-    .filter((p) => p.status !== '입금완료' && p.status !== '취소')
-    .reduce((sum, p) => sum + p.amount, 0)
+  return data.payments.reduce((sum, p) => sum + outstandingOf(data, p), 0)
 }
 
 /** 이번 달 자재 추가요청 건수 */
