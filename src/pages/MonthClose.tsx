@@ -224,7 +224,7 @@ export function MonthClose() {
             그대로 확정하면 추정 금액이 병원에 나가는 청구서가 됩니다. 처음부터 체크를 꺼 두었으니, 단가를 넣거나 금액을
             확인한 뒤 직접 켜 주세요.{' '}
             <Link data-close-pricing-link to="/pricing" className="font-bold text-amber-700 underline underline-offset-2">
-              거래처 단가에서 한 번에 확인
+              거래처 점검에서 한 번에 확인
             </Link>
           </p>
         </div>

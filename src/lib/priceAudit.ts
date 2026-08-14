@@ -1,4 +1,5 @@
 import type { AppData, Client } from '../types'
+import { isValidBizNo, normalizeBizNo } from './taxInvoice'
 import {
   SUPPLY_ITEMS,
   diaperVatPctOf,
@@ -57,6 +58,10 @@ export interface PriceRow {
   diaperVatPct: number
   /** 계약 단가를 넣지 않아 기본 단가로 청구되는 수거 구분 */
   onDefault: string[]
+  /** 세금계산서를 발행하려면 채워야 하는 것 (없으면 발행 목록에서 빠집니다) */
+  taxMissing: string[]
+  /** 결제일이 있는지 — 연체를 일 단위로 판정할 수 있는 근거 */
+  hasDueDay: boolean
   /** 확정 청구가 있었던 달 수 — 실제로 돈이 오간 곳부터 고치도록 */
   billedMonths: number
   /** 이 거래처의 완료 수거 건수 (전체 기간) */
@@ -69,7 +74,23 @@ export interface PriceAudit {
   onDefault: PriceRow[]
   /** 그중 이미 청구가 나간 적이 있는 곳 — 가장 먼저 확인해야 합니다 */
   onDefaultBilled: PriceRow[]
+  /** 세금계산서 정보가 빠진 거래처 */
+  taxMissing: PriceRow[]
+  /** 그중 이미 청구가 나간 곳 — 이번 달 발행에서 바로 걸립니다 */
+  taxMissingBilled: PriceRow[]
+  /** 무엇이든 확인이 필요한 거래처 */
+  needsCheck: PriceRow[]
   total: number
+}
+
+/** 세금계산서를 발행하려면 채워야 하는 것 */
+function taxMissingOf(c: Client): string[] {
+  const miss: string[] = []
+  const digits = normalizeBizNo(c.bizNo)
+  if (!digits) miss.push('사업자등록번호')
+  else if (!isValidBizNo(digits)) miss.push('사업자등록번호 오타')
+  if (!c.vatMode) miss.push('부가세 처리 방식')
+  return miss
 }
 
 const wonUnit = (n: number, unit: string) => `${n.toLocaleString('ko-KR')}원/${unit}`
@@ -145,15 +166,20 @@ export function auditPricing(data: AppData): PriceAudit {
       paidSupplies: paidSuppliesOf(c),
       diaperVatPct: diaperVatPctOf(c),
       onDefault,
+      taxMissing: taxMissingOf(c),
+      hasDueDay: c.paymentDueDay != null,
       billedMonths: billedByClient.get(c.id)?.size ?? 0,
       collections: doneByClient.get(c.id) ?? 0,
     }
   })
 
   //  고쳐야 할 곳이 위로. 청구가 이미 나간 곳 → 수거가 있는 곳 → 나머지.
+  //  「단가가 틀린 채 청구된다」가 「세금계산서를 못 끊는다」보다 급합니다 —
+  //  앞은 병원에 틀린 금액이 나가는 일이고, 뒤는 발행이 미뤄지는 일입니다.
+  const weight = (r: PriceRow) => (r.onDefault.length > 0 ? 2 : r.taxMissing.length > 0 ? 1 : 0)
   rows.sort((a, b) => {
-    const wa = a.onDefault.length > 0 ? 1 : 0
-    const wb = b.onDefault.length > 0 ? 1 : 0
+    const wa = weight(a)
+    const wb = weight(b)
     if (wa !== wb) return wb - wa
     if (a.billedMonths !== b.billedMonths) return b.billedMonths - a.billedMonths
     if (a.collections !== b.collections) return b.collections - a.collections
@@ -161,10 +187,14 @@ export function auditPricing(data: AppData): PriceAudit {
   })
 
   const onDefault = rows.filter((r) => r.onDefault.length > 0)
+  const taxMissing = rows.filter((r) => r.taxMissing.length > 0)
   return {
     rows,
     onDefault,
     onDefaultBilled: onDefault.filter((r) => r.billedMonths > 0),
+    taxMissing,
+    taxMissingBilled: taxMissing.filter((r) => r.billedMonths > 0),
+    needsCheck: rows.filter((r) => r.onDefault.length > 0 || r.taxMissing.length > 0),
     total: rows.length,
   }
 }
