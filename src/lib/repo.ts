@@ -111,6 +111,7 @@ const toClient = (r: Row): Client => ({
   bizItem: r.biz_item ?? '',
   taxEmail: r.tax_email ?? '',
   vatMode: r.vat_mode ?? null,
+  flatFeeWhenEmpty: !!r.flat_fee_when_empty,
 })
 
 const toVehicle = (r: Row): Vehicle => ({
@@ -455,6 +456,7 @@ const clientRow = (c: Partial<Client>) => ({
   biz_item: c.bizItem,
   tax_email: c.taxEmail,
   vat_mode: c.vatMode,
+  flat_fee_when_empty: c.flatFeeWhenEmpty,
 })
 
 const clean = (o: Record<string, unknown>) =>
@@ -1197,7 +1199,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 34
+export const EXPECTED_SCHEMA_VERSION = 35
 
 /**
  * 서버 DB 의 스키마 버전.

@@ -12,7 +12,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
-import { checkAmount } from '../lib/amountCheck'
+import { checkAmount, checkItemCounts, itemCheckMessage } from '../lib/amountCheck'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -235,6 +235,11 @@ export function CollectionInput() {
     //  뒤라 고치러 돌아오지 않습니다.
     const amt = checkAmount(data, clientId, wasteType, Number(amount) || 0, scheduleId || null)
     if (amt.message && !window.confirm(`${amt.message}\n\n이대로 저장할까요?`)) return
+
+    //  물품 개수도 같은 규칙으로 봅니다. 박스 개당으로 정산하는 거래처는
+    //  개수가 곧 금액이라, 3개를 30개로 치면 청구액이 열 배가 됩니다.
+    const itemMsg = itemCheckMessage(checkItemCounts(data, clientId, suppliedItems))
+    if (itemMsg && !window.confirm(`${itemMsg}\n\n이대로 저장할까요?`)) return
 
     // 서버가 실제로 저장했는지 확인한 뒤에만 성공 화면으로 넘어갑니다.
     // (통신이 끊긴 채로 성공 화면을 보여 주면 그 수거는 사라집니다)

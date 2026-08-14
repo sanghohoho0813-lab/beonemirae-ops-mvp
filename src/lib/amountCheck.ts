@@ -1,4 +1,5 @@
 import type { AppData, WasteType } from '../types'
+import { ITEM_BY_KEY, itemsOf, type ItemKey } from './billing'
 import { today } from './format'
 import { addDays } from './performance'
 
@@ -142,6 +143,103 @@ export function oddAmountsIn(data: AppData, clientId: string, month: string): Od
     if (c.level === 'high' || c.level === 'low') {
       out.push({ scheduleId: s.id, date: s.date, wasteType: s.wasteType, kg, median: c.median, ratio: c.ratio })
     }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 물품 개수 자릿수 확인
+//
+//  kg 만 보면 절반만 지킨 것입니다. 박스 개당으로 정산하는 거래처가
+//  실제로 있습니다 — 서울온케어 35L 8,000원 · 서울인화 30L 10,000원 ·
+//  삼성서울연합 63L 18,000원. 여기서는 **개수가 곧 금액**이라, 박스 3개를
+//  30개로 치면 청구액이 열 배가 됩니다.
+//
+//  kg 과 같은 규칙을 씁니다 — 그 거래처가 평소 그 품목을 몇 개 받는지의
+//  중앙값과 비교하고, 근거가 모자라면 판단하지 않고, 막지 않습니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ItemCheck {
+  key: string
+  label: string
+  count: number
+  median: number
+  ratio: number
+  level: 'high' | 'low'
+}
+
+/** 이 거래처가 평소 그 품목을 몇 개 받는지 */
+function supplyHistory(
+  data: AppData,
+  clientId: string,
+  key: string,
+  skipMaterialId?: string | null,
+  from = addDays(today(), -WINDOW_DAYS),
+): number[] {
+  const out: number[] = []
+  for (const m of data.materials) {
+    if (m.clientId !== clientId) continue
+    if (m.date < from) continue
+    if (m.id === skipMaterialId) continue
+    const n = itemsOf(m)[key as ItemKey] ?? 0
+    //  0 개는 「그날 그 품목을 안 줬다」는 뜻입니다. 평소 개수를 셀 때
+    //  넣으면 중앙값이 0 으로 눌려 멀쩡한 값까지 이상치가 됩니다.
+    if (n > 0) out.push(n)
+  }
+  return out
+}
+
+/**
+ * 공급 물품 개수가 평소와 크게 다른지.
+ *  화면이 저장 전에 부르고, 월말 청구가 다시 부릅니다.
+ */
+export function checkItemCounts(
+  data: AppData,
+  clientId: string,
+  items: Record<string, number>,
+  skipMaterialId?: string | null,
+  from?: string,
+): ItemCheck[] {
+  const out: ItemCheck[] = []
+  for (const [key, raw] of Object.entries(items)) {
+    const n = Number(raw) || 0
+    if (n <= 0) continue
+    const past = supplyHistory(data, clientId, key, skipMaterialId, from)
+    if (past.length < MIN_HISTORY) continue
+    const med = median(past)
+    if (med <= 0) continue
+    const ratio = n / med
+    if (ratio > HIGH_RATIO || ratio < LOW_RATIO) {
+      out.push({
+        key,
+        label: ITEM_BY_KEY[key as ItemKey]?.label ?? key,
+        count: n,
+        median: med,
+        ratio,
+        level: ratio > HIGH_RATIO ? 'high' : 'low',
+      })
+    }
+  }
+  return out
+}
+
+/** 화면에 그대로 나가는 문장 (물어볼 것이 없으면 null) */
+export function itemCheckMessage(checks: ItemCheck[]): string | null {
+  if (checks.length === 0) return null
+  const parts = checks.map(
+    (c) => `${c.label} ${c.count.toLocaleString('ko-KR')}개 (평소 ${c.median.toLocaleString('ko-KR')}개)`,
+  )
+  return `평소와 크게 다른 공급 수량이 있습니다 — ${parts.join(' · ')}. 자릿수를 확인해 주세요.`
+}
+
+/** 그 달에 이미 저장된 공급 중 평소와 크게 다른 것 */
+export function oddItemsIn(data: AppData, clientId: string, month: string): Array<ItemCheck & { date: string }> {
+  const out: Array<ItemCheck & { date: string }> = []
+  for (const m of data.materials) {
+    if (m.clientId !== clientId) continue
+    if (m.date.slice(0, 7) !== month) continue
+    const checks = checkItemCounts(data, clientId, itemsOf(m), m.id, addDays(m.date, -WINDOW_DAYS))
+    for (const c of checks) out.push({ ...c, date: m.date })
   }
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }

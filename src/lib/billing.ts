@@ -176,6 +176,37 @@ export function monthlyFeeOf(client: Client | undefined, waste: 'medical' | 'dia
   return typeof v === 'number' && v > 0 ? v : null
 }
 
+/**
+ * 그 달에 월정액을 올릴지.
+ *
+ *  기본 규칙: 그 구분의 완료 수거가 1건이라도 있을 때만 올립니다.
+ *  계약 전·해지 후 달에 기본요금이 저절로 나가는 사고를 막습니다.
+ *
+ *  거래처에 `flatFeeWhenEmpty` 를 켜 두면 수거가 0건인 달에도 올립니다 —
+ *  계약서상 배출이 없어도 기본료를 받는 계약이 실제로 있습니다. 다만
+ *  **계약 기간 밖에는 올리지 않습니다.** 해지한 거래처에 기본료가 계속
+ *  나가는 것이 가장 위험합니다.
+ */
+export function flatFeeApplies(
+  client: Client | undefined,
+  month: string,
+  hasCollection: boolean,
+): boolean {
+  if (hasCollection) return true
+  if (!client?.flatFeeWhenEmpty) return false
+  //  수거가 하나도 없는 달에 기본료를 자동으로 올리는 것은 **계약이 그 달
+  //  전체를 덮을 때만** 합니다. 달 중간에 시작하거나 끝난 달은 얼마를
+  //  받을지가 계약마다 다릅니다(일할 계산·전액·면제) — 짐작하지 않고
+  //  사람에게 돌립니다. 해지한 거래처에 기본료가 계속 나가는 것이 가장
+  //  위험합니다.
+  const first = `${month}-01`
+  const [y, m] = month.split('-').map(Number)
+  const last = `${month}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`
+  if (client.contractStart && client.contractStart > first) return false
+  if (client.contractEnd && client.contractEnd < last) return false
+  return true
+}
+
 /** 지정폐기물 부가세 별도 % (0 = 부가세 없음·포함) */
 export function diaperVatPctOf(client: Client | undefined): number {
   const v = client?.pricing?.diaperVatPct?.sale
@@ -373,8 +404,8 @@ export function settlementFor(
 
   //  월정액 — 그 달에 해당 구분의 완료 수거가 있을 때만 (invoiceFor 와 동일)
   const flatRevenue =
-    (feeMed != null && scheds.some((s) => s.wasteType === '의료폐기물') ? feeMed : 0) +
-    (feeDia != null && scheds.some((s) => s.wasteType === '일회용기저귀') ? feeDia : 0)
+    (feeMed != null && flatFeeApplies(client, month, scheds.some((s) => s.wasteType === '의료폐기물')) ? feeMed : 0) +
+    (feeDia != null && flatFeeApplies(client, month, scheds.some((s) => s.wasteType === '일회용기저귀')) ? feeDia : 0)
 
   //  부가세 별도 — 수거 건 단위 반올림 (invoiceFor 의 줄 단위 계산과 동일)
   const diaSale = priceOf(client, 'diaper').sale
@@ -595,13 +626,13 @@ export function invoiceFor(
     ;(key === 'medical' ? medicalLines : diaperLines).push(row)
   }
 
-  if (feeMed != null && scheds.some((s) => s.wasteType === '의료폐기물')) {
+  if (feeMed != null && flatFeeApplies(client, month, scheds.some((s) => s.wasteType === '의료폐기물'))) {
     medicalLines.push({
       date: `${month}-01`, itemKey: 'medical', label: '의료폐기물 수집·운반 (월정액)',
       unit: '식', qty: 1, price: feeMed, amount: feeMed, note: '월정액',
     })
   }
-  if (feeDia != null && scheds.some((s) => s.wasteType === '일회용기저귀')) {
+  if (feeDia != null && flatFeeApplies(client, month, scheds.some((s) => s.wasteType === '일회용기저귀'))) {
     diaperLines.push({
       date: `${month}-01`, itemKey: 'diaper', label: '일회용기저귀 수집·운반 (월정액)',
       unit: '식', qty: 1, price: feeDia, amount: feeDia, note: '월정액',
@@ -842,6 +873,13 @@ export function billingStateFor(data: AppData, clientId: string, month: string):
   const billed = billedIdsOf(data, clientId, month)
   const pending = settlementFor(data, clientId, month, billed)
   const hasLegacyBill = bills.some((p) => !p.snapshot)
+  //  월정액만 있는 달 — 수거·공급이 하나도 없어도 계약상 청구합니다
+  //  (거래처의 flatFeeWhenEmpty 를 켠 경우에만 정산이 금액을 만듭니다).
+  //
+  //  그 달에 이미 청구가 있으면 다시 올리지 않습니다. 뺄 근거가 되는
+  //  수거·공급 id 가 없어서, 확정한 뒤에도 정산이 계속 같은 금액을
+  //  돌려줍니다 — 그대로 두면 매번 「추가 청구」로 다시 잡힙니다.
+  const flatOnly = pending.collections === 0 && pending.supplies === 0 && pending.revenue > 0
   return {
     bills,
     billedAmount,
@@ -851,7 +889,9 @@ export function billingStateFor(data: AppData, clientId: string, month: string):
     //   · 남은 것이 없으면 = 이미 다 청구했으므로 잠금 (같은 달 중복 차단)
     //   · 남은 것은 있는데 금액이 0원이면 = 무상 물품만 나간 달입니다.
     //     0원짜리 청구를 만들면 미수금 목록에 뜻 없는 줄만 늘어납니다.
-    canConfirm: pending.collections + pending.supplies > 0 && pending.revenue > 0,
+    canConfirm:
+      pending.revenue > 0 &&
+      (pending.collections + pending.supplies > 0 || (flatOnly && bills.length === 0)),
     nextKind: bills.length > 0 ? '추가' : '정기',
     hasLegacyBill,
   }

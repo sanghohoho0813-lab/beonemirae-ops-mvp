@@ -1,6 +1,6 @@
 import type { AppData, Client } from '../types'
 import { billingStateFor, hasOwnPrice, monthlyFeeOf, type ItemKey, type SettlementLine } from './billing'
-import { oddAmountsIn, type OddAmount } from './amountCheck'
+import { oddAmountsIn, oddItemsIn, type ItemCheck, type OddAmount } from './amountCheck'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월말 청구
@@ -46,6 +46,8 @@ export interface CloseRow {
    *  금액이 병원에 나갑니다.
    */
   oddAmounts: OddAmount[]
+  /** 그 달 공급 중 평소와 크게 다른 개수 (박스 개당 정산 거래처는 개수가 곧 금액) */
+  oddItems: Array<ItemCheck & { date: string }>
   /** 확정할 수 있는가 */
   canConfirm: boolean
   /** 확정하지 못하는 이유 (canConfirm=false 일 때) */
@@ -106,6 +108,7 @@ export function monthClose(data: AppData, month: string): MonthClose {
       alreadyBilled: st.billedAmount,
       defaultPriced: defaultPricedItems(c, [...st.pending.wasteLines, ...st.pending.supplyLines]),
       oddAmounts: oddAmountsIn(data, c.id, month),
+      oddItems: oddItemsIn(data, c.id, month),
     }
 
     if (st.canConfirm) {
@@ -115,7 +118,9 @@ export function monthClose(data: AppData, month: string): MonthClose {
 
     //  확정할 것이 없는 이유를 나눠 적습니다. 「없음」 한 마디로 뭉뚱그리면
     //  빠뜨린 것인지 원래 없는 것인지 알 수 없습니다.
-    const nothingLeft = st.pending.collections + st.pending.supplies === 0
+    //  월정액만 있는 달은 수거·공급이 0건이어도 확정할 것이 있습니다.
+    //  canConfirm 을 기준으로 봐야 「없다」와 「월정액만 있다」가 갈립니다.
+    const nothingLeft = st.pending.collections + st.pending.supplies === 0 && !st.canConfirm
     const reason =
       nothingLeft && st.billedAmount > 0
         ? `이미 확정했습니다 (${st.billedAmount.toLocaleString('ko-KR')}원)`
@@ -137,6 +142,9 @@ export function monthClose(data: AppData, month: string): MonthClose {
     const flats: string[] = []
     if (monthlyFeeOf(c, 'medical') != null) flats.push('의료폐기물')
     if (monthlyFeeOf(c, 'diaper') != null) flats.push('일회용기저귀')
+    //  계약서상 수거가 없어도 청구하는 곳(flatFeeWhenEmpty)은 정산이
+    //  이미 월정액을 올렸으므로 nothingLeft 가 아닙니다 — 여기까지 오지
+    //  않고 위의 ready 로 갑니다. 여기 오는 것은 「확인이 필요한」 곳뿐입니다.
     if (nothingLeft && st.billedAmount === 0 && flats.length > 0) {
       const fee =
         (monthlyFeeOf(c, 'medical') ?? 0) + (monthlyFeeOf(c, 'diaper') ?? 0)
@@ -166,7 +174,7 @@ export function monthClose(data: AppData, month: string): MonthClose {
     needsCheck,
     total: ready.reduce((s, r) => s + r.amount, 0),
     defaultPricedCount: ready.filter((r) => r.defaultPriced.length > 0).length,
-    oddAmountCount: ready.filter((r) => r.oddAmounts.length > 0).length,
+    oddAmountCount: ready.filter((r) => r.oddAmounts.length > 0 || r.oddItems.length > 0).length,
   }
 }
 

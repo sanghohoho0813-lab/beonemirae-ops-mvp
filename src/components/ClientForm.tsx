@@ -38,6 +38,7 @@ export const emptyClientForm: Omit<Client, 'id'> = {
   bizItem: '',
   taxEmail: '',
   vatMode: null,
+  flatFeeWhenEmpty: false,
 }
 
 export function ClientForm({
@@ -161,6 +162,29 @@ export function ClientForm({
           />
         </div>
       </div>
+      {/*
+        월정액 계약 정책 — 수거가 0건인 달에도 청구하는 계약인지.
+        시스템이 짐작하지 않습니다: 계약서를 모르는 채 기본료를 자동으로
+        올리면 병원에 잘못된 청구서가 나갑니다. 켜도 계약 기간 밖에는
+        올리지 않습니다.
+      */}
+      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-navy-50/60 p-3.5">
+        <input
+          type="checkbox"
+          data-flat-empty
+          className="mt-1 h-5 w-5 shrink-0 accent-navy-700"
+          checked={form.flatFeeWhenEmpty ?? false}
+          onChange={(e) => set('flatFeeWhenEmpty', e.target.checked)}
+        />
+        <span className="min-w-0 text-[1.03rem] leading-relaxed text-navy-700">
+          <b>월정액은 수거가 없는 달에도 청구</b>
+          <span className="t-caption mt-1 block break-keep text-navy-500">
+            계약서에 그렇게 되어 있을 때만 켜 주세요. 꺼 두면 수거가 있는 달에만 청구하고, 0건인 달은 월말 청구에서
+            「확인 필요」로 알려 드립니다. 켜도 계약 기간 밖에는 올리지 않습니다.
+          </span>
+        </span>
+      </label>
+
       <TaxFields value={form} onChange={(patch) => setForm({ ...form, ...patch })} />
 
       <div>

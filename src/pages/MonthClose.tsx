@@ -43,7 +43,7 @@ export function MonthClose() {
     () =>
       new Set(
         close.ready
-          .filter((r) => r.defaultPriced.length > 0 || r.oddAmounts.length > 0)
+          .filter((r) => r.defaultPriced.length > 0 || r.oddAmounts.length > 0 || r.oddItems.length > 0)
           .map((r) => r.clientId),
       ),
     [close.ready],
@@ -167,7 +167,7 @@ export function MonthClose() {
           </p>
         </div>
         <div className="card p-4">
-          <p className="text-[1.03rem] font-semibold text-navy-400">평소와 다른 수거량</p>
+          <p className="text-[1.03rem] font-semibold text-navy-400">평소와 다른 수량</p>
           <p className="mt-1.5 text-2xl font-extrabold text-rose-500">
             {close.oddAmountCount}
             <span className="ml-0.5 text-base text-navy-300">곳</span>
@@ -246,7 +246,7 @@ export function MonthClose() {
         <div data-close-odd-warn className="card flex gap-3 border-rose-200 bg-rose-50/60 p-4 sm:p-5">
           <AlertTriangle size={20} className="mt-0.5 shrink-0 text-rose-500" />
           <p className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
-            <b className="text-rose-600">{close.oddAmountCount}곳에 평소와 크게 다른 수거량이 섞여 있습니다.</b>{' '}
+            <b className="text-rose-600">{close.oddAmountCount}곳에 평소와 크게 다른 수거량·공급 수량이 섞여 있습니다.</b>{' '}
             현장에서 0 하나를 더 치면 청구액이 열 배가 됩니다. 처음부터 체크를 꺼 두었으니, 수거이력에서 그 날 기록을
             확인한 뒤 직접 켜 주세요. 실제로 그만큼 나온 달이면 그대로 확정하시면 됩니다.
           </p>
@@ -323,6 +323,19 @@ export function MonthClose() {
                     평소와 크게 다른 수거량 — 0 하나를 더 치면 청구액이 열
                     배가 됩니다. 여기가 병원에 나가기 전 마지막 자리입니다.
                   */}
+                  {r.oddItems.length > 0 && (
+                    <span
+                      data-close-odd-item={r.clientId}
+                      className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-[0.95rem] font-bold text-rose-600"
+                    >
+                      평소와 다른 공급 수량 ·{' '}
+                      {r.oddItems
+                        .slice(0, 2)
+                        .map((o) => `${o.date.slice(5)} ${o.label} ${o.count.toLocaleString('ko-KR')}개 (평소 ${o.median.toLocaleString('ko-KR')}개)`)
+                        .join(' · ')}
+                      {r.oddItems.length > 2 && ` 외 ${r.oddItems.length - 2}건`}
+                    </span>
+                  )}
                   {r.oddAmounts.length > 0 && (
                     <span
                       data-close-odd={r.clientId}
