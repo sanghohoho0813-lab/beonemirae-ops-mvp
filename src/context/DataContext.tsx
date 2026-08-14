@@ -35,7 +35,7 @@ import {
 import { buildBillingSnapshot, itemsOf, stockDeltaOf } from '../lib/billing'
 import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
 import { leadKey } from '../lib/sales'
-import { outstandingOf } from '../lib/selectors'
+import { outstandingOf, paidTotalOf } from '../lib/selectors'
 import type { NextAction } from '../lib/insights'
 import { thisMonth, today } from '../lib/format'
 import { useAuth } from './AuthContext'
@@ -106,8 +106,12 @@ interface DataContextValue {
     /** quiet=true 면 건마다 전체를 다시 읽지 않습니다 (여러 건 연속 확정용) */
     opts?: { quiet?: boolean },
   ) => Promise<{ ok: boolean; error: string | null }>
-  /** 잘못 만든 청구 — 지우지 않고 취소로 남깁니다 */
-  cancelPayment: (id: string, reason: string) => void
+  /**
+   * 잘못 만든 청구 — 지우지 않고 취소로 남깁니다.
+   *  입금이 한 건이라도 있으면 취소하지 못합니다(0037). 받은 돈이 매출에도
+   *  미수금에도 안 잡히는 상태가 되기 때문입니다.
+   */
+  cancelPayment: (id: string, reason: string) => Promise<{ ok: boolean; error: string | null }>
   updatePayment: (id: string, patch: Partial<Payment>) => void
   /**
    * 남은 금액을 받은 것으로 기록합니다 (입금일 = 오늘).
@@ -1347,32 +1351,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   //  잘못 만든 청구는 지우지 않습니다. 지워 버리면 "그런 청구는 없었다" 가
   //  되어, 병원과 금액을 두고 다툴 때 근거가 남지 않습니다.
+  //
+  //  입금이 들어온 청구는 취소하지 못합니다(0037). 취소한 청구는 매출에도
+  //  미수금에도 안 잡히는데 입금 기록만 남으면, **실제로 받은 돈이 장부
+  //  어디에도 없는 상태**가 됩니다. 입금을 먼저 취소해야 합니다.
   const cancelPayment = useCallback(
-    (id: string, reason: string) => {
+    async (id: string, reason: string): Promise<{ ok: boolean; error: string | null }> => {
       const before = data.payments.find((p) => p.id === id)
-      const name = before ? findClientName(data, before.clientId) : '거래처'
+      if (!before) return { ok: false, error: '취소할 청구를 찾을 수 없습니다.' }
+      if (before.status === '취소') return { ok: false, error: '이미 취소한 청구입니다.' }
+      //  화면에서도 같은 것을 먼저 봅니다 — 서버까지 갔다 오지 않고 이유를
+      //  바로 알려 주기 위해서입니다. 최종 방어선은 서버입니다.
+      const paid = paidTotalOf(data, before)
+      if (paid > 0) {
+        return {
+          ok: false,
+          error:
+            `이 청구에는 입금 ${paid.toLocaleString('ko-KR')}원이 이미 기록되어 있습니다. ` +
+            '입금 기록을 먼저 취소한 뒤 청구를 취소해 주세요 — 받은 돈이 장부에서 사라지지 않게 하는 규칙입니다.',
+        }
+      }
       const canceledAt = new Date().toISOString()
       if (live) {
-        void runLive(async () => {
-          await repo.updatePayment(id, { status: '취소', canceledAt })
-          await repo.writeAudit({
-            action: 'payment.cancel',
-            entity: 'payments',
-            entityId: id,
-            clientId: before?.clientId,
-            before,
-            summary: before
-              ? `${name} ${before.billingMonth} 청구 ${before.amount.toLocaleString('ko-KR')}원 취소` +
-                `${reason ? ` — ${reason}` : ''}`
-              : '청구 취소',
-          })
-        })
-        return
+        //  상태 변경과 감사기록을 서버가 한 트랜잭션으로 묶습니다(0037).
+        return await runLive(async () => {
+          await repo.cancelBilling(id, reason)
+        }).then((r) => ({ ok: r.ok, error: r.error ?? null }))
       }
       setData((d) => ({
         ...d,
         payments: d.payments.map((p) => (p.id === id ? { ...p, status: '취소', canceledAt } : p)),
       }))
+      return { ok: true, error: null }
     },
     [live, runLive, data],
   )

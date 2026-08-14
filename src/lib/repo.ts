@@ -691,6 +691,13 @@ export async function insertPayment(p: Omit<Payment, 'id'>): Promise<Payment> {
   return toPayment(row[0])
 }
 
+/**
+ * 청구 내용 수정.
+ *
+ *  금액·청구월·명세서는 여기서 보내지 않습니다 — 확정 순간에 굳는 값이라
+ *  서버(0037)가 거부합니다. 금액이 틀렸으면 취소하고 다시 확정합니다.
+ *  취소도 여기가 아니라 cancelBilling 으로 합니다.
+ */
 export async function updatePayment(id: string, patch: Partial<Payment>): Promise<void> {
   const sb = need()
   unwrap(
@@ -701,14 +708,24 @@ export async function updatePayment(id: string, patch: Partial<Payment>): Promis
           status: patch.status,
           method: patch.method,
           paid_at: patch.paidAt,
-          amount: patch.amount,
           memo: patch.memo,
-          canceled_at: patch.canceledAt,
         }),
       )
       .eq('id', id)
       .select(),
   )
+}
+
+/**
+ * 청구 취소 (0037).
+ *
+ *  입금이 한 건이라도 있으면 서버가 거부합니다 — 받은 돈이 어느 합계에도
+ *  안 잡히는 상태가 되기 때문입니다. 상태 변경과 감사기록이 한 트랜잭션입니다.
+ */
+export async function cancelBilling(id: string, reason: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('cancel_billing', { p_payment_id: id, p_reason: reason })
+  if (error) throw new Error(error.message)
 }
 
 // ── 병원 요청 ────────────────────────────────────────────────────────────────
@@ -1218,7 +1235,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 36
+export const EXPECTED_SCHEMA_VERSION = 37
 
 /**
  * 서버 DB 의 스키마 버전.

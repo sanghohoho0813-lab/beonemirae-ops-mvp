@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckCircle2, FileText, Loader2, ReceiptText, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { billingStateFor, type Invoice } from '../lib/billing'
+import { paidTotalOf } from '../lib/selectors'
 import { won } from '../lib/format'
 import type { AppData, Client } from '../types'
 
@@ -58,14 +59,16 @@ export function BillingConfirmCard({
     if (r.ok) setTimeout(() => setMsg(null), 5000)
   }
 
-  function cancel(id: string, amount: number) {
+  async function cancel(id: string, amount: number) {
     const reason = window.prompt(
       `이 청구(${won(amount)})를 취소합니다.\n` +
         '기록은 지우지 않고 「취소」로 남습니다. 사유를 적어 주세요.',
       '',
     )
     if (reason === null) return
-    cancelPayment(id, reason.trim())
+    const r = await cancelPayment(id, reason.trim())
+    setMsg({ ok: r.ok, text: r.ok ? `청구를 취소했습니다 — ${won(amount)}` : (r.error ?? '취소하지 못했습니다.') })
+    if (r.ok) setTimeout(() => setMsg(null), 5000)
   }
 
   return (
@@ -140,15 +143,30 @@ export function BillingConfirmCard({
                   명세서
                 </button>
               )}
-              {p.status !== '입금완료' && (
-                <button
-                  className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[1rem] font-bold text-navy-500 transition hover:bg-navy-100"
-                  onClick={() => cancel(p.id, p.amount)}
-                >
-                  <Undo2 size={14} className="mr-1 inline -translate-y-px" />
-                  취소
-                </button>
-              )}
+              {/*
+                입금이 한 건이라도 들어온 청구는 취소하지 않습니다. 취소한
+                청구는 매출에도 미수금에도 안 잡히는데 입금 기록만 남으면,
+                **실제로 받은 돈이 장부 어디에도 없는 상태**가 됩니다.
+                입금을 먼저 취소해야 합니다 — 그 길을 그대로 적어 둡니다.
+              */}
+              {p.status !== '취소' &&
+                (paidTotalOf(data, p) > 0 ? (
+                  <span
+                    data-bill-cancel-blocked={p.id}
+                    className="shrink-0 break-keep text-[0.98rem] text-navy-400"
+                  >
+                    입금 {won(paidTotalOf(data, p))} 기록됨 — 입금을 먼저 취소해야 청구를 취소할 수 있습니다
+                  </span>
+                ) : (
+                  <button
+                    data-bill-cancel={p.id}
+                    className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[1rem] font-bold text-navy-500 transition hover:bg-navy-100"
+                    onClick={() => void cancel(p.id, p.amount)}
+                  >
+                    <Undo2 size={14} className="mr-1 inline -translate-y-px" />
+                    취소
+                  </button>
+                ))}
             </li>
           ))}
         </ul>

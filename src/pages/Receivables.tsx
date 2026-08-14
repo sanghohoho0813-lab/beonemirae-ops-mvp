@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Check, ReceiptText} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
@@ -8,6 +9,7 @@ import { PaymentBadge } from '../components/Badge'
 import { DunningPanel } from '../components/DunningPanel'
 import { ageOf } from '../lib/dunning'
 import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
+import { strandedReceipts } from '../lib/moneyGuard'
 import { won, today } from '../lib/format'
 import type { PaymentStatus } from '../types'
 
@@ -66,6 +68,9 @@ export function Receivables() {
   const collected = data.payments
     .filter((p) => p.status !== '취소')
     .reduce((s, p) => s + paidTotalOf(data, p), 0)
+  //  위 세 숫자 어디에도 안 잡히는 돈이 있는지 — 취소한 청구에 달린 입금.
+  const stranded = useMemo(() => strandedReceipts(data), [data])
+  const strandedSum = stranded.reduce((s, r) => s + r.paid, 0)
 
   return (
     <div>
@@ -93,6 +98,46 @@ export function Receivables() {
           </div>
         </div>
       </div>
+
+      {/*
+        갈 곳 없는 입금 — 취소한 청구에 입금이 달려 있는 건.
+
+         취소한 청구는 매출에도 미수금에도 들어가지 않습니다. 그런데 입금
+         기록만 남아 있으면 **실제로 받은 돈이 위의 어느 숫자에도 없습니다.**
+         0037 부터 서버가 이런 취소를 막지만, 그 전 자료에는 있을 수
+         있습니다. 시스템이 한쪽으로 되돌리지 않습니다 — 통장을 봐야
+         어느 쪽이 맞는지 알 수 있습니다.
+      */}
+      {stranded.length > 0 && (
+        <div data-stranded className="card mb-5 border-rose-200 bg-rose-50/60 p-4 sm:p-5">
+          <p className="break-keep text-[1.05rem] font-bold text-rose-600">
+            취소한 청구에 입금 {won(strandedSum)}이 남아 있습니다 ({stranded.length}건)
+          </p>
+          <p className="mt-1 break-keep text-[1.02rem] leading-relaxed text-navy-600">
+            취소한 청구는 위의 총 청구액·미수금·입금 완료 어디에도 들어가지 않습니다. 이 돈은 지금 장부에
+            잡히지 않는 상태입니다. 통장을 보고 <b className="text-navy-800">입금 기록을 지우거나</b>, 청구가
+            살아 있어야 하면 <b className="text-navy-800">새로 확정</b>해 주세요.
+          </p>
+          <ul className="mt-2.5 space-y-1.5">
+            {stranded.map((s) => (
+              <li
+                key={s.paymentId}
+                data-stranded-row={s.paymentId}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-white px-3.5 py-2.5"
+              >
+                <Link
+                  to={`/clients/${s.clientId}`}
+                  className="min-w-0 flex-1 basis-[9rem] break-keep font-bold text-navy-900 hover:underline"
+                >
+                  {s.clientName}
+                </Link>
+                <span className="shrink-0 text-[0.98rem] text-navy-500">{s.billingMonth} 청구 {won(s.billed)} · 취소</span>
+                <span className="shrink-0 tabular-nums font-extrabold text-rose-600">입금 {won(s.paid)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/*  독촉 대상 — 오래 밀린 곳부터. 미수가 없으면 아무것도 그리지 않습니다. */}
       <DunningPanel />
