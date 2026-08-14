@@ -184,6 +184,13 @@ export function CollectionInput() {
     return prev ? itemsOf(prev) : {}
   }, [data.materials, clientId])
 
+  //  폰에서 자재 목록을 접습니다 — 지난번에 준 규격과 값이 들어간 줄만
+  //  펼쳐 둡니다. 한 번 펼치면 그 입력이 끝날 때까지 그대로 둡니다.
+  const [showAllItems, setShowAllItems] = useState(false)
+  const hiddenItemCount = showAllItems
+    ? 0
+    : SUPPLY_ITEMS.filter((it) => (lastSupply[it.key] ?? 0) === 0 && (suppliedItems[it.key] ?? 0) === 0).length
+
   const stock = data.officeStock
   // 규격별 입력 → 재고 4칸 차감량
   const supplied = { ...EMPTY_SUPPLIED, ...stockDeltaOf(suppliedItems) }
@@ -533,8 +540,19 @@ export function CollectionInput() {
         <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
           {/* 규격별로 받습니다 — 63L 박스와 12L 박스는 단가가 다르고,
               그 차이가 그대로 거래처 정산·거래명세서로 갑니다. */}
+          {/*
+            폰에서는 이 목록 열 줄이 1,000px 남짓입니다 — 수거 입력 화면이
+            다섯 화면이 되는 가장 큰 이유였습니다. 실제로는 거래처마다 쓰는
+            규격이 두세 개뿐입니다.
+
+            그래서 폰에서는 **지난번에 준 규격과 지금 값이 들어간 줄**만
+            펼쳐 두고, 나머지는 「다른 규격」으로 접습니다. 넓은 화면은
+            지금까지와 똑같이 전부 보여 줍니다. 줄을 없애지 않습니다 —
+            한 번 펼치면 그대로 남습니다.
+          */}
           <div data-tour="collect-supply" className="divide-y divide-navy-50">
             {SUPPLY_ITEMS.map((it, si) => {
+              const used = (lastSupply[it.key] ?? 0) > 0 || (suppliedItems[it.key] ?? 0) > 0
               const bucket = it.bucket!
               const over = supplied[bucket] > stock[bucket]
               const last = lastSupply[it.key] ?? 0
@@ -565,15 +583,29 @@ export function CollectionInput() {
               // 폰에서는 이 목록 전체(10줄, 1000px 남짓)가 화면에 들어가지 않아
               // 투어가 강조할 수 없습니다. 첫 줄만 따로 대상으로 둡니다 —
               // 어차피 설명해야 할 것은 "규격마다 한 줄, ± 로 센다" 하나입니다.
+              //  폰에서 접는 줄 — 값이 들어 있거나 지난번에 준 규격은 늘 보입니다
+              const cls = used || showAllItems ? '' : 'hidden sm:block'
               return si === 0 ? (
-                <div key={it.key} data-tour="collect-supply-row">
+                <div key={it.key} data-tour="collect-supply-row" className={cls}>
                   {field}
                 </div>
               ) : (
-                field
+                <div key={it.key} className={cls}>
+                  {field}
+                </div>
               )
             })}
           </div>
+          {hiddenItemCount > 0 && (
+            <button
+              type="button"
+              data-supply-more
+              onClick={() => setShowAllItems(true)}
+              className="mt-2 w-full rounded-2xl bg-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-600 transition active:scale-[0.99] sm:hidden"
+            >
+              다른 규격 {hiddenItemCount}개 보기
+            </button>
+          )}
           {/* 재고는 규격이 아니라 종류 단위로 관리하므로 여기서 함께 보여 줍니다 */}
           <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
             {SUPPLY_KEYS.map(({ key, label }) => (

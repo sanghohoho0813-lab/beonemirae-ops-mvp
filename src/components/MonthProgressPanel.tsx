@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowRight, Check, CircleDashed, Clock } from 'lucide-re
 import { monthProgress, type ProgressStep, type StepState } from '../lib/monthProgress'
 import { useData } from '../context/DataContext'
 import { won } from '../lib/format'
+import { ExpandableSection } from './ui'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월 마감 진행상황 — 「이번 달 어디까지 했지」
@@ -116,10 +117,27 @@ export function MonthProgressPanel({ month }: { month: string }) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {/*
+        폰에서는 여섯 장이 세로로 쌓여 화면 세 개가 됩니다. 지금 해야 할
+        한 단계만 펼쳐 두고 나머지는 접습니다 — 없애지 않습니다.
+        넓은 화면은 여섯 장을 한눈에 봅니다.
+      */}
+      <div data-progress-grid className="mt-3 hidden gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-3">
         {p.steps.map((s, i) => (
           <StepCard key={s.key} step={s} order={i + 1} />
         ))}
+      </div>
+      <div className="mt-3 space-y-3 sm:hidden" data-progress-phone>
+        {p.next && <StepCard step={p.next} order={p.steps.indexOf(p.next) + 1} />}
+        <ExpandableSection label={`나머지 ${p.steps.length - (p.next ? 1 : 0)}단계 보기`}>
+          <div className="space-y-3 pt-3">
+            {p.steps
+              .filter((s) => s !== p.next)
+              .map((s) => (
+                <StepCard key={s.key} step={s} order={p.steps.indexOf(s) + 1} />
+              ))}
+          </div>
+        </ExpandableSection>
       </div>
 
       <p className="mt-2 break-keep px-1 text-[0.96rem] leading-snug text-navy-400">

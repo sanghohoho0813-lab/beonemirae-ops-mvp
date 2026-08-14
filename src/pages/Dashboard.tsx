@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
-import { PageShell, SectionTitle, AreaHeader, AreaDivider } from '../components/ui'
+import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
@@ -153,10 +153,25 @@ export function Dashboard() {
 
       <AreaDivider />
 
-      {/* ══ ② 거래처 운영상태 ════════════════════════════════════════════════ */}
+      {/* ══ ② 이번 달 경영현황 ═══════════════════════════════════════════════
+          대표가 스크롤 없이 봐야 하는 숫자입니다. 예전에는 거래처 운영상태
+          (1,100px) 아래에 있어서 화면을 한 번 내려야 나왔습니다. */}
       <section>
         <AreaHeader
           n={2}
+          icon={Wallet}
+          title="이번 달 경영현황"
+          desc="매출과 비용, 미수금까지 이번 달 돈의 흐름입니다."
+        />
+        <MonthGlance data={data} />
+      </section>
+
+      <AreaDivider />
+
+      {/* ══ ③ 거래처 운영상태 ════════════════════════════════════════════════ */}
+      <section>
+        <AreaHeader
+          n={3}
           icon={Building2}
           title="거래처 운영상태"
           desc="요청·계약·자재·특이사항 등 거래처 쪽에서 지금 벌어지는 일입니다."
@@ -236,20 +251,10 @@ export function Dashboard() {
 
       <AreaDivider />
 
-      {/* ══ ③ 이번 달 경영현황 ═══════════════════════════════════════════════ */}
-      <section>
-        <AreaHeader
-          n={3}
-          icon={Wallet}
-          title="이번 달 경영현황"
-          desc="매출과 비용, 미수금까지 이번 달 돈의 흐름입니다."
-        />
-        <MonthGlance data={data} />
-      </section>
-
-      <AreaDivider />
-
-      {/* ══ ④ 성장기회 ═══════════════════════════════════════════════════════ */}
+      {/* ══ ④ 성장기회 ═══════════════════════════════════════════════════════
+          매일 처리하는 일이 아니라 「더 할 수 있는 일」입니다. 오늘 업무와
+          이번 달 숫자를 먼저 보시도록 접어 둡니다 — 없애지 않습니다. */}
+      <ExpandableSection label="성장기회 보기 — 추가 수거 · 소모품 · 교육 기회">
       <section>
         <AreaHeader
           n={4}
@@ -290,14 +295,13 @@ export function Dashboard() {
         </div>
       </section>
 
+      </ExpandableSection>
+
       {/* ══ 여기부터는 사업 구조와 성과 ═══════════════════════════════════
           매일 쓰는 정보가 아니라 "이 시스템이 무엇을 하는가"입니다.
           매일 보는 화면 위쪽을 차지하지 않도록 아래로 내렸습니다. */}
-      <div className="hidden lg:contents">
-        <div className="flex items-center gap-3 pt-3">
-          <span className="t-label whitespace-nowrap text-navy-400">사업 구조 · 도입 성과</span>
-          <span className="h-px flex-1 bg-navy-200" />
-        </div>
+      <div className="hidden lg:block">
+        <ExpandableSection label="사업 구조 · 도입 성과 보기">
 
         {/* 이 시스템이 무엇을 하는지 — 데이터가 없어도 항상 읽히는 한 줄 흐름 */}
         <AxStoryStrip data={data} />
@@ -309,6 +313,7 @@ export function Dashboard() {
           </SectionTitle>
           <AxSummaryCard data={data} compact />
         </section>
+        </ExpandableSection>
       </div>
     </PageShell>
   )
