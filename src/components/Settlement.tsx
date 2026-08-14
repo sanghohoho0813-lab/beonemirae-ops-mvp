@@ -292,7 +292,7 @@ function Small({ label, v }: { label: string; v: number }) {
 
 // ── 단가 설정 ────────────────────────────────────────────────────────────────
 
-function PricingModal({
+export function PricingModal({
   open,
   client,
   onClose,

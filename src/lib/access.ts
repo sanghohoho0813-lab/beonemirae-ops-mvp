@@ -34,6 +34,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/receivables', roles: ['admin', 'office'] },
   //  청구·통장 대사는 돈 기록입니다 — 사무실·관리자만.
   { prefix: '/billing', roles: ['admin', 'office'] },
+  //  단가는 청구 금액을 정하는 값입니다 — 현장에는 열지 않습니다.
+  { prefix: '/pricing', roles: ['admin', 'office'] },
   { prefix: '/bank', roles: ['admin', 'office'] },
   { prefix: '/stats', roles: ['admin', 'office'] },
   { prefix: '/reports', roles: ['admin', 'office'] },
