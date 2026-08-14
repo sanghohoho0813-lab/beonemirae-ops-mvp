@@ -408,13 +408,21 @@ export function ClientDetail() {
         </section>
       )}
 
-      {/* 탭 — 돈이 보이는 탭은 현장 담당자에게 열지 않습니다 */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      {/*
+        탭 — 돈이 보이는 탭은 현장 담당자에게 열지 않습니다.
+
+         폰에서는 여덟 개가 가로로 한 줄이라 옆으로 밀어야 나머지가 보였고,
+         밀 수 있다는 표시가 없었습니다. 화면에 처음 보이는 것은 「운영조건」
+         하나뿐이라, 나머지 탭은 있는 줄도 모르고 지나가게 됩니다.
+         폰에서는 두 칸 격자로 전부 펼쳐 놓고, 넓은 화면에서만 한 줄로 둡니다.
+      */}
+      <div data-client-tabs className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {visibleTabs.map((t) => (
           <button
             key={t.id}
+            data-client-tab={t.id}
             onClick={() => setTab(t.id)}
-            className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2.5 text-[1.12rem] font-bold transition ${
+            className={`min-w-0 break-keep rounded-2xl px-3.5 py-2.5 text-[1.08rem] font-bold transition sm:shrink-0 sm:whitespace-nowrap sm:rounded-full sm:px-4 sm:text-[1.12rem] ${
               tab === t.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
             }`}
           >

@@ -2,46 +2,24 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  LayoutGrid,
-  CalendarClock,
-  CalendarPlus,
-  Landmark,
-  ReceiptText,
-  Tags,
-  Building2,
-  PlusCircle,
   MoreHorizontal,
-  Boxes,
-  Wallet,
-  PieChart,
   Smartphone,
-  Truck,
   Globe,
-  Workflow,
   ExternalLink,
-  FileBarChart,
-  History,
   Headset,
   Lock,
   Sparkles,
   ChevronDown,
-  SlidersHorizontal,
-  ScrollText,
-  MessageSquarePlus,
-  Gauge,
-  Inbox,
   LogOut,
   HelpCircle,
   type LucideIcon,
-  UserCog,
-  FileSpreadsheet,
 } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
-import { TONE, type Tone } from '../lib/tone'
+import { TONE } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
@@ -60,89 +38,21 @@ import { PageMotion } from './motion'
 //    지금 바로 사용하는 기능과 향후 확장 기능을 명확히 구분합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface NavItem {
-  to: string
-  label: string
-  icon: LucideIcon
-  /** 한 줄 설명 — 무엇을 하는 메뉴인지 목차에서 바로 읽히게 */
-  desc: string
-  tone: Tone
-}
-
-/** 핵심 운영 — 매일 쓰는 화면 */
-const CORE_NAV: NavItem[] = [
-  { to: '/', label: '대시보드', icon: LayoutGrid, desc: '오늘 현황 · 핵심 지표', tone: 'blue' },
-  { to: '/today', label: '오늘 일정', icon: CalendarClock, desc: '방문 · 완료 · 입력 대기', tone: 'sky' },
-  { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '한 번 입력 → 자동 연결', tone: 'emerald' },
-  { to: '/clients', label: '거래처', icon: Building2, desc: '병원별 이력 · 메모 · 추천', tone: 'navy' },
-]
-
-/** 병원 서비스 — 이번 확장의 중심. 병원에 무엇을 제공하고 무엇을 받았는지 */
-const SERVICE_NAV: NavItem[] = [
-  { to: '/requests', label: '병원 요청', icon: Inbox, desc: '병원이 올린 요청 처리 · 회신', tone: 'violet' },
-  { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
-  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '효율 · 자동화 · 매출 확장', tone: 'teal' },
-]
-
-/** 운영 도구 — 핵심 흐름을 보조하는 실사용 화면 */
-const TOOL_NAV: NavItem[] = [
-  { to: '/plan', label: '일정 편성', icon: CalendarPlus, desc: '', tone: 'navy' },
-  { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '', tone: 'navy' },
-  { to: '/materials', label: '자재 관리', icon: Boxes, desc: '', tone: 'navy' },
-  { to: '/billing', label: '월말 청구', icon: ReceiptText, desc: '', tone: 'navy' },
-  { to: '/pricing', label: '거래처 점검', icon: Tags, desc: '', tone: 'navy' },
-  { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '', tone: 'navy' },
-  { to: '/bank', label: '통장 대사', icon: Landmark, desc: '', tone: 'navy' },
-  { to: '/history', label: '수거이력', icon: History, desc: '', tone: 'navy' },
-  { to: '/stats', label: '통계', icon: PieChart, desc: '', tone: 'navy' },
-  { to: '/roadmap', label: '활용 계획', icon: Workflow, desc: '', tone: 'navy' },
-]
-
-/** 관리 — 관리자만 보이는 영역 */
-const ADMIN_NAV: NavItem[] = [
-  { to: '/users', label: '사용자 관리', icon: UserCog, desc: '', tone: 'navy' },
-  { to: '/dev-requests', label: '개발 요청함', icon: MessageSquarePlus, desc: '', tone: 'navy' },
-  { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '', tone: 'navy' },
-  { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '', tone: 'navy' },
-  { to: '/audit', label: '감사로그', icon: ScrollText, desc: '', tone: 'navy' },
-]
-
-/** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 (클릭 시 활용 계획으로 안내) */
-const PLANNED: string[] = [
-  'AI 배차·경로 고도화',
-  '소모품 주문·결제',
-  '배출자 교육 이력 관리',
-  '리포트 자동 발송(PDF·메일)',
-  '올바로 API 연동',
-  '병원 다중 담당자 계정',
-  'SaaS 서비스 확장',
-]
-
-/**
- * 모바일 하단 고정 메뉴 — 데스크톱 메뉴를 그대로 넣지 않습니다.
- *
- *  폰에서 실제로 반복해서 누르는 것만 남기고, 나머지는 전부 「더보기」로 보냅니다.
- *  역할마다 하는 일이 다르므로 구성도 다릅니다.
- *
- *   현장   오늘 갈 곳 → 입력 → 병원 정보. 대시보드는 아예 열리지 않습니다.
- *   사무실 오늘 할 일 → 일정 → 병원 요청.
- */
-const BOTTOM_NAV_STAFF: NavItem[] = [
-  { to: '/', label: '홈', icon: LayoutGrid, desc: '', tone: 'blue' },
-  { to: '/today', label: '오늘', icon: CalendarClock, desc: '', tone: 'sky' },
-  { to: '/collection', label: '입력', icon: PlusCircle, desc: '', tone: 'emerald' },
-  { to: '/requests', label: '요청', icon: Inbox, desc: '', tone: 'violet' },
-]
-const BOTTOM_NAV_FIELD: NavItem[] = [
-  { to: '/today', label: '오늘', icon: CalendarClock, desc: '', tone: 'sky' },
-  { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '', tone: 'emerald' },
-  { to: '/clients', label: '거래처', icon: Building2, desc: '', tone: 'navy' },
-]
+import {
+  CORE_NAV,
+  SERVICE_NAV,
+  TOOL_NAV,
+  ADMIN_NAV,
+  PLANNED,
+  BOTTOM_NAV_STAFF,
+  BOTTOM_NAV_FIELD,
+  type NavItem,
+} from '../lib/nav'
 
 const MORE_PATHS = [
   '/more', '/plan', '/billing', '/bank', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
   '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
-  '/audit', '/requests',
+  '/audit', '/requests', '/pricing', '/users', '/dev-requests', '/import',
 ]
 
 /**
