@@ -31,6 +31,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: PORTAL_PREFIX, roles: ['client', 'admin'] },
   // 경영 · 성과 · 매출
   { prefix: '/performance', roles: ['admin', 'office'] },
+  //  매출 현황 — 회사 매출·예상 연매출. 현장에는 열지 않습니다.
+  { prefix: '/revenue', roles: ['admin', 'office'] },
   { prefix: '/receivables', roles: ['admin', 'office'] },
   //  청구·통장 대사는 돈 기록입니다 — 사무실·관리자만.
   { prefix: '/billing', roles: ['admin', 'office'] },

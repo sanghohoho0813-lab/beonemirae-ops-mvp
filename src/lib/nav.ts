@@ -21,6 +21,7 @@ import {
   Inbox,
   UserCog,
   FileSpreadsheet,
+  TrendingUp,
   type LucideIcon,
 } from 'lucide-react'
 import type { Tone } from './tone'
@@ -55,6 +56,7 @@ export const CORE_NAV: NavItem[] = [
 
 /** 병원 서비스 · 성과 — 병원에 무엇을 제공하고 무엇을 받았는지 */
 export const SERVICE_NAV: NavItem[] = [
+  { to: '/revenue', label: '매출 현황', icon: TrendingUp, desc: '누적 · 월평균 · 예상 연매출', tone: 'teal' },
   { to: '/requests', label: '병원 요청', icon: Inbox, desc: '병원이 올린 요청 처리 · 회신', tone: 'violet' },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
   { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '효율 · 자동화 · 매출 확장', tone: 'teal' },

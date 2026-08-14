@@ -16,6 +16,7 @@ import type {
   Holiday,
   OperatingCost,
   PaymentReceipt,
+  RevenueOverride,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry } from './supabase'
@@ -316,6 +317,13 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  월 매출 직접입력·조정 (0038). 현장은 RLS 로 막혀 있고, 마이그레이션 전
+  //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 조정이 없는 것과 같습니다.
+  const revenueOverrides = await soft(
+    async () => pageAll((f, t) => sb.from('revenue_overrides').select('*').order('month').range(f, t)),
+    [] as Row[],
+  )
+
   //  휴무일 (0034). 마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다 —
   //  없으면 빈 목록이고, 편성은 지금까지와 똑같이 동작합니다.
   const holidays = await soft(
@@ -379,6 +387,18 @@ export async function loadAppData(): Promise<AppData> {
         actorName: r.actor_name ?? '',
         createdAt: r.created_at,
         sourceRef: r.source_ref ?? null,
+      }),
+    ),
+    revenueOverrides: revenueOverrides.map(
+      (r): RevenueOverride => ({
+        id: r.id,
+        clientId: r.client_id,
+        month: r.month,
+        amount: Number(r.amount ?? 0),
+        reason: r.reason ?? '',
+        actorName: r.actor_name ?? '',
+        createdAt: r.created_at,
+        updatedAt: r.updated_at ?? r.created_at,
       }),
     ),
     monthlyActuals: monthlyActuals.map(
@@ -725,6 +745,39 @@ export async function updatePayment(id: string, patch: Partial<Payment>): Promis
 export async function cancelBilling(id: string, reason: string): Promise<void> {
   const sb = need()
   const { error } = await sb.rpc('cancel_billing', { p_payment_id: id, p_reason: reason })
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * 월 매출 직접입력 · 조정 (0038).
+ *
+ *  사유 없이 넣지 못합니다. 기존 값이 있으면 서버가 이전 값을 함께
+ *  돌려주고 감사기록에 남깁니다 — 조용히 덮어쓰지 않습니다.
+ */
+export async function setRevenueOverride(input: {
+  clientId: string
+  month: string
+  amount: number
+  reason: string
+}): Promise<{ created: boolean; before: number | null; amount: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('set_revenue_override', {
+    p_client_id: input.clientId,
+    p_month: input.month,
+    p_amount: input.amount,
+    p_reason: input.reason,
+  })
+  if (error) throw new Error(error.message)
+  return data as { created: boolean; before: number | null; amount: number }
+}
+
+/** 매출 조정 되돌리기 (0038) — 그 달은 다시 확정 → Excel → 추정 순서로 */
+export async function deleteRevenueOverride(clientId: string, month: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('delete_revenue_override', {
+    p_client_id: clientId,
+    p_month: month,
+  })
   if (error) throw new Error(error.message)
 }
 
@@ -1235,7 +1288,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 37
+export const EXPECTED_SCHEMA_VERSION = 38
 
 /**
  * 서버 DB 의 스키마 버전.

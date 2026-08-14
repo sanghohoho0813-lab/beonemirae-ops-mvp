@@ -345,6 +345,14 @@ export interface AppData {
   /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */
   receipts?: PaymentReceipt[]
   /**
+   * 월 매출 직접입력 · 조정 (0038).
+   *
+   *  거래처 × 월 매출 집계에서 **가장 높은 우선순위**입니다. 계약서에는
+   *  있는데 기록이 없는 달, 엑셀 값이 실제와 다른 달을 사람이 바로잡습니다.
+   *  사유 없이 넣을 수 없습니다.
+   */
+  revenueOverrides?: RevenueOverride[]
+  /**
    * 월 운영비 (0030).
    *
    *  인건비·유류비처럼 회사 전체에 나가는 돈입니다. 시스템이 추정하지 않고
@@ -398,6 +406,20 @@ export interface PaymentReceipt {
   createdAt: string
   /** 통장 대사로 들어온 입금이면 그 통장 줄의 지문 (0031). 손입력은 없음 */
   sourceRef?: string | null
+}
+
+/** 월 매출 직접입력·조정 (0038) — 거래처 × 월 하나씩 */
+export interface RevenueOverride {
+  id: string
+  clientId: string
+  /** 'YYYY-MM' */
+  month: string
+  amount: number
+  /** 왜 이 값인지 — 비어 있을 수 없습니다 */
+  reason: string
+  actorName: string
+  createdAt: string
+  updatedAt: string
 }
 
 /** 엑셀 정산 시트의 월 합계 — 날짜별 수거로 바꾸지 않고 월 단위 그대로 */

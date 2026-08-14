@@ -8,6 +8,7 @@ import { SchedulePlan } from './pages/SchedulePlan'
 import { BankMatch } from './pages/BankMatch'
 import { MonthClose } from './pages/MonthClose'
 import { PricingAudit } from './pages/PricingAudit'
+import { Revenue } from './pages/Revenue'
 import { Clients } from './pages/Clients'
 import { ClientDetail } from './pages/ClientDetail'
 import { CollectionInput } from './pages/CollectionInput'
@@ -106,6 +107,7 @@ export default function App() {
           <Route path="receivables" element={<Receivables />} />
           <Route path="billing" element={<MonthClose />} />
           <Route path="pricing" element={<PricingAudit />} />
+          <Route path="revenue" element={<Revenue />} />
           <Route path="bank" element={<BankMatch />} />
           <Route path="stats" element={<Statistics />} />
           <Route path="reports" element={<Reports />} />

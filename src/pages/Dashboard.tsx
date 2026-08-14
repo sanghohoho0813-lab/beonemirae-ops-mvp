@@ -26,6 +26,8 @@ import { TodayFocus } from '../components/TodayFocus'
 import { TodayBoard } from '../components/TodayBoard'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
+import { canSeeDashboard } from '../lib/access'
+import { RevenueKpis } from '../components/RevenueKpis'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
 import { prettyDate, today, wonShort, thisMonth } from '../lib/format'
@@ -83,6 +85,9 @@ function PhoneRow({
 export function Dashboard() {
   const { data } = useData()
   const { profile, mode } = useAuth()
+  //  매출은 돈입니다 — 현장 담당자에게는 대시보드 자체가 열리지 않지만,
+  //  시연 모드(로그인 없음)에서는 그대로 보여 줍니다.
+  const canSeeMoney = mode !== 'live' || canSeeDashboard(profile?.role ?? null)
   const t = today()
   const month = thisMonth()
 
@@ -116,6 +121,15 @@ export function Dashboard() {
           {prettyDate(t)} · 의료폐기물 운영관리
         </p>
       </div>
+
+      {/*
+        경영 매출 — 대표가 화면을 열자마자 보는 네 숫자.
+
+         올해 누적 · 월평균 · 예상 연매출 · 미수금. 예전에는 이 숫자가
+         어디에도 없어서 대표님이 엑셀을 다시 열어야 했습니다.
+         현장 담당자에게는 열리지 않습니다(access.ts).
+      */}
+      {canSeeMoney && <RevenueKpis />}
 
       {/* ══ ① 오늘 처리할 업무 ═══════════════════════════════════════════════ */}
       <section>

@@ -150,6 +150,21 @@ interface DataContextValue {
   ) => Promise<{ ok: boolean; error: string | null; result: { added: number; updated: number } | null }>
   /** 휴무일 삭제 */
   removeHoliday: (day: string) => Promise<{ ok: boolean; error: string | null }>
+  /**
+   * 월 매출 직접입력·조정 (0038).
+   *  사유 없이 넣지 못하고, 기존 값이 있으면 서버가 이전 값을 함께 돌려줍니다.
+   */
+  saveRevenueOverride: (input: {
+    clientId: string
+    month: string
+    amount: number
+    reason: string
+  }) => Promise<{ ok: boolean; error: string | null; before: number | null }>
+  /** 매출 조정 되돌리기 — 그 달은 다시 확정 → Excel → 추정 순서로 */
+  removeRevenueOverride: (
+    clientId: string,
+    month: string,
+  ) => Promise<{ ok: boolean; error: string | null }>
   /** 방금 만든 편성 되돌리기 — 손대지 않은 예정만 지웁니다 */
   undoPlan: (
     batch: string,
@@ -1520,6 +1535,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /**
+   * 월 매출 직접입력 · 조정 (0038).
+   *
+   *  매출은 대표님이 경영 판단에 쓰는 숫자입니다. 조용히 덮어쓰지 않고,
+   *  기존 값이 있었으면 얼마였는지 돌려줍니다 — 화면이 그것을 보여 줍니다.
+   */
+  const saveRevenueOverride = useCallback(
+    async (input: { clientId: string; month: string; amount: number; reason: string }) => {
+      if (!live) return { ok: false, error: '매출 조정은 실제 운영 모드에서만 됩니다.', before: null }
+      let before: number | null = null
+      const r = await runLive(async () => {
+        const res = await repo.setRevenueOverride(input)
+        before = res.before
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null, before }
+    },
+    [live, runLive, reload],
+  )
+
+  const removeRevenueOverride = useCallback(
+    async (clientId: string, month: string) => {
+      if (!live) return { ok: false, error: '매출 조정은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.deleteRevenueOverride(clientId, month)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const undoPlan = useCallback(
     async (batch: string) => {
       if (!live) return { ok: false, error: '일정 편성은 실제 운영 모드에서만 됩니다.', result: null }
@@ -1715,6 +1762,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       savePricing,
       saveHolidays,
       removeHoliday,
+      saveRevenueOverride,
+      removeRevenueOverride,
       undoPlan,
       assignVehicles,
       undoAssign,
@@ -1777,6 +1826,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       savePricing,
       saveHolidays,
       removeHoliday,
+      saveRevenueOverride,
+      removeRevenueOverride,
       undoPlan,
       assignVehicles,
       undoAssign,
