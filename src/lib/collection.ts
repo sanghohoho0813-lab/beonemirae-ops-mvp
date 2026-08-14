@@ -12,6 +12,7 @@ import type {
 } from '../types'
 import { requestsClosedByCollection } from './ops'
 import { today } from './format'
+import { checkAmount } from './amountCheck'
 import { uid } from './storage'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,6 +113,11 @@ function validate(data: AppData, input: CollectionCompletionInput): { errors: st
       `${input.wasteType} 수거에는 ${input.wasteType} 차량만 배차할 수 있습니다. (선택한 차량: ${vehicle.wasteType})`,
     )
   }
+
+  //  평소와 크게 다른 수거량 — 차량 적재량만으로는 작은 거래처의 오타를
+  //  못 잡습니다. 30kg 거래처가 300kg 이 되어도 1톤 차량 안입니다.
+  const amt = checkAmount(data, input.clientId, input.wasteType, input.actualAmount, input.scheduleId)
+  if (amt.message) warnings.push(amt.message)
 
   //  차량이 실을 수 있는 양을 넘는 수거량은 거의 자릿수 오타입니다.
   //  (88 을 880 으로 치면 그 거래처 그 달 매출이 열 배가 됩니다)

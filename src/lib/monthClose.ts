@@ -1,5 +1,6 @@
 import type { AppData, Client } from '../types'
 import { billingStateFor, hasOwnPrice, monthlyFeeOf, type ItemKey, type SettlementLine } from './billing'
+import { oddAmountsIn, type OddAmount } from './amountCheck'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월말 청구
@@ -38,6 +39,13 @@ export interface CloseRow {
   alreadyBilled: number
   /** 거래처 단가가 없어 기본 단가로 계산된 품목 이름 */
   defaultPriced: string[]
+  /**
+   * 그 달 수거 중 평소와 크게 다른 것.
+   *  현장에서 0 하나를 더 치면 청구액이 열 배가 됩니다. 입력 시점에
+   *  물어보는 것이 첫 방어선이고, 여기가 마지막입니다 — 확정하면 그
+   *  금액이 병원에 나갑니다.
+   */
+  oddAmounts: OddAmount[]
   /** 확정할 수 있는가 */
   canConfirm: boolean
   /** 확정하지 못하는 이유 (canConfirm=false 일 때) */
@@ -59,6 +67,8 @@ export interface MonthClose {
   total: number
   /** 기본 단가가 섞인 거래처 수 */
   defaultPricedCount: number
+  /** 평소와 크게 다른 수거량이 섞인 거래처 수 */
+  oddAmountCount: number
 }
 
 /** 이 정산에서 기본 단가로 값이 매겨진 품목들 */
@@ -95,6 +105,7 @@ export function monthClose(data: AppData, month: string): MonthClose {
       supplies: st.pending.supplies,
       alreadyBilled: st.billedAmount,
       defaultPriced: defaultPricedItems(c, [...st.pending.wasteLines, ...st.pending.supplyLines]),
+      oddAmounts: oddAmountsIn(data, c.id, month),
     }
 
     if (st.canConfirm) {
@@ -155,6 +166,7 @@ export function monthClose(data: AppData, month: string): MonthClose {
     needsCheck,
     total: ready.reduce((s, r) => s + r.amount, 0),
     defaultPricedCount: ready.filter((r) => r.defaultPriced.length > 0).length,
+    oddAmountCount: ready.filter((r) => r.oddAmounts.length > 0).length,
   }
 }
 
