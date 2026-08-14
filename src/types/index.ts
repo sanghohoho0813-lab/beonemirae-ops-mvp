@@ -125,7 +125,26 @@ export interface Client {
   monthlyFlatFee?: number | null
   /** 품목별 단가. 없는 품목은 기본 단가를 씁니다 (lib/billing.ts) */
   pricing?: Record<string, { sale?: number | null; cost?: number | null }>
+
+  // ── v33: 세금계산서 발행 정보 ──
+  //  매달 홈택스에 옮겨 적던 값입니다. 없으면 발행 목록에서 「확인 필요」로
+  //  빠지고, 금액을 자동으로 계산하지 않습니다.
+  /** 사업자등록번호 — 숫자 10자리, 하이픈 없이 저장 */
+  bizNo?: string
+  /** 대표자명 */
+  bizCeo?: string
+  /** 업태 */
+  bizType?: string
+  /** 종목 */
+  bizItem?: string
+  /** 계산서 담당자 이메일 */
+  taxEmail?: string
+  /** 부가세 처리 — 사람이 계약을 보고 정합니다. null = 미지정 */
+  vatMode?: VatMode | null
 }
+
+/** 부가세 처리 방식 — 청구액이 공급가액인지 합계인지는 계약마다 다릅니다 */
+export type VatMode = '별도' | '포함' | '면세'
 
 // ── 차량 ─────────────────────────────────────────────────────────────────────
 export interface Vehicle {

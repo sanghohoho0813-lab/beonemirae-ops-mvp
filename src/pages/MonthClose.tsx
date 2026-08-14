@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryButton, EmptyState } from '../components/ui'
 import { monthClose, recentMonths } from '../lib/monthClose'
 import { confirmedInvoices, InvoiceBatch } from '../components/InvoiceBatch'
+import { TaxInvoicePanel } from '../components/TaxInvoicePanel'
 import { thisMonth, won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -335,7 +336,7 @@ export function MonthClose() {
 
       {/* 대상 아닌 곳 */}
       {close.skipped.length > 0 && (
-        <section>
+        <section data-close-skipped-section>
           <SectionTitle>확정하지 않는 거래처 {close.skipped.length}곳</SectionTitle>
           <ExpandableSection label={`${close.skipped.length}곳 보기`}>
             <div className="card divide-y divide-navy-100" data-close-skipped>
@@ -349,6 +350,9 @@ export function MonthClose() {
           </ExpandableSection>
         </section>
       )}
+
+      {/*  청구 확정 → 거래명세서 → 세금계산서. 순서대로 같은 화면에 둡니다. */}
+      <TaxInvoicePanel month={month} />
 
       {batchOpen && (
         <InvoiceBatch invoices={invoices} month={month} onClose={() => setBatchOpen(false)} />

@@ -102,6 +102,14 @@ const toClient = (r: Row): Client => ({
   paymentDueDay: r.payment_due_day ?? null,
   monthlyFlatFee: r.monthly_flat_fee ?? null,
   pricing: r.pricing ?? undefined,
+  //  0033 이전 DB 에서는 이 칸들이 아예 없습니다. undefined 로 두면
+  //  화면이 「미입력」으로 읽고, 저장할 때도 clean() 이 빼 줍니다.
+  bizNo: r.biz_no ?? '',
+  bizCeo: r.biz_ceo ?? '',
+  bizType: r.biz_type ?? '',
+  bizItem: r.biz_item ?? '',
+  taxEmail: r.tax_email ?? '',
+  vatMode: r.vat_mode ?? null,
 })
 
 const toVehicle = (r: Row): Vehicle => ({
@@ -432,6 +440,12 @@ const clientRow = (c: Partial<Client>) => ({
   payment_due_day: c.paymentDueDay,
   monthly_flat_fee: c.monthlyFlatFee,
   pricing: c.pricing,
+  biz_no: c.bizNo,
+  biz_ceo: c.bizCeo,
+  biz_type: c.bizType,
+  biz_item: c.bizItem,
+  tax_email: c.taxEmail,
+  vat_mode: c.vatMode,
 })
 
 const clean = (o: Record<string, unknown>) =>
@@ -1174,7 +1188,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 32
+export const EXPECTED_SCHEMA_VERSION = 33
 
 /**
  * 서버 DB 의 스키마 버전.
