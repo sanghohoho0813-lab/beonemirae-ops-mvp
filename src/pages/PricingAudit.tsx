@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { PricingModal } from '../components/Settlement'
 import { TaxFields, type TaxFieldValues } from '../components/ClientForm'
 import { Modal } from '../components/Modal'
+import { ClientInfoPaste } from '../components/ClientInfoPaste'
 import { FilterChip, EmptyState } from '../components/ui'
 import { Stagger, StaggerItem } from '../components/motion'
 import { auditPricing, type PriceRow } from '../lib/priceAudit'
@@ -125,6 +126,11 @@ export function PricingAudit() {
           </div>
         </div>
       )}
+
+      {/*  빈 칸을 찾는 자리와 채우는 자리가 같아야 합니다. */}
+      <div className="mb-4">
+        <ClientInfoPaste />
+      </div>
 
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         {(['확인 필요', '완료', '전체'] as Filter[]).map((f) => (

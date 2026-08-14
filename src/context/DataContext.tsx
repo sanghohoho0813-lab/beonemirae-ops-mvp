@@ -53,7 +53,17 @@ interface DataContextValue {
   data: AppData
   // 거래처
   addClient: (c: Omit<Client, 'id'>) => Promise<Client | null>
-  updateClient: (id: string, patch: Partial<Client>) => void
+  /**
+   * 거래처 정보 수정.
+   *  quiet 를 켜면 저장 뒤 전체 다시 읽기를 건너뜁니다 — 여러 곳을 이어서
+   *  고칠 때 매번 전부 읽으면 스무 곳이면 스무 번입니다. 부른 쪽이
+   *  마지막에 reload() 를 한 번 부릅니다.
+   */
+  updateClient: (
+    id: string,
+    patch: Partial<Client>,
+    opts?: { quiet?: boolean },
+  ) => Promise<{ ok: boolean; error: string | null }>
   removeClient: (id: string) => void
   /** 거래 종료를 되돌립니다 (그만둔 거래처 → 다시 거래 중) */
   restoreClient: (id: string) => void
@@ -388,10 +398,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   const updateClient = useCallback(
-    (id: string, patch: Partial<Client>) => {
+    async (id: string, patch: Partial<Client>, opts?: { quiet?: boolean }) => {
       if (live) {
         const before = data.clients.find((c) => c.id === id)
-        void runLive(async () => {
+        const r = await runLive(async () => {
           await repo.updateClient(id, patch)
           await repo.writeAudit({
             action: 'client.update',
@@ -403,13 +413,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
             after: patch,
             summary: `거래처 정보 수정 — ${before?.name ?? id}`,
           })
-        })
-        return
+        }, opts?.quiet ?? false)
+        return { ok: r.ok, error: r.error ?? null }
       }
       setData((d) => ({
         ...d,
         clients: d.clients.map((c) => (c.id === id ? { ...c, ...patch } : c)),
       }))
+      return { ok: true, error: null }
     },
     [live, runLive, data.clients],
   )

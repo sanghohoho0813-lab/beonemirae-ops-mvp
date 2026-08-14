@@ -17,6 +17,7 @@ import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
 import { EMPTY_SUPPLIED } from '../lib/collection'
 import { prettyDate, today, weight } from '../lib/format'
+import { holidayMap } from '../lib/holidays'
 import type { ContainerBreakdown, Schedule, WasteType } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,6 +68,8 @@ export function TodaySchedule() {
   const [flash, setFlash] = useState(false)
 
   const list = useMemo(() => schedulesOn(data, date), [data, date])
+  //  이 날이 휴무일인지 — 넣어 둔 휴무일만 봅니다.
+  const holidayName = useMemo(() => holidayMap(data).get(date), [data, date])
 
   function openEdit(s: Schedule) {
     setEditTarget(s)
@@ -142,6 +145,24 @@ export function TodaySchedule() {
           subtitle={<span className="hidden lg:inline">{`완료 ${doneCount} / 전체 ${list.length}건`}</span>}
         />
       </div>
+
+      {/*
+        휴무일 표시 — 편성에서는 그 날을 빼 주지만, 이미 만들어 둔 예정이
+        남아 있거나 급히 넣은 일정이 있으면 현장은 그날이 쉬는 날인지
+        모릅니다. 지우지는 않습니다 — 명절에도 가야 하는 곳이 있습니다.
+      */}
+      {holidayName && (
+        <div data-holiday-today className="card border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+          <p className="t-body font-extrabold text-navy-900">
+            {prettyDate(date)}은 휴무일입니다 — {holidayName}
+          </p>
+          <p className="t-caption mt-1 break-keep">
+            {list.length > 0
+              ? `그런데 이 날 일정이 ${list.length}건 잡혀 있습니다. 실제로 가는 곳인지 확인해 주세요.`
+              : '이 날은 편성에서 빠집니다.'}
+          </p>
+        </div>
+      )}
 
       {/* 모바일 — 폰을 열면 가장 먼저 "다음에 어디로 가는가" */}
       <NextVisitCard data={data} list={list} notesFor={notesFor} />
