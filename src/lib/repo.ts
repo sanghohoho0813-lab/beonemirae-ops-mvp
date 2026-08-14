@@ -12,6 +12,7 @@ import type {
   SiteNote,
   Vehicle,
   ClientMonthlyActual,
+  ClientPrice,
   Holiday,
   OperatingCost,
   PaymentReceipt,
@@ -322,6 +323,13 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  거래처 단가의 판 (0036). 현장은 RLS 로 막혀 있고, 마이그레이션 전
+  //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 지금 단가를 씁니다.
+  const clientPrices = await soft(
+    async () => pageAll((f, t) => sb.from('client_prices').select('*').order('effective_from').range(f, t)),
+    [] as Row[],
+  )
+
   //  월 운영비 (0030). 현장 담당자는 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다.
   const operatingCosts = await soft(
@@ -388,6 +396,17 @@ export async function loadAppData(): Promise<AppData> {
       }),
     ),
     holidays: holidays.map((r): Holiday => ({ day: r.day, name: r.name ?? '' })),
+    clientPrices: clientPrices.map(
+      (r): ClientPrice => ({
+        id: r.id,
+        clientId: r.client_id,
+        effectiveFrom: r.effective_from,
+        pricing: r.pricing ?? {},
+        memo: r.memo ?? '',
+        actorName: r.actor_name ?? '',
+        createdAt: r.created_at,
+      }),
+    ),
     operatingCosts: operatingCosts.map(
       (r): OperatingCost => ({
         id: r.id,
@@ -1199,7 +1218,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 35
+export const EXPECTED_SCHEMA_VERSION = 36
 
 /**
  * 서버 DB 의 스키마 버전.
@@ -1268,6 +1287,30 @@ export async function deleteOperatingCost(month: string, category: string): Prom
   const sb = need()
   const { error } = await sb.rpc('delete_operating_cost', { p_month: month, p_category: category })
   if (error) throw new Error(error.message)
+}
+
+// ── 거래처 단가 (0036) ──────────────────────────────────────────────────────
+
+/**
+ * 단가 저장 — 지금 단가와 판을 한 트랜잭션에서 함께 갱신합니다.
+ *  둘을 따로 쓰면 중간에 끊겼을 때 「지금 단가는 바뀌었는데 판은 없는」
+ *  상태가 남아, 과거 달이 새 단가로 계산됩니다.
+ */
+export async function setClientPricing(input: {
+  clientId: string
+  pricing: Client['pricing']
+  effectiveFrom: string | null
+  memo?: string
+}): Promise<{ effectiveFrom: string; created: boolean }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('set_client_pricing', {
+    p_client_id: input.clientId,
+    p_pricing: input.pricing ?? {},
+    p_effective_from: input.effectiveFrom,
+    p_memo: input.memo ?? '',
+  })
+  if (error) throw new Error(error.message)
+  return data as { effectiveFrom: string; created: boolean }
 }
 
 // ── 휴무일 (0034) ───────────────────────────────────────────────────────────

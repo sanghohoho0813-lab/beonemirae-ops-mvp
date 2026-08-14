@@ -340,6 +340,8 @@ export interface AppData {
   monthlyActuals?: ClientMonthlyActual[]
   // ── v34: 휴무일 (공휴일·회사 휴무). 넣은 날만 편성에서 빠집니다 ──
   holidays?: Holiday[]
+  // ── v36: 거래처 단가의 판 (언제부터 얼마였는지) ──
+  clientPrices?: ClientPrice[]
   /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */
   receipts?: PaymentReceipt[]
   /**
@@ -561,4 +563,20 @@ export interface Holiday {
   /** YYYY-MM-DD */
   day: string
   name: string
+}
+
+/**
+ * 거래처 단가의 판 (0036).
+ *  정산은 「그 달에 유효했던 판」을 씁니다 — 과거 달이 오늘 단가로
+ *  다시 계산되지 않게 하기 위해서입니다. 판이 없으면 clients.pricing.
+ */
+export interface ClientPrice {
+  id: string
+  clientId: string
+  /** 이 날부터 적용 (YYYY-MM-DD, 그 날 포함) */
+  effectiveFrom: string
+  pricing: Record<string, { sale?: number | null; cost?: number | null }>
+  memo: string
+  actorName: string
+  createdAt: string
 }

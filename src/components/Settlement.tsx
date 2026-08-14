@@ -21,7 +21,7 @@ import {
   type Invoice,
   type ItemKey,
 } from '../lib/billing'
-import { won } from '../lib/format'
+import { today, won } from '../lib/format'
 import { BillingConfirmCard } from './BillingConfirm'
 import { Modal } from './Modal'
 import { SectionTitle } from './ui'
@@ -61,7 +61,7 @@ export function SettlementPanel({
   month: string
   onMonthChange: (m: string) => void
   onOpenInvoice: (invoice?: Invoice) => void
-  onSavePricing: (pricing: Client['pricing']) => void
+  onSavePricing: (pricing: Client['pricing'], effectiveFrom: string) => void
 }) {
   const [priceOpen, setPriceOpen] = useState(false)
   const s = useMemo(() => settlementFor(data, client.id, month), [data, client.id, month])
@@ -247,8 +247,8 @@ export function SettlementPanel({
         open={priceOpen}
         client={client}
         onClose={() => setPriceOpen(false)}
-        onSave={(p) => {
-          onSavePricing(p)
+        onSave={(p, effectiveFrom) => {
+          onSavePricing(p, effectiveFrom)
           setPriceOpen(false)
         }}
       />
@@ -301,7 +301,7 @@ export function PricingModal({
   open: boolean
   client: Client
   onClose: () => void
-  onSave: (p: Client['pricing']) => void
+  onSave: (p: Client['pricing'], effectiveFrom: string) => void
 }) {
   const [draft, setDraft] = useState<Record<string, { sale: string; cost: string }>>(() => build(client))
   //  정산 규칙 — 월정액·부가세 별도 (실제 계약: 오남한양 월 900만,
@@ -313,6 +313,9 @@ export function PricingModal({
   const [feeMed, setFeeMed] = useState(() => ruleStr(client, 'medicalMonthly'))
   const [feeDia, setFeeDia] = useState(() => ruleStr(client, 'diaperMonthly'))
   const [vatDia, setVatDia] = useState(() => ruleStr(client, 'diaperVatPct'))
+  //  이 단가를 언제부터 적용할지. 기본은 오늘 — 「지금부터 바뀐다」가
+  //  가장 흔합니다. 지난달부터 적용해야 하면 날짜를 앞으로 당깁니다.
+  const [from, setFrom] = useState(() => today())
 
   function build(c: Client) {
     const out: Record<string, { sale: string; cost: string }> = {}
@@ -342,7 +345,7 @@ export function PricingModal({
     if (fm != null) pricing.medicalMonthly = { sale: fm, cost: null }
     if (fd != null) pricing.diaperMonthly = { sale: fd, cost: null }
     if (vd != null) pricing.diaperVatPct = { sale: vd, cost: null }
-    onSave(pricing)
+    onSave(pricing, from)
   }
 
   const row = (key: ItemKey, label: string, unit: string, billable: boolean) => (
@@ -398,6 +401,29 @@ export function PricingModal({
       <p className="t-muted break-keep">
         한 번 정하면 매달 다시 입력하지 않습니다. 비워 두면 기본 단가를 씁니다.
       </p>
+
+      {/*
+        언제부터인지가 금액을 정합니다. 이 값이 없으면 아직 확정하지 않은
+        지난달까지 새 단가로 계산됩니다 — 3월분을 확정하기 전에 4월에
+        단가를 올리면 3월 청구서가 새 단가로 나갑니다.
+      */}
+      <div className="rounded-xl bg-navy-50/60 p-3.5">
+        <label className="field-label" htmlFor="price-from">
+          이 단가를 적용하기 시작하는 날
+        </label>
+        <input
+          id="price-from"
+          data-price-from
+          type="date"
+          className="field-input w-full"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+        <p className="t-muted mt-1.5 break-keep">
+          이 날이 지난 달부터 새 단가로 계산합니다. 그 전 달은 그때 단가 그대로입니다 — 확정한 청구는 어느 쪽이든
+          바뀌지 않습니다.
+        </p>
+      </div>
 
       <table className="w-full text-left">
         <thead className="t-label text-navy-500">

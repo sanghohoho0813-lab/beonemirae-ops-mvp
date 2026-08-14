@@ -130,6 +130,16 @@ interface DataContextValue {
   planSchedules: (
     rows: { clientId: string; date: string; wasteType: string; expectedAmount: number; basis: string }[],
   ) => Promise<{ ok: boolean; error: string | null; result: repo.PlanBatchResult | null }>
+  /**
+   * 거래처 단가 저장 (0036).
+   *  지금 단가와 「언제부터」 판을 서버에서 한 번에 씁니다 — 둘이 어긋나면
+   *  과거 달이 새 단가로 계산됩니다.
+   */
+  savePricing: (
+    clientId: string,
+    pricing: Client['pricing'],
+    effectiveFrom: string | null,
+  ) => Promise<{ ok: boolean; error: string | null }>
   /** 휴무일 일괄 등록 (0034) — 넣은 날만 편성에서 빠집니다 */
   saveHolidays: (
     rows: { day: string; name: string }[],
@@ -1456,6 +1466,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /** 거래처 단가 저장 (0036) — 지금 단가와 판을 서버에서 함께 씁니다 */
+  const savePricing = useCallback(
+    async (clientId: string, pricing: Client['pricing'], effectiveFrom: string | null) => {
+      if (!live) {
+        setData((d) => ({
+          ...d,
+          clients: d.clients.map((c) => (c.id === clientId ? { ...c, pricing } : c)),
+        }))
+        return { ok: true, error: null }
+      }
+      const r = await runLive(async () => {
+        await repo.setClientPricing({ clientId, pricing, effectiveFrom })
+      })
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive],
+  )
+
   /** 휴무일 일괄 등록 (0034) — 붙여 넣은 목록을 그대로 서버에 넘깁니다 */
   const saveHolidays = useCallback(
     async (rows: { day: string; name: string }[]) => {
@@ -1674,6 +1702,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addReceipt,
       removeReceipt,
       planSchedules,
+      savePricing,
       saveHolidays,
       removeHoliday,
       undoPlan,
@@ -1735,6 +1764,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addReceipt,
       removeReceipt,
       planSchedules,
+      savePricing,
       saveHolidays,
       removeHoliday,
       undoPlan,

@@ -324,6 +324,52 @@ function findClient(data: AppData, clientId: string) {
   )
 }
 
+/**
+ * 그 달에 유효했던 단가로 바꾼 거래처.
+ *
+ *  단가는 계약 중간에 바뀝니다. 지금까지는 `clients.pricing` 한 칸에
+ *  현재 값만 두고 덮어썼기 때문에, 아직 확정하지 않은 지난달을 계산하면
+ *  **새 단가가 적용**됐습니다. 3월분을 확정하기 전에 4월에 950 → 1,000
+ *  으로 올리면 3월 청구서가 1,000원으로 나갑니다.
+ *
+ *  판(client_prices)이 있으면 「그 달 마지막 날 기준으로 이미 시작된
+ *  판 중 가장 늦은 것」을 씁니다. 판이 하나도 없으면 지금까지와 똑같이
+ *  현재 단가를 씁니다 — 마이그레이션만 하고 아무것도 안 넣으면 동작이
+ *  달라지지 않습니다.
+ *
+ *  이미 확정한 청구는 스냅샷이라 어느 쪽이든 영향받지 않습니다.
+ */
+export function pricedClient(
+  data: AppData,
+  clientId: string,
+  month: string,
+): Client | undefined {
+  const client = findClient(data, clientId)
+  if (!client) return undefined
+  const versions = (data.clientPrices ?? []).filter((v) => v.clientId === clientId)
+  if (versions.length === 0) return client
+  const end = lastDayOf(month)
+  //  그 달이 끝날 때까지 시작된 판 중 가장 늦은 것
+  const started = versions
+    .filter((v) => v.effectiveFrom <= end)
+    .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))
+  const chosen = started.length > 0 ? started[started.length - 1] : undefined
+  //  그 달보다 나중에 시작된 판만 있으면, 그 달에는 아직 판이 없었다는
+  //  뜻입니다. 지금 단가를 쓰지 않고 **가장 이른 판**을 씁니다 — 첫 판이
+  //  생기기 전 기간은 그 판의 값으로 보는 것이 계약에 가깝습니다.
+  const fallback = versions.reduce((a, b) => (a.effectiveFrom <= b.effectiveFrom ? a : b))
+  return { ...client, pricing: (chosen ?? fallback).pricing }
+}
+
+
+/** 이 거래처의 단가 판 (늦은 것부터) */
+export function priceVersionsOf(data: AppData, clientId: string) {
+  return (data.clientPrices ?? [])
+    .filter((v) => v.clientId === clientId)
+    .slice()
+    .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))
+}
+
 function suppliesIn(data: AppData, clientId: string, month: string, billed?: BilledIds) {
   const skip = new Set(billed?.materialIds ?? [])
   return data.materials.filter(
@@ -344,7 +390,7 @@ export function settlementFor(
   month: string,
   billed?: BilledIds,
 ): Settlement {
-  const client = findClient(data, clientId)
+  const client = pricedClient(data, clientId, month)
   const scheds = completedIn(data, clientId, month, billed)
   const sups = suppliesIn(data, clientId, month, billed)
 
@@ -576,7 +622,7 @@ export function invoiceFor(
   month: string,
   billed?: BilledIds,
 ): Invoice {
-  const client = findClient(data, clientId)
+  const client = pricedClient(data, clientId, month)
   const scheds = completedIn(data, clientId, month, billed).slice().sort((a, b) => a.date.localeCompare(b.date))
   const sups = suppliesIn(data, clientId, month, billed).slice().sort((a, b) => a.date.localeCompare(b.date))
 

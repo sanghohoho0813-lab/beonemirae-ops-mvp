@@ -102,7 +102,7 @@ type TabId = (typeof TABS)[number]['id']
 export function ClientDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const { data, clientById, updateClient, removeClient, notesFor } = useData()
+  const { data, clientById, updateClient, savePricing, removeClient, notesFor } = useData()
   const { role, mode } = useAuth()
   const client = clientById(id)
 
@@ -436,7 +436,7 @@ export function ClientDetail() {
             setShownInvoice(inv ?? null)
             setInvoiceOpen(true)
           }}
-          onSavePricing={(pricing) => updateClient(client.id, { pricing })}
+          onSavePricing={(pricing, from) => void savePricing(client.id, pricing, from)}
         />
       )}
       {tab === 'settlement' && canSeeMoney && <MonthlyActuals rows={actuals} purpose="settlement" />}

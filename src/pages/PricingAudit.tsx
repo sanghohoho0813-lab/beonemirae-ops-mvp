@@ -9,6 +9,8 @@ import { ClientInfoPaste } from '../components/ClientInfoPaste'
 import { FilterChip, EmptyState } from '../components/ui'
 import { Stagger, StaggerItem } from '../components/motion'
 import { auditPricing, type PriceRow } from '../lib/priceAudit'
+import { priceVersionsOf } from '../lib/billing'
+import { prettyDate } from '../lib/format'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,7 +33,7 @@ import type { Client } from '../types'
 type Filter = '확인 필요' | '전체' | '완료'
 
 export function PricingAudit() {
-  const { data, updateClient } = useData()
+  const { data, updateClient, savePricing } = useData()
   const audit = useMemo(() => auditPricing(data), [data])
   const [filter, setFilter] = useState<Filter>('확인 필요')
   const [query, setQuery] = useState('')
@@ -166,6 +168,7 @@ export function PricingAudit() {
             <Row
               key={r.clientId}
               row={r}
+              versions={priceVersionsOf(data, r.clientId)}
               onPrice={() => {
                 const c = data.clients.find((x) => x.id === r.clientId)
                 if (c) setPriceOf(c)
@@ -182,8 +185,8 @@ export function PricingAudit() {
           open
           client={priceOf}
           onClose={() => setPriceOf(null)}
-          onSave={(pricing) => {
-            void updateClient(priceOf.id, { pricing })
+          onSave={(pricing, from) => {
+            void savePricing(priceOf.id, pricing, from)
             setPriceOf(null)
           }}
         />
@@ -221,7 +224,17 @@ export function PricingAudit() {
   )
 }
 
-function Row({ row, onPrice, onTax }: { row: PriceRow; onPrice: () => void; onTax: () => void }) {
+function Row({
+  row,
+  versions,
+  onPrice,
+  onTax,
+}: {
+  row: PriceRow
+  versions: ReturnType<typeof priceVersionsOf>
+  onPrice: () => void
+  onTax: () => void
+}) {
   const warn = row.onDefault.length > 0
   const taxWarn = row.taxMissing.length > 0
   const supplies = row.paidSupplies.filter((s) => s.own)
@@ -270,6 +283,17 @@ function Row({ row, onPrice, onTax }: { row: PriceRow; onPrice: () => void; onTa
         {supplies.length > 0 && (
           <p data-price-supplies className="t-caption mt-1.5 break-keep text-navy-500">
             계약 물품 {supplies.map((s) => `${s.label} ${s.price.toLocaleString('ko-KR')}원`).join(' · ')}
+          </p>
+        )}
+
+        {/*
+          단가가 언제부터인지 — 이 값이 있으면 그 전 달은 그때 단가로
+          계산됩니다. 하나도 없으면 지금 단가가 모든 달에 쓰입니다.
+        */}
+        {versions.length > 0 && (
+          <p data-price-since={row.clientId} className="t-caption mt-1.5 break-keep text-navy-500">
+            지금 단가 {prettyDate(versions[0].effectiveFrom)}부터
+            {versions.length > 1 && ` · 이전 판 ${versions.length - 1}개`}
           </p>
         )}
 
