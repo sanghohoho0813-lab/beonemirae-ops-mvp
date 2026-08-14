@@ -120,6 +120,12 @@ interface DataContextValue {
   planSchedules: (
     rows: { clientId: string; date: string; wasteType: string; expectedAmount: number; basis: string }[],
   ) => Promise<{ ok: boolean; error: string | null; result: repo.PlanBatchResult | null }>
+  /** 휴무일 일괄 등록 (0034) — 넣은 날만 편성에서 빠집니다 */
+  saveHolidays: (
+    rows: { day: string; name: string }[],
+  ) => Promise<{ ok: boolean; error: string | null; result: { added: number; updated: number } | null }>
+  /** 휴무일 삭제 */
+  removeHoliday: (day: string) => Promise<{ ok: boolean; error: string | null }>
   /** 방금 만든 편성 되돌리기 — 손대지 않은 예정만 지웁니다 */
   undoPlan: (
     batch: string,
@@ -1439,6 +1445,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  /** 휴무일 일괄 등록 (0034) — 붙여 넣은 목록을 그대로 서버에 넘깁니다 */
+  const saveHolidays = useCallback(
+    async (rows: { day: string; name: string }[]) => {
+      if (!live) return { ok: false, error: '휴무일 등록은 실제 운영 모드에서만 됩니다.', result: null }
+      let result: { added: number; updated: number } | null = null
+      const r = await runLive(async () => {
+        result = await repo.setHolidays(rows)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null, result }
+    },
+    [live, runLive, reload],
+  )
+
+  const removeHoliday = useCallback(
+    async (day: string) => {
+      if (!live) return { ok: false, error: '휴무일 삭제는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.deleteHoliday(day)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const undoPlan = useCallback(
     async (batch: string) => {
       if (!live) return { ok: false, error: '일정 편성은 실제 운영 모드에서만 됩니다.', result: null }
@@ -1631,6 +1663,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addReceipt,
       removeReceipt,
       planSchedules,
+      saveHolidays,
+      removeHoliday,
       undoPlan,
       assignVehicles,
       undoAssign,
@@ -1690,6 +1724,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addReceipt,
       removeReceipt,
       planSchedules,
+      saveHolidays,
+      removeHoliday,
       undoPlan,
       assignVehicles,
       undoAssign,

@@ -330,6 +330,8 @@ export interface AppData {
    *  화면에서 「엑셀에서 가져온 월 실적」으로 구분해 보여 줍니다.
    */
   monthlyActuals?: ClientMonthlyActual[]
+  // ── v34: 휴무일 (공휴일·회사 휴무). 넣은 날만 편성에서 빠집니다 ──
+  holidays?: Holiday[]
   /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */
   receipts?: PaymentReceipt[]
   /**
@@ -544,4 +546,11 @@ export const DEFAULT_OFFICE_STOCK: OfficeStock = {
   plasticContainer: 360,
   bag: 900,
   needleBox: 300,
+}
+
+/** 휴무일 — 공휴일·회사 휴무. 사람이 넣은 날만 편성에서 빠집니다 (0034) */
+export interface Holiday {
+  /** YYYY-MM-DD */
+  day: string
+  name: string
 }

@@ -1,5 +1,6 @@
 import type { AppData, WasteType } from '../types'
 import { today } from './format'
+import { holidayMap } from './holidays'
 import { addDays } from './performance'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,6 +119,8 @@ export interface SkipRow {
   clientName: string
   date: string
   wasteType: WasteType
+  /** 왜 건너뛰었는지 — 화면이 문구를 뜯어보지 않고 구분할 수 있게 */
+  kind: 'exists' | 'holiday'
   reason: string
 }
 
@@ -126,6 +129,8 @@ export interface PlanResult {
   to: string
   rows: PlanRow[]
   skipped: SkipRow[]
+  /** 휴무일이라 빼 놓은 날 수 (같은 날 여러 거래처면 여러 건) */
+  holidaySkips: number
   /** 근거가 모자라 아예 편성하지 못한 거래처 */
   unusable: ClientPattern[]
   /** 편성에 쓰인 거래처 */
@@ -231,16 +236,21 @@ export function buildPlan(
   from: string,
   to: string,
   onlyClientIds?: Set<string>,
+  /** 휴무일에도 만들지 — 명절에도 가야 하는 병원이 실제로 있어 사람이 정합니다 */
+  includeHolidays = false,
 ): PlanResult {
   const t = today()
   const start = from < t ? t : from
   const patterns = detectPatterns(data, start)
+  //  넣어 둔 휴무일만 뺍니다. 아무것도 안 넣었으면 지금까지와 똑같습니다.
+  const hol = includeHolidays ? new Map<string, string>() : holidayMap(data)
 
   //  이미 있는 일정 — 상태와 관계없이 하나라도 있으면 그 날은 손대지 않습니다.
   const taken = new Set(data.schedules.map((s) => `${s.clientId}|${s.date}|${s.wasteType}`))
 
   const rows: PlanRow[] = []
   const skipped: SkipRow[] = []
+  let holidaySkips = 0
   const usable: ClientPattern[] = []
   const unusable: ClientPattern[] = []
 
@@ -255,6 +265,20 @@ export function buildPlan(
     for (const w of p.weekdays) {
       for (let d = start; d <= to; d = addDays(d, 1)) {
         if (weekdayOf(d) !== w.weekday) continue
+        //  휴무일은 아예 만들지 않습니다 — 만들어 두고 지우게 하면
+        //  지우는 것을 잊은 만큼 기사가 헛걸음합니다.
+        if (hol.has(d)) {
+          holidaySkips += 1
+          skipped.push({
+            clientId: p.clientId,
+            clientName: p.clientName,
+            date: d,
+            wasteType: p.wasteType,
+            kind: 'holiday',
+            reason: `휴무일입니다 (${hol.get(d)})`,
+          })
+          continue
+        }
         const key = `${p.clientId}|${d}|${p.wasteType}`
         if (taken.has(key)) {
           skipped.push({
@@ -262,6 +286,7 @@ export function buildPlan(
             clientName: p.clientName,
             date: d,
             wasteType: p.wasteType,
+            kind: 'exists',
             reason: '이미 일정이 있습니다',
           })
           continue
@@ -282,5 +307,5 @@ export function buildPlan(
 
   rows.sort((a, b) => a.date.localeCompare(b.date) || a.clientName.localeCompare(b.clientName, 'ko'))
   skipped.sort((a, b) => a.date.localeCompare(b.date) || a.clientName.localeCompare(b.clientName, 'ko'))
-  return { from: start, to, rows, skipped, usable, unusable }
+  return { from: start, to, rows, skipped, holidaySkips, usable, unusable }
 }

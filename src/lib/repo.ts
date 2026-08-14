@@ -12,6 +12,7 @@ import type {
   SiteNote,
   Vehicle,
   ClientMonthlyActual,
+  Holiday,
   OperatingCost,
   PaymentReceipt,
 } from '../types'
@@ -313,6 +314,13 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  휴무일 (0034). 마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다 —
+  //  없으면 빈 목록이고, 편성은 지금까지와 똑같이 동작합니다.
+  const holidays = await soft(
+    async () => pageAll((f, t) => sb.from('holidays').select('*').order('day').range(f, t)),
+    [] as Row[],
+  )
+
   //  월 운영비 (0030). 현장 담당자는 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다.
   const operatingCosts = await soft(
@@ -378,6 +386,7 @@ export async function loadAppData(): Promise<AppData> {
         sourceFile: r.source_file ?? '',
       }),
     ),
+    holidays: holidays.map((r): Holiday => ({ day: r.day, name: r.name ?? '' })),
     operatingCosts: operatingCosts.map(
       (r): OperatingCost => ({
         id: r.id,
@@ -1188,7 +1197,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 33
+export const EXPECTED_SCHEMA_VERSION = 34
 
 /**
  * 서버 DB 의 스키마 버전.
@@ -1256,6 +1265,22 @@ export async function setOperatingCost(input: {
 export async function deleteOperatingCost(month: string, category: string): Promise<void> {
   const sb = need()
   const { error } = await sb.rpc('delete_operating_cost', { p_month: month, p_category: category })
+  if (error) throw new Error(error.message)
+}
+
+// ── 휴무일 (0034) ───────────────────────────────────────────────────────────
+
+/** 휴무일 일괄 등록 — 이미 있는 날은 이름만 덮어씁니다 */
+export async function setHolidays(rows: { day: string; name: string }[]): Promise<{ added: number; updated: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('set_holidays', { p_rows: rows })
+  if (error) throw new Error(error.message)
+  return data as { added: number; updated: number }
+}
+
+export async function deleteHoliday(day: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('delete_holiday', { p_day: day })
   if (error) throw new Error(error.message)
 }
 

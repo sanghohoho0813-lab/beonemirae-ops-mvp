@@ -7,6 +7,7 @@ import { WasteBadge } from '../components/Badge'
 import { today, prettyDate } from '../lib/format'
 import { addDays } from '../lib/performance'
 import { buildPlan, WEEKDAY_LABEL, type PlanResult } from '../lib/schedulePlan'
+import { HolidayPanel } from '../components/HolidayPanel'
 import { buildAssignment, dayLabel } from '../lib/vehiclePlan'
 import type { AssignResultRow, PlanBatchResult } from '../lib/repo'
 
@@ -345,6 +346,9 @@ export function SchedulePlan() {
   }
 
   const patternCount = plan.usable.length
+  //  「이미 있어 건너뜀」과 「휴무일이라 뺌」은 다른 이야기입니다.
+  //  한 숫자로 묶으면 휴무일 때문에 빠진 것을 이미 있는 일정으로 읽습니다.
+  const existsSkips = plan.skipped.filter((s) => s.kind === 'exists')
   const skippedCount = plan.skipped.length
 
   return (
@@ -405,13 +409,17 @@ export function SchedulePlan() {
         </div>
       </section>
 
+      {/*  휴무일을 먼저 봅니다 — 편성 결과가 여기에 달려 있습니다. */}
+      <HolidayPanel from={from} to={to} />
+
       <StepTitle n={1} title="일정 만들기" desc="언제 · 어디를" />
 
       {/* 요약 */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" data-plan-summary>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5" data-plan-summary>
         <Stat label="만들 일정" value={rows.length} unit="건" tone="teal" />
         <Stat label="반영 거래처" value={new Set(rows.map((r) => r.clientId)).size} unit="곳" />
-        <Stat label="이미 있어 건너뜀" value={skippedCount} unit="건" />
+        <Stat label="이미 있어 건너뜀" value={existsSkips.length} unit="건" />
+        <Stat label="휴무일이라 뺌" value={plan.holidaySkips} unit="건" tone="amber" />
         <Stat label="근거 부족해 제외" value={plan.unusable.length} unit="곳" tone="amber" />
       </div>
 
@@ -572,7 +580,7 @@ export function SchedulePlan() {
       {/* 건너뛴 날짜 */}
       {skippedCount > 0 && (
         <section>
-          <SectionTitle>이미 일정이 있어 건너뛴 날</SectionTitle>
+          <SectionTitle>건너뛴 날</SectionTitle>
           <ExpandableSection label={`${skippedCount}건 보기`}>
             <div className="card divide-y divide-navy-100" data-plan-skipped>
               {plan.skipped.map((s) => (
