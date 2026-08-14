@@ -7,6 +7,7 @@ import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryBut
 import { monthClose, recentMonths } from '../lib/monthClose'
 import { confirmedInvoices, InvoiceBatch } from '../components/InvoiceBatch'
 import { TaxInvoicePanel } from '../components/TaxInvoicePanel'
+import { MonthProgressPanel } from '../components/MonthProgressPanel'
 import { thisMonth, won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,7 +102,7 @@ export function MonthClose() {
   return (
     <PageShell>
       <div data-close-page>
-        <PageHeader title="월말 청구" subtitle="그 달 전체를 한 번에 확인하고 청구로 확정합니다" />
+        <PageHeader title="월말 청구" subtitle="이번 달 어디까지 했는지 보고, 그 달 전체를 한 번에 청구로 확정합니다" />
       </div>
 
       <div className="card flex gap-3 p-4 sm:p-5">
@@ -145,6 +146,15 @@ export function MonthClose() {
           </div>
         </div>
       </section>
+
+      {/*
+        마감 진행상황 — 「이번 달 어디까지 했지」.
+
+         수거 입력 → 정산 확인 → 청구 확정 → 명세서 → 세금계산서 → 입금
+         여섯 단계가 세 화면에 흩어져 있어 매번 돌아다니며 확인했습니다.
+         달을 고른 바로 아래, 작업을 시작하기 전에 봅니다.
+      */}
+      <MonthProgressPanel month={month} />
 
       {/* 요약 */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-5" data-close-summary>
