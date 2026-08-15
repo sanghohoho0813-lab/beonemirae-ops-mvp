@@ -127,6 +127,8 @@ interface DataContextValue {
     memo: string
     /** 통장 대사로 들어온 건이면 그 줄의 지문 (0031) */
     sourceRef?: string | null
+    /** 저장 시도 표 (0042) — 통신이 끊겨 다시 눌러도 두 번 들어가지 않게 */
+    requestId?: string | null
   }) => Promise<{ ok: boolean; error: string | null }>
   /** 잘못 넣은 입금 취소 */
   removeReceipt: (id: string) => Promise<{ ok: boolean; error: string | null }>
@@ -1455,6 +1457,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       method: string
       memo: string
       sourceRef?: string | null
+      /** 저장 시도 표 (0042) — 다시 눌러도 두 번 들어가지 않게 */
+      requestId?: string | null
     }) => {
       if (!live) return { ok: false, error: '입금 기록은 실제 운영 모드에서만 됩니다.' }
       const r = await runLive(async () => {

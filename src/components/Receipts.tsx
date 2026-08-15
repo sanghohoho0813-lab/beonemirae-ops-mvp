@@ -46,8 +46,25 @@ export function ReceiptPanel({
   //  그대로 저장하면 되고, 부분입금일 때만 금액을 고치면 됩니다.
   const [form, setForm] = useState({ receivedOn: today(), amount: '', method: '계좌이체' as ReceiptMethod, memo: '' })
 
+  /*
+    이번 저장이 「같은 저장」인지 알려 주는 표 (0042).
+
+     서버에는 들어갔는데 응답이 오는 길에 통신이 끊기면 화면에는 「저장하지
+     못했습니다」가 뜹니다. 담당자는 당연히 다시 누릅니다. 그때 서버가
+     구분하지 못하면 **입금이 두 번 기록되고 미수금이 그만큼 적게 보입니다.**
+     (격리 DB 에서 재현했습니다 — 30만원 두 번이 60만원이 됐습니다)
+
+     막는 방법이 「같은 금액을 막는 것」이면 안 됩니다. 병원이 오전·오후에
+     같은 금액을 나눠 보내는 일이 실제로 있고 그건 두 줄이 맞습니다.
+
+     그래서 **저장 창을 열 때 표를 하나 만들고**, 실패해서 다시 눌러도 같은
+     표를 냅니다. 성공하면 창을 닫으므로 다음 입금은 새 표를 받습니다.
+  */
+  const [requestId, setRequestId] = useState('')
+
   function openAdd() {
     setForm({ receivedOn: today(), amount: String(remaining), method: '계좌이체', memo: '' })
+    setRequestId(crypto.randomUUID())
     setErr(null)
     setOpen(true)
   }
@@ -70,6 +87,7 @@ export function ReceiptPanel({
       amount,
       method: form.method,
       memo: form.memo.trim(),
+      requestId,
     })
     setBusy(false)
     if (r.ok) setOpen(false)

@@ -1221,7 +1221,15 @@ export async function addPaymentReceipt(input: {
   memo: string
   /** 통장 대사로 들어온 건이면 그 줄의 지문 (0031) — 같은 줄이 두 번 들어오지 않게 */
   sourceRef?: string | null
-}): Promise<{ paidTotal: number; outstanding: number; status: string }> {
+  /**
+   * 저장 시도 표 (0042).
+   *
+   *  통신이 끊겨 다시 누른 것인지, 정말 한 번 더 받은 것인지는 **화면만**
+   *  압니다. 저장 창을 열 때 표를 하나 만들고 실패해도 같은 표를 다시 냅니다.
+   *  서버는 같은 표가 오면 새로 넣지 않고 처음 결과를 돌려줍니다.
+   */
+  requestId?: string | null
+}): Promise<{ paidTotal: number; outstanding: number; status: string; alreadySaved?: boolean }> {
   const sb = need()
   const { data, error } = await sb.rpc('add_payment_receipt', {
     p_payment_id: input.paymentId,
@@ -1230,9 +1238,10 @@ export async function addPaymentReceipt(input: {
     p_method: input.method,
     p_memo: input.memo,
     p_source_ref: input.sourceRef ?? null,
+    p_request_id: input.requestId ?? null,
   })
   if (error) throw new Error(error.message)
-  return data as { paidTotal: number; outstanding: number; status: string }
+  return data as { paidTotal: number; outstanding: number; status: string; alreadySaved?: boolean }
 }
 
 /** 잘못 넣은 입금 취소 — 청구 상태도 함께 되돌립니다 */
@@ -1309,7 +1318,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 41
+export const EXPECTED_SCHEMA_VERSION = 42
 
 /**
  * 서버 DB 의 스키마 버전.
