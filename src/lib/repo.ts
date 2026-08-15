@@ -21,6 +21,7 @@ import type {
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry } from './supabase'
 import type { CollectionCompletionInput } from './collection'
+import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase 레포지토리
@@ -1327,6 +1328,42 @@ export async function schemaVersion(): Promise<number | null> {
   } catch {
     return null
   }
+}
+
+// ── 전체 스냅샷 ──────────────────────────────────────────────────────────────
+/**
+ * DB 의 줄을 **그대로** 읽어 담습니다 (도메인 모양으로 바꾸지 않습니다).
+ *
+ *  화면이 쓰는 loadAppData 는 줄을 화면용으로 바꾸고, 화면이 안 쓰는 표는
+ *  아예 읽지 않습니다. 그 결과물은 되돌리는 데 쓸 수 없습니다 — 감사기록·
+ *  자재 입출고가 통째로 빠져 있고, 참/거짓이 화면용 값으로 바뀌어 있습니다.
+ *
+ *  여기서는 `select *` 한 것을 손대지 않고 그대로 둡니다. 표가 늘어도 이
+ *  함수는 고칠 게 없습니다 — SNAPSHOT_TABLES 에 한 줄 더할 뿐입니다.
+ *
+ *  1000줄 제한 때문에 반드시 나눠 읽습니다. 정렬 없이 나누면 어떤 줄은 두 번
+ *  오고 어떤 줄은 영영 안 옵니다 — 백업에서 그러면 조용히 자료가 빕니다.
+ *
+ *  읽지 못한 표는 **빈 배열로 만들지 않고** 이유와 함께 따로 적습니다.
+ *  「없는 것」과 「못 읽은 것」이 같아 보이면 백업으로서 쓸모가 없습니다.
+ */
+export async function rawSnapshot(takenBy: string, takenAt: string): Promise<Snapshot> {
+  const sb = need()
+  const tables: Record<string, unknown[]> = {}
+  const unreadable: { name: string; reason: string }[] = []
+
+  for (const t of SNAPSHOT_TABLES) {
+    try {
+      tables[t.name] = await withRetry(async () =>
+        pageAll((f, to) => sb.from(t.name).select('*').order(t.order).range(f, to)),
+      )
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      unreadable.push({ name: t.name, reason: msg })
+    }
+  }
+
+  return buildSnapshot({ tables, unreadable, schemaVersion: await schemaVersion(), takenBy, takenAt })
 }
 
 /**

@@ -36,6 +36,8 @@ import { FontSizeControl } from '../components/FontSizeControl'
 import { Modal } from '../components/Modal'
 import { exportData, parseImportFile } from '../lib/backup'
 import { exportTables, downloadCsv } from '../lib/exportData'
+import { downloadSnapshot, snapshotRowCount, snapshotSummary, SNAPSHOT_EXCLUDED } from '../lib/snapshot'
+import { rawSnapshot } from '../lib/repo'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { prettyDate, today } from '../lib/format'
 
@@ -150,6 +152,31 @@ export function Settings() {
   }
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [confirmKind, setConfirmKind] = useState<null | 'demo' | 'reset'>(null)
+
+  //  전체 스냅샷 — 서버의 줄을 그대로 받아 옵니다. 화면이 들고 있는 값이
+  //  아니라 그때 서버에 있는 값이라, 누르는 순간 다시 읽습니다.
+  const [snapping, setSnapping] = useState(false)
+  const [snapDone, setSnapDone] = useState<{ rows: number; tables: number; unreadable: number } | null>(null)
+  async function takeSnapshot() {
+    setSnapping(true)
+    try {
+      const snap = await rawSnapshot(profile?.name ?? '', new Date().toISOString())
+      const rows = snapshotRowCount(snap)
+      downloadSnapshot(snap)
+      setSnapDone({ rows, tables: snapshotSummary(snap).length, unreadable: snap.unreadable.length })
+      if (snap.unreadable.length > 0) {
+        //  못 읽은 표가 있으면 조용히 넘어가지 않습니다 — 반쪽 백업을
+        //  온전한 백업으로 알고 있는 게 백업이 없는 것보다 위험합니다.
+        flash('err', `${snap.unreadable.length}개 표를 읽지 못했습니다 (${snap.unreadable.map((u) => u.name).join(', ')}). 파일 안에 그대로 적혀 있습니다.`)
+      } else {
+        flash('ok', `${rows.toLocaleString('ko-KR')}줄을 파일 하나로 받았습니다.`)
+      }
+    } catch (e) {
+      flash('err', e instanceof Error ? e.message : '스냅샷을 만들지 못했습니다.')
+    } finally {
+      setSnapping(false)
+    }
+  }
 
   function flash(type: 'ok' | 'err', text: string) {
     setMsg({ type, text })
@@ -389,19 +416,38 @@ export function Settings() {
 
         {/* ── 우: 데이터 관리 ── */}
         <div className="space-y-4 xl:space-y-5">
+          {/*
+            전체 스냅샷.
+
+             Supabase 자동 백업은 **그 프로젝트 안에** 있습니다. 프로젝트가
+             사라지면(결제 중단·삭제·계정 문제) 백업도 같이 사라집니다.
+             그때 회사에 남는 것은 내려받아 둔 파일뿐입니다.
+
+             예전에 여기서 받던 파일은 화면이 쓰는 모양이라 감사기록·자재
+             입출고가 아예 없었고, 되돌리는 데 쓸 수 없었습니다. 이제는 DB 의
+             줄을 그대로 담습니다 — 빈 데이터베이스에 다시 부어 넣을 수 있는
+             파일입니다. 절차는 docs/RESTORE.md 에 있습니다.
+          */}
           <SettingCard
             icon={Download}
-            title={live ? '데이터 백업' : '데이터 백업 · 복원'}
+            title={live ? '전체 스냅샷 내려받기' : '데이터 백업 · 복원'}
             desc={
               live
-                ? '전체 운영 데이터를 JSON 파일로 내려받아 보관합니다.'
+                ? '되돌릴 수 있는 파일입니다. DB 의 줄을 그대로 담아 파일 하나로 받습니다.'
                 : '전체 운영 데이터를 JSON 파일로 내보내거나, 백업 파일에서 되돌릴 수 있습니다.'
             }
           >
             <div className="space-y-2.5">
-              <button className="btn-navy w-full" onClick={() => exportData(data)}>
-                <Download size={18} strokeWidth={2.4} /> 전체 데이터 JSON 내보내기
-              </button>
+              {live ? (
+                <button className="btn-navy w-full" data-snapshot-take onClick={() => void takeSnapshot()} disabled={snapping}>
+                  <Download size={18} strokeWidth={2.4} />
+                  {snapping ? '서버에서 읽는 중…' : '전체 스냅샷 받기 (.json)'}
+                </button>
+              ) : (
+                <button className="btn-navy w-full" onClick={() => exportData(data)}>
+                  <Download size={18} strokeWidth={2.4} /> 전체 데이터 JSON 내보내기
+                </button>
+              )}
               {!live && (
                 <button className="btn-ghost w-full" onClick={() => fileRef.current?.click()}>
                   <Upload size={18} strokeWidth={2.4} /> JSON 파일 가져오기
@@ -409,11 +455,24 @@ export function Settings() {
               )}
               <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onImport} />
             </div>
-            <p className="t-muted mt-3">
-              {live
-                ? '내려받은 파일은 보관용입니다. 이 화면으로 실사용 데이터를 되돌리는 기능은 아직 없습니다.'
-                : '가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.'}
-            </p>
+            {live && snapDone && (
+              <p className="t-muted mt-3 break-keep text-emerald-700" data-snapshot-done>
+                표 {snapDone.tables}개 · {snapDone.rows.toLocaleString('ko-KR')}줄을 받았습니다
+                {snapDone.unreadable > 0 ? ` (못 읽은 표 ${snapDone.unreadable}개)` : ''}.
+              </p>
+            )}
+            {live ? (
+              <div className="t-muted mt-3 space-y-1.5 break-keep" data-snapshot-note>
+                <p>
+                  <b className="text-navy-600">이 파일에 담기지 않는 것</b> —{' '}
+                  {SNAPSHOT_EXCLUDED.map((x) => x.label).join(' · ')}. 로그인 계정은 Supabase 가 따로 보관하므로,
+                  되돌린 뒤 사람은 새로 초대합니다.
+                </p>
+                <p>되돌리는 절차는 저장소의 docs/RESTORE.md 에 있습니다. 한 달에 한 번 받아 회사 밖(개인 드라이브 등)에 두시면 됩니다.</p>
+              </div>
+            ) : (
+              <p className="t-muted mt-3">가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.</p>
+            )}
           </SettingCard>
 
           {/*
@@ -471,7 +530,8 @@ export function Settings() {
             </button>
             <p className="t-muted mt-3 break-keep">
               엑셀에서 바로 열립니다(한글 깨짐 없음). <b className="text-navy-600">이 파일로 시스템을 되돌리지는
-              못합니다</b> — 보관·검산·제출용입니다. 되돌리는 것은 Supabase 백업으로 합니다.
+              못합니다</b> — 보관·검산·제출용입니다. 되돌리는 것은 Supabase 백업, 그게 안 되면 위의 전체 스냅샷으로
+              합니다.
             </p>
           </SettingCard>
 
