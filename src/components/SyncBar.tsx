@@ -14,7 +14,10 @@ export function SyncBar() {
 
   if (sync.error) {
     return (
-      <div className="sticky top-0 z-40 flex flex-wrap items-center gap-x-3 gap-y-2 bg-rose-600 px-4 py-3 text-white sm:px-6">
+      <div
+        data-sync-error
+        className="sticky top-0 z-40 flex flex-wrap items-center gap-x-3 gap-y-2 bg-rose-600 px-4 py-3 text-white sm:px-6"
+      >
         <AlertTriangle size={19} className="shrink-0" strokeWidth={2.6} />
         <p className="t-body min-w-0 flex-1 break-keep font-bold">{sync.error}</p>
         <button

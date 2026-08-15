@@ -24,7 +24,7 @@ import type {
   ProductOrderStatus,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
-import { supabase, withRetry } from './supabase'
+import { supabase, withRetry, missingName } from './supabase'
 import type { CollectionCompletionInput } from './collection'
 import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
 import { clientNameKey } from './clientName'
@@ -269,6 +269,17 @@ const toStock = (r: Row | null): OfficeStock =>
     : { ...DEFAULT_OFFICE_STOCK }
 
 // ── 전체 로드 ────────────────────────────────────────────────────────────────
+
+/**
+ * 마지막 로드에서 **없어서 건너뛴** 표·칸의 이름.
+ *
+ *  비어 있으면 전부 제자리에 있다는 뜻입니다. 관리자 화면(위 안내 띠)이
+ *  이 목록을 그대로 읽어 줍니다 — 「무엇이 없는지」를 말해 주지 않는 경고는
+ *  대표님이 손을 쓸 수 없어 없는 것과 같습니다.
+ */
+export const missingParts: string[] = []
+
+
 /**
  * 운영 데이터를 서버에서 한 번에 읽어 AppData 로 조립합니다.
  * 역할에 따라 RLS 가 일부 테이블을 막으므로(예: 현장 담당자의 미수금/매출),
@@ -277,13 +288,30 @@ const toStock = (r: Row | null): OfficeStock =>
 export async function loadAppData(): Promise<AppData> {
   const sb = need()
 
-  const soft = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+  //  「없어도 화면이 도는」 표를 읽습니다.
+  //
+  //   여기 주석들은 오래전부터 「마이그레이션 전 환경에는 표가 없으므로 soft
+  //   로 읽습니다」라고 적어 왔지만, **실제로는 권한 오류만 넘겼습니다.**
+  //   그래서 RUN 파일 하나를 아직 안 올린 서버에서는 표 하나가 없다는 이유로
+  //   빨간 띠가 뜨고 **대시보드 전체가 멈췄습니다** — 수거도, 청구도, 미수금도
+  //   못 봤습니다. 없는 것은 없는 대로 두고 나머지는 돌아가야 합니다.
+  //
+  //   대신 **무엇이 없었는지는 반드시 남깁니다.** 조용히 넘기면 「운영비를
+  //   넣었는데 미입력으로 보인다」 같은 일이 원인 없이 벌어집니다.
+  missingParts.length = 0
+  const soft = async <T>(fn: () => Promise<T>, fallback: T, what = ''): Promise<T> => {
     try {
       return await fn()
     } catch (e) {
       // RLS 로 막힌 테이블은 오류가 아니라 '권한 없음'입니다.
       const msg = e instanceof Error ? e.message : ''
       if (/row-level security|permission denied/i.test(msg)) return fallback
+      //  아직 안 올린 RUN 파일 때문에 표·칸이 없는 경우.
+      if (/schema cache|does not exist/i.test(msg)) {
+        const name = missingName(msg)
+        if (what) missingParts.push(name ? `${what} (${name})` : what)
+        return fallback
+      }
       throw e
     }
   }
@@ -329,6 +357,7 @@ export async function loadAppData(): Promise<AppData> {
   const monthlyActuals = await soft(
     async () => pageAll((f, t) => sb.from('client_monthly_actuals').select('*').order('month').range(f, t)),
     [] as Row[],
+    'Excel 월 실적',
   )
 
   //  월 매출 직접입력·조정 (0038). 현장은 RLS 로 막혀 있고, 마이그레이션 전
@@ -336,26 +365,31 @@ export async function loadAppData(): Promise<AppData> {
   const revenueOverrides = await soft(
     async () => pageAll((f, t) => sb.from('revenue_overrides').select('*').order('month').range(f, t)),
     [] as Row[],
+    '매출 직접입력',
   )
 
   //  파는 소모품과 주문 (0048). 병원은 RLS 로 자기 주문만 내려받습니다.
   const products = await soft(
     async () => pageAll((f, t) => sb.from('products').select('*').order('sort').range(f, t)),
     [] as Row[],
+    '소모품 상품',
   )
   const orderRows = await soft(
     async () => pageAll((f, t) => sb.from('product_orders').select('*').order('requested_at').range(f, t)),
     [] as Row[],
+    '소모품 주문',
   )
   const orderItemRows = await soft(
     async () => pageAll((f, t) => sb.from('product_order_items').select('*').order('id').range(f, t)),
     [] as Row[],
+    '소모품 주문 품목',
   )
 
   //  우리 직원 명부 (0047). 이름·담당만 담고 주민등록번호는 담지 않습니다.
   const staff = await soft(
     async () => pageAll((f, t) => sb.from('staff').select('*').order('insured_from').range(f, t)),
     [] as Row[],
+    '직원 명부',
   )
 
   //  국세청 신고 매출 (0047). 현장은 RLS 로 막혀 있고, 마이그레이션 전
@@ -363,6 +397,7 @@ export async function loadAppData(): Promise<AppData> {
   const taxFilings = await soft(
     async () => pageAll((f, t) => sb.from('tax_filings').select('*').order('period_from').range(f, t)),
     [] as Row[],
+    '국세청 신고 매출',
   )
 
   //  휴무일 (0034). 마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다 —
@@ -370,6 +405,7 @@ export async function loadAppData(): Promise<AppData> {
   const holidays = await soft(
     async () => pageAll((f, t) => sb.from('holidays').select('*').order('day').range(f, t)),
     [] as Row[],
+    '휴무일',
   )
 
   //  거래처 단가의 판 (0036). 현장은 RLS 로 막혀 있고, 마이그레이션 전
@@ -377,6 +413,7 @@ export async function loadAppData(): Promise<AppData> {
   const clientPrices = await soft(
     async () => pageAll((f, t) => sb.from('client_prices').select('*').order('effective_from').range(f, t)),
     [] as Row[],
+    '단가 이력',
   )
 
   //  월 운영비 (0030). 현장 담당자는 RLS 로 막혀 있고, 마이그레이션 전
@@ -384,17 +421,20 @@ export async function loadAppData(): Promise<AppData> {
   const operatingCosts = await soft(
     async () => pageAll((f, t) => sb.from('operating_costs').select('*').order('month').range(f, t)),
     [] as Row[],
+    '월 운영비',
   )
 
   //  입금 기록 (0026). 현장 담당자는 RLS 로 막혀 있으므로 soft 로 읽습니다.
   const receipts = await soft(
     async () => pageAll((f, t) => sb.from('payment_receipts').select('*').order('received_on').range(f, t)),
     [] as Row[],
+    '입금 기록',
   )
 
   const payments = await soft(
     async () => pageAll((f, t) => sb.from('payments').select('*').order('id').range(f, t)),
     [] as Row[],
+    '청구',
   )
   const leads = await soft(
     async () =>

@@ -79,9 +79,36 @@ export function friendlyError(e: unknown): string {
   //  "Could not find the 'snapshot' column of 'payments' in the schema cache"
   //  같은 영문이 직원에게 보입니다 — 무슨 뜻인지도, 무엇을 해야 하는지도
   //  알 수 없습니다.
-  if (/Could not find the .* column|schema cache|column .* does not exist/i.test(msg))
-    return '이 기능에 필요한 항목이 서버에 아직 준비되지 않았습니다. 관리자에게 DB 업데이트를 요청해 주세요.'
+  if (/Could not find the .* column|schema cache|column .* does not exist|relation .* does not exist/i.test(msg)) {
+    //  **무엇이** 없는지 반드시 밝힙니다. 예전 문구는 「필요한 항목이 없습니다」
+    //  뿐이라, 대표님이 SQL 을 다 실행하고도 무엇을 더 해야 하는지 알 수
+    //  없었습니다 — 고칠 수 없는 오류 메시지는 없는 것과 같습니다.
+    const what = missingName(msg)
+    return (
+      '이 기능에 필요한 항목이 서버에 아직 준비되지 않았습니다' +
+      (what ? ` — ${what}` : '') +
+      '. Supabase SQL Editor 에서 아직 실행하지 않은 RUN 파일을 실행해 주세요.'
+    )
+  }
   return msg
+}
+
+/**
+ * 「무엇이 없는가」를 오류 원문에서 그대로 꺼냅니다.
+ *
+ *  PostgREST 는 `Could not find the table 'public.staff' in the schema cache`
+ *  또는 `Could not find the 'sort' column of 'products' in the schema cache`
+ *  라고 알려 줍니다. 이름을 지어내지 않고 **원문에 있는 것만** 씁니다 —
+ *  못 찾으면 빈 문자열입니다.
+ */
+export function missingName(msg: string): string {
+  const table = msg.match(/Could not find the table '([^']+)'/i)
+  if (table) return `${table[1]} 표가 없습니다`
+  const col = msg.match(/Could not find the '([^']+)' column of '([^']+)'/i)
+  if (col) return `${col[2]}.${col[1]} 칸이 없습니다`
+  const pg = msg.match(/(?:relation|column) "([^"]+)" does not exist/i)
+  if (pg) return `${pg[1]} 가 없습니다`
+  return ''
 }
 
 /** 네트워크 오류에 한해 지수 백오프로 재시도합니다. */
