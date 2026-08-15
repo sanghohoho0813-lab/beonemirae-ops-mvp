@@ -115,6 +115,11 @@ export const SNAPSHOT_EXCLUDED: { name: string; label: string; why: string }[] =
     label: '개발자 요청',
     why: '요청자 계정이 반드시 있어야 하는 표라 계정 없이는 넣을 수 없습니다. 업무 자료는 아닙니다.',
   },
+  {
+    name: 'app_errors',
+    label: '오류 기록',
+    why: '고장을 찾을 때 보는 기록입니다. 업무 자료가 아니라 되돌릴 대상이 아니고, 백업만 무겁게 합니다.',
+  },
 ]
 
 export interface Snapshot {

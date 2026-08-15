@@ -806,6 +806,75 @@ export interface HealthCheck {
  *  정책이 지워지거나 색인이 사라져도 숫자는 그대로입니다. 돈을 지키는 것들이
  *  실제로 있는지 서버가 세어 **없는 것을 이름으로** 돌려줍니다. 관리자만.
  */
+export interface AppErrorInput {
+  kind: 'save' | 'load' | 'render'
+  screen?: string
+  action?: string
+  message?: string
+  detail?: Record<string, unknown>
+}
+
+/**
+ * 오류 한 건을 서버에 남깁니다 (0046).
+ *
+ *  **절대 예외를 올리지 않습니다.** 이 함수는 이미 오류가 난 자리에서 불립니다.
+ *  여기서 또 던지면 사용자가 보던 진짜 오류가 「기록 실패」로 바뀌어 원인이
+ *  가려집니다. 못 남겼으면 false 를 돌려줄 뿐, 남긴 척하지 않습니다.
+ *
+ *  0046 이전 DB 에는 함수가 없습니다 — 그때도 조용히 false 입니다.
+ */
+export async function recordAppError(e: AppErrorInput): Promise<boolean> {
+  try {
+    const sb = supabase
+    if (!sb) return false
+    const { data, error } = await sb.rpc('record_app_error', {
+      p_kind: e.kind,
+      p_screen: e.screen ?? '',
+      p_action: e.action ?? '',
+      p_message: e.message ?? '',
+      p_detail: {
+        ...(e.detail ?? {}),
+        appSchema: EXPECTED_SCHEMA_VERSION,
+        //  어떤 기기·브라우저인지 — 기사님 폰에서만 나는 문제를 가릅니다.
+        agent: typeof navigator === 'undefined' ? '' : navigator.userAgent.slice(0, 200),
+      },
+    })
+    if (error) return false
+    return data === true
+  } catch {
+    return false
+  }
+}
+
+export interface ErrorGroup {
+  kind: 'save' | 'load' | 'render'
+  screen: string
+  action: string
+  message: string
+  times: number
+  last_at: string
+  who: string | null
+}
+export interface RecentErrors {
+  days: number
+  total: number
+  groups: ErrorGroup[]
+  checkedAt: string
+}
+
+/** 최근 오류를 화면·동작·문구로 묶어서 (0046). 관리자만. */
+export async function recentErrors(days = 7): Promise<RecentErrors | null> {
+  const sb = supabase
+  if (!sb) return null
+  const { data, error } = await sb.rpc('recent_app_errors', { p_days: days })
+  if (error) return null
+  const r = data as Partial<RecentErrors> | null
+  //  모양이 다르면 못 읽은 것으로 봅니다 — 진단 하나 때문에 설정 화면 전체를
+  //  잃은 적이 있습니다 (0043 라운드).
+  if (!r || !Array.isArray(r.groups) || typeof r.total !== 'number') return null
+  return r as RecentErrors
+}
+
 export async function healthCheck(): Promise<HealthCheck | null> {
   const sb = supabase
   if (!sb) return null
@@ -1485,7 +1554,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 45
+export const EXPECTED_SCHEMA_VERSION = 46
 
 /**
  * 서버 DB 의 스키마 버전.

@@ -39,6 +39,7 @@ import { exportTables, downloadCsv } from '../lib/exportData'
 import { downloadSnapshot, snapshotRowCount, snapshotSummary, SNAPSHOT_EXCLUDED } from '../lib/snapshot'
 import { rawSnapshot } from '../lib/repo'
 import { HealthCard } from '../components/HealthCard'
+import { ErrorLogCard } from '../components/ErrorLogCard'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { prettyDate, today } from '../lib/format'
 
@@ -425,6 +426,7 @@ export function Settings() {
              서버가 직접 세어 보고, 없으면 이름을 그대로 보여 줍니다.
           */}
           <HealthCard />
+          <ErrorLogCard />
 
           {/*
             전체 스냅샷.

@@ -306,6 +306,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData(await repo.loadAppData())
     } catch (e) {
       setSyncError(friendlyError(e))
+      //  앱을 켜다 못 읽은 경우 (0046). 「아침에 안 열렸다」는 이야기가
+      //  가장 흔한데 지금까지 아무 자료도 안 남았습니다.
+      void repo.recordAppError({
+        kind: 'load',
+        screen: typeof window === 'undefined' ? '' : window.location.pathname,
+        action: '운영 자료 읽기',
+        message: friendlyError(e),
+        detail: { raw: e instanceof Error ? e.message : String(e ?? '') },
+      })
     } finally {
       setLoading(false)
     }
@@ -401,6 +410,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const message = friendlyError(e)
         setSyncError(message)
         pending.current = fn
+        //  남깁니다 (0046). 예전에는 이 빨간 띠가 다음 동작에 사라지면 끝이라,
+        //  「어제 저장이 안 됐다」에 답할 자료가 아무 데도 없었습니다.
+        //  기록이 실패해도 여기서 다시 터지지 않습니다 — recordAppError 는
+        //  절대 예외를 올리지 않습니다.
+        void repo.recordAppError({
+          kind: 'save',
+          screen: typeof window === 'undefined' ? '' : window.location.pathname,
+          message,
+          //  사람이 읽는 문구로 바꾸기 전의 원문 — 원인을 찾을 때 이게 필요합니다.
+          detail: { raw: e instanceof Error ? e.message : String(e ?? '') },
+        })
         return { ok: false, error: message }
       } finally {
         setSaving(false)

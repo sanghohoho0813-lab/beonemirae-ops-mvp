@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { ErrorBoundary } from './ErrorBoundary'
 import { motion } from 'framer-motion'
 import {
   MoreHorizontal,
@@ -562,9 +563,20 @@ export function Layout() {
                 label="사용 방법"
               />
             </div>
-            <PageMotion key={pathname}>
-              <Outlet />
-            </PageMotion>
+            {/*
+              안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어
+              다른 화면으로 그냥 넘어갈 수 있습니다. 예전에는 메뉴까지 사라져
+              흰 화면만 남았습니다.
+
+              `key={pathname}` 이 중요합니다 — React 의 오류 경계는 스스로
+              풀리지 않아서, 키를 안 바꾸면 다른 화면으로 가도 계속 오류
+              화면이 붙어 있습니다.
+            */}
+            <ErrorBoundary key={pathname} scope="page">
+              <PageMotion key={pathname}>
+                <Outlet />
+              </PageMotion>
+            </ErrorBoundary>
           </main>
         </div>
       </div>
