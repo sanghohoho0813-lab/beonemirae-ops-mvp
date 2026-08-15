@@ -22,6 +22,7 @@ import { AxStoryStrip } from '../components/AxStory'
 import { CustomerServiceCard } from '../components/CustomerService'
 import { MonthGlance } from '../components/MonthGlance'
 import { StartHere } from '../components/StartHere'
+import { PendingApprovals } from '../components/PendingApprovals'
 import { TodayFocus } from '../components/TodayFocus'
 import { TodayBoard } from '../components/TodayBoard'
 import { TourBanner } from '../components/TourEntry'
@@ -130,6 +131,15 @@ export function Dashboard() {
          현장 담당자에게는 열리지 않습니다(access.ts).
       */}
       {canSeeMoney && <RevenueKpis />}
+
+      {/*
+        가입 승인 대기.
+
+         직원이 신청해도 관리자가 사용자 관리 화면을 열어 봐야 알 수 있었습니다.
+         신청한 사람은 로그인해도 아무것도 안 보여 「고장 났나」 하고 기다립니다.
+         기다리는 사람이 있을 때만 뜹니다 — 없으면 아무것도 그리지 않습니다.
+      */}
+      <PendingApprovals />
 
       {/* ══ ① 오늘 처리할 업무 ═══════════════════════════════════════════════ */}
       <section>
