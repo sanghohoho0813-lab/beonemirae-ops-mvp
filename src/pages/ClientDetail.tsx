@@ -102,7 +102,7 @@ type TabId = (typeof TABS)[number]['id']
 export function ClientDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const { data, clientById, updateClient, savePricing, removeClient, notesFor } = useData()
+  const { data, clientById, updateClient, savePricing, removeClient, purgeClient, notesFor } = useData()
   const { role, mode } = useAuth()
   const client = clientById(id)
 
@@ -183,6 +183,29 @@ export function ClientDetail() {
     updateClient(id, form)
     setEditing(false)
   }
+  //  기록이 없는 거래처만 지웁니다. 기록이 있으면 서버가 무엇 때문인지
+  //  숫자로 알려 주고, 그 문구를 그대로 화면에 띄웁니다.
+  async function confirmPurge() {
+    if (!client) return
+    if (
+      !window.confirm(
+        `'${client.name}' 거래처를 완전히 삭제할까요?\n\n` +
+          '되돌릴 수 없습니다. 수거·청구·자재·요청·메모 기록이 한 건이라도 있으면 ' +
+          '삭제되지 않고 무엇이 남아 있는지 알려 드립니다.\n' +
+          '실제로 거래하던 곳을 정리하는 것이라면 「거래 종료」를 쓰세요.',
+      )
+    ) {
+      return
+    }
+    const reason = window.prompt('삭제 사유를 적어 주세요 (기록에 남습니다)', '') ?? ''
+    const r = await purgeClient(id, reason.trim())
+    if (r.ok) {
+      navigate('/clients')
+      return
+    }
+    window.alert(r.error ?? '삭제하지 못했습니다.')
+  }
+
   function confirmRemove() {
     //  실제로는 지우지 않고 '그만둔 거래처' 로 돌립니다. 과거 수거·미수금·
     //  명세서가 그대로 남아야 하기 때문입니다. 그런데 "삭제할까요" 라고만
@@ -256,9 +279,19 @@ export function ClientDetail() {
             <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
               <Pencil size={14} /> 수정
             </button>
-            <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
+            <button data-client-retire className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
               <Trash2 size={14} /> 거래 종료
             </button>
+            {/*
+              완전 삭제 — 잘못 만든 거래처(오타로 두 번 등록, 시험용)를 지웁니다.
+              기록이 한 건이라도 있으면 서버가 막습니다(0039). 「거래 종료」와
+              뜻이 다르므로 버튼을 따로 둡니다.
+            */}
+            {role === 'admin' && (
+              <button data-client-purge className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={() => void confirmPurge()}>
+                <Trash2 size={14} /> 삭제
+              </button>
+            )}
           </div>
         )}
       </div>

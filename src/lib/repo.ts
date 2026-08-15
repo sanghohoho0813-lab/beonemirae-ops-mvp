@@ -114,6 +114,9 @@ const toClient = (r: Row): Client => ({
   taxEmail: r.tax_email ?? '',
   vatMode: r.vat_mode ?? null,
   flatFeeWhenEmpty: !!r.flat_fee_when_empty,
+  collectTime: r.collect_time ?? '',
+  disposalSite: r.disposal_site ?? '',
+  diaperCycle: r.diaper_cycle ?? '',
 })
 
 const toVehicle = (r: Row): Vehicle => ({
@@ -496,6 +499,9 @@ const clientRow = (c: Partial<Client>) => ({
   tax_email: c.taxEmail,
   vat_mode: c.vatMode,
   flat_fee_when_empty: c.flatFeeWhenEmpty,
+  collect_time: c.collectTime,
+  disposal_site: c.disposalSite,
+  diaper_cycle: c.diaperCycle,
 })
 
 const clean = (o: Record<string, unknown>) =>
@@ -769,6 +775,20 @@ export async function setRevenueOverride(input: {
   })
   if (error) throw new Error(error.message)
   return data as { created: boolean; before: number | null; amount: number }
+}
+
+/**
+ * 거래처 삭제 (0039).
+ *
+ *  수거·청구·자재·요청·메모·엑셀 실적이 한 건이라도 있으면 서버가
+ *  거부합니다 — 무엇 때문인지 숫자로 알려 줍니다. 그런 곳은 「거래 종료」로
+ *  둡니다(기록은 그대로 남고 목록에서만 빠집니다).
+ */
+export async function deleteClient(id: string, reason: string): Promise<{ name: string }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('delete_client', { p_client_id: id, p_reason: reason })
+  if (error) throw new Error(error.message)
+  return data as { name: string }
 }
 
 /** 매출 조정 되돌리기 (0038) — 그 달은 다시 확정 → Excel → 추정 순서로 */
@@ -1288,7 +1308,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 38
+export const EXPECTED_SCHEMA_VERSION = 39
 
 /**
  * 서버 DB 의 스키마 버전.

@@ -160,6 +160,12 @@ interface DataContextValue {
     amount: number
     reason: string
   }) => Promise<{ ok: boolean; error: string | null; before: number | null }>
+  /**
+   * 거래처 완전 삭제 (0039).
+   *  기록이 한 건이라도 있으면 서버가 거부합니다 — 그런 곳은 removeClient
+   *  (거래 종료)로 둡니다.
+   */
+  purgeClient: (id: string, reason: string) => Promise<{ ok: boolean; error: string | null }>
   /** 매출 조정 되돌리기 — 그 달은 다시 확정 → Excel → 추정 순서로 */
   removeRevenueOverride: (
     clientId: string,
@@ -1567,6 +1573,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  //  잘못 만든 거래처를 지웁니다. 기록이 있으면 서버가 막습니다 —
+  //  지우면 지난 매출·미수금이 바뀌기 때문입니다.
+  const purgeClient = useCallback(
+    async (id: string, reason: string) => {
+      if (!live) return { ok: false, error: '거래처 삭제는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.deleteClient(id, reason)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const undoPlan = useCallback(
     async (batch: string) => {
       if (!live) return { ok: false, error: '일정 편성은 실제 운영 모드에서만 됩니다.', result: null }
@@ -1764,6 +1784,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeHoliday,
       saveRevenueOverride,
       removeRevenueOverride,
+      purgeClient,
       undoPlan,
       assignVehicles,
       undoAssign,
@@ -1828,6 +1849,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeHoliday,
       saveRevenueOverride,
       removeRevenueOverride,
+      purgeClient,
       undoPlan,
       assignVehicles,
       undoAssign,

@@ -89,14 +89,56 @@ export function ClientForm({
           <input className="field-input" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
         </div>
       </div>
-      <div>
-        <label className="field-label">수거주기</label>
-        <input
-          className="field-input"
-          value={form.collectionCycle}
-          onChange={(e) => set('collectionCycle', e.target.value)}
-          placeholder="예: 주 2회"
-        />
+      {/*
+        수거주기 · 수거 가능시간 · 처리장.
+
+         「운영조건」 탭은 수거 가능시간과 처리장을 「미등록」으로 보여
+         주는데 넣을 칸이 없었습니다(0039 에서 칸을 만들었습니다).
+         기저귀도 의료폐기물과 다른 주기를 쓰는 곳이 있어 따로 받습니다.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="field-label">수거주기 (의료폐기물)</label>
+          <input
+            data-client-cycle
+            className="field-input"
+            value={form.collectionCycle ?? ''}
+            onChange={(e) => set('collectionCycle', e.target.value)}
+            placeholder="예: 주 2회"
+          />
+        </div>
+        <div>
+          <label className="field-label">수거주기 (일회용기저귀)</label>
+          <input
+            data-client-diaper-cycle
+            className="field-input"
+            value={form.diaperCycle ?? ''}
+            onChange={(e) => set('diaperCycle', e.target.value)}
+            placeholder="비우면 위 주기를 함께 씁니다"
+          />
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="field-label">수거 가능시간</label>
+          <input
+            data-client-collect-time
+            className="field-input"
+            value={form.collectTime ?? ''}
+            onChange={(e) => set('collectTime', e.target.value)}
+            placeholder="예: 평일 09:00~17:00 (점심 제외)"
+          />
+        </div>
+        <div>
+          <label className="field-label">처리장 · 처리업체</label>
+          <input
+            data-client-disposal
+            className="field-input"
+            value={form.disposalSite ?? ''}
+            onChange={(e) => set('disposalSite', e.target.value)}
+            placeholder="예: ○○환경 소각장"
+          />
+        </div>
       </div>
       <div className="flex gap-4">
         <label className="flex items-center gap-2 text-[1.08rem] font-medium text-navy-700">

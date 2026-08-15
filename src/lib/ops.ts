@@ -609,10 +609,15 @@ export function clientProfile(client: Client): ClientProfile {
     //  (이건 사람 이름이 아니라 "어느 부서와 이야기하는지"의 안내입니다).
     roleManager: client.manager?.trim() || roleByType[client.type] || '병원 폐기물 담당',
     medicalCycle: client.collectsMedicalWaste ? client.collectionCycle || '미등록' : '해당 없음',
-    diaperCycle: client.collectsDiaper ? client.collectionCycle || '미등록' : '해당 없음',
-    //  수거 가능시간·처리장은 저장하는 칸이 아직 없습니다. 있는 척하지 않습니다.
-    pickupWindow: '미등록',
-    facility: '미등록',
+    //  기저귀 주기를 따로 넣었으면 그것을, 안 넣었으면 의료폐기물 주기를
+    //  함께 씁니다 (0039 에서 따로 넣는 칸이 생겼습니다).
+    diaperCycle: client.collectsDiaper
+      ? client.diaperCycle?.trim() || client.collectionCycle || '미등록'
+      : '해당 없음',
+    //  0039 에서 넣는 칸이 생겼습니다. 비어 있으면 여전히 「미등록」입니다 —
+    //  없는 값을 있는 척하지 않습니다.
+    pickupWindow: client.collectTime?.trim() || '미등록',
+    facility: client.disposalSite?.trim() || '미등록',
   }
 }
 

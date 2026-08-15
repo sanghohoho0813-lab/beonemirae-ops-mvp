@@ -149,6 +149,12 @@ export interface Client {
    *  수거가 있을 때만 청구하고, 0건인 달은 「확인 필요」로 돌립니다.
    */
   flatFeeWhenEmpty?: boolean
+  /** 수거 가능시간 (0039) — 예: 평일 09:00~17:00 */
+  collectTime?: string
+  /** 처리장·처리업체 (0039) */
+  disposalSite?: string
+  /** 일회용기저귀 수거주기 (0039). 비면 의료폐기물 주기를 함께 씁니다 */
+  diaperCycle?: string
 }
 
 /** 부가세 처리 방식 — 청구액이 공급가액인지 합계인지는 계약마다 다릅니다 */
