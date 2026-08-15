@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
+import { handlersOf } from '../components/StaffCard'
 import { NextVisitCard } from '../components/NextVisit'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
@@ -16,7 +17,7 @@ import { openRequests } from '../lib/ops'
 import { EMPTY_SUPPLIED } from '../lib/collection'
 import { prettyDate, today, weight } from '../lib/format'
 import { holidayMap } from '../lib/holidays'
-import type { ContainerBreakdown, Schedule, WasteType } from '../types'
+import type { AppData, ContainerBreakdown, Schedule, WasteType } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 오늘 일정 — 날짜별 수거 일정 + 완료 처리
@@ -171,6 +172,17 @@ export function TodaySchedule() {
           </p>
         </div>
       )}
+
+      {/*
+        오늘 나가는 일이 폐기물 구분마다 몇 곳이고 **누구 담당인지**.
+
+         지금까지 「이건 누가 가지?」는 매번 카톡으로 정했습니다. 시스템이
+         사람을 모르니 화면이 말해 줄 수가 없었습니다(0047 에서 명부가 생겼습니다).
+
+         「누가 갔다」가 아니라 「이 구분을 맡는 사람」입니다 — 실제로 누가
+         갔는지는 수거 입력에 남습니다. 둘을 섞지 않습니다.
+      */}
+      <TodayHandlers data={data} list={list} />
 
       {/* 모바일 — 폰을 열면 가장 먼저 "다음에 어디로 가는가" */}
       <NextVisitCard data={data} list={list} notesFor={notesFor} />
@@ -555,6 +567,35 @@ export function TodaySchedule() {
           </>
         )}
       </Modal>
+    </div>
+  )
+}
+
+/**
+ * 오늘 · 구분별 몇 곳 · 담당 누구.
+ *
+ *  명부에 사람이 없으면 아무것도 그리지 않습니다 — 없는 담당을 지어내
+ *  「담당 없음」이라고 겁주지 않습니다.
+ */
+function TodayHandlers({ data, list }: { data: AppData; list: Schedule[] }) {
+  const rows = (['의료폐기물', '일회용기저귀'] as const)
+    .map((w) => ({
+      waste: w,
+      count: list.filter((s) => s.wasteType === w).length,
+      names: handlersOf(data.staff, w),
+    }))
+    .filter((r) => r.count > 0 && r.names.length > 0)
+
+  if (rows.length === 0) return null
+  return (
+    <div data-today-handlers className="card flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      {rows.map((r) => (
+        <span key={r.waste} data-today-handler={r.waste} className="flex flex-wrap items-baseline gap-x-1.5">
+          <span className="t-caption text-navy-500">{r.waste}</span>
+          <b className="t-cell tabular-nums text-navy-900">{r.count}곳</b>
+          <span className="t-caption text-navy-600">{r.names.join(' · ')}</span>
+        </span>
+      ))}
     </div>
   )
 }

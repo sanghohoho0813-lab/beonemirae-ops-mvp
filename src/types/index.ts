@@ -1,6 +1,7 @@
 //  청구 확정 스냅샷은 정산·명세서 모양 그대로 담기므로 lib/billing 에
 //  정의된 타입을 그대로 씁니다 (타입만 가져오므로 순환 참조가 남지 않습니다).
 import type { BillingSnapshot } from '../lib/billing'
+import type { TaxFiling } from '../lib/taxBase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 도메인 타입 정의
@@ -163,6 +164,27 @@ export interface Client {
   disposalSite?: string
   /** 일회용기저귀 수거주기 (0039). 비면 의료폐기물 주기를 함께 씁니다 */
   diaperCycle?: string
+}
+
+// ── 우리 직원 (0047) ─────────────────────────────────────────────────────────
+//
+//  주민등록번호는 담지 않습니다 — 이 시스템이 하는 일(일정·수거·정산)에
+//  필요 없는 값이고, 한 번 넣으면 백업·내보내기·화면 어디로든 흘러갑니다.
+export type StaffPosition = '대표' | '이사' | '사무' | '현장'
+export type WasteScope = '의료폐기물' | '일회용기저귀' | '둘 다' | '해당없음'
+
+export interface Staff {
+  id: string
+  name: string
+  position: StaffPosition
+  /** 주로 맡는 폐기물 — 「오늘 이 일이 누구 일인지」를 가립니다 */
+  wasteScope: WasteScope
+  /** 4대보험 최초 자격취득일. 실제 입사일과 다를 수 있습니다 */
+  insuredFrom: string | null
+  /** 네 보험의 취득일을 원본 그대로 ({'국민연금': '2025-07-01', …}) */
+  insurance: Record<string, string | null>
+  active: boolean
+  note: string
 }
 
 /** 부가세 처리 방식 — 청구액이 공급가액인지 합계인지는 계약마다 다릅니다 */
@@ -361,6 +383,16 @@ export interface AppData {
   monthlyActuals?: ClientMonthlyActual[]
   // ── v34: 휴무일 (공휴일·회사 휴무). 넣은 날만 편성에서 빠집니다 ──
   holidays?: Holiday[]
+  /** 우리 직원 명부 (0047). 이름·담당만 — 주민등록번호는 담지 않습니다 */
+  staff?: Staff[]
+  /**
+   * 국세청에 신고한 부가가치세 과세표준 (0047).
+   *
+   *  이 시스템에 쌓인 매출과 **다른 숫자**입니다. 회사가 실제로 국가에 낸
+   *  값이라 대표님이 믿는 기준이고, 「작년 같은 반기보다 얼마나 늘었나」의
+   *  근거가 됩니다. 현장 담당자에게는 RLS 로 보이지 않습니다.
+   */
+  taxFilings?: TaxFiling[]
   // ── v36: 거래처 단가의 판 (언제부터 얼마였는지) ──
   clientPrices?: ClientPrice[]
   /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */

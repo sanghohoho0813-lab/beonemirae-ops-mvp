@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { PageShell, SectionTitle, PrimaryButton, SecondaryButton } from '../components/ui'
 import { Modal } from '../components/Modal'
 import { RevenueKpis } from '../components/RevenueKpis'
+import { TaxBaseCard } from '../components/TaxBaseCard'
 import {
   monthRevenue,
   revenueSummary,
@@ -124,6 +125,12 @@ export function Revenue() {
       <PageHeader title="매출 현황" subtitle="한 달에 하나의 값만 집계합니다 — 어느 것을 썼는지 함께 표시합니다" />
 
       <RevenueKpis />
+
+      {/*
+        이 화면의 다른 숫자는 시스템에 쌓인 것이고, 아래는 국세청에 신고한
+        값입니다. 둘을 섞지 않고 출처를 밝혀서 따로 보여 줍니다.
+      */}
+      <TaxBaseCard />
 
       {msg && (
         <div

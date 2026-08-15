@@ -17,12 +17,14 @@ import type {
   OperatingCost,
   PaymentReceipt,
   RevenueOverride,
+  Staff,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry } from './supabase'
 import type { CollectionCompletionInput } from './collection'
 import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
 import { clientNameKey } from './clientName'
+import type { TaxFiling } from './taxBase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase 레포지토리
@@ -332,6 +334,19 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  우리 직원 명부 (0047). 이름·담당만 담고 주민등록번호는 담지 않습니다.
+  const staff = await soft(
+    async () => pageAll((f, t) => sb.from('staff').select('*').order('insured_from').range(f, t)),
+    [] as Row[],
+  )
+
+  //  국세청 신고 매출 (0047). 현장은 RLS 로 막혀 있고, 마이그레이션 전
+  //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 그 칸이 안 뜹니다.
+  const taxFilings = await soft(
+    async () => pageAll((f, t) => sb.from('tax_filings').select('*').order('period_from').range(f, t)),
+    [] as Row[],
+  )
+
   //  휴무일 (0034). 마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다 —
   //  없으면 빈 목록이고, 편성은 지금까지와 똑같이 동작합니다.
   const holidays = await soft(
@@ -395,6 +410,32 @@ export async function loadAppData(): Promise<AppData> {
         actorName: r.actor_name ?? '',
         createdAt: r.created_at,
         sourceRef: r.source_ref ?? null,
+      }),
+    ),
+    staff: staff.map(
+      (r): Staff => ({
+        id: r.id,
+        name: r.name,
+        position: r.position,
+        wasteScope: r.waste_scope,
+        insuredFrom: r.insured_from ?? null,
+        insurance: (r.insurance ?? {}) as Record<string, string | null>,
+        active: !!r.active,
+        note: r.note ?? '',
+      }),
+    ),
+    taxFilings: taxFilings.map(
+      (r): TaxFiling => ({
+        id: Number(r.id),
+        periodFrom: r.period_from,
+        periodTo: r.period_to,
+        baseTotal: Number(r.base_total ?? 0),
+        baseTaxed: Number(r.base_taxed ?? 0),
+        baseExempt: Number(r.base_exempt ?? 0),
+        taxPayable: Number(r.tax_payable ?? 0),
+        sourceNo: r.source_no ?? '',
+        issuedOn: r.issued_on ?? null,
+        note: r.note ?? '',
       }),
     ),
     revenueOverrides: revenueOverrides.map(
@@ -1554,7 +1595,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 46
+export const EXPECTED_SCHEMA_VERSION = 47
 
 /**
  * 서버 DB 의 스키마 버전.

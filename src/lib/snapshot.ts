@@ -48,6 +48,9 @@ export interface SnapshotTable {
  *  복구가 중간에 멈춥니다. 그래서 이 배열이 곧 복구 순서입니다.
  */
 export const SNAPSHOT_TABLES: SnapshotTable[] = [
+  //  사람이 먼저 — 담당 구분은 업무 자료입니다. 계정(profiles)은 안 담기므로
+  //  profile_id 는 아래 nullify 로 비웁니다.
+  { name: 'staff', label: '직원 명부', order: 'id', core: true },
   { name: 'clients', label: '거래처', order: 'id', core: true },
   { name: 'vehicles', label: '차량', order: 'id', core: true },
   { name: 'materials', label: '자재 공급', order: 'id', core: true },
@@ -71,6 +74,9 @@ export const SNAPSHOT_TABLES: SnapshotTable[] = [
   { name: 'audit_logs', label: '감사기록', order: 'id', core: true },
   { name: 'experiment_settings', label: 'AX 실증 설정', order: 'id', core: false },
   { name: 'performance_baselines', label: 'AX 기준값', order: 'id', core: false },
+  //  국세청 신고 매출 — 증명서를 다시 뽑으면 되지만, 넣어 둔 것을 잃으면
+  //  전년 동기 비교가 통째로 사라집니다. 업무 자료로 담습니다.
+  { name: 'tax_filings', label: '신고 매출', order: 'id', core: true },
 ]
 
 /**
@@ -81,6 +87,7 @@ export const SNAPSHOT_TABLES: SnapshotTable[] = [
  *  누가 했는지는 대부분 이름(actor_name)으로 따로 남아 있어 읽을 수 있습니다.
  */
 export const PROFILE_REFS: Record<string, string[]> = {
+  staff: ['profile_id'],
   clients: ['created_by', 'updated_by'],
   materials: ['created_by'],
   material_transactions: ['created_by'],

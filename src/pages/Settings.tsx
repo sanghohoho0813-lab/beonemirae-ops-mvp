@@ -40,6 +40,7 @@ import { downloadSnapshot, snapshotRowCount, snapshotSummary, SNAPSHOT_EXCLUDED 
 import { rawSnapshot } from '../lib/repo'
 import { HealthCard } from '../components/HealthCard'
 import { ErrorLogCard } from '../components/ErrorLogCard'
+import { StaffCard } from '../components/StaffCard'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { prettyDate, today } from '../lib/format'
 
@@ -425,6 +426,7 @@ export function Settings() {
              지워졌거나 색인이 사라졌으면 돈이 두 번 들어갈 수 있습니다.
              서버가 직접 세어 보고, 없으면 이름을 그대로 보여 줍니다.
           */}
+          <StaffCard />
           <HealthCard />
           <ErrorLogCard />
 
