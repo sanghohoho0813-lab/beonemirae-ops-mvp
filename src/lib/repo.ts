@@ -115,6 +115,9 @@ const toClient = (r: Row): Client => ({
   taxEmail: r.tax_email ?? '',
   vatMode: r.vat_mode ?? null,
   flatFeeWhenEmpty: !!r.flat_fee_when_empty,
+  //  0044 이전 DB 에는 이 칸이 없습니다. null 로 두면 화면이 「아직 안 정함」으로
+  //  읽습니다 — 그게 사실입니다. 정한 적 없는 것을 정했다고 하지 않습니다.
+  flatFeePolicyAt: r.flat_fee_policy_at ?? null,
   collectTime: r.collect_time ?? '',
   disposalSite: r.disposal_site ?? '',
   diaperCycle: r.diaper_cycle ?? '',
@@ -689,6 +692,35 @@ export async function supplyMaterials(input: {
   })
   if (error) throw new Error(error.message)
   return data as { id: string; alreadySaved: boolean }
+}
+
+/**
+ * 월정액 빈 달 정책을 **사람이 정했다고 기록** (0044).
+ *
+ *  값만 바꾸는 것이 아니라 「누가 언제 정했는지」를 남깁니다. 「아니오」도
+ *  정한 것으로 남깁니다 — 안 남기면 이미 확인한 거래처를 매달 다시 묻게 됩니다.
+ *
+ *  0044 이전 DB 에는 이 함수가 없습니다. 그때는 `recorded: false` 로 돌려주고
+ *  **다른 오류는 그대로 던집니다** — 못 저장한 것을 저장했다고 하지 않습니다.
+ */
+export async function setFlatFeePolicy(
+  clientId: string,
+  whenEmpty: boolean,
+): Promise<{ recorded: boolean }> {
+  const sb = need()
+  const { error } = await sb.rpc('set_flat_fee_policy', {
+    p_client_id: clientId,
+    p_when_empty: whenEmpty,
+  })
+  if (error) {
+    const msg = `${error.message ?? ''} ${(error as { code?: string }).code ?? ''}`
+    //  PGRST202 = 그런 함수가 없음, 42883 = undefined_function
+    if (/PGRST202|42883|Could not find the function|does not exist/i.test(msg)) {
+      return { recorded: false }
+    }
+    throw new Error(error.message)
+  }
+  return { recorded: true }
 }
 
 /** 자재 입고 (0043) — 재고를 상대값으로 늘립니다. 동시에 넣어도 둘 다 더해집니다. */
@@ -1406,7 +1438,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 43
+export const EXPECTED_SCHEMA_VERSION = 44
 
 /**
  * 서버 DB 의 스키마 버전.

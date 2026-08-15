@@ -149,6 +149,14 @@ export interface Client {
    *  수거가 있을 때만 청구하고, 0건인 달은 「확인 필요」로 돌립니다.
    */
   flatFeeWhenEmpty?: boolean
+  /**
+   * 위 정책을 **사람이 정한 시각** (0044). 비어 있으면 「아직 안 정함」입니다.
+   *
+   *  `flatFeeWhenEmpty === false` 하나로는 「아니오로 정했다」와 「아무도 안
+   *  정했다」를 구분할 수 없습니다. 구분이 안 되면 배출 없는 달에 월정액
+   *  거래처를 확정하지 못한 채 그 달만 엑셀로 넘어갑니다.
+   */
+  flatFeePolicyAt?: string | null
   /** 수거 가능시간 (0039) — 예: 평일 09:00~17:00 */
   collectTime?: string
   /** 처리장·처리업체 (0039) */

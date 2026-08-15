@@ -151,9 +151,15 @@ export function monthClose(data: AppData, month: string): MonthClose {
       needsCheck.push({
         ...base,
         canConfirm: false,
+        //  「확인해 주세요」만으로는 어디서 무엇을 하라는 건지 알 수 없어
+        //  결국 엑셀로 갑니다. 이미 정해 둔 곳과 아직 안 정한 곳을 나눠
+        //  갈 자리를 그대로 적습니다 (0044).
         reason:
           `월정액 계약(${flats.join('·')} 월 ${fee.toLocaleString('ko-KR')}원)인데 ` +
-          '이 달 수거 기록이 없습니다 — 계약서상 청구 대상인지 확인해 주세요',
+          '이 달 수거 기록이 없습니다 — ' +
+          (c.flatFeePolicyAt
+            ? '거래처 점검에서 「배출 없는 달은 청구 안 함」으로 정해 두셨습니다'
+            : '거래처 점검 화면에서 「배출 없는 달」 청구 여부를 한 번만 정해 주세요'),
       })
       continue
     }

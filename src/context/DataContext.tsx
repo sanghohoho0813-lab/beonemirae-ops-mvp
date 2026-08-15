@@ -64,6 +64,15 @@ interface DataContextValue {
     patch: Partial<Client>,
     opts?: { quiet?: boolean },
   ) => Promise<{ ok: boolean; error: string | null }>
+  /**
+   * 월정액 빈 달 정책을 사람이 정합니다 (0044).
+   *  `updateClient` 와 달리 **값이 그대로여도 「정했다」로 기록**합니다 —
+   *  「아니오」로 확인한 것과 아직 안 본 것은 다른 일이기 때문입니다.
+   */
+  setFlatFeePolicy: (
+    clientId: string,
+    whenEmpty: boolean,
+  ) => Promise<{ ok: boolean; error: string | null }>
   removeClient: (id: string) => void
   /** 거래 종료를 되돌립니다 (그만둔 거래처 → 다시 거래 중) */
   restoreClient: (id: string) => void
@@ -435,6 +444,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const before = data.clients.find((c) => c.id === id)
         const r = await runLive(async () => {
           await repo.updateClient(id, patch)
+          //  「배출 없는 달에도 청구」 체크를 **실제로 바꿨을 때만** 사람이
+          //  정한 것으로 기록합니다. 다른 칸만 고쳐 저장한 것은 판단이 아니므로
+          //  「정했다」로 만들지 않습니다 (계약서를 안 본 채 정한 것이 됩니다).
+          if (
+            patch.flatFeeWhenEmpty !== undefined &&
+            !!patch.flatFeeWhenEmpty !== !!before?.flatFeeWhenEmpty
+          ) {
+            await repo.setFlatFeePolicy(id, !!patch.flatFeeWhenEmpty)
+          }
           await repo.writeAudit({
             action: 'client.update',
             entity: 'clients',
@@ -455,6 +473,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ok: true, error: null }
     },
     [live, runLive, data.clients],
+  )
+
+  //  거래처 점검 화면의 「예 / 아니오」. 값이 안 바뀌어도 기록을 남깁니다 —
+  //  이미 「아니오」인 곳을 계약서 보고 「아니오」로 확인한 것도 판단입니다.
+  //  그걸 안 남기면 확인한 거래처를 매달 다시 묻게 되고, 알림은 곧 무시됩니다.
+  const setFlatFeePolicy = useCallback(
+    async (clientId: string, whenEmpty: boolean) => {
+      if (live) {
+        const r = await runLive(async () => {
+          const { recorded } = await repo.setFlatFeePolicy(clientId, whenEmpty)
+          if (!recorded) {
+            //  0044 를 아직 안 올린 DB. 삼키지 않고 그대로 말합니다.
+            throw new Error('이 DB 에는 아직 월정액 정책 기록 기능이 없습니다. RUN_30 을 실행해 주세요.')
+          }
+        })
+        return { ok: r.ok, error: r.error ?? null }
+      }
+      const at = new Date().toISOString()
+      setData((d) => ({
+        ...d,
+        clients: d.clients.map((c) =>
+          c.id === clientId ? { ...c, flatFeeWhenEmpty: whenEmpty, flatFeePolicyAt: at } : c,
+        ),
+      }))
+      return { ok: true, error: null }
+    },
+    [live, runLive],
   )
 
   /** 실사용에서는 삭제 대신 비활성화합니다 — 과거 수거 이력이 끊기지 않도록. */
@@ -1748,6 +1793,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       data,
       addClient,
       updateClient,
+      setFlatFeePolicy,
       removeClient,
       restoreClient,
       addNote,
@@ -1813,6 +1859,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       data,
       addClient,
       updateClient,
+      setFlatFeePolicy,
       removeClient,
       restoreClient,
       addNote,

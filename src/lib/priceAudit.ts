@@ -62,6 +62,18 @@ export interface PriceRow {
   taxMissing: string[]
   /** 결제일이 있는지 — 연체를 일 단위로 판정할 수 있는 근거 */
   hasDueDay: boolean
+  /**
+   * 월정액인데 「배출 없는 달에도 청구할지」를 아무도 안 정했음 (0044).
+   *
+   *  정하지 않으면 수거가 0건인 달에 서버가 확정을 거부합니다. 900만원짜리
+   *  계약이 그 달만 엑셀로 넘어갑니다. `false` 는 「아니오로 정했다」는
+   *  뜻이 아니라 기본값일 수도 있어서, 정한 시각이 있는지로 봅니다.
+   */
+  flatPolicyUndecided: boolean
+  /** 지금 정해져 있는 값 (정한 적 없으면 기본값 false 입니다) */
+  flatWhenEmpty: boolean
+  /** 지금 이 거래처에서 막혀 있는 일 — 화면에 그대로 나갑니다 */
+  blocked: string[]
   /** 확정 청구가 있었던 달 수 — 실제로 돈이 오간 곳부터 고치도록 */
   billedMonths: number
   /** 이 거래처의 완료 수거 건수 (전체 기간) */
@@ -78,6 +90,10 @@ export interface PriceAudit {
   taxMissing: PriceRow[]
   /** 그중 이미 청구가 나간 곳 — 이번 달 발행에서 바로 걸립니다 */
   taxMissingBilled: PriceRow[]
+  /** 월정액인데 빈 달 정책을 아무도 안 정한 거래처 (0044) */
+  flatUndecided: PriceRow[]
+  /** 그중 이미 청구가 나간 곳 — 다음 빈 달에 바로 막힙니다 */
+  flatUndecidedBilled: PriceRow[]
   /** 무엇이든 확인이 필요한 거래처 */
   needsCheck: PriceRow[]
   total: number
@@ -157,6 +173,14 @@ export function auditPricing(data: AppData): PriceAudit {
 
   const rows: PriceRow[] = data.clients.map((c) => {
     const { terms, onDefault, mode } = termsOf(c)
+    const taxMissing = taxMissingOf(c)
+    //  월정액이 있는 곳만 해당합니다. kg 단가 거래처는 수거가 0건이면
+    //  청구할 금액 자체가 없으므로 정할 것도 없습니다.
+    const flatPolicyUndecided = (mode === '월정액' || mode === '혼합') && !c.flatFeePolicyAt
+    const blocked: string[] = []
+    if (onDefault.length > 0) blocked.push(`${onDefault.join('·')} 기본 단가로 청구 중`)
+    if (taxMissing.length > 0) blocked.push(`세금계산서 못 만듦 (${taxMissing.join('·')})`)
+    if (flatPolicyUndecided) blocked.push('배출 없는 달 청구 여부 미정')
     return {
       clientId: c.id,
       clientName: c.name,
@@ -166,8 +190,11 @@ export function auditPricing(data: AppData): PriceAudit {
       paidSupplies: paidSuppliesOf(c),
       diaperVatPct: diaperVatPctOf(c),
       onDefault,
-      taxMissing: taxMissingOf(c),
+      taxMissing,
       hasDueDay: c.paymentDueDay != null,
+      flatPolicyUndecided,
+      flatWhenEmpty: !!c.flatFeeWhenEmpty,
+      blocked,
       billedMonths: billedByClient.get(c.id)?.size ?? 0,
       collections: doneByClient.get(c.id) ?? 0,
     }
@@ -176,7 +203,10 @@ export function auditPricing(data: AppData): PriceAudit {
   //  고쳐야 할 곳이 위로. 청구가 이미 나간 곳 → 수거가 있는 곳 → 나머지.
   //  「단가가 틀린 채 청구된다」가 「세금계산서를 못 끊는다」보다 급합니다 —
   //  앞은 병원에 틀린 금액이 나가는 일이고, 뒤는 발행이 미뤄지는 일입니다.
-  const weight = (r: PriceRow) => (r.onDefault.length > 0 ? 2 : r.taxMissing.length > 0 ? 1 : 0)
+  //  「배출 없는 달 정책 미정」은 세금계산서와 같은 무게로 둡니다 — 둘 다
+  //  「그 달에 못 끝낸다」는 이야기이고, 틀린 금액이 나가는 일보다는 뒤입니다.
+  const weight = (r: PriceRow) =>
+    r.onDefault.length > 0 ? 2 : r.taxMissing.length > 0 || r.flatPolicyUndecided ? 1 : 0
   rows.sort((a, b) => {
     const wa = weight(a)
     const wb = weight(b)
@@ -188,13 +218,16 @@ export function auditPricing(data: AppData): PriceAudit {
 
   const onDefault = rows.filter((r) => r.onDefault.length > 0)
   const taxMissing = rows.filter((r) => r.taxMissing.length > 0)
+  const flatUndecided = rows.filter((r) => r.flatPolicyUndecided)
   return {
     rows,
     onDefault,
     onDefaultBilled: onDefault.filter((r) => r.billedMonths > 0),
     taxMissing,
     taxMissingBilled: taxMissing.filter((r) => r.billedMonths > 0),
-    needsCheck: rows.filter((r) => r.onDefault.length > 0 || r.taxMissing.length > 0),
+    flatUndecided,
+    flatUndecidedBilled: flatUndecided.filter((r) => r.billedMonths > 0),
+    needsCheck: rows.filter((r) => r.blocked.length > 0),
     total: rows.length,
   }
 }

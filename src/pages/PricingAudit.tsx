@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, FileSpreadsheet, Pencil, Search, Tags } from 'lucide-react'
+import { AlertTriangle, CalendarX, FileSpreadsheet, Pencil, Search, Tags } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { PricingModal } from '../components/Settlement'
@@ -21,6 +21,7 @@ import type { Client } from '../types'
 //   단가가 없으면 → 기본 950원/kg 으로 조용히 청구됩니다
 //   사업자정보가 없으면 → 세금계산서를 못 끊습니다
 //   결제일이 없으면 → 연체를 「몇 개월」로만 셀 수 있습니다
+//   월정액 빈 달 정책이 미정이면 → 배출 0건인 달에 청구를 못 만듭니다 (0044)
 //
 //  그런데 이 셋을 확인하려면 거래처를 하나씩 열어야 했습니다. 거래처가
 //  스무 곳이면 스무 번입니다. 여기서 한 화면에 모으고, 급한 것부터
@@ -33,21 +34,31 @@ import type { Client } from '../types'
 type Filter = '확인 필요' | '전체' | '완료'
 
 export function PricingAudit() {
-  const { data, updateClient, savePricing } = useData()
+  const { data, updateClient, savePricing, setFlatFeePolicy } = useData()
   const audit = useMemo(() => auditPricing(data), [data])
   const [filter, setFilter] = useState<Filter>('확인 필요')
   const [query, setQuery] = useState('')
   const [priceOf, setPriceOf] = useState<Client | null>(null)
   const [taxOf, setTaxOf] = useState<Client | null>(null)
   const [taxDraft, setTaxDraft] = useState<TaxFieldValues>({})
+  const [flatBusy, setFlatBusy] = useState('')
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const need = (r: PriceRow) => r.onDefault.length > 0 || r.taxMissing.length > 0
     return audit.rows
-      .filter((r) => (filter === '전체' ? true : filter === '확인 필요' ? need(r) : !need(r)))
+      .filter((r) =>
+        filter === '전체' ? true : filter === '확인 필요' ? r.blocked.length > 0 : r.blocked.length === 0,
+      )
       .filter((r) => (q ? r.clientName.toLowerCase().includes(q) : true))
   }, [audit.rows, filter, query])
+
+  //  계약서를 보고 내린 판단입니다. 값이 그대로여도 「정했다」로 기록해야
+  //  다음 달에 같은 거래처를 다시 묻지 않습니다.
+  const decideFlat = async (clientId: string, whenEmpty: boolean) => {
+    setFlatBusy(clientId)
+    await setFlatFeePolicy(clientId, whenEmpty)
+    setFlatBusy('')
+  }
 
   const openTax = (clientId: string) => {
     const c = data.clients.find((x) => x.id === clientId)
@@ -68,21 +79,36 @@ export function PricingAudit() {
       <PageHeader title="거래처 점검" subtitle="청구·세금계산서에 빠진 값이 있는 곳" />
 
       {/* 요약 — 무엇이 몇 곳 남았는지 */}
-      <div data-price-summary className="card mb-4 grid grid-cols-3 divide-x divide-navy-100">
-        <div className="px-3 py-4 text-center">
+      {/*
+        칸 사이 선은 gap-px + 바탕색으로 긋습니다. divide-x 는 두 줄로 접히는
+        휴대폰에서 둘째 줄 첫 칸에도 선을 그어 어긋납니다.
+      */}
+      <div
+        data-price-summary
+        className="card mb-4 grid grid-cols-2 gap-px overflow-hidden bg-navy-100 sm:grid-cols-4"
+      >
+        <div className="bg-white px-3 py-4 text-center">
           <p className="t-label text-navy-500">거래처</p>
           <p className="t-stat mt-1 tabular-nums text-navy-900">{audit.total}곳</p>
         </div>
-        <div className="px-3 py-4 text-center">
+        <div className="bg-white px-3 py-4 text-center">
           <p className="t-label text-navy-500">기본 단가</p>
           <p className={`t-stat mt-1 tabular-nums ${audit.onDefault.length > 0 ? 'text-rose-500' : 'text-navy-900'}`}>
             {audit.onDefault.length}곳
           </p>
         </div>
-        <div className="px-3 py-4 text-center">
+        <div className="bg-white px-3 py-4 text-center">
           <p className="t-label text-navy-500">세금계산서</p>
           <p className={`t-stat mt-1 tabular-nums ${audit.taxMissing.length > 0 ? 'text-amber-600' : 'text-navy-900'}`}>
             {audit.taxMissing.length}곳
+          </p>
+        </div>
+        <div className="bg-white px-3 py-4 text-center">
+          <p className="t-label text-navy-500">월정액 정책</p>
+          <p
+            className={`t-stat mt-1 tabular-nums ${audit.flatUndecided.length > 0 ? 'text-amber-600' : 'text-navy-900'}`}
+          >
+            {audit.flatUndecided.length}곳
           </p>
         </div>
       </div>
@@ -129,6 +155,34 @@ export function PricingAudit() {
         </div>
       )}
 
+      {/*
+        0042 부터 배출이 0건인 달도 월정액으로 확정할 수 있습니다 — 단 그
+        거래처에 「배출 없어도 청구함」이 켜져 있어야 합니다. 아무도 안 정해
+        두면 그 달에 서버가 확정을 거부하고, 900만원짜리 계약이 그 달만
+        엑셀로 넘어갑니다. 확정을 눌러 보기 전에 여기서 먼저 보이게 합니다.
+      */}
+      {audit.flatUndecided.length > 0 && (
+        <div data-flat-warn className="card mb-4 border-amber-200 bg-amber-50/50 p-5">
+          <div className="flex items-start gap-2.5">
+            <CalendarX size={20} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.5} />
+            <div className="min-w-0 flex-1">
+              <p className="t-body font-extrabold text-navy-900">
+                월정액 거래처 {audit.flatUndecided.length}곳은 배출이 없는 달에 청구를 만들 수 없습니다
+              </p>
+              <p className="t-caption mt-1 break-keep">
+                「수거가 한 건도 없어도 월정액을 청구하는 계약인가」를 아직 아무도 정하지 않았습니다. 계약서마다
+                다르고 시스템이 짐작하면 안 되는 값이라, 각 거래처 카드에서 「청구함 / 청구 안 함」을 한 번만 정해
+                주시면 됩니다. 「청구 안 함」도 정한 것으로 기록되어 다시 묻지 않습니다.
+              </p>
+              <p className="t-caption mt-1.5 break-keep text-navy-500">
+                {audit.flatUndecided.slice(0, 6).map((r) => r.clientName).join(' · ')}
+                {audit.flatUndecided.length > 6 && ` 외 ${audit.flatUndecided.length - 6}곳`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/*  빈 칸을 찾는 자리와 채우는 자리가 같아야 합니다. */}
       <div className="mb-4">
         <ClientInfoPaste />
@@ -158,7 +212,7 @@ export function PricingAudit() {
           title={filter === '확인 필요' ? '확인할 거래처가 없습니다' : '해당하는 거래처가 없습니다'}
           subtitle={
             filter === '확인 필요'
-              ? '모든 거래처에 계약 단가와 세금계산서 정보가 들어가 있습니다.'
+              ? '계약 단가·세금계산서 정보가 다 들어가 있고, 월정액 빈 달 정책도 다 정해져 있습니다.'
               : '다른 조건으로 찾아 보세요.'
           }
         />
@@ -169,11 +223,13 @@ export function PricingAudit() {
               key={r.clientId}
               row={r}
               versions={priceVersionsOf(data, r.clientId)}
+              flatBusy={flatBusy === r.clientId}
               onPrice={() => {
                 const c = data.clients.find((x) => x.id === r.clientId)
                 if (c) setPriceOf(c)
               }}
               onTax={() => openTax(r.clientId)}
+              onFlat={(v) => void decideFlat(r.clientId, v)}
             />
           ))}
         </Stagger>
@@ -227,16 +283,21 @@ export function PricingAudit() {
 function Row({
   row,
   versions,
+  flatBusy,
   onPrice,
   onTax,
+  onFlat,
 }: {
   row: PriceRow
   versions: ReturnType<typeof priceVersionsOf>
+  flatBusy: boolean
   onPrice: () => void
   onTax: () => void
+  onFlat: (whenEmpty: boolean) => void
 }) {
   const warn = row.onDefault.length > 0
   const taxWarn = row.taxMissing.length > 0
+  const hasFlat = row.mode === '월정액' || row.mode === '혼합'
   const supplies = row.paidSupplies.filter((s) => s.own)
   return (
     <StaggerItem>
@@ -244,7 +305,7 @@ function Row({
           카드 자체에 표시를 달아야 화면 검증에서 이 행을 집을 수 있습니다. */}
       <div
         data-price-row={row.clientId}
-        className={`card p-4 ${warn ? 'border-rose-200' : taxWarn ? 'border-amber-200' : ''}`}
+        className={`card p-4 ${warn ? 'border-rose-200' : taxWarn || row.flatPolicyUndecided ? 'border-amber-200' : ''}`}
       >
         <div className="flex items-start justify-between gap-2">
           <span className="min-w-0 flex-1 font-extrabold text-navy-900">{row.clientName}</span>
@@ -318,6 +379,56 @@ function Row({
             </span>
           )}
         </div>
+
+        {/*
+          월정액이 있는 거래처에만 나옵니다. kg 단가만 쓰는 곳은 수거가 0건이면
+          청구할 금액 자체가 없으므로 정할 것이 없습니다.
+
+          「청구 안 함」도 눌러야 정해집니다 — 값이 이미 꺼져 있어도, 계약서를
+          보고 확인한 것과 아무도 안 본 것은 다른 일이기 때문입니다.
+        */}
+        {hasFlat && (
+          <div
+            data-flat-policy={row.clientId}
+            className="mt-2.5 border-t border-navy-100 pt-2.5"
+          >
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="t-caption shrink-0 text-navy-500">배출 없는 달</span>
+              {row.flatPolicyUndecided ? (
+                <span data-flat-undecided={row.clientId} className="pill bg-amber-100 text-amber-700">
+                  아직 안 정함
+                </span>
+              ) : (
+                <span data-flat-decided={row.clientId} className="pill bg-emerald-50 text-emerald-600">
+                  {row.flatWhenEmpty ? '월정액 청구함' : '청구 안 함'}
+                </span>
+              )}
+            </div>
+            {row.flatPolicyUndecided && (
+              <p className="t-muted mt-1 break-keep">
+                수거가 한 건도 없는 달에도 월정액을 청구하는 계약인가요? 정해 두지 않으면 그 달은 확정이 막힙니다.
+              </p>
+            )}
+            <div className="mt-1.5 flex gap-2">
+              <button
+                data-flat-yes={row.clientId}
+                className={row.flatWhenEmpty && !row.flatPolicyUndecided ? 'btn-primary' : 'btn-ghost'}
+                disabled={flatBusy}
+                onClick={() => onFlat(true)}
+              >
+                청구함
+              </button>
+              <button
+                data-flat-no={row.clientId}
+                className={!row.flatWhenEmpty && !row.flatPolicyUndecided ? 'btn-primary' : 'btn-ghost'}
+                disabled={flatBusy}
+                onClick={() => onFlat(false)}
+              >
+                청구 안 함
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-2">
           <p className="t-muted min-w-0">
