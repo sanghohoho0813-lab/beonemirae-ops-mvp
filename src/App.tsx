@@ -37,6 +37,8 @@ import { Requests } from './pages/Requests'
 import { PortalLayout } from './components/PortalLayout'
 import { PortalHome } from './pages/PortalHome'
 import { PortalReport } from './pages/PortalReport'
+import { PortalSupplies } from './pages/PortalSupplies'
+import { Supplies } from './pages/Supplies'
 import { PortalHistory } from './pages/PortalHistory'
 import { RequireAuth } from './components/RequireAuth'
 import { TourOverlay } from './components/TourOverlay'
@@ -83,6 +85,7 @@ export default function App() {
           <Route index element={<PortalHome />} />
           <Route path="report" element={<PortalReport />} />
           <Route path="history" element={<PortalHistory />} />
+          <Route path="supplies" element={<PortalSupplies />} />
         </Route>
 
         {/* 아래 모든 운영 화면은 로그인 + 역할 확인을 거칩니다.
@@ -108,6 +111,7 @@ export default function App() {
           <Route path="billing" element={<MonthClose />} />
           <Route path="pricing" element={<PricingAudit />} />
           <Route path="revenue" element={<Revenue />} />
+          <Route path="supplies" element={<Supplies />} />
           <Route path="bank" element={<BankMatch />} />
           <Route path="stats" element={<Statistics />} />
           <Route path="reports" element={<Reports />} />

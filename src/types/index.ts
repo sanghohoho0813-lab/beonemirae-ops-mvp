@@ -187,6 +187,59 @@ export interface Staff {
   note: string
 }
 
+// ── 소모품 판매 (0048) ───────────────────────────────────────────────────────
+//
+//  쇼핑몰이 아니라 **수거연계 판매**입니다. 어차피 가는 차가 물건을 싣고
+//  가면 배송비가 0 이고, 병원은 따로 주문할 데를 찾지 않습니다.
+export type ProductOrderStatus = '요청' | '확인' | '준비' | '전달예정' | '전달완료' | '취소'
+
+export interface Product {
+  id: string
+  name: string
+  spec: string
+  unit: string
+  salePrice: number
+  costPrice: number
+  /** 사무실 재고의 어느 칸에서 빠지는가. null = 재고를 두지 않는 물건 */
+  stockKey: string | null
+  available: boolean
+  imageUrl: string
+  description: string
+  active: boolean
+}
+
+export interface ProductOrderItem {
+  id: number
+  orderId: string
+  productId: string | null
+  name: string
+  spec: string
+  unit: string
+  qty: number
+  /** 주문 시점의 단가 — 상품가가 나중에 바뀌어도 이 값은 안 바뀝니다 */
+  unitPrice: number
+  unitCost: number
+  stockKey: string | null
+}
+
+export interface ProductOrder {
+  id: string
+  clientId: string
+  status: ProductOrderStatus
+  requesterName: string
+  source: 'portal' | 'staff'
+  note: string
+  /** 「다음 수거 때 같이」 — 그 방문 일정 */
+  deliverScheduleId: string | null
+  deliverOn: string | null
+  requestedAt: string
+  confirmedAt: string | null
+  deliveredAt: string | null
+  canceledAt: string | null
+  cancelReason: string
+  items: ProductOrderItem[]
+}
+
 /** 부가세 처리 방식 — 청구액이 공급가액인지 합계인지는 계약마다 다릅니다 */
 export type VatMode = '별도' | '포함' | '면세'
 
@@ -385,6 +438,10 @@ export interface AppData {
   holidays?: Holiday[]
   /** 우리 직원 명부 (0047). 이름·담당만 — 주민등록번호는 담지 않습니다 */
   staff?: Staff[]
+  /** 파는 소모품 (0048) */
+  products?: Product[]
+  /** 소모품 주문 (0048). 병원은 자기 것만 내려받습니다 (RLS) */
+  productOrders?: ProductOrder[]
   /**
    * 국세청에 신고한 부가가치세 과세표준 (0047).
    *

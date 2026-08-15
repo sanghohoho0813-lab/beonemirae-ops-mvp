@@ -23,6 +23,8 @@ import type {
   SalesLead,
   RequestKind,
   RequestStatus,
+  Product,
+  ProductOrderStatus,
 } from '../types'
 import { EMPTY_APP_DATA } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
@@ -82,6 +84,23 @@ interface DataContextValue {
     clientId: string,
     whenEmpty: boolean,
   ) => Promise<{ ok: boolean; error: string | null }>
+  /** 소모품 주문 올리기 (0048). 금액은 서버가 계산합니다 */
+  requestProductOrder: (input: {
+    clientId: string
+    items: { productId: string; qty: number }[]
+    note?: string
+    deliverScheduleId?: string | null
+    deliverOn?: string | null
+    requestId?: string | null
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 주문 상태 옮기기. 재고는 서버가 전달완료에서 한 번만 뺍니다 */
+  setProductOrderStatus: (
+    orderId: string,
+    status: ProductOrderStatus,
+    reason?: string,
+  ) => Promise<{ ok: boolean; error: string | null }>
+  /** 상품 등록·수정 (관리자) */
+  saveProduct: (p: Partial<Product> & { name: string }) => Promise<{ ok: boolean; error: string | null }>
   removeClient: (id: string) => void
   /** 거래 종료를 되돌립니다 (그만둔 거래처 → 다시 거래 중) */
   restoreClient: (id: string) => void
@@ -525,6 +544,50 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ),
       }))
       return { ok: true, error: null }
+    },
+    [live, runLive],
+  )
+
+  // ── 소모품 판매 (0048) ────────────────────────────────────────────────
+  //
+  //  화면은 **재고를 건드리지 않습니다.** 서버가 전달완료에서 한 번만 뺍니다.
+  //  여기서 재고를 같이 만지면 두 번 빠지는 자리가 생깁니다.
+  const requestProductOrder = useCallback(
+    async (input: {
+      clientId: string
+      items: { productId: string; qty: number }[]
+      note?: string
+      deliverScheduleId?: string | null
+      deliverOn?: string | null
+      requestId?: string | null
+    }) => {
+      if (!live) return { ok: false, error: '서버에 연결되어 있지 않습니다.' }
+      const r = await runLive(async () => {
+        await repo.requestProductOrder(input)
+      })
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive],
+  )
+
+  const setProductOrderStatus = useCallback(
+    async (orderId: string, status: ProductOrderStatus, reason = '') => {
+      if (!live) return { ok: false, error: '서버에 연결되어 있지 않습니다.' }
+      const r = await runLive(async () => {
+        await repo.setProductOrderStatus(orderId, status, reason)
+      })
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive],
+  )
+
+  const saveProduct = useCallback(
+    async (p: Partial<Product> & { name: string }) => {
+      if (!live) return { ok: false, error: '서버에 연결되어 있지 않습니다.' }
+      const r = await runLive(async () => {
+        await repo.upsertProduct(p)
+      })
+      return { ok: r.ok, error: r.error ?? null }
     },
     [live, runLive],
   )
@@ -1821,6 +1884,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addClient,
       updateClient,
       setFlatFeePolicy,
+      requestProductOrder,
+      setProductOrderStatus,
+      saveProduct,
       removeClient,
       restoreClient,
       addNote,
@@ -1887,6 +1953,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addClient,
       updateClient,
       setFlatFeePolicy,
+      requestProductOrder,
+      setProductOrderStatus,
+      saveProduct,
       removeClient,
       restoreClient,
       addNote,

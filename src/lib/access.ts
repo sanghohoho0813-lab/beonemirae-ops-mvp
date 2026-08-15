@@ -34,6 +34,9 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   //  매출 현황 — 회사 매출·예상 연매출. 현장에는 열지 않습니다.
   { prefix: '/revenue', roles: ['admin', 'office'] },
   { prefix: '/receivables', roles: ['admin', 'office'] },
+  //  소모품 주문 — 판매가·원가·이익이 붙습니다. 현장에는 열지 않습니다.
+  //  (현장은 오늘 일정의 「전달할 물품」 줄로 필요한 것만 봅니다)
+  { prefix: '/supplies', roles: ['admin', 'office'] },
   //  청구·통장 대사는 돈 기록입니다 — 사무실·관리자만.
   { prefix: '/billing', roles: ['admin', 'office'] },
   //  단가는 청구 금액을 정하는 값입니다 — 현장에는 열지 않습니다.

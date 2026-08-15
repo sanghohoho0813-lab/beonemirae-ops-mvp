@@ -74,6 +74,11 @@ export const SNAPSHOT_TABLES: SnapshotTable[] = [
   { name: 'audit_logs', label: '감사기록', order: 'id', core: true },
   { name: 'experiment_settings', label: 'AX 실증 설정', order: 'id', core: false },
   { name: 'performance_baselines', label: 'AX 기준값', order: 'id', core: false },
+  //  소모품 판매 (0048) — 주문은 돈입니다. 거래처·수거 일정을 가리키므로
+  //  그 뒤에 옵니다.
+  { name: 'products', label: '판매 물품', order: 'id', core: true },
+  { name: 'product_orders', label: '소모품 주문', order: 'id', core: true },
+  { name: 'product_order_items', label: '주문 줄', order: 'id', core: true },
   //  국세청 신고 매출 — 증명서를 다시 뽑으면 되지만, 넣어 둔 것을 잃으면
   //  전년 동기 비교가 통째로 사라집니다. 업무 자료로 담습니다.
   { name: 'tax_filings', label: '신고 매출', order: 'id', core: true },
@@ -88,6 +93,7 @@ export const SNAPSHOT_TABLES: SnapshotTable[] = [
  */
 export const PROFILE_REFS: Record<string, string[]> = {
   staff: ['profile_id'],
+  product_orders: ['created_by', 'updated_by'],
   clients: ['created_by', 'updated_by'],
   materials: ['created_by'],
   material_transactions: ['created_by'],

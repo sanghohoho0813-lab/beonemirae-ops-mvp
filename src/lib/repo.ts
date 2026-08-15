@@ -18,6 +18,10 @@ import type {
   PaymentReceipt,
   RevenueOverride,
   Staff,
+  Product,
+  ProductOrder,
+  ProductOrderItem,
+  ProductOrderStatus,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry } from './supabase'
@@ -334,6 +338,20 @@ export async function loadAppData(): Promise<AppData> {
     [] as Row[],
   )
 
+  //  파는 소모품과 주문 (0048). 병원은 RLS 로 자기 주문만 내려받습니다.
+  const products = await soft(
+    async () => pageAll((f, t) => sb.from('products').select('*').order('sort').range(f, t)),
+    [] as Row[],
+  )
+  const orderRows = await soft(
+    async () => pageAll((f, t) => sb.from('product_orders').select('*').order('requested_at').range(f, t)),
+    [] as Row[],
+  )
+  const orderItemRows = await soft(
+    async () => pageAll((f, t) => sb.from('product_order_items').select('*').order('id').range(f, t)),
+    [] as Row[],
+  )
+
   //  우리 직원 명부 (0047). 이름·담당만 담고 주민등록번호는 담지 않습니다.
   const staff = await soft(
     async () => pageAll((f, t) => sb.from('staff').select('*').order('insured_from').range(f, t)),
@@ -410,6 +428,52 @@ export async function loadAppData(): Promise<AppData> {
         actorName: r.actor_name ?? '',
         createdAt: r.created_at,
         sourceRef: r.source_ref ?? null,
+      }),
+    ),
+    products: products.map(
+      (r): Product => ({
+        id: r.id,
+        name: r.name,
+        spec: r.spec ?? '',
+        unit: r.unit ?? '개',
+        salePrice: Number(r.sale_price ?? 0),
+        costPrice: Number(r.cost_price ?? 0),
+        stockKey: r.stock_key ?? null,
+        available: !!r.available,
+        imageUrl: r.image_url ?? '',
+        description: r.description ?? '',
+        active: !!r.active,
+      }),
+    ),
+    productOrders: orderRows.map(
+      (r): ProductOrder => ({
+        id: r.id,
+        clientId: r.client_id,
+        status: r.status,
+        requesterName: r.requester_name ?? '',
+        source: r.source ?? 'portal',
+        note: r.note ?? '',
+        deliverScheduleId: r.deliver_schedule_id ?? null,
+        deliverOn: r.deliver_on ?? null,
+        requestedAt: r.requested_at,
+        confirmedAt: r.confirmed_at ?? null,
+        deliveredAt: r.delivered_at ?? null,
+        canceledAt: r.canceled_at ?? null,
+        cancelReason: r.cancel_reason ?? '',
+        items: orderItemRows
+          .filter((i) => i.order_id === r.id)
+          .map((i): ProductOrderItem => ({
+            id: Number(i.id),
+            orderId: i.order_id,
+            productId: i.product_id ?? null,
+            name: i.name,
+            spec: i.spec ?? '',
+            unit: i.unit ?? '개',
+            qty: Number(i.qty ?? 0),
+            unitPrice: Number(i.unit_price ?? 0),
+            unitCost: Number(i.unit_cost ?? 0),
+            stockKey: i.stock_key ?? null,
+          })),
       }),
     ),
     staff: staff.map(
@@ -596,6 +660,97 @@ export async function createClient(
     throw new Error(error.message)
   }
   return data as CreateClientResult
+}
+
+// ── 소모품 판매 (0048) ───────────────────────────────────────────────────────
+
+/** 병원 주문 올리기. 금액은 서버가 상품표를 보고 계산합니다 */
+export async function requestProductOrder(input: {
+  clientId: string
+  items: { productId: string; qty: number }[]
+  note?: string
+  deliverScheduleId?: string | null
+  deliverOn?: string | null
+  requestId?: string | null
+}): Promise<{ id: string; alreadySaved: boolean; itemCount: number; total: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('request_product_order', {
+    p_client_id: input.clientId,
+    p_items: input.items,
+    p_note: input.note ?? '',
+    p_deliver_schedule_id: input.deliverScheduleId ?? null,
+    p_deliver_on: input.deliverOn ?? null,
+    p_request_id: input.requestId ?? null,
+  })
+  if (error) throw new Error(error.message)
+  return data as { id: string; alreadySaved: boolean; itemCount: number; total: number }
+}
+
+/**
+ * 주문 상태 옮기기.
+ *  재고는 서버가 **전달완료에서 한 번만** 뺍니다 — 화면이 재고를 건드리지
+ *  않습니다. 다시 눌러도 `alreadyDone: true` 로 조용히 끝납니다.
+ */
+export async function setProductOrderStatus(
+  orderId: string,
+  status: ProductOrderStatus,
+  reason = '',
+): Promise<{ status: string; alreadyDone: boolean; stockMoved: boolean }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('set_product_order_status', {
+    p_order_id: orderId,
+    p_status: status,
+    p_reason: reason,
+  })
+  if (error) throw new Error(error.message)
+  return data as { status: string; alreadyDone: boolean; stockMoved: boolean }
+}
+
+export async function upsertProduct(p: Partial<Product> & { name: string }): Promise<{ id: string }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('upsert_product', {
+    p_id: p.id ?? null,
+    p_name: p.name,
+    p_spec: p.spec ?? '',
+    p_unit: p.unit ?? '개',
+    p_sale: p.salePrice ?? 0,
+    p_cost: p.costPrice ?? 0,
+    p_stock_key: p.stockKey ?? null,
+    p_available: p.available ?? true,
+    p_desc: p.description ?? '',
+    p_image: p.imageUrl ?? '',
+  })
+  if (error) throw new Error(error.message)
+  return data as { id: string }
+}
+
+export interface ProductSales {
+  from: string
+  to: string
+  orders: number
+  clients: number
+  revenue: number
+  cost: number
+  profit: number
+  /** 수거 방문에 실어 보낸 주문 수 — 이 사업모델이 실제로 도는지의 지표 */
+  withPickup: number
+  //  아래 둘은 0049 부터 옵니다. 그 전 서버에서는 **없습니다** — 없는 것을
+  //  0 으로 바꿔 보여 주면 「아무도 다시 안 샀다」는 거짓말이 됩니다.
+  /** 그전에도 받아 간 적이 있는 거래처 수 — 한 번은 호의, 두 번째부터가 매출 */
+  repeatClients?: number
+  /** 그 거래처의 첫 주문이 아닌 주문 수 */
+  repeatOrders?: number
+}
+
+/** 판매 실적 — **전달완료만** 셉니다. 수거 매출과 섞지 않습니다 */
+export async function productSales(from: string, to: string): Promise<ProductSales | null> {
+  const sb = supabase
+  if (!sb) return null
+  const { data, error } = await sb.rpc('product_sales_summary', { p_from: from, p_to: to })
+  if (error) return null
+  const r = data as Partial<ProductSales> | null
+  if (!r || typeof r.revenue !== 'number') return null
+  return r as ProductSales
 }
 
 /** 등록 직후 화면이 쓰는 거래처 한 줄 */
@@ -1595,7 +1750,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 48
+export const EXPECTED_SCHEMA_VERSION = 49
 
 /**
  * 서버 DB 의 스키마 버전.

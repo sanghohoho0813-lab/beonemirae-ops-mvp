@@ -184,6 +184,15 @@ export function TodaySchedule() {
       */}
       <TodayHandlers data={data} list={list} />
 
+      {/*
+        오늘 방문하는 병원에 **가져다 줄 물품**이 있으면 현장이 알아야 합니다.
+        모르면 빈손으로 갔다가 다시 가야 하고, 그 순간 이 사업모델의 장점
+        (어차피 가는 차)이 사라집니다.
+
+        금액은 안 적습니다 — 현장 화면에 금액을 두지 않는 규칙 그대로입니다.
+      */}
+      <TodayDeliveries data={data} list={list} />
+
       {/* 모바일 — 폰을 열면 가장 먼저 "다음에 어디로 가는가" */}
       <NextVisitCard data={data} list={list} notesFor={notesFor} />
 
@@ -596,6 +605,43 @@ function TodayHandlers({ data, list }: { data: AppData; list: Schedule[] }) {
           <span className="t-caption text-navy-600">{r.names.join(' · ')}</span>
         </span>
       ))}
+    </div>
+  )
+}
+
+/**
+ * 오늘 가져다 줄 물품.
+ *
+ *  「확인·준비·전달예정」인 주문만 봅니다. 아직 확인 안 한 요청을 현장에
+ *  보내면 사무실이 거절할 것을 싣고 가게 됩니다.
+ */
+function TodayDeliveries({ data, list }: { data: AppData; list: Schedule[] }) {
+  const ids = new Set(list.map((s) => s.id))
+  const clientIds = new Set(list.map((s) => s.clientId))
+  const rows = (data.productOrders ?? []).filter(
+    (o) =>
+      ['확인', '준비', '전달예정'].includes(o.status) &&
+      (o.deliverScheduleId ? ids.has(o.deliverScheduleId) : clientIds.has(o.clientId)),
+  )
+  if (rows.length === 0) return null
+
+  const nameOf = (id: string) => data.clients.find((c) => c.id === id)?.name ?? '거래처'
+  return (
+    <div data-today-deliveries className="card border-teal-200 bg-teal-50/50 p-4 sm:p-5">
+      <p className="t-body font-extrabold text-navy-900">오늘 전달할 물품이 있습니다 — {rows.length}건</p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {rows.map((o) => (
+          <li key={o.id} data-today-delivery={o.id} className="t-body break-keep text-navy-800">
+            <b>{nameOf(o.clientId)}</b>{' '}
+            <span className="text-navy-600">
+              {o.items.map((i) => `${i.name} ${i.spec} ${i.qty}${i.unit}`).join(' · ')}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="t-muted mt-2 break-keep">
+        차에 실으셨는지 확인해 주세요. 전달을 마치면 사무실에서 「전달완료」로 바꿉니다.
+      </p>
     </div>
   )
 }

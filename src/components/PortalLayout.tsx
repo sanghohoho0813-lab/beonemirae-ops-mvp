@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Building2, FileBarChart, History, Headset, LogOut, type LucideIcon } from 'lucide-react'
+import { PackageCheck, Building2, FileBarChart, History, Headset, LogOut, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
@@ -24,6 +24,7 @@ interface Item {
 
 const NAV: Item[] = [
   { to: '/portal', label: '우리 병원 현황', short: '현황', icon: Building2 },
+  { to: '/portal/supplies', label: '필요한 물품', short: '물품', icon: PackageCheck },
   { to: '/portal/report', label: '월간 리포트', short: '리포트', icon: FileBarChart },
   { to: '/portal/history', label: '수거 이력', short: '이력', icon: History },
 ]
