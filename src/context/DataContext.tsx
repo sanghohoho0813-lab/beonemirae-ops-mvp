@@ -32,7 +32,7 @@ import {
   type CollectionCompletionInput,
   type CommandResult,
 } from '../lib/collection'
-import { buildBillingSnapshot, itemsOf, stockDeltaOf } from '../lib/billing'
+import { buildBillingSnapshot } from '../lib/billing'
 import { resetDemoSession, startDemoSession, restoreTodayOnly } from '../lib/demo'
 import { leadKey } from '../lib/sales'
 import { outstandingOf, paidTotalOf } from '../lib/selectors'
@@ -96,7 +96,8 @@ interface DataContextValue {
   addMaterial: (m: Omit<MaterialSupply, 'id'>) => MaterialSupply
   removeMaterial: (id: string) => void
   /** 사무실 자재 입고 — 재고는 공급으로 줄기만 하므로 채우는 길이 필요합니다 */
-  receiveStock: (patch: Partial<OfficeStock>, memo: string) => void
+  /** 자재 입고 — requestId 는 저장 시도 표(0043). 다시 눌러도 두 번 늘지 않습니다 */
+  receiveStock: (patch: Partial<OfficeStock>, memo: string, requestId?: string | null) => void
   // 결제
   addPayment: (p: Omit<Payment, 'id'>) => Payment
   /** 월 정산을 확인한 뒤 청구로 확정합니다 (금액·명세서를 그 순간으로 고정) */
@@ -241,12 +242,6 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null)
 
 /** 사무실 재고 4칸의 화면 이름 (감사기록에 그대로 적습니다) */
-const STOCK_LABEL: Record<keyof OfficeStock, string> = {
-  corrugatedBox: '골판지 전용박스',
-  plasticContainer: '합성수지 전용용기',
-  bag: '전용 봉투',
-  needleBox: '합성수지 바늘통',
-}
 
 /**
  * 감사기록에 남길 거래처 이름 — 그만둔 거래처도 찾습니다.
@@ -1230,21 +1225,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         //  남는데, 자재 화면의 공급 등록은 둘 다 하지 않았습니다. 그러면
         //  재고 숫자가 조용히 실제와 어긋나고, 「자재 소진 위험」도 틀립니다.
         //  같은 사실은 같은 결과가 되도록 여기서도 줄이고 원장에 남깁니다.
-        const delta = stockDeltaOf(itemsOf(m as MaterialSupply))
-        const name = findClientName(data, m.clientId)
+        //  서버 함수 하나가 기록·재고 차감·원장·감사기록을 한 트랜잭션에서
+        //  합니다 (0043). 예전에는 여기서 네 번 따로 불렀고, 재고를 **화면이
+        //  아는 옛 값에서 뺀 절대값**으로 썼습니다 — 두 사람이 같은 순간에
+        //  넣으면 한쪽 차감이 통째로 사라졌고, 중간에 끊기면 자재만 남았습니다.
         void runLive(async () => {
-          const created = await repo.insertMaterial(m)
-          const moved = (Object.keys(delta) as (keyof typeof delta)[]).filter((k) => delta[k] > 0)
-          if (moved.length) {
-            const next: Partial<OfficeStock> = {}
-            for (const k of moved) next[k] = (data.officeStock?.[k] ?? 0) - delta[k]
-            await repo.adjustStock(next, '공급', `자재 화면에서 ${name} 공급 등록`, m.clientId, created.id)
-          }
-          await repo.writeAudit({
-            action: 'material.supply',
-            entity: 'materials',
+          await repo.supplyMaterials({
             clientId: m.clientId,
-            summary: `자재 공급 기록 — 박스 ${m.boxCount} · 비닐 ${m.vinylCount} · 바늘통 ${m.needleBoxCount}`,
+            date: m.date,
+            boxCount: m.boxCount,
+            vinylCount: m.vinylCount,
+            needleBoxCount: m.needleBoxCount,
+            isAdditionalRequest: m.isAdditionalRequest,
+            memo: m.memo,
+            requestId: m.requestId ?? null,
           })
         })
         return material
@@ -1261,7 +1255,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   //  됩니다. 더원요양병원 한 달 사용량(63L 180개·12L 400개·비닐 800개)이면
   //  지금 재고로는 한 달을 못 넘깁니다. 원장에는 '입고' 로 남깁니다.
   const receiveStock = useCallback(
-    (patch: Partial<OfficeStock>, memo: string) => {
+    (patch: Partial<OfficeStock>, memo: string, requestId?: string | null) => {
       const next: Partial<OfficeStock> = {}
       for (const [k, v] of Object.entries(patch)) {
         const add = Number(v ?? 0)
@@ -1269,15 +1263,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       if (Object.keys(next).length === 0) return
       if (live) {
+        //  0043 — 서버가 **상대값**으로 더합니다. 두 사람이 같은 순간에
+        //  50개씩 넣으면 100개가 늘어야 하는데, 예전에는 「내가 아는 재고 +
+        //  넣을 양」을 절대값으로 써서 50개만 늘었습니다.
         void runLive(async () => {
-          await repo.adjustStock(next, '입고', memo || '자재 입고')
-          await repo.writeAudit({
-            action: 'stock.receive',
-            entity: 'office_stock',
-            summary: `자재 입고 — ${Object.entries(patch)
-              .filter(([, v]) => Number(v ?? 0) > 0)
-              .map(([k, v]) => `${STOCK_LABEL[k as keyof OfficeStock]} +${v}`)
-              .join(' · ')}${memo ? ` (${memo})` : ''}`,
+          await repo.receiveStockRpc({
+            corrugatedBox: Number(patch.corrugatedBox ?? 0),
+            plasticContainer: Number(patch.plasticContainer ?? 0),
+            bag: Number(patch.bag ?? 0),
+            needleBox: Number(patch.needleBox ?? 0),
+            memo: memo || '자재 입고',
+            requestId: requestId ?? null,
           })
         })
         return

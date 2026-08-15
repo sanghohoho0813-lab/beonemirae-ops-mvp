@@ -38,6 +38,7 @@ import { exportData, parseImportFile } from '../lib/backup'
 import { exportTables, downloadCsv } from '../lib/exportData'
 import { downloadSnapshot, snapshotRowCount, snapshotSummary, SNAPSHOT_EXCLUDED } from '../lib/snapshot'
 import { rawSnapshot } from '../lib/repo'
+import { HealthCard } from '../components/HealthCard'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { prettyDate, today } from '../lib/format'
 
@@ -416,6 +417,15 @@ export function Settings() {
 
         {/* ── 우: 데이터 관리 ── */}
         <div className="space-y-4 xl:space-y-5">
+          {/*
+            서버 자가진단 — 판 번호만으로는 알 수 없는 것.
+
+             위쪽 안내는 숫자 하나만 비교합니다. 그 숫자가 맞아도 정책이
+             지워졌거나 색인이 사라졌으면 돈이 두 번 들어갈 수 있습니다.
+             서버가 직접 세어 보고, 없으면 이름을 그대로 보여 줍니다.
+          */}
+          <HealthCard />
+
           {/*
             전체 스냅샷.
 

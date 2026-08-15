@@ -34,6 +34,15 @@ export function Materials() {
   const { data, addMaterial, removeMaterial, clientById } = useData()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<Omit<MaterialSupply, 'id'>>(emptyForm)
+  /*
+    저장 시도 표 (0043).
+
+     자재 공급은 재고를 줄이고 **월말 청구에 자재비로 들어갑니다.** 통신이
+     끊긴 줄 알고 다시 누르면 예전에는 두 줄이 됐고, 그 달 청구에 자재비가
+     두 배로 들어갔습니다. 창을 열 때 표를 하나 만들고 실패해서 다시 눌러도
+     같은 표를 냅니다 — 서버가 「같은 저장」임을 알아봅니다.
+  */
+  const [requestId, setRequestId] = useState('')
 
   const sorted = useMemo(
     () => [...data.materials].sort((a, b) => b.date.localeCompare(a.date)),
@@ -87,11 +96,14 @@ export function Materials() {
       )
       if (!okToAdd) return
     }
+    //  저장 시도 표 (0043) — 통신이 끊겨 다시 눌러도 두 줄이 되지 않게.
+    //  창을 열 때 만든 표를 그대로 보냅니다. 자재는 청구에 들어갑니다.
     addMaterial({
       ...form,
       boxCount: Number(form.boxCount),
       vinylCount: Number(form.vinylCount),
       needleBoxCount: Number(form.needleBoxCount),
+      requestId,
     })
     setForm(emptyForm)
     setOpen(false)
@@ -103,7 +115,7 @@ export function Materials() {
         title="자재 관리"
         subtitle="박스 · 비닐 · 합성수지 바늘통"
         action={
-          <button className="btn-primary" onClick={() => { setForm(emptyForm); setOpen(true) }}>
+          <button className="btn-primary" onClick={() => { setForm(emptyForm); setRequestId(crypto.randomUUID()); setOpen(true) }}>
             ＋ 공급 등록
           </button>
         }

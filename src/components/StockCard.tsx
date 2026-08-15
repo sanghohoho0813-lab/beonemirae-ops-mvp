@@ -33,6 +33,9 @@ export function StockCard() {
   const { data, receiveStock } = useData()
   const stock = data.officeStock
   const [add, setAdd] = useState<Record<string, string>>(EMPTY)
+  //  저장 시도 표 (0043) — 다시 눌러도 재고가 두 번 늘지 않게.
+  //  성공하면 새 표를 만듭니다(다음 입고는 따로 세어야 하므로).
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
   const [memo, setMemo] = useState('')
   const [done, setDone] = useState<string | null>(null)
 
@@ -45,7 +48,8 @@ export function StockCard() {
       const n = Number(add[f.key]) || 0
       if (n > 0) patch[f.key] = n
     }
-    receiveStock(patch, memo.trim())
+    receiveStock(patch, memo.trim(), requestId)
+    setRequestId(crypto.randomUUID())
     setDone(
       FIELDS.filter((f) => Number(add[f.key]) > 0)
         .map((f) => `${f.label} +${Number(add[f.key])}`)

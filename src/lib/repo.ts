@@ -656,6 +656,94 @@ export async function deleteMaterial(id: string): Promise<Record<string, number>
   return ((data as { restored?: Record<string, number> } | null)?.restored ?? {}) as Record<string, number>
 }
 
+/**
+ * 자재 공급 (0043) — 기록·재고 차감·원장·감사기록을 서버가 한 번에.
+ *
+ *  예전에는 화면이 네 번 따로 불렀습니다. 그 사이에 통신이 끊기면 자재는
+ *  기록됐는데 재고는 그대로였고, 두 사람이 같은 순간에 넣으면 한쪽 차감이
+ *  통째로 사라졌습니다(화면이 아는 옛 재고 값을 절대값으로 썼기 때문에).
+ *
+ *  requestId 는 「같은 저장 시도」를 알려 주는 표입니다 — 통신이 끊겨 다시
+ *  눌러도 두 줄이 되지 않습니다. 자재는 청구에 들어가므로 돈입니다.
+ */
+export async function supplyMaterials(input: {
+  clientId: string
+  date: string
+  boxCount: number
+  vinylCount: number
+  needleBoxCount: number
+  isAdditionalRequest?: boolean
+  memo?: string
+  requestId?: string | null
+}): Promise<{ id: string; alreadySaved: boolean }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('supply_materials', {
+    p_client_id: input.clientId,
+    p_date: input.date,
+    p_box: input.boxCount,
+    p_vinyl: input.vinylCount,
+    p_needle: input.needleBoxCount,
+    p_additional: input.isAdditionalRequest ?? false,
+    p_memo: input.memo ?? '',
+    p_request_id: input.requestId ?? null,
+  })
+  if (error) throw new Error(error.message)
+  return data as { id: string; alreadySaved: boolean }
+}
+
+/** 자재 입고 (0043) — 재고를 상대값으로 늘립니다. 동시에 넣어도 둘 다 더해집니다. */
+export async function receiveStockRpc(input: {
+  corrugatedBox?: number
+  plasticContainer?: number
+  bag?: number
+  needleBox?: number
+  memo?: string
+  requestId?: string | null
+}): Promise<{ alreadySaved: boolean; stock: Record<string, number> }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('receive_stock', {
+    p_box: input.corrugatedBox ?? 0,
+    p_plastic: input.plasticContainer ?? 0,
+    p_vinyl: input.bag ?? 0,
+    p_needle: input.needleBox ?? 0,
+    p_memo: input.memo ?? '',
+    p_request_id: input.requestId ?? null,
+  })
+  if (error) throw new Error(error.message)
+  return data as { alreadySaved: boolean; stock: Record<string, number> }
+}
+
+export interface HealthCheck {
+  version: number
+  ok: boolean
+  missing: string[]
+  checkedAt: string
+}
+
+/**
+ * DB 자가진단 (0043).
+ *
+ *  판 번호는 「마이그레이션 파일이 끝까지 돌았다」까지만 말해 줍니다. 그 뒤에
+ *  정책이 지워지거나 색인이 사라져도 숫자는 그대로입니다. 돈을 지키는 것들이
+ *  실제로 있는지 서버가 세어 **없는 것을 이름으로** 돌려줍니다. 관리자만.
+ */
+export async function healthCheck(): Promise<HealthCheck | null> {
+  const sb = supabase
+  if (!sb) return null
+  const { data, error } = await sb.rpc('app_health_check')
+  //  0043 이전 DB 에는 이 함수가 없습니다 — 그건 「고장」이 아니라 「구버전」이고,
+  //  위쪽 판 번호 안내가 이미 그 이야기를 하고 있습니다.
+  if (error) return null
+  //  모양이 다르면 못 읽은 것으로 봅니다.
+  //
+  //   여기서 그냥 통과시키면 화면이 `missing.map` 을 부르다 터지고, **설정
+  //   화면 전체가 하얗게** 됩니다 — 백업도 내보내기도 못 하게 됩니다.
+  //   진단 하나 때문에 나머지를 잃을 이유가 없습니다.
+  const h = data as Partial<HealthCheck> | null
+  if (!h || typeof h.ok !== 'boolean' || !Array.isArray(h.missing)) return null
+  return h as HealthCheck
+}
+
 export async function adjustStock(
   patch: Partial<OfficeStock>,
   kind: '입고' | '조정' | '공급',
@@ -1318,7 +1406,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 42
+export const EXPECTED_SCHEMA_VERSION = 43
 
 /**
  * 서버 DB 의 스키마 버전.
