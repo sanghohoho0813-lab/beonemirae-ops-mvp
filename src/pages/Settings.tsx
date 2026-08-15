@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
@@ -20,6 +20,7 @@ import {
   KeyRound,
   ArrowRight,
   type LucideIcon,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -34,6 +35,7 @@ import { PageHeader } from '../components/PageHeader'
 import { FontSizeControl } from '../components/FontSizeControl'
 import { Modal } from '../components/Modal'
 import { exportData, parseImportFile } from '../lib/backup'
+import { exportTables, downloadCsv } from '../lib/exportData'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { prettyDate, today } from '../lib/format'
 
@@ -132,6 +134,20 @@ export function Settings() {
     setBaseline({ [key]: next, source: 'user' } as Partial<BaselineMetrics>)
   }
   const fileRef = useRef<HTMLInputElement>(null)
+
+  //  내려받을 수 있는 표들. 자료가 바뀌면 줄 수도 함께 바뀝니다.
+  const tables = useMemo(() => exportTables(data), [data])
+  const [exporting, setExporting] = useState(false)
+  //  브라우저가 연달아 내려받기를 막는 일이 있어 사이를 띄웁니다.
+  async function downloadAll() {
+    setExporting(true)
+    for (const t of tables) {
+      if (t.rows.length === 0) continue
+      downloadCsv(t)
+      await new Promise((r) => setTimeout(r, 350))
+    }
+    setExporting(false)
+  }
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [confirmKind, setConfirmKind] = useState<null | 'demo' | 'reset'>(null)
 
@@ -397,6 +413,65 @@ export function Settings() {
               {live
                 ? '내려받은 파일은 보관용입니다. 이 화면으로 실사용 데이터를 되돌리는 기능은 아직 없습니다.'
                 : '가져오기를 실행하면 현재 데이터를 덮어씁니다. 먼저 내보내기로 백업해 두세요.'}
+            </p>
+          </SettingCard>
+
+          {/*
+            운영 데이터 표로 내려받기.
+
+             위 JSON 은 기계가 읽는 파일이라 사람이 숫자를 확인할 수 없습니다.
+             표를 CSV 로 내려받으면 엑셀이 바로 열고, 대표님이 눈으로 검산할
+             수 있습니다. 세무사·은행에 낼 자료도 여기서 나옵니다.
+
+             복구용이 아니라는 것을 화면에 그대로 적습니다 — 백업인 줄 알고
+             안심하는 것이 가장 위험합니다.
+          */}
+          <SettingCard
+            icon={FileSpreadsheet}
+            title="운영 데이터 표로 내려받기"
+            desc="거래처 · 수거 · 청구 · 입금 · 매출을 엑셀에서 열어 확인하고 보관합니다."
+          >
+            <div className="space-y-2" data-export-list>
+              {tables.map((t) => (
+                <div
+                  key={t.key}
+                  data-export-row={t.key}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-navy-50/70 px-3.5 py-3"
+                >
+                  <span className="min-w-0 flex-1 basis-[8rem]">
+                    <span className="block break-keep font-bold text-navy-900">
+                      {t.label}
+                      <span className="ml-1.5 text-[0.98rem] font-semibold text-navy-400">
+                        {t.rows.length.toLocaleString('ko-KR')}줄
+                      </span>
+                    </span>
+                    <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">{t.desc}</span>
+                  </span>
+                  <button
+                    type="button"
+                    data-export-one={t.key}
+                    disabled={t.rows.length === 0}
+                    onClick={() => downloadCsv(t)}
+                    className="shrink-0 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-100 disabled:opacity-40"
+                  >
+                    <Download size={15} className="mr-1 inline -translate-y-px" />
+                    CSV
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              className="btn-navy mt-3 w-full"
+              data-export-all
+              onClick={() => void downloadAll()}
+              disabled={exporting}
+            >
+              <Download size={18} strokeWidth={2.4} />
+              {exporting ? '내려받는 중…' : `${tables.length}개 표 전부 내려받기`}
+            </button>
+            <p className="t-muted mt-3 break-keep">
+              엑셀에서 바로 열립니다(한글 깨짐 없음). <b className="text-navy-600">이 파일로 시스템을 되돌리지는
+              못합니다</b> — 보관·검산·제출용입니다. 되돌리는 것은 Supabase 백업으로 합니다.
             </p>
           </SettingCard>
 
