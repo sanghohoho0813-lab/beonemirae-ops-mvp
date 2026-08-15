@@ -52,7 +52,16 @@ import * as repo from '../lib/repo'
 interface DataContextValue {
   data: AppData
   // 거래처
-  addClient: (c: Omit<Client, 'id'>) => Promise<Client | null>
+  /**
+   * 거래처 등록.
+   *  `allowDuplicate` 는 사람이 「이미 있는 그 곳과 다른 병원입니다」라고
+   *  확인했을 때만 켭니다 (0045). 켜지 않으면 서버가 이름을 대고 막습니다.
+   *  `requestId` 는 「이번 저장 시도」 표 — 다시 눌러도 두 곳이 안 됩니다.
+   */
+  addClient: (
+    c: Omit<Client, 'id'>,
+    opts?: { allowDuplicate?: boolean; requestId?: string | null },
+  ) => Promise<Client | null>
   /**
    * 거래처 정보 수정.
    *  quiet 를 켜면 저장 뒤 전체 다시 읽기를 건너뜁니다 — 여러 곳을 이어서
@@ -413,22 +422,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
   //  저장은 됐는데 실패한 것처럼 보이니 한 번 더 등록해 같은 거래처가
   //  둘이 되는 자리였습니다.
   const addClient = useCallback(
-    async (c: Omit<Client, 'id'>): Promise<Client | null> => {
+    async (
+      c: Omit<Client, 'id'>,
+      opts?: { allowDuplicate?: boolean; requestId?: string | null },
+    ): Promise<Client | null> => {
       if (live) {
         let created: Client | null = null
+        //  0045 부터 서버가 등록을 맡습니다 — 같은 이름이 이미 있으면 서버가
+        //  막고, 기록도 서버가 남깁니다. 여기서 따로 기록하면 두 줄이 됩니다.
         await runLive(async () => {
-          const row = await repo.insertClient(c)
-          created = row
-          await repo.writeAudit({
-            action: 'client.create',
-            entity: 'clients',
-            entityId: row.id,
-            clientId: row.id,
-            clientName: row.name,
-            after: c,
-            summary: `거래처 등록 — ${row.name}`,
-          })
+          const res = await repo.createClient(c, opts)
+          created = await repo.clientById(res.id)
         })
+        //  못 만들었으면 null 입니다 — 이유는 위쪽 저장 오류 안내와, 부른 쪽이
+        //  보여 주는 문구에 그대로 남습니다. 성공한 척하지 않습니다.
         return created
       }
       const client: Client = { ...c, id: uid('c') }

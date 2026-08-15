@@ -18,6 +18,7 @@ import { importExcelRows } from '../lib/repo'
 import { emptyClientForm } from './ClientForm'
 import { friendlyError } from '../lib/supabase'
 import { won } from '../lib/format'
+import { findNameMatches, sameClientName } from '../lib/clientName'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 기존 거래처 엑셀 가져오기
@@ -77,13 +78,8 @@ export function ExcelImport() {
   //  파일의 거래처가 아직 시스템에 없을 때, 이름이 비슷한 곳이 있는지 봅니다.
   //  「서울인화스포츠마취통증」과 「…의학과의원」처럼 한쪽이 다른 쪽의 앞부분인
   //  경우가 실제로 있어, 그대로 새로 만들면 같은 병원이 둘이 됩니다.
-  const fileName2 = (checked?.client?.name ?? '').replace(/\s/g, '')
-  const similar = fileName2
-    ? clients.filter((c) => {
-        const n = c.name.replace(/\s/g, '')
-        return n !== fileName2 && (n.startsWith(fileName2) || fileName2.startsWith(n))
-      })
-    : []
+  const matches = findNameMatches(checked?.client?.name ?? '', clients)
+  const similar = matches.map((m) => m.client)
 
   /**
    * 파일 내용 그대로 거래처를 새로 만들고, 이어서 그 거래처로 가져옵니다.
@@ -95,7 +91,7 @@ export function ExcelImport() {
    *  그래도 자동으로 만들지는 않습니다 — 누를 때만 만듭니다. 이름만 보고
    *  말없이 만들면 같은 병원이 둘이 되는 사고가 그대로 남습니다.
    */
-  async function createClientFromFile() {
+  async function createClientFromFile(allowDuplicate = false) {
     const prof = checked?.client
     if (!prof?.name) return
     setCreating(true)
@@ -111,7 +107,7 @@ export function ExcelImport() {
         //  단가·정산규칙도 파일에서 그대로. 여기서 넣어 두면 가져오기 직후
         //  바로 이 거래처의 정산·명세서가 실제 계약대로 계산됩니다.
         pricing: Object.keys(prof.pricing).length ? prof.pricing : undefined,
-      })
+      }, { allowDuplicate })
       if (created) setClientId(created.id)
       else setError('거래처를 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.')
     } catch (e) {
@@ -132,8 +128,11 @@ export function ExcelImport() {
       setPlan(next)
       //  같은 이름의 거래처가 있으면 미리 골라 둡니다. 없으면 사람이 고릅니다 —
       //  이름만 보고 새 거래처를 만들어 버리면 같은 병원이 둘이 됩니다.
+      //  이름 맞대보기는 서버(0045)와 같은 규칙을 씁니다 — 띄어쓰기·(주)·
+      //  의료법인만 다른 이름도 같은 곳으로 봅니다. 규칙이 갈리면 화면이
+      //  「새로 만들기」를 권하고 서버가 그걸 막습니다.
       const hit = next.client
-        ? clients.find((c) => c.name.replace(/\s/g, '') === next.client!.name.replace(/\s/g, ''))
+        ? clients.find((c) => sameClientName(c.name, next.client!.name))
         : undefined
       setClientId(hit?.id ?? '')
       setPhase('확인')
@@ -298,7 +297,9 @@ export function ExcelImport() {
                         disabled={creating}
                         onClick={() => {
                           if (window.confirm(`비슷한 이름의 거래처가 이미 있습니다.\n\n「${checked.client!.name}」 을(를) 그래도 새 거래처로 만들까요?`))
-                            void createClientFromFile()
+                            //  사람이 「그래도」를 눌렀으므로 다른 병원이라는 판단입니다.
+                            //  서버가 그 판단을 기록에 남깁니다 (0045).
+                            void createClientFromFile(true)
                         }}
                       >
                         {creating ? <Loader2 size={16} className="animate-spin" /> : null}

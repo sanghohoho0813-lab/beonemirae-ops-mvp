@@ -22,6 +22,7 @@ import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types
 import { supabase, withRetry } from './supabase'
 import type { CollectionCompletionInput } from './collection'
 import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
+import { clientNameKey } from './clientName'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase 레포지토리
@@ -511,10 +512,56 @@ const clientRow = (c: Partial<Client>) => ({
 const clean = (o: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
 
-export async function insertClient(c: Omit<Client, 'id'>): Promise<Client> {
+/** 이미 있는 거래처와 부딪혔을 때 — 화면이 「그 거래처를 쓰시겠습니까」로 받습니다 */
+export class DuplicateClientError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'DuplicateClientError'
+  }
+}
+
+export interface CreateClientResult {
+  id: string
+  /** 같은 저장 시도가 이미 들어와 있었음 — 새로 만들지 않았습니다 */
+  alreadySaved: boolean
+  /** 「다른 병원입니다」로 만든 경우, 무엇과 부딪혔는지 */
+  duplicates: { id: string; name: string; active: boolean }[]
+}
+
+/**
+ * 거래처 등록 (0045).
+ *
+ *  표에 직접 넣던 길은 서버에서 닫았습니다. 같은 이름이 이미 있으면 서버가
+ *  이름을 대고 멈춥니다 — 화면이 먼저 확인하더라도 두 사람이 같은 순간에
+ *  누르는 경우는 서버만 막을 수 있습니다.
+ *
+ *  `allowDuplicate` 는 사람이 「정말 다른 병원입니다」라고 확인했을 때만
+ *  켭니다. 그 판단은 서버 기록에 남습니다.
+ */
+export async function createClient(
+  c: Omit<Client, 'id'>,
+  opts?: { allowDuplicate?: boolean; requestId?: string | null },
+): Promise<CreateClientResult> {
   const sb = need()
-  const row = unwrap<Row[]>(await sb.from('clients').insert(clean(clientRow(c))).select())
-  return toClient(row[0])
+  const { data, error } = await sb.rpc('create_client', {
+    p_client: clean(clientRow(c)),
+    p_allow_duplicate: opts?.allowDuplicate ?? false,
+    p_request_id: opts?.requestId ?? null,
+  })
+  if (error) {
+    if (/이미 같은 이름의 거래처가 있습니다/.test(error.message ?? '')) {
+      throw new DuplicateClientError(error.message)
+    }
+    throw new Error(error.message)
+  }
+  return data as CreateClientResult
+}
+
+/** 등록 직후 화면이 쓰는 거래처 한 줄 */
+export async function clientById(id: string): Promise<Client | null> {
+  const sb = need()
+  const row = unwrapOne(await sb.from('clients').select('*').eq('id', id).maybeSingle())
+  return row ? toClient(row) : null
 }
 
 export async function updateClient(id: string, patch: Partial<Client>): Promise<void> {
@@ -1438,7 +1485,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 44
+export const EXPECTED_SCHEMA_VERSION = 45
 
 /**
  * 서버 DB 의 스키마 버전.
@@ -1714,24 +1761,26 @@ export function previewImport(local: AppData): ImportPreview {
 export async function importFromLocal(local: AppData): Promise<ImportPreview & { skipped: number }> {
   const sb = need()
   const existing = unwrap<Row[]>(await sb.from('clients').select('id, name, address'))
-  const keyOf = (n: string, a: string) => `${n.trim()}::${(a ?? '').trim()}`
-  const existingByKey = new Map(existing.map((r) => [keyOf(r.name, r.address ?? ''), r.id as string]))
+  //  0045 부터 서버가 이름 열쇠로 중복을 막습니다. 여기서도 같은 열쇠를 써야
+  //  「이름은 같고 주소만 다른」 거래처를 새로 만들려다 서버에 막히는 일이
+  //  생기지 않습니다. 열쇠가 갈리면 옮기기가 통째로 실패합니다.
+  const existingByKey = new Map(existing.map((r) => [clientNameKey(r.name), r.id as string]))
 
   const realClients = local.clients.filter((c) => !c.isDemoGenerated)
   const idMap = new Map<string, string>() // 로컬 id → 서버 id
   let skipped = 0
 
   for (const c of realClients) {
-    const k = keyOf(c.name, c.address)
-    const hit = existingByKey.get(k)
+    const k = clientNameKey(c.name)
+    const hit = k ? existingByKey.get(k) : undefined
     if (hit) {
       idMap.set(c.id, hit)
       skipped++
       continue
     }
-    const created = await insertClient(c)
+    const created = await createClient(c)
     idMap.set(c.id, created.id)
-    existingByKey.set(k, created.id)
+    if (k) existingByKey.set(k, created.id)
   }
 
   const mapped = <T extends { clientId: string }>(list: T[]) =>

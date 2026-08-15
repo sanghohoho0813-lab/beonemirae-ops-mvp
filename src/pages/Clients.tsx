@@ -13,6 +13,7 @@ import { nextActionsFor } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
 import { wonShort } from '../lib/format'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
+import { findNameMatches, type NameMatch } from '../lib/clientName'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,6 +47,11 @@ export function Clients() {
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<Omit<Client, 'id'>>(emptyClientForm)
+  //  이름이 부딪히는 거래처들 — null 이면 아직 안 물어본 상태입니다.
+  const [dupOf, setDupOf] = useState<NameMatch<Client>[] | null>(null)
+  const [saveError, setSaveError] = useState('')
+  //  「이번 저장 시도」 표. 창을 열 때 하나 만들고 성공하면 버립니다.
+  const [requestId, setRequestId] = useState('')
 
   const filtered = useMemo(() => {
     //  폰 자판은 낱말 뒤에 공백을 붙여 주는 일이 잦습니다. 그대로 비교하면
@@ -65,29 +71,41 @@ export function Clients() {
   const realCount = data.clients.filter((c) => !c.isDemoGenerated).length
   const demoCount = data.clients.length - realCount
 
-  async function save() {
+  /**
+   * 실제로 등록합니다.
+   *
+   *  `allowDuplicate` 를 켜는 것은 사람이 「정말 다른 병원입니다」를 누른
+   *  경우뿐입니다. 서버도 같은 규칙으로 한 번 더 막습니다 — 두 사람이 같은
+   *  순간에 누르면 화면이 먼저 확인한 것으로는 못 막습니다 (0045).
+   */
+  async function commit(allowDuplicate: boolean) {
+    setSaveError('')
+    //  같은 저장 시도는 한 번만 들어갑니다 — 통신이 끊긴 줄 알고 다시 눌러도
+    //  두 곳이 되지 않습니다.
+    const created = await addClient({ ...form, name: form.name.trim() }, { allowDuplicate, requestId })
+    if (!created) {
+      setSaveError('거래처를 만들지 못했습니다. 위쪽 안내를 확인해 주세요.')
+      return
+    }
+    setDupOf(null)
+    setAdding(false)
+    navigate(`/clients/${created.id}`)
+  }
+
+  function save() {
     const name = form.name.trim()
     if (!name) return
     //  같은 이름으로 하나 더 만들면 수거도 정산도 둘로 갈립니다. 나중에
     //  어느 쪽이 진짜인지 알 수 없게 되고, 명세서가 두 장 나갑니다.
-    //  막지는 않습니다 — 실제로 상호가 같은 다른 병원일 수 있습니다.
-    const dupActive = data.clients.find((c) => c.name.trim() === name)
-    const dupRetired = data.retiredClients?.find((c) => c.name.trim() === name)
-    if (dupActive || dupRetired) {
-      const okToAdd = window.confirm(
-        dupActive
-          ? `'${name}' 은(는) 이미 거래처 목록에 있습니다.\n` +
-              '같은 이름으로 하나 더 만들면 수거와 정산이 둘로 갈립니다. 그래도 만들까요?'
-          : `'${name}' 은(는) 거래를 종료한 거래처로 남아 있습니다.\n` +
-              '새로 만들면 지난 수거·미수금 기록과 이어지지 않고 따로 시작됩니다. 그래도 만들까요?',
-      )
-      if (!okToAdd) return
+    //  막기만 하지는 않습니다 — 실제로 상호가 같은 다른 병원일 수 있고,
+    //  그건 사람만 압니다. 어느 거래처와 부딪히는지 보여 주고 고르게 합니다.
+    const hits = findNameMatches(name, [...data.clients, ...(data.retiredClients ?? [])])
+    const same = hits.filter((h) => h.kind === 'same')
+    if (same.length > 0 || hits.length > 0) {
+      setDupOf(hits)
+      return
     }
-    //  서버가 저장을 마치고 준 id 로 이동합니다. 저장이 실패하면 목록에
-    //  남고, 화면 위쪽의 저장 오류 안내가 그대로 보입니다.
-    const created = await addClient(form)
-    setAdding(false)
-    if (created) navigate(`/clients/${created.id}`)
+    void commit(false)
   }
 
   return (
@@ -99,7 +117,16 @@ export function Clients() {
           //  거래처 등록은 사무실·관리자 업무입니다. 서버도 막고 있어
           //  (RLS: clients_write) 현장 담당자가 눌러도 저장되지 않습니다.
           canAddClient ? (
-            <button className="btn-primary" onClick={() => { setForm(emptyClientForm); setAdding(true) }}>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                setForm(emptyClientForm)
+                setSaveError('')
+                setDupOf(null)
+                setRequestId(crypto.randomUUID())
+                setAdding(true)
+              }}
+            >
               ＋ 추가
             </button>
           ) : undefined
@@ -255,7 +282,79 @@ export function Clients() {
           </>
         }
       >
+        {saveError && (
+          <p data-client-save-error className="mb-2 rounded-xl bg-rose-50 px-3 py-2 text-rose-700">
+            {saveError}
+          </p>
+        )}
         <ClientForm form={form} setForm={setForm} />
+      </Modal>
+
+      {/*
+        이름이 부딪힐 때.
+        예전에는 브라우저 확인 창이었습니다 — 「그래도 만들까요?」 한 줄이라
+        어느 거래처와 부딪히는지, 그쪽에 수거·청구가 얼마나 쌓였는지 알 수
+        없었습니다. 대부분은 **이미 있는 그 거래처를 찾던 것**이므로 그리로
+        가는 길을 가장 크게 둡니다.
+      */}
+      <Modal
+        open={dupOf != null}
+        title="이미 있는 거래처와 이름이 같습니다"
+        onClose={() => setDupOf(null)}
+        footer={
+          <>
+            <button className="btn-ghost flex-1" onClick={() => setDupOf(null)}>
+              돌아가기
+            </button>
+            <button
+              data-dup-force
+              className="btn-ghost flex-1 text-rose-600"
+              onClick={() => void commit(true)}
+            >
+              다른 병원입니다
+            </button>
+          </>
+        }
+      >
+        <p className="t-body break-keep text-navy-700">
+          「{form.name.trim()}」 (으)로 등록하려고 하는데, 아래 거래처와 이름이 사실상 같습니다. 같은 곳을 두 번
+          만들면 <b>수거·청구·미수금이 둘로 갈리고 되돌릴 수 없습니다.</b>
+        </p>
+        <div data-dup-list className="mt-3 flex flex-col gap-2">
+          {(dupOf ?? []).map(({ client: c, kind }) => {
+            const done = data.schedules.filter((s) => s.clientId === c.id && s.status === '완료').length
+            const billed = data.payments.filter((p) => p.clientId === c.id && p.status !== '취소').length
+            const retiredNow = (data.retiredClients ?? []).some((r) => r.id === c.id)
+            return (
+              <button
+                key={c.id}
+                data-dup-open={c.id}
+                className="card flex items-center justify-between gap-2 p-3.5 text-left hover:border-navy-300"
+                onClick={() => {
+                  setDupOf(null)
+                  setAdding(false)
+                  navigate(`/clients/${c.id}`)
+                }}
+              >
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <b className="text-navy-900">{c.name}</b>
+                    {kind === 'similar' && <span className="pill bg-navy-50 text-navy-500">비슷한 이름</span>}
+                    {retiredNow && <span className="pill bg-amber-100 text-amber-700">거래 종료</span>}
+                  </span>
+                  <span className="t-muted mt-0.5 block">
+                    수거 {done}건 · 청구 {billed}건{c.address ? ` · ${c.address}` : ''}
+                  </span>
+                </span>
+                <ChevronRight size={18} className="shrink-0 text-navy-300" />
+              </button>
+            )
+          })}
+        </div>
+        <p className="t-muted mt-3 break-keep">
+          찾던 곳이 위에 있으면 눌러서 그 거래처로 가세요. 상호는 같지만 정말 다른 병원이라면 「다른 병원입니다」를
+          눌러 주세요 — 그렇게 만든 것은 기록에 남습니다.
+        </p>
       </Modal>
     </div>
   )
