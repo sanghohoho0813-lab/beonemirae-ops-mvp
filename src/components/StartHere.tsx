@@ -22,7 +22,17 @@ export function StartHere({ data }: { data: AppData }) {
 
   const hasClients = data.clients.length > 0
   const hasVehicles = data.vehicles.length > 0
-  const hasCollection = (data.events ?? []).some((e) => e.action === '수거 완료' && !e.reverted)
+  //  「첫 수거 완료 입력」이 끝났는지.
+  //
+  //   예전에는 수거 입력 이벤트(events)만 봤습니다. 그 표는 **이 화면에서
+  //   수거 완료를 눌렀을 때만** 쌓입니다. 그래서 엑셀에서 지난 수거를
+  //   수천 건 가져온 회사에서도 이 줄은 영원히 「안 끝남」으로 남았습니다 —
+  //   이미 다 해 본 일을 매일 「아직 안 했다」고 말하는 셈입니다.
+  //
+  //   완료된 일정이 하나라도 있으면 끝난 것으로 봅니다.
+  const hasCollection =
+    (data.events ?? []).some((e) => e.action === '수거 완료' && !e.reverted) ||
+    data.schedules.some((s) => s.status === '완료')
   const hasBaseline = Object.values({
     a: data.baseline.adminMinutesPerCollection,
     b: data.baseline.repeatEntriesPerCollection,

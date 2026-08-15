@@ -164,7 +164,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
-        options: { data: { name: name.trim() } },
+        options: {
+          data: { name: name.trim() },
+          //  Supabase 의 확인 메일이 어디로 돌아올지.
+          //
+          //   이걸 안 주면 프로젝트의 Site URL 을 씁니다. 그 값이 기본값
+          //   (`http://localhost:3000`)이면 메일 속 링크가 **직원 폰의**
+          //   localhost 로 갑니다. 실제로 눌러 보면
+          //   「사이트에 연결할 수 없음 · ERR_CONNECTION_REFUSED」 가 뜹니다.
+          //   가입한 사람은 자기가 뭘 고장 냈다고 생각합니다.
+          //
+          //   지금 보고 있는 주소로 돌려보냅니다. 어디에 배포돼 있든 맞습니다.
+          //
+          //   ※ 0041 부터는 관리자가 승인하면 메일을 누르지 않아도 됩니다.
+          //     이건 그래도 메일이 나갈 때(대시보드 설정이 켜져 있을 때)
+          //     막다른 길로 보내지 않기 위한 것입니다.
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
       })
       if (error) return { ok: false, error: friendlyError(error) }
       return { ok: true }

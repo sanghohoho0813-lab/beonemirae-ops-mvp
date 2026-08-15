@@ -6,9 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
 import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
-import { StartHere } from '../components/StartHere'
 import { NextVisitCard } from '../components/NextVisit'
-import { TourBanner } from '../components/TourEntry'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
@@ -137,8 +135,18 @@ export function TodaySchedule() {
   return (
     <div>
       <div className={flash ? 'rounded-2xl bg-teal-50/70 transition-colors duration-700' : 'transition-colors duration-700'}>
-        <StartHere data={data} />
-        <TourBanner />
+        {/*
+          안내물은 이 화면에 두지 않습니다.
+
+           실측(390×844 · 오늘 일정 15건): 첫 화면에 **일정 카드가 하나도
+           보이지 않았습니다.** 「시작하기」 체크리스트와 소개 배너가 화면을
+           통째로 채우고, 기사가 오늘 첫 방문지를 보려면 스크롤해야 했습니다.
+           PC(1440)에서도 첫 일정 카드가 900px 아래에 있었습니다.
+
+           오늘 일정은 **매일 아침 여는 화면**입니다. 어제 본 안내를 오늘 또
+           지나가게 하면 안 됩니다. 둘 다 대시보드에 그대로 있습니다 —
+           없앤 게 아니라 자리를 옮겼습니다.
+        */}
         {/* 진행 건수는 아래 「다음 방문」 카드가 크게 보여 주므로 폰에서는 반복하지 않습니다 */}
         <PageHeader
           title="오늘 일정"

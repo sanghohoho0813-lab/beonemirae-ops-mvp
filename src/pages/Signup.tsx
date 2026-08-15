@@ -89,10 +89,30 @@ export function Signup() {
                   </p>
                 </div>
               </div>
-              <p className="t-body break-keep font-medium text-navy-500">
-                관리자가 승인하면 그때부터 사용할 수 있습니다. 승인 전에는 로그인하셔도 업무 화면이 열리지
-                않습니다 — 고장이 아니라 원래 그렇습니다. 승인이 급하시면 담당자에게 직접 알려 주세요.
+              <p className="t-body break-keep font-medium text-navy-500" data-signup-note>
+                <b className="text-navy-700">여기서 하실 일은 끝났습니다.</b> 관리자가 승인하면 그때부터
+                바로 사용할 수 있습니다. 승인 전에는 로그인하셔도 업무 화면이 열리지 않습니다 — 고장이
+                아니라 원래 그렇습니다. 승인이 급하시면 담당자에게 직접 알려 주세요.
               </p>
+              {/*
+                영문 확인 메일 안내.
+
+                 Supabase 설정에 따라 「Confirm your email address」 라는 영문 메일이
+                 한 통 갈 수 있습니다. 예전에는 그걸 누르면 `localhost:3000` 으로 가서
+                 「사이트에 연결할 수 없음」이 떴습니다 — 신청한 사람은 자기가 뭘
+                 고장 냈다고 생각합니다.
+
+                 이제 승인이 곧 인증이라(0041) 그 메일은 눌러도 되고 안 눌러도 됩니다.
+                 화면이 먼저 말해 줍니다. 모르고 눌러서 당황하는 것보다 낫습니다.
+              */}
+              <div className="flex items-start gap-2.5 rounded-2xl bg-navy-50 px-4 py-3.5" data-signup-mail>
+                <Mail size={19} className="mt-0.5 shrink-0 text-navy-400" />
+                <p className="t-body min-w-0 break-keep font-medium text-navy-500">
+                  영어로 된 확인 메일(<span className="font-bold">Confirm your email address</span>)이 한 통
+                  갈 수 있습니다. <b className="text-navy-700">누르지 않으셔도 됩니다.</b> 승인만 되면 바로
+                  로그인됩니다.
+                </p>
+              </div>
               <Link to="/login" className="btn-navy w-full justify-center">
                 <ArrowLeft size={17} strokeWidth={2.4} /> 로그인 화면으로
               </Link>

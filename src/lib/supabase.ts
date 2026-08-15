@@ -46,7 +46,12 @@ export function friendlyError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e ?? '')
   if (!msg) return '알 수 없는 오류가 발생했습니다.'
   if (/Invalid login credentials/i.test(msg)) return '이메일 또는 비밀번호가 올바르지 않습니다.'
-  if (/Email not confirmed/i.test(msg)) return '이메일 인증이 완료되지 않은 계정입니다. 관리자에게 문의해 주세요.'
+  //  0041 부터 관리자 승인이 곧 메일 인증입니다. 이 오류가 보인다는 것은
+  //  「아직 승인 전」이라는 뜻이지, 신청한 사람이 뭘 잘못했다는 뜻이 아닙니다.
+  //  예전 문구("이메일 인증이 완료되지 않았습니다")는 메일함을 뒤지게 만들어
+  //  놓고 정작 눌러도 아무 일이 안 일어났습니다.
+  if (/Email not confirmed/i.test(msg))
+    return '아직 관리자 승인 전입니다. 승인되면 메일 확인 없이 바로 로그인됩니다. 담당자에게 승인을 요청해 주세요.'
   if (/Failed to fetch|NetworkError|fetch failed/i.test(msg))
     return '네트워크에 연결할 수 없습니다. 통신 상태를 확인한 뒤 다시 시도해 주세요.'
   if (/JWT expired|invalid claim/i.test(msg)) return '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.'

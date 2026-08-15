@@ -20,10 +20,15 @@ create schema if not exists auth;
 --  가입 트리거가 역할을 읽는 자리를 raw_user_meta_data(가입자가 씀)에서
 --  raw_app_meta_data(서버만 씀)로 옮겼습니다. 하네스에 이 칸이 없으면
 --  "역할을 조작할 수 있는가" 를 로컬에서 검증할 수 없습니다.
+--  email_confirmed_at 은 0041 부터 반드시 있어야 합니다.
+--
+--  관리자가 승인하면 메일 인증도 함께 끝난 것으로 둡니다. 하네스에 이 칸이
+--  없으면 「승인만으로 로그인이 되는가」를 로컬에서 검증할 수 없습니다.
 create table if not exists auth.users (
   id                   uuid primary key default gen_random_uuid(),
   email                text unique not null,
   encrypted_password   text,
+  email_confirmed_at   timestamptz,
   raw_user_meta_data   jsonb default '{}'::jsonb,
   raw_app_meta_data    jsonb default '{}'::jsonb,
   created_at           timestamptz not null default now()
