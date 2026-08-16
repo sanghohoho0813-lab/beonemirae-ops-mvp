@@ -12,6 +12,7 @@ import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
+import { DeadlineBanner } from '../components/DeadlineBanner'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
 import { EMPTY_SUPPLIED } from '../lib/collection'
@@ -195,6 +196,10 @@ export function TodaySchedule() {
 
       {/* 모바일 — 폰을 열면 가장 먼저 "다음에 어디로 가는가" */}
       <NextVisitCard data={data} list={list} notesFor={notesFor} />
+
+      {/*  밀린 마감 — 사무실이 하루에 제일 많이 여는 화면입니다.
+           밀린 것이 없으면 이 자리는 아예 없습니다(현장에는 안 뜹니다). */}
+      <DeadlineBanner className="mb-4" />
 
       {/* 병원에서 올라온 요청 — 오늘 방문 전에 확인해야 하는 것 */}
       {pendingRequests.length > 0 && (

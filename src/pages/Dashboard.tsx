@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
+import { DeadlineBanner } from '../components/DeadlineBanner'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
@@ -122,6 +123,11 @@ export function Dashboard() {
           {prettyDate(t)} · 의료폐기물 운영관리
         </p>
       </div>
+
+      {/*  밀린 마감 — 인사 바로 아래. 오늘 할 일보다 위입니다.
+           지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.
+           밀린 것이 없으면 이 자리는 아예 없습니다. */}
+      <DeadlineBanner />
 
       {/*
         경영 매출 — 대표가 화면을 열자마자 보는 네 숫자.
