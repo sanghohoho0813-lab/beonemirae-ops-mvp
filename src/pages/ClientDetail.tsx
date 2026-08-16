@@ -1,3 +1,4 @@
+import { LastCollectionLine } from '../components/FieldTodayCard'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -14,6 +15,7 @@ import {
   ChevronRight,
   SearchX,
   Pin,
+  ClipboardCheck,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -258,6 +260,13 @@ export function ClientDetail() {
           <p className="flex items-center gap-2"><Phone size={15} className="shrink-0 text-navy-400" /> {profile.roleManager} · {client.phone}</p>
           <p className="flex items-center gap-2"><RefreshCw size={15} className="shrink-0 text-navy-400" /> 수거주기 {client.collectionCycle}</p>
           <p className="flex items-center gap-2"><Recycle size={15} className="shrink-0 text-navy-400" /> 자재 보관창고 {client.storageSize}</p>
+          {/*  마지막 수거 한 줄 — 언제 누가 얼마.
+               잘했다/못했다를 매기지 않고 사실만 적습니다.
+               현장 담당자에게도 보입니다(금액이 아니라 kg 입니다). */}
+          <p className="flex items-center gap-2">
+            <ClipboardCheck size={15} className="shrink-0 text-navy-400" />
+            <LastCollectionLine clientId={id} className="!text-[1.08rem] !text-navy-600" />
+          </p>
         </div>
         {client.note && (
           <p className="mt-3 flex items-start gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-[1.08rem] font-medium text-amber-700">
