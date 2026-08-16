@@ -483,6 +483,8 @@ export async function loadAppData(): Promise<AppData> {
         imageUrl: r.image_url ?? '',
         description: r.description ?? '',
         active: !!r.active,
+        category: (r.category as string) ?? '',
+        sort: Number(r.sort ?? 0),
       }),
     ),
     productOrders: orderRows.map(
@@ -540,6 +542,8 @@ export async function loadAppData(): Promise<AppData> {
         sourceNo: r.source_no ?? '',
         issuedOn: r.issued_on ?? null,
         note: r.note ?? '',
+        //  0050 이전 서버에는 이 칸이 없습니다 — 없으면 「아직 확인 안 함」입니다.
+        confirmedAt: (r.confirmed_at as string | null) ?? null,
       }),
     ),
     revenueOverrides: revenueOverrides.map(
@@ -759,9 +763,22 @@ export async function upsertProduct(p: Partial<Product> & { name: string }): Pro
     p_available: p.available ?? true,
     p_desc: p.description ?? '',
     p_image: p.imageUrl ?? '',
+    p_category: p.category ?? '',
   })
   if (error) throw new Error(error.message)
   return data as { id: string }
+}
+
+/**
+ * 신고 한 줄을 「확정」으로 표시하거나 되돌립니다 (0050).
+ *
+ *  숫자는 건드리지 않습니다 — 「이 숫자가 확정 신고분인가」만 기록합니다.
+ *  종이(증명서 발급일)만으로는 알 수 없고, 아는 사람은 대표님뿐입니다.
+ */
+export async function setTaxFilingConfirmed(id: number, confirmed: boolean): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('set_tax_filing_confirmed', { p_id: id, p_confirmed: confirmed })
+  if (error) throw new Error(error.message)
 }
 
 export interface ProductSales {
@@ -1790,7 +1807,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 49
+export const EXPECTED_SCHEMA_VERSION = 50
 
 /**
  * 서버 DB 의 스키마 버전.

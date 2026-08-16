@@ -206,6 +206,10 @@ export interface Product {
   imageUrl: string
   description: string
   active: boolean
+  /** 화면에서 묶어 보여 주는 분류 (0050). 재고 차감과는 무관합니다 */
+  category: string
+  /** 목록에서의 자리 */
+  sort: number
 }
 
 export interface ProductOrderItem {

@@ -23,24 +23,32 @@ export function RevenueKpis() {
   const s = useMemo(() => revenueSummary(data), [data])
   const year = new Date().getFullYear()
 
+  //  확정 신고가 올해를 덮고 있으면 그것이 기준입니다 — 시스템 집계는
+  //  거래처가 다 들어오기 전이라 실제의 몇 분의 일입니다.
+  const d = s.declared
+
   const cells = [
     {
       key: 'ytd',
       label: `${year}년 누적매출`,
       value: wonShort(s.ytd),
       tone: 'text-navy-900',
-      sub: s.ytdMonths > 0
-        ? `${s.ytdMonths}개월치${s.ytdPartial ? ' · 이번 달은 진행 중' : ''}`
-        : '아직 집계된 달이 없습니다',
+      sub: d
+        ? d.label
+        : s.ytdMonths > 0
+          ? `${s.ytdMonths}개월치${s.ytdPartial ? ' · 이번 달은 진행 중' : ''}`
+          : '아직 집계된 달이 없습니다',
     },
     {
       key: 'avg',
       label: '월평균 매출',
       value: s.average == null ? '—' : wonShort(s.average),
       tone: 'text-navy-900',
-      sub: s.average == null
-        ? `끝난 달 ${s.averageMonths.length}개월 — 3개월이 쌓이면 계산합니다`
-        : `끝난 ${s.averageMonths.length}개월 평균 · 진행 중인 달 제외`,
+      sub: d
+        ? `신고액 ÷ ${d.months}개월`
+        : s.average == null
+          ? `끝난 달 ${s.averageMonths.length}개월 — 3개월이 쌓이면 계산합니다`
+          : `끝난 ${s.averageMonths.length}개월 평균 · 진행 중인 달 제외`,
     },
     {
       key: 'proj',
@@ -69,6 +77,15 @@ export function RevenueKpis() {
           </div>
         ))}
       </div>
+      {/*  신고 기간 뒤의 달은 **더하지 않고** 따로 적습니다. 전체 자료와
+          일부 자료를 더하면 「그 달에 매출이 급감했다」로 읽힙니다. */}
+      {d && d.afterLabel !== '' && (
+        <p data-revenue-after className="t-muted border-t border-navy-100 px-4 py-2.5 break-keep">
+          {d.afterLabel}은 아직 신고 전이라 시스템 집계로 <b className="text-navy-600">{wonShort(d.afterTotal)}</b>{' '}
+          입니다 — <b className="text-navy-600">거래처가 아직 다 들어오지 않아 실제보다 적습니다.</b> 위 누적매출에
+          더하지 않았습니다.
+        </p>
+      )}
       <Link
         to="/revenue"
         data-revenue-more

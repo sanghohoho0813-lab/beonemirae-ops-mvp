@@ -34,6 +34,14 @@ export interface TaxFiling {
   /** 증명 발급일 */
   issuedOn: string | null
   note: string
+  /**
+   * 사람이 「이 값은 확정 신고분이 맞다」고 확인한 시각 (0050).
+   *
+   *  null 이면 아직 아무도 확인하지 않은 것입니다. **날짜만 보고
+   *  확정이라고 단정하지 않습니다** — 종이만으로는 알 수 없고,
+   *  아는 사람은 대표님뿐입니다.
+   */
+  confirmedAt?: string | null
 }
 
 export interface HalfYear {
@@ -63,6 +71,8 @@ export interface HalfYear {
   provisional: boolean
   /** 왜 확정 전인지 — 화면에 그대로 나갑니다 */
   provisionalWhy: string
+  /** 사람이 확정으로 확인해 준 반기인가 (0050) */
+  confirmed: boolean
 }
 
 export interface TaxYear {
@@ -119,6 +129,8 @@ export function taxBaseView(filings: TaxFiling[], today: string): TaxBaseView {
     //  확정 신고분이 아닙니다. 날짜만 보고 「끝난 기간이니 확정」이라고
     //  단정하면 안 됩니다.
     const early = f.issuedOn != null && f.issuedOn < f.periodTo
+    //  사람이 확인해 준 것은 더 묻지 않습니다. 확인은 날짜 추측을 이깁니다.
+    const confirmed = f.confirmedAt != null
     return {
       year,
       half,
@@ -127,12 +139,16 @@ export function taxBaseView(filings: TaxFiling[], today: string): TaxBaseView {
       prev,
       diff: prev ? f.baseTotal - prev.baseTotal : null,
       growthPct: pct(f.baseTotal, prev?.baseTotal),
-      provisional: running || early,
-      provisionalWhy: running
-        ? '이 과세기간이 아직 끝나지 않았습니다'
-        : early
-          ? `증명서를 이 기간이 끝나기 전(${f.issuedOn})에 뽑았습니다 — 확정 신고분이 아닐 수 있습니다`
-          : '',
+      provisional: !confirmed && (running || early),
+      provisionalWhy:
+        confirmed
+          ? ''
+          : running
+            ? '이 과세기간이 아직 끝나지 않았습니다'
+            : early
+              ? `증명서를 이 기간이 끝나기 전(${f.issuedOn})에 뽑았습니다 — 확정 신고분이 아닐 수 있습니다`
+              : '',
+      confirmed,
     }
   })
 

@@ -40,8 +40,14 @@ export function PortalSupplies() {
   const today = useMemo(() => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }), [])
 
   const needs = useMemo(() => supplyNeedsFor(data, clientId, today), [data, clientId, today])
+  //  단가가 0 인 물건은 병원에 보이지 않습니다.
+  //
+  //   서버(0050)도 「판매가 0원이면 공급 가능으로 못 켠다」로 막지만, 그
+  //   전에 들어간 줄이나 표를 직접 고친 줄이 있을 수 있습니다. 0원짜리
+  //   주문이 한 건이라도 들어오면 그 금액이 그대로 확정 판매금액으로
+  //   박힙니다(0048 은 주문 시점 단가를 snapshot 합니다).
   const products = useMemo(
-    () => (data.products ?? []).filter((p) => p.active && p.available),
+    () => (data.products ?? []).filter((p) => p.active && p.available && p.salePrice > 0),
     [data.products],
   )
   const myOrders = useMemo(

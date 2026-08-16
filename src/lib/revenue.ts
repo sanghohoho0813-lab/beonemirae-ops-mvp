@@ -192,6 +192,45 @@ export interface RevenueSummary {
   outstanding: number
   /** 이번 달까지의 추이 */
   trend: MonthPoint[]
+  /**
+   * 확정 신고를 바탕으로 한 올해 숫자 (없으면 null).
+   *
+   *  있으면 `ytd`·`average`·`projection` 이 **이 값 기준**으로 계산됩니다.
+   *  없으면 지금까지처럼 시스템 집계만 씁니다.
+   */
+  declared: DeclaredBasis | null
+}
+
+/**
+ * 국세청에 **확정 신고**한 기간이 올해에 있으면, 그 기간의 매출은
+ * 시스템 집계 대신 신고액을 씁니다.
+ *
+ *  왜 이렇게 하는가 —
+ *   거래처가 아직 시스템에 다 들어오지 않았습니다. 그래서 시스템이 스스로
+ *   센 올해 매출은 실제의 몇 분의 일입니다(실측: 상반기 시스템 약 2,800만원
+ *   대 실제 신고 4억 5,387만원). 그 숫자를 「올해 누적매출」이라고 크게
+ *   띄우면 대표님이 회사를 실제의 6분의 1로 보게 됩니다.
+ *
+ *  지키는 선 —
+ *   · **사람이 확정으로 확인한 신고만** 씁니다. 확정 전 값은 안 씁니다.
+ *   · 신고액을 6으로 나눠 월별 막대를 채우지 **않습니다** — 우리에게 없는
+ *     월별 내역을 지어내는 것이 됩니다. 막대그래프는 시스템 값 그대로입니다.
+ *   · 신고 기간 **뒤의** 달은 섞지 않고 따로 보여 줍니다. 전체 자료(4.5억)와
+ *     일부 자료(수백만원)를 더하면 「7월에 매출이 90% 줄었다」로 읽힙니다.
+ */
+export interface DeclaredBasis {
+  /** 확정 신고로 덮은 기간의 매출 합 */
+  total: number
+  /** 그 기간의 개월 수 */
+  months: number
+  /** 'YYYY-MM' — 덮은 마지막 달 */
+  lastMonth: string
+  /** 화면에 그대로 나가는 근거 */
+  label: string
+  /** 신고 기간 뒤부터 지금까지 시스템이 센 값 (섞지 않고 따로) */
+  afterTotal: number
+  /** 그 기간 표시 — '7~8월' */
+  afterLabel: string
 }
 
 /** 평균을 내려면 끝난 달이 최소 몇 개 있어야 하는가 */
@@ -210,6 +249,51 @@ export const AVERAGE_WINDOW = 6
 export function revenueSummary(data: AppData, now = thisMonth()): RevenueSummary {
   const year = now.slice(0, 4)
   const trend = revenueTrend(data, 12, now)
+
+  //  ── 확정 신고가 올해를 덮고 있는가 ──────────────────────────────────────
+  //   사람이 「확정」이라고 확인해 준 신고만 봅니다. 확정 전 값은 안 씁니다.
+  const declaredFilings = (data.taxFilings ?? [])
+    .filter((f) => f.confirmedAt != null && f.periodFrom.slice(0, 4) === year)
+    .filter((f) => f.periodTo.slice(0, 7) <= now)
+    .sort((a, b) => a.periodFrom.localeCompare(b.periodFrom))
+
+  let declared: DeclaredBasis | null = null
+  if (declaredFilings.length > 0) {
+    const last = declaredFilings[declaredFilings.length - 1]
+    const lastMonth = last.periodTo.slice(0, 7)
+    const total = declaredFilings.reduce((sum, f) => sum + f.baseTotal, 0)
+    //  실제 개월 수를 셉니다 — 반기라고 6 을 박지 않습니다.
+    const months = declaredFilings.reduce((sum, f) => {
+      const a = Number(f.periodFrom.slice(0, 4)) * 12 + Number(f.periodFrom.slice(5, 7))
+      const b = Number(f.periodTo.slice(0, 4)) * 12 + Number(f.periodTo.slice(5, 7))
+      return sum + (b - a + 1)
+    }, 0)
+
+    //  신고 기간 **뒤의** 달 — 더하지 않고 따로 셉니다.
+    const afterMonths: string[] = []
+    let mm = shiftMonth(lastMonth, 1)
+    while (mm <= now) {
+      afterMonths.push(mm)
+      mm = shiftMonth(mm, 1)
+    }
+    const afterTotal = afterMonths.reduce((sum, x) => sum + monthRevenue(data, x).total, 0)
+
+    declared = {
+      total,
+      months,
+      lastMonth,
+      label:
+        declaredFilings.length === 1
+          ? `${year}년 ${Number(last.periodFrom.slice(5, 7)) <= 6 ? '상반기' : '하반기'} 국세청 신고 기준 (확정)`
+          : `${year}년 국세청 신고 기준 ${months}개월 (확정)`,
+      afterTotal,
+      afterLabel: afterMonths.length
+        ? afterMonths.length === 1
+          ? `${Number(afterMonths[0].slice(5, 7))}월`
+          : `${Number(afterMonths[0].slice(5, 7))}~${Number(afterMonths[afterMonths.length - 1].slice(5, 7))}월`
+        : '',
+    }
+  }
 
   //  올해 누적 — 1월부터 이번 달까지
   const ytdPoints: MonthPoint[] = []
@@ -236,6 +320,25 @@ export function revenueSummary(data: AppData, now = thisMonth()): RevenueSummary
     ? `최근 끝난 ${closed.length}개월(${closed[0].month} ~ ${closed[closed.length - 1].month}) 실제 평균 × 12`
     : `끝난 달이 ${closed.length}개월뿐입니다 — ${MIN_MONTHS_FOR_AVERAGE}개월이 쌓이면 계산합니다`
 
+  //  ── 확정 신고가 있으면 그것이 기준입니다 ────────────────────────────────
+  //   숫자 셋(누적·월평균·예상)을 **한 출처로만** 냅니다. 4.5억(전체 자료)과
+  //   수백만원(일부 자료)을 섞으면 어느 쪽도 아닌 값이 나옵니다.
+  if (declared) {
+    const dAvg = declared.months > 0 ? Math.round(declared.total / declared.months) : null
+    return {
+      ytd: declared.total,
+      ytdMonths: declared.months,
+      ytdPartial: false,
+      average: dAvg,
+      averageMonths: [],
+      projection: dAvg == null ? null : dAvg * 12,
+      formula: `${declared.label} 월평균 × 12`,
+      outstanding: outstandingTotal(data),
+      trend,
+      declared,
+    }
+  }
+
   return {
     ytd,
     ytdMonths: withValue.length,
@@ -246,5 +349,6 @@ export function revenueSummary(data: AppData, now = thisMonth()): RevenueSummary
     formula,
     outstanding: outstandingTotal(data),
     trend,
+    declared: null,
   }
 }

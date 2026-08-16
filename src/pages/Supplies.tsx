@@ -202,11 +202,39 @@ function ProductsTab({
   canEdit: boolean
   onSave: (p: Partial<Product> & { name: string }) => Promise<{ ok: boolean; error: string | null }>
 }) {
-  const empty = { name: '', spec: '', unit: '개', salePrice: 0, costPrice: 0, stockKey: '', available: true }
+  const empty = {
+    name: '', spec: '', unit: '개', salePrice: 0, costPrice: 0, stockKey: '',
+    available: true, category: '', imageUrl: '', description: '',
+  }
   const [form, setForm] = useState<Record<string, unknown>>(empty)
   const [editing, setEditing] = useState<Product | null>(null)
   const [adding, setAdding] = useState(false)
   const [err, setErr] = useState('')
+
+  //  분류별로 묶어 보여 줍니다. 분류가 없는 것은 맨 아래 「기타」로 갑니다 —
+  //  숨기지 않습니다.
+  const grouped = useMemo(() => {
+    const m = new Map<string, Product[]>()
+    for (const p of products) {
+      const k = p.category?.trim() || '기타'
+      m.set(k, [...(m.get(k) ?? []), p])
+    }
+    for (const list of m.values()) list.sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name))
+    return [...m.entries()].sort((a, b) => {
+      if (a[0] === '기타') return 1
+      if (b[0] === '기타') return -1
+      return (a[1][0]?.sort ?? 0) - (b[1][0]?.sort ?? 0)
+    })
+  }, [products])
+
+  //  단가를 아직 안 정한 것 — 병원 화면에 안 뜨는 물품입니다.
+  const needPrice = useMemo(() => products.filter((p) => p.salePrice <= 0), [products])
+
+  //  이미 쓰고 있는 분류 — 새로 만들 때 골라 쓰게 합니다(오타로 갈리지 않게).
+  const categories = useMemo(
+    () => [...new Set(products.map((p) => p.category?.trim()).filter((c): c is string => !!c))].sort(),
+    [products],
+  )
 
   async function save() {
     setErr('')
@@ -219,6 +247,9 @@ function ProductsTab({
       costPrice: Number(form.costPrice ?? 0),
       stockKey: form.stockKey ? String(form.stockKey) : null,
       available: !!form.available,
+      category: String(form.category ?? ''),
+      imageUrl: String(form.imageUrl ?? '').trim(),
+      description: String(form.description ?? ''),
     } as Partial<Product> & { name: string })
     if (r.ok) {
       setAdding(false)
@@ -243,6 +274,16 @@ function ProductsTab({
         </button>
       )}
 
+      {/*  단가를 아직 안 정한 물건이 있으면 맨 위에 그 수를 적습니다.
+          품목만 있고 값이 없으면 병원 화면에는 하나도 안 뜹니다 — 그 사실을
+          숨기면 「등록했는데 왜 안 보이지」가 됩니다. */}
+      {needPrice.length > 0 && (
+        <p data-product-needprice className="card mb-3 bg-amber-50 p-4 t-body break-keep text-amber-900">
+          <b>단가를 정하지 않은 물품이 {needPrice.length}가지</b> 있습니다 — 판매가를 넣어야 병원 화면에 뜹니다.
+          품목·규격만 미리 만들어 둔 것이라 <b>지어낸 가격은 넣지 않았습니다.</b>
+        </p>
+      )}
+
       {products.length === 0 ? (
         <EmptyState
           icon={Boxes}
@@ -250,38 +291,70 @@ function ProductsTab({
           subtitle="파실 물품을 등록하면 병원 포털에 나오고, 그때부터 요청을 받을 수 있습니다."
         />
       ) : (
-        <div className="flex flex-col gap-2">
-          {products.map((p) => (
-            <div key={p.id} data-product-row={p.id} className="card flex flex-wrap items-center gap-x-3 gap-y-1.5 p-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-300">
-                <Package size={18} strokeWidth={2.2} />
-              </span>
-              <span className="min-w-0 flex-1 basis-[10rem]">
-                <b className="t-cell text-navy-900">{p.name}</b>
-                <span className="t-muted ml-1.5">{p.spec}</span>
-                <span className="t-muted mt-0.5 block">
-                  {p.stockKey ? `재고 연결 · ${STOCK_LABEL[p.stockKey] ?? p.stockKey}` : '재고를 두지 않는 물품'}
-                </span>
-              </span>
-              <span className="shrink-0 text-right">
-                <b className="t-cell tabular-nums text-navy-900">{won(p.salePrice)}</b>
-                <span className="t-muted block tabular-nums">원가 {won(p.costPrice)}</span>
-              </span>
-              {!p.available && <span className="pill bg-navy-50 text-navy-400">공급 불가</span>}
-              {canEdit && (
-                <button
-                  data-product-edit={p.id}
-                  className="btn-ghost shrink-0"
-                  onClick={() => {
-                    setForm({ ...p, stockKey: p.stockKey ?? '' })
-                    setEditing(p)
-                    setErr('')
-                    setAdding(true)
-                  }}
-                >
-                  수정
-                </button>
-              )}
+        <div className="flex flex-col gap-5">
+          {grouped.map(([cat, list]) => (
+            <div key={cat} data-product-group={cat}>
+              <p className="t-label mb-1.5 text-navy-500">
+                {cat} <span className="text-navy-300">· {list.length}가지</span>
+              </p>
+              <div className="flex flex-col gap-2">
+                {list.map((p) => (
+                  <div
+                    key={p.id}
+                    data-product-row={p.id}
+                    className="card flex flex-wrap items-center gap-x-3 gap-y-1.5 p-4"
+                  >
+                    {/*  사진 자리. 실제 제품 사진이 정해지면 여기 들어갑니다 —
+                        없는 사진을 지어내지 않습니다. */}
+                    <span
+                      data-product-thumb={p.id}
+                      className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-300 ring-1 ring-navy-100"
+                    >
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Package size={20} strokeWidth={2.2} />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 basis-[10rem]">
+                      <b className="t-cell text-navy-900">{p.name}</b>
+                      <span className="t-muted ml-1.5">{p.spec}</span>
+                      <span className="t-muted mt-0.5 block">
+                        {p.unit} 단위 ·{' '}
+                        {p.stockKey ? `재고 연결 · ${STOCK_LABEL[p.stockKey] ?? p.stockKey}` : '재고를 두지 않는 물품'}
+                        {p.imageUrl ? '' : ' · 사진 없음'}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      {p.salePrice > 0 ? (
+                        <>
+                          <b className="t-cell tabular-nums text-navy-900">{won(p.salePrice)}</b>
+                          <span className="t-muted block tabular-nums">원가 {won(p.costPrice)}</span>
+                        </>
+                      ) : (
+                        <b data-product-noprice={p.id} className="t-cell text-amber-700">
+                          단가 미정
+                        </b>
+                      )}
+                    </span>
+                    {!p.available && <span className="pill bg-navy-50 text-navy-400">공급 불가</span>}
+                    {canEdit && (
+                      <button
+                        data-product-edit={p.id}
+                        className="btn-ghost shrink-0"
+                        onClick={() => {
+                          setForm({ ...p, stockKey: p.stockKey ?? '' })
+                          setEditing(p)
+                          setErr('')
+                          setAdding(true)
+                        }}
+                      >
+                        수정
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -309,13 +382,43 @@ function ProductsTab({
           value={String(form.name ?? '')}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
-        <label className="field-label mt-2">규격</label>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <span>
+            <label className="field-label">규격</label>
+            <input
+              data-product-spec
+              className="field-input w-full"
+              placeholder="20L · 100매입"
+              value={String(form.spec ?? '')}
+              onChange={(e) => setForm({ ...form, spec: e.target.value })}
+            />
+          </span>
+          <span>
+            <label className="field-label">단위</label>
+            <input
+              data-product-unit
+              className="field-input w-full"
+              placeholder="개 · 박스 · 팩"
+              value={String(form.unit ?? '')}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+            />
+          </span>
+        </div>
+        <label className="field-label mt-2">분류</label>
         <input
+          data-product-category
           className="field-input w-full"
-          placeholder="20L"
-          value={String(form.spec ?? '')}
-          onChange={(e) => setForm({ ...form, spec: e.target.value })}
+          list="product-categories"
+          placeholder="위생·감염관리"
+          value={String(form.category ?? '')}
+          onChange={(e) => setForm({ ...form, category: e.target.value })}
         />
+        <datalist id="product-categories">
+          {categories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+        <p className="t-muted mt-1 break-keep">화면에서 묶어 보여 줄 때만 씁니다 — 재고와는 상관없습니다.</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <span>
             <label className="field-label">판매가</label>
@@ -353,6 +456,36 @@ function ProductsTab({
           재고를 연결하면 <b className="text-navy-600">전달완료를 누를 때</b> 사무실 재고에서 그만큼 빠집니다. 같은
           물건을 자재용·판매용으로 두 번 등록하지 않기 위해서입니다.
         </p>
+        <label className="field-label mt-2">사진 주소</label>
+        <div className="flex items-center gap-2.5">
+          {/*  넣기 전에 어떻게 보일지 그 자리에서 보여 줍니다. */}
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-300 ring-1 ring-navy-100">
+            {String(form.imageUrl ?? '') ? (
+              <img src={String(form.imageUrl)} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <Package size={20} strokeWidth={2.2} />
+            )}
+          </span>
+          <input
+            data-product-image
+            className="field-input w-full"
+            placeholder="https://… (비워 두면 기본 아이콘)"
+            value={String(form.imageUrl ?? '')}
+            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          />
+        </div>
+        <p className="t-muted mt-1 break-keep">
+          실제 제품 사진이 정해지면 넣어 주세요. <b className="text-navy-600">없는 사진을 지어내지 않습니다</b> — 비워
+          두면 기본 아이콘이 그대로 나갑니다.
+        </p>
+        <label className="field-label mt-2">병원에 보이는 설명</label>
+        <input
+          data-product-desc
+          className="field-input w-full"
+          placeholder="규격(S/M/L)은 주문하실 때 적어 주세요"
+          value={String(form.description ?? '')}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
         <label className="mt-2.5 flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
@@ -361,6 +494,9 @@ function ProductsTab({
           />
           <span className="t-body text-navy-800">지금 공급할 수 있음 (끄면 병원이 주문할 수 없습니다)</span>
         </label>
+        <p className="t-muted mt-1 break-keep">
+          판매가가 0원이면 켤 수 없습니다 — 0원짜리 주문이 들어오면 돈이 틀립니다.
+        </p>
       </Modal>
     </>
   )
