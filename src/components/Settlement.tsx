@@ -166,8 +166,10 @@ export function SettlementPanel({
                   </tr>
                 </thead>
                 <tbody className="t-cell divide-y divide-navy-50">
-                  {[...s.wasteLines, ...s.supplyLines].map((l) => (
-                    <tr key={l.key}>
+                  {/*  소모품 판매(0057)도 같은 표에 올립니다 — 이번 달에 이
+                       거래처에서 받을 돈은 한 곳에서 다 보여야 합니다. */}
+                  {[...s.wasteLines, ...s.supplyLines, ...s.productLines].map((l, i) => (
+                    <tr key={`${l.key}-${i}`} data-settle-line={l.key}>
                       <td className="px-4 py-2.5 font-bold text-navy-800">
                         {l.label}
                         {!l.billable && (
@@ -193,6 +195,17 @@ export function SettlementPanel({
               </table>
             </div>
           </section>
+
+          {/*  단가가 없어 청구에 못 실은 소모품 (0057).
+               물건은 나갔는데 받을 돈이 안 잡힌 상태입니다 — 「소모품」 화면에서
+               단가를 넣으면 다음 확정부터 실립니다. 이미 확정한 청구는
+               저절로 바뀌지 않습니다(굳어 둔 값이라 그게 맞습니다). */}
+          {s.productNoPrice.length > 0 && (
+            <p data-settle-noprice className="t-body break-keep rounded-2xl bg-amber-50 px-4 py-3 font-bold text-amber-800">
+              단가가 없어 청구에 안 실린 소모품이 있습니다 — {s.productNoPrice.join(' · ')}. 물건은
+              전달됐는데 받을 돈이 잡히지 않습니다. 「소모품 → 상품」에서 단가를 넣어 주세요.
+            </p>
+          )}
 
           {/* 자재 사용량 — 엑셀에서 따로 세던 것 */}
           {usage.length > 0 && (

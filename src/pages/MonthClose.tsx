@@ -361,7 +361,24 @@ export function MonthClose() {
                   )}
                   <span className="break-keep text-[0.98rem] text-navy-400">
                     수거 {r.collections}건 · 공급 {r.supplies}건
+                    {r.products > 0 && (
+                      <span data-close-products={r.clientId} className="font-bold text-teal-700">
+                        {' '}· 소모품 {r.products}건
+                      </span>
+                    )}
                   </span>
+                  {/*  단가가 없어 청구에 못 실은 소모품 — 물건은 나갔는데
+                       받을 돈이 안 잡힌 것입니다. 조용히 넘기면 그대로 손해라
+                       확정 화면에서 이름까지 적습니다. */}
+                  {r.productNoPrice.length > 0 && (
+                    <span
+                      data-close-noprice={r.clientId}
+                      className="break-keep rounded-lg bg-amber-50 px-2 py-1 text-[0.95rem] font-bold text-amber-700"
+                    >
+                      단가가 없어 청구에 안 실린 소모품 — {r.productNoPrice.slice(0, 2).join(' · ')}
+                      {r.productNoPrice.length > 2 && ` 외 ${r.productNoPrice.length - 2}가지`}
+                    </span>
+                  )}
                   <span className="shrink-0 tabular-nums text-lg font-extrabold text-navy-900">{won(r.amount)}</span>
                 </label>
               )

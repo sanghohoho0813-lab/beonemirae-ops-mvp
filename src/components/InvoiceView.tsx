@@ -74,6 +74,8 @@ export function InvoiceSheet({ invoice }: { invoice: Invoice }) {
   //  전체가 죽으면 그 달 명세서를 아예 못 뽑습니다 — 빈 목록으로 봅니다.
   const medicalLines = inv.medicalLines ?? []
   const diaperLines = inv.diaperLines ?? []
+  //  옛 청구의 굳어 둔 명세서에는 이 칸이 없습니다 — 없으면 빈 목록입니다.
+  const productLines = inv.productLines ?? []
   const freeSupplies = inv.freeSupplies ?? []
   return (
     <div className="mx-auto my-4 max-w-[52rem] bg-white p-6 shadow-2xl print:my-0 print:max-w-none print:p-0 print:shadow-none sm:p-10">
@@ -172,6 +174,32 @@ export function InvoiceSheet({ invoice }: { invoice: Invoice }) {
               <Td />
               <Td className="text-right tabular-nums">{inv.diaperSubtotal.toLocaleString()}</Td>
               {hasVat && <Td className="text-right tabular-nums">{inv.vatTotal.toLocaleString()}</Td>}
+              <Td />
+            </tr>
+          )}
+
+          {/*  소모품 판매 (0057) — 전달완료한 주문만 올라옵니다.
+               수거 줄과 섞지 않습니다: 병원이 「이건 무슨 돈인가」를 바로
+               알아야 하고, 이사님도 소계를 따로 봅니다. */}
+          {productLines.map((l, i) => (
+            <tr key={`p${i}`} className="border-b border-navy-100">
+              <Td className="text-center">{md(l.date)}</Td>
+              <Td className="text-left font-bold text-navy-800">{l.label}</Td>
+              <Td className="text-center text-navy-500">{l.unit}</Td>
+              <Td className="text-right tabular-nums">{l.qty.toLocaleString()}</Td>
+              <Td className="text-right tabular-nums text-navy-500">{l.price > 0 ? l.price.toLocaleString() : ''}</Td>
+              <Td className="text-right font-bold tabular-nums">{l.amount > 0 ? l.amount.toLocaleString() : ''}</Td>
+              {hasVat && <Td />}
+              <Td className="text-left text-navy-400">{l.note}</Td>
+            </tr>
+          ))}
+          {productLines.length > 0 && (
+            <tr data-invoice-product-subtotal className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
+              <Td colSpan={5} className="text-left">
+                소모품 공급 합계
+              </Td>
+              <Td className="text-right tabular-nums">{(inv.productSubtotal ?? 0).toLocaleString()}</Td>
+              {hasVat && <Td />}
               <Td />
             </tr>
           )}

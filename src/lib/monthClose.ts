@@ -35,6 +35,13 @@ export interface CloseRow {
   amount: number
   collections: number
   supplies: number
+  /** 그 달에 전달완료한 소모품 주문 건수 (0057) */
+  products: number
+  /**
+   * 단가가 비어 있어 **청구에 안 실린** 소모품 품목 (0057).
+   *  물건은 나갔는데 받을 돈이 안 잡힌다는 뜻이라 화면이 그대로 적습니다.
+   */
+  productNoPrice: string[]
   /** 이 달에 이미 확정해 둔 금액 (추가 청구일 때) */
   alreadyBilled: number
   /** 거래처 단가가 없어 기본 단가로 계산된 품목 이름 */
@@ -105,6 +112,8 @@ export function monthClose(data: AppData, month: string): MonthClose {
       amount: st.pendingAmount,
       collections: st.pending.collections,
       supplies: st.pending.supplies,
+      products: st.pending.productOrders,
+      productNoPrice: st.pending.productNoPrice,
       alreadyBilled: st.billedAmount,
       defaultPriced: defaultPricedItems(c, [...st.pending.wasteLines, ...st.pending.supplyLines]),
       oddAmounts: oddAmountsIn(data, c.id, month),

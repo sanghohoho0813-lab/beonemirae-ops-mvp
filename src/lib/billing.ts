@@ -252,7 +252,11 @@ export function stockDeltaOf(items: ItemCounts): Record<StockBucket, number> {
 // ── 월 정산 ──────────────────────────────────────────────────────────────────
 
 export interface SettlementLine {
-  key: ItemKey
+  /**
+   * 품목 열쇠. 소모품 판매 줄(0057)은 정해진 품목표에 없는 물건이라
+   * 'product' 로 표시합니다 — ITEM_BY_KEY 에서 찾으면 안 됩니다.
+   */
+  key: ItemKey | 'product'
   label: string
   unit: ItemUnit
   qty: number
@@ -273,6 +277,25 @@ export interface Settlement {
   wasteLines: SettlementLine[]
   /** 물품 공급 */
   supplyLines: SettlementLine[]
+  /**
+   * 소모품 판매 (0048 → 0057). **전달완료된 주문만**입니다.
+   *  단가·원가는 주문 시점에 굳어 둔 값을 씁니다 — 오늘 상품가가 바뀌어도
+   *  이미 전달한 물건의 청구액은 안 흔들립니다.
+   */
+  productLines: SettlementLine[]
+  /** 소모품 매출 */
+  productRevenue: number
+  /** 소모품 원가 (주문 시점 값) */
+  productCost: number
+  /** 그 달에 전달완료한 주문 건수 */
+  productOrders: number
+  /**
+   * 단가가 비어 있어 **0원으로 잡힌** 소모품 품목 이름.
+   *
+   *  물건은 나갔는데 청구에 안 실린다는 뜻입니다. 조용히 넘어가면 그대로
+   *  돈이 새므로 화면이 이 목록을 그대로 보여 줍니다.
+   */
+  productNoPrice: string[]
   /** 유상 물품 매출 */
   supplyRevenue: number
   /** 수거 매출 */
@@ -302,6 +325,8 @@ export interface Settlement {
 export interface BilledIds {
   scheduleIds?: string[]
   materialIds?: string[]
+  /** 이미 청구한 소모품 주문 id (0057) */
+  orderIds?: string[]
 }
 
 function completedIn(data: AppData, clientId: string, month: string, billed?: BilledIds) {
@@ -375,6 +400,31 @@ function suppliesIn(data: AppData, clientId: string, month: string, billed?: Bil
   return data.materials.filter(
     (m) => m.clientId === clientId && monthOf(m.date) === month && !skip.has(m.id),
   )
+}
+
+/**
+ * 그 달에 **전달완료**된 소모품 주문 (0048 판매).
+ *
+ *  ⚠ 전달완료만 셉니다. 요청·확인·준비·전달예정은 아직 매출이 아닙니다 —
+ *    「실제 판매가 발생하기 전에는 예상 실적을 실제처럼 표시하지 않는다」가
+ *    대표님이 정하신 규칙이고, 재고도 전달완료에서만 빠집니다(0048).
+ *    취소한 주문은 영영 매출이 아닙니다.
+ *
+ *  ⚠ 어느 달인지는 **전달한 날**로 봅니다. 주문한 날이 아닙니다 — 지난달에
+ *    요청받아 이번 달에 실어다 준 물건은 이번 달 매출입니다.
+ */
+function deliveredOrdersIn(data: AppData, clientId: string, month: string, billed?: BilledIds) {
+  const skip = new Set(billed?.orderIds ?? [])
+  return (data.productOrders ?? [])
+    .filter(
+      (o) =>
+        o.clientId === clientId &&
+        o.status === '전달완료' &&
+        !!o.deliveredAt &&
+        monthOf(o.deliveredAt.slice(0, 10)) === month &&
+        !skip.has(o.id),
+    )
+    .sort((a, b) => (a.deliveredAt ?? '').localeCompare(b.deliveredAt ?? ''))
 }
 
 /**
@@ -462,13 +512,46 @@ export function settlementFor(
           .reduce((a, s) => a + Math.round(((s.actualAmount ?? 0) * diaSale * vatPct) / 100), 0)
       : 0
 
+  //  ── 소모품 판매 (0057) ───────────────────────────────────────────────────
+  //   전달완료한 주문을 품목별로 합쳐 한 줄씩 만듭니다. 단가·원가는 주문
+  //   시점에 굳어 둔 값입니다(오늘 상품가를 다시 읽지 않습니다).
+  const orders = deliveredOrdersIn(data, clientId, month, billed)
+  const prodMap = new Map<string, { label: string; unit: string; qty: number; price: number; cost: number }>()
+  const noPrice = new Set<string>()
+  for (const o of orders) {
+    for (const it of o.items) {
+      if (!it.qty) continue
+      //  같은 품목·같은 단가끼리만 한 줄로 묶습니다. 단가가 다르면(주문
+      //  시점이 다르면) 줄을 나눠야 명세서에서 단가×수량이 맞습니다.
+      const label = [it.name, it.spec].filter(Boolean).join(' ')
+      const k = `${label}|${it.unit}|${it.unitPrice}|${it.unitCost}`
+      const cur = prodMap.get(k) ?? { label, unit: it.unit, qty: 0, price: it.unitPrice, cost: it.unitCost }
+      cur.qty += it.qty
+      prodMap.set(k, cur)
+      if (!it.unitPrice) noPrice.add(label)
+    }
+  }
+  const productLines: SettlementLine[] = [...prodMap.values()].map((v) => ({
+    key: 'product' as const,
+    label: v.label,
+    unit: v.unit as SettlementLine['unit'],
+    qty: v.qty,
+    salePrice: v.price || null,
+    costPrice: v.cost || null,
+    revenue: v.qty * v.price,
+    cost: v.qty * v.cost,
+    billable: v.price > 0,
+  }))
+  const productRevenue = productLines.reduce((a, l) => a + l.revenue, 0)
+  const productCost = productLines.reduce((a, l) => a + l.cost, 0)
+
   const wasteRevenue = wasteLines.reduce((a, l) => a + l.revenue, 0) + flatRevenue + diaperVat
   const supplyRevenue = supplyLines.reduce((a, l) => a + l.revenue, 0)
   const disposalCost = wasteLines.reduce((a, l) => a + l.cost, 0)
   const materialCost = supplyLines.reduce((a, l) => a + l.cost, 0)
 
-  const revenue = wasteRevenue + supplyRevenue
-  const cost = disposalCost + materialCost
+  const revenue = wasteRevenue + supplyRevenue + productRevenue
+  const cost = disposalCost + materialCost + productCost
   const profit = revenue - cost
 
   return {
@@ -477,6 +560,11 @@ export function settlementFor(
     month,
     wasteLines,
     supplyLines,
+    productLines,
+    productRevenue,
+    productCost,
+    productOrders: orders.length,
+    productNoPrice: [...noPrice],
     supplyRevenue,
     wasteRevenue,
     revenue,
@@ -538,7 +626,8 @@ export function rollupFor(data: AppData, month: string): MonthlyRollup {
 
 export interface InvoiceLine {
   date: string
-  itemKey: ItemKey
+  /** 소모품 판매 줄(0057)은 'product' — 품목표에 없는 물건입니다 */
+  itemKey: ItemKey | 'product'
   label: string
   unit: ItemUnit
   qty: number
@@ -564,8 +653,16 @@ export interface Invoice {
   paymentTerms: string
   medicalLines: InvoiceLine[]
   diaperLines: InvoiceLine[]
+  /**
+   * 소모품 판매 (0057). **전달완료한 주문만** 올립니다.
+   *
+   *  수거·용기와 줄을 섞지 않습니다 — 병원이 명세서를 보고 「이건 무슨
+   *  돈인가」를 바로 알 수 있어야 하고, 이사님도 소계를 따로 봅니다.
+   */
+  productLines: InvoiceLine[]
   medicalSubtotal: number
   diaperSubtotal: number
+  productSubtotal: number
   medicalKg: number
   diaperKg: number
   /** 세액 합 (부가세 별도 거래처만 0 이 아님). total 은 세액을 포함합니다 */
@@ -713,11 +810,35 @@ export function invoiceFor(
     }
   }
 
-  medicalLines.sort((a, b) => a.date.localeCompare(b.date) || a.itemKey.localeCompare(b.itemKey))
+  //  소모품 판매 (0057) — 전달한 날짜에, 주문 시점 단가로 올립니다.
+  //   ⚠ 단가가 0 인 품목은 금액이 없으므로 명세서에 올리지 않습니다.
+  //     대신 정산 화면이 「단가가 없어 청구에 안 실린 소모품」으로 셉니다 —
+  //     조용히 사라지면 물건은 나갔는데 받을 돈이 없어집니다.
+  const productLines: InvoiceLine[] = []
+  for (const o of deliveredOrdersIn(data, clientId, month, billed)) {
+    const day = (o.deliveredAt ?? '').slice(0, 10)
+    for (const it of o.items) {
+      if (!it.qty || !it.unitPrice) continue
+      productLines.push({
+        date: day,
+        itemKey: 'product',
+        label: [it.name, it.spec].filter(Boolean).join(' '),
+        unit: (it.unit || '개') as InvoiceLine['unit'],
+        qty: it.qty,
+        price: it.unitPrice,
+        amount: it.qty * it.unitPrice,
+        note: '소모품',
+      })
+    }
+  }
+
+  medicalLines.sort((a, b) => a.date.localeCompare(b.date) || String(a.itemKey).localeCompare(String(b.itemKey)))
   diaperLines.sort((a, b) => a.date.localeCompare(b.date))
+  productLines.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label, 'ko'))
 
   const medicalSubtotal = medicalLines.reduce((a, l) => a + l.amount, 0)
   const diaperSubtotal = diaperLines.reduce((a, l) => a + l.amount, 0)
+  const productSubtotal = productLines.reduce((a, l) => a + l.amount, 0)
   //  세액은 줄 단위로 이미 계산돼 있습니다 — 여기서는 더하기만 합니다.
   const vatTotal = [...medicalLines, ...diaperLines].reduce((a, l) => a + (l.vat ?? 0), 0)
 
@@ -733,13 +854,17 @@ export function invoiceFor(
     paymentTerms: client?.paymentTerms ?? '',
     medicalLines,
     diaperLines,
+    productLines,
     medicalSubtotal,
     diaperSubtotal,
+    productSubtotal,
     //  kg 합계에 월정액 줄(qty 1「식」)이 섞이면 안 됩니다 — kg 줄만 셉니다.
     medicalKg: medicalLines.filter((l) => l.itemKey === 'medical' && l.unit === 'kg').reduce((a, l) => a + l.qty, 0),
     diaperKg: diaperLines.filter((l) => l.unit === 'kg').reduce((a, l) => a + l.qty, 0),
     vatTotal,
-    total: medicalSubtotal + diaperSubtotal + vatTotal,
+    //  ⚠ 이 합계는 청구 금액(settlementFor 의 revenue)과 **1원까지 같아야**
+    //    합니다. 다르면 병원에 보낸 종이와 미수금 장부가 어긋납니다.
+    total: medicalSubtotal + diaperSubtotal + productSubtotal + vatTotal,
     freeSupplies: [...freeMap.entries()].map(([k, qty]) => ({
       label: ITEM_BY_KEY[k].label,
       qty,
@@ -862,6 +987,12 @@ export interface BillingSnapshot {
   scheduleIds: string[]
   /** 이 청구가 덮은 자재 공급 id */
   materialIds: string[]
+  /**
+   * 이 청구가 덮은 소모품 주문 id (0057).
+   *
+   *  옛 청구에는 이 칸이 없습니다 — 없으면 빈 목록으로 봅니다.
+   */
+  orderIds?: string[]
   /** 확정 당시의 거래명세서 (나중에 그대로 다시 뽑을 수 있습니다) */
   invoice: Invoice
   /** 확정 당시의 손익 (매출·원가·이익) */
@@ -883,13 +1014,15 @@ export function liveBills(data: AppData, clientId: string, month: string): Payme
 export function billedIdsOf(data: AppData, clientId: string, month: string): BilledIds {
   const scheduleIds: string[] = []
   const materialIds: string[] = []
+  const orderIds: string[] = []
   for (const p of liveBills(data, clientId, month)) {
     const snap = p.snapshot
     if (!snap) continue
     scheduleIds.push(...(snap.scheduleIds ?? []))
     materialIds.push(...(snap.materialIds ?? []))
+    orderIds.push(...(snap.orderIds ?? []))
   }
-  return { scheduleIds, materialIds }
+  return { scheduleIds, materialIds, orderIds }
 }
 
 /** 청구 화면이 알아야 할 것 — 얼마를 청구했고, 아직 얼마가 남았는가 */
@@ -925,7 +1058,9 @@ export function billingStateFor(data: AppData, clientId: string, month: string):
   //  그 달에 이미 청구가 있으면 다시 올리지 않습니다. 뺄 근거가 되는
   //  수거·공급 id 가 없어서, 확정한 뒤에도 정산이 계속 같은 금액을
   //  돌려줍니다 — 그대로 두면 매번 「추가 청구」로 다시 잡힙니다.
-  const flatOnly = pending.collections === 0 && pending.supplies === 0 && pending.revenue > 0
+  //  월정액만 있는 달인지 — 소모품 판매도 「근거 있는 청구」입니다(0057).
+  const flatOnly =
+    pending.collections === 0 && pending.supplies === 0 && pending.productOrders === 0 && pending.revenue > 0
   return {
     bills,
     billedAmount,
@@ -937,7 +1072,8 @@ export function billingStateFor(data: AppData, clientId: string, month: string):
     //     0원짜리 청구를 만들면 미수금 목록에 뜻 없는 줄만 늘어납니다.
     canConfirm:
       pending.revenue > 0 &&
-      (pending.collections + pending.supplies > 0 || (flatOnly && bills.length === 0)),
+      (pending.collections + pending.supplies + pending.productOrders > 0 ||
+        (flatOnly && bills.length === 0)),
     nextKind: bills.length > 0 ? '추가' : '정기',
     hasLegacyBill,
   }
@@ -959,6 +1095,7 @@ export function buildBillingSnapshot(
   const invoice = invoiceFor(data, clientId, month, billed)
   const skipS = new Set(billed.scheduleIds ?? [])
   const skipM = new Set(billed.materialIds ?? [])
+  const skipO = new Set(billed.orderIds ?? [])
   const snapshot: BillingSnapshot = {
     confirmedAt: now,
     scheduleIds: data.schedules
@@ -967,6 +1104,18 @@ export function buildBillingSnapshot(
     materialIds: data.materials
       .filter((m) => m.clientId === clientId && m.date.slice(0, 7) === month && !skipM.has(m.id))
       .map((m) => m.id),
+    //  전달완료한 소모품 주문 (0057). 여기에 담긴 것은 서버가 「이미 청구함」
+    //  으로 기억해, 두 번째 확정에서 같은 주문이 또 실리지 않습니다.
+    orderIds: (data.productOrders ?? [])
+      .filter(
+        (o) =>
+          o.clientId === clientId &&
+          o.status === '전달완료' &&
+          !!o.deliveredAt &&
+          o.deliveredAt.slice(0, 7) === month &&
+          !skipO.has(o.id),
+      )
+      .map((o) => o.id),
     invoice,
     revenue: state.pending.revenue,
     cost: state.pending.cost,
