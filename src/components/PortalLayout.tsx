@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { CLIENT_TEL } from '../lib/brand'
 import { PackageCheck, Building2, FileBarChart, History, Headset, LogOut, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
@@ -59,11 +60,11 @@ export function PortalLayout() {
               className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             />
             <a
-              href="tel:1533-8876"
+              href={`tel:${CLIENT_TEL}`}
               className="flex items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             >
               <Headset size={17} strokeWidth={2.3} />
-              <span className="t-btn hidden sm:inline">1533-8876</span>
+              <span className="t-btn hidden sm:inline">{CLIENT_TEL}</span>
             </a>
             <button
               onClick={() => {

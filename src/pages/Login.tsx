@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { SYSTEM_TAGLINE } from '../lib/brand'
+import { COMPANY_HOURS, COMPANY_TEL, SYSTEM_TAGLINE } from '../lib/brand'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -202,7 +202,10 @@ export function Login() {
         </div>
 
         <p className="t-muted mt-6 text-center text-navy-400">
-          ㈜비원미래 · 1533-8876 · 평일 09:00 ~ 18:00
+          {/*  로그인 화면은 직원·병원이 함께 씁니다. 병원 상담번호가 아니라
+              **회사 대표번호**를 둡니다 — 직원이 자기 회사 상담센터로
+              전화할 일은 없습니다. */}
+          ㈜비원미래 · {COMPANY_TEL} · {COMPANY_HOURS}
         </p>
       </div>
     </div>

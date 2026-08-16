@@ -24,7 +24,16 @@ import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
-import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
+import {
+  COMPANY,
+  COMPANY_EMAIL,
+  COMPANY_FAX,
+  COMPANY_HOURS,
+  COMPANY_TEL,
+  SYSTEM_TAGLINE,
+  SYSTEM_WORDMARK,
+  SYSTEM_WORDMARK_TAIL,
+} from '../lib/brand'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { HelpSheet } from './HelpSheet'
 import { DevRequestButton, DevRequestSheet } from './DevRequestSheet'
@@ -362,41 +371,53 @@ function Sidebar() {
             </button>
           )}
         </div>
-        <TourButton className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-3 py-3 text-[1.05rem] font-bold text-navy-200 transition hover:bg-white/10 hover:text-white" />
-        {/*  개발자에게 요청하기 — 「사용 방법」 바로 아래, 전화번호 위.
-             불편한 것이 생기는 순간은 화면을 보고 있을 때입니다. 그때 눈에
-             들어오는 자리에 두어야 합니다(0022). */}
-        <DevRequestButton className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-3 py-3 text-[1.05rem] font-bold text-navy-200 transition hover:bg-white/10 hover:text-white" />
-        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
-          <Headset size={16} className="shrink-0 text-teal-300" />
-          <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1.12rem] font-bold text-white">1533-8876</p>
-            <p className="break-keep text-[1rem] text-navy-400">평일 09:00 ~ 18:00</p>
+        {/*  「사용 방법」과 「개발자에게 요청하기」는 오른쪽 위로 옮겼습니다.
+             한 화면에 같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈리고,
+             왼쪽 목차는 목차만 남는 편이 읽힙니다. */}
+        {/*  회사 연락처 — **우리 직원**이 보는 값입니다.
+             예전에는 병원 상담번호(1533-8876)가 여기 있었습니다. 직원이
+             자기 회사 상담센터로 전화할 일은 없고, 정작 대표번호는
+             어디에도 없었습니다. */}
+        <div data-company-contact className="rounded-xl bg-white/5 px-3 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <Headset size={16} className="shrink-0 text-teal-300" />
+            <div className="min-w-0 leading-tight">
+              <p className="break-keep text-[1.12rem] font-bold text-white">{COMPANY_TEL}</p>
+              <p className="break-keep text-[1rem] text-navy-400">{COMPANY_HOURS}</p>
+            </div>
           </div>
+          <p className="mt-1.5 break-keep text-[1rem] leading-snug text-navy-400">
+            팩스 {COMPANY_FAX}
+            <br />
+            {COMPANY_EMAIL}
+          </p>
         </div>
+        {/*  바깥으로 나가는 길. 아이콘만 두었더니 무엇인지 눌러 보기 전에는
+             알 수 없었습니다 — 이름을 함께 답니다. 글자와 아이콘을 같은
+             크기 감각으로 맞추고 예전보다 10% 키웠습니다. */}
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => navigate('/company')}
-            title="회사 홈페이지"
-            className="flex items-center justify-center rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
           >
-            <Globe size={16} strokeWidth={2.2} />
+            <Globe size={18} strokeWidth={2.2} />
+            <span className="break-keep text-[0.98rem] font-semibold">홈페이지</span>
           </button>
           <button
             onClick={() => navigate('/mobile-preview')}
-            title="모바일 미리보기"
-            className="flex items-center justify-center rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
           >
-            <Smartphone size={16} strokeWidth={2.2} />
+            <Smartphone size={18} strokeWidth={2.2} />
+            <span className="break-keep text-[0.98rem] font-semibold">모바일 화면</span>
           </button>
           <a
             href={ALLBARO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            title="올바로 시스템"
-            className="flex items-center justify-center rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
           >
-            <ExternalLink size={16} strokeWidth={2.2} />
+            <ExternalLink size={18} strokeWidth={2.2} />
+            <span className="break-keep text-[0.98rem] font-semibold">올바로</span>
           </a>
         </div>
       </div>
@@ -591,6 +612,11 @@ export function Layout() {
                 className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
                 label="사용 방법"
               />
+              {/*  개발자에게 요청하기 — 왼쪽 목차에서 여기로 올렸습니다.
+                   같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈립니다.
+                   **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고
+                   이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
+              <DevRequestButton className="flex items-center gap-1.5 rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800" />
             </div>
             {/*
               안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어

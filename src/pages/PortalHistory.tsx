@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { CLIENT_TEL } from '../lib/brand'
 import { Hospital, ClipboardList } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, EmptyState } from '../components/ui'
@@ -76,7 +77,7 @@ export function PortalHistory() {
       )}
 
       <p className="t-muted break-keep">
-        수거대장 PDF 자동 발급과 올바로 시스템 연동은 개발 예정입니다. 지금 필요하시면 담당자(1533-8876)에게
+        수거대장 PDF 자동 발급과 올바로 시스템 연동은 개발 예정입니다. 지금 필요하시면 담당자({CLIENT_TEL})에게
         요청해 주세요.
       </p>
     </PageShell>

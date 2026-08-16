@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CLIENT_TEL } from '../lib/brand'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -116,7 +117,7 @@ export function PortalHome() {
         <EmptyState
           icon={Hospital}
           title="연결된 병원 정보를 찾을 수 없습니다"
-          subtitle="비원미래 담당자에게 계정 연결을 요청해 주세요. (1533-8876)"
+          subtitle={`비원미래 담당자에게 계정 연결을 요청해 주세요. (${CLIENT_TEL})`}
         />
       </PageShell>
     )

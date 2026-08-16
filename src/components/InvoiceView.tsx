@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { COMPANY_EMAIL, COMPANY_FAX, COMPANY_TEL } from '../lib/brand'
 import { Printer, X } from 'lucide-react'
 import type { Invoice } from '../lib/billing'
 import { won } from '../lib/format'
@@ -38,8 +39,9 @@ const SUPPLIER = {
   category: '서비스',
   item: '의료폐기물 수집운반',
   manager: '홍현주',
-  phone: '1533-8876',
-  email: 'beonemirae@naver.com',
+  phone: COMPANY_TEL,
+  fax: COMPANY_FAX,
+  email: COMPANY_EMAIL,
   bank: '기업은행',
   account: '523-075252-04-012',
   holder: '㈜ 비원미래',
