@@ -9,7 +9,6 @@ import {
   ExternalLink,
   Headset,
   Lock,
-  Sparkles,
   ChevronDown,
   LogOut,
   HelpCircle,
@@ -181,7 +180,26 @@ function GroupHeader({
 }
 
 /** 접히는 메뉴 묶음 (링크 목록) */
-function NavGroup({ id, title, items }: { id: string; title: string; items: NavItem[] }) {
+/**
+ * 목차 한 묶음.
+ *
+ *  `planned` 는 **아직 못 쓰는 것**입니다. 예전에는 「운영 도구」와
+ *  「추가 개발 예정」이 별개의 묶음이었는데, 둘 다 같은 성격(업무 도구)이라
+ *  목차가 괜히 둘로 갈려 있었습니다. 한 묶음에 넣되 **자물쇠로 구분**하고
+ *  **누를 수 없게** 둡니다 — 눌리는데 아무 일도 안 일어나는 것이 제일
+ *  나쁩니다.
+ */
+function NavGroup({
+  id,
+  title,
+  items,
+  planned = [],
+}: {
+  id: string
+  title: string
+  items: NavItem[]
+  planned?: string[]
+}) {
   const { pathname } = useLocation()
   const hasActive = items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))
   const [open, setOpen] = useState(() => readNavOpen(id, false))
@@ -196,7 +214,7 @@ function NavGroup({ id, title, items }: { id: string; title: string; items: NavI
     <>
       <GroupHeader
         title={title}
-        count={items.length}
+        count={items.length + planned.length}
         open={open}
         onToggle={() => {
           setOpen((v) => {
@@ -210,6 +228,26 @@ function NavGroup({ id, title, items }: { id: string; title: string; items: NavI
           {items.map((item) => (
             <SidebarLink key={item.to} item={item} muted />
           ))}
+          {planned.length > 0 && (
+            <p className="px-4 pb-1 pt-3 text-[0.88rem] font-bold tracking-wide text-navy-500">추가 개발 예정</p>
+          )}
+          {planned.map((label) => (
+            //  단추가 아니라 글자입니다 — 누를 수 없다는 것이 손끝에서
+            //  먼저 느껴져야 합니다.
+            <div
+              key={label}
+              data-nav-planned={label}
+              aria-disabled="true"
+              title="아직 개발 전입니다 — 「활용 계획」에서 단계별 로드맵을 볼 수 있습니다"
+              className="flex w-full cursor-default select-none items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-500"
+            >
+              <Lock size={14} className="shrink-0" />
+              <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
+              <span className="shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-500">
+                예정
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </>
@@ -218,7 +256,6 @@ function NavGroup({ id, title, items }: { id: string; title: string; items: NavI
 
 function Sidebar() {
   const navigate = useNavigate()
-  const [plannedOpen, setPlannedOpen] = useState(() => readNavOpen('planned', false))
   const { configured, profile, signOut } = useAuth()
   const coreNav = useVisibleNav(CORE_NAV)
   const serviceNav = useVisibleNav(SERVICE_NAV)
@@ -282,47 +319,13 @@ function Sidebar() {
 
         {/*  현장 담당자에게는 이 묶음이 통째로 비어 있습니다(access.ts).
              빈 제목만 남으면 "여기 뭔가 있는데 안 열린다"로 읽힙니다. */}
+        {/*  운영 도구 — 쓸 수 있는 것과 아직 못 쓰는 것을 **한 묶음**으로.
+             예전에는 「운영 도구」와 「추가 개발 예정」이 목차 두 칸을 따로
+             차지했습니다. 둘 다 업무 도구라 나눌 이유가 없었고, 목차만
+             길어졌습니다. 자물쇠로 구분하고 아직 못 쓰는 것은 누를 수 없게
+             둡니다. */}
         {toolNav.length > 0 && (
-          <NavGroup id="tools" title="운영 도구 · 추가 고도화 예정" items={toolNav} />
-        )}
-
-        {/*  추가 개발 예정 — 접기/펼치기.
-             누르면 「활용 계획」으로 가는 목록이라, 그 화면을 못 여는 역할에게는
-             띄우지 않습니다. 현장 담당자에게는 지금 할 일과 상관없는 목록이고,
-             눌러도 「접근 권한이 없는 화면입니다」만 나옵니다. */}
-        {showPlanned && (
-        <>
-        <GroupHeader
-          title="추가 개발 예정"
-          icon={Sparkles}
-          count={PLANNED.length}
-          open={plannedOpen}
-          onToggle={() => {
-            setPlannedOpen((v) => {
-              writeNavOpen('planned', !v)
-              return !v
-            })
-          }}
-        />
-        {plannedOpen && (
-          <div className="space-y-0.5 pb-2">
-            {PLANNED.map((label) => (
-              <button
-                key={label}
-                onClick={() => navigate('/roadmap')}
-                title="향후 개발 예정 기능 — 활용 계획에서 단계별 로드맵을 확인할 수 있습니다"
-                className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
-              >
-                <Lock size={14} className="shrink-0" />
-                <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
-                <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.98rem] font-bold text-navy-300">
-                  예정
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        </>
+          <NavGroup id="tools" title="운영 도구" items={toolNav} planned={showPlanned ? PLANNED : []} />
         )}
 
         {/*  관리 — 관리자 전용. 아직 만들지 않은 「추가 개발 예정」보다 아래에

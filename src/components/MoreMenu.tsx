@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, Monitor, ChevronDown, Sparkles, Globe, Workflow, ExternalLink, Lock, LogOut, MessageSquarePlus, BookOpen, Lightbulb } from 'lucide-react'
+import { Smartphone, Monitor, ChevronDown, Sparkles, Globe, ExternalLink, Lock, LogOut, MessageSquarePlus, BookOpen, Lightbulb } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -55,6 +55,7 @@ function NavSection({
   hook,
   collapsible = false,
   defaultOpen = true,
+  planned = [],
 }: {
   title: string
   items: NavItem[]
@@ -63,6 +64,8 @@ function NavSection({
   /** 접었다 폈다 할 수 있는가 (운영 도구처럼 길고 매일 안 쓰는 묶음) */
   collapsible?: boolean
   defaultOpen?: boolean
+  /** 아직 못 쓰는 것 — 자물쇠를 달고 **누를 수 없게** 둡니다 */
+  planned?: string[]
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const shown = !collapsible || open
@@ -81,7 +84,7 @@ function NavSection({
           <span className="min-w-0 flex-1 break-keep">{title}</span>
           {!open && (
             <span className="shrink-0 rounded-md bg-navy-100 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-500">
-              {items.length}
+              {items.length + planned.length}
             </span>
           )}
           <ChevronDown size={16} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -110,6 +113,28 @@ function NavSection({
           </Tappable>
         ))}
       </div>
+      {/*  아직 못 쓰는 것. **단추가 아니라 글자**입니다 — 눌리는데 아무 일도
+           안 일어나는 것이 제일 나쁩니다. */}
+      {planned.length > 0 && shown && (
+        <>
+          <p className="mb-1.5 mt-3 px-1 text-[0.98rem] font-bold text-navy-400">추가 개발 예정</p>
+          <div className="flex flex-wrap gap-1.5">
+            {planned.map((label) => (
+              <span
+                key={label}
+                data-more-planned-item={label}
+                aria-disabled="true"
+                className="inline-flex cursor-default select-none items-center gap-1 rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.98rem] font-semibold text-navy-400"
+              >
+                <Lock size={12} /> {label}
+              </span>
+            ))}
+          </div>
+          <p className="t-muted mt-2 break-keep px-1">
+            위 기능은 아직 개발 전이라 눌러도 열리지 않습니다. 단계별 계획은 「활용 계획」에 있습니다.
+          </p>
+        </>
+      )}
     </section>
   )
 }
@@ -135,7 +160,6 @@ export function MoreMenu({
 }) {
   const navigate = useNavigate()
   const { role, configured, profile, signOut } = useAuth()
-  const [plannedOpen, setPlannedOpen] = useState(false)
   const [rndOpen, setRndOpen] = useState(false)
   //  현장 담당자에게는 미수금·통계·배차가 열리지 않습니다. 사이드바에서는
   //  이미 숨기고 있었는데 폰의 더보기에는 그대로 남아 있어서, 눌렀다가
@@ -235,56 +259,14 @@ export function MoreMenu({
       )}
       {toolNav.length > 0 && (
         <NavSection
-          title="운영 도구 · 추가 고도화 예정"
+          title="운영 도구"
           items={toolNav}
           onGo={go}
           hook="more-tools"
           collapsible
           defaultOpen={false}
+          planned={showRoadmap ? PLANNED : []}
         />
-      )}
-
-      {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분.
-          아직 없는 기능 목록이라 처음부터 펼쳐 두지 않습니다. PC 사이드바와
-          같은 규칙입니다(Layout.tsx 의 NavGroup). */}
-      {showRoadmap && (
-      <section>
-        <button
-          type="button"
-          onClick={() => setPlannedOpen((v) => !v)}
-          aria-expanded={plannedOpen}
-          data-more-planned
-          className="mb-2 flex w-full items-center gap-2 px-1 text-left text-[1.08rem] font-semibold text-navy-500"
-        >
-          <span className="min-w-0 flex-1 break-keep">추가 개발 예정</span>
-          {!plannedOpen && (
-            <span className="shrink-0 rounded-md bg-navy-100 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-500">
-              {PLANNED.length}
-            </span>
-          )}
-          <ChevronDown size={16} className={`shrink-0 transition-transform ${plannedOpen ? 'rotate-180' : ''}`} />
-        </button>
-        {plannedOpen && (
-        <div className="card p-4">
-          <div className="flex flex-wrap gap-1.5">
-            {PLANNED.map((f) => (
-              <span
-                key={f}
-                className="inline-flex items-center gap-1 rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.98rem] font-semibold text-navy-500"
-              >
-                <Lock size={12} /> {f}
-              </span>
-            ))}
-          </div>
-          <button className="btn-ghost mt-3 w-full" onClick={() => go('/roadmap')}>
-            <Workflow size={16} strokeWidth={2.4} /> 단계별 활용 계획 보기
-          </button>
-          <p className="mt-2.5 text-[0.98rem] text-navy-400">
-            위 기능은 아직 실사용 단계가 아니며, 단계별 로드맵에 따라 개발 예정입니다.
-          </p>
-        </div>
-        )}
-      </section>
       )}
 
       {/*  관리 — PC 사이드바와 같이 맨 아래. 관리자에게만 열립니다. */}
