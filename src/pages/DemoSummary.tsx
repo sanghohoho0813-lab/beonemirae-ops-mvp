@@ -200,7 +200,7 @@ export function DemoSummary() {
               </div>
               <p className="mt-2 flex items-center gap-1.5 text-[1.03rem] font-semibold text-navy-500"><Route size={14} className="shrink-0" /> 권장 순서</p>
               <p className="mt-1 break-words text-[1.08rem] font-medium text-navy-600">{p.routeLabels.join(' → ')}</p>
-              <p className="mt-2 flex items-start gap-1.5 break-words text-[0.98rem] font-bold text-navy-500"><Target size={13} className="mt-0.5 shrink-0" /> <span className="min-w-0">{p.facilityName} 인계 {p.handoverTime} · 운행 {p.simDistanceKm}km (시뮬)</span></p>
+              <p className="mt-2 flex items-start gap-1.5 break-words text-[0.98rem] font-bold text-navy-500"><Target size={13} className="mt-0.5 shrink-0" /> <span className="min-w-0">{p.facilityName} 인계 {p.handoverTime} · 정차 {p.stops.length}곳</span></p>
             </div>
           ))}
         </div>

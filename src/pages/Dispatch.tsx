@@ -8,6 +8,7 @@ import { WasteBadge } from '../components/Badge'
 import { PageShell, SectionTitle, ExpandableSection } from '../components/ui'
 import { SeparationNotice, VehicleFleetCard, FacilityCard, IsolationCard } from '../components/ops'
 import { dispatchPlans, type DispatchPlan } from '../lib/ops'
+import { RouteReviewCard } from '../components/RouteReviewCard'
 import { today } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,27 +84,33 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
               <div>
                 <p className="mb-1.5 text-[1.03rem] font-semibold text-navy-500">추천 이유</p>
                 <div className="flex flex-wrap gap-1.5">
+                  {/*  적혀 있던 것 중 **실제로 하지 않는 것**을 뺐습니다 —
+                       「같은 권역 거래처 우선 묶음」·「수거 가능시간 반영」·
+                       「기사 근무시간 고려」. 코드가 그 셋을 보지 않는데
+                       화면은 봤다고 말하고 있었습니다. 권역은 아래
+                       「동선 점검」이 실제 주소로 봅니다. */}
                   {[
-                    '같은 권역 거래처 우선 묶음',
-                    '수거 가능시간 반영',
                     `${p.wasteType} 전용 차량 분리`,
-                    ...(p.urgentCount > 0 ? ['보관기한 임박·긴급수거 우선'] : []),
+                    ...(p.urgentCount > 0 ? ['긴급수거 우선'] : []),
                     ...(p.materialCount > 0 ? ['자재 동시공급 필요'] : []),
                     '차량 적재율 고려',
                     '처리장 인계시간 고려',
-                    '기사 근무시간 고려',
                   ].map((r) => (
                     <span key={r} className="rounded-lg bg-navy-50 px-2.5 py-1 text-[0.98rem] font-semibold text-navy-600">{r}</span>
                   ))}
                 </div>
               </div>
 
+              {/*  운행거리·운행시간을 여기에 적었었습니다. 좌표가 없어 계산할 수
+                   없는 값을 식으로 만들어 낸 것이었습니다 — 지웠습니다.
+                   실제로 아는 것은 적재량뿐입니다. */}
               <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-2xl bg-navy-50 px-3.5 py-2.5 text-[0.98rem] font-medium text-navy-500">
                 <span>실적재 약 {p.capacity.toLocaleString('ko-KR')}kg</span>
-                <span>운행거리 <b className="text-navy-700">{p.simDistanceKm}km</b> <span className="text-navy-300">(시뮬레이션)</span></span>
-                <span>운행시간 <b className="text-navy-700">{p.simMinutes}분</b> <span className="text-navy-300">(시뮬레이션)</span></span>
+                <span>정차 {p.stops.length}곳</span>
               </div>
-              <p className="text-[0.98rem] text-navy-400">업무보조 추천 · 관리자 최종 확인 필요</p>
+              <p className="text-[0.98rem] text-navy-400">
+                업무보조 추천 · 관리자 최종 확인 필요 · 운행거리·소요시간은 계산하지 않습니다(거래처 좌표 없음)
+              </p>
             </div>
           </motion.div>
         )}
@@ -154,14 +161,15 @@ export function Dispatch() {
           <p className="text-[1.07rem] font-bold">오늘 배차 추천 시뮬레이션</p>
         </div>
         <p className="mt-2.5 text-[1.08rem] leading-relaxed text-navy-200">
-          경기 남양주시 출발 · 서울·경기권 권역 배차. 거래처 위치·수거 가능시간·수거주기·예정 수거량·차량 적재가능량·폐기물
-          구분·기사 근무시간·처리장 인계시간·긴급수거·자재 동시공급을 함께 고려합니다.
+          경기 남양주시 출발 · 서울·경기권 배차. 지금 실제로 보고 있는 것은 <b className="text-white">폐기물 구분 · 예정
+          수거량 · 차량 적재가능량 · 긴급수거 · 자재 동시공급 · 처리장 인계시간</b>입니다. 거래처 좌표가 없어
+          거리·경로 순서·소요시간은 계산하지 않습니다.
         </p>
         <p className="mt-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-[0.98rem] leading-snug text-teal-100">
           현재는 현장 규칙을 반영한 추천 시뮬레이션 단계이며, 실제 운행데이터를 축적하여 추천 로직을 고도화할 예정입니다.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {['남양주 출발', '규칙 기반', '시뮬레이션', '실증 예정'].map((b) => (
+          {['남양주 출발', '규칙 기반', '거리 계산 없음', '실증 예정'].map((b) => (
             <span key={b} className="rounded-full bg-white/10 px-2.5 py-1 text-[0.95rem] font-bold text-teal-200">{b}</span>
           ))}
         </div>
@@ -214,6 +222,9 @@ export function Dispatch() {
           {plans.length === 0 && <div className="card p-5 text-[1.08rem] text-navy-400">오늘 배정된 차량 일정이 없습니다.</div>}
         </div>
       </section>
+
+      {/* 동선 점검 — 실제 수거 기록의 요일 쏠림 */}
+      <RouteReviewCard data={data} />
 
       {/* 차량 운영 상태 */}
       <section>

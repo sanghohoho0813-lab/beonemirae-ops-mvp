@@ -36,9 +36,17 @@ export interface DispatchPlan {
   materialCount: number // 자재 동시공급 반영 건수
   facilityName: string
   handoverTime: string
-  simDistanceKm: number // 시뮬레이션
-  simMinutes: number // 시뮬레이션
 }
+
+//  ⚠ 예전에는 여기에 simDistanceKm·simMinutes 가 있었습니다.
+//    `8 + 정차수 × 6` km, `30 + 정차수 × 22` 분 — **지어낸 식**이었습니다.
+//    거래처 좌표가 없어 거리를 계산할 방법이 없는데, 화면에는 「운행거리
+//    38km」처럼 또렷한 숫자로 나갔습니다. 「시뮬레이션」이라고 작게 적혀
+//    있어도 옆에 붙은 숫자는 읽는 사람에게 사실로 남습니다.
+//
+//    동선은 이제 routeEfficiency.ts 가 봅니다 — 거리 대신 **실제 수거 기록의
+//    요일 쏠림과 시군구**로 말합니다. 계산할 수 있는 것만 말하는 쪽으로
+//    바꿨습니다.
 
 /** 오늘 차량별 배차·경로 추천 (시뮬레이션) */
 export function dispatchPlans(data: AppData): DispatchPlan[] {
@@ -76,8 +84,6 @@ export function dispatchPlans(data: AppData): DispatchPlan[] {
       materialCount,
       facilityName: facility?.name ?? '처리장',
       handoverTime: facility?.targetTime ?? '-',
-      simDistanceKm: stops.length ? 8 + stops.length * 6 : 0,
-      simMinutes: stops.length ? 30 + stops.length * 22 : 0,
     }
   })
 }
