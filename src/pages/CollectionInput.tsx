@@ -154,6 +154,30 @@ export function CollectionInput() {
   useEffect(() => {
     if (prefilledRef.current) return
     const pre = params.get('schedule')
+
+    //  ?client= 로 들어오는 길 — 거래처 화면에서 「수거 입력」을 누른 경우입니다.
+    //
+    //   예전에는 이 길이 없어서, 거래처를 보다가 「이 병원 오늘 수거했다」를
+    //   적으려면 왼쪽 메뉴로 나갔다가 목록에서 그 병원을 다시 찾아야 했습니다.
+    //   거래처가 100곳 가까이 되면 그게 매번 일입니다.
+    //
+    //   그 병원의 **오늘 예정이 있으면** 그 일정을 그대로 씁니다(차량·시간까지
+    //   따라옵니다). 없으면 거래처만 채우고 나머지는 사람이 고릅니다 —
+    //   차량·시간을 짐작으로 채우면 그 값이 그대로 기록에 남습니다.
+    const preClient = params.get('client')
+    if (!pre && preClient) {
+      if (data.clients.length === 0) return // 아직 안 받아왔습니다 — 기다립니다
+      prefilledRef.current = true
+      const mine = todayPending.find((s) => s.clientId === preClient)
+      if (mine) {
+        applySchedule(mine.id)
+      } else if (data.clients.some((c) => c.id === preClient)) {
+        setScheduleId('')
+        setClientId(preClient)
+      }
+      return
+    }
+
     if (!pre) {
       prefilledRef.current = true
       return
@@ -162,7 +186,7 @@ export function CollectionInput() {
     prefilledRef.current = true
     applySchedule(pre)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.schedules])
+  }, [data.schedules, data.clients])
 
   // 폐기물 구분이 바뀌면 해당 구분 차량으로 기본 배차
   useEffect(() => {

@@ -16,6 +16,7 @@ import {
   SearchX,
   Pin,
   ClipboardCheck,
+  PlusCircle,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -280,7 +281,18 @@ export function ClientDetail() {
              차지하고, 남은 자리에 핵심 지표를 놓습니다. 폰은 그대로
              (한 손으로 누르려면 넓은 편이 낫습니다). */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button className="btn-primary flex-1 lg:flex-none lg:px-6" onClick={() => setLogOpen(true)}>
+          {/*  수거 입력 — 거래처를 보다가 바로 넣을 수 있어야 합니다.
+               예전에는 왼쪽 메뉴로 나갔다가 목록에서 이 병원을 다시 찾아야
+               했습니다. 거래처가 100곳 가까이 되면 그게 매번 일입니다.
+               오늘 예정이 있으면 차량·시간까지 따라옵니다. */}
+          <button
+            data-go-collect={id}
+            className="btn-primary flex-1 lg:flex-none lg:px-6"
+            onClick={() => navigate(`/collection?client=${id}`)}
+          >
+            <PlusCircle size={17} strokeWidth={2.4} /> 수거 입력
+          </button>
+          <button className="btn-ghost flex-1 lg:flex-none lg:px-6" onClick={() => setLogOpen(true)}>
             <FileText size={17} strokeWidth={2.4} /> 수거대장 보기
           </button>
           {/* 배차 화면은 현장 담당자에게 막혀 있습니다 — 갈 수 없는 곳으로 보내지 않습니다 */}
