@@ -25,6 +25,7 @@ import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
 import { MoreMenu } from './MoreMenu'
+import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { HelpSheet } from './HelpSheet'
 import { DevRequestButton, DevRequestSheet } from './DevRequestSheet'
@@ -235,9 +236,9 @@ function Sidebar() {
             비
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1.42rem] font-extrabold tracking-tight text-white">㈜비원미래</p>
+            <p className="break-keep text-[1.42rem] font-extrabold tracking-tight text-white">{COMPANY}</p>
             <p className="mt-1.5 break-keep text-[1.03rem] font-medium leading-snug text-navy-300">
-              의료폐기물 수거·운반 통합 운영관리
+              {SYSTEM_TAGLINE}
             </p>
           </div>
         </div>
@@ -250,8 +251,9 @@ function Sidebar() {
           data-brand-ax
           className="mt-3.5 select-none border-t border-white/10 pt-3 text-[0.98rem] font-black uppercase tracking-[0.22em] text-amber-300"
         >
-          Beonemirae<span className="text-white/40"> · </span>Waste Ops
-          <span className="ml-1 text-amber-200">AX</span>
+          {SYSTEM_WORDMARK}
+          <span className="text-white/40"> · </span>
+          <span className="text-amber-200">{SYSTEM_WORDMARK_TAIL}</span>
         </p>
       </div>
 
@@ -423,7 +425,7 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
             상관이 없습니다. 오히려 같이 커지면 정작 눌러야 할 「사용법」과
             실제/시연 배지를 밀어내 상호가 「㈜비…」로 잘렸습니다. */}
         <div className="min-w-0 flex-1 leading-none">
-          <p className="truncate text-[15px] font-extrabold tracking-tight text-navy-900">㈜비원미래</p>
+          <p className="truncate text-[15px] font-extrabold tracking-tight text-navy-900">{COMPANY}</p>
           {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
           <p className="mt-1 truncate text-[13px] font-medium text-navy-400">
             {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '운영관리'}

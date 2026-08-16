@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { SYSTEM_TAGLINE } from '../lib/brand'
 import { Link, Navigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Lock, Mail, ShieldCheck, User, UserPlus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -59,7 +60,7 @@ export function Signup() {
           </span>
           <div className="min-w-0">
             <p className="t-section break-keep text-white">㈜비원미래 운영관리 시스템</p>
-            <p className="t-body mt-1 font-medium text-navy-300">의료폐기물 수거·운반 통합 운영관리</p>
+            <p className="t-body mt-1 break-keep font-medium text-navy-300">{SYSTEM_TAGLINE}</p>
           </div>
         </div>
 

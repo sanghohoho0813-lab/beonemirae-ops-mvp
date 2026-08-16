@@ -15,6 +15,7 @@ import { canAccess, canSeeShowcase } from '../lib/access'
 import { SERVICE_NAV, TOOL_NAV, ADMIN_NAV, PLANNED, type NavItem } from '../lib/nav'
 import type { Tone } from '../lib/tone'
 import { canSendDevRequest } from '../lib/devRequests'
+import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 — 폰에서는 이곳이 목차 전부입니다
@@ -442,11 +443,21 @@ export function MoreMenu({
         </section>
       )}
 
-      {/*  「시연용 MVP」는 실제로 운영에 쓰기 시작한 지금은 맞지 않는 문구입니다.
-           현장 담당자에게는 자기가 넣은 기록이 연습용처럼 읽힙니다. */}
-      <p className="pb-1 text-center text-[0.98rem] text-navy-300">
-        ㈜비원미래 · beonemirae ops{showcase ? ' · 시연용 MVP' : ''}
-      </p>
+      {/*  이름표 — PC 사이드바와 **같은 문구**입니다(lib/brand.ts).
+           폰에는 사이드바가 없어 이 자리가 시스템 이름을 보는 유일한 곳입니다.
+           예전에는 여기만 다른 말이 적혀 있었습니다. */}
+      <div data-brand-ax-mobile className="pb-1 text-center">
+        <p className="text-[0.98rem] font-semibold text-navy-400">{SYSTEM_TAGLINE}</p>
+        <p className="mt-1 select-none text-[0.92rem] font-black uppercase tracking-[0.22em] text-amber-500">
+          {SYSTEM_WORDMARK}
+          <span className="text-navy-300"> · </span>
+          {SYSTEM_WORDMARK_TAIL}
+        </p>
+        <p className="mt-1 text-[0.92rem] text-navy-300">
+          {COMPANY}
+          {showcase ? ' · 시연용 MVP' : ''}
+        </p>
+      </div>
     </div>
   )
 }
