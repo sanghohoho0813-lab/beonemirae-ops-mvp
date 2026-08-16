@@ -53,6 +53,8 @@ export function Requests() {
   const [replyText, setReplyText] = useState('')
   const [newOpen, setNewOpen] = useState(false)
   const [newError, setNewError] = useState<string | null>(null)
+  //  한 번의 「접수」에 하나. 실패해도 바뀌지 않습니다 (0055).
+  const [newRequestId, setNewRequestId] = useState(() => crypto.randomUUID())
   const [nClient, setNClient] = useState('')
   const [nKind, setNKind] = useState<RequestKind>('추가수거')
   const [nContent, setNContent] = useState('')
@@ -84,6 +86,8 @@ export function Requests() {
       content: nContent.trim(),
       source: 'staff',
       requesterName: '전화·카톡 접수',
+      //  통화 중에 두 번 눌러도 접수는 하나입니다 (0055).
+      requestId: newRequestId,
     })
     if (!res.ok) {
       setNewError(res.error ?? '접수하지 못했습니다. 잠시 후 다시 시도해 주세요.')
@@ -92,6 +96,7 @@ export function Requests() {
     setNewError(null)
     setNContent('')
     setNewOpen(false)
+    setNewRequestId(crypto.randomUUID())
   }
 
   return (

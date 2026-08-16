@@ -91,6 +91,8 @@ export function PortalHome() {
   const [desired, setDesired] = useState('')
   const [sent, setSent] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  //  한 번의 「보내기」에 하나. 실패해도 바뀌지 않습니다 (0055).
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
 
   const start = useCallback((k: RequestKind) => {
     setSendError(null)
@@ -136,13 +138,19 @@ export function PortalHome() {
       urgent,
       source: 'portal',
       requesterName: profile?.name ?? '병원 담당자',
+      //  이번 시도의 표 (0055). 실패해서 다시 누르면 **같은 값**이 갑니다 —
+      //  지하 주차장에서 응답이 늦어 두 번 눌러도 요청은 하나입니다.
+      requestId,
     })
     if (!res.ok) {
       //  적은 내용을 지우지 않고 창을 열어 둡니다 — 다시 보내면 됩니다.
+      //  requestId 도 그대로 둡니다. 새로 만들면 두 번째가 새 요청이 됩니다.
       setSendError(res.error ?? '요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
     }
     setSendError(null)
+    //  보내진 뒤에는 다음 요청을 위해 새 표를 만듭니다.
+    setRequestId(crypto.randomUUID())
     setContent('')
     setUrgent(false)
     setDesired('')
@@ -168,7 +176,7 @@ export function PortalHome() {
       </div>
 
       {sent && (
-        <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 px-5 py-4 ring-1 ring-emerald-100">
+        <div data-req-sent className="flex items-start gap-3 rounded-2xl bg-emerald-50 px-5 py-4 ring-1 ring-emerald-100">
           <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-600" strokeWidth={2.4} />
           <p className="t-body min-w-0 flex-1 break-keep font-bold text-emerald-800">
             요청이 접수되었습니다. 비원미래 담당자가 확인하면 아래 진행 상태가 바뀌고 회신이 표시됩니다.
@@ -455,7 +463,7 @@ export function PortalHome() {
       >
         <div className="space-y-4">
           {sendError && (
-            <div className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
+            <div data-req-error className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
               <p className="t-body break-keep font-bold text-rose-700">{sendError}</p>
               <p className="t-muted mt-1 break-keep">
                 적으신 내용은 그대로 있습니다. 통신 상태를 확인한 뒤 다시 보내 주세요.

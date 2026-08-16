@@ -105,7 +105,7 @@ interface DataContextValue {
   /** 거래 종료를 되돌립니다 (그만둔 거래처 → 다시 거래 중) */
   restoreClient: (id: string) => void
   // 현장 메모 / 특이사항 (병원별)
-  addNote: (clientId: string, kind: NoteKind, content: string) => SiteNote
+  addNote: (clientId: string, kind: NoteKind, content: string, requestId?: string | null) => SiteNote
   toggleNote: (id: string) => void
   removeNote: (id: string) => void
   notesFor: (clientId: string) => SiteNote[]
@@ -257,6 +257,8 @@ interface DataContextValue {
     urgent?: boolean
     source?: 'portal' | 'staff'
     requesterName?: string
+    /** 이번 「보내기」 시도의 표 (0055) — 다시 눌러도 같은 값이어야 합니다 */
+    requestId?: string | null
   }) => Promise<{ ok: boolean; error: string | null }>
   /** 비원미래 담당자의 요청 처리 (상태 변경 · 병원에 보이는 회신) */
   handleRequest: (id: string, patch: { status?: RequestStatus; reply?: string }) => void
@@ -658,7 +660,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ── 현장 메모 / 특이사항 ────────────────────────────────────────────────
   // 한 번 기록하면 오늘 일정·수거 입력·대시보드에서 함께 확인됩니다.
   const addNote = useCallback(
-    (clientId: string, kind: NoteKind, content: string) => {
+    (clientId: string, kind: NoteKind, content: string, requestId?: string | null) => {
       const note: SiteNote = {
         id: uid('note'),
         clientId,
@@ -669,7 +671,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       if (live) {
         void runLive(async () => {
-          await repo.insertNote({ clientId, kind, content: content.trim(), done: false })
+          await repo.insertNote({ clientId, kind, content: content.trim(), done: false }, requestId)
         })
         return note
       }
@@ -1043,6 +1045,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       urgent?: boolean
       source?: 'portal' | 'staff'
       requesterName?: string
+      /**
+       * 이번 「보내기」 시도의 표 (0055).
+       *
+       *  다시 눌러도 **같은 값**이어야 합니다. 누를 때마다 새로 만들면
+       *  중복 방어가 아무 일도 안 합니다 — 서버는 서로 다른 시도로 봅니다.
+       */
+      requestId?: string | null
     }): Promise<{ ok: boolean; error: string | null }> => {
       const payload = {
         clientId: r.clientId,
@@ -1052,6 +1061,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         urgent: r.urgent ?? false,
         source: r.source ?? 'portal',
         requesterName: r.requesterName ?? '',
+        requestId: r.requestId ?? null,
       }
       if (live) {
         //  서버가 받았는지 확인한 뒤에 돌려줍니다. 예전에는 기다리지 않아서,
@@ -1065,6 +1075,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         requests: [
           {
             ...payload,
+            requestId: undefined,
             id: uid('creq'),
             clientName: d.clients.find((c) => c.id === r.clientId)?.name ?? '',
             status: '접수' as const,

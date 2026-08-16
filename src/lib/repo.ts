@@ -933,12 +933,29 @@ export async function deleteSchedule(id: string): Promise<void> {
 }
 
 // ── 현장 메모 ────────────────────────────────────────────────────────────────
-export async function insertNote(n: Omit<SiteNote, 'id' | 'createdAt'>): Promise<SiteNote> {
+export async function insertNote(
+  n: Omit<SiteNote, 'id' | 'createdAt'>,
+  requestId?: string | null,
+): Promise<SiteNote | null> {
   const sb = need()
-  const row = unwrap<Row[]>(
-    await sb.from('site_notes').insert({ client_id: n.clientId, kind: n.kind, content: n.content, done: n.done }).select(),
-  )
-  return toNote(row[0])
+  try {
+    const row = unwrap<Row[]>(
+      await sb
+        .from('site_notes')
+        .insert(
+          clean({
+            client_id: n.clientId, kind: n.kind, content: n.content, done: n.done,
+            request_id: requestId ?? null,
+          }),
+        )
+        .select(),
+    )
+    return toNote(row[0])
+  } catch (e) {
+    //  다시 눌러 같은 표가 온 것입니다 (0055). 이미 저장돼 있습니다.
+    if (requestId && isDuplicateAttempt(e)) return null
+    throw e
+  }
 }
 
 export async function setNoteDone(id: string, done: boolean): Promise<void> {
@@ -1328,6 +1345,14 @@ export async function deleteRevenueOverride(clientId: string, month: string): Pr
 // ── 병원 요청 ────────────────────────────────────────────────────────────────
 // 병원 담당자가 포털에서 직접 등록하거나(source='portal'),
 // 전화·카톡으로 받은 것을 비원미래가 대신 접수합니다(source='staff').
+//  같은 저장 시도가 두 번 오면 두 번째는 서버 색인이 막습니다 (0055).
+//  그건 오류가 아니라 **이미 저장된 것**입니다 — 그렇게 다뤄야 화면이
+//  「실패했습니다」라고 거짓말하지 않습니다.
+function isDuplicateAttempt(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e ?? '')
+  return /duplicate key|23505|_request_uniq/i.test(msg)
+}
+
 export async function insertRequest(r: {
   clientId: string
   kind: ClientRequest['kind']
@@ -1336,23 +1361,34 @@ export async function insertRequest(r: {
   urgent: boolean
   source: ClientRequest['source']
   requesterName: string
+  /** 이번 「보내기」 시도의 표. 다시 눌러도 같은 값을 보냅니다 (0055) */
+  requestId?: string | null
 }): Promise<void> {
   const sb = need()
-  unwrap(
-    await sb
-      .from('client_requests')
-      .insert({
-        client_id: r.clientId,
-        kind: r.kind,
-        content: r.content,
-        desired_date: r.desiredDate,
-        urgent: r.urgent,
-        source: r.source,
-        requester_name: r.requesterName,
-        status: '접수',
-      })
-      .select(),
-  )
+  try {
+    unwrap(
+      await sb
+        .from('client_requests')
+        .insert(
+          clean({
+            client_id: r.clientId,
+            kind: r.kind,
+            content: r.content,
+            desired_date: r.desiredDate,
+            urgent: r.urgent,
+            source: r.source,
+            requester_name: r.requesterName,
+            status: '접수',
+            request_id: r.requestId ?? null,
+          }),
+        )
+        .select(),
+    )
+  } catch (e) {
+    //  다시 눌러 같은 표가 온 것입니다. 이미 들어가 있으니 성공입니다.
+    if (r.requestId && isDuplicateAttempt(e)) return
+    throw e
+  }
 }
 
 /** 비원미래 담당자의 요청 처리 — 상태 변경 + 회신 */
@@ -1870,7 +1906,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 54
+export const EXPECTED_SCHEMA_VERSION = 55
 
 /**
  * 서버 DB 의 스키마 버전.
