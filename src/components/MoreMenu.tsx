@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, Monitor, ChevronDown, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, Lock, LogOut, MessageSquarePlus } from 'lucide-react'
+import { Smartphone, Monitor, ChevronDown, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, Lock, LogOut, MessageSquarePlus, BookOpen, Lightbulb } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -52,16 +52,43 @@ function NavSection({
   items,
   onGo,
   hook,
+  collapsible = false,
+  defaultOpen = true,
 }: {
   title: string
   items: NavItem[]
   onGo: (to: string) => void
   hook: string
+  /** 접었다 폈다 할 수 있는가 (운영 도구처럼 길고 매일 안 쓰는 묶음) */
+  collapsible?: boolean
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const shown = !collapsible || open
   return (
     <section data-more-section={hook}>
-      <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">{title}</h3>
-      <div className="grid grid-cols-2 gap-2.5">
+      {collapsible ? (
+        //  운영 도구는 열 개짜리라 펼치면 화면 두 개를 씁니다. 접어 두면
+        //  그 아래 「추가 개발 예정 · 관리」가 첫 화면 안에 들어옵니다.
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          data-more-toggle={hook}
+          className="mb-2 flex w-full items-center gap-2 px-1 text-left text-[1.08rem] font-semibold text-navy-500"
+        >
+          <span className="min-w-0 flex-1 break-keep">{title}</span>
+          {!open && (
+            <span className="shrink-0 rounded-md bg-navy-100 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-500">
+              {items.length}
+            </span>
+          )}
+          <ChevronDown size={16} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      ) : (
+        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">{title}</h3>
+      )}
+      <div className={`grid grid-cols-2 gap-2.5 ${shown ? '' : 'hidden'}`}>
         {items.map((item) => (
           <Tappable
             key={item.to}
@@ -108,6 +135,7 @@ export function MoreMenu({
   const navigate = useNavigate()
   const { role, configured, profile, signOut } = useAuth()
   const [plannedOpen, setPlannedOpen] = useState(false)
+  const [rndOpen, setRndOpen] = useState(false)
   //  현장 담당자에게는 미수금·통계·배차가 열리지 않습니다. 사이드바에서는
   //  이미 숨기고 있었는데 폰의 더보기에는 그대로 남아 있어서, 눌렀다가
   //  튕기는 메뉴가 보였습니다. 같은 규칙(canAccess)으로 맞춥니다.
@@ -136,27 +164,29 @@ export function MoreMenu({
           네 가지 설명 화면의 역할이 겹치지 않게 한 줄로 구분해 둡니다.
             사용 방법  어떻게 쓰는가        만든 이유  왜 만들었고 어디로 가는가
             AX 성과    얼마나 좋아졌는가    시연 요약  발표용 핵심 숫자 */}
-      <section>
+      {/*  두 칸 격자. 한 줄에 하나씩 두면 이 둘만으로 첫 화면을 다 씁니다 —
+           목차를 보러 들어왔는데 목차가 안 보입니다. */}
+      <section data-more-help>
         <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">도움말</h3>
-        <div className="card divide-y divide-navy-50 overflow-hidden">
-          <TourButton className="flex w-full cursor-pointer items-start gap-3 p-4 text-left" label="">
-            <span className="min-w-0 flex-1">
+        <div className="grid grid-cols-2 gap-2.5">
+          <TourButton className="card flex cursor-pointer flex-col gap-2 p-3.5 text-left" label="">
+            <IconChip icon={BookOpen} tone="teal" />
+            <span className="min-w-0">
               <span className="block break-keep font-bold text-navy-900">사용 방법</span>
-              <span className="mt-0.5 block break-keep text-[0.98rem] text-navy-400">
-                실제 화면과 기능을 어떻게 쓰는지 안내합니다
+              <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
+                어떻게 쓰는지 안내합니다
               </span>
             </span>
-            <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
           </TourButton>
           {showWhy && (
-            <TourWhyButton className="flex w-full cursor-pointer items-start gap-3 p-4 text-left" label="">
-              <span className="min-w-0 flex-1">
+            <TourWhyButton className="card flex cursor-pointer flex-col gap-2 p-3.5 text-left" label="">
+              <IconChip icon={Lightbulb} tone="amber" />
+              <span className="min-w-0">
                 <span className="block break-keep font-bold text-navy-900">이 시스템을 만든 이유</span>
-                <span className="mt-0.5 block break-keep text-[0.98rem] text-navy-400">
-                  AX 전환 · 정책자금 · 사업고도화 · 향후 개발 방향
+                <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
+                  AX 전환 · 정책자금 · 개발 방향
                 </span>
               </span>
-              <ChevronRight size={18} className="mt-1 shrink-0 text-navy-300" />
             </TourWhyButton>
           )}
         </div>
@@ -190,40 +220,6 @@ export function MoreMenu({
       </section>
       )}
 
-      {/* PC 화면으로 보기 — 폰에서만. 실제 데스크톱 레이아웃을 그대로 그립니다.
-          업무용 기본 모드가 아니라 "PC 에서는 어떻게 보이는지" 확인하는 보기 기능입니다. */}
-      {onPcView && (
-        <section>
-          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">화면 보기</h3>
-          <Tappable as="div" onClick={onPcView} className="card flex cursor-pointer items-center gap-3 p-4">
-            <IconChip icon={Monitor} tone="navy" />
-            <div className="min-w-0">
-              <p data-pc-view-open className="font-bold text-navy-900">PC 화면으로 보기</p>
-              <p className="text-[0.98rem] text-navy-400">PC 에서 보이는 전체 화면 구성을 확인합니다</p>
-            </div>
-            <ChevronRight size={18} className="ml-auto text-navy-300" />
-          </Tappable>
-        </section>
-      )}
-
-      {/* 시연용 핵심 요약 — 발표용 자료라 현장 담당자에게는 내립니다 */}
-      {showDemo && (
-      <Tappable
-        as="div"
-        onClick={() => go('/demo')}
-        className="flex cursor-pointer items-center gap-3 rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-4 text-white shadow-lg"
-      >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-          <Sparkles size={20} className="text-teal-300" />
-        </span>
-        <div className="min-w-0">
-          <p className="font-bold">시연용 핵심 요약</p>
-          <p className="text-[0.95rem] text-navy-300">발표할 때 쓰는 숫자 — 회사 규모 · 수거 실적 · 기술개발</p>
-        </div>
-        <ChevronRight size={18} className="ml-auto shrink-0 text-white/60" />
-      </Tappable>
-      )}
-
       {/*
         여기부터가 목차입니다 — PC 사이드바와 **같은 순서, 같은 분류**.
 
@@ -241,7 +237,14 @@ export function MoreMenu({
         <NavSection title="병원 서비스 · 성과" items={serviceNav} onGo={go} hook="more-service" />
       )}
       {toolNav.length > 0 && (
-        <NavSection title="운영 도구 · 추가 고도화 예정" items={toolNav} onGo={go} hook="more-tools" />
+        <NavSection
+          title="운영 도구 · 추가 고도화 예정"
+          items={toolNav}
+          onGo={go}
+          hook="more-tools"
+          collapsible
+          defaultOpen={false}
+        />
       )}
 
       {/* 추가 개발 예정 — 현재 사용 기능과 확장 예정 기능을 명확히 구분.
@@ -351,11 +354,64 @@ export function MoreMenu({
         </section>
       )}
 
-      {/* 기술개발 현황 — 회사 소개 자료입니다 (현장 담당자 제외) */}
+      {/*  발표·확인용 — 매일 쓰는 것이 아니라 **가끔** 여는 것들입니다.
+           예전에는 맨 위에 있어서, 목차를 보러 들어온 사람이 매번 이 둘을
+           지나쳐 내려가야 했습니다. 성격이 같은 기술개발 현황 옆으로
+           내립니다(특허출원번호가 여기 있습니다). */}
+      {(onPcView || showDemo) && (
+        <section data-more-showcase>
+          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">발표 · 확인용</h3>
+          <div className="grid grid-cols-2 gap-2.5">
+            {showDemo && (
+              <Tappable
+                as="div"
+                onClick={() => go('/demo')}
+                className="flex cursor-pointer flex-col gap-2 rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-3.5 text-white shadow-lg"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10">
+                  <Sparkles size={18} className="text-teal-300" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block break-keep font-bold">시연용 핵심 요약</span>
+                  <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-300">
+                    발표용 숫자 — 회사 규모 · 실적
+                  </span>
+                </span>
+              </Tappable>
+            )}
+            {onPcView && (
+              <Tappable as="div" onClick={onPcView} className="card flex cursor-pointer flex-col gap-2 p-3.5">
+                <IconChip icon={Monitor} tone="navy" />
+                <span className="min-w-0">
+                  <span data-pc-view-open className="block break-keep font-bold text-navy-900">
+                    PC 화면으로 보기
+                  </span>
+                  <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
+                    PC 전체 화면 구성 확인
+                  </span>
+                </span>
+              </Tappable>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/*  기술개발 현황 — 회사 소개 자료입니다 (현장 담당자 제외).
+           407px 짜리라 접어 둡니다. 매일 보는 것이 아니라 발표할 때
+           여는 것이고, 바로 위 「발표·확인용」과 성격이 같습니다. */}
       {showcase && (
         <section>
-          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">기술개발 현황</h3>
-          <RnDCard />
+          <button
+            type="button"
+            onClick={() => setRndOpen((v) => !v)}
+            aria-expanded={rndOpen}
+            data-more-toggle="more-rnd"
+            className="mb-2 flex w-full items-center gap-2 px-1 text-left text-[1.08rem] font-semibold text-navy-500"
+          >
+            <span className="min-w-0 flex-1 break-keep">기술개발 현황</span>
+            <ChevronDown size={16} className={`shrink-0 transition-transform ${rndOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {rndOpen && <RnDCard />}
         </section>
       )}
 

@@ -198,20 +198,7 @@ export function TodaySchedule() {
 
       {/* 병원에서 올라온 요청 — 오늘 방문 전에 확인해야 하는 것 */}
       {pendingRequests.length > 0 && (
-        <button
-          onClick={() => navigate('/requests')}
-          className="card mb-4 hidden w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 text-left transition hover:bg-navy-50 lg:flex"
-        >
-          <Inbox size={19} className="shrink-0 text-teal-600" strokeWidth={2.4} />
-          <span className="t-body min-w-0 break-keep font-extrabold text-navy-900">
-            병원 요청 {pendingRequests.length}건 처리 대기
-          </span>
-          {pendingRequests.some((r) => r.urgent) && <span className="pill bg-rose-50 text-rose-600">긴급 포함</span>}
-          <span className="t-muted min-w-0 flex-1 break-keep">
-            {pendingRequests[0].clientName} · {pendingRequests[0].type}
-          </span>
-          <ChevronRight size={18} className="shrink-0 text-navy-300" />
-        </button>
+        <RequestBanner requests={pendingRequests} onGo={() => navigate('/requests')} className="mb-4 hidden lg:grid" />
       )}
 
       {/* 날짜 네비게이션 */}
@@ -385,20 +372,7 @@ export function TodaySchedule() {
 
       {/* 병원 요청은 사무실 업무라, 좁은 화면에서는 일정 아래로 내립니다 */}
       {pendingRequests.length > 0 && (
-        <button
-          onClick={() => navigate('/requests')}
-          className="card mt-4 flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 text-left transition hover:bg-navy-50 lg:hidden"
-        >
-          <Inbox size={19} className="shrink-0 text-teal-600" strokeWidth={2.4} />
-          <span className="t-body min-w-0 break-keep font-extrabold text-navy-900">
-            병원 요청 {pendingRequests.length}건 처리 대기
-          </span>
-          {pendingRequests.some((r) => r.urgent) && <span className="pill bg-rose-50 text-rose-600">긴급 포함</span>}
-          <span className="t-muted min-w-0 flex-1 break-keep">
-            {pendingRequests[0].clientName} · {pendingRequests[0].type}
-          </span>
-          <ChevronRight size={18} className="shrink-0 text-navy-300" />
-        </button>
+        <RequestBanner requests={pendingRequests} onGo={() => navigate('/requests')} className="mt-4 grid lg:hidden" />
       )}
 
 
@@ -586,6 +560,50 @@ export function TodaySchedule() {
  *  명부에 사람이 없으면 아무것도 그리지 않습니다 — 없는 담당을 지어내
  *  「담당 없음」이라고 겁주지 않습니다.
  */
+/**
+ * 병원 요청 알림 줄.
+ *
+ *  예전에는 `flex flex-wrap` 한 줄에 아이콘·제목·긴급 딱지·거래처 이름·화살표를
+ *  전부 늘어놓았습니다. 폰처럼 좁은 화면에서는 앞의 것들이 줄을 다 쓰고,
+ *  마지막 거래처 이름 칸에 **글자 한 자 폭**만 남습니다. 그래서 병원 이름이
+ *  세로로 한 자씩 늘어졌습니다(실측).
+ *
+ *  격자로 바꿉니다 — 아이콘 | 글자 | 화살표 세 칸을 고정하고, 글자 칸이 남은
+ *  자리를 전부 가져갑니다. 이름이 길면 세로로 늘어지는 대신 **한 줄로 잘립니다.**
+ */
+function RequestBanner({
+  requests,
+  onGo,
+  className = '',
+}: {
+  requests: Array<{ clientName: string; type: string; urgent?: boolean }>
+  onGo: () => void
+  className?: string
+}) {
+  const urgent = requests.some((r) => r.urgent)
+  return (
+    <button
+      data-request-banner
+      onClick={onGo}
+      className={`card w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3.5 text-left transition hover:bg-navy-50 ${className}`}
+    >
+      <Inbox size={19} className="row-span-2 shrink-0 text-teal-600" strokeWidth={2.4} />
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="t-body break-keep font-extrabold text-navy-900">
+          병원 요청 {requests.length}건 처리 대기
+        </span>
+        {urgent && <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급 포함</span>}
+      </span>
+      <ChevronRight size={18} className="row-span-2 shrink-0 text-navy-300" />
+      {/*  이름이 아무리 길어도 **한 줄**입니다. 넘치면 … 로 자릅니다 —
+          세로로 늘어지는 것보다 잘리는 편이 읽힙니다. */}
+      <span className="t-muted col-start-2 min-w-0 truncate">
+        {requests[0].clientName} · {requests[0].type}
+      </span>
+    </button>
+  )
+}
+
 function TodayHandlers({ data, list }: { data: AppData; list: Schedule[] }) {
   const rows = (['의료폐기물', '일회용기저귀'] as const)
     .map((w) => ({
