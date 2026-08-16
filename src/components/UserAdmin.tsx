@@ -11,6 +11,7 @@ import {
   resetUserPassword,
   setProfileActive,
   setProfileClient,
+  setProfileName,
   setProfileRole,
   type ProfileRow,
 } from '../lib/repo'
@@ -203,6 +204,28 @@ export function UserAdmin() {
                   <p className="t-body break-keep font-extrabold text-navy-900">
                     {r.name || r.email}
                     {self && <span className="ml-2 font-bold text-teal-600">본인</span>}
+                    {/*  호칭만 바꿉니다 — 권한은 하나도 안 건드립니다.
+                        지금 대표님 계정 이름과 예비 계정 이름이 서로 바뀌어
+                        있는데, 화면에 고칠 곳이 없어 SQL 을 써야 했습니다. */}
+                    <button
+                      data-user-rename={r.id}
+                      disabled={busy}
+                      className="ml-2 align-middle text-[0.95rem] font-bold text-navy-300 underline transition hover:text-navy-600 disabled:opacity-40"
+                      onClick={() => {
+                        const next = window.prompt(
+                          `${r.email} 계정에 표시할 이름을 적어 주세요.\n\n권한은 바뀌지 않습니다 — 호칭만 바뀝니다.`,
+                          r.name ?? '',
+                        )
+                        if (next == null) return
+                        if (!next.trim()) {
+                          setError('이름을 비워 둘 수 없습니다.')
+                          return
+                        }
+                        void change(() => setProfileName(r.id, next))
+                      }}
+                    >
+                      이름 바꾸기
+                    </button>
                   </p>
                   <p className="t-muted break-keep">{r.email}</p>
                 </div>

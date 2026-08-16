@@ -69,7 +69,10 @@ export function Reports() {
         <KpiCard icon={TrendingUp} label="배출량 증가 병원" value={growing} unit="곳" tone="amber" hint="수거주기 조정 검토" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-6">
+      {/*  왼쪽 목록이 320px 이라 「서울인화스포츠마취통증의학과의원」 같은
+           긴 병원 이름이 세 줄로 접혔습니다. 오른쪽 리포트는 넓어도 남던
+           자리라 40px 만 넘겨 줍니다 — 폰에서는 위아래 그대로입니다. */}
+      <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6 xl:grid-cols-[400px_minmax(0,1fr)]">
         {/* 좌: 거래처 목록 */}
         <section className="min-w-0">
           <SectionTitle>거래처 선택</SectionTitle>

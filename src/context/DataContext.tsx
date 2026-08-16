@@ -890,7 +890,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if ('monthlyDocHours' in patch) row.monthly_doc_hours = patch.monthlyDocHours ?? null
         if ('monthlyReworkCount' in patch) row.monthly_rework_count = patch.monthlyReworkCount ?? null
         if ('dailyCapacity' in patch) row.daily_capacity = patch.dailyCapacity ?? null
-        if (Object.keys(row).length) void runLive(async () => repo.saveBaseline(row))
+        //  출처를 함께 보냅니다. 예전에는 서버가 무조건 「사용자 입력값」으로
+        //  저장해, 시연용 예시값이 새로고침 뒤에 실제 값처럼 보였습니다.
+        const src = patch.source ?? 'user'
+        if (Object.keys(row).length) void runLive(async () => repo.saveBaseline(row, src))
         return
       }
       setData((d) => ({

@@ -31,6 +31,7 @@ import {
 } from '../lib/performance'
 import { SalesFunnelPanel } from '../components/SalesFunnel'
 import { BeforeAfterPanel } from '../components/BeforeAfter'
+import { OpsSurveyCard } from '../components/OpsSurveyCard'
 import { ProvenanceBadge, TierBadge, TierProgress } from '../components/DataBadge'
 import { today } from '../lib/format'
 
@@ -344,6 +345,14 @@ export function Performance() {
           nextAt={tier.nextAt}
           desc={tier.desc}
         />
+      </section>
+
+      {/*  ── 도입 전 실제 업무 조사 ──
+           「도입 전에는 이랬습니다」의 근거입니다. 이게 없으면 아래 개선폭이
+           전부 「그렇다고 칩시다」가 됩니다. */}
+      <section>
+        <SectionTitle>도입 전 실제 업무</SectionTitle>
+        <OpsSurveyCard />
       </section>
 
       {/* ── 일하는 방식 Before / After ── */}

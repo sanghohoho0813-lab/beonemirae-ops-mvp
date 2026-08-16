@@ -1391,9 +1391,21 @@ export async function setLeadRevenue(leadId: string, amount: number | null): Pro
 }
 
 // ── AX 실증 설정 ─────────────────────────────────────────────────────────────
-export async function saveBaseline(patch: Record<string, number | null>): Promise<void> {
+/**
+ * 도입 전 기준값을 저장합니다.
+ *
+ *  예전에는 출처를 무조건 `'user'` 로 박아 보냈습니다. 그래서 「시연용
+ *  예시값 채우기」를 눌러도 서버에는 **사용자 입력값**으로 남았고, 화면을
+ *  새로 고치면 노란 「시연 기준값」 딱지가 사라졌습니다 — 시연 숫자가
+ *  실제 조사값처럼 보이는 상태였습니다. 심사 자리에서 제일 위험한 종류의
+ *  거짓말이라, 부르는 쪽이 출처를 함께 정하게 바꿉니다.
+ */
+export async function saveBaseline(
+  patch: Record<string, number | null>,
+  source: 'user' | 'demo' | 'survey' = 'user',
+): Promise<void> {
   const sb = need()
-  unwrap(await sb.from('performance_baselines').update({ ...patch, source: 'user' }).eq('id', 1).select())
+  unwrap(await sb.from('performance_baselines').update({ ...patch, source }).eq('id', 1).select())
 }
 
 export async function saveExperimentStart(date: string | null): Promise<void> {
@@ -1637,6 +1649,23 @@ export async function setProfileRole(
  *  소속이 바뀌면 그 사람이 포털에서 보는 병원이 통째로 바뀌므로 감사기록에
  *  남깁니다.
  */
+/**
+ * 계정에 표시되는 이름을 바꿉니다.
+ *
+ *  권한은 하나도 안 바뀝니다 — **호칭만** 바꿉니다. 지금 대표님 계정 이름이
+ *  「대표」, 예비 계정 이름이 「관리자(백업)」로 서로 바뀌어 있는데, 화면
+ *  어디에도 고칠 곳이 없어 SQL 을 직접 써야 했습니다.
+ *
+ *  이름을 비우지 못하게 막습니다 — 비면 화면이 이메일로 사람을 부르게 되고,
+ *  누가 누군지 알아보기 어려워집니다.
+ */
+export async function setProfileName(id: string, name: string): Promise<void> {
+  const sb = need()
+  const clean = name.trim()
+  if (!clean) throw new Error('이름을 비워 둘 수 없습니다.')
+  unwrap(await sb.from('profiles').update({ name: clean }).eq('id', id).select())
+}
+
 /** 병원 계정의 소속 거래처 변경 — 감사기록은 DB 트리거가 남깁니다(0020) */
 export async function setProfileClient(id: string, clientId: string): Promise<void> {
   const sb = need()
@@ -1807,7 +1836,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 50
+export const EXPECTED_SCHEMA_VERSION = 51
 
 /**
  * 서버 DB 의 스키마 버전.

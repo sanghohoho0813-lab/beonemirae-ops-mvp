@@ -241,6 +241,18 @@ function Sidebar() {
             </p>
           </div>
         </div>
+        {/*  이 시스템의 이름.
+             남색 바탕에서 흰색은 위 회사명과 다투고, 청록은 왼쪽 아이콘과
+             겹칩니다. 그래서 금색 계열(amber-300)로 두어 회사명 아래에서
+             조용히 자기 자리를 잡게 했습니다. 자간을 넓게 준 것은 로고처럼
+             읽히라고 — 문장이 아니라 이름입니다. */}
+        <p
+          data-brand-ax
+          className="mt-3.5 select-none border-t border-white/10 pt-3 text-[0.98rem] font-black uppercase tracking-[0.22em] text-amber-300"
+        >
+          Beonemirae<span className="text-white/40"> · </span>Waste Ops
+          <span className="ml-1 text-amber-200">AX</span>
+        </p>
       </div>
 
       <nav className="flex-1 px-3">

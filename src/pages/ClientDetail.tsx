@@ -57,7 +57,7 @@ import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 상세 (/clients/:id) — 실제 거래처 운영관리 화면
-//  헤더 + 핵심지표 + 인증·실사 대응(상시) + 탭(운영조건/수거이력/자재/요청·알림/결제·미수금)
+//  헤더 + 핵심지표 + 인증·실사 관련(상시) + 탭(운영조건/수거이력/자재/요청·알림/결제·미수금)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const reqStatusStyle: Record<RequestStatus, string> = {
@@ -172,7 +172,7 @@ export function ClientDetail() {
   const histSummary = collectionHistorySummary(data, id)
   const matSummary = clientMaterialSummary(data, id)
   const bills = clientPaymentRows(data, id)
-  // 축적된 운영 데이터 기반 다음 행동 추천 + 월간 운영 리포트
+  // 축적된 운영 데이터 기반 다음 행동 AI 추천 + 월간 운영 리포트
   const actions = nextActionsFor(data, client)
   const report = clientMonthlyReport(data, client)
 
@@ -223,6 +223,13 @@ export function ClientDetail() {
     }
   }
 
+  //  월평균이 무엇으로 나온 숫자인지 — 폰·PC 두 곳에서 같은 문장을 씁니다.
+  const avgHint =
+    avgDetail.months === 0
+      ? '아직 기록이 없습니다'
+      : `${avgDetail.months}개월 평균` +
+        (avgDetail.fromExcel > 0 ? ` · 수거기록 ${avgDetail.fromRecords}달 + 엑셀 ${avgDetail.fromExcel}달` : '')
+
   return (
     <PageShell>
       <button onClick={() => navigate('/clients')} className="flex items-center gap-1.5 text-[1.08rem] font-bold text-navy-500">
@@ -260,8 +267,11 @@ export function ClientDetail() {
         {/* 현장 메모 — 처리 전 항목을 헤더에서 바로 확인 */}
         <NoteChips notes={notesFor(id)} max={3} />
 
-        <div className="mt-4 flex items-center gap-2">
-          <button className="btn-primary flex-1" onClick={() => setLogOpen(true)}>
+        {/*  PC 에서는 단추가 화면 끝까지 늘어날 이유가 없습니다 — 글자만큼만
+             차지하고, 남은 자리에 핵심 지표를 놓습니다. 폰은 그대로
+             (한 손으로 누르려면 넓은 편이 낫습니다). */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button className="btn-primary flex-1 lg:flex-none lg:px-6" onClick={() => setLogOpen(true)}>
             <FileText size={17} strokeWidth={2.4} /> 수거대장 보기
           </button>
           {/* 배차 화면은 현장 담당자에게 막혀 있습니다 — 갈 수 없는 곳으로 보내지 않습니다 */}
@@ -270,6 +280,49 @@ export function ClientDetail() {
               <Truck size={16} /> 배차 반영
             </button>
           )}
+        </div>
+
+        {/*  ── 핵심 지표 (PC) ────────────────────────────────────────────────
+             폰에서는 아래에 카드 넉 장으로 그대로 둡니다. PC 에서만 이 카드
+             안으로 들여, 거래처 하나를 한 덩어리로 봅니다. */}
+        <div
+          data-key-metrics="pc"
+          className="mt-4 hidden border-t border-navy-100 pt-4 lg:grid lg:grid-cols-4 lg:gap-x-4 lg:divide-x lg:divide-navy-100"
+        >
+          <div className="lg:pr-4">
+            <p className="text-[1.03rem] font-semibold text-navy-400">월평균 수거량</p>
+            <p className="mt-1 whitespace-nowrap text-[1.6rem] font-extrabold leading-none text-navy-900">
+              {weight(avg)}
+            </p>
+            <p className="mt-1 text-[0.98rem] text-navy-400">{avgHint}</p>
+          </div>
+          {canSeeMoney ? (
+            <button className="px-0 text-left lg:px-4" onClick={() => navigate('/receivables')}>
+              <p className="text-[1.03rem] font-semibold text-navy-400">미수금</p>
+              <p
+                className={`mt-1 text-[1.6rem] font-extrabold leading-none ${
+                  outstanding > 0 ? 'text-rose-500' : 'text-emerald-600'
+                }`}
+              >
+                {outstanding > 0 ? won(outstanding) : '없음'}
+              </p>
+              <p className="mt-1 text-[0.98rem] text-navy-400">미수금 관리 →</p>
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="lg:px-4">
+            <p className="text-[1.03rem] font-semibold text-navy-400">최근 수거일</p>
+            <p className="mt-1 text-[1.6rem] font-extrabold leading-none text-navy-900">
+              {last ? prettyDate(last.date) : '—'}
+            </p>
+          </div>
+          <div className="lg:pl-4">
+            <p className="text-[1.03rem] font-semibold text-navy-400">다음 예정 수거</p>
+            <p className="mt-1 text-[1.6rem] font-extrabold leading-none text-navy-900">
+              {next ? prettyDate(next.date) : '—'}
+            </p>
+          </div>
         </div>
         {/*  거래처 정보 수정과 거래 종료는 사무실·관리자 업무입니다.
              서버도 막고 있어(clients_update/clients_delete) 현장 담당자가
@@ -296,21 +349,15 @@ export function ClientDetail() {
         )}
       </div>
 
-      {/* 핵심 지표 */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/*  핵심 지표 — 폰에서는 지금까지처럼 카드 넉 장으로 둡니다.
+           PC 에서는 위 헤더 카드 안으로 들어갑니다(아래 KeyMetrics). */}
+      <div data-key-metrics="phone" className="grid grid-cols-2 gap-3 lg:hidden">
         <MetricCard
           label="월평균 수거량"
           value={weight(avg)}
           tone="navy"
           nowrap
-          hint={
-            avgDetail.months === 0
-              ? '아직 기록이 없습니다'
-              : `${avgDetail.months}개월 평균` +
-                (avgDetail.fromExcel > 0
-                  ? ` · 수거기록 ${avgDetail.fromRecords}달 + 엑셀 ${avgDetail.fromExcel}달`
-                  : '')
-          }
+          hint={avgHint}
         />
         {/*
           미수금 칸도 현장 담당자에게는 열지 않습니다. 눌러도 미수금 화면은
@@ -340,10 +387,15 @@ export function ClientDetail() {
            항목마다 예상 매출이 붙습니다(「추가 수거 제안 · +70만원」). 현장
            담당자에게는 띄우지 않습니다 — 영업 판단이고, 병원에 가서 여는
            화면이라 금액이 상대방 눈에 들어갈 수도 있습니다. */}
+      {/*  PC 에서는 「다음 행동 AI 추천」과 「영업 전환 이력」을 나란히 둡니다.
+           둘은 같은 이야기의 앞뒤(무엇을 할까 → 그래서 어떻게 됐나)라, 위아래로
+           떼어 놓으면 스크롤하며 머릿속에서 다시 이어 붙여야 합니다.
+           폰에서는 지금까지처럼 위아래 그대로입니다. */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start" data-client-insight-grid>
       {canSeeMoney && actions.length > 0 && (
         <section>
           <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">데이터 기반 추천</span>}>
-            다음 행동 추천
+            다음 행동 AI 추천
           </SectionTitle>
           <div className="card divide-y divide-navy-50 p-2">
             {actions.map((a, i) => {
@@ -416,11 +468,12 @@ export function ClientDetail() {
           <ClientLeadHistory data={data} clientId={client.id} />
         </section>
       )}
+      </div>
 
-      {/* 인증·실사 대응 (상시 노출) */}
+      {/* 인증·실사 관련 (상시 노출) */}
       {inspection && (
         <section>
-          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>인증·실사 대응</SectionTitle>
+          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>인증·실사 관련</SectionTitle>
           <div className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-navy-800 px-2.5 py-1 text-[0.98rem] font-bold text-white">{inspection.type}</span>
@@ -449,13 +502,16 @@ export function ClientDetail() {
          하나뿐이라, 나머지 탭은 있는 줄도 모르고 지나가게 됩니다.
          폰에서는 두 칸 격자로 전부 펼쳐 놓고, 넓은 화면에서만 한 줄로 둡니다.
       */}
-      <div data-client-tabs className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div data-client-tabs className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:gap-1.5">
         {visibleTabs.map((t) => (
           <button
             key={t.id}
             data-client-tab={t.id}
             onClick={() => setTab(t.id)}
-            className={`min-w-0 break-keep rounded-2xl px-3.5 py-2.5 text-[1.08rem] font-bold transition sm:shrink-0 sm:whitespace-nowrap sm:rounded-full sm:px-4 sm:text-[1.12rem] ${
+            //  PC 에서만 20% 키웁니다(1.12 → 1.34rem). 이 줄이 화면의 목차라
+            //  본문보다 작으면 어디를 보고 있는지 매번 다시 찾게 됩니다.
+            //  폰·태블릿은 그대로 — 좁은 화면에서 키우면 줄이 넘칩니다.
+            className={`min-w-0 break-keep rounded-2xl px-3.5 py-2.5 text-[1.08rem] font-bold transition sm:shrink-0 sm:whitespace-nowrap sm:rounded-full sm:px-4 sm:text-[1.12rem] lg:px-3.5 lg:py-2.5 lg:text-[1.34rem] ${
               tab === t.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
             }`}
           >

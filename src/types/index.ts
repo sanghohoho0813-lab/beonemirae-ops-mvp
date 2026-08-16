@@ -616,7 +616,7 @@ export interface SalesLead {
 //  · 측정 원천    → CollectionEvent (이미 존재하는 감사기록)에 소요시간만 추가
 
 /** 기준값 출처 — 사용자가 직접 입력한 값인지, 시연용 예시값인지 구분합니다. */
-export type BaselineSource = 'user' | 'demo'
+export type BaselineSource = 'user' | 'demo' | 'survey'
 
 /** 도입 전 업무 기준값 (모두 사용자 입력. 미입력은 null 로 두고 '기준값 입력 필요'로 표시) */
 export interface BaselineMetrics {
@@ -625,7 +625,7 @@ export interface BaselineMetrics {
   monthlyDocHours: number | null // 수거대장·명세 등 월간 문서 작성시간 (시간)
   monthlyReworkCount: number | null // 월간 누락·재확인 발생 건수 (건)
   dailyCapacity: number | null // 하루 평균 처리 건수 (건)
-  source: BaselineSource // 'user' = 직접 입력 / 'demo' = 시연용 예시값
+  source: BaselineSource // 'user' = 직접 입력 / 'demo' = 시연용 예시값 / 'survey' = 실제 업무 조사(0051)
   updatedAt: string | null // ISO
 }
 

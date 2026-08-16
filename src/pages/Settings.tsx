@@ -30,6 +30,7 @@ import { VehicleManager } from '../components/VehicleManager'
 import { StockCard } from '../components/StockCard'
 import { PasswordCard } from '../components/PasswordCard'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
+import { SURVEY_TAKEN_ON, surveyBaselineFields } from '../lib/opsSurvey'
 import { PageShell } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { FontSizeControl } from '../components/FontSizeControl'
@@ -338,10 +339,34 @@ export function Settings() {
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span
-                className={`pill ${data.baseline.source === 'demo' ? 'bg-amber-50 text-amber-700' : 'bg-teal-50 text-teal-700'}`}
+                className={`pill ${
+                  data.baseline.source === 'demo'
+                    ? 'bg-amber-50 text-amber-700'
+                    : data.baseline.source === 'survey'
+                      ? 'bg-teal-50 text-teal-700'
+                      : 'bg-teal-50 text-teal-700'
+                }`}
               >
-                {data.baseline.source === 'demo' ? '시연 기준값' : '사용자 입력값'}
+                {data.baseline.source === 'demo'
+                  ? '시연 기준값'
+                  : data.baseline.source === 'survey'
+                    ? `실제 업무 조사 (${SURVEY_TAKEN_ON})`
+                    : '사용자 입력값'}
               </span>
+              {/*  이사님이 적어 주신 실제 업무 답변으로 채웁니다. 답변에 없는
+                   칸(반복 입력 횟수·월 누락 건수)은 **비워 둡니다** — 넉넉히
+                   지어 넣으면 나중에 개선폭이 부풀려집니다. */}
+              <button
+                data-baseline-survey
+                className="btn-ghost"
+                onClick={() => {
+                  const next: BaselineMetrics = { ...EMPTY_BASELINE, source: 'survey' }
+                  for (const f of surveyBaselineFields()) next[f.key] = f.value
+                  setBaseline(next)
+                }}
+              >
+                실제 업무 조사값으로 채우기
+              </button>
               <button className="btn-ghost" onClick={() => setBaseline({ ...DEMO_BASELINE })}>
                 시연용 예시값 채우기
               </button>
@@ -349,9 +374,22 @@ export function Settings() {
                 기준값 비우기
               </button>
             </div>
+            {/*  각 숫자가 어떻게 나왔는지 그대로 적습니다. 파생값만 띄우면
+                 몇 달 뒤에 아무도 근거를 못 댑니다. */}
+            <ul data-baseline-survey-how className="mt-2.5 flex flex-col gap-1">
+              {surveyBaselineFields().map((f) => (
+                <li key={f.key} className="t-muted break-keep">
+                  · {BASELINE_FIELDS.find((x) => x.key === f.key)?.label ?? f.key} —{' '}
+                  <b className="text-navy-600">{f.value}</b> · {f.how}
+                </li>
+              ))}
+              <li className="t-muted break-keep">
+                · 반복 입력 횟수 · 월 누락·재확인 건수 —{' '}
+                <b className="text-navy-600">이번 조사에 없어 비워 둡니다</b> (지어내지 않습니다)
+              </li>
+            </ul>
             <p className="t-muted mt-2.5">
-              「시연용 예시값」을 쓰면 출처가 <b>시연 기준값</b>으로 표시됩니다. 심사 제출 시에는 실제 업무 값을 직접
-              입력해 주세요.
+              「시연용 예시값」을 쓰면 출처가 <b>시연 기준값</b>으로 표시됩니다. 심사 제출 시에는 실제 업무 값을 쓰세요.
             </p>
 
             <button className="btn-primary mt-4 w-full" onClick={() => navigate('/performance')}>
