@@ -45,7 +45,16 @@ type Tab = '주문' | '상품' | '실적'
 export function Supplies() {
   const { data, setProductOrderStatus, saveProduct } = useData()
   const { role, mode } = useAuth()
-  const [tab, setTab] = useState<Tab>('주문')
+  //  처음 열면 **상품**입니다 — 들어온 주문이 아니라 파는 물건이 먼저 보입니다.
+  //
+  //   예전 기본값은 「주문」이었습니다. 그런데 아직 주문이 한 건도 없는 지금은
+  //   이 화면을 눌러도 「아직 들어온 주문이 없습니다」 한 줄만 나옵니다.
+  //   무엇을 파는지, 사진이 어떻게 나가는지, 어느 품목에 단가가 비었는지를
+  //   보려면 한 번 더 눌러야 했습니다.
+  //
+  //   들어온 주문을 놓칠 걱정은 없습니다 — 위 「주문 N」 칩에 처리할 건수가
+  //   그대로 찍히고, 오늘 일정·대시보드에도 따로 뜹니다.
+  const [tab, setTab] = useState<Tab>('상품')
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -76,7 +85,30 @@ export function Supplies() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {(['주문', '상품', '실적'] as Tab[]).map((t) => (
           <FilterChip key={t} active={tab === t} onClick={() => setTab(t)}>
-            {t === '주문' ? `주문 ${open.length}` : t}
+            {t === '주문' ? (
+              <span data-supply-tab="주문" className="inline-flex items-center gap-1.5">
+                주문
+                {/*
+                  처리할 주문이 있는데 다른 칸을 보고 있으면 **붉게** 띄웁니다.
+                  기본 화면이 「상품」이 된 뒤로, 들어온 주문이 이 숫자 하나에
+                  걸립니다 — 회색 숫자로 두면 놓칩니다.
+                */}
+                <b
+                  data-open-orders={open.length}
+                  className={`min-w-[1.4rem] rounded-full px-1.5 py-0.5 text-[0.86rem] tabular-nums ${
+                    open.length > 0 && tab !== '주문'
+                      ? 'bg-rose-500 text-white'
+                      : tab === '주문'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-navy-50 text-navy-400'
+                  }`}
+                >
+                  {open.length}
+                </b>
+              </span>
+            ) : (
+              <span data-supply-tab={t}>{t}</span>
+            )}
           </FilterChip>
         ))}
       </div>
