@@ -15,6 +15,7 @@ import {
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
+import { SetupGapsLine } from '../components/SetupGapsCard'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
 import { TodayClients } from '../components/TodayClients'
@@ -128,6 +129,9 @@ export function Dashboard() {
            지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.
            밀린 것이 없으면 이 자리는 아예 없습니다. */}
       <DeadlineBanner />
+      {/*  한 줄만 — 비어 있는 것이 없으면 이 자리도 없습니다.
+           띠를 하나 더 두면 둘 다 안 보게 됩니다. */}
+      <SetupGapsLine />
 
       {/*
         경영 매출 — 대표가 화면을 열자마자 보는 네 숫자.

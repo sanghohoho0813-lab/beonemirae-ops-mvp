@@ -32,6 +32,7 @@ import { PasswordCard } from '../components/PasswordCard'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
 import { SURVEY_TAKEN_ON, surveyBaselineFields } from '../lib/opsSurvey'
 import { PageShell } from '../components/ui'
+import { SetupGapsCard } from '../components/SetupGapsCard'
 import { PageHeader } from '../components/PageHeader'
 import { FontSizeControl } from '../components/FontSizeControl'
 import { Modal } from '../components/Modal'
@@ -220,6 +221,11 @@ export function Settings() {
   return (
     <PageShell>
       <PageHeader title="설정" subtitle="화면 표시 · 데이터 관리 설정 (이 기기에 저장됩니다)" />
+
+      {/*  아직 값이 비어서 못 쓰는 기능 — 맨 위입니다.
+           기능이 없어서 안 되는 것이 아니라 값이 비어서 안 되는 것들이라,
+           대표님이 여기서 한 번에 훑고 채우실 수 있어야 합니다. */}
+      <SetupGapsCard />
 
       {msg && (
         <div
