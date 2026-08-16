@@ -13,6 +13,7 @@ import {
   setProfileClient,
   setProfileName,
   setProfileRole,
+  setProfileVehicle,
   type ProfileRow,
 } from '../lib/repo'
 import { friendlyError } from '../lib/supabase'
@@ -262,6 +263,35 @@ export function UserAdmin() {
 
                 <ResetPasswordButton row={r} busy={busy} onError={setError} onDone={setDone} />
               </div>
+
+              {/*  담당 차량 (0056) — 묶어 두면 그 사람의 수거 입력에서
+                   차량·기사 칸이 사라집니다. 매번 같은 값을 고르지 않아도
+                   되고, 기록에 남는 이름은 **로그인한 본인**입니다. */}
+              {r.role !== 'client' && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-2xl bg-teal-50/60 px-3.5 py-2.5">
+                  <span className="t-muted shrink-0 font-bold text-teal-700">담당 차량</span>
+                  <select
+                    data-user-vehicle={r.id}
+                    disabled={busy}
+                    aria-label={`${r.name || r.email} 담당 차량`}
+                    value={r.vehicleId ?? ''}
+                    onChange={(e) =>
+                      void change(
+                        () => setProfileVehicle(r.id, e.target.value || null),
+                        e.target.value ? '담당 차량을 지정했습니다.' : '담당 차량을 해제했습니다.',
+                      )
+                    }
+                    className="min-w-0 flex-1 rounded-xl border border-teal-200 bg-white px-3 py-2 text-[1.02rem] font-bold text-navy-900"
+                  >
+                    <option value="">묶지 않음 (수거 입력에서 매번 고름)</option>
+                    {data.vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} ({v.wasteType})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 병원 계정 — 어느 병원 소속인지, 그리고 바꾸는 길 */}
               {r.role === 'client' && (

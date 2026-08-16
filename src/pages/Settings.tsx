@@ -222,11 +222,6 @@ export function Settings() {
     <PageShell>
       <PageHeader title="설정" subtitle="화면 표시 · 데이터 관리 설정 (이 기기에 저장됩니다)" />
 
-      {/*  아직 값이 비어서 못 쓰는 기능 — 맨 위입니다.
-           기능이 없어서 안 되는 것이 아니라 값이 비어서 안 되는 것들이라,
-           대표님이 여기서 한 번에 훑고 채우실 수 있어야 합니다. */}
-      <SetupGapsCard />
-
       {msg && (
         <div
           className={`flex items-center gap-2 rounded-2xl px-4 py-3.5 ${
@@ -246,7 +241,12 @@ export function Settings() {
 
            차량이 없으면 현장에서 수거 입력 자체가 저장되지 않습니다. 설정에서
            가장 급한 일이 맞으니 맨 위가 제자리입니다. 한 대라도 등록하면
-           아래 원래 자리로 내려갑니다. */}
+           아래 원래 자리로 내려갑니다.
+
+           ⚠ 아래 「값이 비어서 못 쓰는 기능」(SetupGapsCard)보다 **위**여야
+             합니다. 그 카드를 위에 두었더니 차량 카드가 773px 로 밀려나
+             (검사가 잡았습니다) 「맨 위」라고 적어 둔 이 규칙이 조용히
+             깨졌습니다. 목록을 읽는 것보다 등록하는 자리가 먼저입니다. */}
       {data.vehicles.length === 0 && (
         <SettingCard
           icon={Truck}
@@ -258,6 +258,11 @@ export function Settings() {
           <VehicleManager />
         </SettingCard>
       )}
+
+      {/*  아직 값이 비어서 못 쓰는 기능 — 맨 위입니다.
+           기능이 없어서 안 되는 것이 아니라 값이 비어서 안 되는 것들이라,
+           대표님이 여기서 한 번에 훑고 채우실 수 있어야 합니다. */}
+      <SetupGapsCard />
 
       {/* 사용 방법 — 언제든 다시 실행 */}
       <section className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6">

@@ -21,6 +21,7 @@ import { SUPPLY_ITEMS, stockDeltaOf, itemsOf, type ItemCounts, type ItemKey } fr
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { QtyField } from '../components/ui'
+import { TimeField } from '../components/TimeField'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import {
@@ -89,7 +90,7 @@ function Section({
 
 export function CollectionInput() {
   const { data, completeCollection, revertCollection, notesFor, sync } = useData()
-  const { configured, role } = useAuth()
+  const { configured, role, profile } = useAuth()
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const canGoHistory = !configured || canAccess(role, '/history')
   const [params] = useSearchParams()
@@ -126,6 +127,33 @@ export function CollectionInput() {
 
   const client = data.clients.find((c) => c.id === clientId)
   const vehicles = useMemo(() => data.vehicles.filter((v) => v.wasteType === wasteType), [data.vehicles, wasteType])
+
+  // ── 내 차량 (0056) ─────────────────────────────────────────────────────────
+  //
+  //  대표님 말씀: "각각 그 수거 기사인지, 이름이 뭔지, 몇 호차인지 이거는 굳이
+  //  입력할 필요는 없을 것 같고."
+  //
+  //  관리자가 계정에 차량을 묶어 두면 여기서 그 차량을 씁니다. 이름은 **로그인한
+  //  본인**에서 옵니다 — 차량에 적힌 기본 기사가 아닙니다. 오늘 그 차로 나간
+  //  사람이 대타일 수 있고, 그러면 기록에 안 간 사람 이름이 남습니다.
+  const myVehicle = useMemo(
+    () => (profile?.vehicleId ? (data.vehicles.find((v) => v.id === profile.vehicleId) ?? null) : null),
+    [data.vehicles, profile?.vehicleId],
+  )
+  //  묶인 차량이 지금 고른 구분과 다르면(의료폐기물 차인데 기저귀 수거) 자동으로
+  //  쓰지 않습니다. 구분이 안 맞는 차는 어차피 저장이 막힙니다.
+  const boundVehicle = myVehicle && myVehicle.wasteType === wasteType ? myVehicle : null
+  //  「오늘은 다른 차로 갔다」를 적을 길은 남겨 둡니다. 이 길이 없으면 대타로
+  //  나간 날 기록이 통째로 틀립니다.
+  const [showVehiclePick, setShowVehiclePick] = useState(false)
+  const vehicleHidden = !!boundVehicle && !showVehiclePick
+
+  useEffect(() => {
+    if (!vehicleHidden || !boundVehicle) return
+    if (vehicleId !== boundVehicle.id) setVehicleId(boundVehicle.id)
+    const mine = (profile?.name ?? '').trim()
+    if (mine && driverName !== mine) setDriverName(mine)
+  }, [vehicleHidden, boundVehicle, vehicleId, driverName, profile?.name])
 
   // 일정 선택 시 거래처/폐기물/차량/기사/시간/수거량 자동 채움
   function applySchedule(id: string) {
@@ -510,14 +538,19 @@ export function CollectionInput() {
 
         {/* 3. 실제 수거 시간 · 수거량 */}
         <Section n={3} title="실제 수거 시간 · 수거량" tour="collect-form">
-          <div className="grid grid-cols-2 gap-3">
+          {/*  시간과 수거량을 반씩 나눠 놓으면, 폰에서 시간 칸이 손가락보다
+               좁아집니다 (버튼 두 개 + 숫자 칸이 150px 안에 들어갑니다).
+               시간은 한 줄을 통째로 씁니다 — 대표님이 「너무 조그맣게 있어서
+               입력하기 되게 불편하다」고 하신 그 자리입니다. */}
+          <div className="space-y-3">
+            <TimeField value={time} onChange={setTime} />
             <div>
-              <label className="field-label">실제 수거 시간</label>
-              <input type="time" className="field-input" value={time} onChange={(e) => setTime(e.target.value)} />
-            </div>
-            <div>
-              <label className="field-label">실제 수거량 (kg) *</label>
+              <label className="field-label" htmlFor="collection-amount">실제 수거량 (kg) *</label>
+              {/*  집을 수 있는 이름을 답니다. 시간 칸도 숫자 칸이라, 「첫 번째
+                   숫자 칸」으로 집으면 수거량 대신 시(時)에 값이 들어갑니다. */}
               <input
+                id="collection-amount"
+                data-actual-amount
                 type="number"
                 inputMode="numeric"
                 className="field-input"
@@ -661,6 +694,27 @@ export function CollectionInput() {
         </Section>
 
         {/* 6. 차량 · 기사 */}
+        {vehicleHidden && boundVehicle ? (
+          //  관리자가 이 계정에 차량을 묶어 뒀습니다 — 매번 고르지 않습니다.
+          //  대신 무엇으로 저장되는지는 그대로 보여 줍니다. 안 보여 주면
+          //  틀린 차량으로 기록이 쌓여도 알 방법이 없습니다.
+          <div data-my-vehicle={boundVehicle.id} className="card flex flex-wrap items-center gap-x-3 gap-y-2 p-4">
+            <Truck size={20} strokeWidth={2.3} className="shrink-0 text-teal-600" />
+            <p className="t-body min-w-0 break-keep font-extrabold text-navy-900">
+              {boundVehicle.name}
+              {(profile?.name ?? '').trim() && (
+                <span className="ml-2 font-bold text-navy-500">· {profile?.name}</span>
+              )}
+            </p>
+            <button
+              data-vehicle-other
+              onClick={() => setShowVehiclePick(true)}
+              className="t-muted ml-auto shrink-0 font-bold text-navy-400 underline transition hover:text-navy-700"
+            >
+              오늘은 다른 차로 갔어요
+            </button>
+          </div>
+        ) : (
         <Section n={6} title="차량 · 기사">
           {/*  차량이 한 대도 없으면 여기서 고를 것이 없고, 저장 버튼도
                끝까지 잠깁니다. 예전에는 그 이유를 아무 데도 적어 두지 않아
@@ -706,8 +760,15 @@ export function CollectionInput() {
           </div>
           <p className="mt-1.5 text-[0.95rem] text-navy-400">
             {wasteType} 전용 차량만 배차할 수 있습니다 (구분 불일치 시 저장 차단).
+            {myVehicle && !boundVehicle && (
+              <>
+                {' '}
+                계정에 묶인 {myVehicle.name}는 {myVehicle.wasteType} 차량이라 이번에는 자동으로 쓰지 않습니다.
+              </>
+            )}
           </p>
         </Section>
+        )}
 
         {/* 7. 처리장 인계 상태 */}
         <Section n={7} title="처리장 인계 상태">

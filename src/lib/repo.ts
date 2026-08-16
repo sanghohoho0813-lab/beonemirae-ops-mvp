@@ -24,6 +24,8 @@ import type {
   ProductOrderStatus,
   MonthCloseMark,
   MonthCloseStep,
+  ClientAssignment,
+  StaffInvite,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry, missingName } from './supabase'
@@ -419,6 +421,22 @@ export async function loadAppData(): Promise<AppData> {
     '마감 표시',
   )
 
+  //  담당 기사 배정 (0056). 마이그레이션 전 환경에는 표가 없으므로 soft 로
+  //  읽습니다 — 없으면 빈 목록이고, 지금까지처럼 전부 보입니다.
+  const clientAssignments = await soft(
+    async () => pageAll((f, t) => sb.from('client_assignments').select('*').order('assigned_at').range(f, t)),
+    [] as Row[],
+    '담당 기사 배정',
+  )
+
+  //  사전 등록(초대) 명단 (0056). 관리자만 읽을 수 있습니다 — 다른 역할은
+  //  RLS 가 막으므로 빈 목록으로 옵니다.
+  const staffInvites = await soft(
+    async () => pageAll((f, t) => sb.from('staff_invites').select('*').order('created_at').range(f, t)),
+    [] as Row[],
+    '사전 등록 명단',
+  )
+
   //  거래처 단가의 판 (0036). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 지금 단가를 씁니다.
   const clientPrices = await soft(
@@ -587,6 +605,14 @@ export async function loadAppData(): Promise<AppData> {
     monthCloseMarks: monthCloseMarks.map((r): MonthCloseMark => ({
       month: r.month, step: r.step as MonthCloseStep,
       markedAt: r.marked_at ?? '', markedName: r.marked_name ?? '', note: r.note ?? '',
+    })),
+    clientAssignments: clientAssignments.map((r): ClientAssignment => ({
+      clientId: r.client_id, profileId: r.profile_id, assignedAt: r.assigned_at ?? '',
+    })),
+    staffInvites: staffInvites.map((r): StaffInvite => ({
+      email: r.email, name: r.name ?? '', role: r.role,
+      vehicleId: r.vehicle_id ?? null, clientIds: r.client_ids ?? [],
+      note: r.note ?? '', createdAt: r.created_at ?? '', usedAt: r.used_at ?? null,
     })),
     clientPrices: clientPrices.map(
       (r): ClientPrice => ({
@@ -811,6 +837,65 @@ export async function setMonthCloseMark(
   const sb = need()
   const { error } = await sb.rpc('set_month_close_mark', {
     p_month: month, p_step: step, p_done: done, p_note: note,
+  })
+  if (error) throw new Error(error.message)
+}
+
+// ── 담당 기사 배정 · 사전 등록 (0056) ───────────────────────────────────────
+//
+//  네 함수 모두 **관리자만** 부를 수 있고, 그 확인은 서버가 다시 합니다.
+//  화면에서 버튼을 숨기는 것으로 끝내지 않습니다.
+
+/**
+ * 이 거래처의 담당 기사 **목록 전체**를 바꿉니다.
+ *
+ *  하나씩 넣고 빼는 길을 두지 않은 이유 — 화면에서 두 번 눌렀는데 한 번만
+ *  닿으면 화면과 서버가 어긋난 채로 남습니다. 통째로 보내면 마지막에 보낸
+ *  것이 그대로 서버 상태입니다.
+ *
+ *  빈 배열을 보내면 배정이 사라지고, 그 기사는 다시 전 거래처를 봅니다.
+ */
+export async function setClientDrivers(clientId: string, profileIds: string[]): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('set_client_drivers', {
+    p_client_id: clientId, p_profiles: profileIds,
+  })
+  if (error) throw new Error(error.message)
+}
+
+/** 사전 등록(초대) 만들기·고치기. 비밀번호는 보내지 않습니다 — 본인이 정합니다 */
+export async function upsertStaffInvite(input: {
+  email: string
+  name: string
+  role: 'admin' | 'office' | 'field'
+  vehicleId?: string | null
+  clientIds?: string[]
+  note?: string
+}): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('upsert_staff_invite', {
+    p_email: input.email,
+    p_name: input.name,
+    p_role: input.role,
+    p_vehicle_id: input.vehicleId ?? null,
+    p_client_ids: input.clientIds ?? [],
+    p_note: input.note ?? '',
+  })
+  if (error) throw new Error(error.message)
+}
+
+/** 아직 가입에 안 쓰인 초대만 지웁니다 (쓰인 것은 기록으로 남습니다) */
+export async function deleteStaffInvite(email: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('delete_staff_invite', { p_email: email })
+  if (error) throw new Error(error.message)
+}
+
+/** 계정에 차량을 묶습니다 (null 이면 해제) */
+export async function setProfileVehicle(profileId: string, vehicleId: string | null): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('set_profile_vehicle', {
+    p_profile_id: profileId, p_vehicle_id: vehicleId,
   })
   if (error) throw new Error(error.message)
 }
@@ -1620,6 +1705,8 @@ export interface ProfileRow {
   /** 병원 계정이면 소속 거래처 id */
   clientId: string | null
   clientName: string
+  /** 계정에 묶인 차량 (0056). 묶여 있으면 수거 입력에서 차량 칸이 사라집니다 */
+  vehicleId: string | null
 }
 
 /** 아직 승인되지 않은 가입 신청인가 */
@@ -1652,6 +1739,8 @@ export async function loadProfiles(): Promise<ProfileRow[]> {
     approvedAt: (r as { approved_at?: string | null }).approved_at ?? null,
     clientId: r.client_id ?? null,
     clientName: r.clients?.name ?? '',
+    //  0056 이전 서버에는 이 칸이 없습니다 — 그때는 null 로 옵니다.
+    vehicleId: (r as { vehicle_id?: string | null }).vehicle_id ?? null,
   }))
 }
 
@@ -1906,7 +1995,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 55
+export const EXPECTED_SCHEMA_VERSION = 56
 
 /**
  * 서버 DB 의 스키마 버전.

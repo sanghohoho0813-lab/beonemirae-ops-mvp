@@ -44,6 +44,13 @@ export interface Profile {
   approvedAt: string | null
   /** 병원 계정이면 소속 거래처 id (직원 계정은 null) */
   clientId: string | null
+  /**
+   * 관리자가 이 계정에 묶어 둔 차량 (0056).
+   *
+   *  묶여 있으면 수거 입력에서 차량·기사 칸이 사라집니다 — 기사님이 매번
+   *  같은 값을 고르지 않아도 됩니다. 0056 이전 서버에서는 항상 null 입니다.
+   */
+  vehicleId: string | null
 }
 
 /** 앱 동작 모드 — 실제 운영(서버 DB) / 시연(로컬 저장) */
@@ -86,6 +93,7 @@ type ProfileRow = {
   active: boolean
   approved_at: string | null
   client_id: string | null
+  vehicle_id?: string | null
 }
 
 const toProfile = (r: ProfileRow): Profile => ({
@@ -97,6 +105,7 @@ const toProfile = (r: ProfileRow): Profile => ({
   active: r.active,
   approvedAt: r.approved_at ?? null,
   clientId: r.client_id ?? null,
+  vehicleId: r.vehicle_id ?? null,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -109,7 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return null
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, name, role, font_scale, active, approved_at, client_id')
+      //  칸 이름을 하나씩 적어 두면, 0056 을 아직 안 돌린 서버에서 vehicle_id
+      //  하나 때문에 요청 전체가 거절되고 **아무도 로그인하지 못합니다**.
+      //  있는 칸만 받아 쓰도록 통째로 읽습니다 — 본인 한 줄이라 양도 같습니다.
+      .select('*')
       .eq('id', userId)
       .maybeSingle()
     if (error || !data) return null

@@ -191,6 +191,32 @@ interface DataContextValue {
   /** 휴무일 삭제 */
   removeHoliday: (day: string) => Promise<{ ok: boolean; error: string | null }>
   /**
+   * 이 거래처의 담당 기사 목록을 통째로 바꿉니다 (0056).
+   *
+   *  빈 배열을 보내면 배정이 사라지고, 그 기사는 다시 전 거래처를 봅니다 —
+   *  잘못 눌러도 되돌릴 수 있어야 합니다.
+   */
+  setClientDrivers: (
+    clientId: string,
+    profileIds: string[],
+  ) => Promise<{ ok: boolean; error: string | null }>
+  /** 사전 등록(초대) 만들기·고치기 (0056). 비밀번호는 본인이 정합니다 */
+  saveStaffInvite: (input: {
+    email: string
+    name: string
+    role: 'admin' | 'office' | 'field'
+    vehicleId?: string | null
+    clientIds?: string[]
+    note?: string
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 아직 안 쓰인 초대만 지웁니다 */
+  removeStaffInvite: (email: string) => Promise<{ ok: boolean; error: string | null }>
+  /** 계정에 차량 묶기 (0056). null 이면 해제 */
+  setProfileVehicle: (
+    profileId: string,
+    vehicleId: string | null,
+  ) => Promise<{ ok: boolean; error: string | null }>
+  /**
    * 월 매출 직접입력·조정 (0038).
    *  사유 없이 넣지 못하고, 기존 값이 있으면 서버가 이전 값을 함께 돌려줍니다.
    */
@@ -1690,6 +1716,65 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  // ── 담당 기사 배정 · 사전 등록 (0056) ──────────────────────────────────────
+  //
+  //  넷 다 관리자만 됩니다. 화면에서 감추는 것과 별개로 서버가 다시 막습니다.
+
+  const setClientDrivers = useCallback(
+    async (clientId: string, profileIds: string[]) => {
+      if (!live) return { ok: false, error: '담당 기사 배정은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.setClientDrivers(clientId, profileIds)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const saveStaffInvite = useCallback(
+    async (input: {
+      email: string
+      name: string
+      role: 'admin' | 'office' | 'field'
+      vehicleId?: string | null
+      clientIds?: string[]
+      note?: string
+    }) => {
+      if (!live) return { ok: false, error: '사전 등록은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.upsertStaffInvite(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const removeStaffInvite = useCallback(
+    async (email: string) => {
+      if (!live) return { ok: false, error: '사전 등록 삭제는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.deleteStaffInvite(email)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const setProfileVehicle = useCallback(
+    async (profileId: string, vehicleId: string | null) => {
+      if (!live) return { ok: false, error: '차량 지정은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.setProfileVehicle(profileId, vehicleId)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   /**
    * 월 매출 직접입력 · 조정 (0038).
    *
@@ -1935,6 +2020,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       savePricing,
       saveHolidays,
       removeHoliday,
+      setClientDrivers,
+      saveStaffInvite,
+      removeStaffInvite,
+      setProfileVehicle,
       saveRevenueOverride,
       removeRevenueOverride,
       purgeClient,
@@ -2004,6 +2093,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       savePricing,
       saveHolidays,
       removeHoliday,
+      setClientDrivers,
+      saveStaffInvite,
+      removeStaffInvite,
+      setProfileVehicle,
       saveRevenueOverride,
       removeRevenueOverride,
       purgeClient,

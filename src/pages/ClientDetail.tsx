@@ -56,6 +56,7 @@ import { invoiceForBilled, contractState, type Invoice } from '../lib/billing'
 import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import { MonthlyActuals } from '../components/MonthlyActuals'
 import { ReceiptPanel } from '../components/Receipts'
+import { ClientDrivers } from '../components/ClientDrivers'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -469,6 +470,12 @@ export function ClientDetail() {
           </section>
         )}
         </div>
+
+        {/*  담당 기사 (0056) — 관리자에게만 보입니다.
+             거래처 정보 카드 안에 둡니다. 「이 병원은 누가 갑니까」는
+             주소·담당자와 같은 줄의 정보이고, 여기서 고른 사람에게만
+             이 거래처가 보입니다. */}
+        <ClientDrivers clientId={client.id} />
       </div>
 
       {/*  핵심 지표 — 폰에서는 지금까지처럼 카드 넉 장으로 둡니다.

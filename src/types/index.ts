@@ -415,6 +415,37 @@ export interface MonthCloseMark {
   note: string
 }
 
+/**
+ * 거래처에 붙은 담당 기사 (0056).
+ *
+ *  이 표가 **비어 있는 기사**는 지금까지처럼 전 거래처를 봅니다. 한 건이라도
+ *  붙는 순간 그 목록만 보입니다 — 그래서 「배정했더니 화면이 빈다」가 아니라
+ *  「배정한 곳만 남는다」가 됩니다.
+ */
+export interface ClientAssignment {
+  clientId: string
+  profileId: string
+  assignedAt: string
+}
+
+/**
+ * 사전 등록(초대) — 아직 가입하지 않은 직원 자리 (0056).
+ *
+ *  비밀번호는 여기에 없습니다. 본인이 가입 화면에서 직접 정합니다.
+ *  이 이메일로 가입하면 역할·차량·담당 거래처가 자동으로 붙고 바로 씁니다.
+ */
+export interface StaffInvite {
+  email: string
+  name: string
+  role: 'admin' | 'office' | 'field'
+  vehicleId: string | null
+  clientIds: string[]
+  note: string
+  createdAt: string
+  /** 가입해서 실제로 쓰인 시각 — 채워지면 더 이상 대기 중이 아닙니다 */
+  usedAt: string | null
+}
+
 export interface AppData {
   clients: Client[]
   vehicles: Vehicle[]
@@ -462,6 +493,15 @@ export interface AppData {
    *  시스템이 스스로 채우지 않습니다.
    */
   monthCloseMarks?: MonthCloseMark[]
+  /**
+   * 담당 기사 배정 (0056). 관리자만 바꿀 수 있고, 화면은 읽기만 합니다.
+   *
+   *  기사 계정으로 들어오면 RLS 가 이미 걸러 주므로 여기 담긴 것도 자기
+   *  것뿐입니다 — 화면이 다시 거르지 않아도 됩니다.
+   */
+  clientAssignments?: ClientAssignment[]
+  /** 사전 등록(초대) 명단 (0056). 관리자만 읽습니다 */
+  staffInvites?: StaffInvite[]
   /** 파는 소모품 (0048) */
   products?: Product[]
   /** 소모품 주문 (0048). 병원은 자기 것만 내려받습니다 (RLS) */
