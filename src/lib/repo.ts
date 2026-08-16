@@ -1836,7 +1836,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 51
+export const EXPECTED_SCHEMA_VERSION = 52
 
 /**
  * 서버 DB 의 스키마 버전.

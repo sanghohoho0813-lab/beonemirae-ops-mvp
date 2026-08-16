@@ -636,7 +636,7 @@ export function Layout() {
       </BottomSheet>
 
       {/* 도움말 — 사용 방법 / 만든 이유 두 갈래 (폰) */}
-      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} onDevRequest={() => setDevOpen(true)} />
 
       {/* 개발자에게 요청하기 — 더보기 시트 바깥에 두어야 시트가 닫혀도 남습니다 */}
       <DevRequestSheet open={devOpen} onClose={() => setDevOpen(false)} />

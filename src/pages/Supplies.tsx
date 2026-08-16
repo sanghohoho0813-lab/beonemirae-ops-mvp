@@ -297,61 +297,61 @@ function ProductsTab({
               <p className="t-label mb-1.5 text-navy-500">
                 {cat} <span className="text-navy-300">· {list.length}가지</span>
               </p>
-              <div className="flex flex-col gap-2">
+              {/*  물건은 **사진으로 고릅니다.** 한 줄에 하나씩 작은 아이콘만
+                   두면 30가지 중에서 원하는 것을 찾기가 어렵습니다.
+                   폰 2칸 → 태블릿 3칸 → PC 4칸 → 큰 화면 5칸. */}
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {list.map((p) => (
-                  <div
-                    key={p.id}
-                    data-product-row={p.id}
-                    className="card flex flex-wrap items-center gap-x-3 gap-y-1.5 p-4"
-                  >
+                  <div key={p.id} data-product-row={p.id} className="card flex flex-col p-3">
                     {/*  사진 자리. 실제 제품 사진이 정해지면 여기 들어갑니다 —
-                        없는 사진을 지어내지 않습니다. */}
+                        없는 사진을 지어내지 않습니다. 정사각형으로 잡아 두어
+                        사진이 들어와도 칸이 흔들리지 않습니다. */}
                     <span
                       data-product-thumb={p.id}
-                      className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-300 ring-1 ring-navy-100"
+                      className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl bg-navy-50 text-navy-300 ring-1 ring-navy-100"
                     >
                       {p.imageUrl ? (
-                        <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                        <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
                       ) : (
-                        <Package size={20} strokeWidth={2.2} />
+                        <Package size={38} strokeWidth={1.8} />
                       )}
                     </span>
-                    <span className="min-w-0 flex-1 basis-[10rem]">
-                      <b className="t-cell text-navy-900">{p.name}</b>
-                      <span className="t-muted ml-1.5">{p.spec}</span>
-                      <span className="t-muted mt-0.5 block">
-                        {p.unit} 단위 ·{' '}
-                        {p.stockKey ? `재고 연결 · ${STOCK_LABEL[p.stockKey] ?? p.stockKey}` : '재고를 두지 않는 물품'}
-                        {p.imageUrl ? '' : ' · 사진 없음'}
-                      </span>
+                    <b className="t-body break-keep leading-snug text-navy-900">{p.name}</b>
+                    <span className="t-cell mt-0.5 break-keep text-navy-500">{p.spec}</span>
+                    <span className="t-muted mt-0.5 break-keep">
+                      {p.unit} 단위
+                      {p.stockKey ? ` · 재고 ${STOCK_LABEL[p.stockKey] ?? p.stockKey}` : ''}
+                      {p.imageUrl ? '' : ' · 사진 없음'}
                     </span>
-                    <span className="shrink-0 text-right">
+                    <span className="mt-2 flex flex-wrap items-baseline gap-x-2">
                       {p.salePrice > 0 ? (
                         <>
-                          <b className="t-cell tabular-nums text-navy-900">{won(p.salePrice)}</b>
-                          <span className="t-muted block tabular-nums">원가 {won(p.costPrice)}</span>
+                          <b className="t-body tabular-nums text-navy-900">{won(p.salePrice)}</b>
+                          <span className="t-muted tabular-nums">원가 {won(p.costPrice)}</span>
                         </>
                       ) : (
-                        <b data-product-noprice={p.id} className="t-cell text-amber-700">
+                        <b data-product-noprice={p.id} className="t-body text-amber-700">
                           단가 미정
                         </b>
                       )}
                     </span>
-                    {!p.available && <span className="pill bg-navy-50 text-navy-400">공급 불가</span>}
-                    {canEdit && (
-                      <button
-                        data-product-edit={p.id}
-                        className="btn-ghost shrink-0"
-                        onClick={() => {
-                          setForm({ ...p, stockKey: p.stockKey ?? '' })
-                          setEditing(p)
-                          setErr('')
-                          setAdding(true)
-                        }}
-                      >
-                        수정
-                      </button>
-                    )}
+                    <span className="mt-auto flex items-center gap-2 pt-2.5">
+                      {!p.available && <span className="pill bg-navy-50 text-navy-400">공급 불가</span>}
+                      {canEdit && (
+                        <button
+                          data-product-edit={p.id}
+                          className="btn-ghost ml-auto shrink-0"
+                          onClick={() => {
+                            setForm({ ...p, stockKey: p.stockKey ?? '' })
+                            setEditing(p)
+                            setErr('')
+                            setAdding(true)
+                          }}
+                        >
+                          수정
+                        </button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>

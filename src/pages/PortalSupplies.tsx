@@ -167,35 +167,39 @@ export function PortalSupplies() {
       {products.length > 0 && (
         <div data-order-box className="card mb-4 p-5">
           <p className="t-card font-extrabold text-navy-900">주문할 물품</p>
-          <ul className="mt-3 flex flex-col gap-1.5">
+          {/*  병원도 **사진으로 고릅니다.** 이름만 늘어놓으면 「비닐장갑」과
+               「멸균 수술장갑」을 잘못 고릅니다 — 그러면 다음 수거 때 엉뚱한
+               물건이 갑니다. 폰 2칸 → PC 4칸. */}
+          <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
             {products.map((p) => (
               <li
                 key={p.id}
                 data-product={p.id}
-                className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl bg-white px-3 py-2.5 ring-1 ring-navy-50"
+                className="flex flex-col rounded-2xl bg-white p-3 ring-1 ring-navy-50"
               >
                 {/*  사진 자리 — 실제 제품 사진이 정해지면 여기 들어갑니다.
                     없는 사진을 지어내지 않습니다. */}
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-300">
+                <span className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-300">
                   {p.imageUrl ? (
-                    <img src={p.imageUrl} alt="" className="h-full w-full rounded-lg object-cover" />
+                    <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
                   ) : (
-                    <Package size={17} strokeWidth={2.2} />
+                    <Package size={34} strokeWidth={1.8} />
                   )}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <b className="t-cell text-navy-900">{p.name}</b>
-                  <span className="t-muted ml-1.5">{p.spec}</span>
-                  <span className="t-muted ml-1.5 tabular-nums">{won(p.salePrice)}</span>
+                <b className="t-body break-keep leading-snug text-navy-900">{p.name}</b>
+                <span className="t-cell mt-0.5 break-keep text-navy-500">{p.spec}</span>
+                <span className="t-body mt-1 tabular-nums font-bold text-navy-800">
+                  {won(p.salePrice)}
+                  <span className="t-muted ml-1 font-medium">/{p.unit}</span>
                 </span>
-                <span className="flex shrink-0 items-center gap-1.5">
-                  <button data-qty-minus={p.id} className="btn-ghost px-2.5" onClick={() => bump(p.id, -1)}>
+                <span className="mt-auto flex items-center justify-center gap-2 pt-2.5">
+                  <button data-qty-minus={p.id} className="btn-ghost px-3" onClick={() => bump(p.id, -1)}>
                     −
                   </button>
-                  <b data-qty={p.id} className="t-cell w-8 text-center tabular-nums text-navy-900">
+                  <b data-qty={p.id} className="t-body w-8 text-center tabular-nums text-navy-900">
                     {qty[p.id] ?? 0}
                   </b>
-                  <button data-qty-plus={p.id} className="btn-ghost px-2.5" onClick={() => bump(p.id, 1)}>
+                  <button data-qty-plus={p.id} className="btn-ghost px-3" onClick={() => bump(p.id, 1)}>
                     ＋
                   </button>
                 </span>
