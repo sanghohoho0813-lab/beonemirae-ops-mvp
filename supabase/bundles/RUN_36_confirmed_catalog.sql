@@ -181,8 +181,14 @@ update public.products
 
 -- ── 상품 저장 — 분류를 함께 ─────────────────────────────────────────────────
 --
---  0048 의 upsert_product 에 분류 하나를 더합니다. 인자 순서를 바꾸지 않고
---  **맨 뒤에** 붙여, 예전 화면이 부르던 방식도 그대로 동작합니다.
+--  0048 의 upsert_product 에 분류 하나를 더합니다.
+--
+--  ⚠ **먼저 옛 서명을 지웁니다.** `create or replace` 는 인자 개수가 다르면
+--    바꾸는 게 아니라 **하나 더 만듭니다**(오버로드). 그러면 10개짜리와
+--    11개짜리가 같이 남아, 인자를 10개로 부르는 쪽이 통째로 실패합니다 —
+--    `function ... is not unique`. 실측으로 확인했습니다.
+drop function if exists public.upsert_product(uuid, text, text, text, bigint, bigint, text, boolean, text, text);
+
 create or replace function public.upsert_product(
   p_id        uuid,
   p_name      text,
@@ -205,8 +211,12 @@ declare
   v_id   uuid;
   v_name text := btrim(coalesce(p_name, ''));
 begin
-  if not public.is_staff() then
-    raise exception '상품은 사무실 담당자와 관리자만 넣을 수 있습니다.' using errcode = 'P0001';
+  --  ⚠ 관리자만입니다(0048 과 같음). 상품 단가는 그대로 확정 판매금액이
+  --    되므로(0048 이 주문 시점 단가를 snapshot 합니다) 값을 정하는 사람은
+  --    한 명이어야 합니다. 0050 초안에서 실수로 사무실까지 열었던 것을
+  --    격리 DB 검사(db_orders)가 잡았습니다.
+  if not public.is_admin() then
+    raise exception '상품은 관리자만 등록·수정할 수 있습니다.' using errcode = 'P0001';
   end if;
   if v_name = '' then
     raise exception '상품 이름을 넣어 주세요.' using errcode = 'P0001';

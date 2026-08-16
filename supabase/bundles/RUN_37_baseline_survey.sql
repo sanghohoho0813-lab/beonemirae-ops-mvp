@@ -44,6 +44,18 @@ comment on column public.performance_baselines.source is
   'user = 대표님이 직접 입력 · demo = 시연용 예시값 · survey = 실제 업무 조사 답변(이사님 2026-08)';
 
 
+-- ── 0050 뒷정리 — 상품 저장 함수가 두 벌이 되지 않게 ────────────────────────
+--
+--  0050 이 `upsert_product` 에 인자를 하나 더했는데, `create or replace` 는
+--  인자 개수가 다르면 **하나 더 만듭니다**. 이미 RUN_36 을 실행하신 DB 에는
+--  10개짜리와 11개짜리가 같이 남아 있고, 그 상태에서는 상품 저장이
+--  `function ... is not unique` 로 실패합니다.
+--
+--  0050 파일 자체도 고쳤으므로, 아직 RUN_36 을 안 하셨다면 이 줄은 아무 일도
+--  하지 않습니다. 이미 하셨다면 여기서 옛 것이 지워집니다.
+drop function if exists public.upsert_product(uuid, text, text, text, bigint, bigint, text, boolean, text, text);
+
+
 -- ── DB 버전 ──────────────────────────────────────────────────────────────────
 --
 --  표·색인·함수는 그대로라 자가진단 목록은 건드리지 않습니다.
