@@ -90,6 +90,15 @@ const billStyle: Record<BillStatus, string> = {
 //  청구 확정 버튼까지 눌러졌습니다. 원가와 이익은 미수금보다 더 민감한
 //  숫자입니다. 정산은 수거·자재로 계산되는 값이라 RLS 로는 막을 수 없어
 //  화면에서 가려야 합니다.
+/**
+ * 인증·실사 관련 카드를 보일지.
+ *
+ *  지금은 꺼 둡니다 — 체크리스트가 시연용이고 알림 연동이 없어서,
+ *  거래처 화면에서 자리만 차지했습니다. 실제로 쓰실 때 true 로 바꾸면
+ *  그대로 다시 나옵니다(코드는 그대로 있습니다).
+ */
+const SHOW_INSPECTION = false
+
 const TABS = [
   { id: 'ops', label: '운영조건', money: false },
   { id: 'settlement', label: '월 정산·명세서', money: true },
@@ -368,6 +377,98 @@ export function ClientDetail() {
             )}
           </div>
         )}
+
+        {/*  다음 행동 추천 — 축적된 운영 데이터 기반.
+             항목마다 예상 매출이 붙습니다(「추가 수거 제안 · +70만원」). 현장
+             담당자에게는 띄우지 않습니다 — 영업 판단이고, 병원에 가서 여는
+             화면이라 금액이 상대방 눈에 들어갈 수도 있습니다. */}
+        {/*  PC 에서는 「다음 행동 AI 추천」과 「영업 전환 이력」을 나란히 둡니다.
+             둘은 같은 이야기의 앞뒤(무엇을 할까 → 그래서 어떻게 됐나)라, 위아래로
+             떼어 놓으면 스크롤하며 머릿속에서 다시 이어 붙여야 합니다.
+             폰에서는 지금까지처럼 위아래 그대로입니다. */}
+        <div
+          className="mt-4 grid gap-4 border-t border-navy-100 pt-4 lg:grid-cols-2 lg:items-start"
+          data-client-insight-grid
+        >
+        {canSeeMoney && actions.length > 0 && (
+          <section>
+            <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">데이터 기반 추천</span>}>
+              다음 행동 AI 추천
+            </SectionTitle>
+            {/*  이미 카드 안입니다 — 여기서 또 card 를 쓰면 상자 속 상자가
+                 됩니다. 옅은 바탕으로 「같은 카드의 한 칸」처럼 둡니다. */}
+            <div className="divide-y divide-navy-100 rounded-2xl bg-navy-50/50 p-2">
+              {actions.map((a, i) => {
+                const meta = actionMeta[a.kind]
+                const Icon = meta.icon
+                return (
+                  <div key={`${a.kind}-${i}`} className="p-3">
+                    <div className="flex items-start gap-3">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${meta.chip}`}>
+                        <Icon size={17} strokeWidth={2.3} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="break-keep text-[1.22rem] font-extrabold leading-snug text-navy-900">{a.title}</p>
+                          {a.estValue > 0 && (
+                            <span className="pill bg-teal-50 text-teal-700">예상 +{wonShort(a.estValue)}</span>
+                          )}
+                        </div>
+                        <p className="mt-1 break-keep text-[1.12rem] leading-snug text-navy-500">{a.reason}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {a.metrics.map((m) => (
+                            <span key={m.label} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[1rem] font-semibold text-navy-600">
+                              {m.label} <span className="font-extrabold text-navy-800">{m.value}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap gap-2 pl-12">
+                      <button
+                        className="pressable rounded-xl bg-navy-900 px-4 py-2.5 text-[1.07rem] font-bold text-white transition hover:bg-navy-800"
+                        onClick={() =>
+                          navigate(
+                            a.kind === '소모품공급'
+                              ? '/materials'
+                              : a.kind === '관리필요'
+                                ? '/receivables'
+                                : '/collection',
+                          )
+                        }
+                      >
+                        {a.cta}
+                      </button>
+                      <button
+                        className="rounded-xl bg-navy-50 px-4 py-2.5 text-[1.07rem] font-bold text-navy-600 transition hover:bg-navy-100"
+                        onClick={() => setTab('report')}
+                      >
+                        리포트에 포함
+                      </button>
+                    </div>
+                    {/* 영업 진행상태 — 추천 → 제안 → 수락 → 실제 매출 */}
+                    <LeadStageControl action={a} />
+                  </div>
+                )
+              })}
+            </div>
+            <p className="mt-2 px-1 text-[0.98rem] leading-snug text-navy-400">
+              이 거래처의 수거이력·자재공급·청구 데이터를 규칙에 대입해 도출한 추천입니다. 예상 금액은 실제 청구 단가
+              기준의 참고 값입니다.
+            </p>
+          </section>
+        )}
+
+        {/* 영업 전환 이력 — 추천 → 제안 → 수락 → 실제 매출 (현장 담당자 제외) */}
+        {canSeeMoney && (
+          <section>
+            <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">담당자 기록 기준</span>}>
+              영업 전환 이력
+            </SectionTitle>
+            <ClientLeadHistory data={data} clientId={client.id} flat />
+          </section>
+        )}
+        </div>
       </div>
 
       {/*  핵심 지표 — 폰에서는 지금까지처럼 카드 넉 장으로 둡니다.
@@ -404,95 +505,12 @@ export function ClientDetail() {
         </div>
       </div>
 
-      {/*  다음 행동 추천 — 축적된 운영 데이터 기반.
-           항목마다 예상 매출이 붙습니다(「추가 수거 제안 · +70만원」). 현장
-           담당자에게는 띄우지 않습니다 — 영업 판단이고, 병원에 가서 여는
-           화면이라 금액이 상대방 눈에 들어갈 수도 있습니다. */}
-      {/*  PC 에서는 「다음 행동 AI 추천」과 「영업 전환 이력」을 나란히 둡니다.
-           둘은 같은 이야기의 앞뒤(무엇을 할까 → 그래서 어떻게 됐나)라, 위아래로
-           떼어 놓으면 스크롤하며 머릿속에서 다시 이어 붙여야 합니다.
-           폰에서는 지금까지처럼 위아래 그대로입니다. */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start" data-client-insight-grid>
-      {canSeeMoney && actions.length > 0 && (
-        <section>
-          <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">데이터 기반 추천</span>}>
-            다음 행동 AI 추천
-          </SectionTitle>
-          <div className="card divide-y divide-navy-50 p-2">
-            {actions.map((a, i) => {
-              const meta = actionMeta[a.kind]
-              const Icon = meta.icon
-              return (
-                <div key={`${a.kind}-${i}`} className="p-3">
-                  <div className="flex items-start gap-3">
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${meta.chip}`}>
-                      <Icon size={17} strokeWidth={2.3} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="break-keep text-[1.22rem] font-extrabold leading-snug text-navy-900">{a.title}</p>
-                        {a.estValue > 0 && (
-                          <span className="pill bg-teal-50 text-teal-700">예상 +{wonShort(a.estValue)}</span>
-                        )}
-                      </div>
-                      <p className="mt-1 break-keep text-[1.12rem] leading-snug text-navy-500">{a.reason}</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {a.metrics.map((m) => (
-                          <span key={m.label} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[1rem] font-semibold text-navy-600">
-                            {m.label} <span className="font-extrabold text-navy-800">{m.value}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2.5 flex flex-wrap gap-2 pl-12">
-                    <button
-                      className="pressable rounded-xl bg-navy-900 px-4 py-2.5 text-[1.07rem] font-bold text-white transition hover:bg-navy-800"
-                      onClick={() =>
-                        navigate(
-                          a.kind === '소모품공급'
-                            ? '/materials'
-                            : a.kind === '관리필요'
-                              ? '/receivables'
-                              : '/collection',
-                        )
-                      }
-                    >
-                      {a.cta}
-                    </button>
-                    <button
-                      className="rounded-xl bg-navy-50 px-4 py-2.5 text-[1.07rem] font-bold text-navy-600 transition hover:bg-navy-100"
-                      onClick={() => setTab('report')}
-                    >
-                      리포트에 포함
-                    </button>
-                  </div>
-                  {/* 영업 진행상태 — 추천 → 제안 → 수락 → 실제 매출 */}
-                  <LeadStageControl action={a} />
-                </div>
-              )
-            })}
-          </div>
-          <p className="mt-2 px-1 text-[0.98rem] leading-snug text-navy-400">
-            이 거래처의 수거이력·자재공급·청구 데이터를 규칙에 대입해 도출한 추천입니다. 예상 금액은 실제 청구 단가
-            기준의 참고 값입니다.
-          </p>
-        </section>
-      )}
-
-      {/* 영업 전환 이력 — 추천 → 제안 → 수락 → 실제 매출 (현장 담당자 제외) */}
-      {canSeeMoney && (
-        <section>
-          <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">담당자 기록 기준</span>}>
-            영업 전환 이력
-          </SectionTitle>
-          <ClientLeadHistory data={data} clientId={client.id} />
-        </section>
-      )}
-      </div>
-
-      {/* 인증·실사 관련 (상시 노출) */}
-      {inspection && (
+      {/*  인증·실사 관련 — **지금은 숨겨 둡니다** (대표님 요청).
+           체크리스트가 아직 시연용이고(「체크리스트는 시연용이며」), 문자·카카오
+           알림 연동도 안 돼 있어서 지금 상태로는 거래처 화면 위쪽을 차지할
+           만큼의 값어치가 없습니다. 지우지 않고 이 스위치만 true 로 바꾸면
+           그대로 돌아옵니다 — 실제 인증 일정을 넣어 쓰실 때가 오면 켭니다. */}
+      {SHOW_INSPECTION && inspection && (
         <section>
           <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">MVP 검증 중</span>}>인증·실사 관련</SectionTitle>
           <div className="card p-4 sm:p-5">

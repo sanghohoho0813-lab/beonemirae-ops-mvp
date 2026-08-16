@@ -10,11 +10,24 @@ import { STAGE_STYLE } from './LeadStage'
 
 const won = (v: number) => `${(v / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만원`
 
-export function ClientLeadHistory({ data, clientId }: { data: AppData; clientId: string }) {
+/**
+ * @param flat  이미 카드 안에 놓일 때 true — 상자 속 상자가 되지 않게
+ *              옅은 바탕으로 그립니다.
+ */
+export function ClientLeadHistory({
+  data,
+  clientId,
+  flat = false,
+}: {
+  data: AppData
+  clientId: string
+  flat?: boolean
+}) {
+  const box = flat ? 'rounded-2xl bg-navy-50/50' : 'card'
   const leads = leadsOfClient(data, clientId)
   if (leads.length === 0) {
     return (
-      <div className="card p-5">
+      <div className={`${box} p-5`}>
         <p className="t-body text-navy-400">
           아직 기록된 영업 진행이 없습니다. 위 「다음 행동 추천」에서 고객 제안·수락을 기록하면 여기에 쌓입니다.
         </p>
@@ -27,7 +40,7 @@ export function ClientLeadHistory({ data, clientId }: { data: AppData; clientId:
   const entered = accepted.filter((l) => l.actualRevenue != null).length
 
   return (
-    <div className="card overflow-hidden">
+    <div className={`${box} overflow-hidden`}>
       {/* 합계 — 예상과 실제를 나란히 (혼동 방지) */}
       <div className="flex flex-wrap items-end gap-x-8 gap-y-3 border-b border-navy-100 px-5 py-4">
         <div>
