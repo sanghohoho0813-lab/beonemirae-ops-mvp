@@ -403,7 +403,7 @@ function Sidebar() {
 
 // ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
 function MobileHeader({ onHelp }: { onHelp: () => void }) {
-  const { mode, profile } = useAuth()
+  const { mode } = useAuth()
   const live = mode === 'live'
   return (
     <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg lg:hidden">
@@ -426,9 +426,20 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
             실제/시연 배지를 밀어내 상호가 「㈜비…」로 잘렸습니다. */}
         <div className="min-w-0 flex-1 leading-none">
           <p className="truncate text-[15px] font-extrabold tracking-tight text-navy-900">{COMPANY}</p>
-          {/* 실제 운영 중에는 로그인한 담당자를 보여줍니다 */}
-          <p className="mt-1 truncate text-[13px] font-medium text-navy-400">
-            {live && profile ? `${profile.name} · ${ROLE_LABEL[profile.role]}` : '운영관리'}
+          {/*  PC 사이드바와 **같은 이름표**입니다. 폰에서는 지금까지 더보기
+              맨 아래까지 내려가야 볼 수 있었습니다. */}
+          <p
+            data-brand-ax-header
+            className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.06em] text-amber-500"
+          >
+            {SYSTEM_WORDMARK}
+            <span className="text-navy-300"> · </span>
+            {SYSTEM_WORDMARK_TAIL}
+          </p>
+          {/*  무엇을 하는 시스템인지. 아주 좁은 폰(360px 미만)에서는 상호를
+              밀어내므로 그때만 접습니다 — 이름이 잘리는 것보다 낫습니다. */}
+          <p className="mt-0.5 hidden truncate text-[9.5px] font-medium text-navy-400 min-[360px]:block">
+            {SYSTEM_TAGLINE}
           </p>
         </div>
         {/* 도움말은 두 갈래입니다 — 사용 방법 / 만든 이유.
@@ -441,18 +452,19 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
           className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-white px-3 py-2 text-[0.95rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition active:bg-navy-50"
         >
           <HelpCircle size={17} strokeWidth={2.3} className="shrink-0" />
-          도움말
+          {/*  아주 좁은 폰(360px 미만)에서는 글자를 접고 물음표만 남깁니다 —
+              여기서 50px 을 아껴야 왼쪽 이름표가 안 잘립니다. */}
+          <span className="hidden min-[380px]:inline">도움말</span>
         </button>
-        {/* 실제 운영 데이터를 시연 데이터로 오인하지 않도록 배지를 구분합니다 */}
-        <span
-          className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.9rem] font-bold ring-1 ${
-            live
-              ? 'bg-teal-50 text-teal-700 ring-teal-100'
-              : 'bg-amber-50 text-amber-600 ring-amber-100'
-          }`}
-        >
-          {live ? '실제 운영' : '시연용'}
-        </span>
+        {/*  「실제 운영」 딱지는 뗐습니다 — 실제로 쓰고 있는 지금은 굳이
+            매 화면에서 알릴 것이 아니고, 좁은 폰에서 상호를 밀어냈습니다.
+            **「시연용」은 그대로 둡니다.** 이건 안내가 아니라 경고입니다 —
+            시연 자료를 실제 기록으로 착각하면 그게 진짜 사고입니다. */}
+        {!live && (
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.9rem] font-bold text-amber-600 ring-1 ring-amber-100">
+            시연용
+          </span>
+        )}
       </div>
     </header>
   )

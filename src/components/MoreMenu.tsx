@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, Monitor, ChevronDown, ChevronRight, Sparkles, Globe, Workflow, ExternalLink, Lock, LogOut, MessageSquarePlus, BookOpen, Lightbulb } from 'lucide-react'
+import { Smartphone, Monitor, ChevronDown, Sparkles, Globe, Workflow, ExternalLink, Lock, LogOut, MessageSquarePlus, BookOpen, Lightbulb } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -165,10 +165,12 @@ export function MoreMenu({
           네 가지 설명 화면의 역할이 겹치지 않게 한 줄로 구분해 둡니다.
             사용 방법  어떻게 쓰는가        만든 이유  왜 만들었고 어디로 가는가
             AX 성과    얼마나 좋아졌는가    시연 요약  발표용 핵심 숫자 */}
-      {/*  두 칸 격자. 한 줄에 하나씩 두면 이 둘만으로 첫 화면을 다 씁니다 —
-           목차를 보러 들어왔는데 목차가 안 보입니다. */}
+      {/*  안내 · 요청 — 세 가지를 한 묶음으로.
+           예전에는 「도움말」과 「요청」이 따로 있었는데, 셋 다 **업무가
+           아니라 시스템에 대해 묻는 자리**라 묶음이 갈릴 이유가 없었습니다.
+           두 칸 격자라 세 개가 한 줄 반이면 끝납니다. */}
       <section data-more-help>
-        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">도움말</h3>
+        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">안내 · 요청</h3>
         <div className="grid grid-cols-2 gap-2.5">
           <TourButton className="card flex cursor-pointer flex-col gap-2 p-3.5 text-left" label="">
             <IconChip icon={BookOpen} tone="teal" />
@@ -190,36 +192,30 @@ export function MoreMenu({
               </span>
             </TourWhyButton>
           )}
+          {/*  개발자에게 요청하기 — 폰에서 이 자리가 유일한 통로입니다.
+               현장 담당자는 사이드바가 없어 더보기밖에 열 곳이 없습니다(0022). */}
+          {onDevRequest && canSendDevRequest(role) && (
+            <Tappable
+              as="div"
+              onClick={() => {
+                onNavigate?.()
+                onDevRequest()
+              }}
+              className="card flex cursor-pointer flex-col gap-2 p-3.5"
+            >
+              <IconChip icon={MessageSquarePlus} tone="rose" />
+              {/*  Tappable 은 정해진 속성만 넘깁니다 — 표시는 안쪽에 답니다
+                  (목차 칸과 같은 이유). */}
+              <span data-dev-request-more className="min-w-0">
+                <span className="block break-keep font-bold text-navy-900">개발자에게 요청하기</span>
+                <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
+                  불편한 것·실제와 다른 것
+                </span>
+              </span>
+            </Tappable>
+          )}
         </div>
       </section>
-
-      {/*  개발자에게 요청하기 — 폰에서 이 자리가 유일한 통로입니다.
-           현장 담당자는 사이드바가 없어 더보기밖에 열 곳이 없습니다(0022). */}
-      {onDevRequest && canSendDevRequest(role) && (
-      <section>
-        <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">요청</h3>
-        <div data-dev-request-more className="card overflow-hidden">
-          <Tappable
-            as="div"
-            onClick={() => {
-              onNavigate?.()
-              onDevRequest()
-            }}
-            className="flex cursor-pointer items-center gap-3 p-4"
-          >
-            <IconChip icon={MessageSquarePlus} tone="teal" />
-            <div className="min-w-0">
-              <p className="font-bold text-navy-900">개발자에게 요청하기</p>
-              <p className="text-[0.98rem] text-navy-400">불편한 것·실제와 다른 것을 알려 주세요</p>
-            </div>
-            <ChevronRight size={18} className="ml-auto text-navy-300" />
-          </Tappable>
-        </div>
-        <p className="t-muted mt-1.5 break-keep px-1">
-          해당하는 항목을 고르기만 하셔도 됩니다. 대표님이 요청함에서 확인합니다.
-        </p>
-      </section>
-      )}
 
       {/*
         여기부터가 목차입니다 — PC 사이드바와 **같은 순서, 같은 분류**.
@@ -453,10 +449,9 @@ export function MoreMenu({
           <span className="text-navy-300"> · </span>
           {SYSTEM_WORDMARK_TAIL}
         </p>
-        <p className="mt-1 text-[0.92rem] text-navy-300">
-          {COMPANY}
-          {showcase ? ' · 시연용 MVP' : ''}
-        </p>
+        {/*  「시연용 MVP」를 뗐습니다 — 실제 운영에 쓰는 지금은 맞지 않고,
+            현장에서는 자기가 넣은 기록이 연습용처럼 읽혔습니다. */}
+        <p className="mt-1 text-[0.92rem] text-navy-300">{COMPANY}</p>
       </div>
     </div>
   )
