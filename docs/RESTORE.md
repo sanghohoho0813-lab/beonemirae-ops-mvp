@@ -1,6 +1,6 @@
 # 복구 절차서 — 시스템이 사라졌을 때 되살리는 법
 
-㈜비원미래 운영 시스템 · 마지막 실측 2026-08-15 · 스키마 판 50
+㈜비원미래 운영 시스템 · 마지막 실측 2026-08-15 · 스키마 판 51
 
 ---
 
@@ -72,7 +72,7 @@ Supabase 프로젝트 자체가 없을 때. **이 길은 실제로 걸어 봤습
 for f in supabase/migrations/00*.sql; do
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f" || break
 done
-psql "$DATABASE_URL" -c "select public.app_schema_version()"   # 50 이 나와야 합니다
+psql "$DATABASE_URL" -c "select public.app_schema_version()"   # 51 이 나와야 합니다
 ```
 
 실측: 표 31개가 만들어지고 **약 2초** 걸립니다. 구조는 전적으로 이 저장소에서 나오므로,
@@ -125,7 +125,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f restore.sql
 
 | 확인 | 어떻게 | 맞는 값 |
 | --- | --- | --- |
-| 구조 | `select public.app_schema_version()` | `50` |
+| 구조 | `select public.app_schema_version()` | `51` |
 | 거래처 | 거래처 화면 | 거래처 수가 맞는가 |
 | 돈 | 미수금 화면 | **되돌리기 전에 받아 둔 CSV 와 1원까지 같은가** |
 | 청구 | 미수금 → 아무 청구나 열기 | 명세서가 그대로 뜨는가 |
@@ -173,7 +173,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f restore.sql
 
 | 항목 | 상태 |
 | --- | --- |
-| 마이그레이션만으로 빈 시스템 세우기 | ✅ 했습니다 (표 31개 · 판 50 · 2초) |
+| 마이그레이션만으로 빈 시스템 세우기 | ✅ 했습니다 (표 31개 · 판 51 · 2초) |
 | 스냅샷 → 복구 SQL → 빈 DB 에 붓기 | ✅ 했습니다 (321줄 · 0.13초) |
 | 원본과 복구본 대조 (줄 수 · 금액 · 내용) | ✅ 1원까지 같음 (85개 항목 전부 통과) |
 | 복구 후 새 기록 남기기 · 잠금 동작 | ✅ 확인 |
