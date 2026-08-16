@@ -1,4 +1,4 @@
-import type { AppData, Payment } from '../types'
+import type { AppData, MonthCloseStep, Payment } from '../types'
 import { monthClose } from './monthClose'
 import { taxInvoiceList } from './taxInvoice'
 import { outstandingOf, paidTotalOf } from './selectors'
@@ -87,6 +87,15 @@ export function monthProgress(data: AppData, month: string): MonthProgress {
   const t = today()
   const close = monthClose(data, month)
   const tax = taxInvoiceList(data, month)
+
+  //  사람이 「보냈다 / 발행했다」고 눌러 둔 기록 (0054).
+  //  시스템이 스스로 채우는 값이 아닙니다 — 없으면 「준비됨」 그대로입니다.
+  const markOf = (step: MonthCloseStep) =>
+    (data.monthCloseMarks ?? []).find((m) => m.month === month && m.step === step)
+  const sentMark = markOf('invoice_sent')
+  const taxMark = markOf('tax_issued')
+  const markedBy = (m: { markedName: string; markedAt: string }) =>
+    `${m.markedName || '누군가'}님이 ${m.markedAt.slice(0, 10)} 표시`
 
   //  그 달 청구 — 취소한 것은 청구한 적 없는 것으로 셉니다(0037 과 같은 규칙).
   const bills: Payment[] = data.payments.filter((p) => p.billingMonth === month && p.status !== '취소')
@@ -189,13 +198,23 @@ export function monthProgress(data: AppData, month: string): MonthProgress {
   //  시스템에 남지 않습니다 — 「끝」이라고 말하지 않습니다.
   const invoice: ProgressStep =
     invoices > 0
-      ? {
-          key: 'invoice', label: '거래명세서', state: '준비됨',
-          detail: `${invoices}장 뽑을 수 있음`,
-          source: '확정 순간 굳혀 둔 명세서',
-          todo: '병원에 보냈는지는 시스템이 알지 못합니다 — 사람이 확인해 주세요',
-          to: '/billing', linkLabel: '한 번에 인쇄',
-        }
+      ? sentMark
+        ? {
+            //  사람이 눌렀을 때만 「끝」입니다. 시스템이 스스로 이 상태로
+            //  가지 않습니다 — 안 보낸 명세서를 보냈다고 믿게 하면
+            //  병원에 청구서가 안 간 채 한 달이 지나갑니다.
+            key: 'invoice', label: '거래명세서', state: '끝',
+            detail: `${invoices}장 · ${markedBy(sentMark)}${sentMark.note ? ` (${sentMark.note})` : ''}`,
+            source: '사람이 표시한 기록 (0054)',
+            todo: '', to: '/billing', linkLabel: '한 번에 인쇄',
+          }
+        : {
+            key: 'invoice', label: '거래명세서', state: '준비됨',
+            detail: `${invoices}장 뽑을 수 있음`,
+            source: '확정 순간 굳혀 둔 명세서',
+            todo: '병원에 보냈는지는 시스템이 알지 못합니다 — 보내셨으면 아래에서 표시해 주세요',
+            to: '/billing', linkLabel: '한 번에 인쇄',
+          }
       : {
           key: 'invoice', label: '거래명세서', state: '해당 없음',
           detail: '청구를 확정하면 그때 굳힌 명세서가 생깁니다',
@@ -214,13 +233,22 @@ export function monthProgress(data: AppData, month: string): MonthProgress {
           to: '/pricing', linkLabel: '거래처 점검에서 채우기',
         }
       : tax.ready.length > 0
-        ? {
-            key: 'tax', label: '세금계산서 자료', state: '준비됨',
-            detail: `${tax.ready.length}건 · 공급가액 ${won(tax.supplyTotal)} · 세액 ${won(tax.vatTotal)}`,
-            source: '확정한 청구 + 거래처 사업자정보',
-            todo: '홈택스에 실제로 발행했는지는 시스템이 알지 못합니다',
-            to: '/billing', linkLabel: '발행 자료 보기',
-          }
+        ? taxMark
+          ? {
+              key: 'tax', label: '세금계산서 자료', state: '끝',
+              detail:
+                `${tax.ready.length}건 · ${markedBy(taxMark)}` +
+                `${taxMark.note ? ` (${taxMark.note})` : ''}`,
+              source: '사람이 표시한 기록 (0054)',
+              todo: '', to: '/billing', linkLabel: '발행 자료 보기',
+            }
+          : {
+              key: 'tax', label: '세금계산서 자료', state: '준비됨',
+              detail: `${tax.ready.length}건 · 공급가액 ${won(tax.supplyTotal)} · 세액 ${won(tax.vatTotal)}`,
+              source: '확정한 청구 + 거래처 사업자정보',
+              todo: '홈택스에 실제로 발행했는지는 시스템이 알지 못합니다 — 발행하셨으면 아래에서 표시해 주세요',
+              to: '/billing', linkLabel: '발행 자료 보기',
+            }
         : {
             key: 'tax', label: '세금계산서 자료', state: '해당 없음',
             detail: '확정한 청구가 있어야 발행 자료가 생깁니다',

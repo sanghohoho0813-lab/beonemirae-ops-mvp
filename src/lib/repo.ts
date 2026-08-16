@@ -22,6 +22,8 @@ import type {
   ProductOrder,
   ProductOrderItem,
   ProductOrderStatus,
+  MonthCloseMark,
+  MonthCloseStep,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry, missingName } from './supabase'
@@ -408,6 +410,15 @@ export async function loadAppData(): Promise<AppData> {
     '휴무일',
   )
 
+  //  마감 표시 (0054). 사람이 「보냈다/발행했다」고 누른 기록입니다.
+  //  없으면 지금까지와 똑같이 「준비됨」에 머뭅니다 — 시스템이 스스로
+  //  「보냈다」로 채우지 않습니다.
+  const monthCloseMarks = await soft(
+    async () => pageAll((f, t) => sb.from('month_close_marks').select('*').order('month').range(f, t)),
+    [] as Row[],
+    '마감 표시',
+  )
+
   //  거래처 단가의 판 (0036). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 지금 단가를 씁니다.
   const clientPrices = await soft(
@@ -573,6 +584,10 @@ export async function loadAppData(): Promise<AppData> {
       }),
     ),
     holidays: holidays.map((r): Holiday => ({ day: r.day, name: r.name ?? '' })),
+    monthCloseMarks: monthCloseMarks.map((r): MonthCloseMark => ({
+      month: r.month, step: r.step as MonthCloseStep,
+      markedAt: r.marked_at ?? '', markedName: r.marked_name ?? '', note: r.note ?? '',
+    })),
     clientPrices: clientPrices.map(
       (r): ClientPrice => ({
         id: r.id,
@@ -778,6 +793,25 @@ export async function upsertProduct(p: Partial<Product> & { name: string }): Pro
 export async function setTaxFilingConfirmed(id: number, confirmed: boolean): Promise<void> {
   const sb = need()
   const { error } = await sb.rpc('set_tax_filing_confirmed', { p_id: id, p_confirmed: confirmed })
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * 「보냈습니다 / 발행했습니다」 표시 (0054).
+ *
+ *  누가 눌렀는지는 **보내지 않습니다** — 서버가 로그인한 사람에서 채웁니다.
+ *  화면이 보내면 남의 이름으로 표시할 수 있습니다.
+ */
+export async function setMonthCloseMark(
+  month: string,
+  step: MonthCloseStep,
+  done: boolean,
+  note = '',
+): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('set_month_close_mark', {
+    p_month: month, p_step: step, p_done: done, p_note: note,
+  })
   if (error) throw new Error(error.message)
 }
 
@@ -1836,7 +1870,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 53
+export const EXPECTED_SCHEMA_VERSION = 54
 
 /**
  * 서버 DB 의 스키마 버전.

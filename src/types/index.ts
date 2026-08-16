@@ -403,6 +403,18 @@ export interface DemoSession {
 }
 
 // ── 전체 데이터 컨테이너 (localStorage 직렬화 단위) ──────────────────────────
+/** 월 마감에서 **사람만 아는** 두 단계 (0054) */
+export type MonthCloseStep = 'invoice_sent' | 'tax_issued'
+
+export interface MonthCloseMark {
+  month: string // YYYY-MM
+  step: MonthCloseStep
+  markedAt: string
+  /** 누른 사람 이름 — 계정이 지워져도 남도록 그 자리에서 굳혀 둡니다 */
+  markedName: string
+  note: string
+}
+
 export interface AppData {
   clients: Client[]
   vehicles: Vehicle[]
@@ -442,6 +454,14 @@ export interface AppData {
   holidays?: Holiday[]
   /** 우리 직원 명부 (0047). 이름·담당만 — 주민등록번호는 담지 않습니다 */
   staff?: Staff[]
+  /**
+   * 사람이 「보냈다 / 발행했다」고 표시한 기록 (0054).
+   *
+   *  거래명세서 발송과 세금계산서 발행은 시스템이 알 수 없습니다 — 뽑을 수
+   *  있다는 것까지만 압니다. 그래서 사람이 누른 것만 「끝」으로 봅니다.
+   *  시스템이 스스로 채우지 않습니다.
+   */
+  monthCloseMarks?: MonthCloseMark[]
   /** 파는 소모품 (0048) */
   products?: Product[]
   /** 소모품 주문 (0048). 병원은 자기 것만 내려받습니다 (RLS) */

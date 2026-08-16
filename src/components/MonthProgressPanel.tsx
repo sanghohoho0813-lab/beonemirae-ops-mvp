@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowRight, Check, CircleDashed, Clock } from 'lucide-react'
 import { monthProgress, type ProgressStep, type StepState } from '../lib/monthProgress'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { setMonthCloseMark } from '../lib/repo'
 import { won } from '../lib/format'
 import { ExpandableSection } from './ui'
+import type { MonthCloseStep } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월 마감 진행상황 — 「이번 달 어디까지 했지」
@@ -11,11 +15,14 @@ import { ExpandableSection } from './ui'
 //  여섯 단계가 세 화면에 흩어져 있어서, 어디서 멈췄는지 알려면 화면을
 //  돌아다녀야 했습니다. 한 자리에서 봅니다.
 //
-//  칠하지 않는 것
+//  스스로 칠하지 않는 것
 //
-//   명세서를 보냈는지, 홈택스에 발행했는지는 시스템에 남지 않습니다.
-//   그것을 초록색 「끝」으로 칠하면 안 한 일을 했다고 믿게 됩니다.
-//   그 둘은 「준비됨」까지만 말하고, 모른다는 사실을 그대로 적습니다.
+//   명세서를 보냈는지, 홈택스에 발행했는지는 시스템이 알 수 없습니다.
+//   그것을 시스템이 초록색 「끝」으로 칠하면 안 한 일을 했다고 믿게 됩니다.
+//
+//   그래서 **사람이 눌러 기록한 것만** 끝으로 봅니다(0054). 누르기 전에는
+//   「준비됨」에 머물고, 누른 뒤에는 누가 언제 눌렀는지가 함께 남습니다.
+//   시스템이 대신 판단하는 자리가 아니라, 사람이 한 일을 적어 두는 자리입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STYLE: Record<StepState, { chip: string; ring: string; icon: typeof Check }> = {
@@ -68,6 +75,97 @@ function StepCard({ step, order }: { step: ProgressStep; order: number }) {
         {step.linkLabel}
         <ArrowRight size={14} strokeWidth={2.6} />
       </Link>
+    </div>
+  )
+}
+
+/**
+ * 「보냈습니다 / 발행했습니다」 표시.
+ *
+ *  관리자만 누를 수 있습니다(서버도 같은 규칙). 다른 역할에게는 누가
+ *  표시해 뒀는지만 읽기로 보입니다 — 사무실도 「이사님이 보냈나」를
+ *  알아야 하기 때문입니다.
+ */
+function MarkBox({ month }: { month: string }) {
+  const { data, reload } = useData()
+  const { role } = useAuth()
+  const [busy, setBusy] = useState('')
+  const [err, setErr] = useState('')
+  const canMark = role === 'admin'
+
+  const STEPS: Array<{ step: MonthCloseStep; label: string; hint: string }> = [
+    { step: 'invoice_sent', label: '거래명세서를 병원에 보냈습니다', hint: '우편·이메일·직접 전달 — 방법은 상관없습니다' },
+    { step: 'tax_issued', label: '홈택스에 세금계산서를 발행했습니다', hint: '실제 발행까지 끝난 뒤에 눌러 주세요' },
+  ]
+
+  async function toggle(step: MonthCloseStep, done: boolean) {
+    setBusy(step)
+    setErr('')
+    try {
+      await setMonthCloseMark(month, step, done)
+      await reload()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '표시하지 못했습니다.')
+    }
+    setBusy('')
+  }
+
+  return (
+    <div data-mark-box className="card mt-3 p-4 sm:p-5">
+      <p className="break-keep text-[1.08rem] font-extrabold text-navy-900">사람만 아는 두 가지</p>
+      <p className="mt-1 break-keep text-[0.98rem] leading-snug text-navy-500">
+        시스템은 명세서를 뽑을 수 있다는 것까지만 압니다. 실제로 보내고 발행하신 뒤에 여기서 표시해 주시면 그때
+        마감이 끝난 것으로 봅니다. 잘못 누르면 다시 눌러 되돌릴 수 있습니다.
+      </p>
+
+      <div className="mt-3 flex flex-col gap-2.5">
+        {STEPS.map(({ step, label, hint }) => {
+          const mark = (data.monthCloseMarks ?? []).find((m) => m.month === month && m.step === step)
+          const on = Boolean(mark)
+          return (
+            <div
+              key={step}
+              data-mark-row={step}
+              className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl px-3.5 py-3 ${
+                on ? 'bg-teal-50/70 ring-1 ring-teal-200' : 'bg-navy-50/70'
+              }`}
+            >
+              <span className="min-w-0 flex-1 basis-[12rem]">
+                <b className="block break-keep text-[1.05rem] text-navy-900">{label}</b>
+                <span data-mark-detail={step} className="block break-keep text-[0.96rem] text-navy-500">
+                  {mark
+                    ? `${mark.markedName || '누군가'}님이 ${mark.markedAt.slice(0, 10)} 표시`
+                    : hint}
+                </span>
+              </span>
+              {canMark ? (
+                <button
+                  data-mark-toggle={step}
+                  disabled={busy === step}
+                  onClick={() => toggle(step, !on)}
+                  className={`shrink-0 rounded-full px-3.5 py-2 text-[1rem] font-bold transition disabled:opacity-50 ${
+                    on
+                      ? 'bg-white text-navy-500 ring-1 ring-navy-200 hover:text-navy-800'
+                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                  }`}
+                >
+                  {busy === step ? '…' : on ? '표시 해제' : '했습니다'}
+                </button>
+              ) : (
+                <span data-mark-readonly={step} className="shrink-0 pill bg-white text-navy-400">
+                  {on ? '표시됨' : '대표님이 표시'}
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {err && (
+        <p data-mark-error className="mt-2.5 break-keep rounded-xl bg-rose-50 px-3.5 py-2.5 text-[1rem] font-bold text-rose-600">
+          {err}
+        </p>
+      )}
     </div>
   )
 }
@@ -140,9 +238,11 @@ export function MonthProgressPanel({ month }: { month: string }) {
         </ExpandableSection>
       </div>
 
+      <MarkBox month={month} />
+
       <p className="mt-2 break-keep px-1 text-[0.96rem] leading-snug text-navy-400">
-        명세서를 병원에 보냈는지, 홈택스에 세금계산서를 발행했는지는 시스템에 기록이 남지 않습니다. 그래서 그
-        두 단계는 「준비됨」까지만 표시하고 끝났다고 말하지 않습니다.
+        명세서를 병원에 보냈는지, 홈택스에 세금계산서를 발행했는지는 시스템이 알 수 없습니다. 시스템이 스스로
+        「끝」으로 칠하지 않고, 위에서 표시하신 것만 끝으로 봅니다.
       </p>
     </section>
   )
