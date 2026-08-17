@@ -47,8 +47,14 @@ export function cycleDays(cycle: string): number {
   return 7
 }
 
-/** 이번 달 실제 청구액 ÷ 수거량으로 구한 kg당 평균 단가 (데이터 부족 시 기준 단가) */
-export function unitPricePerKg(data: AppData, month = thisMonth()): number {
+/**
+ * 이번 달 **실제 청구액 ÷ 실제 수거량**으로 구한 kg당 평균 단가.
+ *
+ *  ⚠ 근거가 없으면 **null** 입니다. 예전에는 1,200원을 「기준 단가」로
+ *  돌려주었는데, 그 값은 어디에서도 나온 적이 없는 숫자입니다. 그런데
+ *  화면에는 「예상 +70만원」처럼 확정된 금액으로 나갔습니다.
+ */
+export function unitPricePerKg(data: AppData, month = thisMonth()): number | null {
   const billed = data.payments
     .filter((p) => p.billingMonth === month && p.status !== '취소')
     .reduce((s, p) => s + p.amount, 0)
@@ -56,13 +62,48 @@ export function unitPricePerKg(data: AppData, month = thisMonth()): number {
     .filter((s) => s.date.startsWith(month) && s.status === '완료' && s.actualAmount != null)
     .reduce((s, x) => s + (x.actualAmount ?? 0), 0)
   if (billed > 0 && kg > 0) return Math.round(billed / kg)
-  return 1_200 // 기준 단가 (데이터 부족 시 표시용)
+  return null
 }
 
-/** 소모품 예상 단가 (기준값 · 실제 계약단가로 대체 예정) */
-const SUPPLY_UNIT_PRICE = 3_500
-/** 배출자 교육 1회 예상 단가 (기준값) */
-const EDUCATION_PRICE = 150_000
+//  ⚠ 여기 있던 「소모품 예상 단가 3,500원」과 「교육 1회 15만원」을 걷어냈습니다.
+//
+//   둘 다 **어디에도 근거가 없는 숫자**였습니다. 그런데 화면에는
+//   「예상 +7만원」처럼 확정된 금액으로 나갔습니다. 그 금액을 보고 어느
+//   거래처를 먼저 도는지 정하면, 지어낸 숫자가 실제 영업 순서를 정하게
+//   됩니다.
+//
+//   이제 **거래처에 실제로 매겨 둔 단가**로만 계산하고, 단가가 없으면
+//   금액을 아예 안 붙입니다(estValue = 0 이면 화면이 금액을 안 그립니다).
+
+/** 그 날짜로부터 몇 달 지났는가 (달 단위, 내림) */
+function monthsSince(from: string, to: string): number {
+  const [fy, fm, fd] = from.split('-').map(Number)
+  const [ty, tm, td] = to.split('-').map(Number)
+  let n = (ty - fy) * 12 + (tm - fm)
+  if (td < fd) n -= 1
+  return Math.max(0, n)
+}
+
+/**
+ * 이 거래처에 실제로 매겨 둔 **유상 용기 단가**.
+ *
+ *  무상으로 주는 물품(박스·비닐)은 매출이 아니므로 빼고, 실제로 값을 받는
+ *  합성수지 용기 단가의 중앙값을 씁니다. 하나도 안 매겨 뒀으면 null —
+ *  그때는 금액을 아예 안 붙입니다.
+ *
+ *  ⚠ 기본 단가표(DEFAULT_PRICES)로 대신 채우지 않습니다. 그건 비원미래
+ *    엑셀에서 가져온 값이라 사실이지만, **이 거래처와 합의한 값은 아닙니다.**
+ *    「예상 매출」에 남의 단가를 쓰면 그 숫자로 영업 순서를 정하게 됩니다.
+ */
+function supplyUnitPriceOf(client: Client): number | null {
+  const own = client.pricing ?? {}
+  const prices = (['plastic2', 'plastic5', 'plastic10', 'plastic20'] as const)
+    .map((k) => own[k]?.sale)
+    .filter((v): v is number => typeof v === 'number' && v > 0)
+    .sort((a, b) => a - b)
+  if (prices.length === 0) return null
+  return prices[Math.floor(prices.length / 2)]
+}
 
 const dayMs = 24 * 60 * 60 * 1000
 function daysBetween(fromIso: string, toIso: string): number {
@@ -74,10 +115,6 @@ function addDays(iso: string, n: number): string {
   return dateStr(d)
 }
 
-/** 거래처 id 기반 결정적 해시 (시연 파생값 생성용) */
-function seedOf(id: string): number {
-  return [...id].reduce((s, ch) => s + ch.charCodeAt(0), 0)
-}
 
 // ── 거래처별 운영 지표 ───────────────────────────────────────────────────────
 export interface ClientSignals {
@@ -110,7 +147,11 @@ export interface ClientSignals {
   /** 미수금 */
   outstanding: number
   /** 마지막 배출자 교육 경과 개월 (시연 파생) */
-  educationMonthsAgo: number
+  /**
+   * 마지막 배출자 교육으로부터 몇 달 지났는가.
+   *  **적어 둔 날짜가 없으면 null** — 모른다는 뜻입니다(0060).
+   */
+  educationMonthsAgo: number | null
 }
 
 export function clientSignals(data: AppData, client: Client, month = thisMonth()): ClientSignals {
@@ -147,8 +188,16 @@ export function clientSignals(data: AppData, client: Client, month = thisMonth()
   const prevSuppliedUnits = mats.filter((m) => m.date.startsWith(prevMonth)).reduce((s, m) => s + unitsOf(m), 0)
   const hasAdditionalRequest = mats.some((m) => m.isAdditionalRequest && m.date.startsWith(month))
 
-  // 배출자 교육: 법정 주기 2년 — 실제 이력 스키마 도입 전까지 id 기반 결정적 파생값
-  const educationMonthsAgo = 6 + (seedOf(client.id) % 22)
+  //  배출자 교육 — **실제로 적어 둔 날짜만** 봅니다 (0060).
+  //
+  //   예전에는 `6 + (거래처 id 해시 % 22)` 로 개월 수를 만들어, 화면에
+  //   「교육 이력 23개월 경과 — 법정 주기 도래 임박」이라고 단정했습니다.
+  //   거래처마다 늘 같은 값이 나와서 일관돼 보이고, 그래서 더 믿게 됩니다.
+  //   그걸 보고 병원에 전화하면 근거가 0입니다.
+  //
+  //   날짜가 없으면 null 입니다 — 모른다는 뜻이고, 화면은 아무 말도 하지
+  //   않습니다(「채워야 할 값」에만 올라갑니다).
+  const educationMonthsAgo = client.educationAt ? monthsSince(client.educationAt, t) : null
 
   return {
     client,
@@ -175,7 +224,8 @@ export function clientSignals(data: AppData, client: Client, month = thisMonth()
  */
 export function nextActionsFor(data: AppData, client: Client, month = thisMonth()): NextAction[] {
   const s = clientSignals(data, client, month)
-  const price = unitPricePerKg(data, month)
+  //  단가 근거가 없으면 금액을 안 붙입니다 (0 이면 화면이 안 그립니다).
+  const price = unitPricePerKg(data, month) ?? 0
   const out: NextAction[] = []
 
   // 1) 추가 수거 — 수거량이 늘고 있는데 예상 수거시점이 임박했거나 이미 지난 경우
@@ -217,7 +267,9 @@ export function nextActionsFor(data: AppData, client: Client, month = thisMonth(
           : '보관창고 협소 · 이번 달 공급 이력 없음',
       cta: '소모품 공급 제안',
       priority: s.hasAdditionalRequest ? 90 : 70,
-      estValue: qty * SUPPLY_UNIT_PRICE,
+      //  거래처에 실제로 매겨 둔 유상 용기 단가로만 계산합니다.
+      //  단가를 안 넣어 둔 곳은 금액을 안 붙입니다(0 이면 화면이 안 그립니다).
+      estValue: qty * (supplyUnitPriceOf(client) ?? 0),
       metrics: [
         { label: '이번 달 공급', value: `${s.suppliedUnits}개` },
         { label: '전월 공급', value: `${s.prevSuppliedUnits}개` },
@@ -226,8 +278,12 @@ export function nextActionsFor(data: AppData, client: Client, month = thisMonth(
     })
   }
 
-  // 3) 배출자 교육 — 법정 주기(2년) 도래 임박
-  if (s.educationMonthsAgo >= 20) {
+  //  3) 배출자 교육 — 법정 주기(2년) 도래 임박
+  //
+  //   ⚠ **적어 둔 교육일이 있을 때만** 뜹니다. 모르는 것을 「임박했다」고
+  //     말하지 않습니다. 그리고 **금액을 안 붙입니다** — 교육 단가를
+  //     시스템이 모릅니다(예전에는 15만원이라고 적어 두었습니다).
+  if (s.educationMonthsAgo != null && s.educationMonthsAgo >= 20) {
     out.push({
       clientId: client.id,
       clientName: client.name,
@@ -236,7 +292,8 @@ export function nextActionsFor(data: AppData, client: Client, month = thisMonth(
       reason: `교육 이력 ${s.educationMonthsAgo}개월 경과 — 법정 주기(2년) 도래 임박`,
       cta: '배출자 교육 제안',
       priority: 60,
-      estValue: EDUCATION_PRICE,
+      //  교육 단가는 시스템에 없습니다 — 지어내지 않습니다.
+      estValue: 0,
       metrics: [
         { label: '최근 교육', value: `${s.educationMonthsAgo}개월 전` },
         { label: '법정 주기', value: '2년' },
@@ -371,7 +428,11 @@ export interface MonthlyReport {
   /** 관리 특이사항 */
   notes: string[]
   /** 배출자 교육 상태 */
-  education: { monthsAgo: number; needed: boolean }
+  /**
+   * 배출자 교육.
+   *  `known` 이 false 면 **모르는 것**입니다 — 「정상」이 아닙니다(0060).
+   */
+  education: { monthsAgo: number | null; needed: boolean; known: boolean }
   /** 다음 수거 예상일 */
   nextPredicted: string | null
   /** 이 거래처의 다음 행동 추천 */
@@ -439,7 +500,12 @@ export function clientMonthlyReport(data: AppData, client: Client, month = thisM
     supplies,
     urgentCount,
     notes,
-    education: { monthsAgo: signals.educationMonthsAgo, needed: signals.educationMonthsAgo >= 20 },
+    //  교육일을 안 적어 뒀으면 「필요하다/정상」 둘 다 아닙니다 — 모릅니다.
+    education: {
+      monthsAgo: signals.educationMonthsAgo,
+      needed: signals.educationMonthsAgo != null && signals.educationMonthsAgo >= 20,
+      known: signals.educationMonthsAgo != null,
+    },
     nextPredicted: signals.predictedDate,
     actions: nextActionsFor(data, client, month),
   }

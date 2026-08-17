@@ -115,6 +115,14 @@ export interface Client {
   // ── v8: 계약·정산 (실제 거래처 관리 엑셀을 흡수) ──
   // 매월 같은 값을 다시 적지 않도록 거래처에 한 번만 정해 둡니다.
   /** 계약 시작일 (YYYY-MM-DD) */
+  /**
+   * 마지막 배출자 교육을 **실제로 한 날** (0060, YYYY-MM-DD).
+   *
+   *  ⚠ 비어 있으면 「모른다」입니다. 예전에는 거래처 id 를 해시해
+   *  「23개월 전」 같은 값을 만들어 화면에 확정처럼 띄웠습니다.
+   *  없으면 아무 말도 하지 않습니다.
+   */
+  educationAt?: string | null
   contractStart?: string | null
   /** 계약 종료일 — 만료 알림의 근거가 됩니다 */
   contractEnd?: string | null

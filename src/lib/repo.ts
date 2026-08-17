@@ -112,6 +112,8 @@ const toClient = (r: Row): Client => ({
   storageSize: r.storage_size,
   note: r.note ?? '',
   isDemoGenerated: !!r.is_demo_generated,
+  //  0060 이전 서버에는 이 칸이 없습니다 — 없으면 「모른다」입니다.
+  educationAt: r.education_at ?? null,
   contractStart: r.contract_start ?? null,
   contractEnd: r.contract_end ?? null,
   paymentTerms: r.payment_terms ?? '',
@@ -687,6 +689,7 @@ const clientRow = (c: Partial<Client>) => ({
   collects_diaper: c.collectsDiaper,
   storage_size: c.storageSize,
   note: c.note,
+  education_at: c.educationAt,
   contract_start: c.contractStart,
   contract_end: c.contractEnd,
   payment_terms: c.paymentTerms,
@@ -2082,7 +2085,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 59
+export const EXPECTED_SCHEMA_VERSION = 60
 
 /**
  * 서버 DB 의 스키마 버전.

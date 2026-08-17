@@ -144,9 +144,21 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
               <p className={`text-[1rem] font-bold ${report.education.needed ? 'text-amber-600' : 'text-navy-400'}`}>
                 배출자 교육
               </p>
-              <p className="break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">
-                {report.education.needed ? '주기 도래 임박' : '정상'}
+              {/*  ⚠ 교육일을 안 적어 뒀으면 「정상」이 아닙니다 — **모르는**
+                   것입니다. 예전에는 거래처 id 를 해시해 개월 수를 지어내고
+                   그 위에서 「정상 / 임박」을 단정했습니다(0060). */}
+              <p data-edu-state className="break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">
+                {!report.education.known
+                  ? '교육일 미입력'
+                  : report.education.needed
+                    ? '주기 도래 임박'
+                    : '정상'}
               </p>
+              {!report.education.known && (
+                <p className="t-muted mt-0.5 break-keep text-navy-400">
+                  거래처 정보에 마지막 교육일을 넣으면 계산합니다
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -28,6 +28,7 @@ export const emptyClientForm: Omit<Client, 'id'> = {
   storageSize: '보통',
   note: '',
   isDemoGenerated: false,
+  educationAt: null,
   contractStart: null,
   contractEnd: null,
   paymentTerms: '',
@@ -181,6 +182,27 @@ export function ClientForm({
             onChange={(e) => set('contractEnd', e.target.value || null)}
           />
         </div>
+      </div>
+
+      {/*  배출자 교육 (0060) — **실제로 한 날**을 적는 자리입니다.
+           예전에는 이 칸이 없어서 시스템이 거래처 id 를 해시해 「23개월 전」
+           같은 값을 만들어 화면에 확정처럼 띄웠습니다. 비워 두면 아무 말도
+           하지 않습니다 — 모르는 것이 사실입니다. */}
+      <div>
+        <label className="field-label">
+          마지막 배출자 교육일 <span className="font-normal text-navy-300">(모르면 비워 두세요)</span>
+        </label>
+        <input
+          type="date"
+          data-client-education
+          className="field-input"
+          value={form.educationAt ?? ''}
+          onChange={(e) => set('educationAt', e.target.value || null)}
+        />
+        <p className="t-muted mt-1 break-keep text-navy-400">
+          넣어 두면 법정 주기(2년)가 가까워질 때 알려 드립니다. <b className="text-navy-500">비워 두면
+          시스템이 추측하지 않습니다.</b>
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
