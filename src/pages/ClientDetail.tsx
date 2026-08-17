@@ -255,8 +255,16 @@ export function ClientDetail() {
         <ArrowLeft size={16} /> 거래처 목록
       </button>
 
-      {/* 헤더 카드 */}
+      {/*  헤더 카드 — PC 에서는 **가운데를 반으로 갈라** 왼쪽에 거래처 정보와
+           핵심 지표를, 오른쪽에 「다음 행동 AI 추천」을 둡니다 (대표님 요청).
+           지금까지는 추천이 정보 아래에 통째로 깔려서, 정작 매일 쓰는
+           운영조건·정산·청구 탭이 화면 한참 아래로 밀려 있었습니다.
+           나란히 놓으면 **탭이 그만큼 위로 올라옵니다** — 그게 이 배치의 목적입니다.
+           폰에서는 세로 한 줄 그대로입니다(좁은 화면에서 반으로 가르면 둘 다 못 씁니다). */}
       <div className="card p-5">
+      <div data-client-split className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
+      {/* ── 왼쪽 50% — 거래처 정보 + 월평균 수거량 ~ 다음 예정 수거 ── */}
+      <div className="min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -324,9 +332,12 @@ export function ClientDetail() {
              안으로 들여, 거래처 하나를 한 덩어리로 봅니다. */}
         <div
           data-key-metrics="pc"
-          className="mt-4 hidden border-t border-navy-100 pt-4 lg:grid lg:grid-cols-4 lg:gap-x-4 lg:divide-x lg:divide-navy-100"
+          /*  반 칸에 넷을 가로로 늘어놓으면 한 칸이 150px 도 안 됩니다
+              (실측) — 「월평균 수거량」이 두 줄로 접히고 숫자가 눌립니다.
+              2×2 로 놓습니다. */
+          className="mt-4 hidden border-t border-navy-100 pt-4 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-3.5"
         >
-          <div className="lg:pr-4">
+          <div className="">
             <p className="text-[1.03rem] font-semibold text-navy-400">월평균 수거량</p>
             <p className="mt-1 whitespace-nowrap text-[1.6rem] font-extrabold leading-none text-navy-900">
               {weight(avg)}
@@ -334,7 +345,7 @@ export function ClientDetail() {
             <p className="mt-1 text-[0.98rem] text-navy-400">{avgHint}</p>
           </div>
           {canSeeMoney ? (
-            <button className="px-0 text-left lg:px-4" onClick={() => navigate('/receivables')}>
+            <button className="px-0 text-left" onClick={() => navigate('/receivables')}>
               <p className="text-[1.03rem] font-semibold text-navy-400">미수금</p>
               <p
                 className={`mt-1 text-[1.6rem] font-extrabold leading-none ${
@@ -348,13 +359,13 @@ export function ClientDetail() {
           ) : (
             <span />
           )}
-          <div className="lg:px-4">
+          <div className="">
             <p className="text-[1.03rem] font-semibold text-navy-400">최근 수거일</p>
             <p className="mt-1 text-[1.6rem] font-extrabold leading-none text-navy-900">
               {last ? prettyDate(last.date) : '—'}
             </p>
           </div>
-          <div className="lg:pl-4">
+          <div className="">
             <p className="text-[1.03rem] font-semibold text-navy-400">다음 예정 수거</p>
             <p className="mt-1 text-[1.6rem] font-extrabold leading-none text-navy-900">
               {next ? prettyDate(next.date) : '—'}
@@ -385,16 +396,13 @@ export function ClientDetail() {
           </div>
         )}
 
-        {/*  다음 행동 추천 — 축적된 운영 데이터 기반.
-             항목마다 예상 매출이 붙습니다(「추가 수거 제안 · +70만원」). 현장
-             담당자에게는 띄우지 않습니다 — 영업 판단이고, 병원에 가서 여는
-             화면이라 금액이 상대방 눈에 들어갈 수도 있습니다. */}
-        {/*  PC 에서는 「다음 행동 AI 추천」과 「영업 전환 이력」을 나란히 둡니다.
-             둘은 같은 이야기의 앞뒤(무엇을 할까 → 그래서 어떻게 됐나)라, 위아래로
-             떼어 놓으면 스크롤하며 머릿속에서 다시 이어 붙여야 합니다.
-             폰에서는 지금까지처럼 위아래 그대로입니다. */}
+      </div>
+      {/* ── 오른쪽 50% — 다음 행동 AI 추천 ─────────────────────────────────
+           현장 담당자에게는 띄우지 않습니다 — 영업 판단이고, 병원에 가서 여는
+           화면이라 금액이 상대방 눈에 들어갈 수도 있습니다.
+           둘(추천 → 전환 이력)은 같은 이야기의 앞뒤라 위아래로 붙여 둡니다. */}
         <div
-          className="mt-4 grid gap-4 border-t border-navy-100 pt-4 lg:grid-cols-2 lg:items-start"
+          className="mt-4 grid gap-3 border-t border-navy-100 pt-4 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0"
           data-client-insight-grid
         >
         {canSeeMoney && actions.length > 0 && (
@@ -467,15 +475,21 @@ export function ClientDetail() {
         )}
 
         {/* 영업 전환 이력 — 추천 → 제안 → 수락 → 실제 매출 (현장 담당자 제외) */}
+        {/*  영업 전환 이력 — **작게만** 둡니다 (대표님 요청, 일단은).
+             추천과 같은 칸에 있지만 오늘 할 일은 아니라, 제목을 한 급 낮추고
+             접어 둡니다. 지운 것이 아니라 눌러서 펼칩니다. */}
         {canSeeMoney && (
-          <section>
-            <SectionTitle action={<span className="pill bg-navy-50 text-navy-500">담당자 기록 기준</span>}>
-              영업 전환 이력
-            </SectionTitle>
-            <ClientLeadHistory data={data} clientId={client.id} flat />
-          </section>
+          <details data-lead-history className="rounded-2xl bg-navy-50/60 px-3.5 py-2.5">
+            <summary className="t-muted cursor-pointer list-none font-extrabold text-navy-500">
+              영업 전환 이력 <span className="font-normal text-navy-300">· 담당자 기록 기준</span>
+            </summary>
+            <div className="mt-2">
+              <ClientLeadHistory data={data} clientId={client.id} flat />
+            </div>
+          </details>
         )}
         </div>
+      </div>
 
         {/*  담당 기사 (0056) — 관리자에게만 보입니다.
              거래처 정보 카드 안에 둡니다. 「이 병원은 누가 갑니까」는
