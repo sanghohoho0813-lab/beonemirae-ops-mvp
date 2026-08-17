@@ -51,7 +51,7 @@ function Row({ item }: { item: OverdueItem }) {
       <p className="t-caption mt-1 break-keep leading-snug text-navy-600">{item.detail}</p>
       <Link
         to={item.to}
-        className="mt-1.5 inline-flex items-center gap-1 text-[0.98rem] font-bold text-teal-700 underline-offset-2 hover:underline"
+        className="-mx-2 mt-0.5 inline-flex min-h-[2.75rem] items-center gap-1 px-2 text-[0.98rem] font-bold text-teal-700 underline-offset-2 hover:underline"
       >
         {item.linkLabel}
         <ArrowRight size={13} strokeWidth={2.6} />

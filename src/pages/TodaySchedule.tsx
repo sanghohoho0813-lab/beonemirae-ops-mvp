@@ -249,7 +249,12 @@ export function TodaySchedule() {
         </button>
         <div className="text-center">
           <p className="text-[1.07rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
-          <button className="text-[0.98rem] font-bold text-teal-600" onClick={() => setDate(today())}>
+          {/*  누르는 자리를 글자 크기가 아니라 **손가락 크기**로 잡습니다.
+               글자만 있으면 높이가 26px 이라 폰에서 빗나갑니다. */}
+          <button
+            className="-mx-2 min-h-[2.75rem] px-2 text-[0.98rem] font-bold text-teal-600"
+            onClick={() => setDate(today())}
+          >
             오늘로 이동
           </button>
         </div>

@@ -216,7 +216,8 @@ export function PortalSupplies() {
           >
             <input
               type="checkbox"
-              className="mt-1"
+              /* 기본 체크박스는 폰에서 13px 입니다 — 손가락으로 못 맞춥니다 */
+              className="mt-0.5 h-5 w-5 shrink-0 accent-teal-600"
               checked={withPickup}
               onChange={(e) => setWithPickup(e.target.checked)}
             />

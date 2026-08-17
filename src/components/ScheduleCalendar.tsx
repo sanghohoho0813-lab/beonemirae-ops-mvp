@@ -45,15 +45,20 @@ function DayCell({
   return (
     <div
       data-cal-day={d.date}
-      className={`relative min-h-[4.2rem] border-b border-r border-navy-100 p-1 sm:min-h-[5.4rem] sm:p-1.5 ${
+      className={`relative flex min-h-[4.2rem] flex-col border-b border-r border-navy-100 p-1 sm:min-h-[5.4rem] sm:p-1.5 ${
         selected ? 'bg-teal-50/70 ring-2 ring-inset ring-teal-400' : d.isToday ? 'bg-navy-50/60' : ''
       } ${dim ? 'opacity-40' : ''}`}
     >
+      {/*  ⚠ 누르는 곳은 **칸 전체**여야 합니다.
+           예전에는 이 버튼이 글자 높이(27px)만 차지해서, 칸(67px)의 아래쪽을
+           누르면 아무 일도 일어나지 않았습니다. 기사님이 달리는 차 안에서
+           장갑 끼고 누르는 자리라 이게 그대로 「안 눌린다」가 됩니다.
+           h-full 로 칸을 다 채웁니다 — 보이는 모양은 그대로입니다. */}
       <button
         type="button"
         data-cal-pick={d.date}
         onClick={() => onPick(d.date)}
-        className="block w-full text-left"
+        className="block w-full flex-1 text-left"
       >
         <span className={`text-[0.98rem] font-extrabold tabular-nums ${tone}`}>{d.dayOfMonth}</span>
         {d.isToday && <span className="ml-1 text-[0.82rem] font-bold text-teal-600">오늘</span>}
@@ -86,7 +91,10 @@ function DayCell({
           data-cal-book={d.date}
           onClick={() => onBook(d.date)}
           aria-label={`${d.date} 방문 잡기`}
-          className="absolute bottom-0.5 right-0.5 flex h-6 w-6 items-center justify-center rounded-lg text-navy-300 transition hover:bg-navy-800 hover:text-white"
+          /*  누르는 자리를 36px 로 잡습니다. 폰에서 칸 하나가 56px 밖에 안 되어
+              44px 로 키우면 ＋ 가 칸을 거의 다 덮어 **날짜 고르기를 가로챕니다.**
+              날짜 숫자는 왼쪽 위에 있으니 오른쪽 아래 36px 이 서로 안 겹칩니다. */
+          className="absolute bottom-0 right-0 flex h-9 w-9 items-end justify-end rounded-lg p-1.5 text-navy-300 transition hover:bg-navy-800 hover:text-white sm:items-center sm:justify-center"
         >
           <Plus size={14} strokeWidth={3} />
         </button>

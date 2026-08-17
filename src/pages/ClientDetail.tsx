@@ -251,7 +251,12 @@ export function ClientDetail() {
 
   return (
     <PageShell>
-      <button onClick={() => navigate('/clients')} className="flex items-center gap-1.5 text-[1.08rem] font-bold text-navy-500">
+      {/*  「뒤로」는 폰에서 가장 자주 눌리는 버튼입니다. 글자 높이(29px)로
+           두면 빗나갑니다 — 손가락 크기(44px)를 확보합니다. */}
+      <button
+        onClick={() => navigate('/clients')}
+        className="-mx-2 flex min-h-[2.75rem] items-center gap-1.5 px-2 text-[1.08rem] font-bold text-navy-500"
+      >
         <ArrowLeft size={16} /> 거래처 목록
       </button>
 
@@ -377,10 +382,10 @@ export function ClientDetail() {
              눌러도 저장되지 않습니다. 눌리는데 안 되는 버튼은 두지 않습니다. */}
         {canEditClient && (
           <div className="mt-2 flex items-center justify-end gap-3">
-            <button className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
+            <button className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
               <Pencil size={14} /> 수정
             </button>
-            <button data-client-retire className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
+            <button data-client-retire className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
               <Trash2 size={14} /> 거래 종료
             </button>
             {/*
@@ -389,7 +394,7 @@ export function ClientDetail() {
               뜻이 다르므로 버튼을 따로 둡니다.
             */}
             {role === 'admin' && (
-              <button data-client-purge className="flex items-center gap-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={() => void confirmPurge()}>
+              <button data-client-purge className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={() => void confirmPurge()}>
                 <Trash2 size={14} /> 삭제
               </button>
             )}
@@ -535,7 +540,7 @@ export function ClientDetail() {
             <button
               data-book-open
               onClick={() => setBookOpen(true)}
-              className="t-btn mt-2 flex items-center gap-1 font-extrabold text-teal-700 hover:underline"
+              className="-mx-2 mt-1 flex min-h-[2.75rem] items-center gap-1 px-2 text-teal-700 t-btn font-extrabold hover:underline"
             >
               <CalendarPlus size={15} strokeWidth={2.5} /> {next ? '방문 더 잡기' : '방문 잡기'}
             </button>

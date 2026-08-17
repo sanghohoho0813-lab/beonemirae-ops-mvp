@@ -165,7 +165,7 @@ export function Requests() {
                 })()}
                 <Link
                   to={`/clients/${r.clientId}`}
-                  className="t-card min-w-0 break-keep text-navy-900 hover:text-teal-700"
+                  className="t-card -my-2 flex min-h-[2.75rem] min-w-0 items-center break-keep py-2 text-navy-900 hover:text-teal-700"
                 >
                   {r.clientName}
                 </Link>
@@ -242,7 +242,7 @@ export function Requests() {
                     setReplyTo(r)
                     setReplyText(r.reply)
                   }}
-                  className="t-btn ml-auto flex items-center gap-1 text-teal-700 hover:underline"
+                  className="-mr-2 ml-auto flex min-h-[2.75rem] items-center gap-1 px-2 text-teal-700 t-btn hover:underline"
                 >
                   회신 남기기 <ChevronRight size={16} />
                 </button>
