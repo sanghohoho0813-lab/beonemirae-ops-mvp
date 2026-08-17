@@ -32,6 +32,7 @@ import {
   type CollectionCompletionInput,
 } from '../lib/collection'
 import type { ContainerBreakdown, HandoverStatus, OfficeStock, WasteType } from '../types'
+import { isPending } from '../lib/scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 수거 입력 (3단계) — 현장 담당자가 한 번 입력하면 일정·이력·자재·통계로 자동 연결
@@ -99,7 +100,7 @@ export function CollectionInput() {
 
   // 오늘 미완료 일정 (선택 대상)
   const todayPending = useMemo(
-    () => schedulesOn(data, today()).filter((s) => s.status !== '완료'),
+    () => schedulesOn(data, today()).filter(isPending),
     [data],
   )
 
@@ -210,7 +211,7 @@ export function CollectionInput() {
       prefilledRef.current = true
       return
     }
-    if (!data.schedules.some((s) => s.id === pre && s.status !== '완료')) return
+    if (!data.schedules.some((s) => s.id === pre && isPending(s))) return
     prefilledRef.current = true
     applySchedule(pre)
     // eslint-disable-next-line react-hooks/exhaustive-deps

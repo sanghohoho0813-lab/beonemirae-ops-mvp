@@ -2,6 +2,7 @@ import type { AppData, WasteType } from '../types'
 import { today } from './format'
 import { holidayMap } from './holidays'
 import { addDays } from './performance'
+import { isDone } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 수거 일정 자동 편성
@@ -150,7 +151,7 @@ export function detectPatterns(data: AppData, before: string): ClientPattern[] {
   //  수거)은 아래에서 날짜로 묶어 한 번의 방문으로 셉니다.
   const bucket = new Map<string, { date: string; kg: number | null }[]>()
   for (const s of data.schedules) {
-    if (s.status !== '완료') continue
+    if (!isDone(s)) continue
     if (s.date < windowStart || s.date >= before) continue
     const key = `${s.clientId}|${s.wasteType}`
     const list = bucket.get(key) ?? []

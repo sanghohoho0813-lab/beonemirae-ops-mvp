@@ -1,6 +1,7 @@
 import type { AppData, Client, ClientRequest, Schedule } from '../types'
 import { today } from './format'
 import { addDays } from './performance'
+import { isPending } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 긴급 전화가 오기 전에 알아채기
@@ -159,7 +160,7 @@ export function urgentRisks(data: AppData, now = today()): UrgentRisk[] {
 
     //  앞으로 잡혀 있는 방문 — 오늘 것도 「앞으로」에 넣습니다.
     const next = data.schedules
-      .filter((s) => s.clientId === clientId && s.status !== '완료' && s.date >= now)
+      .filter((s) => s.clientId === clientId && isPending(s) && s.date >= now)
       .map((s) => s.date)
       .sort()[0]
     const nextInDays = next ? daysBetween(now, next) : null

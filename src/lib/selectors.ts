@@ -1,5 +1,6 @@
 import type { AppData, Payment, Schedule, WasteType } from '../types'
 import { thisMonth, today } from './format'
+import { isLive, isDone } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 데이터 파생(집계) 셀렉터 모음
@@ -7,9 +8,16 @@ import { thisMonth, today } from './format'
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 특정 날짜의 일정 */
+/**
+ * 그날의 일정.
+ *
+ *  ⚠ **무른 방문은 여기서부터 빠집니다** (0059). 이 함수가 오늘 일정·배차·
+ *  미배정·지연의 근원이라, 여기서 한 번 걸러야 열두 곳에 같은 조건을
+ *  적지 않아도 됩니다. 한 곳만 빠뜨리면 무른 방문에 기사가 나갑니다.
+ */
 export function schedulesOn(data: AppData, date: string): Schedule[] {
   return data.schedules
-    .filter((s) => s.date === date)
+    .filter((s) => s.date === date && isLive(s))
     .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
 }
 
@@ -18,7 +26,7 @@ export function monthlyCollected(data: AppData, month = thisMonth()): Record<Was
   const result: Record<WasteType, number> = { 의료폐기물: 0, 일회용기저귀: 0 }
   for (const s of data.schedules) {
     if (!s.date.startsWith(month)) continue
-    if (s.status !== '완료' || s.actualAmount == null) continue
+    if (!isDone(s) || s.actualAmount == null) continue
     result[s.wasteType] += s.actualAmount
   }
   return result
@@ -30,7 +38,7 @@ export function todaySummary(data: AppData, date = today()) {
   return {
     total: list.length,
     완료: list.filter((s) => s.status === '완료').length,
-    예정: list.filter((s) => s.status === '예정').length,
+    예정: list.filter((s) => s.status === '예정' && isLive(s)).length,
     지연: list.filter((s) => s.status === '지연').length,
     긴급: list.filter((s) => s.status === '긴급').length,
   }

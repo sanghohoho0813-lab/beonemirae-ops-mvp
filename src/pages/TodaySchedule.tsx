@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -14,6 +14,7 @@ import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
 import { BookVisitModal } from '../components/BookVisit'
+import { MoveVisitModal } from '../components/MoveVisit'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
@@ -49,6 +50,7 @@ export function TodaySchedule() {
   //  방문 예약은 사무실·관리자만입니다 (서버도 같은 기준으로 막습니다).
   const canBook = !configured || role === 'admin' || role === 'office'
   const [bookOpen, setBookOpen] = useState(false)
+  const [moveTarget, setMoveTarget] = useState<Schedule | null>(null)
   const canGoMaterials = !configured || canAccess(role, '/materials')
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
@@ -171,6 +173,15 @@ export function TodaySchedule() {
       </div>
 
       {canBook && <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} />}
+
+      {moveTarget && canBook && (
+        <MoveVisitModal
+          open
+          onClose={() => setMoveTarget(null)}
+          schedule={moveTarget}
+          clientName={clientById(moveTarget.clientId)?.name ?? '알 수 없는 거래처'}
+        />
+      )}
 
       {/*
         휴무일 표시 — 편성에서는 그 날을 빼 주지만, 이미 만들어 둔 예정이
@@ -397,6 +408,21 @@ export function TodaySchedule() {
                         <Zap size={15} strokeWidth={2.6} /> 빠른 완료
                       </button>
                     </div>
+                  )}
+
+                  {/*  옮기기·무르기 (0059) — 병원이 「그날 말고 다음 주로」
+                       하면 여기서 바로 합니다. 지금까지는 화면에서 할 수 있는
+                       것이 없어 잘못 잡은 방문에도 기사가 나갔습니다.
+                       완료된 수거에는 안 띄웁니다 — 실제로 다녀온 기록이고
+                       정산·청구로 이어집니다(서버도 막습니다). */}
+                  {!done && canBook && (
+                    <button
+                      data-move-open={s.id}
+                      onClick={() => setMoveTarget(s)}
+                      className="t-btn mt-2 flex w-full items-center justify-center gap-1 rounded-xl py-2 font-bold text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
+                    >
+                      <CalendarClock size={14} strokeWidth={2.4} /> 날짜 옮기기 · 무르기
+                    </button>
                   )}
                 </div>
                 </div>

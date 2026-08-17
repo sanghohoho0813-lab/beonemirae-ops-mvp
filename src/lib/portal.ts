@@ -2,6 +2,7 @@ import type { AppData, Client, RequestKind, SalesLead } from '../types'
 import { today, thisMonth } from './format'
 import { clientSchedules, requestsForClient, type RequestItem } from './ops'
 import { cycleDays } from './insights'
+import { isPending } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 고객 화면용 파생값
@@ -50,7 +51,7 @@ export function portalSummary(data: AppData, client: Client, month = thisMonth()
   const last = done[0] ?? null
 
   const upcoming = all
-    .filter((s) => s.date >= t && s.status !== '완료')
+    .filter((s) => s.date >= t && isPending(s))
     .sort((a, b) => (a.date + a.scheduledTime).localeCompare(b.date + b.scheduledTime))[0]
 
   // 등록된 일정이 없으면 수거주기로 예상만 보여주고, 예상값임을 분명히 표시합니다.

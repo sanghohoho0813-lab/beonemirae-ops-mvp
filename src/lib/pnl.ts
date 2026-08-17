@@ -1,5 +1,6 @@
 import type { AppData, CostCategoryName, OperatingCost, WasteType } from '../types'
 import { rollupFor, type MonthlyRollup, type Settlement } from './billing'
+import { isDone } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월 손익 — 기여이익에서 영업이익까지
@@ -119,7 +120,7 @@ export function monthlyPnl(data: AppData, month: string): MonthlyPnl {
 function weightsOf(data: AppData, month: string, basis: AllocBasis): Map<string, number> {
   const out = new Map<string, number>()
   for (const s of data.schedules) {
-    if (!s.date.startsWith(month) || s.status !== '완료') continue
+    if (!s.date.startsWith(month) || !isDone(s)) continue
     const add = basis === 'visits' ? 1 : (s.actualAmount ?? 0)
     out.set(s.clientId, (out.get(s.clientId) ?? 0) + add)
   }
@@ -165,7 +166,7 @@ export function allocate(
 export function monthKgByType(data: AppData, month: string): Record<WasteType, number> {
   const out: Record<WasteType, number> = { 의료폐기물: 0, 일회용기저귀: 0 }
   for (const s of data.schedules) {
-    if (!s.date.startsWith(month) || s.status !== '완료') continue
+    if (!s.date.startsWith(month) || !isDone(s)) continue
     out[s.wasteType] += s.actualAmount ?? 0
   }
   return out

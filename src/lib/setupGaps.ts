@@ -2,6 +2,7 @@ import type { AppData, Client, Payment } from '../types'
 import { today } from './format'
 import { addDays } from './performance'
 import { shiftMonth } from './deadlines'
+import { isPending } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 아직 값이 비어서 못 쓰는 기능
@@ -78,7 +79,7 @@ export function scanSetupGaps(data: AppData, asOf: string = today()): SetupScan 
   {
     const to = addDays(asOf, HOLIDAY_WINDOW_DAYS)
     const planned = (data.schedules ?? []).filter(
-      (s) => s.date >= asOf && s.date <= to && s.status !== '완료',
+      (s) => s.date >= asOf && s.date <= to && isPending(s),
     ).length
     const has = (data.holidays ?? []).some((h) => h.day >= asOf && h.day <= to)
     if (!has && planned > 0) {

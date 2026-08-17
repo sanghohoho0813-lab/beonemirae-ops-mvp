@@ -10,6 +10,7 @@ import { SeparationNotice, VehicleFleetCard, FacilityCard, IsolationCard } from 
 import { dispatchPlans, type DispatchPlan } from '../lib/ops'
 import { RouteReviewCard } from '../components/RouteReviewCard'
 import { today } from '../lib/format'
+import { isPending } from '../lib/scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 배차·경로 추천 (시뮬레이션) — 특허 경로 산출부(150)/배차 추천부(160)
@@ -132,7 +133,7 @@ export function Dispatch() {
   //  「추천 차량 0대」만 보이면 일정이 없는 것인지 배정이 안 된 것인지
   //  알 수 없어, 몇 건이 남았는지와 어디서 붙이는지를 먼저 알려 줍니다.
   const unassignedToday = data.schedules.filter(
-    (s) => s.date === today() && s.status !== '완료' && !s.vehicleId,
+    (s) => s.date === today() && isPending(s) && !s.vehicleId,
   ).length
   const allPlans = dispatchPlans(data)
   const plans = allPlans.filter((p) => p.stops.length > 0)

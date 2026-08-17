@@ -10,6 +10,7 @@ import type {
 import { facilityByWaste } from '../data/ops'
 import { schedulesOn, todaySummary, additionalMaterialCount, outstandingOf, paidTotalOf } from './selectors'
 import { today, thisMonth, nowHm, shiftDays } from './format'
+import { isPending, isDone } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 운영 파생 로직 (시연용 추천/위험 시뮬레이션)
@@ -225,7 +226,7 @@ export function lastCollection(data: AppData, clientId: string) {
 export function nextSchedule(data: AppData, clientId: string) {
   const t = today()
   return data.schedules
-    .filter((s) => s.clientId === clientId && s.date >= t && s.status !== '완료')
+    .filter((s) => s.clientId === clientId && s.date >= t && isPending(s))
     .sort((a, b) => (a.date + a.scheduledTime).localeCompare(b.date + b.scheduledTime))[0]
 }
 
@@ -270,7 +271,7 @@ export function clientMonthlyAvgDetail(data: AppData, clientId: string): {
 } {
   const byMonth = new Map<string, { kg: number; src: '기록' | '엑셀' }>()
   for (const s of clientSchedules(data, clientId)) {
-    if (s.status !== '완료' || s.actualAmount == null) continue
+    if (!isDone(s) || s.actualAmount == null) continue
     const m = s.date.slice(0, 7)
     const cur = byMonth.get(m)
     byMonth.set(m, { kg: (cur?.kg ?? 0) + s.actualAmount, src: '기록' })
@@ -293,7 +294,7 @@ export function clientMonthlyAvgDetail(data: AppData, clientId: string): {
 export function clientMonthlyAvg(data: AppData, clientId: string): number {
   const byMonth = new Map<string, number>()
   for (const s of clientSchedules(data, clientId)) {
-    if (s.status !== '완료' || s.actualAmount == null) continue
+    if (!isDone(s) || s.actualAmount == null) continue
     const m = s.date.slice(0, 7)
     byMonth.set(m, (byMonth.get(m) ?? 0) + s.actualAmount)
   }
@@ -331,7 +332,7 @@ export interface LogRow {
 export function collectionLog(data: AppData, clientId: string, month = thisMonth()): LogRow[] {
   const rows: LogRow[] = []
   for (const s of data.schedules) {
-    if (s.clientId !== clientId || s.status !== '완료' || !s.date.startsWith(month)) continue
+    if (s.clientId !== clientId || !isDone(s) || !s.date.startsWith(month)) continue
     const driver = s.driverName ?? data.vehicles.find((v) => v.id === s.vehicleId)?.driver ?? '-'
     const c = s.containers
     rows.push({
@@ -515,7 +516,7 @@ export function pendingInputSchedules(data: AppData): typeof data.schedules {
   //  기기 시각이 아니라 한국 시각으로 비교합니다 — 시간대가 어긋난 기기에서
   //  「입력 대기」가 아홉 시간 일찍/늦게 뜨지 않도록.
   const hhmm = nowHm()
-  return schedulesOn(data, t).filter((s) => s.status === '지연' || (s.status !== '완료' && s.scheduledTime < hhmm))
+  return schedulesOn(data, t).filter((s) => isPending(s) && (s.status === '지연' || s.scheduledTime < hhmm))
 }
 
 // ── 오늘 처리장 인계 예정 (배차된 차량 기준) ─────────────────────────────────

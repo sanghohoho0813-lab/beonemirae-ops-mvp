@@ -209,6 +209,16 @@ interface DataContextValue {
    *  넘어갑니다 — 방문만 생기고 요청이 「접수」로 남으면 병원이 한 번 더
    *  전화를 겁니다.
    */
+  /** 잡아 둔 방문을 옮깁니다 (0059) */
+  moveVisit: (input: {
+    scheduleId: string
+    date: string
+    time?: string | null
+    vehicleId?: string | null
+    keepVehicle?: boolean
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 잡아 둔 방문을 무릅니다 (0059). 지우지 않고 이유와 함께 남깁니다 */
+  cancelVisit: (scheduleId: string, reason: string) => Promise<{ ok: boolean; error: string | null }>
   bookVisit: (input: {
     clientId: string
     date: string
@@ -1777,6 +1787,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  //  ── 옮기기·무르기 (0059) ───────────────────────────────────────────────
+  //
+  //   판단(완료 여부·지난 날짜·겹침·이유 필수)은 전부 서버에 있습니다.
+  //   화면에서 한 번 더 쓰지 않습니다 — 두 곳에 두면 언젠가 서로 달라집니다.
+  const moveVisit = useCallback(
+    async (input: {
+      scheduleId: string
+      date: string
+      time?: string | null
+      vehicleId?: string | null
+      keepVehicle?: boolean
+    }) => {
+      if (!live) return { ok: false, error: '방문 옮기기는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.moveVisit(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const cancelVisit = useCallback(
+    async (scheduleId: string, reason: string) => {
+      if (!live) return { ok: false, error: '방문 무르기는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.cancelVisit(scheduleId, reason)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const saveStaffInvite = useCallback(
     async (input: {
       email: string
@@ -2067,6 +2111,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeHoliday,
       setClientDrivers,
       bookVisit,
+      moveVisit,
+      cancelVisit,
       saveStaffInvite,
       removeStaffInvite,
       setProfileVehicle,
@@ -2141,6 +2187,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeHoliday,
       setClientDrivers,
       bookVisit,
+      moveVisit,
+      cancelVisit,
       saveStaffInvite,
       removeStaffInvite,
       setProfileVehicle,

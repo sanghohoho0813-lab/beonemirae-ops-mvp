@@ -1,4 +1,5 @@
 import type { AppData } from '../types'
+import { isLive } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 휴무일
@@ -130,7 +131,7 @@ export function holidayClashes(data: AppData, from: string, to: string): Holiday
   if (hol.size === 0) return []
   const nameOf = new Map(data.clients.map((c) => [c.id, c.name]))
   return data.schedules
-    .filter((s) => s.status === '예정' && s.date >= from && s.date <= to && hol.has(s.date))
+    .filter((s) => s.status === '예정' && isLive(s) && s.date >= from && s.date <= to && hol.has(s.date))
     .map((s) => ({
       scheduleId: s.id,
       date: s.date,

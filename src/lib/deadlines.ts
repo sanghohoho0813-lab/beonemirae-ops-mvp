@@ -1,6 +1,7 @@
 import type { AppData, MonthCloseStep, Payment } from '../types'
 import { today } from './format'
 import { outstandingOf } from './selectors'
+import { isPending } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 밀린 마감 — 화면을 열지 않아도 보이게
@@ -136,7 +137,7 @@ export function scanDeadlines(
     const base = { month, daysAfterMonthEnd: days }
 
     // ① 수거 입력 — 그날이 지났는데 아직 완료가 아닌 것
-    const late = inMonth.filter((s) => s.status !== '완료' && s.date <= asOf)
+    const late = inMonth.filter((s) => isPending(s) && s.date <= asOf)
     if (late.length > 0) {
       items.push({
         ...base, kind: 'collect', label: '수거 입력',

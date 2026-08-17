@@ -2,6 +2,7 @@ import type { AppData, Schedule, Vehicle, WasteType } from '../types'
 import { today } from './format'
 import { addDays } from './performance'
 import { WEEKDAY_LABEL, weekdayOf, WINDOW_DAYS } from './schedulePlan'
+import { isPending, isDone } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 차량 배정
@@ -93,7 +94,7 @@ function historyByClient(data: AppData, before: string): Map<string, Map<string,
   const windowStart = addDays(before, -WINDOW_DAYS)
   const out = new Map<string, Map<string, number>>()
   for (const s of data.schedules) {
-    if (s.status !== '완료' || !s.vehicleId) continue
+    if (!isDone(s) || !s.vehicleId) continue
     if (s.date < windowStart || s.date > before) continue
     const key = `${s.clientId}|${s.wasteType}`
     const inner = out.get(key) ?? new Map<string, number>()
@@ -133,7 +134,7 @@ export function buildAssignment(data: AppData, from: string, to: string): Assign
   //  배정 대상 — 차량이 비어 있는 예정. 큰 것부터 채워야 남는 자리가
   //  잘게 쪼개지지 않습니다.
   const targets = data.schedules
-    .filter((s) => inRange(s) && !s.vehicleId && (s.status === '예정' || s.status === '지연' || s.status === '긴급'))
+    .filter((s) => inRange(s) && isPending(s) && !s.vehicleId)
     .sort((a, b) => a.date.localeCompare(b.date) || b.expectedAmount - a.expectedAmount)
 
   const rows: AssignRow[] = []

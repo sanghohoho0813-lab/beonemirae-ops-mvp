@@ -8,6 +8,7 @@ import {
   priceOf,
   type ItemKey,
 } from './billing'
+import { isDone } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 단가 점검
@@ -167,7 +168,7 @@ export function auditPricing(data: AppData): PriceAudit {
   }
   const doneByClient = new Map<string, number>()
   for (const s of data.schedules) {
-    if (s.status !== '완료') continue
+    if (!isDone(s)) continue
     doneByClient.set(s.clientId, (doneByClient.get(s.clientId) ?? 0) + 1)
   }
 

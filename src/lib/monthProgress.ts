@@ -3,6 +3,7 @@ import { monthClose } from './monthClose'
 import { taxInvoiceList } from './taxInvoice'
 import { outstandingOf, paidTotalOf } from './selectors'
 import { today } from './format'
+import { isPending } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 월 마감 진행상황
@@ -110,8 +111,8 @@ export function monthProgress(data: AppData, month: string): MonthProgress {
   //  바뀌지 않은 것만 셉니다.
   const inMonth = data.schedules.filter((s) => s.date.startsWith(month))
   const doneCount = inMonth.filter((s) => s.status === '완료').length
-  const late = inMonth.filter((s) => s.status !== '완료' && s.date <= t)
-  const future = inMonth.filter((s) => s.status !== '완료' && s.date > t).length
+  const late = inMonth.filter((s) => isPending(s) && s.date <= t)
+  const future = inMonth.filter((s) => isPending(s) && s.date > t).length
 
   const collect: ProgressStep =
     late.length > 0

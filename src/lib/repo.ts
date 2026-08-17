@@ -166,6 +166,9 @@ const toSchedule = (r: Row): Schedule => ({
   origin: r.origin ?? 'field',
   //  0058 이전 서버에는 이 칸이 없습니다 — 없으면 없는 대로 둡니다.
   bookedAt: r.booked_at ?? null,
+  //  0059 이전 서버에는 이 칸이 없습니다 — 없으면 「안 무른 것」입니다.
+  canceledAt: r.canceled_at ?? null,
+  cancelReason: r.cancel_reason ?? '',
 })
 
 const toMaterial = (r: Row): MaterialSupply => ({
@@ -1044,6 +1047,45 @@ export async function bookVisit(input: {
     clientName: String(r.clientName ?? ''),
     requestUpdated: !!r.requestUpdated,
   }
+}
+
+/**
+ * 잡아 둔 방문을 옮깁니다 (0059).
+ *
+ *  time 을 안 보내면 지금 시각을 그대로 둡니다. 빈 문자열은 「지우기」입니다.
+ *  vehicleId 를 명시하지 않으면 지금 차를 그대로 둡니다.
+ */
+export async function moveVisit(input: {
+  scheduleId: string
+  date: string
+  time?: string | null
+  vehicleId?: string | null
+  keepVehicle?: boolean
+}): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('move_visit', {
+    p_schedule_id: input.scheduleId,
+    p_date: input.date,
+    p_time: input.time ?? null,
+    p_vehicle_id: input.vehicleId ?? null,
+    p_keep_vehicle: input.keepVehicle ?? true,
+  })
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * 잡아 둔 방문을 무릅니다 (0059).
+ *
+ *  ⚠ 지우지 않습니다. 지우면 「그 병원이 그날 취소했다」는 사실이 사라져
+ *  나중에 「왜 그 주에 안 갔냐」에 답할 근거가 없어집니다.
+ *  이유는 서버가 반드시 요구합니다.
+ */
+export async function cancelVisit(scheduleId: string, reason: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('cancel_visit', {
+    p_schedule_id: scheduleId, p_reason: reason,
+  })
+  if (error) throw new Error(error.message)
 }
 
 export async function insertSchedule(s: Omit<Schedule, 'id'>): Promise<Schedule> {
@@ -2040,7 +2082,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 58
+export const EXPECTED_SCHEMA_VERSION = 59
 
 /**
  * 서버 DB 의 스키마 버전.
