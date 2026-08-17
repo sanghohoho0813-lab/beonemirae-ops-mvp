@@ -25,6 +25,7 @@ import type {
   RequestStatus,
   Product,
   ProductOrderStatus,
+  WasteType,
 } from '../types'
 import { EMPTY_APP_DATA } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
@@ -200,6 +201,24 @@ interface DataContextValue {
     clientId: string,
     profileIds: string[],
   ) => Promise<{ ok: boolean; error: string | null }>
+  /**
+   * 날짜를 정해 방문을 잡습니다 (0058).
+   *
+   *  병원에서 「다음 주 목요일에 와 주세요」 전화를 받았을 때 넣는 자리입니다.
+   *  requestId 를 함께 보내면 그 요청이 같은 트랜잭션에서 「일정 반영」으로
+   *  넘어갑니다 — 방문만 생기고 요청이 「접수」로 남으면 병원이 한 번 더
+   *  전화를 겁니다.
+   */
+  bookVisit: (input: {
+    clientId: string
+    date: string
+    wasteType: WasteType
+    time?: string
+    vehicleId?: string | null
+    memo?: string
+    expected?: number | null
+    requestId?: string | null
+  }) => Promise<{ ok: boolean; error: string | null }>
   /** 사전 등록(초대) 만들기·고치기 (0056). 비밀번호는 본인이 정합니다 */
   saveStaffInvite: (input: {
     email: string
@@ -1732,6 +1751,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  //  ── 방문 예약 (0058) ────────────────────────────────────────────────────
+  //
+  //   판단(지난 날짜·먼 미래·안 하는 구분·중복)은 전부 서버에 있습니다.
+  //   여기서 한 번 더 검사하지 않습니다 — 두 곳에 두면 언젠가 서로 달라지고,
+  //   그때 어느 쪽이 맞는지 아무도 모릅니다.
+  const bookVisit = useCallback(
+    async (input: {
+      clientId: string
+      date: string
+      wasteType: WasteType
+      time?: string
+      vehicleId?: string | null
+      memo?: string
+      expected?: number | null
+      requestId?: string | null
+    }) => {
+      if (!live) return { ok: false, error: '방문 예약은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.bookVisit(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const saveStaffInvite = useCallback(
     async (input: {
       email: string
@@ -2021,6 +2066,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       saveHolidays,
       removeHoliday,
       setClientDrivers,
+      bookVisit,
       saveStaffInvite,
       removeStaffInvite,
       setProfileVehicle,
@@ -2094,6 +2140,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       saveHolidays,
       removeHoliday,
       setClientDrivers,
+      bookVisit,
       saveStaffInvite,
       removeStaffInvite,
       setProfileVehicle,

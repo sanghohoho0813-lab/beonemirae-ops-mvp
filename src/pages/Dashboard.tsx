@@ -16,6 +16,7 @@ import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
 import { SetupGapsLine } from '../components/SetupGapsCard'
+import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { FieldTodayCard } from '../components/FieldTodayCard'
 import { OpportunityPanel } from '../components/Opportunities'
 import { ReportHighlight } from '../components/ReportHighlight'
@@ -130,6 +131,11 @@ export function Dashboard() {
            지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.
            밀린 것이 없으면 이 자리는 아예 없습니다. */}
       <DeadlineBanner />
+
+      {/*  급한 요청이 반복되는데 앞이 비어 있는 곳 — **긴급 전화가 오기 전에**
+           보여 주는 자리입니다. 지금 손댈 곳이 없으면 이 자리는 아예 없습니다.
+           밀린 마감 아래에 둡니다: 지난달 세금계산서가 더 급합니다. */}
+      <UrgentRiskBanner />
 
       {/*  오늘 현장에서 들어온 입력 — 사무실에 앉아 알 방법이 없던 것입니다.
            아직 아무것도 안 들어왔으면 이 자리는 아예 없습니다. */}

@@ -15,10 +15,12 @@ import {
   PackagePlus,
   GraduationCap,
   Inbox,
+  CalendarPlus,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
+import { BookVisitModal } from '../components/BookVisit'
 import { Modal } from '../components/Modal'
 import { clientRequests, type RequestItem } from '../lib/ops'
 import { customerServiceStats } from '../lib/portal'
@@ -48,6 +50,14 @@ type Filter = '진행 중' | '전체' | '병원 직접' | '긴급'
 
 export function Requests() {
   const { data, handleRequest, addRequest } = useData()
+  //  ── 요청을 그 자리에서 날짜로 바꾸기 (0058) ─────────────────────────────
+  //
+  //   지금까지 「일정 반영」은 **말**이었습니다. 눌러도 일정이 생기지 않아
+  //   사람이 따로 기억해 두었다가 그날 아침에 챙겨야 했습니다. 잊으면
+  //   병원에는 「반영했습니다」라고 적혀 있는데 차는 안 갑니다 — 가장 나쁜
+  //   방식으로 신뢰가 깨집니다. 이제 날짜를 잡으면 진짜 일정이 생기고,
+  //   그 결과로 요청이 「일정 반영」으로 넘어갑니다.
+  const [bookFor, setBookFor] = useState<RequestItem | null>(null)
   const [filter, setFilter] = useState<Filter>('진행 중')
   const [replyTo, setReplyTo] = useState<RequestItem | null>(null)
   const [replyText, setReplyText] = useState('')
@@ -216,6 +226,17 @@ export function Requests() {
                     {st}
                   </button>
                 ))}
+                {/*  수거로 이어지는 요청에만 붙입니다. 소모품·교육 요청에
+                     방문 예약을 띄우면 엉뚱한 방문이 잡힙니다. */}
+                {(r.type === '긴급수거' || r.type === '추가수거') && r.status !== '처리 완료' && (
+                  <button
+                    data-book-req={r.id}
+                    onClick={() => setBookFor(r)}
+                    className="t-btn flex items-center gap-1 rounded-full bg-navy-800 px-3.5 py-2 font-extrabold text-white"
+                  >
+                    <CalendarPlus size={15} strokeWidth={2.5} /> 날짜 잡기
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setReplyTo(r)
@@ -229,6 +250,17 @@ export function Requests() {
             </div>
           ))}
         </div>
+      )}
+
+      {bookFor && (
+        <BookVisitModal
+          open
+          onClose={() => setBookFor(null)}
+          client={data.clients.find((c) => c.id === bookFor.clientId)}
+          requestId={bookFor.id}
+          desiredDate={bookFor.desiredDate}
+          defaultMemo={`${bookFor.type} 요청 — ${bookFor.content}`.slice(0, 120)}
+        />
       )}
 
       <section>

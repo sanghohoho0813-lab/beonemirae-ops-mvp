@@ -17,6 +17,7 @@ import {
   Pin,
   ClipboardCheck,
   PlusCircle,
+  CalendarPlus,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -25,6 +26,8 @@ import { WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { PageShell, SectionTitle, MetricCard, EmptyState } from '../components/ui'
 import { ClientForm } from '../components/ClientForm'
+import { BookVisitModal } from '../components/BookVisit'
+import { UrgentRiskCard } from '../components/UrgentRisk'
 import {
   lastCollection,
   nextSchedule,
@@ -117,6 +120,9 @@ export function ClientDetail() {
   const navigate = useNavigate()
   const { data, clientById, updateClient, savePricing, removeClient, purgeClient, notesFor } = useData()
   const { role, mode } = useAuth()
+  //  방문 예약 (0058) — 사무실·관리자만. 서버도 같은 기준으로 막습니다.
+  const canBook = role === 'admin' || role === 'office' || !mode
+  const [bookOpen, setBookOpen] = useState(false)
   const client = clientById(id)
 
   const [editing, setEditing] = useState(false)
@@ -509,8 +515,27 @@ export function ClientDetail() {
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">다음 예정 수거</p>
           <p className="mt-1.5 text-base font-extrabold text-navy-900">{next ? prettyDate(next.date) : '—'}</p>
+          {/*  「—」만 있으면 「앞으로 갈 일이 없다」는 사실이 조용히 지나갑니다.
+               잡을 자리를 바로 그 옆에 둡니다. */}
+          {canBook && (
+            <button
+              data-book-open
+              onClick={() => setBookOpen(true)}
+              className="t-btn mt-2 flex items-center gap-1 font-extrabold text-teal-700 hover:underline"
+            >
+              <CalendarPlus size={15} strokeWidth={2.5} /> {next ? '방문 더 잡기' : '방문 잡기'}
+            </button>
+          )}
         </div>
       </div>
+
+      {/*  긴급이 반복되는 곳이면 그 사실을 여기서 알려 줍니다 — 아래 수거이력
+           탭의 「긴급수거 3건」이라는 숫자만으로는 무엇을 해야 할지 모릅니다. */}
+      <UrgentRiskCard clientId={client.id} />
+
+      {canBook && (
+        <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} client={client} />
+      )}
 
       {/*  인증·실사 관련 — **지금은 숨겨 둡니다** (대표님 요청).
            체크리스트가 아직 시연용이고(「체크리스트는 시연용이며」), 문자·카카오

@@ -26,6 +26,7 @@ import type {
   MonthCloseStep,
   ClientAssignment,
   StaffInvite,
+  WasteType,
 } from '../types'
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry, missingName } from './supabase'
@@ -163,6 +164,8 @@ const toSchedule = (r: Row): Schedule => ({
   handoverAt: r.handover_at ?? null,
   eventId: r.event_id ?? null,
   origin: r.origin ?? 'field',
+  //  0058 이전 서버에는 이 칸이 없습니다 — 없으면 없는 대로 둡니다.
+  bookedAt: r.booked_at ?? null,
 })
 
 const toMaterial = (r: Row): MaterialSupply => ({
@@ -1000,6 +1003,48 @@ const scheduleRow = (s: Partial<Schedule>) => ({
   actual_amount: s.actualAmount,
   memo: s.memo,
 })
+
+/**
+ * 날짜를 정해 방문을 잡습니다 (0058).
+ *
+ *  ⚠ 표에 직접 넣지 않고 서버 함수를 부릅니다. 지난 날짜·먼 미래·안 하는
+ *  구분·중복 같은 판단이 **서버 한 곳에** 있어야 화면을 우회해도 지켜집니다.
+ *  화면에서만 막으면 새로고침 두 번으로 뚫립니다.
+ *
+ *  requestId 를 함께 보내면 그 요청이 같은 트랜잭션에서 「일정 반영」으로
+ *  넘어갑니다 — 방문만 생기고 요청이 「접수」로 남으면 병원 담당자가 한 번
+ *  더 전화를 겁니다.
+ */
+export async function bookVisit(input: {
+  clientId: string
+  date: string
+  wasteType: WasteType
+  time?: string
+  vehicleId?: string | null
+  memo?: string
+  expected?: number | null
+  requestId?: string | null
+}): Promise<{ id: string; date: string; clientName: string; requestUpdated: boolean }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('book_visit', {
+    p_client_id: input.clientId,
+    p_date: input.date,
+    p_waste_type: input.wasteType,
+    p_time: input.time ?? '',
+    p_vehicle_id: input.vehicleId || null,
+    p_memo: input.memo ?? '',
+    p_expected: input.expected ?? null,
+    p_request_id: input.requestId || null,
+  })
+  if (error) throw new Error(error.message)
+  const r = (data ?? {}) as Record<string, unknown>
+  return {
+    id: String(r.id ?? ''),
+    date: String(r.date ?? input.date),
+    clientName: String(r.clientName ?? ''),
+    requestUpdated: !!r.requestUpdated,
+  }
+}
 
 export async function insertSchedule(s: Omit<Schedule, 'id'>): Promise<Schedule> {
   const sb = need()
@@ -1995,7 +2040,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 57
+export const EXPECTED_SCHEMA_VERSION = 58
 
 /**
  * 서버 DB 의 스키마 버전.

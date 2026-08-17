@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin} from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -13,6 +13,8 @@ import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
+import { BookVisitModal } from '../components/BookVisit'
+import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
 import { EMPTY_SUPPLIED } from '../lib/collection'
@@ -44,6 +46,9 @@ export function TodaySchedule() {
   const { configured, role } = useAuth()
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const canGoHistory = !configured || canAccess(role, '/history')
+  //  방문 예약은 사무실·관리자만입니다 (서버도 같은 기준으로 막습니다).
+  const canBook = !configured || role === 'admin' || role === 'office'
+  const [bookOpen, setBookOpen] = useState(false)
   const canGoMaterials = !configured || canAccess(role, '/materials')
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
@@ -154,7 +159,18 @@ export function TodaySchedule() {
           title="오늘 일정"
           subtitle={<span className="hidden lg:inline">{`완료 ${doneCount} / 전체 ${list.length}건`}</span>}
         />
+        {/*  매일 아침 여는 화면입니다. 병원 전화는 대개 이 화면을 보고 있을
+             때 옵니다 — 「다음 주 목요일에 와 주세요」. 그 자리에서 바로
+             넣을 수 있어야 수첩으로 가지 않습니다. 기사님에게는 안 띄웁니다
+             (남의 일정을 만드는 자리가 아닙니다). */}
+        {canBook && (
+          <button data-book-open onClick={() => setBookOpen(true)} className="btn-ghost shrink-0">
+            <CalendarPlus size={17} strokeWidth={2.4} /> 다른 날 방문 잡기
+          </button>
+        )}
       </div>
+
+      {canBook && <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} />}
 
       {/*
         휴무일 표시 — 편성에서는 그 날을 빼 주지만, 이미 만들어 둔 예정이
@@ -200,6 +216,10 @@ export function TodaySchedule() {
       {/*  밀린 마감 — 사무실이 하루에 제일 많이 여는 화면입니다.
            밀린 것이 없으면 이 자리는 아예 없습니다(현장에는 안 뜹니다). */}
       <DeadlineBanner className="mb-4" />
+
+      {/*  긴급 전화가 오기 전에 — 여기가 사무실이 아침에 여는 화면입니다.
+           지금 손댈 곳이 없으면 이 자리는 아예 없습니다. */}
+      {canBook && <UrgentRiskBanner limit={2} />}
 
       {/* 병원에서 올라온 요청 — 오늘 방문 전에 확인해야 하는 것 */}
       {pendingRequests.length > 0 && (
@@ -297,6 +317,17 @@ export function TodaySchedule() {
                         <span className="tabular-nums text-lg font-extrabold text-navy-900">{s.scheduledTime}</span>
                         <WasteBadge type={s.wasteType} />
                         {!done && <StatusBadge status={s.status} />}
+                        {/*  사람이 날짜를 정해 잡은 방문 (0058). 자동으로 생긴
+                             예정과 무게가 다릅니다 — 이건 병원과 한 약속이라
+                             놓치면 그 병원이 전화기를 듭니다. */}
+                        {s.bookedAt && (
+                          <span
+                            data-booked={s.id}
+                            className="rounded-full bg-teal-50 px-2 py-0.5 text-[0.9rem] font-extrabold text-teal-700"
+                          >
+                            예약
+                          </span>
+                        )}
                         {done && s.handoverStatus && (
                           <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[0.9rem] font-bold text-navy-500">
                             {s.handoverStatus}

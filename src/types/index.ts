@@ -279,6 +279,14 @@ export interface Schedule {
   handoverAt?: string | null // 처리장 인계 완료 시간 (ISO)
   eventId?: string | null // 이 완료를 생성/처리한 수거 이벤트 id
   origin?: RecordOrigin // 데이터 출처 (seed/field/demo/migrated/system)
+  /**
+   * 사람이 날짜를 정해 잡은 방문 (0058, ISO).
+   *
+   *  자동 편성으로 생긴 예정과 **무게가 다릅니다.** 자동 예정은 틀리면
+   *  지우면 되지만, 병원과 약속한 방문을 놓치면 그 병원은 전화기를 듭니다.
+   *  화면에서 갈라 보여 주기 위한 값입니다.
+   */
+  bookedAt?: string | null
 }
 
 /** 데이터 출처 구분 — 시연 초기화 시 보존/정리 대상을 구분하는 데 사용 */
