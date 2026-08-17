@@ -66,16 +66,22 @@ const KIND_HINT: Record<RequestKind, string> = {
 /**
  * 첫 화면의 행동 버튼 — 다 같은 크기로 늘어놓지 않습니다.
  *
- *  primary   전화로 가장 많이 오는 두 가지. 크게 둡니다.
- *  secondary 덜 급한 두 가지. 같은 자리에 작게 둡니다.
- *  (기타 문의는 요청 창 안에서만 고릅니다)
+ *  primary   병원이 여기 들어오는 이유 두 가지. 화면을 열자마자 보입니다.
+ *  secondary 덜 급하거나 덜 잦은 것. 같은 자리에 작게 둡니다.
+ *  (기타 문의는 요청 창 안에서 고릅니다)
+ *
+ * ── 「소모품」이 두 갈래였습니다 ────────────────────────────────────────────
+ *
+ *  예전에는 큰 버튼의 「소모품」이 **자유 글 요청**으로 갔습니다. 병원이
+ *  「20L 용기 10개요」라고 적으면 그건 요청 한 줄로만 남고, 품목·수량·단가가
+ *  붙은 **주문**이 되지 않습니다. 그러면 전달해도 그 달 청구에 안 실립니다.
+ *
+ *  실제로 팔리려면 목록에서 품목과 수량을 고른 주문이어야 합니다. 그래서 큰
+ *  버튼은 **소모품 주문 화면**으로 보냅니다. 자유 글로 적고 싶으신 분을 위해
+ *  요청 창의 「소모품」 항목은 그대로 남겨 둡니다 — 없앤 것이 아닙니다.
  */
-const PRIMARY: { kind: RequestKind; label: string; caption: string }[] = [
-  { kind: '긴급수거', label: '긴급 수거 요청', caption: '보관기한 임박 · 오늘 중 수거' },
-  { kind: '소모품', label: '소모품 요청', caption: '전용 용기 · 봉투가 부족할 때' },
-]
 const SECONDARY: { kind: RequestKind; label: string }[] = [
-  { kind: '추가수거', label: '추가 수거' },
+  { kind: '긴급수거', label: '긴급 수거' },
   { kind: '교육·자료', label: '교육·자료' },
 ]
 
@@ -187,33 +193,53 @@ export function PortalHome() {
         </div>
       )}
 
-      <TourBanner tourId="client" />
-
-      {/* ── 1. 지금 할 수 있는 일 — 전화를 걸기 전에 여기서 먼저 ── */}
+      {/* ── 1. 지금 할 수 있는 일 — 전화를 걸기 전에 여기서 먼저 ──
+           ⚠ 이 두 개가 **화면을 열자마자** 보여야 합니다. 예전에는 시스템
+             소개 카드가 첫 화면을 다 차지해서, 「수거 요청」은 화면 맨 끝에
+             겨우 걸치고 「소모품 주문」은 아예 보이지 않았습니다. 병원 담당자는
+             폐기물이 본업이 아니라, 안 보이면 그냥 전화를 겁니다.
+             소개 카드는 이 아래로 내렸습니다 — 없애지 않았습니다. */}
       <section>
         <div data-tour="portal-request" className="grid gap-3 sm:grid-cols-2">
-          {PRIMARY.map((q) => {
-            const Icon = KIND_ICON[q.kind]
-            const t = TONE[REQUEST_TONE[q.kind]]
-            return (
-              <button
-                key={q.kind}
-                onClick={() => start(q.kind)}
-                className="card pressable flex items-center gap-4 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
-              >
-                <span
-                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${t.tile}`}
-                >
-                  <Icon size={29} strokeWidth={2.3} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="t-card block break-keep text-navy-900">{q.label}</span>
-                  <span className="t-muted mt-1 block break-keep leading-snug">{q.caption}</span>
-                </span>
-                <ChevronRight size={22} className="shrink-0 text-navy-300" />
-              </button>
-            )
-          })}
+          <button
+            data-portal-cta="collect"
+            onClick={() => start('추가수거')}
+            className="card pressable flex items-center gap-4 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
+          >
+            <span
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${TONE[REQUEST_TONE['추가수거']].tile}`}
+            >
+              <Truck size={29} strokeWidth={2.3} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="t-card block break-keep text-navy-900">수거 요청</span>
+              <span className="t-muted mt-1 block break-keep leading-snug">
+                정기 수거 외에 한 번 더 필요할 때
+              </span>
+            </span>
+            <ChevronRight size={22} className="shrink-0 text-navy-300" />
+          </button>
+
+          {/*  자유 글이 아니라 **주문 화면**으로 보냅니다 — 품목과 수량이 붙어야
+              실제로 전달되고 그 달 청구에 실립니다. 위 주석 참고. */}
+          <Link
+            to="/portal/supplies"
+            data-portal-cta="supplies"
+            className="card pressable flex items-center gap-4 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
+          >
+            <span
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${TONE[REQUEST_TONE['소모품']].tile}`}
+            >
+              <PackagePlus size={29} strokeWidth={2.3} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="t-card block break-keep text-navy-900">소모품 주문</span>
+              <span className="t-muted mt-1 block break-keep leading-snug">
+                전용 용기 · 봉투 — 다음 수거 때 가져다 드립니다
+              </span>
+            </span>
+            <ChevronRight size={22} className="shrink-0 text-navy-300" />
+          </Link>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {SECONDARY.map((q) => {
@@ -234,6 +260,11 @@ export function PortalHome() {
           })}
         </div>
       </section>
+
+      {/*  시스템 소개·둘러보기 — 할 수 있는 일 **아래**입니다.
+          처음 오신 분께는 여전히 눈에 띄지만, 매일 쓰시는 분의 첫 화면을
+          가리지는 않습니다. 「오늘 하루 보지 않기」도 그대로입니다. */}
+      <TourBanner tourId="client" />
 
       {/* ── 2. 내 요청 진행 상태 — 내가 한 행동이 지금 어디까지 왔는가 ── */}
       <section>
