@@ -47,6 +47,15 @@ export interface CollectionCompletionInput {
   driverName: string
   actualAmount: number
   actualTime: string
+  /**
+   * 실제로 **다녀온 날** (YYYY-MM-DD, 0061). 안 보내면 오늘입니다.
+   *
+   *  ⚠ 저녁이나 다음 날 아침에 넣으면 날짜가 하루 밀립니다. 월말에는
+   *  그 하루가 **다른 달 매출**이 됩니다 — 31일 수거를 1일에 넣으면 그 달
+   *  청구에서 빠집니다. 예정 일정을 눌러 완료하는 길은 그 일정의 날짜를
+   *  쓰므로 이 값이 필요 없습니다.
+   */
+  date?: string
   containers: ContainerBreakdown
   handoverStatus: HandoverStatus
   supplied: SuppliedMaterials

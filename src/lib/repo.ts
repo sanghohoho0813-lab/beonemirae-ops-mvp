@@ -1682,6 +1682,8 @@ export async function completeCollection(input: CollectionCompletionInput): Prom
       driverName: input.driverName,
       actualAmount: input.actualAmount,
       actualTime: input.actualTime,
+      //  안 보내면 서버가 오늘로 씁니다 (0061 이전 서버도 그렇게 동작합니다).
+      date: input.date ?? null,
       containers: input.containers,
       handoverStatus: input.handoverStatus,
       supplied: input.supplied,
@@ -2085,7 +2087,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 60
+export const EXPECTED_SCHEMA_VERSION = 61
 
 /**
  * 서버 DB 의 스키마 버전.

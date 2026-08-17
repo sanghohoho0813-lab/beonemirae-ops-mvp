@@ -13,6 +13,7 @@ import {
   CalendarPlus,
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
+import { addDays } from '../lib/performance'
 import { checkAmount, checkItemCounts, itemCheckMessage } from '../lib/amountCheck'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -121,6 +122,10 @@ export function CollectionInput() {
   // 재고(4칸) 차감량은 이 값에서 계산합니다 — 현장이 두 번 적지 않게.
   const [suppliedItems, setSuppliedItems] = useState<ItemCounts>({})
   const [isAdditional, setIsAdditional] = useState(false)
+  //  ── 다녀온 날 (0061) ────────────────────────────────────────────────────
+  //   기본은 오늘입니다. 저녁이나 다음 날 아침에 넣을 때 실제로 간 날로
+  //   바꿉니다 — 안 그러면 월말에 하루치가 다음 달 매출이 됩니다.
+  const [visitDate, setVisitDate] = useState(today())
   const [handover, setHandover] = useState<HandoverStatus>('수거 완료')
   const [memo, setMemo] = useState('')
 
@@ -281,6 +286,9 @@ export function CollectionInput() {
       driverName,
       actualAmount: Number(amount) || 0,
       actualTime: time,
+      //  다녀온 날 (0061). 예정을 눌러 완료할 때는 그 일정의 날짜를 쓰므로
+      //  보내지 않습니다 — 여기서 보내면 서버가 일정 날짜를 덮어쓸 이유가 없습니다.
+      date: scheduleId ? undefined : visitDate,
       containers,
       handoverStatus: handover,
       supplied,
@@ -549,6 +557,37 @@ export function CollectionInput() {
                시간은 한 줄을 통째로 씁니다 — 대표님이 「너무 조그맣게 있어서
                입력하기 되게 불편하다」고 하신 그 자리입니다. */}
           <div className="space-y-3">
+            {/*  ── 다녀온 날 (0061) ────────────────────────────────────────
+                 예정을 눌러 완료할 때는 그 일정의 날짜를 쓰므로 안 보여
+                 줍니다. 예정에 없던 수거를 직접 넣을 때만 나옵니다.
+
+                 ⚠ 이 칸이 없어서 저녁·다음 날 아침 입력이 전부 오늘로
+                   저장됐습니다. 평소엔 기록만 어긋나지만 **월말에는 하루치가
+                   다음 달 매출**이 됩니다. */}
+            {!scheduleId && (
+              <div>
+                <label className="field-label" htmlFor="collection-date">다녀온 날 *</label>
+                <input
+                  id="collection-date"
+                  data-visit-date
+                  type="date"
+                  className="field-input"
+                  value={visitDate}
+                  max={today()}
+                  min={addDays(today(), -45)}
+                  onChange={(e) => setVisitDate(e.target.value || today())}
+                />
+                {visitDate !== today() && (
+                  <p
+                    data-visit-past
+                    className="t-body mt-1.5 break-keep rounded-2xl bg-amber-50 px-3.5 py-2.5 font-bold text-amber-800"
+                  >
+                    오늘이 아닌 <b>{prettyDate(visitDate)}</b> 로 저장됩니다. 그 달 실적·청구에 그 날짜로
+                    잡힙니다.
+                  </p>
+                )}
+              </div>
+            )}
             <TimeField value={time} onChange={setTime} />
             <div>
               <label className="field-label" htmlFor="collection-amount">실제 수거량 (kg) *</label>
