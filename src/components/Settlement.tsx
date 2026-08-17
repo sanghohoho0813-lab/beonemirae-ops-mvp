@@ -68,7 +68,13 @@ export function SettlementPanel({
   const usage = useMemo(() => usageComparison(data, client.id, month), [data, client.id, month])
   const months = useMemo(() => recentMonths(month.length === 7 ? `${month}-01`.slice(0, 7) : month), [month])
 
-  const empty = s.collections === 0 && s.supplies === 0
+  //  ⚠ 소모품 주문을 빼먹으면 안 됩니다. 수거는 없고 소모품만 전달한 달이
+  //  실제로 있습니다(주문만 받아 가져다준 달). 여기서 「집계할 것이 없다」로
+  //  닫아 버리면 그 달은 거래명세서 버튼도 잠기고 청구 확정 카드도 안 떠서
+  //  **판 물건 값을 받을 방법이 화면에 없습니다.** 서버(0057)는 소모품만
+  //  있는 달의 청구를 이미 허용합니다 — 막고 있던 것은 이 한 줄입니다.
+  const empty = s.collections === 0 && s.supplies === 0 && s.productOrders === 0
+  const hasProduct = s.productRevenue > 0 || s.productCost > 0
 
   return (
     <div className="space-y-3">
@@ -104,7 +110,7 @@ export function SettlementPanel({
 
       {empty ? (
         <div className="card px-6 py-10 text-center">
-          <p className="t-card break-keep text-navy-700">이 달에는 집계할 수거·공급이 없습니다</p>
+          <p className="t-card break-keep text-navy-700">이 달에는 집계할 수거·공급·소모품이 없습니다</p>
           <p className="t-body mt-1.5 break-keep text-navy-400">
             현장에서 수거 완료를 입력하면 여기에 자동으로 쌓입니다.
           </p>
@@ -134,9 +140,19 @@ export function SettlementPanel({
               <Small label="물품 매출" v={s.supplyRevenue} />
               <Small label="처리비" v={-s.disposalCost} />
               <Small label="자재비" v={-s.materialCost} />
+              {/*  소모품을 판 달에만 두 칸이 더 붙습니다. 위 「직접원가」에는
+                   이미 들어가 있는 값이라, 여기 없으면 내역을 더해도 요약과
+                   맞지 않습니다. */}
+              {hasProduct && (
+                <>
+                  <Small label="소모품 매출" v={s.productRevenue} data-settle-prodrev />
+                  <Small label="소모품 원가" v={-s.productCost} data-settle-prodcost />
+                </>
+              )}
             </div>
             <p data-profit-note className="t-muted break-keep border-t border-navy-100 px-5 py-2.5 text-navy-400">
-              기여이익 = 매출 − 처리비 − 자재비. <b className="text-navy-500">운송비·인건비·차량 유지비는
+              기여이익 = 매출 − 처리비 − 자재비{hasProduct ? ' − 소모품 원가' : ''}.{' '}
+              <b className="text-navy-500">운송비·인건비·차량 유지비는
               빠져 있습니다</b> — 시스템에 그 값을 넣는 곳이 아직 없습니다. 실제 영업이익은 이보다 낮습니다.
             </p>
           </section>
@@ -204,6 +220,19 @@ export function SettlementPanel({
             <p data-settle-noprice className="t-body break-keep rounded-2xl bg-amber-50 px-4 py-3 font-bold text-amber-800">
               단가가 없어 청구에 안 실린 소모품이 있습니다 — {s.productNoPrice.join(' · ')}. 물건은
               전달됐는데 받을 돈이 잡히지 않습니다. 「소모품 → 상품」에서 단가를 넣어 주세요.
+            </p>
+          )}
+
+          {/*  위와 반대 방향의 위험입니다. 저쪽은 받을 돈이 없어지고 이쪽은
+               **안 쓴 돈이 이익으로 잡힙니다.** 매입가가 비어 있으면 원가가
+               0 이라 그 품목은 이익률 100% 로 보이고, 그 숫자를 믿으면 밑지고
+               파는 물건을 더 팔게 됩니다. 청구액은 이것과 무관합니다 —
+               고쳐도 병원에 나가는 금액은 한 푼도 안 바뀝니다. */}
+          {s.productNoCost.length > 0 && (
+            <p data-settle-nocost className="t-body break-keep rounded-2xl bg-amber-50 px-4 py-3 text-amber-800">
+              <b>매입가가 없어 원가 0원으로 잡힌 소모품이 있습니다 — {s.productNoCost.join(' · ')}.</b>{' '}
+              이 품목은 이익률이 100% 로 보입니다 — 실제보다 남는 것처럼 보이는 숫자입니다.
+              청구액은 바뀌지 않습니다.
             </p>
           )}
 
@@ -294,9 +323,13 @@ function Cell({
   )
 }
 
-function Small({ label, v }: { label: string; v: number }) {
+function Small({
+  label,
+  v,
+  ...rest
+}: { label: string; v: number } & Record<`data-${string}`, unknown>) {
   return (
-    <div className="flex items-baseline justify-between gap-2">
+    <div className="flex items-baseline justify-between gap-2" {...rest}>
       <span className="t-muted shrink-0">{label}</span>
       <span className="t-cell tabular-nums text-navy-700">{v === 0 ? '—' : won(v)}</span>
     </div>

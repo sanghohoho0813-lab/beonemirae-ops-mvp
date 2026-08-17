@@ -34,6 +34,13 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
   const pnl = useMemo(() => monthlyPnl(data, month), [data, month])
   const r = pnl.rollup
   const alloc = useMemo(() => allocate(data, month, basis), [data, month, basis])
+  const hasProduct = r.productRevenue > 0 || r.productCost > 0
+  //  매입가를 안 넣은 품목 — 거래처별로 흩어져 있어 전사 화면에서는 합쳐서
+  //  한 번만 적습니다(같은 물건을 여러 병원에 팔면 줄이 여러 개가 됩니다).
+  const noCost = useMemo(
+    () => [...new Set(r.rows.flatMap((s) => s.productNoCost))].sort(),
+    [r.rows],
+  )
   //  배부가 없는 달에는 기여이익률만 보여 주므로 두 종류의 줄을 함께 다룹니다.
   const allocatedOf = (s: Settlement | AllocatedRow) => ('allocated' in s ? s.allocated : 0)
   const opProfitOf = (s: Settlement | AllocatedRow) => ('operatingProfit' in s ? s.operatingProfit : 0)
@@ -62,19 +69,42 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
         </div>
       ) : (
         <>
+          {/*  소모품을 판 달에는 매입 원가 칸을 함께 띄웁니다. 안 그러면
+               화면에 적힌 뺄셈(매출 − 처리비 − 자재비)이 기여이익과 맞지
+               않아 대표님이 「어디서 이만큼 빠졌지」를 손으로 찾게 됩니다.
+               판 적이 없는 달에는 지금까지처럼 네 칸입니다. */}
           <div data-tour="business-summary" className="card mb-3 overflow-hidden">
-            <div className="grid grid-cols-2 divide-x divide-navy-100 sm:grid-cols-4">
+            <div
+              className={`grid grid-cols-2 divide-x divide-navy-100 ${
+                hasProduct ? 'sm:grid-cols-5' : 'sm:grid-cols-4'
+              }`}
+            >
               <Cell label="매출" v={r.revenue} />
               <Cell label="처리비" v={-r.disposalCost} />
               <Cell label="자재비" v={-r.materialCost} />
+              {hasProduct && <Cell label="소모품 원가" v={-r.productCost} data-rollup-productcost />}
               <Cell
                 label="기여이익"
                 v={r.profit}
                 tone={r.profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}
                 sub={r.margin != null ? `${Math.round(r.margin * 100)}%` : undefined}
+                //  폰에서는 두 칸씩 놓이므로 홀수가 되는 다섯 번째 칸이
+                //  반쪽으로 남습니다. 제일 중요한 숫자를 반쪽으로 두지 않습니다.
+                className={hasProduct ? 'col-span-2 sm:col-span-1' : undefined}
               />
             </div>
           </div>
+
+          {noCost.length > 0 && (
+            <p
+              data-rollup-nocost
+              className="t-muted mb-3 break-keep rounded-2xl bg-amber-50 px-4 py-3 text-amber-700"
+            >
+              <b>매입가가 없어 원가 0원으로 잡힌 소모품이 있습니다 — {noCost.join(' · ')}.</b> 판 값만
+              들어가고 산 값이 안 빠져서 이 품목은 <b>이익률 100%</b> 로 보입니다. 실제보다 남는 것처럼
+              보이는 숫자이니, 「소모품 → 상품」에서 매입가를 넣어 주세요.
+            </p>
+          )}
 
           {/* 운영비 → 영업이익. 넣지 않은 달은 계산하지 않습니다 */}
           <div className="mb-3 card overflow-hidden" data-pnl-summary>
@@ -220,6 +250,8 @@ function Cell({
   tone = 'text-navy-900',
   sub,
   empty = false,
+  className,
+  ...rest
 }: {
   label: string
   v: number
@@ -227,9 +259,10 @@ function Cell({
   sub?: string
   /** 아직 값이 없어 계산하지 않은 칸 — 0원으로 보여 주지 않습니다 */
   empty?: boolean
-}) {
+  className?: string
+} & Record<`data-${string}`, unknown>) {
   return (
-    <div className="px-4 py-3.5">
+    <div className={`px-4 py-3.5 ${className ?? ''}`} {...rest}>
       <p className="t-label text-navy-500">{label}</p>
       <p className={`t-kpi-sm mt-0.5 tabular-nums ${empty ? 'text-navy-300' : tone}`}>
         {empty ? '미입력' : wonShort(v)}

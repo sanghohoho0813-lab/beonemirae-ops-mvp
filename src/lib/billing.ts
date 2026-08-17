@@ -296,6 +296,15 @@ export interface Settlement {
    *  돈이 새므로 화면이 이 목록을 그대로 보여 줍니다.
    */
   productNoPrice: string[]
+  /**
+   * 매입가가 비어 있어 **원가 0원으로 잡힌** 소모품 품목 이름.
+   *
+   *  단가가 없는 것(productNoPrice)과 방향이 반대인 위험입니다. 저쪽은 받을
+   *  돈이 없어지고, 이쪽은 **안 쓴 돈이 이익으로 잡힙니다.** 매입가를 안
+   *  넣으면 그 품목은 이익률 100% 로 보이고, 그 숫자로 「소모품은 남는
+   *  장사」라고 판단하면 실제로는 밑지고 파는 물건을 더 팔게 됩니다.
+   */
+  productNoCost: string[]
   /** 유상 물품 매출 */
   supplyRevenue: number
   /** 수거 매출 */
@@ -518,6 +527,7 @@ export function settlementFor(
   const orders = deliveredOrdersIn(data, clientId, month, billed)
   const prodMap = new Map<string, { label: string; unit: string; qty: number; price: number; cost: number }>()
   const noPrice = new Set<string>()
+  const noCost = new Set<string>()
   for (const o of orders) {
     for (const it of o.items) {
       if (!it.qty) continue
@@ -529,6 +539,13 @@ export function settlementFor(
       cur.qty += it.qty
       prodMap.set(k, cur)
       if (!it.unitPrice) noPrice.add(label)
+      //  매입가가 없으면 원가 0 으로 잡혀 그 품목이 이익률 100% 로 보입니다.
+      //  판 값이 있는 물건만 셉니다 — 무상으로 준 물건(단가 0)까지 「원가가
+      //  없다」고 재촉하면 진짜 위험한 줄이 그 안에 묻힙니다.
+      if (!it.unitCost && it.unitPrice) noCost.add(label)
+      //  매입가가 없으면 원가 0 으로 잡혀 그 품목이 이익률 100% 로 보입니다.
+      //  판 값이 있는 물건만 셉니다 — 무상으로 준 물건(단가 0)까지 「원가가
+      //  없다」고 재촉하면 진짜 위험한 줄이 그 안에 묻힙니다.
     }
   }
   const productLines: SettlementLine[] = [...prodMap.values()].map((v) => ({
@@ -565,6 +582,7 @@ export function settlementFor(
     productCost,
     productOrders: orders.length,
     productNoPrice: [...noPrice],
+    productNoCost: [...noCost],
     supplyRevenue,
     wasteRevenue,
     revenue,
@@ -585,6 +603,18 @@ export interface MonthlyRollup {
   revenue: number
   disposalCost: number
   materialCost: number
+  /**
+   * 소모품 매입 원가 (0057 · 주문 시점 값).
+   *
+   *  ⚠ 이 칸이 없어서 실제로 숫자가 틀렸습니다. 0057 로 소모품 **매출**은
+   *  거래처 정산에 들어갔는데 전사 합계의 원가는 처리비+자재비만 더하고
+   *  있었습니다. 판 값은 이익에 들어오고 산 값은 안 빠지니 기여이익과
+   *  이익률이 부풀려졌고, 그 위에서 운영비를 빼는 **영업이익까지** 같이
+   *  틀렸습니다. 아래 rollupFor 의 불변식 주석을 함께 보세요.
+   */
+  productCost: number
+  /** 소모품 매출 (0057) */
+  productRevenue: number
   cost: number
   profit: number
   margin: number | null
@@ -603,13 +633,28 @@ export function rollupFor(data: AppData, month: string): MonthlyRollup {
   const revenue = rows.reduce((a, r) => a + r.revenue, 0)
   const disposalCost = rows.reduce((a, r) => a + r.disposalCost, 0)
   const materialCost = rows.reduce((a, r) => a + r.materialCost, 0)
-  const cost = disposalCost + materialCost
+  const productCost = rows.reduce((a, r) => a + r.productCost, 0)
+  const productRevenue = rows.reduce((a, r) => a + r.productRevenue, 0)
+
+  //  ⚠ 지켜야 하는 불변식 — **원가를 여기서 다시 더하지 말 것.**
+  //
+  //   전사 합계는 거래처 정산을 그냥 더한 값이어야 합니다. 그런데 매출은
+  //   rows 를 더하고 원가만 항목을 하나씩 골라 더하는 구조라, 정산에 새
+  //   원가가 생길 때마다 **여기 한 줄을 빼먹으면 이익이 부풀려집니다.**
+  //   실제로 0057 에서 소모품 원가가 이렇게 빠졌습니다.
+  //
+  //   그래서 cost 는 항목의 합이 아니라 rows 의 cost 합으로 잡고, 항목별
+  //   금액(처리비·자재비·소모품)은 화면에 보여 주기 위한 내역으로만 씁니다.
+  //   둘이 어긋나면 검사가 잡습니다(rollup.profit === Σ rows.profit).
+  const cost = rows.reduce((a, r) => a + r.cost, 0)
   const profit = revenue - cost
   return {
     month,
     revenue,
     disposalCost,
     materialCost,
+    productCost,
+    productRevenue,
     cost,
     profit,
     margin: revenue > 0 ? profit / revenue : null,

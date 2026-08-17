@@ -129,13 +129,19 @@ export function monthClose(data: AppData, month: string): MonthClose {
     //  빠뜨린 것인지 원래 없는 것인지 알 수 없습니다.
     //  월정액만 있는 달은 수거·공급이 0건이어도 확정할 것이 있습니다.
     //  canConfirm 을 기준으로 봐야 「없다」와 「월정액만 있다」가 갈립니다.
-    const nothingLeft = st.pending.collections + st.pending.supplies === 0 && !st.canConfirm
+    //  ⚠ 소모품 주문을 여기 안 세면 「전달은 했는데 단가가 없어 0원」인
+    //  거래처가 「이 달에 완료된 수거·공급이 없습니다」로 뜹니다. 물건은
+    //  나갔는데 아무 일도 없었던 것처럼 읽혀 그대로 넘어가게 됩니다.
+    const left = st.pending.collections + st.pending.supplies + st.pending.productOrders
+    const nothingLeft = left === 0 && !st.canConfirm
     const reason =
       nothingLeft && st.billedAmount > 0
         ? `이미 확정했습니다 (${st.billedAmount.toLocaleString('ko-KR')}원)`
         : nothingLeft
-          ? '이 달에 완료된 수거·공급이 없습니다'
-          : '남은 수거·공급이 무상 항목뿐이라 청구 금액이 0원입니다'
+          ? '이 달에 완료된 수거·공급·소모품이 없습니다'
+          : st.pending.collections + st.pending.supplies === 0
+            ? '전달한 소모품에 단가가 없어 청구 금액이 0원입니다'
+            : '남은 수거·공급이 무상 항목뿐이라 청구 금액이 0원입니다'
 
     //  월정액 계약인데 그 달 수거가 한 건도 없는 경우
     //
