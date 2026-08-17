@@ -628,17 +628,21 @@ export function clientProfile(client: Client): ClientProfile {
   }
 }
 
-// ── 거래처 수거이력 (성상·용기·인계 포함, 파생) ──────────────────────────────
+// ── 거래처 수거이력 (실제로 기록된 값만) ────────────────────────────────────
 export interface HistoryRow {
   id: string
   date: string
   scheduledTime: string
   actualTime: string
   wasteType: WasteType
-  form: string
+  /**
+   * 용기 종류 — **실제로 기록된 것만.**
+   *  현장에서 용기별 수량을 안 적었으면 null 입니다.
+   */
   amountKg: number | null
-  containerType: string
-  containerCount: number
+  containerType: string | null
+  /** 용기 개수 — 기록이 없으면 null (0으로 두면 「0개 받았다」가 됩니다) */
+  containerCount: number | null
   driver: string
   vehicleName: string
   handoverTime: string
@@ -656,13 +660,27 @@ export function collectionHistory(data: AppData, clientId: string, limit = 10): 
       const v = data.vehicles.find((x) => x.id === s.vehicleId)
       const facility = facilityByWaste(s.wasteType)
       const done = s.status === '완료'
-      const seed = [...s.id].reduce((a, ch) => a + ch.charCodeAt(0), 0)
       const kind: HistoryRow['kind'] = s.status === '긴급' ? '긴급' : s.memo.includes('추가') ? '추가' : '정기'
-      const form = s.wasteType === '일회용기저귀' ? '고상(기저귀)' : ['위해성(고상)', '손상성', '병리계'][seed % 3]
-      // 저장된 용기별 배출 수량이 있으면 사용, 없으면 결정적 파생값
+
+      //  ⚠ 여기 있던 「성상」과 용기 기본값을 걷어냈습니다 (대표님 지적).
+      //
+      //   성상(위해성·손상성·병리계)은 일정 id 를 해시해 **셋 중 하나를 골라
+      //   찍고 있었습니다.** 시스템에 그 값을 넣는 자리가 아예 없는데 화면에는
+      //   확정된 사실처럼 떠 있었습니다. 의료폐기물 분류는 대장·인계에 쓰이는
+      //   법정 구분이라, 지어낸 값이 거기 섞이면 안 됩니다.
+      //   용기 종류·개수도 같은 방식이었습니다(개수는 2~9 사이 아무 값).
+      //
+      //   실제로 적힌 것만 보여 주고, 없으면 비웁니다.
       const c = s.containers
-      const containerType = s.wasteType === '일회용기저귀' ? '전용 봉투' : ['골판지 전용박스', '합성수지 전용용기'][seed % 2]
-      const containerCount = c ? c.corrugated + c.plastic + c.bag + c.etc : 2 + (seed % 8)
+      const parts: string[] = []
+      if (c) {
+        if (c.corrugated > 0) parts.push(`골판지 ${c.corrugated}`)
+        if (c.plastic > 0) parts.push(`합성수지 ${c.plastic}`)
+        if (c.bag > 0) parts.push(`봉투 ${c.bag}`)
+        if (c.etc > 0) parts.push(`기타 ${c.etc}`)
+      }
+      const containerCount = c ? c.corrugated + c.plastic + c.bag + c.etc : null
+      const containerType = parts.length > 0 ? parts.join(' · ') : null
       const handoverStatus = s.handoverStatus ?? (done ? '인계 완료' : null)
       return {
         id: s.id,
@@ -670,7 +688,6 @@ export function collectionHistory(data: AppData, clientId: string, limit = 10): 
         scheduledTime: s.scheduledTime,
         actualTime: s.actualTime ?? (done ? s.scheduledTime : '-'),
         wasteType: s.wasteType,
-        form,
         amountKg: s.actualAmount,
         containerType,
         containerCount,

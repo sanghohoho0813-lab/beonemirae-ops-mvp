@@ -15,6 +15,7 @@ import { EmptyState } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
 import { BookVisitModal } from '../components/BookVisit'
 import { MoveVisitModal } from '../components/MoveVisit'
+import { ScheduleCalendar } from '../components/ScheduleCalendar'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
@@ -431,6 +432,13 @@ export function TodaySchedule() {
           })}
         </Stagger>
       )}
+
+      {/*  달력 — 하루씩 화살표로 넘기지 않아도 한 달이 보입니다 (대표님 요청).
+           날짜를 누르면 위 목록이 그날로 바뀌고, 앞으로 올 날의 ＋ 로 그
+           자리에서 방문을 잡습니다. */}
+      <div className="mt-4">
+        <ScheduleCalendar selected={date} onPick={setDate} />
+      </div>
 
       {/* 병원 요청은 사무실 업무라, 좁은 화면에서는 일정 아래로 내립니다 */}
       {pendingRequests.length > 0 && (

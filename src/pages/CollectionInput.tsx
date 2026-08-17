@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Truck,
   ArrowRight,
+  CalendarPlus,
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
 import { checkAmount, checkItemCounts, itemCheckMessage } from '../lib/amountCheck'
@@ -20,6 +21,7 @@ import { NoteChips } from '../components/SiteNotes'
 import { SUPPLY_ITEMS, stockDeltaOf, itemsOf, type ItemCounts, type ItemKey } from '../lib/billing'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
+import { BookVisitModal } from '../components/BookVisit'
 import { QtyField } from '../components/ui'
 import { TimeField } from '../components/TimeField'
 import { schedulesOn } from '../lib/selectors'
@@ -106,6 +108,9 @@ export function CollectionInput() {
 
   const [scheduleId, setScheduleId] = useState<string>('') // '' = 직접 입력
   const [clientId, setClientId] = useState('')
+  //  방문 예약은 사무실·관리자만입니다 (서버도 같은 기준으로 막습니다).
+  const canBook = role === 'admin' || role === 'office' || !configured
+  const [bookOpen, setBookOpen] = useState(false)
   const [wasteType, setWasteType] = useState<WasteType>('의료폐기물')
   const [vehicleId, setVehicleId] = useState('')
   const [driverName, setDriverName] = useState('')
@@ -895,6 +900,37 @@ export function CollectionInput() {
             취소 시 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
           </p>
         </div>
+      )}
+
+      {/*  ── 다음 방문 예약 (대표님 요청) ────────────────────────────────────
+           위쪽은 **오늘 다녀온 것을 적는 자리**입니다. 여기는 **앞으로 갈 날을
+           잡는 자리**라 분명히 갈라 둡니다 — 섞이면 「입력했는데 왜 실적에
+           안 잡히나」 / 「예약했는데 왜 수거가 됐나」가 생깁니다.
+
+           수거를 넣다가 병원이 「다음엔 언제 오세요?」 물었을 때 화면을
+           나가지 않고 그 자리에서 날짜를 잡습니다. 고른 거래처가 있으면
+           그 병원으로 열립니다. */}
+      {canBook && (
+        <section data-book-section className="mt-6 card p-4 sm:p-5">
+          <p className="t-card text-navy-900">다음 방문 예약</p>
+          <p className="t-muted mt-1 break-keep text-navy-500">
+            병원에서 받은 날짜를 그대로 넣으시면 그날 일정에 뜹니다.{' '}
+            <b className="text-navy-600">위 수거 입력과는 별개입니다</b> — 여기서 잡은 것은 실적에 안 잡히고,
+            현장에서 완료를 눌러야 실적이 됩니다.
+          </p>
+          <button
+            data-book-open
+            onClick={() => setBookOpen(true)}
+            className="btn-ghost mt-3 w-full sm:w-auto sm:px-6"
+          >
+            <CalendarPlus size={17} strokeWidth={2.4} />
+            {client ? `${client.name} 방문 잡기` : '날짜 정해 방문 잡기'}
+          </button>
+        </section>
+      )}
+
+      {canBook && (
+        <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} client={client} />
       )}
 
       <p className="mt-6 text-center text-[0.98rem] text-navy-300">{prettyDate(today())} 기준</p>

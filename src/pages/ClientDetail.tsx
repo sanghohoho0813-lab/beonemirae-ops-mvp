@@ -691,7 +691,7 @@ export function ClientDetail() {
             <table className="w-full border-collapse text-left text-[0.98rem]">
               <thead>
                 <tr className="bg-navy-50 text-navy-500">
-                  {['날짜', '구분', '성상', '수거량', '용기', '기사', '차량', '인계', '유형', '대장'].map((h) => (
+                  {['날짜', '구분', '수거량', '용기', '기사', '차량', '인계', '유형', '대장'].map((h) => (
                     <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
                   ))}
                 </tr>
@@ -701,9 +701,10 @@ export function ClientDetail() {
                   <tr key={r.id} className="border-t border-navy-100 text-navy-700">
                     <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.date.slice(5)} {r.scheduledTime}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.wasteType === '의료폐기물' ? '의료' : '기저귀'}</td>
-                    <td className="whitespace-nowrap px-2.5 py-2">{r.form}</td>
                     <td className="whitespace-nowrap px-2.5 py-2 font-bold">{r.amountKg != null ? `${r.amountKg}kg` : '-'}</td>
-                    <td className="whitespace-nowrap px-2.5 py-2">{r.containerType} {r.containerCount}</td>
+                    {/*  용기는 현장에서 적은 것만 보여 줍니다 — 안 적었으면
+                         비웁니다. 기본값을 채우면 「이만큼 받았다」가 됩니다. */}
+                    <td className="whitespace-nowrap px-2.5 py-2">{r.containerType ?? '-'}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.driver}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.vehicleName}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">
@@ -714,7 +715,7 @@ export function ClientDetail() {
                   </tr>
                 ))}
                 {history.length === 0 && (
-                  <tr><td colSpan={10} className="px-3 py-4 text-center text-navy-400">수거 이력이 없습니다.</td></tr>
+                  <tr><td colSpan={9} className="px-3 py-4 text-center text-navy-400">수거 이력이 없습니다.</td></tr>
                 )}
               </tbody>
             </table>
