@@ -38,7 +38,14 @@ export function PortalReport() {
   return (
     <PageShell>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="min-w-0 flex-1">
+        {/*  ⚠ 폰에서 제목이 **세로로 한 글자씩** 늘어져 있었습니다 (71px 폭 ·
+             165px 높이). 옆의 달 고르기(버튼 셋 + 달 이름)가 `shrink-0` 이라
+             자리를 다 가져가고, 제목은 `flex-1 min-w-0` 이라 줄바꿈 대신
+             **끝까지 줄어들었습니다.** flex-wrap 이 있어도 제목이 0 까지
+             줄어들 수 있으면 줄이 안 넘어갑니다.
+             폰에서는 제목이 한 줄을 통째로 쓰고(basis-full), 넓은 화면은
+             지금까지처럼 나눠 씁니다. */}
+        <div className="min-w-0 flex-1 basis-full sm:basis-0">
           <h1 className="t-page break-keep text-navy-900">월간 운영 리포트</h1>
           <p className="t-body mt-2.5 break-keep font-medium text-navy-400">
             {client.name} · 수거·배출량·용기 공급 내역

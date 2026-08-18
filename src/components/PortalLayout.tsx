@@ -46,9 +46,14 @@ export function PortalLayout() {
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white sm:h-12 sm:w-12 sm:text-[1.3rem]">
               비
             </div>
-            {/* 좁은 화면에서는 병원 이름 한 줄만 — 헤더가 길어지면 정작 눌러야 할 버튼이 아래로 밀립니다 */}
+            {/*  ⚠ 한 줄로 자르면 「의료법인 한…」만 남습니다. 정작 어느 병원인지는
+                 **뒤쪽**에 있습니다 — 「의료법인 한마음의료재단 **한마음요양병원**」.
+                 병원 담당자가 자기 병원 이름을 못 알아보는 화면이 됩니다.
+                 그렇다고 「의료법인」 같은 앞머리를 임의로 떼지 않습니다 —
+                 등록된 이름을 저희가 줄여 부를 일이 아닙니다.
+                 두 줄까지 허용합니다. 헤더는 한 줄(약 20px)만 길어집니다. */}
             <div className="min-w-0 leading-tight">
-              <p className="t-card truncate text-white sm:break-keep">{clientName || '우리 병원'}</p>
+              <p className="t-card line-clamp-2 break-keep text-white">{clientName || '우리 병원'}</p>
               <p className="t-muted mt-1 hidden break-keep text-navy-300 sm:block">㈜비원미래 병원 운영지원 서비스</p>
             </div>
           </div>
