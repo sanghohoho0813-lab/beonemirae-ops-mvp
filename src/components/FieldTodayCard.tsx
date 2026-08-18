@@ -24,7 +24,10 @@ export function FieldTodayCard() {
   if (role === 'field' || role === 'client') return null
 
   const day = fieldDay(data)
-  if (day.inputs.length === 0) return null
+  //  ⚠ 예전에는 들어온 것이 하나도 없으면 아무것도 안 그렸습니다. 그런데
+  //    이사님이 이 화면을 여는 이유의 절반은 **「아직 안 들어온 곳」**입니다.
+  //    둘 다 없을 때만 조용합니다.
+  if (day.inputs.length === 0 && day.pending.length === 0) return null
 
   const FIRST = 5
   const shown = day.inputs.slice(0, FIRST)
@@ -38,10 +41,16 @@ export function FieldTodayCard() {
         </span>
         <div className="min-w-0 flex-1">
           <p data-field-today-headline className="break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">
-            오늘 현장에서 {day.inputs.length}건 들어왔습니다
+            {day.inputs.length > 0
+              ? `오늘 현장에서 ${day.inputs.length}건 들어왔습니다`
+              : '오늘 현장 입력이 아직 없습니다'}
           </p>
+          {/*  들어온 것이 없으면 「0곳 · 0kg」을 적지 않습니다 — 숫자만
+               읽고 「오늘 아무 일도 없었다」로 오해할 수 있습니다. */}
           <p className="t-caption mt-0.5 break-keep text-navy-500">
-            {day.clients}곳 · 모두 {day.totalKg.toLocaleString('ko-KR')}kg
+            {day.inputs.length > 0
+              ? `${day.clients}곳 · 모두 ${day.totalKg.toLocaleString('ko-KR')}kg`
+              : '예정은 아래에 있습니다'}
             {day.adHoc > 0 && ` · 예정에 없던 수거 ${day.adHoc}건`}
           </p>
         </div>
@@ -69,6 +78,34 @@ export function FieldTodayCard() {
             {/*  이름이 안 적혀 있으면 지어내지 않고 그 자리를 비웁니다. */}
             {i.who && <span className="t-caption shrink-0 text-navy-500">{i.who}</span>}
             {i.adHoc && <span className="pill shrink-0 bg-amber-100 text-amber-700">예정 외</span>}
+
+            {/*  ⚠ 이사님이 카카오톡 사진을 다시 여는 이유가 **용기 개수와
+                 공급 자재**입니다. 수거량만 있으면 이 화면으로 사진을
+                 대신할 수 없습니다. 안 적힌 것은 0 으로 채우지 않고 비웁니다 —
+                 「안 적었다」와 「0개였다」는 다른 말입니다. */}
+            <span className="w-full min-w-0 basis-full">
+              {i.containerLine ? (
+                <span data-field-containers={i.clientId} className="t-caption break-keep text-navy-600">
+                  용기 {i.containerLine}
+                  {i.containerTotal != null && ` (${i.containerTotal}개)`}
+                </span>
+              ) : (
+                <span data-field-nocontainer={i.clientId} className="t-caption break-keep text-navy-300">
+                  용기 미기재
+                </span>
+              )}
+              {i.supplyLine && (
+                <span data-field-supply={i.clientId} className="t-caption break-keep text-teal-700">
+                  {' · 자재 '}
+                  {i.supplyLine}
+                </span>
+              )}
+            </span>
+            {i.memo && (
+              <span data-field-memo={i.clientId} className="w-full basis-full break-keep text-[0.98rem] leading-snug text-navy-500">
+                {i.memo}
+              </span>
+            )}
           </li>
         ))}
       </ul>
@@ -82,6 +119,35 @@ export function FieldTodayCard() {
           나머지 {rest}건 보기
           <ArrowRight size={13} strokeWidth={2.6} />
         </Link>
+      )}
+
+      {/*  아직 안 들어온 곳 (F4).
+           ⚠ **「누락」이라고 쓰지 않습니다.** 일정이 바뀌었을 수도, 병원이
+             쉬었을 수도, 내일 처리하기로 했을 수도 있습니다. 시스템은 그
+             이유를 모릅니다 — 「아직 입력이 없다」는 사실만 적습니다. */}
+      {day.pending.length > 0 && (
+        <div data-field-pending className="mt-3 rounded-2xl bg-amber-50/70 px-3.5 py-3">
+          <p data-field-pending-headline className="break-keep text-[1.05rem] font-extrabold text-navy-900">
+            아직 입력이 없는 곳 {day.pending.length}곳
+          </p>
+          <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+            {day.pending.slice(0, 8).map((v) => (
+              <li key={v.scheduleId} data-field-pending-row={v.clientId} className="flex items-center gap-1.5">
+                {v.atTime && <span className="t-caption tabular-nums text-navy-400">{v.atTime}</span>}
+                <Link
+                  to={`/clients/${v.clientId}`}
+                  className="break-keep text-[1.02rem] font-bold text-navy-800 underline-offset-4 hover:underline"
+                >
+                  {v.clientName}
+                </Link>
+                {v.who && <span className="t-caption text-navy-400">{v.who}</span>}
+              </li>
+            ))}
+          </ul>
+          <p className="t-caption mt-1.5 break-keep leading-snug text-navy-500">
+            일정이 바뀌었거나 병원이 쉬었을 수도 있습니다. 「안 했다」가 아니라 <b>아직 입력이 없다</b>는 뜻입니다.
+          </p>
+        </div>
       )}
 
       {day.noName > 0 && (

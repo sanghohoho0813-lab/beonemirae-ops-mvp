@@ -1,5 +1,6 @@
 import type { AppData, Schedule, WasteType } from '../types'
 import { today } from './format'
+import { isLive } from './scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 현장에서 들어온 입력
@@ -52,9 +53,43 @@ export interface FieldInput {
    *  화면에 딱지를 안 붙입니다.
    */
   adHoc: boolean
+  /**
+   * 배출 용기 — 「골판지 3 · 합성수지 2」처럼 읽을 수 있게 만든 줄.
+   *
+   *  ⚠ 이사님이 카카오톡 사진을 다시 여는 이유가 **이것**입니다. 수거량만
+   *    보여 주면 이 화면으로 사진을 대신할 수 없습니다.
+   *  ⚠ 적혀 있지 않으면 빈 문자열입니다 — **0 으로 채우지 않습니다.**
+   *    「안 적었다」와 「0개였다」는 다른 말입니다.
+   */
+  containerLine: string
+  /** 배출 용기 합계 (개). 적혀 있지 않으면 null */
+  containerTotal: number | null
+  /** 이 방문에서 건넨 자재 — 「63L 박스 10 · 20L 용기 3」. 없으면 빈 문자열 */
+  supplyLine: string
+  /** 특이사항 — 기사님이 적은 메모. 없으면 빈 문자열 */
+  memo: string
 }
 
-function toInput(s: Schedule, clientName: string, adHoc: boolean): FieldInput {
+/** 「골판지 3 · 합성수지 2」 — 0 인 칸은 빼고 이어 붙입니다 */
+function containerText(c: Schedule['containers']): { line: string; total: number | null } {
+  if (!c) return { line: '', total: null }
+  const parts: string[] = []
+  let total = 0
+  const push = (label: string, n: number | undefined) => {
+    if (!n) return
+    parts.push(`${label} ${n}`)
+    total += n
+  }
+  push('골판지', c.corrugated)
+  push('합성수지', c.plastic)
+  push('봉투', c.bag)
+  push('기타', c.etc)
+  //  하나도 안 적혀 있으면 「없다」가 아니라 「모른다」입니다.
+  return parts.length === 0 ? { line: '', total: null } : { line: parts.join(' · '), total }
+}
+
+function toInput(s: Schedule, clientName: string, adHoc: boolean, supplyLine = ''): FieldInput {
+  const c = containerText(s.containers)
   return {
     scheduleId: s.id,
     clientId: s.clientId,
@@ -67,6 +102,10 @@ function toInput(s: Schedule, clientName: string, adHoc: boolean): FieldInput {
     //  ⚠ 차량 기본 기사로 채우지 않습니다 — 실제로 간 사람과 다를 수 있습니다.
     who: (s.driverName ?? '').trim(),
     adHoc,
+    containerLine: c.line,
+    containerTotal: c.total,
+    supplyLine,
+    memo: (s.memo ?? '').trim(),
   }
 }
 
@@ -105,15 +144,77 @@ export function fieldInputsOn(data: AppData, date: string = today()): FieldInput
   const name = new Map((data.clients ?? []).map((c) => [c.id, c.name]))
   const retired = new Map((data.retiredClients ?? []).map((c) => [c.id, c.name]))
   const adHoc = adHocIds(data)
+  //  그날 그 거래처에 건넨 자재 — 이사님이 카톡 사진에서 확인하던 바로 그것.
+  const supply = new Map<string, string>()
+  for (const m of data.materials ?? []) {
+    if (m.date !== date) continue
+    const parts: string[] = []
+    if (m.boxCount > 0) parts.push(`박스 ${m.boxCount}`)
+    if (m.vinylCount > 0) parts.push(`비닐 ${m.vinylCount}`)
+    if (m.needleBoxCount > 0) parts.push(`바늘통 ${m.needleBoxCount}`)
+    if (parts.length === 0) continue
+    const before = supply.get(m.clientId)
+    supply.set(m.clientId, before ? `${before} · ${parts.join(' · ')}` : parts.join(' · '))
+  }
   return (data.schedules ?? [])
     .filter((s) => completed(s) && s.date === date)
-    .map((s) => toInput(s, name.get(s.clientId) ?? retired.get(s.clientId) ?? '알 수 없는 거래처', adHoc.has(s.id)))
+    .map((s) =>
+      toInput(
+        s,
+        name.get(s.clientId) ?? retired.get(s.clientId) ?? '알 수 없는 거래처',
+        adHoc.has(s.id),
+        supply.get(s.clientId) ?? '',
+      ),
+    )
     .sort((a, b) => b.savedAt.localeCompare(a.savedAt) || b.atTime.localeCompare(a.atTime))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 아직 안 들어온 것 (F4)
+//
+//  이사님이 저녁이나 새벽에 「누가 아직 안 보냈나」를 기다리는 구조를 줄입니다.
+//
+//  ⚠ **「업무 누락」이라고 단정하지 않습니다.** 일정이 바뀌었을 수도, 병원이
+//    쉬었을 수도, 다음 날 처리하기로 했을 수도 있습니다. 시스템은 그 이유를
+//    모릅니다. 그래서 **「아직 입력이 없다」**는 사실만 적습니다.
+//  ⚠ 무른 방문(0059)은 세지 않습니다 — 안 가기로 한 것입니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PendingVisit {
+  scheduleId: string
+  clientId: string
+  clientName: string
+  wasteType: WasteType
+  /** 예정 시각 HH:mm — 안 정해졌으면 빈 문자열 */
+  atTime: string
+  /** 기사님이 정해져 있으면 이름 (없으면 빈 문자열) */
+  who: string
+}
+
+/** 그날 예정인데 **아직 입력이 없는** 방문 */
+export function pendingVisitsOn(data: AppData, date: string = today()): PendingVisit[] {
+  const name = new Map((data.clients ?? []).map((c) => [c.id, c.name]))
+  return (data.schedules ?? [])
+    .filter((s) => s.date === date && !completed(s) && isLive(s))
+    .map((s) => ({
+      scheduleId: s.id,
+      clientId: s.clientId,
+      clientName: name.get(s.clientId) ?? '알 수 없는 거래처',
+      wasteType: s.wasteType,
+      atTime: s.scheduledTime ?? '',
+      who: (s.driverName ?? '').trim(),
+    }))
+    .sort((a, b) => a.atTime.localeCompare(b.atTime) || a.clientName.localeCompare(b.clientName, 'ko'))
 }
 
 export interface FieldDaySummary {
   date: string
   inputs: FieldInput[]
+  /**
+   * 그날 예정인데 아직 입력이 없는 방문.
+   *  ⚠ 「누락」이 아닙니다 — 이유를 시스템이 모릅니다. 사실만 적습니다.
+   */
+  pending: PendingVisit[]
   /** 몇 곳 (같은 거래처를 두 번 갔으면 한 곳) */
   clients: number
   /** 모두 몇 kg */
@@ -133,6 +234,7 @@ export function fieldDay(data: AppData, date: string = today()): FieldDaySummary
     totalKg: inputs.reduce((s, i) => s + i.amountKg, 0),
     adHoc: inputs.filter((i) => i.adHoc).length,
     noName: inputs.filter((i) => !i.who).length,
+    pending: pendingVisitsOn(data, date),
   }
 }
 
