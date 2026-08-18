@@ -25,6 +25,7 @@ import { Modal } from '../components/Modal'
 import { BookVisitModal } from '../components/BookVisit'
 import { QtyField } from '../components/ui'
 import { TimeField } from '../components/TimeField'
+import { WasteBadge } from '../components/Badge'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import {
@@ -108,6 +109,8 @@ export function CollectionInput() {
   )
 
   const [scheduleId, setScheduleId] = useState<string>('') // '' = 직접 입력
+  //  일정을 고른 뒤 ①② 를 다시 펼쳤는지 — 「다른 일정 고르기」를 누르면 켜집니다.
+  const [pickOpen, setPickOpen] = useState(false)
   const [clientId, setClientId] = useState('')
   //  방문 예약은 사무실·관리자만입니다 (서버도 같은 기준으로 막습니다).
   const canBook = role === 'admin' || role === 'office' || !configured
@@ -137,6 +140,8 @@ export function CollectionInput() {
   )
 
   const client = data.clients.find((c) => c.id === clientId)
+  //  지금 고른 예정 일정 — 「지금 이 병원」 카드가 이 값을 씁니다.
+  const picked = scheduleId ? todayPending.find((s) => s.id === scheduleId) ?? null : null
   const vehicles = useMemo(() => data.vehicles.filter((v) => v.wasteType === wasteType), [data.vehicles, wasteType])
 
   // ── 내 차량 (0056) ─────────────────────────────────────────────────────────
@@ -460,7 +465,53 @@ export function CollectionInput() {
       {/* PC 는 좌(입력 대상·수거량) / 우(현장 정보·저장) 2열, 모바일은 1열로 자연스럽게 내려감 */}
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
         <div className="min-w-0 space-y-4">
+        {/*
+          ── 일정에서 들어왔으면 ①② 를 접습니다 ─────────────────────────────
+          기사님이 「오늘 일정」에서 병원을 눌러 들어오면 **어느 병원인지·무슨
+          폐기물인지는 이미 정해져 있습니다.** 그런데도 두 단계가 그대로 펼쳐져
+          있어, 폰에서 수거량 칸까지 두 화면을 밀어야 했습니다(전체 4화면).
+          정해진 것은 한 줄로 보여 주고, 바꿔야 할 때만 펼칩니다.
+          직접 입력(일정 없이)일 때는 예전 그대로입니다 — 고를 것이 있으니까요.
+        */}
+        {picked && !pickOpen ? (
+          <section data-collect-here className="card p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="pill bg-teal-50 text-teal-700">지금 이 병원</span>
+              {client && <WasteBadge type={wasteType} />}
+              <span className="t-caption text-navy-400">{picked.scheduledTime || '시간 미정'}</span>
+            </div>
+            <p data-collect-here-name className="mt-1.5 break-keep text-[1.32rem] font-extrabold leading-snug text-navy-900">
+              {client?.name ?? '거래처'}
+            </p>
+            {client?.address && (
+              <p className="t-body mt-1 break-keep leading-snug text-navy-500">{client.address}</p>
+            )}
+            {(client?.manager || client?.phone) && (
+              <p className="t-body mt-0.5 break-keep text-navy-500">
+                {client?.manager}
+                {client?.phone && (
+                  <>
+                    {' · '}
+                    {/*  현장에서 바로 걸 수 있어야 합니다 — 번호를 옮겨 적지 않게. */}
+                    <a href={`tel:${client.phone}`} className="font-bold text-teal-700 underline-offset-2 hover:underline">
+                      {client.phone}
+                    </a>
+                  </>
+                )}
+              </p>
+            )}
+            <button
+              data-collect-repick
+              onClick={() => setPickOpen(true)}
+              className="-mx-2 mt-1 flex min-h-[2.75rem] items-center gap-1 px-2 text-[1.02rem] font-bold text-navy-400"
+            >
+              다른 일정 고르기
+            </button>
+          </section>
+        ) : null}
+
         {/* 1. 오늘 일정 선택 */}
+        <div className={picked && !pickOpen ? 'hidden' : 'space-y-4'}>
         <Section n={1} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
           <div className="flex flex-wrap gap-2">
             <button
@@ -549,6 +600,7 @@ export function CollectionInput() {
             )}
           </div>
         </Section>
+        </div>
 
         {/* 3. 실제 수거 시간 · 수거량 */}
         <Section n={3} title="실제 수거 시간 · 수거량" tour="collect-form">
