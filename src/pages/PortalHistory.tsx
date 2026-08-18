@@ -54,7 +54,10 @@ export function PortalHistory() {
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                 <b className="t-body break-keep text-navy-900">{prettyDate(r.date)}</b>
                 <span className="t-muted text-navy-500">{r.wasteType}</span>
-                <span className={`pill ml-auto shrink-0 ${r.handedOver ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
+                <span
+                  data-portal-hist-handover={r.id}
+                  className={`pill ml-auto shrink-0 ${r.handedOver ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}
+                >
                   {r.handedOver ? '인계 완료' : (r.handoverStatus ?? '처리 중')}
                 </span>
               </div>
