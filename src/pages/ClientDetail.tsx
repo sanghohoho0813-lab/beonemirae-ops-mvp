@@ -106,7 +106,12 @@ const SHOW_INSPECTION = false
 const TABS = [
   { id: 'ops', label: '운영조건', money: false },
   { id: 'settlement', label: '월 정산·명세서', money: true },
-  { id: 'report', label: '월간 리포트', money: false },
+  //  ⚠ 0063 부터 월 실적(매출·원가·이익)은 **서버가** 현장에 안 줍니다.
+  //    kg 도 같은 표에 있어 함께 막힙니다. 탭을 열어 두면 현장에서는
+  //    빈 표가 뜨는데, 그건 「기록이 없다」로 읽혀 더 나쁩니다.
+  //    이 리포트는 사무실이 병원에 드리는 자료라 원래 사무실 일입니다
+  //    (/reports 도 이미 사무실·관리자 전용입니다).
+  { id: 'report', label: '월간 리포트', money: true },
   { id: 'notes', label: '현장 메모', money: false },
   { id: 'history', label: '수거이력', money: false },
   { id: 'materials', label: '자재관리', money: false },

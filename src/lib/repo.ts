@@ -99,6 +99,75 @@ async function pageAll(
   }
 }
 
+/**
+ * 거래처에서 **읽을 수 있는 칸** (0063).
+ *
+ *  ⚠ 예전에는 `select('*')` 였습니다. 그런데 별표는 단가·월정액·결제조건·
+ *    세금계산서 정보까지 통째로 훑습니다. 0063 부터 서버가 그 칸들을
+ *    authenticated 에게서 **열 단위로** 회수했기 때문에, 별표를 그대로 두면
+ *    **모든 역할에서** 「permission denied」가 납니다.
+ *
+ *  ⚠ 여기에 새 칸을 더하는 것을 잊으면 그 칸이 조용히 안 읽힙니다.
+ *    그래서 서버의 `app_health_check()` 가 **이 목록과 같은 칸이 열려 있는지**
+ *    함께 봅니다 — 한쪽만 고치면 자가진단이 알려 줍니다.
+ */
+const CLIENT_COLS = [
+  'id', 'name', 'type', 'address', 'manager', 'phone',
+  'collection_cycle', 'collects_medical_waste', 'collects_diaper', 'storage_size', 'note',
+  'is_demo_generated', 'demo_session_id', 'active',
+  'created_at', 'updated_at', 'created_by', 'updated_by',
+  'contract_start', 'contract_end',
+  'collect_time', 'disposal_site', 'diaper_cycle',
+  'name_key', 'request_id', 'education_at',
+].join(', ')
+
+/**
+ * 거래처의 돈 칸 — 사무실·관리자만 (0063).
+ *
+ *  ⚠ 이 값이 안 붙으면 **청구가 틀립니다.** 단가판(client_prices)이 없는
+ *    거래처는 지금도 `clients.pricing` 을 그대로 씁니다(billing.ts). 서버는
+ *    현장에 빈 배열을 돌려주므로, 현장 화면에서는 이 칸들이 비어 있는 것이
+ *    맞습니다 — 현장은 금액을 계산하지 않습니다.
+ */
+interface BillingTerm {
+  id: string
+  paymentTerms?: string | null
+  paymentDueDay?: number | null
+  monthlyFlatFee?: number | null
+  pricing?: Client['pricing'] | null
+  bizNo?: string | null
+  bizCeo?: string | null
+  bizType?: string | null
+  bizItem?: string | null
+  taxEmail?: string | null
+  vatMode?: Client['vatMode'] | null
+  flatFeeWhenEmpty?: boolean | null
+  flatFeePolicyAt?: string | null
+}
+
+function applyTerms(list: Client[], terms: BillingTerm[]): Client[] {
+  if (terms.length === 0) return list
+  const by = new Map(terms.map((t) => [t.id, t]))
+  return list.map((c) => {
+    const t = by.get(c.id)
+    if (!t) return c
+    return {
+      ...c,
+      paymentTerms: t.paymentTerms ?? '',
+      paymentDueDay: t.paymentDueDay ?? null,
+      monthlyFlatFee: t.monthlyFlatFee ?? null,
+      pricing: t.pricing ?? undefined,
+      bizNo: t.bizNo ?? '',
+      bizCeo: t.bizCeo ?? '',
+      bizType: t.bizType ?? '',
+      bizItem: t.bizItem ?? '',
+      taxEmail: t.taxEmail ?? '',
+      vatMode: t.vatMode ?? null,
+      flatFeeWhenEmpty: t.flatFeeWhenEmpty ?? false,
+    }
+  })
+}
+
 // ── 행 → 도메인 매핑 ─────────────────────────────────────────────────────────
 const toClient = (r: Row): Client => ({
   id: r.id,
@@ -332,7 +401,7 @@ export async function loadAppData(): Promise<AppData> {
   const [clients, vehicles, schedules, materials, notes, events, stock, overrides, requests] = await Promise.all([
     // 그만둔 거래처까지 함께 읽습니다. 목록에는 활성만 넣고, 비활성은
     // 청구·수거 기록의 이름을 되찾는 데만 씁니다(아래 retiredClients).
-    withRetry(async () => pageAll((f, t) => sb.from('clients').select('*').order('id').range(f, t))),
+    withRetry(async () => pageAll((f, t) => sb.from('clients').select(CLIENT_COLS).order('id').range(f, t))),
     //  사용 중지한 차량도 함께 읽습니다. 예전에는 여기서 active=true 로 걸러
     //  버려서, 실수로 「사용 중지」를 누르면 앱 어디에서도 다시 꺼낼 수
     //  없었습니다(SQL 을 직접 쓰는 수밖에). 아래에서 갈라 담습니다.
@@ -457,6 +526,22 @@ export async function loadAppData(): Promise<AppData> {
     '사전 등록 명단',
   )
 
+  //  거래처의 돈 칸 (0063). 서버가 clients 에서 **열 단위로** 회수했기 때문에
+  //  사무실·관리자는 여기로 받습니다. 현장에는 빈 배열이 옵니다.
+  //
+  //  ⚠ 0063 을 아직 안 올린 서버에는 이 함수가 없습니다. 그때는 `clients` 에
+  //    돈 칸이 아직 열려 있어 위에서 이미 읽힙니다 — soft 로 조용히 넘어가고
+  //    화면은 지금까지처럼 돕니다.
+  const billingTerms = await soft(
+    async () => {
+      const { data, error } = await sb.rpc('client_billing_terms')
+      if (error) throw new Error(error.message)
+      return (data ?? []) as BillingTerm[]
+    },
+    [] as BillingTerm[],
+    '거래처 단가·결제조건',
+  )
+
   //  거래처 단가의 판 (0036). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 지금 단가를 씁니다.
   const clientPrices = await soft(
@@ -502,8 +587,9 @@ export async function loadAppData(): Promise<AppData> {
   )
 
   return {
-    clients: clients.filter((c) => c.active).map(toClient),
-    retiredClients: clients.filter((c) => !c.active).map(toClient),
+    //  돈 칸은 별도 통로로 받아 붙입니다 (0063). 현장에는 안 붙습니다.
+    clients: applyTerms(clients.filter((c) => c.active).map(toClient), billingTerms),
+    retiredClients: applyTerms(clients.filter((c) => !c.active).map(toClient), billingTerms),
     vehicles: vehicles.filter((v) => v.active).map(toVehicle),
     retiredVehicles: vehicles.filter((v) => !v.active).map(toVehicle),
     receipts: receipts.map(
@@ -967,25 +1053,25 @@ export async function productSales(from: string, to: string): Promise<ProductSal
 /** 등록 직후 화면이 쓰는 거래처 한 줄 */
 export async function clientById(id: string): Promise<Client | null> {
   const sb = need()
-  const row = unwrapOne(await sb.from('clients').select('*').eq('id', id).maybeSingle())
+  const row = unwrapOne(await sb.from('clients').select(CLIENT_COLS).eq('id', id).maybeSingle())
   return row ? toClient(row) : null
 }
 
 export async function updateClient(id: string, patch: Partial<Client>): Promise<void> {
   const sb = need()
-  unwrap(await sb.from('clients').update(clean(clientRow(patch))).eq('id', id).select())
+  unwrap(await sb.from('clients').update(clean(clientRow(patch))).eq('id', id).select('id'))
 }
 
 /** hard delete 대신 비활성화 — 과거 수거 이력이 끊기지 않게 합니다. */
 export async function deactivateClient(id: string): Promise<void> {
   const sb = need()
-  unwrap(await sb.from('clients').update({ active: false }).eq('id', id).select())
+  unwrap(await sb.from('clients').update({ active: false }).eq('id', id).select('id'))
 }
 
 /** 거래 종료를 되돌립니다 — 잘못 누른 것을 SQL 없이 되살릴 수 있어야 합니다. */
 export async function reactivateClient(id: string): Promise<void> {
   const sb = need()
-  unwrap(await sb.from('clients').update({ active: true }).eq('id', id).select())
+  unwrap(await sb.from('clients').update({ active: true }).eq('id', id).select('id'))
 }
 
 // ── 차량 ─────────────────────────────────────────────────────────────────────
@@ -2196,7 +2282,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 62
+export const EXPECTED_SCHEMA_VERSION = 63
 
 /**
  * 서버 DB 의 스키마 버전.
