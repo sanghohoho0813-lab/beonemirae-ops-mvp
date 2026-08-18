@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 import { FilterChip } from '../components/ui'
 import { facilityByWaste } from '../data/ops'
@@ -21,8 +22,14 @@ type PeriodFilter = '전체' | '최근 7일' | '이번 달'
 const shift = shiftDays
 
 export function CollectionHistory() {
-  const { data, clientById } = useData()
+  const { data, clientById, revertCollection } = useData()
+  const { role, mode } = useAuth()
   const navigate = useNavigate()
+  //  ⚠ 잘못 올라간 기록을 지우는 것은 **돈이 바뀌는 일**입니다 —
+  //    그 달 정산·청구·매출이 같이 바뀝니다. 사무실·관리자만 합니다.
+  const canRevert = mode !== 'live' || role === 'admin' || role === 'office'
+  const [busy, setBusy] = useState('')
+  const [error, setError] = useState('')
   const [waste, setWaste] = useState<WasteFilter>('전체')
   const [kind, setKind] = useState<KindFilter>('전체')
   const [period, setPeriod] = useState<PeriodFilter>('전체')
@@ -44,6 +51,9 @@ export function CollectionHistory() {
         const k: KindFilter = s.status === '긴급' ? '긴급' : s.memo.includes('추가') ? '추가' : '정기'
         return {
           id: s.id,
+          //  되돌리기는 **수거 기록(event)** 단위입니다. 일정에 event 가
+          //  안 붙어 있으면(엑셀로 들어온 옛 기록) 되돌릴 수 없습니다.
+          eventId: s.eventId ?? null,
           date: s.date,
           time: s.actualTime ?? s.scheduledTime,
           clientName: client?.name ?? '거래처',
@@ -129,7 +139,7 @@ export function CollectionHistory() {
         <table className="w-full border-collapse text-left text-[0.98rem]">
           <thead>
             <tr className="bg-navy-50 text-navy-500">
-              {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고'].map((h) => (
+              {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고', ...(canRevert ? ['정정'] : [])].map((h) => (
                 <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
               ))}
             </tr>
@@ -150,10 +160,45 @@ export function CollectionHistory() {
                 <td className="whitespace-nowrap px-2.5 py-2">{r.facility}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.handoverStatus ?? '예정'}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.note}</td>
+                {canRevert && (
+                  <td className="whitespace-nowrap px-2.5 py-2">
+                    {r.completed && r.eventId ? (
+                      <button
+                        data-history-revert={r.id}
+                        disabled={busy === r.eventId}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              `${r.date} ${r.clientName} 수거 기록을 되돌릴까요?\n\n` +
+                                '이 수거로 빠졌던 재고와 처리했던 요청이 함께 되돌아갑니다.\n' +
+                                '그 달 정산·청구 금액도 같이 바뀝니다. 확정한 청구가 있으면 서버가 막습니다.',
+                            )
+                          ) {
+                            return
+                          }
+                          setBusy(r.eventId!)
+                          setError('')
+                          void revertCollection(r.eventId!).then((res) => {
+                            setBusy('')
+                            if (!res.ok) setError(res.errors.join(' ') || '되돌리지 못했습니다.')
+                          })
+                        }}
+                        className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-rose-500 transition hover:bg-rose-50 disabled:opacity-40"
+                      >
+                        <Undo2 size={14} strokeWidth={2.5} /> 되돌리기
+                      </button>
+                    ) : (
+                      //  왜 못 지우는지 적습니다 — 빈 칸이면 고장으로 보입니다.
+                      <span className="text-[0.95rem] text-navy-300">
+                        {r.completed ? '엑셀 기록' : '아직 미완료'}
+                      </span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="px-3 py-4 text-center text-navy-400">
+              <tr><td colSpan={canRevert ? 11 : 10} className="px-3 py-4 text-center text-navy-400">
                 {data.schedules.length === 0
                   ? '아직 수거 기록이 없습니다. 첫 수거를 입력하면 여기에 쌓입니다.'
                   : '조건에 맞는 이력이 없습니다.'}
@@ -162,6 +207,11 @@ export function CollectionHistory() {
           </tbody>
         </table>
       </div>
+      {error && (
+        <p data-history-error className="mt-2 break-keep rounded-2xl bg-rose-50 px-4 py-3 text-[1.05rem] font-bold text-rose-600">
+          {error}
+        </p>
+      )}
       {rows.length > 60 && <p className="mt-2 px-1 text-[0.98rem] text-navy-400">최근 60건까지 표시합니다.</p>}
     </div>
   )

@@ -1,6 +1,8 @@
-import { FileSpreadsheet } from 'lucide-react'
+import { useState } from 'react'
+import { FileSpreadsheet, Pencil } from 'lucide-react'
 import type { ClientMonthlyActual } from '../types'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
 import { won, weight } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,7 +39,16 @@ export function MonthlyActuals({
   purpose: Purpose
   showMoney?: boolean
 }) {
-  const { data } = useData()
+  const { data, updateMonthlyActual } = useData()
+  const { role, mode } = useAuth()
+  //  ⚠ 엑셀 값을 고치면 **그 달 매출이 바뀝니다.** 사무실·관리자만 합니다.
+  //    서버는 확정한 청구가 있는 달을 거부하고, 고치기 전 값을 감사기록에
+  //    통째로 남깁니다.
+  const canEdit = (mode !== 'live' || role === 'admin' || role === 'office') && showMoney
+  const [editing, setEditing] = useState('')
+  const [form, setForm] = useState({ medicalKg: '', diaperKg: '', revenue: '', cost: '' })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   if (rows.length === 0) return null
   const sorted = rows.slice().sort((a, b) => b.month.localeCompare(a.month))
 
@@ -67,6 +78,75 @@ export function MonthlyActuals({
       </div>
       <p className="t-muted mt-2 break-keep">{NOTE[purpose]}</p>
 
+      {canEdit && editing && (
+        <div data-actual-form className="mt-3 rounded-2xl bg-navy-50/70 p-4">
+          <p className="t-body break-keep font-bold text-navy-800">
+            {sorted.find((r) => r.id === editing)?.month} 실적 고치기
+          </p>
+          <p className="t-muted mt-1 break-keep leading-snug text-navy-500">
+            ⚠ 이 달 매출이 바뀝니다. 이익은 <b>매출 − 원가</b>로 서버가 다시 계산합니다. 확정한 청구가 있는
+            달은 서버가 막습니다 — 청구를 취소한 뒤에 고쳐 주세요.
+          </p>
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            {([
+              ['medicalKg', '의료폐기물 (kg)'],
+              ['diaperKg', '일회용기저귀 (kg)'],
+              ['revenue', '매출 (원)'],
+              ['cost', '원가 (원)'],
+            ] as const).map(([k, label]) => (
+              <label key={k} className="block">
+                <span className="t-label mb-1 block text-navy-500">{label}</span>
+                <input
+                  data-actual-field={k}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={form[k]}
+                  onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))}
+                  className="field-input w-full"
+                />
+              </label>
+            ))}
+          </div>
+          {error && (
+            <p data-actual-error className="t-body mt-2.5 break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-600">
+              {error}
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => setEditing('')} className="btn-ghost flex-1">
+              취소
+            </button>
+            <button
+              data-actual-save
+              disabled={busy}
+              onClick={() => {
+                setBusy(true)
+                setError('')
+                const num = (v: string) => (v.trim() === '' ? null : Number(v))
+                void updateMonthlyActual({
+                  id: editing,
+                  medicalKg: num(form.medicalKg),
+                  diaperKg: num(form.diaperKg),
+                  revenue: num(form.revenue),
+                  cost: num(form.cost),
+                }).then((r) => {
+                  setBusy(false)
+                  if (!r.ok) {
+                    setError(r.error ?? '고치지 못했습니다.')
+                    return
+                  }
+                  setEditing('')
+                })
+              }}
+              className="btn-primary flex-[2] disabled:opacity-40"
+            >
+              {busy ? '저장 중…' : '이대로 고치기'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="-mx-4 mt-3 overflow-x-auto px-4">
         <table className="w-full min-w-[30rem] border-collapse text-[1rem]">
           <thead>
@@ -76,6 +156,7 @@ export function MonthlyActuals({
               <th className="px-2.5 py-2 text-right font-bold">일회용기저귀</th>
               {showMoney && <th className="px-2.5 py-2 text-right font-bold">매출</th>}
               <th className="px-2.5 py-2 text-left font-bold">비고</th>
+              {canEdit && <th className="px-2.5 py-2 text-left font-bold">고치기</th>}
             </tr>
           </thead>
           <tbody>
@@ -100,6 +181,26 @@ export function MonthlyActuals({
                     <span className="t-muted text-navy-400">월 합계만</span>
                   )}
                 </td>
+                {canEdit && (
+                  <td className="whitespace-nowrap px-2.5 py-2">
+                    <button
+                      data-actual-edit={r.month}
+                      onClick={() => {
+                        setEditing(editing === r.id ? '' : r.id)
+                        setError('')
+                        setForm({
+                          medicalKg: String(r.medicalKg),
+                          diaperKg: String(r.diaperKg),
+                          revenue: String(r.revenue),
+                          cost: String(r.cost),
+                        })
+                      }}
+                      className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
+                    >
+                      <Pencil size={13} strokeWidth={2.5} /> {editing === r.id ? '접기' : '고치기'}
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
             <tr className="bg-navy-50/60 font-extrabold text-navy-900">

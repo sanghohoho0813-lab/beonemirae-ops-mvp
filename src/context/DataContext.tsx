@@ -210,6 +210,34 @@ interface DataContextValue {
    *  전화를 겁니다.
    */
   /** 잡아 둔 방문을 옮깁니다 (0059) */
+  updateVisit: (input: {
+    scheduleId: string
+    time?: string | null
+    vehicleId?: string | null
+    expected?: number | null
+    memo?: string | null
+    keepVehicle?: boolean
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 현장 의견 (0062) — 현장은 일정을 못 지우고, 의견만 냅니다 */
+  submitScheduleFeedback: (input: {
+    scheduleId: string
+    kind: string
+    body: string
+    requestId?: string | null
+  }) => Promise<{ ok: boolean; error: string | null }>
+  handleScheduleFeedback: (
+    id: string,
+    status: string,
+    reply: string,
+  ) => Promise<{ ok: boolean; error: string | null }>
+  /** 엑셀 월 실적 고치기 (0062) — 이익은 서버가 매출 − 원가로 계산 */
+  updateMonthlyActual: (input: {
+    id: string
+    medicalKg?: number | null
+    diaperKg?: number | null
+    revenue?: number | null
+    cost?: number | null
+  }) => Promise<{ ok: boolean; error: string | null }>
   moveVisit: (input: {
     scheduleId: string
     date: string
@@ -1809,6 +1837,71 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  //  잡아 둔 방문의 **상세**만 고칩니다 (0062). 날짜는 안 건드립니다 —
+  //  옮기는 것은 moveVisit 입니다.
+  const updateVisit = useCallback(
+    async (input: {
+      scheduleId: string
+      time?: string | null
+      vehicleId?: string | null
+      expected?: number | null
+      memo?: string | null
+      keepVehicle?: boolean
+    }) => {
+      if (!live) return { ok: false, error: '일정 수정은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.updateVisit(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  //  현장 의견 (0062). 같은 표(requestId)로 다시 눌러도 하나입니다.
+  const submitScheduleFeedback = useCallback(
+    async (input: { scheduleId: string; kind: string; body: string; requestId?: string | null }) => {
+      if (!live) return { ok: false, error: '의견 보내기는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.submitScheduleFeedback(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const handleScheduleFeedback = useCallback(
+    async (id: string, status: string, reply: string) => {
+      if (!live) return { ok: false, error: '의견 처리는 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.handleScheduleFeedback(id, status, reply)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  //  엑셀 월 실적 고치기 (0062) — ⚠ 매출이 바뀝니다. 이익은 서버가 계산합니다.
+  const updateMonthlyActual = useCallback(
+    async (input: {
+      id: string
+      medicalKg?: number | null
+      diaperKg?: number | null
+      revenue?: number | null
+      cost?: number | null
+    }) => {
+      if (!live) return { ok: false, error: '월 실적 수정은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.updateMonthlyActual(input)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   const cancelVisit = useCallback(
     async (scheduleId: string, reason: string) => {
       if (!live) return { ok: false, error: '방문 무르기는 실제 운영 모드에서만 됩니다.' }
@@ -2112,6 +2205,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClientDrivers,
       bookVisit,
       moveVisit,
+      updateVisit,
+      submitScheduleFeedback,
+      handleScheduleFeedback,
+      updateMonthlyActual,
       cancelVisit,
       saveStaffInvite,
       removeStaffInvite,
@@ -2188,6 +2285,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClientDrivers,
       bookVisit,
       moveVisit,
+      updateVisit,
+      submitScheduleFeedback,
+      handleScheduleFeedback,
+      updateMonthlyActual,
       cancelVisit,
       saveStaffInvite,
       removeStaffInvite,

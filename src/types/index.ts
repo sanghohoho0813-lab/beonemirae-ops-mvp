@@ -546,6 +546,13 @@ export interface AppData {
   /** 입금 기록 (0026) — 청구별 부분입금. 없으면 기존 방식(완납/미수)만 */
   receipts?: PaymentReceipt[]
   /**
+   * 현장 의견 (0062) — 배정된 일정에 대해 현장이 낸 의견.
+   *
+   *  현장 담당자에게는 **자기가 낸 것만** 담깁니다(RLS). 사무실·관리자에게는
+   *  전부 담깁니다 — 그래서 「몇 건 왔는지」를 셀 수 있는 것도 그쪽뿐입니다.
+   */
+  scheduleFeedback?: ScheduleFeedback[]
+  /**
    * 월 매출 직접입력 · 조정 (0038).
    *
    *  거래처 × 월 매출 집계에서 **가장 높은 우선순위**입니다. 계약서에는
@@ -802,4 +809,30 @@ export interface ClientPrice {
   memo: string
   actorName: string
   createdAt: string
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 현장 의견 (0062)
+//
+//  현장 담당자는 배정받은 일정을 **직접 지우지 못합니다.** 대신 의견을 냅니다 —
+//  「이 날짜보다 화요일이 낫습니다」 같은 것. 저장하면 대표·사무실 화면에 뜹니다.
+//  자기가 낸 것만 보이고(RLS), 지우지도 못합니다 — 기록이기 때문입니다.
+// ─────────────────────────────────────────────────────────────────────────────
+export const FEEDBACK_KINDS = ['일정변경', '요일변경', '현장상황', '기타'] as const
+export type FeedbackKind = (typeof FEEDBACK_KINDS)[number]
+
+export const FEEDBACK_STATUSES = ['접수', '확인', '반영', '반려'] as const
+export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number]
+
+export interface ScheduleFeedback {
+  id: string
+  scheduleId: string
+  clientId: string
+  kind: FeedbackKind
+  body: string
+  status: FeedbackStatus
+  reply: string
+  createdBy: string | null
+  createdAt: string
+  handledAt: string | null
 }

@@ -13,6 +13,7 @@ import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
+import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { BookVisitModal } from '../components/BookVisit'
 import { MoveVisitModal } from '../components/MoveVisit'
 import { ScheduleCalendar } from '../components/ScheduleCalendar'
@@ -175,7 +176,10 @@ export function TodaySchedule() {
 
       {canBook && <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} />}
 
-      {moveTarget && canBook && (
+      {/*  ⚠ 현장 담당자도 이 창을 엽니다 — 다만 안에서 보이는 것은
+           「의견 내기」 하나뿐입니다(고치기·무르기는 안 그립니다).
+           창 자체를 막으면 기사님이 의견을 낼 길이 없어집니다. */}
+      {moveTarget && (
         <MoveVisitModal
           open
           onClose={() => setMoveTarget(null)}
@@ -228,6 +232,10 @@ export function TodaySchedule() {
       {/*  밀린 마감 — 사무실이 하루에 제일 많이 여는 화면입니다.
            밀린 것이 없으면 이 자리는 아예 없습니다(현장에는 안 뜹니다). */}
       <DeadlineBanner className="mb-4" />
+
+      {/*  현장에서 온 일정 의견 (0062) — 사무실이 하루에 제일 많이 여는
+           화면입니다. 안 온 날에는 자리가 아예 없습니다. */}
+      <ScheduleFeedbackCard />
 
       {/*  긴급 전화가 오기 전에 — 여기가 사무실이 아침에 여는 화면입니다.
            지금 손댈 곳이 없으면 이 자리는 아예 없습니다. */}
@@ -421,13 +429,14 @@ export function TodaySchedule() {
                        것이 없어 잘못 잡은 방문에도 기사가 나갔습니다.
                        완료된 수거에는 안 띄웁니다 — 실제로 다녀온 기록이고
                        정산·청구로 이어집니다(서버도 막습니다). */}
-                  {!done && canBook && (
+                  {!done && (
                     <button
                       data-move-open={s.id}
                       onClick={() => setMoveTarget(s)}
-                      className="t-btn mt-2 flex w-full items-center justify-center gap-1 rounded-xl py-2 font-bold text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
+                      className="t-btn mt-2 flex min-h-[2.75rem] w-full items-center justify-center gap-1 rounded-xl py-2 font-bold text-navy-400 transition hover:bg-navy-50 hover:text-navy-700"
                     >
-                      <CalendarClock size={14} strokeWidth={2.4} /> 날짜 옮기기 · 무르기
+                      <CalendarClock size={14} strokeWidth={2.4} />{' '}
+                      {canBook ? '날짜 옮기기 · 고치기 · 무르기' : '이 일정에 의견 내기'}
                     </button>
                   )}
                 </div>

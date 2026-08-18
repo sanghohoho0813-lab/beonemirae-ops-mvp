@@ -3,6 +3,7 @@ import type {
   Client,
   ClientRequest,
   CollectionEvent,
+  ScheduleFeedback,
   MaterialSupply,
   OfficeStock,
   Payment,
@@ -372,6 +373,17 @@ export async function loadAppData(): Promise<AppData> {
     'Excel 월 실적',
   )
 
+  //  현장 의견 (0062). 현장 계정에는 **자기가 낸 것만** 내려옵니다(RLS).
+  //  마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다.
+  const feedbackRows = await soft(
+    async () =>
+      pageAll((f, t) =>
+        sb.from('schedule_feedback').select('*').order('created_at', { ascending: false }).range(f, t),
+      ),
+    [] as Row[],
+    '현장 의견',
+  )
+
   //  월 매출 직접입력·조정 (0038). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 조정이 없는 것과 같습니다.
   const revenueOverrides = await soft(
@@ -593,6 +605,20 @@ export async function loadAppData(): Promise<AppData> {
         actorName: r.actor_name ?? '',
         createdAt: r.created_at,
         updatedAt: r.updated_at ?? r.created_at,
+      }),
+    ),
+    scheduleFeedback: feedbackRows.map(
+      (r): ScheduleFeedback => ({
+        id: r.id,
+        scheduleId: r.schedule_id,
+        clientId: r.client_id,
+        kind: r.kind,
+        body: r.body ?? '',
+        status: r.status,
+        reply: r.reply ?? '',
+        createdBy: r.created_by ?? null,
+        createdAt: r.created_at,
+        handledAt: r.handled_at ?? null,
       }),
     ),
     monthlyActuals: monthlyActuals.map(
@@ -1058,6 +1084,89 @@ export async function bookVisit(input: {
  *  time 을 안 보내면 지금 시각을 그대로 둡니다. 빈 문자열은 「지우기」입니다.
  *  vehicleId 를 명시하지 않으면 지금 차를 그대로 둡니다.
  */
+/**
+ * 잡아 둔 방문의 **상세**를 고칩니다 (0062) — 시각·차량·예상량·메모.
+ *
+ *  날짜를 옮기는 것은 moveVisit 입니다. 여기서는 날짜를 안 건드립니다 —
+ *  그 달 매출이 통째로 옮겨 가는 일을 막기 위해서입니다.
+ *  완료된 수거는 서버가 거부합니다(정산·청구가 거기서 나옵니다).
+ */
+export async function updateVisit(input: {
+  scheduleId: string
+  time?: string | null
+  vehicleId?: string | null
+  expected?: number | null
+  memo?: string | null
+  keepVehicle?: boolean
+}): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('update_visit', {
+    p_schedule_id: input.scheduleId,
+    p_time: input.time ?? null,
+    p_vehicle_id: input.vehicleId ?? null,
+    p_expected: input.expected ?? null,
+    p_memo: input.memo ?? null,
+    p_keep_vehicle: input.keepVehicle ?? true,
+  })
+  if (error) throw new Error(error.message)
+}
+
+/** 현장 의견 내기 (0062). requestId 로 다시 눌러도 하나입니다. */
+export async function submitScheduleFeedback(input: {
+  scheduleId: string
+  kind: string
+  body: string
+  requestId?: string | null
+}): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('submit_schedule_feedback', {
+    p_schedule_id: input.scheduleId,
+    p_kind: input.kind,
+    p_body: input.body,
+    p_request_id: input.requestId ?? null,
+  })
+  if (error) throw new Error(error.message)
+}
+
+/** 현장 의견 처리 (0062) — 사무실·관리자만. */
+export async function handleScheduleFeedback(
+  id: string,
+  status: string,
+  reply: string,
+): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('handle_schedule_feedback', {
+    p_id: id,
+    p_status: status,
+    p_reply: reply,
+  })
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * 엑셀로 가져온 월 실적 고치기 (0062).
+ *
+ *  ⚠ **매출이 바뀝니다.** 이익은 보내지 않습니다 — 서버가 매출 − 원가로
+ *    다시 계산합니다. 확정한 청구가 있는 달은 서버가 거부합니다.
+ */
+export async function updateMonthlyActual(input: {
+  id: string
+  medicalKg?: number | null
+  diaperKg?: number | null
+  revenue?: number | null
+  cost?: number | null
+}): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('update_monthly_actual', {
+    p_id: input.id,
+    p_medical_kg: input.medicalKg ?? null,
+    p_diaper_kg: input.diaperKg ?? null,
+    p_revenue: input.revenue ?? null,
+    p_cost: input.cost ?? null,
+  })
+  if (error) throw new Error(error.message)
+}
+
 export async function moveVisit(input: {
   scheduleId: string
   date: string
@@ -2087,7 +2196,7 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
-export const EXPECTED_SCHEMA_VERSION = 61
+export const EXPECTED_SCHEMA_VERSION = 62
 
 /**
  * 서버 DB 의 스키마 버전.

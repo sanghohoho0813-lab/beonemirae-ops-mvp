@@ -15,6 +15,7 @@ import {
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
 import { DeadlineBanner } from '../components/DeadlineBanner'
+import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { SetupGapsLine } from '../components/SetupGapsCard'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { FieldTodayCard } from '../components/FieldTodayCard'
@@ -136,6 +137,9 @@ export function Dashboard() {
            보여 주는 자리입니다. 지금 손댈 곳이 없으면 이 자리는 아예 없습니다.
            밀린 마감 아래에 둡니다: 지난달 세금계산서가 더 급합니다. */}
       <UrgentRiskBanner />
+
+      {/*  현장에서 온 일정 의견 (0062) — 안 온 날에는 자리가 아예 없습니다. */}
+      <ScheduleFeedbackCard />
 
       {/*  오늘 현장에서 들어온 입력 — 사무실에 앉아 알 방법이 없던 것입니다.
            아직 아무것도 안 들어왔으면 이 자리는 아예 없습니다. */}
