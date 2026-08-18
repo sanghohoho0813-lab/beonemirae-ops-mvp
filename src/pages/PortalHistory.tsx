@@ -40,7 +40,39 @@ export function PortalHistory() {
       {done.length === 0 ? (
         <EmptyState icon={ClipboardList} title="아직 수거 기록이 없습니다" subtitle="첫 수거가 완료되면 여기에 표시됩니다." />
       ) : (
-        <div className="card overflow-x-auto">
+        <>
+        {/*  ── 폰에서는 표 대신 카드 ───────────────────────────────────────
+             표가 640px 인데 폰의 칸은 354px 입니다 — **가로로 286px 밀렸습니다.**
+             병원 담당자는 「용기」와 「처리장 인계」를 보려고 옆으로 밀어야
+             했고, 밀 수 있다는 표시도 없었습니다. 인증·실사 때 쓰는 자료라
+             안 보이면 결국 전화를 겁니다.
+             넓은 화면은 표 그대로입니다 — 여러 줄을 한눈에 견주는 데는 표가
+             낫습니다. */}
+        <div data-portal-hist-cards className="card divide-y divide-navy-50 sm:hidden">
+          {done.map((r) => (
+            <div key={r.id} data-portal-hist-card={r.id} className="px-4 py-3.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <b className="t-body break-keep text-navy-900">{prettyDate(r.date)}</b>
+                <span className="t-muted text-navy-500">{r.wasteType}</span>
+                <span className={`pill ml-auto shrink-0 ${r.handedOver ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
+                  {r.handedOver ? '인계 완료' : (r.handoverStatus ?? '처리 중')}
+                </span>
+              </div>
+              <p className="t-card mt-1 break-keep text-navy-900">{weight(r.amountKg ?? 0)}</p>
+              {/*  ⚠ 용기를 **안 적었으면 「미기재」**입니다. 0 으로 채우지
+                   않습니다 — 「안 적었다」와 「0개였다」는 다른 말이고,
+                   병원은 이 숫자를 사실로 읽습니다.
+                   예전에는 여기가 그냥 「개」 한 글자만 떠 있었습니다. */}
+              <p className="t-muted mt-0.5 break-keep text-navy-500">
+                {r.containerType
+                  ? `용기 ${r.containerType}${r.containerCount != null ? ` (${r.containerCount}개)` : ''}`
+                  : '용기 미기재'}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="card hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="border-b border-navy-100">
@@ -62,7 +94,9 @@ export function PortalHistory() {
                     {weight(r.amountKg ?? 0)}
                   </td>
                   <td className="t-cell px-4 py-3.5 text-navy-600">
-                    {r.containerType} {r.containerCount}개
+                    {r.containerType
+                      ? `${r.containerType}${r.containerCount != null ? ` ${r.containerCount}개` : ''}`
+                      : '미기재'}
                   </td>
                   <td className="px-4 py-3.5">
                     <span className={`pill ${r.handedOver ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
@@ -74,6 +108,7 @@ export function PortalHistory() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <p className="t-muted break-keep">
