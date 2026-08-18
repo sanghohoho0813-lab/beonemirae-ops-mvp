@@ -153,7 +153,12 @@ export function Revenue() {
                 data-revenue-bar={p.month}
                 onClick={() => setMonth(p.month)}
                 title={`${p.month} · ${won(p.total)}`}
-                className="flex min-w-0 flex-1 flex-col justify-end gap-1 rounded-t-lg transition hover:opacity-80"
+                /*  ⚠ 누르는 자리를 **기둥 전체 높이**로 잡습니다.
+                    items-end 라 버튼이 제 내용 높이(작은 달은 34px)밖에 안 돼서,
+                    폰에서 막대 위쪽 빈 곳을 눌러도 아무 일이 없었습니다.
+                    self-stretch 로 160px 을 다 차지하게 하면 기둥 어디를 눌러도
+                    그 달이 열립니다 — 보이는 막대 모양은 그대로입니다. */
+                className="flex min-w-0 flex-1 flex-col justify-end gap-1 self-stretch rounded-t-lg transition hover:opacity-80"
               >
                 <span className="block text-center text-[0.82rem] font-bold tabular-nums text-navy-400 sm:text-[0.9rem]">
                   {p.total > 0 ? Math.round(p.total / 10000).toLocaleString('ko-KR') : ''}

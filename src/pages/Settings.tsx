@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
+  ChevronDown,
   Type,
   Building2,
   Download,
@@ -57,13 +58,28 @@ import { prettyDate, today } from '../lib/format'
 //  · 시스템 정보 (저장 위치·보관 건수)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 설정 화면 공통 카드 — 아이콘 + 제목 + 설명 + 본문 */
+/**
+ * 설정 화면 공통 카드 — 아이콘 + 제목 + 설명 + 본문
+ *
+ * ── 폰에서는 접습니다 ──────────────────────────────────────────────────────
+ *
+ *  이 화면은 폰에서 **10,457px**(12.4 화면)이었습니다. 열네 개 카드가 전부
+ *  펼쳐진 채 세로로 이어져서, 원하는 항목을 찾으려면 한참 밀어야 했습니다.
+ *  설정은 「무엇이 있는지 훑고 하나를 고르는」 화면이라, 폰에서는 제목만
+ *  늘어놓고 누른 것만 펼치는 편이 맞습니다.
+ *
+ *  ⚠ 태블릿·PC(sm 이상)는 **그대로 다 펼쳐집니다.** 자리가 넉넉한 화면에서
+ *    굳이 누르게 만들면 오히려 손이 더 갑니다.
+ *  ⚠ 주소에 #이름 을 붙여 들어오면(예: /settings#vehicles) 그 카드는 폰에서도
+ *    펼친 채로 엽니다 — 바로가기를 눌렀는데 접혀 있으면 고장으로 보입니다.
+ */
 function SettingCard({
   icon: Icon,
   title,
   desc,
   tone = 'navy',
   anchor,
+  defaultOpen = false,
   children,
 }: {
   icon: LucideIcon
@@ -72,8 +88,13 @@ function SettingCard({
   tone?: 'navy' | 'teal' | 'amber' | 'rose'
   /** 주소 뒤에 #이름 을 붙여 바로 올 수 있게 (예: /settings#vehicles) */
   anchor?: string
+  /** 폰에서도 처음부터 펼쳐 둘지 (지금 손봐야 하는 카드) */
+  defaultOpen?: boolean
   children: React.ReactNode
 }) {
+  const [open, setOpen] = useState(
+    () => defaultOpen || (!!anchor && typeof window !== 'undefined' && window.location.hash === `#${anchor}`),
+  )
   const toneStyle = {
     navy: 'bg-navy-50 text-navy-600',
     teal: 'bg-teal-50 text-teal-600',
@@ -82,16 +103,27 @@ function SettingCard({
   }[tone]
   return (
     <section id={anchor} className="card scroll-mt-6 p-5 sm:p-6">
-      <div className="flex items-start gap-3">
+      <button
+        type="button"
+        data-setting-toggle={anchor ?? title}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-start gap-3 text-left sm:pointer-events-none"
+      >
         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneStyle}`}>
           <Icon size={22} strokeWidth={2.2} />
         </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="t-card text-navy-900">{title}</h2>
-          <p className="t-muted mt-1">{desc}</p>
-        </div>
-      </div>
-      <div className="mt-4">{children}</div>
+        <span className="min-w-0 flex-1">
+          <span className="t-card block text-navy-900">{title}</span>
+          <span className="t-muted mt-1 block">{desc}</span>
+        </span>
+        <ChevronDown
+          size={20}
+          strokeWidth={2.4}
+          className={`mt-2 shrink-0 text-navy-300 transition-transform sm:hidden ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <div className={open ? 'mt-4' : 'mt-4 hidden sm:block'}>{children}</div>
     </section>
   )
 }
@@ -123,6 +155,8 @@ export function Settings() {
   const live = mode === 'live'
   const demoActive = data.demoSession?.active !== false
   const navigate = useNavigate()
+  //  기준값 카드는 폰에서만 접습니다 (PC 는 항상 펼침).
+  const [baselineOpen, setBaselineOpen] = useState(false)
 
   //  기준값 칸은 타이핑 중에는 화면에만 담아 두고, 칸을 벗어날 때 한 번 저장합니다.
   //  예전에는 글자를 칠 때마다 서버에 쓰고 전체 데이터를 다시 읽어 왔는데,
@@ -254,7 +288,8 @@ export function Settings() {
           title="운행 차량 — 먼저 등록해 주세요"
           desc="차량이 한 대도 없습니다. 차량이 없으면 현장에서 수거 입력을 저장할 수 없습니다."
           tone="amber"
-        >
+        
+          defaultOpen>
           <VehicleManager />
         </SettingCard>
       )}
@@ -286,18 +321,33 @@ export function Settings() {
         {/* ── 좌: 성과측정 · 화면 표시 ── */}
         <div className="space-y-4 xl:space-y-5">
           {/* AX 실증 — 도입 전 기준값 (반드시 사용자가 입력. 시스템이 임의 생성하지 않음) */}
+          {/*  ⚠ 이 카드 하나가 폰에서 1,948px 이었습니다 — 설정 화면 전체의 3분의 1.
+               기준값은 **한 번 넣고 거의 안 고치는 값**이라, 폰에서는 다른
+               설정 카드와 같은 방식으로 접습니다. PC 는 그대로 펼쳐집니다. */}
           <section id="baseline" className="card p-5 sm:p-6">
-            <div className="flex items-start gap-3">
+            <button
+              type="button"
+              data-setting-toggle="baseline"
+              aria-expanded={baselineOpen}
+              onClick={() => setBaselineOpen((v) => !v)}
+              className="flex w-full items-start gap-3 text-left sm:pointer-events-none"
+            >
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
                 <Gauge size={22} strokeWidth={2.2} />
               </span>
-              <div className="min-w-0 flex-1">
-                <h2 className="t-card text-navy-900">AX 실증 · 도입 전 기준값</h2>
-                <p className="t-muted mt-1">
+              <span className="min-w-0 flex-1">
+                <span className="t-card block text-navy-900">AX 실증 · 도입 전 기준값</span>
+                <span className="t-muted mt-1 block">
                   이 시스템을 쓰기 전의 실제 업무 값을 입력하세요. 도입 후 성과와 비교하는 기준이 됩니다.
-                </p>
-              </div>
-            </div>
+                </span>
+              </span>
+              <ChevronDown
+                size={20}
+                strokeWidth={2.4}
+                className={`mt-2 shrink-0 text-navy-300 transition-transform sm:hidden ${baselineOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            <div className={baselineOpen ? '' : 'hidden sm:block'}>
 
             {/* 실증 시작일 */}
             <div className="mt-4 rounded-2xl bg-navy-50 p-4">
@@ -406,6 +456,7 @@ export function Settings() {
             <button className="btn-primary mt-4 w-full" onClick={() => navigate('/performance')}>
               AX 도입 성과 보기 <ArrowRight size={17} strokeWidth={2.4} />
             </button>
+            </div>
           </section>
 
           <SettingCard

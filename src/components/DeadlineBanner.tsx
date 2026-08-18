@@ -73,7 +73,13 @@ export function DeadlineBanner({ className = '' }: { className?: string } = {}) 
   //  늘 띄우면 그것도 곧 배경이 됩니다.
   if (scan.items.length === 0) return null
 
-  const FIRST = 3
+  //  ⚠ 첫 화면에서 **한 건만** 펼칩니다.
+  //    예전에는 세 건을 다 펼쳐서 이 띠 하나가 폰에서 778px(PC 496px)이
+  //    됐습니다. 그래서 정작 「오늘 처리할 업무」가 y=1,189px 로 밀려,
+  //    대표님이 이 화면을 여는 이유가 첫 화면에서 사라졌습니다.
+  //    급한 순서로 정렬되어 있으니 맨 위 한 건이 지금 제일 급한 것이고,
+  //    나머지는 바로 아래 「나머지 N건 보기」에 그대로 있습니다.
+  const FIRST = 1
   const shown = open ? scan.items : scan.items.slice(0, FIRST)
   const rest = scan.items.length - shown.length
 
@@ -110,11 +116,16 @@ export function DeadlineBanner({ className = '' }: { className?: string } = {}) 
         </button>
       )}
 
-      {/*  이 띠가 무엇을 근거로 떴는지 — 추정이 아니라는 것을 밝힙니다. */}
-      <p className="t-caption mt-2.5 break-keep leading-snug text-navy-500">
-        수거 기록·확정한 청구·사람이 표시한 기록에서 나온 것만 적었습니다. 세법 기한은 판단하지 않고, 그 달이
-        끝난 지 며칠인지만 적습니다.
-      </p>
+      {/*  이 띠가 무엇을 근거로 떴는지 — 추정이 아니라는 것을 밝힙니다.
+           **펼쳤을 때만** 적습니다. 접힌 상태에서도 늘 세 줄을 차지하면
+           띠가 커져서 정작 오늘 할 일을 밀어냅니다. 근거를 없앤 것이
+           아니라, 자세히 보실 때 함께 보이게 옮긴 것입니다. */}
+      {open && (
+        <p className="t-caption mt-2.5 break-keep leading-snug text-navy-500">
+          수거 기록·확정한 청구·사람이 표시한 기록에서 나온 것만 적었습니다. 세법 기한은 판단하지 않고, 그
+          달이 끝난 지 며칠인지만 적습니다.
+        </p>
+      )}
     </section>
   )
 }

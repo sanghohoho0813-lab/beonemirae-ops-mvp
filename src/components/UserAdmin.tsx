@@ -70,6 +70,11 @@ export function UserAdmin() {
     () => data.clients.slice().sort((a, b) => a.name.localeCompare(b.name, 'ko')),
     [data.clients],
   )
+  //  폰에서 계정 한 줄이 세로로 길게 늘어졌습니다 — 역할 칩 3개 + 사용상태
+  //  + 비밀번호 초기화 + 담당 차량 고르개가 각각 줄바꿈되기 때문입니다.
+  //  계정이 6개면 화면을 한참 밀어야 했습니다. 폰에서는 **이름과 지금 상태만**
+  //  줄에 두고, 손볼 때 눌러서 펼칩니다. 태블릿·PC 는 지금 그대로입니다.
+  const [openRows, setOpenRows] = useState<Record<string, boolean>>({})
   const activeAdmins = rows.filter((r) => r.role === 'admin' && r.active).length
 
   //  승인 대기는 먼저 신청한 순서로. 기다린 사람이 위에 옵니다.
@@ -229,9 +234,26 @@ export function UserAdmin() {
                     </button>
                   </p>
                   <p className="t-muted break-keep">{r.email}</p>
+                  {/*  접혀 있을 때도 「지금 무엇인지」는 보여야 합니다 —
+                       역할과 사용 여부는 여기서 바로 읽힙니다. */}
+                  <button
+                    type="button"
+                    data-user-expand={r.id}
+                    aria-expanded={!!openRows[r.id]}
+                    onClick={() => setOpenRows((m) => ({ ...m, [r.id]: !m[r.id] }))}
+                    className="mt-1 flex min-h-[2.75rem] w-full items-center gap-2 text-left sm:hidden"
+                  >
+                    <span className="pill bg-navy-50 text-navy-600">{ROLE_LABEL[r.role]}</span>
+                    <span className={`pill ${r.active ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
+                      {r.active ? '사용 중' : '비활성'}
+                    </span>
+                    <span className="t-muted ml-auto font-bold text-navy-400">
+                      {openRows[r.id] ? '접기' : '바꾸기'}
+                    </span>
+                  </button>
                 </div>
 
-                <div className="flex flex-wrap gap-1">
+                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} flex-wrap gap-1`}>
                   {(r.role === 'client' ? ALL_ROLES : STAFF_ROLES).map((role) => {
                     const why = lockReason(r, { role })
                     return (
@@ -254,21 +276,23 @@ export function UserAdmin() {
                   disabled={busy || !!lockReason(r, { active: !r.active ? undefined : false })}
                   title={lockReason(r, { active: !r.active ? undefined : false }) ?? ''}
                   onClick={() => void change(() => setProfileActive(r.id, !r.active))}
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-40 ${
+                  className={`${openRows[r.id] ? '' : 'hidden sm:block'} shrink-0 rounded-full px-3 py-1.5 text-[0.95rem] font-extrabold transition disabled:opacity-40 ${
                     r.active ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'
                   }`}
                 >
                   {r.active ? '사용 중' : '비활성'}
                 </button>
 
-                <ResetPasswordButton row={r} busy={busy} onError={setError} onDone={setDone} />
+                <span className={openRows[r.id] ? '' : 'hidden sm:inline'}>
+                  <ResetPasswordButton row={r} busy={busy} onError={setError} onDone={setDone} />
+                </span>
               </div>
 
               {/*  담당 차량 (0056) — 묶어 두면 그 사람의 수거 입력에서
                    차량·기사 칸이 사라집니다. 매번 같은 값을 고르지 않아도
                    되고, 기록에 남는 이름은 **로그인한 본인**입니다. */}
               {r.role !== 'client' && (
-                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-2xl bg-teal-50/60 px-3.5 py-2.5">
+                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-teal-50/60 px-3.5 py-2.5`}>
                   <span className="t-muted shrink-0 font-bold text-teal-700">담당 차량</span>
                   <select
                     data-user-vehicle={r.id}
@@ -295,7 +319,7 @@ export function UserAdmin() {
 
               {/* 병원 계정 — 어느 병원 소속인지, 그리고 바꾸는 길 */}
               {r.role === 'client' && (
-                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-2xl bg-sky-50/70 px-3.5 py-2.5">
+                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-sky-50/70 px-3.5 py-2.5`}>
                   <span className="t-muted shrink-0 font-bold text-sky-700">소속 병원</span>
                   <select
                     disabled={busy}

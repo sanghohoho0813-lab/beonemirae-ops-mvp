@@ -141,6 +141,14 @@ export function ClientDetail() {
     setEditing(true)
   }
   const [logOpen, setLogOpen] = useState(false)
+  //  폰에서 추천을 **한 건만** 펼칩니다.
+  //   PC 는 오른쪽 절반이라 세 건이 다 들어가지만, 폰에서는 이 추천 묶음
+  //   하나가 1,004px 을 차지해서 정작 매일 쓰는 운영조건·정산·청구 **탭이
+  //   y=2,582px**(3화면 아래)까지 밀렸습니다. 추천을 없앤 것이 아니라
+  //   나머지를 「더 보기」 뒤에 둡니다 — PC 에서는 지금처럼 다 보입니다.
+  const [allActions, setAllActions] = useState(false)
+  //  영업 진행상태는 폰에서만 접습니다 (PC 는 항상 보입니다).
+  const [stageOpen, setStageOpen] = useState(false)
   const [tab, setTab] = useState<TabId>('ops')
   //  현장 담당자에게는 매출·원가·이익·청구가 보이는 탭을 열지 않습니다.
   //  주소를 직접 쳐서 들어와도 탭이 없으므로 그 내용은 그려지지 않습니다.
@@ -422,7 +430,10 @@ export function ClientDetail() {
                 const meta = actionMeta[a.kind]
                 const Icon = meta.icon
                 return (
-                  <div key={`${a.kind}-${i}`} className="p-3">
+                  <div
+                    key={`${a.kind}-${i}`}
+                    className={`p-3 ${i > 0 && !allActions ? 'hidden lg:block' : ''}`}
+                  >
                     <div className="flex items-start gap-3">
                       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${meta.chip}`}>
                         <Icon size={17} strokeWidth={2.3} />
@@ -466,12 +477,35 @@ export function ClientDetail() {
                         리포트에 포함
                       </button>
                     </div>
-                    {/* 영업 진행상태 — 추천 → 제안 → 수락 → 실제 매출 */}
-                    <LeadStageControl action={a} />
+                    {/*  영업 진행상태 — 추천 → 제안 → 수락 → 실제 매출.
+                         ⚠ 폰에서는 이 한 덩어리가 239px 입니다(추천 카드 722px 의 3분의 1).
+                           영업 담당이 가끔 누르는 것이지 거래처를 열 때마다 보는 것이
+                           아니라, 폰에서만 눌러서 펼치게 합니다. PC 는 그대로 보입니다. */}
+                    <div className={stageOpen ? '' : 'hidden lg:block'}>
+                      <LeadStageControl action={a} />
+                    </div>
                   </div>
                 )
               })}
             </div>
+            {!stageOpen && (
+              <button
+                data-stage-open
+                onClick={() => setStageOpen(true)}
+                className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-2xl bg-navy-50 px-3.5 text-[1rem] font-bold text-navy-500 transition hover:bg-navy-100 lg:hidden"
+              >
+                영업 진행 상태 보기
+              </button>
+            )}
+            {actions.length > 1 && (
+              <button
+                data-actions-more
+                onClick={() => setAllActions((v) => !v)}
+                className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center gap-1.5 rounded-2xl bg-navy-50 px-3.5 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-100 lg:hidden"
+              >
+                {allActions ? '추천 접기' : `추천 ${actions.length - 1}건 더 보기`}
+              </button>
+            )}
             <p className="mt-2 px-1 text-[0.98rem] leading-snug text-navy-400">
               이 거래처의 수거이력·자재공급·청구 데이터를 규칙에 대입해 도출한 추천입니다. 예상 금액은 실제 청구 단가
               기준의 참고 값입니다.
@@ -592,7 +626,13 @@ export function ClientDetail() {
          하나뿐이라, 나머지 탭은 있는 줄도 모르고 지나가게 됩니다.
          폰에서는 두 칸 격자로 전부 펼쳐 놓고, 넓은 화면에서만 한 줄로 둡니다.
       */}
-      <div data-client-tabs className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:gap-1.5">
+            {/*  ⚠ 폰에서는 탭 줄이 y=2,582px 에 있습니다 — 세 화면을 밀어야 나옵니다.
+           위치를 옮기면 화면 구조가 바뀌므로, 대신 **화면 위에 붙여 둡니다**.
+           한 번 지나가면 계속 손에 닿아, 탭을 옮길 때마다 위로 되돌아가지
+           않아도 됩니다. PC 는 지금처럼 흐릅니다. */}
+      <div
+        data-client-tabs
+        className="sticky top-0 z-20 -mx-4 grid grid-cols-2 gap-2 bg-[#f5f7fa]/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:flex sm:flex-wrap sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none lg:gap-1.5">
         {visibleTabs.map((t) => (
           <button
             key={t.id}
