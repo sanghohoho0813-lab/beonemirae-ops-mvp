@@ -150,6 +150,33 @@ export function FieldTodayCard() {
         </div>
       )}
 
+      {/*  사람별 한 줄 — 「누구 것이 아직 안 들어왔나」.
+           ⚠ **성적표가 아닙니다.** 「N곳 아직」은 「안 했다」가 아니라
+             「아직 입력이 없다」입니다. 그래서 「누락·미이행」 같은 말을
+             쓰지 않고, 숫자에 빨간색도 안 씁니다 — 색이 곧 판정이 됩니다.
+           ⚠ 사람이 한 명뿐이면 위 목록과 같은 말이라 안 그립니다. */}
+      {day.staff.filter((r) => r.who).length > 1 && (
+        <div data-field-staff className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+          {day.staff
+            .filter((r) => r.who)
+            .map((r) => (
+              <span
+                key={r.who}
+                data-field-staff-row={r.who}
+                className="flex items-center gap-1.5 break-keep text-[1.02rem]"
+              >
+                <b className="font-extrabold text-navy-800">{r.who}</b>
+                <span className="tabular-nums text-navy-500">{r.done}곳 들어옴</span>
+                {r.pending > 0 && (
+                  <span data-field-staff-pending className="tabular-nums text-navy-400">
+                    · {r.pending}곳 아직
+                  </span>
+                )}
+              </span>
+            ))}
+        </div>
+      )}
+
       {day.noName > 0 && (
         <p data-field-noname className="t-caption mt-2 break-keep text-navy-400">
           {day.noName}건은 기사 이름이 안 적혀 있습니다 — 수거 입력의 「기사」 칸을 채우면 여기에 함께 보입니다.

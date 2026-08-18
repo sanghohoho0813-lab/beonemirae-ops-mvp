@@ -207,6 +207,62 @@ export function pendingVisitsOn(data: AppData, date: string = today()): PendingV
     .sort((a, b) => a.atTime.localeCompare(b.atTime) || a.clientName.localeCompare(b.clientName, 'ko'))
 }
 
+export interface StaffDay {
+  /** 기사 이름. 빈 문자열이면 **이름이 안 적힌 것**입니다 (지어내지 않습니다) */
+  who: string
+  /** 이 이름으로 **입력이 들어온** 방문 수 */
+  done: number
+  /** 이 이름으로 예정돼 있는데 **아직 입력이 없는** 방문 수 */
+  pending: number
+  /** 들어온 것만 더한 kg */
+  totalKg: number
+}
+
+/**
+ * 그날을 **사람별로** 묶어 봅니다 — 이사님이 「누구 것이 아직 안 들어왔나」를
+ * 한 줄로 보시게.
+ *
+ * ── 성적표가 아닙니다 ──────────────────────────────────────────────────────
+ *
+ *  `pending` 은 **「안 했다」가 아닙니다.** 시스템은 이유를 모릅니다 —
+ *  일정이 바뀌었을 수도, 병원이 쉬었을 수도, 내일 넣기로 했을 수도
+ *  있습니다. 그래서 이 값에 「누락·미이행」 같은 말을 붙이지 않습니다.
+ *  화면 문구도 같은 규칙을 지킵니다.
+ *
+ * ── 두 이름의 출처가 다릅니다 ──────────────────────────────────────────────
+ *
+ *   done    수거 입력에 **사람이 적은** 기사 이름
+ *   pending 일정에 **미리 적어 둔** 담당 기사 이름
+ *
+ *  이하늘 기사님 자리에 김준기 기사님이 대신 갔으면 두 이름이 갈립니다.
+ *  그것을 한쪽으로 맞추지 않습니다 — 맞추면 실제로 간 사람이 지워집니다.
+ *  이름이 안 적힌 것은 다른 이름과 합치지 않고 빈 이름 줄로 따로 둡니다.
+ */
+export function staffDayOn(data: AppData, date: string = today()): StaffDay[] {
+  const rows = new Map<string, StaffDay>()
+  const at = (who: string): StaffDay => {
+    const key = who
+    let r = rows.get(key)
+    if (!r) {
+      r = { who, done: 0, pending: 0, totalKg: 0 }
+      rows.set(key, r)
+    }
+    return r
+  }
+  for (const i of fieldInputsOn(data, date)) {
+    const r = at(i.who)
+    r.done += 1
+    r.totalKg += i.amountKg
+  }
+  for (const v of pendingVisitsOn(data, date)) at(v.who).pending += 1
+  //  이름이 있는 줄을 먼저, 그 안에서는 아직 안 들어온 것이 많은 순서로.
+  //  빈 이름(안 적힌 것)은 맨 아래 — 사람이 아니라 「모르는 것」입니다.
+  return [...rows.values()].sort((a, b) => {
+    if (!a.who !== !b.who) return a.who ? -1 : 1
+    return b.pending - a.pending || b.done - a.done || a.who.localeCompare(b.who, 'ko')
+  })
+}
+
 export interface FieldDaySummary {
   date: string
   inputs: FieldInput[]
@@ -223,6 +279,12 @@ export interface FieldDaySummary {
   adHoc: number
   /** 이름이 안 적힌 건수 — 지어내지 않고 그대로 셉니다 */
   noName: number
+  /**
+   * 사람별 묶음.
+   *  ⚠ 성적표가 아닙니다 — `pending` 은 「안 했다」가 아니라 「아직 입력이
+   *    없다」입니다. 이유는 시스템이 모릅니다.
+   */
+  staff: StaffDay[]
 }
 
 export function fieldDay(data: AppData, date: string = today()): FieldDaySummary {
@@ -235,6 +297,7 @@ export function fieldDay(data: AppData, date: string = today()): FieldDaySummary
     adHoc: inputs.filter((i) => i.adHoc).length,
     noName: inputs.filter((i) => !i.who).length,
     pending: pendingVisitsOn(data, date),
+    staff: staffDayOn(data, date),
   }
 }
 

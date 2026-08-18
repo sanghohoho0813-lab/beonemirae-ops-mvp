@@ -18,6 +18,8 @@ import {
   CalendarPlus,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { canSeeMoney } from '../lib/access'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
 import { PageHeader } from '../components/PageHeader'
 import { BookVisitModal } from '../components/BookVisit'
@@ -50,6 +52,19 @@ type Filter = '진행 중' | '전체' | '병원 직접' | '긴급'
 
 export function Requests() {
   const { data, handleRequest, addRequest } = useData()
+  //  ── 현장 담당자에게는 「연결되는 매출」을 안 적습니다 ────────────────────
+  //
+  //   이 화면은 현장 담당자도 엽니다 — 병원이 올린 요청을 보고 가야 하기
+  //   때문입니다. 그런데 요청마다 「연결되는 매출: 추가 수거 매출」이 함께
+  //   붙어 있었습니다. 금액은 아니지만 **영업 정보**입니다.
+  //
+  //   전수 감사(check_fieldperm)에서 현장 화면 7곳을 훑다가 잡았습니다.
+  //   요청 자체는 그대로 보입니다 — 지운 것은 그 한 줄뿐입니다.
+  //
+  //   시연에는 로그인이 없어 role 이 null 입니다. 역할만 보고 가리면 시연에서
+  //   이 줄이 통째로 사라져, 「요청 처리가 곧 영업」이라는 설명이 없어집니다.
+  const { role, mode } = useAuth()
+  const showRevenueLine = mode !== 'live' || canSeeMoney(role)
   //  ── 요청을 그 자리에서 날짜로 바꾸기 (0058) ─────────────────────────────
   //
   //   지금까지 「일정 반영」은 **말**이었습니다. 눌러도 일정이 생기지 않아
@@ -197,11 +212,14 @@ export function Requests() {
                 {r.desiredDate && ` · 희망일 ${r.desiredDate}`}
               </p>
 
-              {/* 이 요청이 어떤 매출로 이어지는지 — 요청 처리 = 영업 행동임을 명시 */}
-              <p className="t-muted mt-2 flex flex-wrap items-center gap-1.5 break-keep">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.type]].dot}`} />
-                연결되는 매출: <b className="font-extrabold text-navy-600">{REQUEST_REVENUE[r.type]}</b>
-              </p>
+              {/* 이 요청이 어떤 매출로 이어지는지 — 요청 처리 = 영업 행동임을 명시.
+                  현장 담당자에게는 안 적습니다 (위 주석 참고). */}
+              {showRevenueLine && (
+                <p data-req-revenue className="t-muted mt-2 flex flex-wrap items-center gap-1.5 break-keep">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.type]].dot}`} />
+                  연결되는 매출: <b className="font-extrabold text-navy-600">{REQUEST_REVENUE[r.type]}</b>
+                </p>
+              )}
 
               {r.reply && (
                 <div className="mt-3 flex items-start gap-2 rounded-xl bg-sky-50 px-3.5 py-3">
