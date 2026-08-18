@@ -437,7 +437,13 @@ export function ClientDetail() {
                 return (
                   <div
                     key={`${a.kind}-${i}`}
-                    className={`p-3 ${i > 0 && !allActions ? 'hidden lg:block' : ''}`}
+                    /*  ⚠ 폰에서는 **한 건도 안 펼칩니다.** 예전에는 첫 건만
+                        펼쳤는데, 그 한 건이 378px 이라 안내문까지 800px 을
+                        먹었습니다. 그 바람에 정작 전화 중에 눌러야 할
+                        **탭 줄이 y=2,103px(2.5화면)** 로 밀려 있었습니다.
+                        추천을 없앤 것이 아니라 한 번 눌러 보게 둡니다 —
+                        PC 는 지금까지처럼 전부 보입니다. */
+                    className={`p-3 ${allActions ? '' : 'hidden lg:block'}`}
                   >
                     <div className="flex items-start gap-3">
                       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${meta.chip}`}>
@@ -502,16 +508,17 @@ export function ClientDetail() {
                 영업 진행 상태 보기
               </button>
             )}
-            {actions.length > 1 && (
-              <button
-                data-actions-more
-                onClick={() => setAllActions((v) => !v)}
-                className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center gap-1.5 rounded-2xl bg-navy-50 px-3.5 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-100 lg:hidden"
-              >
-                {allActions ? '추천 접기' : `추천 ${actions.length - 1}건 더 보기`}
-              </button>
-            )}
-            <p className="mt-2 px-1 text-[0.98rem] leading-snug text-navy-400">
+            <button
+              data-actions-more
+              onClick={() => setAllActions((v) => !v)}
+              className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center gap-1.5 rounded-2xl bg-navy-50 px-3.5 text-[1rem] font-bold text-navy-600 transition hover:bg-navy-100 lg:hidden"
+            >
+              {allActions ? '추천 접기' : `추천 ${actions.length}건 보기`}
+            </button>
+            {/*  근거 안내문 — **펼쳤을 때만.** 접힌 채로도 늘 96px 을 차지하고
+                 있었습니다. 근거를 없앤 것이 아니라 자세히 보실 때 함께
+                 보이게 옮긴 것입니다. PC 는 늘 보입니다. */}
+            <p className={`mt-2 px-1 text-[0.98rem] leading-snug text-navy-400 ${allActions ? '' : 'hidden lg:block'}`}>
               이 거래처의 수거이력·자재공급·청구 데이터를 규칙에 대입해 도출한 추천입니다. 예상 금액은 실제 청구 단가
               기준의 참고 값입니다.
             </p>

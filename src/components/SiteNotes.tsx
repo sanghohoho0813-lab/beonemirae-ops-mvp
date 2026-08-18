@@ -11,6 +11,19 @@ import type { NoteKind, SiteNote } from '../types'
 
 export const NOTE_KINDS: NoteKind[] = ['수거요청', '자재', '연락', '주의', '기타']
 
+/**
+ * 메모 종류별 아이콘·색.
+ *
+ *  ⚠ `noteMeta[n.kind]` 가 undefined 면 **거래처 상세 화면이 통째로 죽습니다.**
+ *    실제로 그렇게 터지는 것을 봤습니다(그때는 검사 픽스처가 `kind` 를 안
+ *    넣은 탓이었습니다).
+ *
+ *    운영 데이터에서는 날 수 없습니다 — `site_notes_kind_check` 가 아래
+ *    다섯 값만 허용합니다. 그게 진짜 방패입니다. 다만 나중에 종류를 하나
+ *    늘리면서 이 표를 같이 안 고치면 **알림 하나 때문에 화면 전체가**
+ *    안 뜹니다. 그 대가가 너무 큽니다 — 모르는 종류는 「기타」로 그리되
+ *    **적힌 글자는 그대로 보여 줍니다.** 감추지 않습니다.
+ */
 export const noteMeta: Record<NoteKind, { icon: typeof Package; chip: string }> = {
   수거요청: { icon: Truck, chip: 'bg-teal-50 text-teal-700' },
   자재: { icon: Package, chip: 'bg-sky-50 text-sky-700' },
@@ -27,7 +40,7 @@ export function NoteChips({ notes, max = 2 }: { notes: SiteNote[]; max?: number 
   return (
     <div className="mt-2 space-y-1.5">
       {shown.map((n) => {
-        const m = noteMeta[n.kind]
+        const m = noteMeta[n.kind] ?? noteMeta['기타']
         const Icon = m.icon
         return (
           <p
@@ -111,7 +124,7 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
           </p>
         ) : (
           notes.map((n) => {
-            const m = noteMeta[n.kind]
+            const m = noteMeta[n.kind] ?? noteMeta['기타']
             const Icon = m.icon
             return (
               <div
