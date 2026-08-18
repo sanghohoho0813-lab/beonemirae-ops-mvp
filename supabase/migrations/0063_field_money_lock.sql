@@ -156,6 +156,37 @@ comment on function public.client_billing_terms() is
   '거래처별 단가·결제조건·세금계산서 정보 (0063). 사무실·관리자만 — 현장에는 빈 배열을 돌려줍니다.';
 
 
+-- ── ⑤-b 백업은 거래처를 **통째로** 받아야 합니다 ───────────────────────────
+--
+--  ⚠ 이걸 빠뜨릴 뻔했습니다. 백업(`rawSnapshot`)은 표 이름을 돌면서 전부
+--    `select *` 로 읽습니다. ④ 로 별표를 막으면 **거래처가 통째로 「못 읽음」**
+--    으로 빠집니다 — 그 백업으로는 복구가 안 됩니다.
+--
+--  백업은 관리자 화면(설정)에서만 합니다. 그래서 관리자만입니다.
+--  ⚠ 권한이 없으면 **빈 배열이 아니라 오류**입니다. 빈 배열로 돌려주면
+--    「거래처가 0곳인 백업」이 만들어지고, 그것을 복구하면 다 지워집니다.
+create or replace function public.clients_full()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception '거래처 전체 내려받기는 관리자만 할 수 있습니다.' using errcode = 'P0001';
+  end if;
+  return coalesce((select jsonb_agg(to_jsonb(c) order by c.id) from public.clients c), '[]'::jsonb);
+end;
+$$;
+
+revoke all on function public.clients_full() from public;
+grant execute on function public.clients_full() to authenticated;
+
+comment on function public.clients_full() is
+  '백업용 거래처 전체 행 (0063). 관리자만 — 돈 칸까지 담아야 복구가 됩니다.';
+
+
 -- ── ⑥ 수거 완료 — 거래처를 통째로 읽던 자리 ────────────────────────────────
 --
 --  ⚠ 아래는 0061 의 함수를 **그대로 옮겨 온 뒤 두 줄만** 고친 것입니다.
@@ -558,7 +589,7 @@ begin
     'has_live_billing',
     'submit_schedule_feedback','handle_schedule_feedback',
     'update_visit','update_monthly_actual',
-    'client_billing_terms',
+    'client_billing_terms','clients_full',
     'is_admin','is_staff','is_active_user','auth_role'
   ] loop
     if not exists (

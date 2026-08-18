@@ -2327,6 +2327,25 @@ export async function rawSnapshot(takenBy: string, takenAt: string): Promise<Sna
 
   for (const t of SNAPSHOT_TABLES) {
     try {
+      if (t.name === 'clients') {
+        //  ⚠ 0063 부터 거래처는 `select *` 가 막혀 있습니다 (돈 칸을 열 단위로
+        //    잠갔습니다). 백업은 **돈 칸까지** 담아야 복구가 됩니다 — 안 담으면
+        //    되살렸을 때 단가·월정액·결제조건·세금정보가 통째로 사라지고,
+        //    그 다음 달 청구가 조용히 틀립니다.
+        //
+        //    관리자만 부를 수 있고, 권한이 없으면 **오류**입니다. 빈 배열로
+        //    돌려주면 「거래처 0곳인 백업」이 만들어져 더 위험합니다.
+        tables[t.name] = await withRetry(async () => {
+          const { data, error } = await sb.rpc('clients_full')
+          if (!error) return (data ?? []) as unknown[]
+          //  0063 을 아직 안 올린 서버에는 이 함수가 없습니다. 그때는 별표가
+          //  아직 열려 있으므로 예전 길로 읽습니다 — 앱만 먼저 올려도 백업이
+          //  멈추지 않게. (권한 오류는 그대로 올려 「못 읽음」으로 남깁니다)
+          if (!/schema cache|does not exist/i.test(error.message)) throw new Error(error.message)
+          return await pageAll((f, to) => sb.from('clients').select('*').order(t.order).range(f, to))
+        })
+        continue
+      }
       tables[t.name] = await withRetry(async () =>
         pageAll((f, to) => sb.from(t.name).select('*').order(t.order).range(f, to)),
       )
