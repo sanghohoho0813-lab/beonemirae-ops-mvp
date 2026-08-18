@@ -82,6 +82,9 @@ export const SNAPSHOT_TABLES: SnapshotTable[] = [
   //  국세청 신고 매출 — 증명서를 다시 뽑으면 되지만, 넣어 둔 것을 잃으면
   //  전년 동기 비교가 통째로 사라집니다. 업무 자료로 담습니다.
   { name: 'tax_filings', label: '신고 매출', order: 'id', core: true },
+  //  현장 의견 (0062) — 「왜 그 주에 요일을 바꿨나」에 답할 근거입니다.
+  //  수거 일정을 가리키므로 schedules 뒤에 와야 합니다.
+  { name: 'schedule_feedback', label: '현장 의견', order: 'id', core: false },
 ]
 
 /**
@@ -110,6 +113,7 @@ export const PROFILE_REFS: Record<string, string[]> = {
   audit_logs: ['actor_id'],
   experiment_settings: ['updated_by'],
   performance_baselines: ['updated_by'],
+  schedule_feedback: ['created_by', 'handled_by'],
 }
 
 /**
