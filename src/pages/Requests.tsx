@@ -25,7 +25,7 @@ import { Modal } from '../components/Modal'
 import { clientRequests, type RequestItem } from '../lib/ops'
 import { customerServiceStats } from '../lib/portal'
 import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
-import { REQUEST_KINDS, type RequestKind, type RequestStatus } from '../types'
+import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 요청 (비원미래 담당자 화면)
@@ -169,7 +169,7 @@ export function Requests() {
                 >
                   {r.clientName}
                 </Link>
-                <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{r.type}</span>
+                <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{REQUEST_KIND_LABEL[r.type]}</span>
                 {r.urgent && (
                   <span className="pill bg-rose-50 text-rose-600">
                     <AlertTriangle size={13} strokeWidth={2.6} /> 긴급
@@ -259,7 +259,7 @@ export function Requests() {
           client={data.clients.find((c) => c.id === bookFor.clientId)}
           requestId={bookFor.id}
           desiredDate={bookFor.desiredDate}
-          defaultMemo={`${bookFor.type} 요청 — ${bookFor.content}`.slice(0, 120)}
+          defaultMemo={`${REQUEST_KIND_LABEL[bookFor.type]} 요청 — ${bookFor.content}`.slice(0, 120)}
         />
       )}
 
@@ -268,7 +268,7 @@ export function Requests() {
         <div className="card p-5">
           <p className="t-body break-keep leading-snug text-navy-600">
             수거 완료를 입력하면 해당 병원의 <b>긴급수거·추가수거</b> 요청이 자동으로 닫히고, 자재를 함께
-            공급했으면 <b>소모품</b> 요청도 함께 닫힙니다. 교육·자료 요청은 별도 처리가 필요하므로 자동으로
+            공급했으면 <b>자재·용기</b> 요청도 함께 닫힙니다. 교육·자료 요청은 별도 처리가 필요하므로 자동으로
             닫지 않습니다.
           </p>
         </div>
@@ -291,7 +291,8 @@ export function Requests() {
         }
       >
         <p className="t-muted mb-3 break-keep">
-          {replyTo?.clientName} · {replyTo?.type} — 아래 내용이 병원 화면에 그대로 표시됩니다.
+          {replyTo?.clientName} · {replyTo ? REQUEST_KIND_LABEL[replyTo.type] : ''} — 아래 내용이 병원 화면에 그대로
+          표시됩니다.
         </p>
         <textarea
           id="reply-text"

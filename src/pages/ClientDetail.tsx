@@ -60,7 +60,7 @@ import { SiteNotesPanel, NoteChips } from '../components/SiteNotes'
 import { MonthlyActuals } from '../components/MonthlyActuals'
 import { ReceiptPanel } from '../components/Receipts'
 import { ClientDrivers } from '../components/ClientDrivers'
-import type { Client } from '../types'
+import { REQUEST_KIND_LABEL, type Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 상세 (/clients/:id) — 실제 거래처 운영관리 화면
@@ -821,7 +821,7 @@ export function ClientDetail() {
               {requests.map((r) => (
                 <div key={r.id} className="p-3.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.98rem] font-bold text-teal-700">{r.type}</span>
+                    <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.98rem] font-bold text-teal-700">{REQUEST_KIND_LABEL[r.type]}</span>
                     {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.98rem] font-bold text-rose-500">긴급</span>}
                     <span className={`rounded-lg px-2 py-0.5 text-[0.98rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
                     <span className="ml-auto text-[0.98rem] text-navy-400">{r.when}</span>

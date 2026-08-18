@@ -28,7 +28,7 @@ import { Modal } from '../components/Modal'
 import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
-import { REQUEST_KINDS, type RequestKind, type RequestStatus } from '../types'
+import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 import { prettyDate, weight, won } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ import { prettyDate, weight, won } from '../lib/format'
 //
 //  화면 순서 자체가 답입니다. 행동 → 내 행동의 상태 → 지나간 기록 순입니다.
 //   0) 다음 수거는 언제인가 (제목 아래 한 줄)
-//   1) 지금 할 수 있는 일 — 긴급 수거 / 소모품을 크게, 나머지는 작게
+//   1) 지금 할 수 있는 일 — 수거 요청 / 자재·용기 요청을 크게, 나머지는 작게
 //   2) 내 요청이 지금 어디까지 왔는가 (회신까지)
 //   3) 비원미래가 우리 병원 데이터를 보고 무엇을 제안했는가 → 수락
 //   4) 우리 병원 수거 현황 (최근 기록)
@@ -70,15 +70,17 @@ const KIND_HINT: Record<RequestKind, string> = {
  *  secondary 덜 급하거나 덜 잦은 것. 같은 자리에 작게 둡니다.
  *  (기타 문의는 요청 창 안에서 고릅니다)
  *
- * ── 「소모품」이 두 갈래였습니다 ────────────────────────────────────────────
+ * ── 두 번째 버튼이 「소모품 주문」이었습니다 ───────────────────────────────
  *
- *  예전에는 큰 버튼의 「소모품」이 **자유 글 요청**으로 갔습니다. 병원이
- *  「20L 용기 10개요」라고 적으면 그건 요청 한 줄로만 남고, 품목·수량·단가가
- *  붙은 **주문**이 되지 않습니다. 그러면 전달해도 그 달 청구에 안 실립니다.
+ *  이사님 통화 기준으로 병원이 급한 것은 **용기가 모자란 것**입니다. 물건을
+ *  사겠다는 뜻이 아닙니다. 「소모품 주문」이라고 적어 두면 판매 상품 목록처럼
+ *  읽혀서, 정작 용기가 없어 못 버리는 병원이 이 칸을 안 누르고 전화를 겁니다.
+ *  그래서 **글자만** 「자재·용기 요청」으로 바꿨습니다.
  *
- *  실제로 팔리려면 목록에서 품목과 수량을 고른 주문이어야 합니다. 그래서 큰
- *  버튼은 **소모품 주문 화면**으로 보냅니다. 자유 글로 적고 싶으신 분을 위해
- *  요청 창의 「소모품」 항목은 그대로 남겨 둡니다 — 없앤 것이 아닙니다.
+ *  가는 곳은 그대로 물품 화면입니다. 자유 글 요청으로 보내면 「20L 용기
+ *  10개요」가 요청 한 줄로만 남고 품목·수량·단가가 붙은 **주문**이 되지
+ *  않아, 전달해도 그 달 청구에 안 실립니다. 파는 기능을 없앤 것이 아니라
+ *  **파는 것처럼 부르지 않는 것**입니다.
  */
 const SECONDARY: { kind: RequestKind; label: string }[] = [
   { kind: '긴급수거', label: '긴급 수거' },
@@ -196,7 +198,7 @@ export function PortalHome() {
       {/* ── 1. 지금 할 수 있는 일 — 전화를 걸기 전에 여기서 먼저 ──
            ⚠ 이 두 개가 **화면을 열자마자** 보여야 합니다. 예전에는 시스템
              소개 카드가 첫 화면을 다 차지해서, 「수거 요청」은 화면 맨 끝에
-             겨우 걸치고 「소모품 주문」은 아예 보이지 않았습니다. 병원 담당자는
+             겨우 걸치고 「자재·용기 요청」은 아예 보이지 않았습니다. 병원 담당자는
              폐기물이 본업이 아니라, 안 보이면 그냥 전화를 겁니다.
              소개 카드는 이 아래로 내렸습니다 — 없애지 않았습니다. */}
       <section>
@@ -220,7 +222,7 @@ export function PortalHome() {
             <ChevronRight size={22} className="shrink-0 text-navy-300" />
           </button>
 
-          {/*  자유 글이 아니라 **주문 화면**으로 보냅니다 — 품목과 수량이 붙어야
+          {/*  자유 글이 아니라 **물품 화면**으로 보냅니다 — 품목과 수량이 붙어야
               실제로 전달되고 그 달 청구에 실립니다. 위 주석 참고. */}
           <Link
             to="/portal/supplies"
@@ -233,9 +235,9 @@ export function PortalHome() {
               <PackagePlus size={29} strokeWidth={2.3} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="t-card block break-keep text-navy-900">소모품 주문</span>
+              <span className="t-card block break-keep text-navy-900">자재·용기 요청</span>
               <span className="t-muted mt-1 block break-keep leading-snug">
-                전용 용기 · 봉투 — 다음 수거 때 가져다 드립니다
+                전용 용기 · 봉투 · 바늘통이 부족할 때 — 다음 수거 때 가져다 드립니다
               </span>
             </span>
             <ChevronRight size={22} className="shrink-0 text-navy-300" />
@@ -303,7 +305,7 @@ export function PortalHome() {
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kt.tile}`}>
                       <Icon size={18} strokeWidth={2.3} />
                     </span>
-                    <span className={`pill ${kt.chip}`}>{r.type}</span>
+                    <span className={`pill ${kt.chip}`}>{REQUEST_KIND_LABEL[r.type]}</span>
                     {r.urgent && (
                       <span className="pill bg-rose-50 text-rose-600">
                         <AlertTriangle size={13} strokeWidth={2.6} /> 긴급
@@ -475,7 +477,7 @@ export function PortalHome() {
       {/* ── 요청 등록 ── */}
       <Modal
         open={open}
-        title={`${kind} 요청`}
+        title={`${REQUEST_KIND_LABEL[kind]} 요청`}
         onClose={() => setOpen(false)}
         footer={
           <div className="flex gap-2">
@@ -512,7 +514,7 @@ export function PortalHome() {
                     kind === k ? 'bg-navy-900 text-white' : `${TONE[REQUEST_TONE[k]].chip} hover:opacity-80`
                   }`}
                 >
-                  {k}
+                  {REQUEST_KIND_LABEL[k]}
                 </button>
               ))}
             </div>

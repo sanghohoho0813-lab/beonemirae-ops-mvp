@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, ChevronRight, Hospital, Send } from 'lucide-react'
-import type { AppData } from '../types'
+import { REQUEST_KIND_LABEL, type AppData } from '../types'
 import { serviceConversion } from '../lib/portal'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { openRequests } from '../lib/ops'
@@ -173,7 +173,7 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="t-body break-keep font-extrabold text-navy-900">{r.clientName}</span>
-                  <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{r.type}</span>
+                  <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{REQUEST_KIND_LABEL[r.type]}</span>
                   <span className={`pill ${TONE[STATUS_TONE[r.status]].chip}`}>{r.status}</span>
                 </div>
                 <p className="t-muted mt-1 break-keep">
