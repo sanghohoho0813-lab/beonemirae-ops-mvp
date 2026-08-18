@@ -51,14 +51,17 @@ export function VehicleManager() {
 
   return (
     <div className="space-y-3">
+      {/*  ⚠ 「등록된 차량이 없습니다 — 수거 완료 입력을 할 수 없습니다」를
+           여기서 또 적고 있었습니다. 이 칸을 감싸는 설정 카드가 바로 위에서
+           **같은 말을 이미** 합니다. 같은 문장이 연달아 두 번 뜨면 화면이
+           미완성처럼 보입니다. 여기서는 **채울 때 필요한 것만** 남깁니다. */}
       {data.vehicles.length === 0 && (
         <div className="rounded-2xl bg-amber-50 px-4 py-3.5">
           <p className="t-body break-keep font-bold text-amber-800">
-            등록된 차량이 없습니다. 차량이 없으면 수거 완료 입력을 할 수 없습니다.
+            실제로 운행하는 차량을 먼저 등록해 주세요.
           </p>
           <p className="t-muted mt-1 break-keep text-amber-700">
-            실제로 운행하는 차량을 먼저 등록해 주세요. 의료폐기물 차량과 일회용기저귀 차량은 서로 배차할 수
-            없으므로 구분을 정확히 선택해야 합니다.
+            의료폐기물 차량과 일회용기저귀 차량은 서로 배차할 수 없으므로 구분을 정확히 선택해야 합니다.
           </p>
         </div>
       )}

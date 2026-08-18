@@ -114,7 +114,10 @@ export function MonthClose() {
             확정하면 <b className="text-navy-800">그 순간의 금액과 거래명세서가 그대로 굳습니다.</b> 나중에 단가를 바꿔도
             이미 확정한 청구는 바뀌지 않고, 확정 뒤에 들어온 수거는 「추가 청구」로 따로 잡힙니다.
           </p>
-          <p>
+          {/*  두 문단 중 **위쪽만** 폰에 남깁니다. 위는 「되돌릴 수 없다」는
+               경고라 반드시 보여야 하고, 아래는 왜 필요한지에 대한 설명이라
+               매달 다시 읽을 것은 아닙니다. 넓은 화면은 그대로 둡니다. */}
+          <p className="hidden sm:block">
             청구가 만들어져야 미수금과 <Link to="/bank" className="font-bold text-navy-800 underline">통장 대사</Link>가
             붙을 곳이 생깁니다 — 돈 흐름의 첫 단추입니다.
           </p>
@@ -125,7 +128,10 @@ export function MonthClose() {
       <section>
         <SectionTitle>청구할 달</SectionTitle>
         <div className="card p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-2">
+          {/*  ⚠ 폰에서 여섯 달이 한 줄에 하나씩 쌓여 382px 이었습니다.
+               「2026년 08월」이 한 줄을 다 먹기 때문입니다. 두 칸 격자로
+               바꾸면 세 줄입니다 — 글자는 그대로 두고 자리만 나눕니다. */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {months.map((m) => (
               <button
                 key={m}

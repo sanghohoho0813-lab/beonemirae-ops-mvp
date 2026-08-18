@@ -110,15 +110,16 @@ function MarkBox({ month }: { month: string }) {
     setBusy('')
   }
 
-  return (
-    <div data-mark-box className="card mt-3 p-4 sm:p-5">
-      <p className="break-keep text-[1.08rem] font-extrabold text-navy-900">사람만 아는 두 가지</p>
-      <p className="mt-1 break-keep text-[0.98rem] leading-snug text-navy-500">
-        시스템은 명세서를 뽑을 수 있다는 것까지만 압니다. 실제로 보내고 발행하신 뒤에 여기서 표시해 주시면 그때
-        마감이 끝난 것으로 봅니다. 잘못 누르면 다시 눌러 되돌릴 수 있습니다.
-      </p>
+  //  폰에서 접었다 폈다 — 넓은 화면에서는 이 값과 무관하게 늘 보입니다.
+  const [marksOpen, setMarksOpen] = useState(false)
 
-      <div className="mt-3 flex flex-col gap-2.5">
+  //  몇 개나 표시해 뒀는지 — 접었을 때 이 숫자만은 보여야 합니다.
+  const markedCount = STEPS.filter(({ step }) =>
+    (data.monthCloseMarks ?? []).some((m) => m.month === month && m.step === step),
+  ).length
+
+  const rows = (
+    <div className="mt-3 flex flex-col gap-2.5">
         {STEPS.map(({ step, label, hint }) => {
           const mark = (data.monthCloseMarks ?? []).find((m) => m.month === month && m.step === step)
           const on = Boolean(mark)
@@ -159,7 +160,38 @@ function MarkBox({ month }: { month: string }) {
             </div>
           )
         })}
-      </div>
+    </div>
+  )
+
+  return (
+    <div data-mark-box className="card mt-3 p-4 sm:p-5">
+      <p className="break-keep text-[1.08rem] font-extrabold text-navy-900">
+        사람만 아는 두 가지
+        {/*  ⚠ 접었을 때도 **몇 개를 표시해 뒀는지**는 보여야 합니다.
+             안 보이면 「나중에 하지」가 아니라 「한 줄이 사라졌다」가 됩니다. */}
+        <span data-mark-count className="ml-2 font-bold text-navy-400">{markedCount} / {STEPS.length} 표시함</span>
+      </p>
+      <p className="mt-1 break-keep text-[0.98rem] leading-snug text-navy-500">
+        시스템은 명세서를 뽑을 수 있다는 것까지만 압니다. 실제로 보내고 발행하신 뒤에 여기서 표시해 주시면 그때
+        마감이 끝난 것으로 봅니다. 잘못 누르면 다시 눌러 되돌릴 수 있습니다.
+      </p>
+
+      {/*  ⚠ 이 두 가지는 **청구를 확정한 뒤에** 하는 일입니다. 그런데 폰에서
+           530px 을 차지하고 있어, 정작 지금 눌러야 할 「확정하기」를 y=3,004px
+           까지 밀어냈습니다. 폰에서만 접습니다 — 넓은 화면은 그대로입니다.
+           지운 것이 아니라 한 번 누르면 그대로 나옵니다. */}
+      {/*  ⚠ 두 벌로 그리면 `data-mark-row` 가 DOM 에 **두 번** 생깁니다.
+           검사가 늘 숨은 쪽을 집어 「접혀 있다」가 항상 통과했습니다.
+           한 벌만 그리고 폰에서만 감춥니다 — 넓은 화면은 늘 보입니다. */}
+      <button
+        type="button"
+        data-mark-open
+        onClick={() => setMarksOpen((v) => !v)}
+        className="mt-2 flex w-full items-center justify-center gap-1 rounded-2xl bg-navy-50 px-4 py-2.5 text-[1.08rem] font-bold text-navy-600 transition active:scale-[0.99] sm:hidden"
+      >
+        {marksOpen ? '접기' : '명세서·세금계산서 표시하기'}
+      </button>
+      <div className={marksOpen ? '' : 'hidden sm:block'}>{rows}</div>
 
       {err && (
         <p data-mark-error className="mt-2.5 break-keep rounded-xl bg-rose-50 px-3.5 py-2.5 text-[1rem] font-bold text-rose-600">
@@ -240,7 +272,10 @@ export function MonthProgressPanel({ month }: { month: string }) {
 
       <MarkBox month={month} />
 
-      <p className="mt-2 break-keep px-1 text-[0.96rem] leading-snug text-navy-400">
+      {/*  바로 위 「사람만 아는 두 가지」 카드가 같은 말을 이미 합니다.
+           폰에서는 그 118px 이 정작 눌러야 할 「확정하기」를 밀어냅니다.
+           넓은 화면에서는 그대로 둡니다. */}
+      <p className="mt-2 hidden break-keep px-1 text-[0.96rem] leading-snug text-navy-400 sm:block">
         명세서를 병원에 보냈는지, 홈택스에 세금계산서를 발행했는지는 시스템이 알 수 없습니다. 시스템이 스스로
         「끝」으로 칠하지 않고, 위에서 표시하신 것만 끝으로 봅니다.
       </p>
