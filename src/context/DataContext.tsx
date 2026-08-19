@@ -353,7 +353,21 @@ interface DataContextValue {
   /** 'live' = 로그인 상태의 서버 DB, 'demo' = 이 브라우저에만 저장되는 시연 데이터 */
   mode: 'live' | 'demo'
   /** 서버 통신 상태 — 화면에서 로딩/저장중/실패를 그대로 보여주기 위한 값 */
-  sync: { loading: boolean; saving: boolean; error: string | null; lastSavedAt: string | null }
+  sync: {
+    loading: boolean
+    saving: boolean
+    error: string | null
+    lastSavedAt: string | null
+    /**
+     * 첫 읽기가 끝났는가.
+     *
+     *  실사용에서 병원 담당자가 로그인한 직후 몇 초 동안
+     *  「연결된 병원 정보를 찾을 수 없습니다 — 담당자에게 계정 연결을
+     *  요청해 주세요」가 떴습니다. 실제로는 연결돼 있었습니다.
+     *  아직 안 읽어온 것과 정말로 없는 것은 다른 말이어야 합니다.
+     */
+    ready: boolean
+  }
   /** 서버에서 다시 읽어옵니다 (다른 기기에서 입력한 내용 반영) */
   reload: () => Promise<void>
   /** 마지막 실패한 저장을 다시 시도 */
@@ -386,6 +400,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
   const [clientSet, setClientSetState] = useState<ClientSetSize>(() => loadClientSet())
   const [loading, setLoading] = useState(false)
+  //  로그인 후 첫 읽기가 끝났는지. 끝나기 전에는 어느 화면도 「없습니다」라고
+  //  말하지 않습니다 (실패로 끝나도 true — 그때는 실패 안내가 대신 뜹니다).
+  const [firstLoadDone, setFirstLoadDone] = useState(false)
   const [saving, setSaving] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
@@ -421,6 +438,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       })
     } finally {
       setLoading(false)
+      setFirstLoadDone(true)
     }
   }, [mode])
 
@@ -429,7 +447,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // 남아 있어서도, 그 자리를 시연 데이터가 채워서도 안 됩니다.
   useEffect(() => {
     if (live) void reload()
-    else setData(isSupabaseConfigured ? EMPTY_APP_DATA : loadData())
+    else {
+      setData(isSupabaseConfigured ? EMPTY_APP_DATA : loadData())
+      //  로그아웃하면 다시 「아직 안 읽었음」으로 되돌립니다 — 다음 사람이
+      //  로그인했을 때 앞사람 기준으로 「없습니다」가 뜨면 안 됩니다.
+      setFirstLoadDone(false)
+    }
   }, [live, reload])
 
   // ── 남의 입력을 따라잡기 ────────────────────────────────────────────────
@@ -2235,7 +2258,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       shareProposal,
       respondProposal,
       mode,
-      sync: { loading, saving, error: syncError, lastSavedAt },
+      sync: { loading, saving, error: syncError, lastSavedAt, ready: !live || firstLoadDone },
       reload,
       retry,
       clearSyncError,
@@ -2316,6 +2339,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       respondProposal,
       mode,
       loading,
+      firstLoadDone,
+      live,
       saving,
       syncError,
       lastSavedAt,

@@ -21,6 +21,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canSeeMoney } from '../lib/access'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { PageHeader } from '../components/PageHeader'
 import { BookVisitModal } from '../components/BookVisit'
 import { Modal } from '../components/Modal'
@@ -158,10 +159,15 @@ export function Requests() {
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState
-          icon={Inbox}
-          title={filter === '진행 중' ? '처리할 요청이 없습니다' : '요청이 없습니다'}
-          subtitle="병원 담당자가 포털에서 요청을 올리면 여기에 바로 표시됩니다."
+        <LoadGate
+          loadingTitle="요청을 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={Inbox}
+              title={filter === '진행 중' ? '처리할 요청이 없습니다' : '요청이 없습니다'}
+              subtitle="병원 담당자가 포털에서 요청을 올리면 여기에 바로 표시됩니다."
+            />
+          }
         />
       ) : (
         <div className="space-y-3">

@@ -12,6 +12,7 @@ import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 import { EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { DeadlineBanner } from '../components/DeadlineBanner'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { BookVisitModal } from '../components/BookVisit'
@@ -276,7 +277,16 @@ export function TodaySchedule() {
       </div>
 
       {list.length === 0 ? (
-        <EmptyState icon={CalendarX2} title="등록된 일정이 없어요" subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요." />
+        <LoadGate
+          loadingTitle="오늘 일정을 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={CalendarX2}
+              title="등록된 일정이 없어요"
+              subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요."
+            />
+          }
+        />
       ) : (
         <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
           {list.map((s, si) => {

@@ -28,6 +28,7 @@ import { CustomerServiceCard } from '../components/CustomerService'
 import { MonthGlance } from '../components/MonthGlance'
 import { StartHere } from '../components/StartHere'
 import { PendingApprovals } from '../components/PendingApprovals'
+import { useLoadState } from '../components/LoadState'
 import { TodayFocus } from '../components/TodayFocus'
 import { TodayBoard } from '../components/TodayBoard'
 import { TourBanner } from '../components/TourEntry'
@@ -90,6 +91,7 @@ function PhoneRow({
 
 export function Dashboard() {
   const { data } = useData()
+  const loadState = useLoadState()
   const { profile, mode } = useAuth()
   //  매출은 돈입니다 — 현장 담당자에게는 대시보드 자체가 열리지 않지만,
   //  시연 모드(로그인 없음)에서는 그대로 보여 줍니다.
@@ -245,7 +247,9 @@ export function Dashboard() {
             <div className="card flex min-h-0 flex-1 flex-col divide-y divide-navy-50">
               {topChecks.length === 0 && (
                 <p className="t-body break-keep px-4 py-6 text-center font-bold text-navy-400">
-                  오늘 따로 챙길 일이 없습니다.
+                  {/*  자료가 오기 전에는 「없습니다」가 아니라 「불러오는 중」입니다 —
+                       밀린 일이 있는데도 없다고 읽히면 그날 그대로 지나갑니다. */}
+                  {loadState === 'ready' ? '오늘 따로 챙길 일이 없습니다.' : '불러오는 중입니다…'}
                 </p>
               )}
               {topChecks.map((item) => {

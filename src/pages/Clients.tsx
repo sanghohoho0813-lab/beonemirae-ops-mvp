@@ -7,6 +7,7 @@ import { canSeeMoney } from '../lib/access'
 import { PageHeader } from '../components/PageHeader'
 import { Modal } from '../components/Modal'
 import { FilterChip, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { ClientForm, emptyClientForm } from '../components/ClientForm'
 import { clientOutstanding } from '../lib/ops'
 import { nextActionsFor } from '../lib/insights'
@@ -176,11 +177,16 @@ export function Clients() {
       {/* 아직 한 곳도 없는 것(신규 고객사 1일차)과 필터에 안 걸린 것은 다른 상황입니다.
           전자는 "등록하세요", 후자는 "조건을 바꾸세요"가 맞는 안내입니다. */}
       {data.clients.length === 0 ? (
-        <EmptyState
-          icon={Building2}
-          title="아직 등록된 거래처가 없습니다"
-          subtitle="거래처를 등록하면 수거 일정·이력·월간 리포트가 함께 만들어집니다."
-          action={canAddClient ? { label: '첫 거래처 등록', onClick: () => { setForm(emptyClientForm); setAdding(true) } } : undefined}
+        <LoadGate
+          loadingTitle="거래처를 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={Building2}
+              title="아직 등록된 거래처가 없습니다"
+              subtitle="거래처를 등록하면 수거 일정·이력·월간 리포트가 함께 만들어집니다."
+              action={canAddClient ? { label: '첫 거래처 등록', onClick: () => { setForm(emptyClientForm); setAdding(true) } } : undefined}
+            />
+          }
         />
       ) : filtered.length === 0 ? (
         <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />

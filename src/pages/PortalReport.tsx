@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Hospital} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { MonthlyReportView } from '../components/MonthlyReport'
 import { clientMonthlyReport } from '../lib/insights'
 import { thisMonth } from '../lib/format'
@@ -30,7 +31,10 @@ export function PortalReport() {
   if (!client || !report) {
     return (
       <PageShell>
-        <EmptyState icon={Hospital} title="연결된 병원 정보를 찾을 수 없습니다" />
+        <LoadGate
+          loadingTitle="병원 정보를 불러오는 중입니다"
+          empty={<EmptyState icon={Hospital} title="연결된 병원 정보를 찾을 수 없습니다" />}
+        />
       </PageShell>
     )
   }

@@ -3,6 +3,7 @@ import { PackageSearch } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { MetricCard, EmptyState, SectionTitle } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { MaterialRiskCard } from '../components/ops'
 import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
@@ -165,7 +166,12 @@ export function Materials() {
 
       <h2 className="mb-2.5 px-1 text-[1.07rem] font-bold text-navy-700">공급 내역</h2>
       {sorted.length === 0 ? (
-        <EmptyState icon={PackageSearch} title="자재공급 내역이 없어요" subtitle="우측 상단에서 공급을 등록해 보세요." />
+        <LoadGate
+          loadingTitle="자재공급 내역을 불러오는 중입니다"
+          empty={
+            <EmptyState icon={PackageSearch} title="자재공급 내역이 없어요" subtitle="우측 상단에서 공급을 등록해 보세요." />
+          }
+        />
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {sorted.map((m) => {

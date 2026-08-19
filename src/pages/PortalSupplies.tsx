@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { supplyNeedsFor } from '../lib/supplyNeeds'
 import { prettyDate, won } from '../lib/format'
 import type { Product, ProductOrder } from '../types'
+import { LoadFailedState, LoadingState, useLoadState } from '../components/LoadState'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 포털 — 필요한 물품 요청
@@ -72,6 +73,7 @@ export function PortalSupplies() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   //  같은 저장 시도는 한 번만 — 다시 눌러도 주문이 두 개가 되지 않습니다.
   const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const loadState = useLoadState()
 
   //  추천 물품 ↔ 실제 파는 상품 잇기. 파는 상품이 없으면 추천만 보여 줍니다.
   const productFor = (stockKey: string): Product | undefined =>
@@ -281,13 +283,20 @@ export function PortalSupplies() {
 
       {/*  아직 파는 물품을 한 번도 등록하지 않은 상태. 빈 화면을 그냥 두면
           병원 눈에는 「고장」으로 보입니다 — 그대로 적습니다. */}
-      {products.length === 0 && (
-        <div data-no-products className="card mb-4 p-5">
-          <p className="t-body break-keep text-navy-600">
-            아직 주문하실 수 있는 물품이 준비되지 않았습니다. 필요하신 것은 전화로 말씀해 주세요.
-          </p>
-        </div>
-      )}
+      {products.length === 0 &&
+        (loadState === 'ready' ? (
+          <div data-no-products className="card mb-4 p-5">
+            <p className="t-body break-keep text-navy-600">
+              아직 주문하실 수 있는 물품이 준비되지 않았습니다. 필요하신 것은 전화로 말씀해 주세요.
+            </p>
+          </div>
+        ) : loadState === 'failed' ? (
+          <LoadFailedState />
+        ) : (
+          //  자료가 오기 전에 「준비되지 않았습니다」라고 하면, 물품이 있는데도
+          //  병원은 주문을 포기하고 전화를 겁니다.
+          <LoadingState title="주문하실 수 있는 물품을 불러오는 중입니다" />
+        ))}
 
       {/* ── 지난 요청 ─────────────────────────────────────────────────────── */}
       {myOrders.length > 0 && (

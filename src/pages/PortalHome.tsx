@@ -24,6 +24,7 @@ import {
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { PageShell, SectionTitle, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { Modal } from '../components/Modal'
 import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
@@ -122,12 +123,20 @@ export function PortalHome() {
   const s = useMemo(() => (client ? portalSummary(data, client) : null), [data, client])
 
   if (!client || !s) {
+    //  ⚠ 자료가 오기 전에 「연결된 병원 정보를 찾을 수 없습니다」라고 하면
+    //     연결돼 있는 병원도 전화를 겁니다 (실사용 검증에서 실제로 떴습니다).
+    //     확인된 뒤에만 「없다」고 말합니다.
     return (
       <PageShell>
-        <EmptyState
-          icon={Hospital}
-          title="연결된 병원 정보를 찾을 수 없습니다"
-          subtitle={`비원미래 담당자에게 계정 연결을 요청해 주세요. (${CLIENT_TEL})`}
+        <LoadGate
+          loadingTitle="병원 정보를 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={Hospital}
+              title="연결된 병원 정보를 찾을 수 없습니다"
+              subtitle={`비원미래 담당자에게 계정 연결을 요청해 주세요. (${CLIENT_TEL})`}
+            />
+          }
         />
       </PageShell>
     )

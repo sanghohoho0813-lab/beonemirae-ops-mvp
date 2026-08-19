@@ -3,6 +3,7 @@ import { CLIENT_TEL } from '../lib/brand'
 import { Hospital, ClipboardList } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { collectionHistory } from '../lib/ops'
 import { prettyDate, weight } from '../lib/format'
 
@@ -23,7 +24,10 @@ export function PortalHistory() {
   if (!client) {
     return (
       <PageShell>
-        <EmptyState icon={Hospital} title="연결된 병원 정보를 찾을 수 없습니다" />
+        <LoadGate
+          loadingTitle="병원 정보를 불러오는 중입니다"
+          empty={<EmptyState icon={Hospital} title="연결된 병원 정보를 찾을 수 없습니다" />}
+        />
       </PageShell>
     )
   }
@@ -38,7 +42,16 @@ export function PortalHistory() {
       </div>
 
       {done.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="아직 수거 기록이 없습니다" subtitle="첫 수거가 완료되면 여기에 표시됩니다." />
+        <LoadGate
+          loadingTitle="수거 이력을 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={ClipboardList}
+              title="아직 수거 기록이 없습니다"
+              subtitle="첫 수거가 완료되면 여기에 표시됩니다."
+            />
+          }
+        />
       ) : (
         <>
         {/*  ── 폰에서는 표 대신 카드 ───────────────────────────────────────

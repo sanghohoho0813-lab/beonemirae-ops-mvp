@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell, FilterChip, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { Modal } from '../components/Modal'
 import { productSales, type ProductSales } from '../lib/repo'
 import { prettyDate, won } from '../lib/format'
@@ -150,10 +151,15 @@ function OrdersTab({
 
   if (orders.length === 0) {
     return (
-      <EmptyState
-        icon={Package}
-        title="아직 들어온 주문이 없습니다"
-        subtitle="병원 포털의 「필요한 물품」에서 요청이 올라오면 여기에 표시됩니다. 먼저 「상품」 탭에서 파실 물품을 등록해 주세요."
+      <LoadGate
+        loadingTitle="주문을 불러오는 중입니다"
+        empty={
+          <EmptyState
+            icon={Package}
+            title="아직 들어온 주문이 없습니다"
+            subtitle="병원 포털의 「필요한 물품」에서 요청이 올라오면 여기에 표시됩니다. 먼저 「상품」 탭에서 파실 물품을 등록해 주세요."
+          />
+        }
       />
     )
   }
@@ -317,10 +323,15 @@ function ProductsTab({
       )}
 
       {products.length === 0 ? (
-        <EmptyState
-          icon={Boxes}
-          title="등록된 상품이 없습니다"
-          subtitle="파실 물품을 등록하면 병원 포털에 나오고, 그때부터 요청을 받을 수 있습니다."
+        <LoadGate
+          loadingTitle="상품을 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={Boxes}
+              title="등록된 상품이 없습니다"
+              subtitle="파실 물품을 등록하면 병원 포털에 나오고, 그때부터 요청을 받을 수 있습니다."
+            />
+          }
         />
       ) : (
         <div className="flex flex-col gap-5">

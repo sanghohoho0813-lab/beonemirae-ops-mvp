@@ -4,6 +4,7 @@ import { Check, ReceiptText} from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { FilterChip, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PaymentBadge } from '../components/Badge'
 import { DunningPanel } from '../components/DunningPanel'
@@ -163,10 +164,15 @@ export function Receivables() {
       </div>
 
       {data.payments.length === 0 ? (
-        <EmptyState
-          icon={ReceiptText}
-          title="아직 청구 내역이 없습니다"
-          subtitle="수거 실적이 쌓이면 거래처별 청구·입금 현황이 여기에 표시됩니다."
+        <LoadGate
+          loadingTitle="청구 내역을 불러오는 중입니다"
+          empty={
+            <EmptyState
+              icon={ReceiptText}
+              title="아직 청구 내역이 없습니다"
+              subtitle="수거 실적이 쌓이면 거래처별 청구·입금 현황이 여기에 표시됩니다."
+            />
+          }
         />
       ) : list.length === 0 ? (
         <EmptyState icon={ReceiptText} title="조건에 맞는 청구 내역이 없어요" subtitle="다른 필터를 선택해 보세요." />

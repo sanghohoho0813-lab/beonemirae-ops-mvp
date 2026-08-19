@@ -25,6 +25,7 @@ import { canAccess, canSeeDashboard } from '../lib/access'
 import { WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { PageShell, SectionTitle, MetricCard, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { ClientForm } from '../components/ClientForm'
 import { BookVisitModal } from '../components/BookVisit'
 import { UrgentRiskCard } from '../components/UrgentRisk'
@@ -177,9 +178,16 @@ export function ClientDetail() {
   const [invoiceOpen, setInvoiceOpen] = useState(false)
 
   if (!client) {
+    //  주소창·즐겨찾기로 바로 들어오면 자료보다 화면이 먼저 뜹니다.
+    //  그때 「찾을 수 없어요」라고 하면 지워진 거래처로 오해합니다.
     return (
       <PageShell>
-        <EmptyState icon={SearchX} title="거래처를 찾을 수 없어요" subtitle="목록에서 다시 선택해 주세요." />
+        <LoadGate
+          loadingTitle="거래처 정보를 불러오는 중입니다"
+          empty={
+            <EmptyState icon={SearchX} title="거래처를 찾을 수 없어요" subtitle="목록에서 다시 선택해 주세요." />
+          }
+        />
         <button className="btn-ghost mx-auto" onClick={() => navigate('/clients')}>
           거래처 목록으로
         </button>

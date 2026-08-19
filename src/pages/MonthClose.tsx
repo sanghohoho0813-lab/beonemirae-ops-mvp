@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Info, Printer, ReceiptText } from 'lucide-
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryButton, EmptyState } from '../components/ui'
+import { LoadGate } from '../components/LoadState'
 import { monthClose, recentMonths } from '../lib/monthClose'
 import { confirmedInvoices, InvoiceBatch } from '../components/InvoiceBatch'
 import { TaxInvoicePanel } from '../components/TaxInvoicePanel'
@@ -293,10 +294,15 @@ export function MonthClose() {
       <section>
         <SectionTitle>확정할 청구 {close.ready.length}건</SectionTitle>
         {close.ready.length === 0 ? (
-          <EmptyState
-            icon={ReceiptText}
-            title="이 달에 확정할 청구가 없습니다"
-            subtitle="수거 입력이 끝난 달을 골라 주세요. 이미 확정한 달이라면 아래 「이미 확정」에 나옵니다."
+          <LoadGate
+            loadingTitle="이 달의 청구를 계산하는 중입니다"
+            empty={
+              <EmptyState
+                icon={ReceiptText}
+                title="이 달에 확정할 청구가 없습니다"
+                subtitle="수거 입력이 끝난 달을 골라 주세요. 이미 확정한 달이라면 아래 「이미 확정」에 나옵니다."
+              />
+            }
           />
         ) : (
           <div className="card divide-y divide-navy-100">
