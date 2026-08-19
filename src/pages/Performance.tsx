@@ -76,9 +76,10 @@ function BasisDetails({ m }: { m: MetricRow }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="mt-4 border-t border-navy-50 pt-3">
+      {/*  폰에서 27px 이라 자꾸 빗나갔습니다. 글자는 그대로, 누를 자리만 44px. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 text-left text-[1rem] font-bold text-navy-400 transition hover:text-navy-600"
+        className="-mx-2 flex min-h-[2.75rem] w-[calc(100%+1rem)] items-center gap-1.5 rounded-xl px-2 text-left text-[1rem] font-bold text-navy-400 transition hover:bg-navy-50 hover:text-navy-600"
       >
         측정 근거
         <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -175,7 +176,11 @@ function MetricCard({ m, onSetBaseline }: { m: MetricRow; onSetBaseline: () => v
             )}
           </>
         ) : m.status === 'need-baseline' ? (
-          <button onClick={onSetBaseline} className="t-body font-bold text-amber-600 underline underline-offset-4">
+          <button
+            onClick={onSetBaseline}
+            /*  이사님이 실제로 눌러야 하는 자리입니다 — 26px 이면 폰에서 안 눌립니다. */
+            className="-mx-2 inline-flex min-h-[2.75rem] items-center rounded-xl px-2 text-left font-bold text-amber-600 underline underline-offset-4 transition hover:bg-amber-50"
+          >
             도입 전 기준값 입력하기
           </button>
         ) : (
