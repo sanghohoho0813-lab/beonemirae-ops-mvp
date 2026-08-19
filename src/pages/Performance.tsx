@@ -452,7 +452,8 @@ export function Performance() {
           <div className="mt-4 border-t border-navy-50 pt-3">
             <button
               onClick={() => setAutoOpen((v) => !v)}
-              className="flex w-full items-center gap-1.5 text-left text-[1rem] font-bold text-navy-400 transition hover:text-navy-600"
+              /*  「측정 근거」와 같은 자리입니다 — 27px 이면 폰에서 안 눌립니다. */
+              className="-mx-2 flex min-h-[2.75rem] w-[calc(100%+1rem)] items-center gap-1.5 rounded-xl px-2 text-left text-[1rem] font-bold text-navy-400 transition hover:bg-navy-50 hover:text-navy-600"
             >
               자동 연결 업무 내역
               <ChevronDown size={14} className={`transition-transform ${autoOpen ? 'rotate-180' : ''}`} />
