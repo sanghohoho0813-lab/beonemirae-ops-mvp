@@ -139,7 +139,8 @@ export function ScheduleCalendar({
           data-cal-prev
           onClick={() => setMonth(shiftMonth(month, -1))}
           aria-label="지난달"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-navy-500 transition hover:bg-navy-50"
+          /*  폰에서 달을 넘기는 자리입니다. 36px 는 장갑 낀 손으로 자꾸 빗나갑니다. */
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-navy-500 transition hover:bg-navy-50"
         >
           <ChevronLeft size={19} strokeWidth={2.4} />
         </button>
@@ -151,7 +152,7 @@ export function ScheduleCalendar({
           data-cal-next
           onClick={() => setMonth(shiftMonth(month, 1))}
           aria-label="다음달"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-navy-500 transition hover:bg-navy-50"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-navy-500 transition hover:bg-navy-50"
         >
           <ChevronRight size={19} strokeWidth={2.4} />
         </button>

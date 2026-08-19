@@ -70,7 +70,7 @@ function StepCard({ step, order }: { step: ProgressStep; order: number }) {
       <Link
         to={step.to}
         data-progress-link={step.key}
-        className="mt-auto inline-flex items-center gap-1 self-start rounded-full bg-navy-50 px-3 py-1.5 text-[0.98rem] font-bold text-navy-600 transition hover:bg-navy-100"
+        className="mt-auto inline-flex min-h-[2.75rem] items-center gap-1 self-start rounded-full bg-navy-50 px-4 py-2.5 text-[0.98rem] font-bold text-navy-600 transition hover:bg-navy-100"
       >
         {step.linkLabel}
         <ArrowRight size={14} strokeWidth={2.6} />

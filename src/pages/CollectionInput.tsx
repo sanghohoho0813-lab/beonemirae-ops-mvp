@@ -803,10 +803,14 @@ export function CollectionInput() {
                 <span className="ml-2 font-bold text-navy-500">· {profile?.name}</span>
               )}
             </p>
+            {/*  ⚠ 이 버튼은 높이가 23px 이었습니다. 대차로 나간 날 기사님이
+                 장갑 낀 손으로 눌러야 하는 자리인데, 안 눌리면 **틀린 차량으로
+                 기록이 쌓입니다.** 글자는 그대로 두고 누를 자리만 44px 로
+                 넓혔습니다 (여백은 음수 마진으로 되돌려 줄이 안 벌어지게). */}
             <button
               data-vehicle-other
               onClick={() => setShowVehiclePick(true)}
-              className="t-muted ml-auto shrink-0 font-bold text-navy-400 underline transition hover:text-navy-700"
+              className="t-muted -my-2.5 ml-auto shrink-0 rounded-xl px-3 py-2.5 font-bold text-navy-400 underline transition hover:bg-navy-50 hover:text-navy-700"
             >
               오늘은 다른 차로 갔어요
             </button>
