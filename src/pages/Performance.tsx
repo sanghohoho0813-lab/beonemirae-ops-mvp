@@ -31,6 +31,7 @@ import {
 } from '../lib/performance'
 import { SalesFunnelPanel } from '../components/SalesFunnel'
 import { AxEvidencePanels } from '../components/AxEvidencePanels'
+import { LoadGate, useLoadState } from '../components/LoadState'
 import { BeforeAfterPanel } from '../components/BeforeAfter'
 import { OpsSurveyCard } from '../components/OpsSurveyCard'
 import { ProvenanceBadge, TierBadge, TierProgress } from '../components/DataBadge'
@@ -196,6 +197,7 @@ export function Performance() {
   const [customFrom, setCustomFrom] = useState(today())
   const [customTo, setCustomTo] = useState(today())
   const [autoOpen, setAutoOpen] = useState(false)
+  const loadState = useLoadState()
 
   const summary = useMemo(
     () => performanceSummary(data, preset, { from: customFrom, to: customTo }),
@@ -221,6 +223,29 @@ export function Performance() {
     summary.collectionCount > 0
       ? Math.round((summary.autoLink.total / summary.collectionCount) * 10) / 10
       : null
+
+  //  ⚠ 자료가 오기 전에는 **성과를 말하지 않습니다.**
+  //
+  //   이 화면은 전부 0 에서 시작합니다. 읽어 오기 전에 그리면
+  //   「측정 중 · 아직 없음 · 0건 · 0원」이 줄줄이 뜨고, 그건
+  //   **「성과가 없다」**로 읽힙니다. 성과판에서 그 오해는 다른 화면보다
+  //   훨씬 비쌉니다 — 이사님이 그 화면을 보고 판단하시기 때문입니다.
+  //   (병원 첫 화면에서 고쳤던 것과 같은 부류입니다)
+  if (loadState !== 'ready') {
+    return (
+      <PageShell>
+        <PageHeader
+          title="AX 도입 성과"
+          subtitle="업무 자동화 → 데이터 축적 → 추천 → 제안 → 수락 → 추가 매출"
+        />
+        <LoadGate
+          loadingTitle="성과 자료를 불러오는 중입니다"
+          loadingSubtitle="다 읽은 뒤에 숫자를 보여 드립니다 — 읽는 중에 0 을 보여 주면 「성과가 없다」로 읽힙니다."
+          empty={<span />}
+        />
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell>
