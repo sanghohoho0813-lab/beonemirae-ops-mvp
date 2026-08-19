@@ -132,7 +132,8 @@ export function Reports() {
               selected && (
                 <button
                   onClick={() => navigate(`/clients/${selected.client.id}`)}
-                  className="pill bg-navy-50 text-navy-500 transition hover:bg-navy-100"
+                  /*  pill 은 py-1.5 라 29px 입니다 — 폰에서 누르는 자리는 44px 로. */
+                  className="pill min-h-[2.75rem] bg-navy-50 px-4 text-navy-500 transition hover:bg-navy-100"
                 >
                   거래처 상세 <ChevronRight size={13} />
                 </button>

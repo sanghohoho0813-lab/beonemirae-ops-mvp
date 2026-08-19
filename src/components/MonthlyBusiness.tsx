@@ -52,7 +52,8 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
         <select
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="field-input w-auto py-1.5"
+          /*  달 고르기 — 38px 이면 폰에서 옆 글자를 같이 누릅니다. */
+          className="field-input min-h-[2.75rem] w-auto py-1.5"
           aria-label="집계 월"
         >
           {months.map((m) => (

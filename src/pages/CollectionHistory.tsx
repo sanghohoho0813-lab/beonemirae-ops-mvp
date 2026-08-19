@@ -91,7 +91,11 @@ export function CollectionHistory() {
 
   return (
     <div>
-      <button onClick={() => navigate(-1)} className="mb-3 flex items-center gap-1.5 text-[1.08rem] font-bold text-navy-500">
+      {/*  폰에서 29px 이라 자꾸 빗나갔습니다. 글자는 그대로, 누를 자리만 44px. */}
+      <button
+        onClick={() => navigate(-1)}
+        className="-ml-2 mb-1 flex min-h-[2.75rem] items-center gap-1.5 rounded-xl px-2 text-[1.08rem] font-bold text-navy-500 transition hover:bg-navy-50"
+      >
         <ArrowLeft size={16} /> 뒤로
       </button>
       <PageHeader title="전체 수거이력" subtitle="거래처·차량·폐기물 구분별 수거 기록" />

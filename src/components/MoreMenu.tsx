@@ -79,7 +79,8 @@ function NavSection({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           data-more-toggle={hook}
-          className="mb-2 flex w-full items-center gap-2 px-1 text-left text-[1.08rem] font-semibold text-navy-500"
+          /*  묶음을 여닫는 자리입니다. 30px 이라 폰에서 자꾸 빗나갔습니다. */
+          className="mb-1 flex min-h-[2.75rem] w-full items-center gap-2 rounded-xl px-2 text-left text-[1.08rem] font-semibold text-navy-500 transition hover:bg-navy-50"
         >
           <span className="min-w-0 flex-1 break-keep">{title}</span>
           {!open && (
@@ -385,7 +386,8 @@ export function MoreMenu({
             onClick={() => setRndOpen((v) => !v)}
             aria-expanded={rndOpen}
             data-more-toggle="more-rnd"
-            className="mb-2 flex w-full items-center gap-2 px-1 text-left text-[1.08rem] font-semibold text-navy-500"
+            /*  묶음을 여닫는 자리입니다. 30px 이라 폰에서 자꾸 빗나갔습니다. */
+            className="mb-1 flex min-h-[2.75rem] w-full items-center gap-2 rounded-xl px-2 text-left text-[1.08rem] font-semibold text-navy-500 transition hover:bg-navy-50"
           >
             <span className="min-w-0 flex-1 break-keep">기술개발 현황</span>
             <ChevronDown size={16} className={`shrink-0 transition-transform ${rndOpen ? 'rotate-180' : ''}`} />
