@@ -55,6 +55,22 @@ export interface SupplyNeed {
   dueOn: string | null
   /** 이미 지났거나 곧 다가온 것 */
   due: boolean
+  /**
+   * 다음에 그 병원에 가는 날 (YYYY-MM-DD). 예정이 없으면 null.
+   *
+   *  이 사업모델의 핵심은 「어차피 가는 차에 실어 보내는 것」입니다.
+   *  그래서 병원이 실제로 궁금한 것은 「언제 떨어지나」가 아니라
+   *  **「그때까지 버티나」** 입니다. 그 판단에 필요한 날짜입니다.
+   */
+  nextVisitOn: string | null
+  /**
+   * 예상 소진일이 다음 수거일보다 **앞인가** — 즉 다음에 갈 때 실어 보내지
+   * 않으면 그 사이에 떨어질 것으로 보이는가.
+   *
+   *  둘 중 하나라도 모르면 false 입니다. 모르는 것을 「급하다」로 바꾸지
+   *  않습니다.
+   */
+  runsOutBeforeNextVisit: boolean
   /** 화면에 그대로 나가는 근거 한 줄 */
   why: string
 }
@@ -125,6 +141,14 @@ const addDays = (iso: string, n: number) => {
  */
 export function supplyNeedsFor(data: AppData, clientId: string, today: string): SupplyNeeds {
   const from = addDays(today, -NEEDS_WINDOW_DAYS)
+
+  //  다음에 그 병원에 가는 날. 「그때 같이 가져다 드립니다」의 근거입니다.
+  //  예전에는 화면(PortalSupplies)이 따로 계산했는데, 추천 문구는 그 날짜를
+  //  모른 채 만들어졌습니다. 같은 값을 두 곳에서 세지 않도록 여기로 옮깁니다.
+  const nextVisitOn =
+    (data.schedules ?? [])
+      .filter((s) => s.clientId === clientId && s.status !== '완료' && !s.canceledAt && s.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))[0]?.date ?? null
   const mine = (data.materials ?? [])
     .filter((m) => m.clientId === clientId && m.date >= from && m.date <= today)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -159,6 +183,8 @@ export function supplyNeedsFor(data: AppData, clientId: string, today: string): 
     const dueOn = cycleDays ? addDays(lastDate, cycleDays) : null
     //  「곧」은 일주일입니다. 다음 수거가 보통 그 안에 있습니다.
     const due = dueOn != null && dayDiff(dueOn, today) <= 7
+    //  둘 중 하나라도 모르면 false 입니다 — 모르는 것을 「급하다」로 바꾸지 않습니다.
+    const runsOutBeforeNextVisit = dueOn != null && nextVisitOn != null && dueOn < nextVisitOn
 
     needs.push({
       stockKey,
@@ -172,15 +198,24 @@ export function supplyNeedsFor(data: AppData, clientId: string, today: string): 
       suggestQty,
       dueOn,
       due,
+      nextVisitOn,
+      runsOutBeforeNextVisit,
       why:
         `최근 ${Math.round(span / 30 * 10) / 10}개월 동안 ${times}번 · 모두 ${total}개 ` +
         `(한 달 ${perMonth}개꼴) · 마지막 ${lastDate} (${daysSince}일 전)` +
-        (cycleDays ? ` · 평균 ${cycleDays}일에 한 번` : ''),
+        (cycleDays ? ` · 평균 ${cycleDays}일에 한 번` : '') +
+        //  ⚠ 다음 수거일은 **있을 때만** 붙입니다. 예정이 없는데 「다음 수거
+        //    때 같이」라고 하면 오지 않는 날을 약속하는 것이 됩니다.
+        (nextVisitOn ? ` · 다음 수거 ${nextVisitOn}` : ''),
     })
   }
 
-  //  지난 것 먼저, 그다음 많이 쓰는 것 먼저.
+  //  다음 수거 전에 떨어질 것 먼저 → 지난 것 → 그다음 많이 쓰는 것.
+  //
+  //   「다음에 갈 때 안 실으면 그 사이에 떨어진다」가 병원이 지금 결정해야
+  //   하는 유일한 것입니다. 그것을 맨 위로 올립니다.
   needs.sort((a, b) => {
+    if (a.runsOutBeforeNextVisit !== b.runsOutBeforeNextVisit) return a.runsOutBeforeNextVisit ? -1 : 1
     if (a.due !== b.due) return a.due ? -1 : 1
     return b.perMonth - a.perMonth
   })

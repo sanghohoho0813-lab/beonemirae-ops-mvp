@@ -5,9 +5,11 @@ import { SectionTitle } from './ui'
 import { won } from '../lib/format'
 import {
   AX_MIN_SAMPLES,
+  axCompare,
   axEvidence,
   ORDER_STAGE_ORDER,
   stageLabel,
+  type AxCompare,
   type AxNumber,
   type AxPeriod,
 } from '../lib/axEvidence'
@@ -24,6 +26,8 @@ import {
 //   · 주문 접수 · 전달 완료 · 청구 확정 · 입금 완료를 **네 칸으로 갈라**
 //     둡니다. 한 칸으로 합치면 아직 안 들어온 돈이 매출로 보입니다.
 // ─────────────────────────────────────────────────────────────────────────────
+
+const WD = ['일', '월', '화', '수', '목', '금', '토']
 
 const STATE_PILL: Record<AxNumber['state'], string> = {
   ok: 'bg-teal-50 text-teal-700',
@@ -69,8 +73,101 @@ function Numbers({ list }: { list: AxNumber[] }) {
   return <div className="card divide-y divide-navy-50">{list.map((n) => <NumberRow key={n.key} n={n} />)}</div>
 }
 
-export function AxEvidencePanels({ data, period }: { data: AppData; period: AxPeriod }) {
+/**
+ * 도입 전 → 현재 → 변화.
+ *
+ *  ⚠ 이 자리에서 제일 위험한 것은 **Before 를 지어내는 것**입니다.
+ *    「도입 전 포털 비율은 당연히 0%」는 추정이지 측정이 아닙니다.
+ *    같은 계산을 도입일 앞 기간에 그대로 돌리고, 기록이 없으면 없다고 적습니다.
+ */
+function BeforeAfter({ cmp }: { cmp: AxCompare }) {
+  const fmtV = (v: number | null, unit: string) =>
+    v == null ? '—' : unit === '원' ? won(v) : `${v.toLocaleString('ko-KR')}${unit}`
+
+  return (
+    <section id="ax-before-after">
+      <SectionTitle action={<span className="pill bg-navy-100 text-navy-500">같은 계산 · 같은 길이</span>}>
+        도입 전 → 현재
+      </SectionTitle>
+      <div data-ax-cmp={cmp.state} className="card p-4 sm:p-5">
+        <p className="t-body break-keep font-bold text-navy-700">{cmp.reason}</p>
+        {cmp.before && cmp.after && (
+          <p className="t-muted mt-1 break-keep text-navy-400">
+            도입 전 {cmp.before.from} ~ {cmp.before.to} · 도입 후 {cmp.after.from} ~ {cmp.after.to}
+          </p>
+        )}
+
+        {cmp.rows.length > 0 && (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[30rem] border-collapse">
+              <thead>
+                <tr className="border-b border-navy-100 text-left">
+                  <th className="t-muted py-2 pr-3 font-bold text-navy-400">항목</th>
+                  <th className="t-muted py-2 pr-3 text-right font-bold text-navy-400">도입 전</th>
+                  <th className="t-muted py-2 pr-3 text-right font-bold text-navy-400">현재</th>
+                  <th className="t-muted py-2 text-right font-bold text-navy-400">변화</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cmp.rows.map((r) => {
+                  //  ⚠ 한쪽이라도 없으면 변화를 만들지 않습니다.
+                  //    「0 → 3」을 「＋∞%」나 「＋300%」로 적으면 안 됩니다.
+                  const canDiff = r.before != null && r.after != null
+                  const diff = canDiff ? (r.after as number) - (r.before as number) : null
+                  const good = diff == null ? null : r.betterWhen === 'higher' ? diff > 0 : diff < 0
+                  return (
+                    <tr key={r.key} data-ax-cmp-row={r.key} className="border-b border-navy-50 last:border-0">
+                      <td className="t-body break-keep py-2.5 pr-3 font-bold text-navy-700">{r.label}</td>
+                      <td
+                        data-ax-cmp-before={r.key}
+                        className={`t-body py-2.5 pr-3 text-right tabular-nums ${r.before == null ? 'text-navy-300' : 'text-navy-600'}`}
+                      >
+                        {r.before == null ? '기록 없음' : fmtV(r.before, r.unit)}
+                      </td>
+                      <td
+                        data-ax-cmp-after={r.key}
+                        className={`t-body py-2.5 pr-3 text-right font-extrabold tabular-nums ${r.after == null ? 'text-navy-300' : 'text-navy-900'}`}
+                      >
+                        {fmtV(r.after, r.unit)}
+                      </td>
+                      <td
+                        data-ax-cmp-diff={r.key}
+                        className={`t-body py-2.5 text-right tabular-nums ${good === true ? 'text-teal-700' : good === false ? 'text-rose-600' : 'text-navy-300'}`}
+                      >
+                        {diff == null
+                          ? '견줄 수 없음'
+                          : `${diff > 0 ? '＋' : diff < 0 ? '−' : ''}${fmtV(Math.abs(diff), r.unit)}`}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <p className="t-muted mt-3 break-keep text-navy-400">
+          ⚠ 한쪽에 기록이 없으면 <b className="text-navy-600">변화를 만들지 않습니다</b> — 「0 → 3」을 「＋300%」로
+          적지 않습니다. 도입 전 기간은 엑셀·카톡으로 일하던 때라 이 시스템에 남은 것이 없을 수 있습니다.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+export function AxEvidencePanels({
+  data,
+  period,
+  experimentStart,
+  today,
+}: {
+  data: AppData
+  period: AxPeriod
+  experimentStart: string | null
+  today: string
+}) {
   const e = useMemo(() => axEvidence(data, period), [data, period])
+  const cmp = useMemo(() => axCompare(data, experimentStart, today), [data, experimentStart, today])
   const f = e.sales.funnel
   const stageCount = ORDER_STAGE_ORDER.map((label) => ({
     label,
@@ -79,6 +176,8 @@ export function AxEvidencePanels({ data, period }: { data: AppData; period: AxPe
 
   return (
     <>
+      <BeforeAfter cmp={cmp} />
+
       {/* ── 업무 AX · 당일 입력 ─────────────────────────────────────────── */}
       <section id="ax-work">
         <SectionTitle action={<span className="pill bg-sky-50 text-sky-700">완료된 입력 기록</span>}>
@@ -183,6 +282,62 @@ export function AxEvidencePanels({ data, period }: { data: AppData; period: AxPe
         </div>
 
         <Numbers list={e.capacity.numbers} />
+
+        {/*  ── 차량 × 요일 ─────────────────────────────────────────────────
+             「화요일 2호차는 지금 일정 기준으로 여유가 있는가」에 답하는
+             자리입니다. 답은 **관측된 것**뿐입니다 —
+             그 요일에 예전에 최대 몇 곳을 돌았고, 요즘은 몇 곳인가.
+             그 차이가 「예전에 이만큼은 해냈다」입니다. 그 이상은 말하지
+             않습니다(거리·교통·그날 폐기물 양은 여기 안 들어 있습니다). */}
+        {e.capacity.vehicles.some((v) => v.visits > 0) && (
+          <div data-ax-vehday className="card mt-3 p-4 sm:p-5">
+            <p className="t-body break-keep font-extrabold text-navy-900">차량 × 요일 — 예전 최대 / 요즘 평균</p>
+            <p className="t-muted mt-1 break-keep text-navy-400">
+              두 번 이상 나간 요일만 적습니다. 한 번은 「그 요일의 그 차」라고 부를 수 없습니다.
+            </p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[26rem] border-collapse">
+                <thead>
+                  <tr className="border-b border-navy-100 text-left">
+                    <th className="t-muted py-2 pr-3 font-bold text-navy-400">차량</th>
+                    {WD.map((w) => (
+                      <th key={w} className="t-muted py-2 pr-2 text-center font-bold text-navy-400">{w}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {e.capacity.vehicles
+                    .filter((v) => v.visits > 0)
+                    .map((v) => (
+                      <tr key={v.vehicleId} data-ax-veh={v.vehicleId} className="border-b border-navy-50 last:border-0">
+                        <td className="t-body break-keep py-2.5 pr-3 font-bold text-navy-700">{v.vehicleName}</td>
+                        {v.byWeekday.map((w) => (
+                          <td
+                            key={w.weekday}
+                            data-ax-veh-day={`${v.vehicleId}.${w.weekday}`}
+                            className="py-2.5 pr-2 text-center tabular-nums"
+                          >
+                            {w.days < 2 ? (
+                              <span className="t-muted text-navy-300">·</span>
+                            ) : (
+                              <span className="t-body text-navy-800">
+                                {w.max}
+                                <span className="t-muted text-navy-400"> / {w.avg}</span>
+                              </span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="t-muted mt-2.5 break-keep text-navy-400">
+              읽는 법 · <b className="text-navy-600">예전 최대 / 요즘 평균</b> (곳). 「·」는 그 요일에 두 번 넘게 나간
+              기록이 아직 없다는 뜻입니다.
+            </p>
+          </div>
+        )}
 
         {e.capacity.byDriver.length > 0 && (
           <div data-ax-drivers className="card mt-3 divide-y divide-navy-50">

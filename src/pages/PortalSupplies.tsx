@@ -60,9 +60,15 @@ export function PortalSupplies() {
   )
 
   //  다음 방문 예정 — 「그때 같이 가져다 주세요」의 근거입니다.
+  //
+  //   ⚠ 예전에는 이 화면이 따로 셌고, 추천 문구(supplyNeeds)는 그 날짜를
+  //     모른 채 만들어졌습니다. 같은 값을 두 곳에서 세면 언젠가 갈라집니다.
+  //     이제 추천이 쓰는 것과 **같은 규칙**으로 고른 일정을 씁니다.
   const nextVisit = useMemo(() => {
     return (data.schedules ?? [])
-      .filter((s) => s.clientId === clientId && s.status !== '완료' && s.date >= today)
+      .filter(
+        (s) => s.clientId === clientId && s.status !== '완료' && !s.canceledAt && s.date >= today,
+      )
       .sort((a, b) => a.date.localeCompare(b.date))[0]
   }, [data.schedules, clientId, today])
 
@@ -134,7 +140,17 @@ export function PortalSupplies() {
                 <li key={n.stockKey} data-need={n.stockKey} className="rounded-2xl bg-navy-50/60 p-3.5">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <b className="t-body text-navy-900">{n.label}</b>
-                    {n.due && <span className="pill bg-amber-100 text-amber-700">이번에 필요</span>}
+                    {/*  ⚠ 병원이 지금 결정해야 하는 것은 딱 하나입니다 —
+                         「다음에 오실 때 안 실어 주시면 그 사이에 떨어지나」.
+                         그 경우에만 따로 표시합니다. 다 급하다고 하면 아무것도
+                         급하지 않은 것과 같습니다. */}
+                    {n.runsOutBeforeNextVisit ? (
+                      <span data-need-urgent={n.stockKey} className="pill bg-rose-100 text-rose-700">
+                        다음 수거 전에 떨어집니다
+                      </span>
+                    ) : (
+                      n.due && <span className="pill bg-amber-100 text-amber-700">이번에 필요</span>
+                    )}
                     <span className="t-cell tabular-nums text-navy-700">약 {n.suggestQty}개</span>
                   </div>
                   {/*  근거 — 이게 없으면 그냥 팔려는 말입니다 */}
@@ -142,8 +158,9 @@ export function PortalSupplies() {
                     {n.why}
                   </p>
                   {n.dueOn && (
-                    <p className="t-caption mt-0.5 break-keep text-navy-500">
+                    <p data-need-due={n.stockKey} className="t-caption mt-0.5 break-keep text-navy-500">
                       이대로면 {prettyDate(n.dueOn)}쯤 필요합니다
+                      {n.nextVisitOn && ` · 다음 수거는 ${prettyDate(n.nextVisitOn)}`}
                     </p>
                   )}
                   {p ? (

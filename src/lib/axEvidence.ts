@@ -125,6 +125,15 @@ export function needsAsOf(data: AppData, clientId: string, on: string) {
   const past: AppData = {
     ...data,
     materials: (data.materials ?? []).filter((m) => m.date <= on),
+    //  ⚠ 일정도 통째로 비웁니다.
+    //
+    //   추천 문구에는 「다음 수거 ○월 ○일」이 붙는데, 그 예정이 **그날
+    //   실제로 잡혀 있었는지**는 알 방법이 없습니다(만든 시각을 안 남깁니다).
+    //   그래서 되짚을 때는 아예 모르는 것으로 둡니다 — 몰랐던 것을 알았던
+    //   것처럼 세지 않기 위해서입니다.
+    //   전환율 계산에 쓰는 것은 **어떤 품목이 추천됐는가**뿐이라 결과는
+    //   달라지지 않습니다(다음 수거일은 문구와 정렬에만 씁니다).
+    schedules: [],
   }
   return supplyNeedsFor(past, clientId, on)
 }
@@ -563,6 +572,125 @@ export function axEvidence(data: AppData, period: AxPeriod): AxEvidence {
     customer: customerAx(data, period),
     capacity: capacityAx(data, period),
   }
+}
+
+// ═══ 도입 전 → 현재 → 변화 ═══════════════════════════════════════════════════
+//
+//  ⚠ 여기서 제일 조심할 것은 **Before 를 만들어 내는 것**입니다.
+//
+//   「도입 전 포털 비율은 당연히 0% 아니냐」는 맞는 말처럼 들리지만, 그건
+//   추정이지 측정이 아닙니다. 대신 **같은 계산을 도입일 앞 기간에 그대로**
+//   돌립니다. 그 기간에 기록이 하나도 없으면 「도입 전 기록 없음」이라고
+//   적습니다 — 0 이라고 적지 않습니다.
+//
+//   비교 기간은 **길이를 맞춥니다.** 도입 후 30일과 도입 전 90일을 견주면
+//   건수는 당연히 도입 전이 많습니다. 같은 길이여야 견줄 수 있습니다.
+
+export type CompareState =
+  | 'ok' // 앞뒤 다 잼
+  | 'no-start' // 도입일이 설정돼 있지 않음
+  | 'no-before' // 도입 전 기간에 기록이 없음
+  | 'no-after' // 도입 후 기간에 아직 기록이 없음
+
+export interface CompareRow {
+  key: string
+  label: string
+  unit: string
+  before: number | null
+  after: number | null
+  beforeSamples: number
+  afterSamples: number
+  /** 낮을수록 좋은 지표인가 */
+  betterWhen: 'higher' | 'lower'
+  basis: string
+}
+
+export interface AxCompare {
+  state: CompareState
+  reason: string
+  before: AxPeriod | null
+  after: AxPeriod | null
+  rows: CompareRow[]
+}
+
+/** 견줄 지표 — 네 갈래에서 하나씩, 「이게 달라졌다」를 대표하는 것만 */
+const COMPARE_KEYS: { area: 'work' | 'sales' | 'customer' | 'capacity'; key: string; betterWhen: 'higher' | 'lower' }[] = [
+  { area: 'work', key: 'sameDayRate', betterWhen: 'higher' },
+  { area: 'sales', key: 'revenue', betterWhen: 'higher' },
+  { area: 'sales', key: 'deliveredOrders', betterWhen: 'higher' },
+  { area: 'customer', key: 'portalShare', betterWhen: 'higher' },
+  { area: 'customer', key: 'portalClients', betterWhen: 'higher' },
+  { area: 'capacity', key: 'avgPerDay', betterWhen: 'higher' },
+]
+
+const daysBetweenIso = (a: string, b: string) =>
+  Math.round((new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime()) / 86400000) + 1
+
+export function axCompare(data: AppData, experimentStart: string | null, today: string): AxCompare {
+  if (!experimentStart) {
+    return {
+      state: 'no-start',
+      reason: '도입일(실증 시작일)이 설정돼 있지 않아 「도입 전」을 가를 수 없습니다. 설정에서 시작일을 정해 주세요.',
+      before: null,
+      after: null,
+      rows: [],
+    }
+  }
+  const after: AxPeriod = { from: experimentStart, to: today }
+  const span = Math.max(daysBetweenIso(after.from, after.to), 1)
+  const before: AxPeriod = { from: shift(experimentStart, -span), to: shift(experimentStart, -1) }
+
+  const b = axEvidence(data, before)
+  const a = axEvidence(data, after)
+  const pick = (e: AxEvidence, area: string, key: string) =>
+    (area === 'work' ? e.work.numbers : area === 'sales' ? e.sales.numbers : area === 'customer' ? e.customer.numbers : e.capacity.numbers)
+      .find((n) => n.key === key)
+
+  const rows: CompareRow[] = []
+  for (const c of COMPARE_KEYS) {
+    const nb = pick(b, c.area, c.key)
+    const na = pick(a, c.area, c.key)
+    if (!nb || !na) continue
+    rows.push({
+      key: `${c.area}.${c.key}`,
+      label: na.label,
+      unit: na.unit,
+      before: nb.value,
+      after: na.value,
+      beforeSamples: nb.samples,
+      afterSamples: na.samples,
+      betterWhen: c.betterWhen,
+      basis: na.basis,
+    })
+  }
+
+  const beforeAny = rows.some((r) => r.beforeSamples > 0)
+  const afterAny = rows.some((r) => r.afterSamples > 0)
+  const state: CompareState = !afterAny ? 'no-after' : !beforeAny ? 'no-before' : 'ok'
+
+  //  ⚠ 도입 전 기간에 **이 시스템의 기록이 통째로 없으면** 그 칸을 0 으로
+  //    두면 안 됩니다.
+  //
+  //     0 원 → 135,000원 (＋135,000원)
+  //
+  //    이렇게 적히면 「우리가 135,000원을 만들었다」로 읽힙니다. 하지만 그
+  //    기간은 엑셀·카톡으로 일하던 때라 시스템에 아무것도 안 남았을 뿐이고,
+  //    실제로 0 이었는지는 **모릅니다**. 모르는 것은 null 입니다.
+  //
+  //    반대로 그 기간에 시스템을 쓴 흔적이 있으면(다른 지표에 표본이 있으면)
+  //    그때의 0 은 **재 봤더니 0** 이므로 그대로 둡니다.
+  if (!beforeAny) {
+    for (const r of rows) r.before = null
+  }
+  const reason =
+    state === 'no-after'
+      ? `도입 후(${after.from} ~ ${after.to})에 아직 기록이 없습니다. 파일럿이 시작되면 채워집니다.`
+      : state === 'no-before'
+        ? `도입 전(${before.from} ~ ${before.to})에 이 시스템의 기록이 없습니다. `
+          + '그 기간은 엑셀·카톡으로 일하던 때라 시스템에 남은 것이 없습니다 — 0 이라고 적지 않습니다.'
+        : `도입 전 ${span}일과 도입 후 ${span}일을 같은 계산으로 견줍니다.`
+
+  return { state, reason, before, after, rows }
 }
 
 /** 화면이 「지금 가장 약한 증거」를 한 줄로 말할 수 있게 */

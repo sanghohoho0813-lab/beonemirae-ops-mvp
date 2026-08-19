@@ -455,7 +455,12 @@ export function Performance() {
            저장하면 두 숫자가 언젠가 갈라집니다.
            기간은 위 업무 AX 와 **같은 기간**을 씁니다. 기준이 갈라지면
            같은 화면 안에서 숫자가 서로 안 맞습니다. */}
-      <AxEvidencePanels data={data} period={{ from: summary.period.from, to: summary.period.to }} />
+      <AxEvidencePanels
+        data={data}
+        period={{ from: summary.period.from, to: summary.period.to }}
+        experimentStart={summary.experimentStart}
+        today={today()}
+      />
 
       {/* ── C. 매출 확장 ── */}
       <section id="sales">
