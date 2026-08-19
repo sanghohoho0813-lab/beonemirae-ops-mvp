@@ -221,9 +221,21 @@ export function QtyField({
     //     0 까지 줄어들 수 있었기 때문입니다.
     //     이름에 최소 폭을 주고 줄을 넘길 수 있게 했습니다 — 자리가 모자라면
     //     −／＋ 가 아랫줄로 내려갑니다. 기사님 화면이라 읽히는 쪽이 먼저입니다.
+    //
+    //  ⚠ 최소 폭을 7.5rem 으로 잡았다가 **보통 글씨에서도** 줄이 넘어가
+    //     수거 입력 화면이 2,932 → 3,072px 로 길어졌습니다(회귀 2건).
+    //     실제로 잰 값으로 다시 잡았습니다.
+    //
+    //       보통 글씨  줄 310px = 이름 + 12(사이) + −／＋ 208  → 이름이 90px
+    //                  이하여야 한 줄로 남습니다
+    //       큰 글씨    줄 294px = 이름 + 12 + −／＋ 250        → 이름이 32px
+    //                  을 넘으면 넘어갑니다(그게 우리가 원하는 것)
+    //
+    //     rem 은 글자 크기를 따라 커집니다 — 4rem 이면 보통 71px(안 넘어감) ·
+    //     큰 글씨 86px(넘어감). 두 조건을 다 만족하는 값입니다.
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1.5">
-        <div className="flex min-w-[7.5rem] flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <div className="flex min-w-[4rem] flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="break-keep text-[1.06rem] font-bold text-navy-800">{label}</span>
           {badge}
         </div>
