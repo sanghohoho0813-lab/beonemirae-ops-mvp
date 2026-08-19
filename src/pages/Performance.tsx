@@ -30,6 +30,7 @@ import {
   type PeriodPreset,
 } from '../lib/performance'
 import { SalesFunnelPanel } from '../components/SalesFunnel'
+import { AxEvidencePanels } from '../components/AxEvidencePanels'
 import { BeforeAfterPanel } from '../components/BeforeAfter'
 import { OpsSurveyCard } from '../components/OpsSurveyCard'
 import { ProvenanceBadge, TierBadge, TierProgress } from '../components/DataBadge'
@@ -447,6 +448,14 @@ export function Performance() {
           </div>
         </div>
       </section>
+
+      {/*  ── 네 문장을 숫자로 ────────────────────────────────────────────
+           매출 · 고객 · 확장 AX 는 전부 **이미 저장돼 있는 기록**으로 셉니다.
+           새 표를 만들지 않았습니다 — 같은 뜻의 값을 보여 주려고 다시
+           저장하면 두 숫자가 언젠가 갈라집니다.
+           기간은 위 업무 AX 와 **같은 기간**을 씁니다. 기준이 갈라지면
+           같은 화면 안에서 숫자가 서로 안 맞습니다. */}
+      <AxEvidencePanels data={data} period={{ from: summary.period.from, to: summary.period.to }} />
 
       {/* ── C. 매출 확장 ── */}
       <section id="sales">
