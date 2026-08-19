@@ -25,6 +25,7 @@ import { canAccess, canSeeDashboard } from '../lib/access'
 import { WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { PageShell, SectionTitle, MetricCard, EmptyState } from '../components/ui'
+import { ClientAxPanel } from '../components/ClientAxPanel'
 import { LoadGate } from '../components/LoadState'
 import { ClientForm } from '../components/ClientForm'
 import { BookVisitModal } from '../components/BookVisit'
@@ -704,6 +705,9 @@ export function ClientDetail() {
       {/* ── 운영조건 ── */}
       {tab === 'ops' && (
         <div className="space-y-3">
+          {/*  이 병원에 대해 지금 아는 것 — **이미 일어난 일**만.
+               「이걸 파세요」식 영업추천은 넣지 않습니다. */}
+          <ClientAxPanel data={data} clientId={id} today={today()} canSeeMoney={canSeeMoney} />
           <div className="card flex flex-wrap gap-2 p-4">
             <Cond label={`수거주기 ${client.collectionCycle}`} />
             {client.collectsMedicalWaste && <Cond label="의료폐기물 차량" tone="rose" />}

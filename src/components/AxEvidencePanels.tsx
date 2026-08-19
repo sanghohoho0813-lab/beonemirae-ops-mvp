@@ -1,6 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Package, Hospital, Truck, Timer, AlertTriangle } from 'lucide-react'
 import type { AppData } from '../types'
+import { useAuth } from '../context/AuthContext'
+import { loadProfiles } from '../lib/repo'
 import { SectionTitle } from './ui'
 import { won } from '../lib/format'
 import {
@@ -166,7 +168,33 @@ export function AxEvidencePanels({
   experimentStart: string | null
   today: string
 }) {
-  const e = useMemo(() => axEvidence(data, period), [data, period])
+  //  ── 활성 병원 계정 수 ─────────────────────────────────────────────────
+  //
+  //   profiles 는 **관리자만** 읽을 수 있습니다 (RLS: 본인 또는 관리자).
+  //   사무실 계정으로 읽으면 본인 한 줄만 옵니다 — 그걸 「계정 1개」로 적으면
+  //   거짓말이 됩니다. 그래서 **관리자일 때만** 읽고, 아니면 안 넘깁니다
+  //   (그때 화면은 「관리자 계정에서만 볼 수 있습니다」라고 적습니다).
+  const { role } = useAuth()
+  const [accounts, setAccounts] = useState<number | null>(null)
+  useEffect(() => {
+    if (role !== 'admin') {
+      setAccounts(null)
+      return
+    }
+    let alive = true
+    void loadProfiles()
+      .then((rows) => {
+        if (!alive) return
+        setAccounts(rows.filter((r) => r.role === 'client' && r.active).length)
+      })
+      //  못 읽으면 조용히 「셀 수 없음」으로 둡니다 — 0 으로 바꾸지 않습니다.
+      .catch(() => alive && setAccounts(null))
+    return () => {
+      alive = false
+    }
+  }, [role])
+
+  const e = useMemo(() => axEvidence(data, period, accounts), [data, period, accounts])
   const cmp = useMemo(() => axCompare(data, experimentStart, today), [data, experimentStart, today])
   const f = e.sales.funnel
   const stageCount = ORDER_STAGE_ORDER.map((label) => ({
@@ -189,6 +217,27 @@ export function AxEvidencePanels({
           <b className="text-navy-600">「당일 입력률」과 같은 정의</b>를 씁니다 — 두 숫자를 나란히 놓을 수 있게.
         </p>
         <Numbers list={e.work.numbers} />
+
+        {/*  직원별 처리건수 — 지시문에서 **업무 AX** 항목입니다.
+             계산은 완료된 방문 기록에서 하므로 확장 AX 와 같은 값이지만,
+             「누가 얼마나 했나」는 업무 쪽에서 보는 것이 맞습니다.
+             ⚠ 기록에 이름이 없는 건은 차량 기본 기사로 채우지 않습니다 —
+               대차로 나간 날이 그대로 틀린 사람 실적이 됩니다. */}
+        {e.capacity.byDriver.length > 0 && (
+          <div data-ax-work-drivers className="card mt-3 divide-y divide-navy-50">
+            <p className="t-card px-4 py-3 font-extrabold text-navy-900">직원별 처리건수</p>
+            {e.capacity.byDriver.map((d) => (
+              <div key={d.name} className="flex flex-wrap items-baseline gap-x-3 px-4 py-3">
+                <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">{d.name}</span>
+                <b className="t-body shrink-0 tabular-nums text-navy-900">{d.visits}건</b>
+                <span className="t-muted shrink-0 text-navy-400">
+                  {d.days}일 · 하루 {Math.round((d.visits / Math.max(d.days, 1)) * 10) / 10}곳
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {e.work.lagHistogram.length > 0 && (
           <div data-ax-lag className="card mt-3 p-4 sm:p-5">
             <p className="t-body break-keep font-extrabold text-navy-900">며칠 만에 입력했는가</p>

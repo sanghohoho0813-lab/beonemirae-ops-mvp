@@ -1,5 +1,5 @@
 import type { AppData, Schedule } from '../types'
-import { supplyNeedsFor, type StockKey } from './supplyNeeds'
+import { supplyNeedsFor } from './supplyNeeds'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AX 증거 — 네 문장을 숫자로 만들 수 있는가
@@ -102,13 +102,28 @@ export interface OrderStage {
   cost: number
   /** 병원이 직접 올렸는가 */
   fromPortal: boolean
-  /** 이 주문의 품목 중 그 시점에 추천되고 있던 것 */
-  matchedNeeds: StockKey[]
-  itemStockKeys: StockKey[]
+  /** 이 주문의 품목 중 그 시점에 추천되고 있던 것 (추천과 같은 키) */
+  matchedNeeds: string[]
+  itemStockKeys: string[]
 }
 
-const STOCK_KEYS: StockKey[] = ['corrugated_box', 'plastic_container', 'bag', 'needle_box']
-const isStockKey = (k: string | null): k is StockKey => !!k && (STOCK_KEYS as string[]).includes(k)
+const STOCK_KEYS: string[] = ['corrugated_box', 'plastic_container', 'bag', 'needle_box']
+
+/**
+ * 주문 품목 하나를 **추천과 같은 키**로 바꿉니다.
+ *
+ *  ⚠ 추천(supplyNeeds)과 주문이 서로 다른 키를 쓰면 전환율이 통째로
+ *    틀립니다 — 같은 물건인데 안 겹치는 것으로 세게 됩니다.
+ *    키를 만드는 규칙은 두 곳이 **같아야** 합니다.
+ *      재고 네 칸       stockKey 그대로
+ *      재고 안 두는 상품 `product:<상품 id>`
+ *  둘 다 아니면(상품 id 도 없으면) 무엇인지 알 수 없어 세지 않습니다.
+ */
+function needKeyOfItem(it: { stockKey: string | null; productId: string | null }): string | null {
+  if (it.stockKey && STOCK_KEYS.includes(it.stockKey)) return it.stockKey
+  if (it.productId) return `product:${it.productId}`
+  return null
+}
 
 /**
  * 그 주문일 시점의 추천을 **다시 계산**합니다.
@@ -134,6 +149,12 @@ export function needsAsOf(data: AppData, clientId: string, on: string) {
     //   전환율 계산에 쓰는 것은 **어떤 품목이 추천됐는가**뿐이라 결과는
     //   달라지지 않습니다(다음 수거일은 문구와 정렬에만 씁니다).
     schedules: [],
+    //  ⚠ 추천은 이제 **전달 완료한 주문**도 사용 이력으로 봅니다(그게 실제로
+    //    병원에 들어간 물량이니까요). 되짚을 때 그날 이후 전달분이 섞이면,
+    //    그날은 아직 안 받은 물건을 「이미 받았다」로 세게 됩니다.
+    productOrders: (data.productOrders ?? []).filter(
+      (o) => !o.deliveredAt || o.deliveredAt.slice(0, 10) <= on,
+    ),
   }
   return supplyNeedsFor(past, clientId, on)
 }
@@ -164,8 +185,8 @@ export function orderStages(data: AppData, period: AxPeriod): OrderStage[] {
     const cost = o.items.reduce((s, it) => s + it.unitCost * it.qty, 0)
     const bill = billedBy.get(o.id)
     const requestedOn = o.requestedAt.slice(0, 10)
-    const itemStockKeys = [...new Set(o.items.map((it) => it.stockKey).filter(isStockKey))]
-    const wasNeeded = new Set(needsAsOf(data, o.clientId, requestedOn).needs.map((n) => n.stockKey))
+    const itemStockKeys = [...new Set(o.items.map(needKeyOfItem).filter((k): k is string => !!k))]
+    const wasNeeded = new Set(needsAsOf(data, o.clientId, requestedOn).needs.map((n) => n.key))
     return {
       orderId: o.id,
       clientId: o.clientId,
@@ -223,7 +244,7 @@ export function needConversion(data: AppData, period: AxPeriod): NeedConversion 
   for (let d = period.from; d <= period.to; d = shift(d, RECALL_STEP_DAYS)) {
     checkpoints += 1
     for (const cid of clients) {
-      for (const n of needsAsOf(data, cid, d).needs) seen.add(`${cid}|${n.stockKey}`)
+      for (const n of needsAsOf(data, cid, d).needs) seen.add(`${cid}|${n.key}`)
     }
   }
   const orderedPairs = new Set<string>()
@@ -231,7 +252,8 @@ export function needConversion(data: AppData, period: AxPeriod): NeedConversion 
     if (o.status === '취소') continue
     if (!inPeriod(o.requestedAt, period)) continue
     for (const it of o.items) {
-      if (isStockKey(it.stockKey)) orderedPairs.add(`${o.clientId}|${it.stockKey}`)
+      const k = needKeyOfItem(it)
+      if (k) orderedPairs.add(`${o.clientId}|${k}`)
     }
   }
   let converted = 0
@@ -328,7 +350,12 @@ export interface CustomerAx {
   portalClientIds: string[]
 }
 
-export function customerAx(data: AppData, period: AxPeriod): CustomerAx {
+export function customerAx(
+  data: AppData,
+  period: AxPeriod,
+  /** 관리자 화면이 읽어 온 활성 병원 계정 수. 못 읽으면 넘기지 않습니다 */
+  accounts?: number | null,
+): CustomerAx {
   const reqs = (data.requests ?? []).filter((r) => inPeriod(r.createdAt, period))
   const portalReqs = reqs.filter((r) => r.source === 'portal')
   const orders = (data.productOrders ?? []).filter(
@@ -346,6 +373,19 @@ export function customerAx(data: AppData, period: AxPeriod): CustomerAx {
 
   const buyers = new Set(orders.filter((o) => o.status === '전달완료').map((o) => o.clientId))
 
+  //  재구매 — 그 거래처의 **첫 주문이 아닌** 주문을 받은 병원.
+  //  기간을 넘어서 봅니다(첫 주문이 기간 앞에 있을 수 있습니다).
+  const firstOrderOf2 = new Map<string, string>()
+  for (const o of (data.productOrders ?? []).filter((x) => x.status !== '취소')) {
+    const cur = firstOrderOf2.get(o.clientId)
+    if (!cur || o.requestedAt < cur) firstOrderOf2.set(o.clientId, o.requestedAt)
+  }
+  const repeatBuyerSet = new Set(
+    orders
+      .filter((o) => o.status === '전달완료' && o.requestedAt > (firstOrderOf2.get(o.clientId) ?? o.requestedAt))
+      .map((o) => o.clientId),
+  )
+
   const numbers: AxNumber[] = [
     num('portalRequests', '포털 수거요청 건수', '건', portalReqs.length, reqs.length,
       '병원 담당자가 포털에서 직접 올린 요청 (전화·카톡 대행 접수 제외)'),
@@ -360,10 +400,19 @@ export function customerAx(data: AppData, period: AxPeriod): CustomerAx {
     num('repeatPortalClients', '두 번 이상 쓴 병원 수', '곳', repeat, uses.size,
       '한 번은 시켜서 해 본 것일 수 있습니다 — 두 번째부터가 습관입니다'),
     num('buyerClients', '주문한 병원 수', '곳', buyers.size, orders.length, '전달 완료된 주문이 있는 거래처'),
-    //  ⚠ 계정 수는 이 자료로 못 셉니다. 0 이라고 적으면 「계정이 없다」는
-    //    거짓말이 됩니다. 못 센다고 그대로 적습니다.
-    num('accounts', '활성 병원 계정 수', '개', null, 0,
-      '계정 목록(profiles)은 관리자 화면에서만 봅니다 — 이 화면 자료에는 없어 세지 않습니다'),
+    num('repeatBuyerClients', '두 번 이상 산 병원 수', '곳', repeatBuyerSet.size, buyers.size,
+      '그 거래처의 첫 주문이 아닌 주문을 받은 병원'),
+    num('repeatRate', '재구매율', '%',
+      buyers.size > 0 ? Math.round((repeatBuyerSet.size / buyers.size) * 1000) / 10 : null,
+      buyers.size,
+      '두 번 이상 산 병원 ÷ 산 병원. 산 병원이 없으면 계산하지 않습니다 (0으로 나누지 않습니다)'),
+    //  ⚠ 계정 수는 **관리자만** 볼 수 있습니다 (profiles RLS: 본인 또는 관리자).
+    //    이 계산 함수는 계정 목록을 안 받으므로 여기서는 못 셉니다.
+    //    화면이 관리자로 읽어 오면 그 값을 넣어 줍니다 — 0 이라고 적지 않습니다.
+    num('accounts', '활성 병원 계정 수', '개', accounts ?? null, accounts != null ? accounts : 0,
+      accounts != null
+        ? '역할이 「병원 담당자」이고 사용 중인 계정 수'
+        : '계정 목록은 **관리자 계정에서만** 볼 수 있습니다 (사무실 계정에서는 세지 않습니다)'),
   ]
 
   return { period, numbers, portalClientIds: [...uses.keys()] }
@@ -564,12 +613,12 @@ export interface AxEvidence {
   capacity: CapacityAx
 }
 
-export function axEvidence(data: AppData, period: AxPeriod): AxEvidence {
+export function axEvidence(data: AppData, period: AxPeriod, accounts?: number | null): AxEvidence {
   return {
     period,
     work: workAx(data, period),
     sales: salesAx(data, period),
-    customer: customerAx(data, period),
+    customer: customerAx(data, period, accounts),
     capacity: capacityAx(data, period),
   }
 }

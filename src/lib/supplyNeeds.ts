@@ -34,7 +34,18 @@ export const NEEDS_WINDOW_DAYS = 90
 export const MIN_SUPPLIES_FOR_NEED = 2
 
 export interface SupplyNeed {
-  stockKey: StockKey
+  /**
+   * 사무실 재고 네 칸 중 하나. **재고를 두지 않는 상품**이면 null 입니다.
+   *
+   *  예전에는 이 네 칸이 추천의 전부였습니다. 그런데 병원이 실제로 반복해서
+   *  사는 물건은 그보다 넓습니다(장갑·소독티슈처럼 재고를 안 두는 것도
+   *  있습니다). 그런 것은 productId 로 따라갑니다.
+   */
+  stockKey: StockKey | null
+  /** 재고를 두지 않는 상품이면 그 상품 id (재고 품목이면 null) */
+  productId: string | null
+  /** 화면·데이터에서 쓰는 하나뿐인 키 — stockKey 또는 `product:<id>` */
+  key: string
   /** '골판지 전용박스' */
   label: string
   /** 창 안에서 실제로 가져다 드린 총 수량 */
@@ -84,6 +95,8 @@ export interface SupplyNeeds {
   /** 추천을 못 하는 이유 (추천이 있으면 빈 문자열) */
   blocked: string
 }
+
+const STOCK_KEYS: StockKey[] = ['corrugated_box', 'plastic_container', 'bag', 'needle_box']
 
 const LABEL: Record<StockKey, string> = {
   corrugated_box: '골판지 전용박스',
@@ -149,29 +162,79 @@ export function supplyNeedsFor(data: AppData, clientId: string, today: string): 
     (data.schedules ?? [])
       .filter((s) => s.clientId === clientId && s.status !== '완료' && !s.canceledAt && s.date >= today)
       .sort((a, b) => a.date.localeCompare(b.date))[0]?.date ?? null
-  const mine = (data.materials ?? [])
-    .filter((m) => m.clientId === clientId && m.date >= from && m.date <= today)
-    .sort((a, b) => a.date.localeCompare(b.date))
 
-  const byKey = new Map<StockKey, { dates: string[]; qty: number[] }>()
-  for (const m of mine) {
+  // ── 실제로 그 병원에 들어간 물량 ──────────────────────────────────────────
+  //
+  //  ⚠ 예전에는 **자재공급 기록(materials)만** 봤습니다. 그런데 병원이 포털로
+  //    주문해서 받은 물량은 거기 안 남습니다 — 전달할 때 재고와 원장
+  //    (material_transactions)만 건드리고 materials 에는 안 씁니다.
+  //
+  //    그래서 병원이 박스 20개를 사서 받아도 추천은 그걸 못 보고, 그다음 주에
+  //    또 「마지막 공급 46일 전 · 이번에 필요」라고 권했습니다. 방금 받은
+  //    사람에게 또 사라고 하는 것입니다 — 근거 없는 추천이 됩니다.
+  //
+  //    두 갈래를 합쳐서 봅니다.
+  //      · 자재공급(materials)      우리가 가져다 드린 것
+  //      · 전달 완료한 소모품 주문   병원이 사서 받은 것
+  //    둘은 같은 표에 안 들어가므로 두 번 세지 않습니다.
+  type Ev = { date: string; key: string; stockKey: StockKey | null; productId: string | null; label: string; qty: number }
+  const evs: Ev[] = []
+
+  for (const m of (data.materials ?? []).filter(
+    (x) => x.clientId === clientId && x.date >= from && x.date <= today,
+  )) {
     for (const [k, n] of Object.entries(qtyOf(m)) as [StockKey, number][]) {
       if (!n || n <= 0) continue
-      const cur = byKey.get(k) ?? { dates: [], qty: [] }
-      cur.dates.push(m.date)
-      cur.qty.push(n)
-      byKey.set(k, cur)
+      evs.push({ date: m.date, key: k, stockKey: k, productId: null, label: LABEL[k], qty: n })
     }
   }
 
+  for (const o of (data.productOrders ?? []).filter(
+    (x) =>
+      x.clientId === clientId &&
+      x.status === '전달완료' &&
+      !!x.deliveredAt &&
+      x.deliveredAt.slice(0, 10) >= from &&
+      x.deliveredAt.slice(0, 10) <= today,
+  )) {
+    const on = (o.deliveredAt as string).slice(0, 10)
+    for (const it of o.items) {
+      if (!it.qty || it.qty <= 0) continue
+      const sk = (STOCK_KEYS as string[]).includes(it.stockKey ?? '') ? (it.stockKey as StockKey) : null
+      //  재고를 두지 않는 상품은 상품 자체로 따라갑니다. 상품 id 도 없으면
+      //  무엇인지 알 수 없으므로 세지 않습니다 — 이름만으로 묶으면 규격이
+      //  다른 물건이 한 줄로 합쳐집니다.
+      if (!sk && !it.productId) continue
+      evs.push({
+        date: on,
+        key: sk ?? `product:${it.productId}`,
+        stockKey: sk,
+        productId: sk ? null : it.productId,
+        label: sk ? LABEL[sk] : `${it.name}${it.spec ? ` ${it.spec}` : ''}`,
+        qty: it.qty,
+      })
+    }
+  }
+
+  const byKey = new Map<string, Ev[]>()
+  for (const e of evs) {
+    const cur = byKey.get(e.key) ?? []
+    cur.push(e)
+    byKey.set(e.key, cur)
+  }
+
   const needs: SupplyNeed[] = []
-  for (const [stockKey, v] of byKey) {
+  for (const [key, rowsRaw] of byKey) {
+    const rows = [...rowsRaw].sort((a, b) => a.date.localeCompare(b.date))
     //  한 번뿐이면 「주기」가 아닙니다 — 추천하지 않습니다.
-    if (v.dates.length < MIN_SUPPLIES_FOR_NEED) continue
-    const total = v.qty.reduce((s, n) => s + n, 0)
-    const times = v.dates.length
-    const lastDate = v.dates[v.dates.length - 1]
-    const firstDate = v.dates[0]
+    //  ⚠ 같은 날 두 건이 들어온 것도 **한 번**입니다. 하루에 두 줄 적었다고
+    //    주기를 아는 것이 아닙니다.
+    const days = [...new Set(rows.map((r) => r.date))]
+    if (days.length < MIN_SUPPLIES_FOR_NEED) continue
+    const total = rows.reduce((s2, r) => s2 + r.qty, 0)
+    const times = days.length
+    const lastDate = days[days.length - 1]
+    const firstDate = days[0]
     const daysSince = dayDiff(today, lastDate)
     //  실제로 자료가 있는 기간으로 나눕니다. 창(90일) 전체로 나누면
     //  두 달 전에 시작한 병원의 사용량이 3분의 2로 줄어 보입니다.
@@ -185,10 +248,13 @@ export function supplyNeedsFor(data: AppData, clientId: string, today: string): 
     const due = dueOn != null && dayDiff(dueOn, today) <= 7
     //  둘 중 하나라도 모르면 false 입니다 — 모르는 것을 「급하다」로 바꾸지 않습니다.
     const runsOutBeforeNextVisit = dueOn != null && nextVisitOn != null && dueOn < nextVisitOn
+    const head0 = rows[0]
 
     needs.push({
-      stockKey,
-      label: LABEL[stockKey],
+      stockKey: head0.stockKey,
+      productId: head0.productId,
+      key,
+      label: head0.label,
       total,
       times,
       perMonth,
@@ -201,7 +267,7 @@ export function supplyNeedsFor(data: AppData, clientId: string, today: string): 
       nextVisitOn,
       runsOutBeforeNextVisit,
       why:
-        `최근 ${Math.round(span / 30 * 10) / 10}개월 동안 ${times}번 · 모두 ${total}개 ` +
+        `최근 ${Math.round((span / 30) * 10) / 10}개월 동안 ${times}번 · 모두 ${total}개 ` +
         `(한 달 ${perMonth}개꼴) · 마지막 ${lastDate} (${daysSince}일 전)` +
         (cycleDays ? ` · 평균 ${cycleDays}일에 한 번` : '') +
         //  ⚠ 다음 수거일은 **있을 때만** 붙입니다. 예정이 없는데 「다음 수거
@@ -220,14 +286,16 @@ export function supplyNeedsFor(data: AppData, clientId: string, today: string): 
     return b.perMonth - a.perMonth
   })
 
+  const supplyCount = new Set(evs.map((e) => `${e.date}|${e.key}`)).size
+
   return {
     clientId,
     needs,
-    supplyCount: mine.length,
+    supplyCount,
     blocked:
       needs.length > 0
         ? ''
-        : mine.length === 0
+        : evs.length === 0
           ? `최근 ${NEEDS_WINDOW_DAYS}일 안에 자재를 가져다 드린 기록이 없어 추천할 사용 이력이 아직 충분하지 않습니다.`
           : `추천할 사용 이력이 아직 충분하지 않습니다 — 같은 물품을 ${MIN_SUPPLIES_FOR_NEED}번 이상 받으신 기록이 있어야 사용 주기를 알 수 있습니다.`,
   }

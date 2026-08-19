@@ -3,7 +3,7 @@ import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
-import { supplyNeedsFor } from '../lib/supplyNeeds'
+import { supplyNeedsFor, type SupplyNeed } from '../lib/supplyNeeds'
 import { prettyDate, won } from '../lib/format'
 import type { Product, ProductOrder } from '../types'
 import { LoadFailedState, LoadingState, useLoadState } from '../components/LoadState'
@@ -82,8 +82,11 @@ export function PortalSupplies() {
   const loadState = useLoadState()
 
   //  추천 물품 ↔ 실제 파는 상품 잇기. 파는 상품이 없으면 추천만 보여 줍니다.
-  const productFor = (stockKey: string): Product | undefined =>
-    products.find((p) => p.stockKey === stockKey)
+  //
+  //   추천은 두 갈래에서 옵니다 — 재고 네 칸(자재공급 이력)과, 재고를 두지
+  //   않는 상품(전에 사서 받으신 것). 앞은 stockKey 로, 뒤는 상품 id 로 잇습니다.
+  const productFor = (n: SupplyNeed): Product | undefined =>
+    n.productId ? products.find((p) => p.id === n.productId) : products.find((p) => p.stockKey === n.stockKey)
 
   const picked = Object.entries(qty).filter(([, n]) => n > 0)
   const total = picked.reduce((s, [id, n]) => {
@@ -135,9 +138,9 @@ export function PortalSupplies() {
         ) : (
           <ul className="mt-3 flex flex-col gap-2.5">
             {needs.needs.map((n) => {
-              const p = productFor(n.stockKey)
+              const p = productFor(n)
               return (
-                <li key={n.stockKey} data-need={n.stockKey} className="rounded-2xl bg-navy-50/60 p-3.5">
+                <li key={n.key} data-need={n.key} className="rounded-2xl bg-navy-50/60 p-3.5">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <b className="t-body text-navy-900">{n.label}</b>
                     {/*  ⚠ 병원이 지금 결정해야 하는 것은 딱 하나입니다 —
@@ -145,7 +148,7 @@ export function PortalSupplies() {
                          그 경우에만 따로 표시합니다. 다 급하다고 하면 아무것도
                          급하지 않은 것과 같습니다. */}
                     {n.runsOutBeforeNextVisit ? (
-                      <span data-need-urgent={n.stockKey} className="pill bg-rose-100 text-rose-700">
+                      <span data-need-urgent={n.key} className="pill bg-rose-100 text-rose-700">
                         다음 수거 전에 떨어집니다
                       </span>
                     ) : (
@@ -158,14 +161,14 @@ export function PortalSupplies() {
                     {n.why}
                   </p>
                   {n.dueOn && (
-                    <p data-need-due={n.stockKey} className="t-caption mt-0.5 break-keep text-navy-500">
+                    <p data-need-due={n.key} className="t-caption mt-0.5 break-keep text-navy-500">
                       이대로면 {prettyDate(n.dueOn)}쯤 필요합니다
                       {n.nextVisitOn && ` · 다음 수거는 ${prettyDate(n.nextVisitOn)}`}
                     </p>
                   )}
                   {p ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <button data-need-add={n.stockKey} className="btn-ghost" onClick={() => bump(p.id, n.suggestQty)}>
+                      <button data-need-add={n.key} className="btn-ghost" onClick={() => bump(p.id, n.suggestQty)}>
                         ＋ {n.suggestQty}개 담기
                       </button>
                       <span className="t-muted">
