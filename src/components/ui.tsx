@@ -215,13 +215,19 @@ export function QtyField({
   )
 
   if (row) {
+    //  ⚠ 「큰 글씨」로 켜면 이름이 **세로로 한 글자씩** 늘어졌습니다
+    //     (「골판지 전용박스」가 27px 폭 · 238px 높이). 오른쪽 −／＋ 칸이
+    //     글자와 같이 커지면서 자리를 다 가져가고, 이름 칸은 min-w-0 이라
+    //     0 까지 줄어들 수 있었기 때문입니다.
+    //     이름에 최소 폭을 주고 줄을 넘길 수 있게 했습니다 — 자리가 모자라면
+    //     −／＋ 가 아랫줄로 내려갑니다. 기사님 화면이라 읽히는 쪽이 먼저입니다.
     return (
-      <div className="flex items-center gap-3 py-1.5">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1.5">
+        <div className="flex min-w-[7.5rem] flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="break-keep text-[1.06rem] font-bold text-navy-800">{label}</span>
           {badge}
         </div>
-        <div className="shrink-0">{control}</div>
+        <div className="ml-auto shrink-0">{control}</div>
       </div>
     )
   }

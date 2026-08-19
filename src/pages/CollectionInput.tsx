@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle,
@@ -132,7 +132,10 @@ export function CollectionInput() {
   const [handover, setHandover] = useState<HandoverStatus>('수거 완료')
   const [memo, setMemo] = useState('')
 
+  const navigate = useNavigate()
   const [errors, setErrors] = useState<string[]>([])
+  //  「이미 저장돼 있다」는 빨간 실패가 아니라 안심시켜야 할 안내입니다.
+  const [dupNotice, setDupNotice] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
   const [success, setSuccess] = useState<null | { client: string; amount: number; supplied: number; created: boolean }>(
@@ -307,6 +310,22 @@ export function CollectionInput() {
     }
   }
 
+  //  ── 「이미 저장돼 있다」는 실패가 아닙니다 ────────────────────────────────
+  //
+  //   지하 보관실에서 저장을 누르면, 서버에는 들어갔는데 **응답이 오는 길에**
+  //   끊기는 일이 있습니다. 화면에는 「저장하지 못했습니다」가 뜨고 기사님은
+  //   당연히 다시 누릅니다. 그때 서버는 이렇게 답합니다.
+  //
+  //     「이미 완료 처리된 일정입니다. (중복 완료 방지)」
+  //     「8월 19일 ○○병원의 의료폐기물 수거가 이미 저장되어 있습니다…」
+  //
+  //   **저장이 됐다는 뜻인데 빨간 글씨로 뜹니다.** 기사님은 안 된 줄 알고
+  //   사무실에 전화합니다. 파일럿에서 제일 많이 걸려 올 전화입니다.
+  //   서버가 막은 것은 그대로 두고(중복은 여전히 안 들어갑니다), **읽히는
+  //   말만** 바꿉니다. 저장됐다고 지어내지도 않습니다 — 확인할 곳을 알려 줍니다.
+  const alreadySaved = (msgs: string[]) =>
+    msgs.some((m) => /이미 완료 처리된 일정|이미 저장되어 있습니다/.test(m))
+
   async function submit() {
     //  평소와 크게 다른 수거량은 저장 **전에** 물어봅니다. 저장한 뒤에
     //  알려 주면 이미 그 금액으로 잡히고, 현장은 다음 화면으로 넘어간
@@ -324,10 +343,18 @@ export function CollectionInput() {
     const result = await completeCollection(buildInput())
     setWarnings(result.warnings)
     if (!result.ok) {
+      if (alreadySaved(result.errors)) {
+        //  이미 들어가 있습니다 — 다시 넣을 필요가 없다는 것만 알려 줍니다.
+        setErrors([])
+        setDupNotice(result.errors[0] ?? '')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
       setErrors(result.errors)
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
+    setDupNotice(null)
     setErrors([])
     setSuccess({
       client: client?.name ?? '거래처',
@@ -443,6 +470,34 @@ export function CollectionInput() {
   return (
     <div className="pb-4">
       <PageHeader title="수거 입력" subtitle="한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다" />
+
+      {/*  이미 저장돼 있는 경우 — 빨강이 아니라 청록입니다.
+           「안 됐다」가 아니라 「이미 됐다」이기 때문입니다. */}
+      {dupNotice && (
+        <div data-collect-dup className="card mb-4 border border-teal-200 bg-teal-50 p-4">
+          <p className="t-body flex items-start gap-1.5 font-extrabold text-teal-800">
+            <CheckCircle2 size={17} strokeWidth={2.4} className="mt-0.5 shrink-0" />
+            이미 저장돼 있습니다 — 다시 넣지 않으셔도 됩니다.
+          </p>
+          <p className="t-muted mt-1.5 break-keep text-teal-700">{dupNotice}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              data-collect-dup-check
+              onClick={() => navigate('/today')}
+              className="rounded-full bg-teal-600 px-4 py-2.5 text-[1rem] font-extrabold text-white transition hover:bg-teal-700"
+            >
+              오늘 일정에서 확인
+            </button>
+            <button
+              data-collect-dup-close
+              onClick={() => setDupNotice(null)}
+              className="rounded-full bg-white px-4 py-2.5 text-[1rem] font-bold text-teal-700 ring-1 ring-teal-200 transition hover:bg-teal-100"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 검증 오류 */}
       <AnimatePresence>

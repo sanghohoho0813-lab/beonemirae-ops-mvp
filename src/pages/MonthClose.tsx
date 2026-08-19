@@ -238,7 +238,11 @@ export function MonthClose() {
               : `확정한 명세서 ${invoices.length}장 한 번에 인쇄`}
           </span>
         </PrimaryButton>
-        <p className="min-w-0 flex-1 break-keep text-[1.02rem] text-navy-500">
+        {/*  ⚠ 「큰 글씨」에서 이 설명이 38px 폭 · 949px 높이로 **세로로 한
+             글자씩** 늘어졌습니다. 왼쪽 버튼이 글자와 같이 커지면서 자리를
+             다 가져가는데, 이 칸은 min-w-0 이라 0 까지 줄어들 수 있었습니다.
+             최소 폭을 줘서, 자리가 모자라면 아랫줄로 내려가게 합니다. */}
+        <p className="min-w-[12rem] flex-1 break-keep text-[1.02rem] text-navy-500">
           {invoices.length === 0
             ? '청구를 확정하면 그때 굳혀 둔 명세서를 여기서 한 번에 뽑을 수 있습니다.'
             : '병원마다 A4 한 장씩 끊어집니다 — 인쇄 창에서 「PDF로 저장」을 고르면 그대로 파일이 됩니다.'}
