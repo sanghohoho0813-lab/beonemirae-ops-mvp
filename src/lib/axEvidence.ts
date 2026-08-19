@@ -471,10 +471,85 @@ export function capacityAx(data: AppData, period: AxPeriod): CapacityAx {
   return { period, numbers, vehicles, byDriver }
 }
 
+// ═══ ① 업무 AX — 당일 입력 ═══════════════════════════════════════════════════
+//
+//   파일럿 측정항목에 「당일 입력률」이 있습니다. 화면과 하루 한 줄 기록이
+//   **같은 정의**를 써야 두 숫자를 나란히 놓을 수 있습니다. 그래서 여기서
+//   한 번만 정의합니다.
+//
+//    당일 입력 = 다녀온 날(schedules.date)과 입력이 서버에 남은 날
+//                (completed_at 을 한국 시간으로 본 날)이 같은 것
+//
+//   ⚠ 「그날 안에 넣었나」는 업무가 하루 안에 닫혔는가입니다. 다음 날 아침에
+//     몰아 넣으면 그날 저녁에 이사님이 확인할 것이 없습니다 — 그게 예전
+//     방식(퇴근 후 카톡·엑셀)과 같아지는 지점입니다.
+
+/** ISO 시각을 한국 시간 기준 날짜로 */
+export function kstDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
+export interface WorkAx {
+  period: AxPeriod
+  numbers: AxNumber[]
+  /** 며칠 만에 입력했는가 → 건수 (0 = 당일) */
+  lagHistogram: { lagDays: number; count: number }[]
+}
+
+export function workAx(data: AppData, period: AxPeriod): WorkAx {
+  const done = (data.schedules ?? []).filter(
+    (s) =>
+      s.status === '완료' &&
+      !s.canceledAt &&
+      s.date >= period.from &&
+      s.date <= period.to &&
+      !!s.completedAt,
+  )
+  const lags: number[] = []
+  for (const s of done) {
+    const entered = kstDate(s.completedAt as string)
+    if (!entered) continue
+    const lag = Math.round(
+      (new Date(`${entered}T00:00:00Z`).getTime() - new Date(`${s.date}T00:00:00Z`).getTime()) / 86400000,
+    )
+    //  ⚠ 음수(다녀오기 전에 입력)는 있을 수 없는 값입니다. 0 으로 눌러
+    //    당일처럼 세면 안 됩니다 — 그런 기록이 있으면 그것 자체가 문제입니다.
+    lags.push(lag)
+  }
+  const sameDay = lags.filter((n) => n === 0).length
+  const byNextDay = lags.filter((n) => n <= 1 && n >= 0).length
+  const odd = lags.filter((n) => n < 0).length
+
+  const hist = new Map<number, number>()
+  for (const n of lags) hist.set(n, (hist.get(n) ?? 0) + 1)
+
+  const numbers: AxNumber[] = [
+    num('entered', '입력이 끝난 수거', '건', lags.length, lags.length,
+      '완료 처리되고 입력 시각이 남은 건 (무른 방문 제외)'),
+    num('sameDayRate', '당일 입력 완료율', '%',
+      lags.length > 0 ? Math.round((sameDay / lags.length) * 1000) / 10 : null, lags.length,
+      '다녀온 날과 입력한 날(한국 시간)이 같은 건의 비율 — 파일럿 「당일 입력률」과 같은 정의입니다'),
+    num('nextDayRate', '다음 날까지 입력한 비율', '%',
+      lags.length > 0 ? Math.round((byNextDay / lags.length) * 1000) / 10 : null, lags.length,
+      '당일 + 다음 날. 당일률과 이 값의 차이가 「저녁에 몰아 넣는 습관」의 크기입니다'),
+    num('oddLag', '다녀오기 전에 입력된 건', '건', odd, lags.length,
+      '있을 수 없는 값입니다. 0 이 아니면 날짜를 잘못 넣은 기록이 있다는 뜻이라 그대로 셉니다'),
+  ]
+
+  return {
+    period,
+    numbers,
+    lagHistogram: [...hist.entries()].map(([lagDays, count]) => ({ lagDays, count })).sort((a, b) => a.lagDays - b.lagDays),
+  }
+}
+
 // ═══ 한 화면에 필요한 묶음 ════════════════════════════════════════════════════
 
 export interface AxEvidence {
   period: AxPeriod
+  work: WorkAx
   sales: SalesAx
   customer: CustomerAx
   capacity: CapacityAx
@@ -483,6 +558,7 @@ export interface AxEvidence {
 export function axEvidence(data: AppData, period: AxPeriod): AxEvidence {
   return {
     period,
+    work: workAx(data, period),
     sales: salesAx(data, period),
     customer: customerAx(data, period),
     capacity: capacityAx(data, period),
@@ -493,6 +569,7 @@ export function axEvidence(data: AppData, period: AxPeriod): AxEvidence {
 export function weakestEvidence(e: AxEvidence): { area: string; why: string } {
   const score = (ns: AxNumber[]) => ns.filter((n) => n.state === 'ok').length
   const rows = [
+    { area: '업무 AX (당일 입력)', n: score(e.work.numbers), total: e.work.numbers.length },
     { area: '매출 AX', n: score(e.sales.numbers), total: e.sales.numbers.length },
     { area: '고객 AX', n: score(e.customer.numbers), total: e.customer.numbers.length },
     { area: '확장 AX', n: score(e.capacity.numbers), total: e.capacity.numbers.length },

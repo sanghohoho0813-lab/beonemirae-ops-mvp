@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Package, Hospital, Truck, AlertTriangle } from 'lucide-react'
+import { Package, Hospital, Truck, Timer, AlertTriangle } from 'lucide-react'
 import type { AppData } from '../types'
 import { SectionTitle } from './ui'
 import { won } from '../lib/format'
@@ -79,6 +79,35 @@ export function AxEvidencePanels({ data, period }: { data: AppData; period: AxPe
 
   return (
     <>
+      {/* ── 업무 AX · 당일 입력 ─────────────────────────────────────────── */}
+      <section id="ax-work">
+        <SectionTitle action={<span className="pill bg-sky-50 text-sky-700">완료된 입력 기록</span>}>
+          <Timer size={17} className="mr-1.5 inline -translate-y-px" strokeWidth={2.5} />
+          업무 AX — 그날 안에 업무가 닫혔는가
+        </SectionTitle>
+        <p className="t-muted mb-3 break-keep px-1 text-navy-400">
+          다녀온 날과 입력한 날(한국 시간)이 같으면 「당일」입니다. 파일럿 하루 한 줄 기록의{' '}
+          <b className="text-navy-600">「당일 입력률」과 같은 정의</b>를 씁니다 — 두 숫자를 나란히 놓을 수 있게.
+        </p>
+        <Numbers list={e.work.numbers} />
+        {e.work.lagHistogram.length > 0 && (
+          <div data-ax-lag className="card mt-3 p-4 sm:p-5">
+            <p className="t-body break-keep font-extrabold text-navy-900">며칠 만에 입력했는가</p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {e.work.lagHistogram.map((h) => (
+                <span
+                  key={h.lagDays}
+                  data-ax-lag-bucket={h.lagDays}
+                  className={`pill ${h.lagDays === 0 ? 'bg-teal-50 text-teal-700' : h.lagDays < 0 ? 'bg-rose-50 text-rose-700' : 'bg-navy-100 text-navy-600'}`}
+                >
+                  {h.lagDays === 0 ? '당일' : h.lagDays < 0 ? `${-h.lagDays}일 전(있을 수 없음)` : `${h.lagDays}일 뒤`} {h.count}건
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* ── 매출 AX ─────────────────────────────────────────────────────── */}
       <section id="ax-sales">
         <SectionTitle action={<span className="pill bg-teal-50 text-teal-700">실제 주문 기록 기준</span>}>
