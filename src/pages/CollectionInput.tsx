@@ -11,6 +11,7 @@ import {
   Truck,
   ArrowRight,
   CalendarPlus,
+  ChevronDown,
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
 import { addDays } from '../lib/performance'
@@ -63,11 +64,39 @@ const CONTAINER_KEYS: { key: keyof ContainerBreakdown; label: string }[] = [
   { key: 'etc', label: '기타' },
 ]
 
+/**
+ *  ── 폰에서 접는 칸 (0065) ──────────────────────────────────────────────────
+ *
+ *   기사님이 한 건을 넣을 때 실제로 **바꾸는 값은 수거량 하나**입니다.
+ *   시간·용기·자재·인계·특이사항은 기본값 그대로 저장되는 날이 대부분인데,
+ *   여덟 칸이 전부 펼쳐져 있어 저장 단추까지 네 번을 밀어야 했습니다.
+ *
+ *   그래서 **기본값 그대로인 칸만** 한 줄로 접습니다.
+ *
+ *   ⚠ 두 가지를 지킵니다.
+ *     ① 접힌 칸도 **값은 그대로 저장됩니다.** 화면에서만 감춥니다(`hidden`).
+ *        지우는 것이 아니라 안 보이게 하는 것입니다.
+ *     ② 값이 기본과 다르면 **저절로 펼칩니다.** 넣어 둔 것이 접힌 채로
+ *        숨는 일이 없어야 합니다 — 그러면 「분명히 적었는데」가 생깁니다.
+ *
+ *   넓은 화면(sm 이상)은 지금까지와 똑같이 전부 펼쳐 둡니다. 사무실은
+ *   마우스로 보고, 접는 것이 오히려 손이 더 갑니다.
+ */
+type Fold = {
+  /** 펼쳐져 있는가 — 부모가 「기본값과 다르면 true」로 계산해서 넘깁니다 */
+  open: boolean
+  onOpen: () => void
+  /** 접힌 줄 오른쪽에 지금 값을 적습니다 — 열지 않아도 무엇으로 저장되는지 보이게 */
+  summary: React.ReactNode
+  id: string
+}
+
 function Section({
   n,
   title,
   desc,
   tour,
+  fold,
   children,
 }: {
   n: number
@@ -75,20 +104,44 @@ function Section({
   desc?: string
   /** 제품 투어 대상 표시 */
   tour?: string
+  fold?: Fold
   children: React.ReactNode
 }) {
+  const folded = !!fold && !fold.open
   return (
-    <div data-tour={tour} className="card p-5">
-      <div className="mb-3 flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
-          {n}
-        </span>
-        <div>
-          <h2 className="text-[1.15rem] font-extrabold text-navy-900">{title}</h2>
-          {desc && <p className="mt-0.5 text-[0.98rem] text-navy-400">{desc}</p>}
+    <div data-tour={tour} className="card">
+      {folded && (
+        <button
+          type="button"
+          data-fold={fold.id}
+          onClick={fold.onOpen}
+          className="flex min-h-[3.5rem] w-full items-center gap-2.5 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
+        >
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
+            {n}
+          </span>
+          <span className="min-w-0 break-keep text-[1.1rem] font-extrabold text-navy-900">{title}</span>
+          <span
+            data-fold-summary={fold.id}
+            className="ml-auto flex shrink-0 items-center gap-1 text-[1.02rem] font-bold text-navy-400"
+          >
+            {fold.summary}
+            <ChevronDown size={16} strokeWidth={2.4} />
+          </span>
+        </button>
+      )}
+      <div className={folded ? 'hidden p-5 sm:block' : 'p-5'}>
+        <div className="mb-3 flex items-start gap-2.5">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
+            {n}
+          </span>
+          <div>
+            <h2 className="text-[1.15rem] font-extrabold text-navy-900">{title}</h2>
+            {desc && <p className="mt-0.5 text-[0.98rem] text-navy-400">{desc}</p>}
+          </div>
         </div>
+        {children}
       </div>
-      {children}
     </div>
   )
 }
@@ -285,6 +338,17 @@ export function CollectionInput() {
   )
   const containerSum = containerTotal(containers)
 
+  //  ── 접힘 상태 (0065) ────────────────────────────────────────────────────
+  //   「기사님이 손대는 칸」만 펼쳐 둡니다. 기본값 그대로면 한 줄로 접습니다.
+  //   ⚠ open 계산에 **값 조건**을 함께 넣습니다. 그래야 넣어 둔 값이 접힌 채로
+  //     숨지 않습니다 — 접기는 보여 주기일 뿐, 저장은 그대로 됩니다.
+  const [openTime, setOpenTime] = useState(false)
+  const [openContainers, setOpenContainers] = useState(false)
+  const [openSupply, setOpenSupply] = useState(false)
+  const [openHandover, setOpenHandover] = useState(false)
+  const [openMemo, setOpenMemo] = useState(false)
+  const [openRecent, setOpenRecent] = useState(false)
+
   function buildInput(): CollectionCompletionInput {
     return {
       scheduleId: scheduleId || null,
@@ -376,7 +440,36 @@ export function CollectionInput() {
 
   const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock
 
+  //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
+  const timeOpen = openTime || visitDate !== today()
+  const containersOpen = openContainers || containerSum > 0
+  const supplyOpen = openSupply || suppliedSum > 0 || overStock
+  const handoverOpen = openHandover || handover !== '수거 완료'
+  const memoOpen = openMemo || memo.trim().length > 0
+
   const recentEvents = data.events.slice(0, 4)
+
+  //  ── 자주 가는 곳 바로 고르기 (0065) ─────────────────────────────────────
+  //
+  //   폰에서 거래처를 고르려면 목록을 열고 → 굴려서 찾고 → 누릅니다. 거래처가
+  //   열 곳이 넘으면 한 번에 안 잡힙니다. 그런데 기사님이 다니는 곳은 거의
+  //   정해져 있습니다.
+  //
+  //   ⚠ 새로 저장하는 것은 없습니다. **이미 읽어 둔 수거 이력**(data.events)
+  //     에서 최근에 다녀온 순서를 셀 뿐입니다. 이력이 없으면 안 나옵니다 —
+  //     없는 것을 지어내지 않습니다.
+  const quickClients = useMemo(() => {
+    const seen: string[] = []
+    for (const e of data.events) {
+      if (e.reverted) continue
+      if (!data.clients.some((c) => c.id === e.clientId)) continue
+      if (!seen.includes(e.clientId)) seen.push(e.clientId)
+      if (seen.length >= 4) break
+    }
+    return seen
+      .map((id) => data.clients.find((c) => c.id === id)!)
+      .filter(Boolean)
+  }, [data.events, data.clients])
 
   // ── 성공 화면 ──
   // 저장 직후 기준으로 다시 계산 — 방금 저장한 건은 이미 완료로 빠집니다
@@ -567,8 +660,15 @@ export function CollectionInput() {
 
         {/* 1. 오늘 일정 선택 */}
         <div className={picked && !pickOpen ? 'hidden' : 'space-y-4'}>
+        {/*
+          ── 고를 것이 없으면 고르는 칸도 없습니다 ────────────────────────────
+          오늘 예정이 0건이면 이 칸에 남는 것은 이미 켜져 있는 「직접 입력」
+          단추와 안내문뿐입니다. 기사님은 아무것도 고를 수 없는 칸을 250px
+          밀고 지나가야 했습니다. 0건일 때는 한 줄로 알리기만 합니다.
+        */}
         <Section n={1} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
           <div className="flex flex-wrap gap-2">
+            {todayPending.length > 0 && (
             <button
               onClick={() => {
                 setScheduleId('')
@@ -580,6 +680,7 @@ export function CollectionInput() {
             >
               직접 입력
             </button>
+            )}
             {todayPending.map((s) => {
               const c = data.clients.find((x) => x.id === s.clientId)
               const active = scheduleId === s.id
@@ -597,9 +698,31 @@ export function CollectionInput() {
               )
             })}
             {todayPending.length === 0 && (
-              <p className="text-[1.08rem] text-navy-400">오늘 남은 예정 수거가 없습니다. 직접 입력으로 등록하세요.</p>
+              <p data-pick-mode className="text-[1.08rem] text-navy-400">
+                오늘 예정된 수거가 없어 <b className="text-navy-600">직접 입력</b>으로 넣습니다.
+              </p>
             )}
           </div>
+          {/*
+            ── 「직접 입력」을 눌러도 아무 일도 안 일어난다 ──────────────────
+            대표님이 짚어 주신 자리입니다. 원인은 **이미 골라져 있는 것을 다시
+            누른 것**이었습니다. 눌러도 상태가 그대로라 화면이 안 움직이고,
+            누른 사람은 「고장」으로 읽습니다.
+            지금 무엇이 골라져 있고 다음에 무엇을 하면 되는지 한 줄로 적습니다.
+          */}
+          {todayPending.length > 0 && (
+            <p data-pick-mode className="mt-2.5 break-keep text-[1.05rem] text-navy-500">
+              {scheduleId === '' ? (
+                <>
+                  지금은 <b className="text-navy-800">직접 입력</b>입니다 — 아래 <b>거래처</b>를 골라 주세요.
+                </>
+              ) : (
+                <>
+                  지금은 <b className="text-navy-800">예정 일정</b>으로 넣습니다 — 거래처·구분은 자동으로 채워집니다.
+                </>
+              )}
+            </p>
+          )}
         </Section>
 
         {/* 2. 거래처 · 폐기물 구분 */}
@@ -607,6 +730,32 @@ export function CollectionInput() {
           <div className="space-y-3">
             <div>
               <label className="field-label">거래처 *</label>
+              {/*  자주 가는 곳 — 목록을 열지 않고 한 번에 고릅니다.
+                   일정에서 들어왔으면 이미 정해져 있으니 안 보여 줍니다. */}
+              {!scheduleId && quickClients.length > 0 && (
+                <div data-quick-clients className="mb-2 flex flex-wrap gap-2">
+                  {quickClients.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      data-quick-client={c.id}
+                      onClick={() => {
+                        setClientId(c.id)
+                        setErrors([])
+                      }}
+                      title={c.name}
+                      className={`min-h-[2.75rem] max-w-full truncate rounded-xl px-3.5 py-2.5 text-left text-[1.05rem] font-bold transition active:scale-[0.97] ${
+                        clientId === c.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-navy-50 text-navy-700'
+                      }`}
+                    >
+                      {/*  「서울인화스포츠마취통증의학과의원」처럼 긴 이름이 두 줄을
+                           차지해 버려서, 알아볼 만큼만 자릅니다. 누르면 아래 목록에도
+                           그대로 반영되니 무엇을 골랐는지 다시 확인됩니다. */}
+                      {c.name.length > 11 ? `${c.name.slice(0, 10)}…` : c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               <select
                 className="field-input"
                 value={clientId}
@@ -633,7 +782,7 @@ export function CollectionInput() {
                     key={w}
                     disabled={!!scheduleId}
                     onClick={() => setWasteType(w)}
-                    className={`rounded-2xl px-4 py-3.5 text-[1.08rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
+                    className={`whitespace-nowrap rounded-2xl px-2 py-3.5 text-[1.08rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
                       wasteType === w
                         ? w === '의료폐기물'
                           ? 'bg-rose-500 text-white shadow-sm'
@@ -646,18 +795,49 @@ export function CollectionInput() {
                 ))}
               </div>
             </div>
+            {/*
+              ── 빈 칸에는 가운뎃점을 찍지 않습니다 ──────────────────────────
+              예전에는 `{주소} · {담당} · {전화}` 를 그대로 붙였습니다. 운영
+              자료를 실제 현장 계정으로 열어 보니 **전화 12/12 · 주소 11/12 가
+              비어 있어서**, 화면에는 「 · 관리팀 · 」처럼 점만 남았습니다.
+              값이 있는 것만 잇고, 없으면 없다고 적습니다.
+              전화는 **바로 걸리게** 합니다 — 현장에서 번호를 옮겨 적지 않게.
+            */}
             {client && (
-              <>
-                <div className="t-body rounded-2xl bg-navy-50 p-4 text-navy-500">
-                  {client.address} · {client.manager} · {client.phone}
-                </div>
-              </>
+              <div data-collect-contact className="t-body rounded-2xl bg-navy-50 p-4 text-navy-500">
+                {client.address && <p className="break-keep">{client.address}</p>}
+                <p className="mt-0.5 break-keep">
+                  {client.manager || '담당자 미등록'}
+                  {client.phone ? (
+                    <>
+                      {' · '}
+                      <a
+                        data-collect-tel
+                        href={`tel:${client.phone}`}
+                        className="font-bold text-teal-700 underline-offset-2 hover:underline"
+                      >
+                        {client.phone}
+                      </a>
+                    </>
+                  ) : (
+                    <span className="text-navy-400"> · 전화번호 미등록</span>
+                  )}
+                </p>
+                {!client.address && <p className="mt-0.5 text-navy-400">주소 미등록</p>}
+              </div>
             )}
           </div>
         </Section>
         </div>
 
         {/* 3. 실제 수거 시간 · 수거량 */}
+        {/*
+          ── ③ 은 「수거량」만 늘 펼쳐 둡니다 ────────────────────────────────
+          시간은 **방금 다녀와서 바로 넣는 것**이라 지금 시각이 곧 답입니다.
+          그런데 오전/오후 + 시 + 분 세 줄이 300px 을 먹고 단추가 여섯 개라,
+          정작 손대야 할 수거량 칸이 두 번째 화면으로 밀려 있었습니다.
+          시간·날짜는 「지금으로 저장됩니다」 한 줄로 접고, 바꿀 때만 폅니다.
+        */}
         <Section n={3} title="실제 수거 시간 · 수거량" tour="collect-form">
           {/*  시간과 수거량을 반씩 나눠 놓으면, 폰에서 시간 칸이 손가락보다
                좁아집니다 (버튼 두 개 + 숫자 칸이 150px 안에 들어갑니다).
@@ -671,6 +851,24 @@ export function CollectionInput() {
                  ⚠ 이 칸이 없어서 저녁·다음 날 아침 입력이 전부 오늘로
                    저장됐습니다. 평소엔 기록만 어긋나지만 **월말에는 하루치가
                    다음 달 매출**이 됩니다. */}
+            {/*  접힘 줄 — 폰에서만. 무엇으로 저장되는지 숫자를 그대로 적습니다. */}
+            {!timeOpen && (
+              <button
+                type="button"
+                data-fold="time"
+                onClick={() => setOpenTime(true)}
+                className="flex min-h-[3rem] w-full items-center gap-2 rounded-2xl bg-navy-50 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
+              >
+                <span data-fold-summary="time" className="min-w-0 break-keep text-[1.05rem] font-bold text-navy-700">
+                  {prettyDate(visitDate)} {time} 으로 저장
+                </span>
+                <span className="ml-auto flex shrink-0 items-center gap-1 text-[1.02rem] font-bold text-teal-700">
+                  시간 바꾸기
+                  <ChevronDown size={16} strokeWidth={2.4} />
+                </span>
+              </button>
+            )}
+            <div className={`space-y-3 ${timeOpen ? '' : 'hidden sm:block'}`}>
             {!scheduleId && (
               <div>
                 <label className="field-label" htmlFor="collection-date">다녀온 날 *</label>
@@ -696,6 +894,7 @@ export function CollectionInput() {
               </div>
             )}
             <TimeField value={time} onChange={setTime} />
+            </div>
             <div>
               <label className="field-label" htmlFor="collection-amount">실제 수거량 (kg) *</label>
               {/*  집을 수 있는 이름을 답니다. 시간 칸도 숫자 칸이라, 「첫 번째
@@ -718,7 +917,17 @@ export function CollectionInput() {
         </Section>
 
         {/* 4. 용기별 배출 수량 */}
-        <Section n={4} title="용기별 배출 수량" desc="수거대장 초안에 그대로 반영됩니다">
+        <Section
+          n={4}
+          title="용기별 배출 수량"
+          desc="수거대장 초안에 그대로 반영됩니다"
+          fold={{
+            open: containersOpen,
+            onOpen: () => setOpenContainers(true),
+            summary: '놓고 온 것 없음',
+            id: 'containers',
+          }}
+        >
           <div className="divide-y divide-navy-50">
             {CONTAINER_KEYS.map(({ key, label }) => (
               <QtyField
@@ -746,7 +955,17 @@ export function CollectionInput() {
         )}
 
         {/* 5. 자재 동시공급 */}
-        <Section n={5} title="자재 동시공급" desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)">
+        <Section
+          n={5}
+          title="자재 동시공급"
+          desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)"
+          fold={{
+            open: supplyOpen,
+            onOpen: () => setOpenSupply(true),
+            summary: '공급 없음',
+            id: 'supply',
+          }}
+        >
           {/* 규격별로 받습니다 — 63L 박스와 12L 박스는 단가가 다르고,
               그 차이가 그대로 거래처 정산·거래명세서로 갑니다. */}
           {/*
@@ -875,14 +1094,28 @@ export function CollectionInput() {
           {/*  차량이 한 대도 없으면 여기서 고를 것이 없고, 저장 버튼도
                끝까지 잠깁니다. 예전에는 그 이유를 아무 데도 적어 두지 않아
                현장에서는 "저장이 안 된다"만 알고 왜인지 몰랐습니다. */}
-          {data.vehicles.length === 0 && (
-            <div className="mb-3 flex items-start gap-2.5 rounded-2xl bg-amber-50 px-4 py-3.5">
-              <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
-              <p className="t-body min-w-0 break-keep font-bold text-amber-800">
-                등록된 차량이 없어 저장할 수 없습니다. 관리자에게 「설정 → 운행 차량」에서 차량 등록을
-                요청해 주세요.
-              </p>
+          {/*
+            ── 「아직 안 읽었다」와 「정말 없다」는 다릅니다 ────────────────────
+            예전에는 자료를 다 읽기 전에도 `vehicles.length === 0` 이 참이라,
+            차가 6대 등록돼 있는데도 **「등록된 차량이 없어 저장할 수 없습니다.
+            관리자에게 요청하세요」**가 떴습니다. 실제 현장 계정으로 열어서
+            확인한 화면입니다. 기사님은 관리자에게 헛되이 전화하게 됩니다.
+            읽는 중에는 읽는 중이라고만 적습니다.
+          */}
+          {!sync.ready ? (
+            <div data-vehicle-loading className="mb-3 rounded-2xl bg-navy-50 px-4 py-3.5">
+              <p className="t-body break-keep font-bold text-navy-500">차량 목록을 불러오는 중입니다…</p>
             </div>
+          ) : (
+            data.vehicles.length === 0 && (
+              <div data-vehicle-none className="mb-3 flex items-start gap-2.5 rounded-2xl bg-amber-50 px-4 py-3.5">
+                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+                <p className="t-body min-w-0 break-keep font-bold text-amber-800">
+                  등록된 차량이 없어 저장할 수 없습니다. 관리자에게 「설정 → 운행 차량」에서 차량 등록을
+                  요청해 주세요.
+                </p>
+              </div>
+            )
           )}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -927,7 +1160,16 @@ export function CollectionInput() {
         )}
 
         {/* 7. 처리장 인계 상태 */}
-        <Section n={7} title="처리장 인계 상태">
+        <Section
+          n={7}
+          title="처리장 인계 상태"
+          fold={{
+            open: handoverOpen,
+            onOpen: () => setOpenHandover(true),
+            summary: handover,
+            id: 'handover',
+          }}
+        >
           <div className="grid grid-cols-3 gap-2">
             {HANDOVERS.map((h) => (
               <button
@@ -944,7 +1186,16 @@ export function CollectionInput() {
         </Section>
 
         {/* 8. 특이사항 */}
-        <Section n={8} title="특이사항">
+        <Section
+          n={8}
+          title="특이사항"
+          fold={{
+            open: memoOpen,
+            onOpen: () => setOpenMemo(true),
+            summary: '없음',
+            id: 'memo',
+          }}
+        >
           <textarea
             className="field-input"
             rows={2}
@@ -1005,17 +1256,37 @@ export function CollectionInput() {
             </>
           )}
         </button>
-        <p className="t-muted text-center">
-          작업 주체: 현장 담당자 (Demo) · 실제 적용 시 사용자별 계정·수정이력과 연동 예정
-        </p>
+        {/*  예전엔 여기에 「현장 담당자 (Demo) · 실제 적용 시 … 연동 예정」이
+             적혀 있었습니다. 이제는 실제 계정으로 저장되므로, 지어낸 문구
+             대신 **누구 이름으로 남는지**를 그대로 적습니다. */}
+        {profile?.name && (
+          <p data-collect-actor className="t-muted text-center">
+            {profile.name} 이름으로 저장됩니다
+          </p>
+        )}
         </div>
       </div>
 
       {/* 최근 입력 이력 (감사기록) */}
       {recentEvents.length > 0 && (
         <div className="mt-6">
-          <p className="mb-2 px-1 text-[1.07rem] font-extrabold text-navy-800">최근 입력 이력</p>
-          <div className="card divide-y divide-navy-50">
+          {/*  저장 단추 **아래**라 폰에서는 어차피 안 보이는데 문서만 700px
+               길어집니다. 「취소」가 필요할 때만 폅니다. */}
+          <button
+            type="button"
+            data-recent-toggle
+            onClick={() => setOpenRecent((v) => !v)}
+            className="mb-2 flex min-h-[2.75rem] w-full items-center gap-2 px-1 text-left sm:hidden"
+          >
+            <span className="text-[1.07rem] font-extrabold text-navy-800">최근 입력 이력 {recentEvents.length}건</span>
+            <ChevronDown
+              size={17}
+              strokeWidth={2.4}
+              className={`ml-auto shrink-0 text-navy-400 transition ${openRecent ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <p className="mb-2 hidden px-1 text-[1.07rem] font-extrabold text-navy-800 sm:block">최근 입력 이력</p>
+          <div className={`card divide-y divide-navy-50 ${openRecent ? '' : 'hidden sm:block'}`}>
             {recentEvents.map((e) => (
               <div key={e.id} className="flex items-center gap-3 p-3.5">
                 <span
@@ -1046,7 +1317,7 @@ export function CollectionInput() {
               </div>
             ))}
           </div>
-          <p className="mt-1.5 px-1 text-[0.95rem] text-navy-400">
+          <p className={`mt-1.5 px-1 text-[0.95rem] text-navy-400 ${openRecent ? '' : 'hidden sm:block'}`}>
             취소 시 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
           </p>
         </div>

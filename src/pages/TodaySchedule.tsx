@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -57,6 +57,8 @@ export function TodaySchedule() {
   const canGoMaterials = !configured || canAccess(role, '/materials')
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
+  //  폰에서 달력은 기본 접힘입니다 (아래 주석 참고)
+  const [calOpen, setCalOpen] = useState(false)
 
   // 완료된 건 수정 (기존 동작 유지)
   const [editTarget, setEditTarget] = useState<Schedule | null>(null)
@@ -460,8 +462,31 @@ export function TodaySchedule() {
       {/*  달력 — 하루씩 화살표로 넘기지 않아도 한 달이 보입니다 (대표님 요청).
            날짜를 누르면 위 목록이 그날로 바뀌고, 앞으로 올 날의 ＋ 로 그
            자리에서 방문을 잡습니다. */}
+      {/*
+        ── 폰에서는 달력을 접습니다 (0065) ────────────────────────────────────
+        한 달 달력은 620px 에 누를 수 있는 칸이 42개입니다. 기사님이 첫 화면에서
+        알고 싶은 것은 「오늘 어디를 가나」 하나인데, 오늘 일정이 없는 날에는
+        화면의 대부분이 달력이었습니다. 날짜를 옮기는 것은 위 화살표로 되고,
+        달력이 필요한 날에는 한 번 눌러서 폅니다. 넓은 화면은 그대로 둡니다.
+      */}
       <div className="mt-4">
-        <ScheduleCalendar selected={date} onPick={setDate} />
+        <button
+          type="button"
+          data-calendar-toggle
+          onClick={() => setCalOpen((v) => !v)}
+          className="card flex min-h-[3.25rem] w-full items-center gap-2 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
+        >
+          <CalendarDays size={18} strokeWidth={2.3} className="shrink-0 text-navy-400" />
+          <span className="text-[1.07rem] font-extrabold text-navy-800">앞으로 갈 곳 · 달력으로 보기</span>
+          <ChevronDown
+            size={17}
+            strokeWidth={2.4}
+            className={`ml-auto shrink-0 text-navy-400 transition ${calOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <div data-calendar-body className={`${calOpen ? 'mt-3' : 'hidden'} sm:mt-0 sm:block`}>
+          <ScheduleCalendar selected={date} onPick={setDate} />
+        </div>
       </div>
 
       {/* 병원 요청은 사무실 업무라, 좁은 화면에서는 일정 아래로 내립니다 */}

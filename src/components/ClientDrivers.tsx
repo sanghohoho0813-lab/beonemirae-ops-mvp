@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { loadProfiles, type ProfileRow } from '../lib/repo'
 import { friendlyError } from '../lib/supabase'
+import { isTestAccount } from '../lib/testAccounts'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 담당 기사 (0056)
@@ -46,10 +47,17 @@ export function ClientDrivers({ clientId }: { clientId: string }) {
   }, [isAdmin, mode])
 
   //  배정할 수 있는 사람 — 쓰고 있는 직원 계정만. 병원 계정은 서버가 거절합니다.
+  //
+  //  ⚠ 점검하며 만든 계정(「[검증]…」, 「김상호(테스트용)」)은 여기서 뺍니다.
+  //    실제 거래처에 배정할 사람이 아닌데 목록에 섞여 있으면, 누르다 잘못
+  //    배정되고 그 순간 **그 거래처가 진짜 기사에게서 사라집니다**
+  //    (한 명이라도 배정되면 그 사람에게만 보이는 규칙이라서).
+  //    계정을 지우는 것이 아니라 **고르는 목록에서만** 뺍니다.
   const staff = useMemo(
     () =>
       rows
         .filter((r) => r.active && (r.role === 'field' || r.role === 'office' || r.role === 'admin'))
+        .filter((r) => !isTestAccount(r.name, r.email))
         .sort((a, b) => {
           //  기사(현장)를 먼저 — 실제로 고르는 사람이 거의 현장입니다.
           if (a.role !== b.role) return a.role === 'field' ? -1 : b.role === 'field' ? 1 : 0
@@ -98,6 +106,12 @@ export function ClientDrivers({ clientId }: { clientId: string }) {
         <p className="t-body font-extrabold text-navy-900">담당 기사</p>
         {busy && <Loader2 size={15} className="animate-spin text-navy-300" />}
       </div>
+
+      {/*  대표님 요청 — 누르는 규칙을 옆에 적어 둡니다. 안 적으면 이미 배정된
+           사람을 한 번 더 눌러서 **모르는 사이에 해제**됩니다. */}
+      <p data-drivers-howto className="t-muted mb-2 break-keep text-navy-400">
+        한 번 누르면 배정, 다시 누르면 해제됩니다.
+      </p>
 
       <div className="flex flex-wrap gap-1.5">
         {staff.map((s) => {
