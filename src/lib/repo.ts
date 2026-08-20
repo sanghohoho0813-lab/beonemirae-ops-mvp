@@ -122,6 +122,31 @@ const CLIENT_COLS = [
 ].join(', ')
 
 /**
+ * 상품에서 **누구나 읽어도 되는 칸** (0064 준비).
+ *
+ *  매입원가(cost_price)가 **빠져 있습니다.** 병원도 상품 목록은 봐야 하지만
+ *  우리가 얼마에 사 오는지는 볼 일이 없습니다. 0064 가 그 칸을 잠그는데,
+ *  별표로 읽고 있으면 잠그는 순간 요청 전체가 거절됩니다.
+ */
+const PRODUCT_COLS = [
+  'id', 'name', 'spec', 'unit', 'sale_price',
+  'stock_key', 'available', 'image_url', 'description', 'active', 'category', 'sort',
+  'created_at', 'updated_at',
+].join(', ')
+
+/**
+ * 직원 명부에서 **업무에 필요한 칸** (0064 준비).
+ *
+ *  4대보험 자격취득일(insured_from)과 보험 상세(insurance)가 **빠져 있습니다.**
+ *  누가 무슨 폐기물을 맡는지는 현장에서도 봐야 하지만, 동료의 보험 취득일은
+ *  업무에 필요 없는 개인정보입니다.
+ */
+const STAFF_COLS = [
+  'id', 'name', 'position', 'waste_scope', 'profile_id', 'active', 'note',
+  'created_at', 'updated_at',
+].join(', ')
+
+/**
  * 거래처의 돈 칸 — 사무실·관리자만 (0063).
  *
  *  ⚠ 이 값이 안 붙으면 **청구가 틀립니다.** 단가판(client_prices)이 없는
@@ -388,8 +413,16 @@ export async function loadAppData(): Promise<AppData> {
       // RLS 로 막힌 테이블은 오류가 아니라 '권한 없음'입니다.
       const msg = e instanceof Error ? e.message : ''
       if (/row-level security|permission denied/i.test(msg)) return fallback
-      //  아직 안 올린 RUN 파일 때문에 표·칸이 없는 경우.
-      if (/schema cache|does not exist/i.test(msg)) {
+      //  아직 안 올린 RUN 파일 때문에 표·칸·**함수**가 없는 경우.
+      //
+      //   ⚠ PostgREST 는 없는 함수를 부르면 PGRST202 로 답합니다 —
+      //     「Could not find the function public.xxx in the schema cache」.
+      //     보통은 'schema cache' 가 들어 있어 아래 조건에 걸리지만, 서버
+      //     판에 따라 그 꼬리말이 빠진 문구가 오기도 합니다. 그러면 이 함수가
+      //     오류를 그대로 던지고 **자료 읽기 전체가 실패**합니다 —
+      //     화면 한 칸이 비는 게 아니라 앱이 안 열립니다.
+      //     실제로 0064 호환 검사에서 그렇게 걸렸습니다. 코드로도 잡습니다.
+      if (/schema cache|does not exist|PGRST202|could not find the function/i.test(msg)) {
         const name = missingName(msg)
         if (what) missingParts.push(name ? `${what} (${name})` : what)
         return fallback
@@ -462,10 +495,40 @@ export async function loadAppData(): Promise<AppData> {
   )
 
   //  파는 소모품과 주문 (0048). 병원은 RLS 로 자기 주문만 내려받습니다.
+  //
+  //  ⚠ **별표(*)를 쓰지 않습니다.** 0064 가 매입원가 칸을 잠그면, 별표는
+  //    「있는 칸 전부」라서 그 요청이 통째로 permission denied 로 거절됩니다.
+  //    그러면 소모품 화면이 빈 화면이 아니라 **오류**가 됩니다.
+  //    (0063 이 거래처에서 똑같은 함정을 만들었습니다 — 그때 배운 대로 씁니다)
+  //    칸 이름을 적어 두면 잠그기 전에도 후에도 똑같이 돕니다.
   const products = await soft(
-    async () => pageAll((f, t) => sb.from('products').select('*').order('sort').range(f, t)),
+    async () => pageAll((f, t) => sb.from('products').select(PRODUCT_COLS).order('sort').range(f, t)),
     [] as Row[],
     '소모품 상품',
+  )
+
+  //  매입원가는 **따로** 받습니다 — 사무실·관리자만 받습니다.
+  //
+  //   0064 뒤에는 product_costs() 로 옵니다. 아직 0064 를 안 돌린 판(63)
+  //   에서는 그 함수가 없으므로, 예전처럼 표에서 그 칸만 다시 읽습니다.
+  //   둘 다 soft 라 **어느 쪽이 없어도 화면이 안 깨집니다.**
+  //   (현장·병원은 어느 길로도 못 받습니다 — 빈 값이고 오류가 아닙니다)
+  const costRows = await soft(
+    async () => unwrap<Row[]>(await sb.rpc('product_costs')),
+    null as Row[] | null,
+  )
+  const costFallback =
+    costRows == null
+      ? await soft(
+          async () => pageAll((f, t) => sb.from('products').select('id, cost_price').order('id').range(f, t)),
+          [] as Row[],
+        )
+      : []
+  const costById = new Map<string, number | null>(
+    [...(costRows ?? []), ...costFallback].map((r) => [
+      String(r.id),
+      r.cost_price == null ? null : Number(r.cost_price),
+    ]),
   )
   const orderRows = await soft(
     async () => pageAll((f, t) => sb.from('product_orders').select('*').order('requested_at').range(f, t)),
@@ -479,10 +542,36 @@ export async function loadAppData(): Promise<AppData> {
   )
 
   //  우리 직원 명부 (0047). 이름·담당만 담고 주민등록번호는 담지 않습니다.
+  //
+  //  ⚠ 여기도 별표를 쓰지 않습니다. 그리고 **정렬도 바꿉니다** —
+  //    예전에는 insured_from 으로 정렬했는데, 0064 가 그 칸을 잠그면
+  //    **정렬만으로도** 요청이 거절됩니다(칸을 안 읽어도 정렬에 쓰면 권한이
+  //    필요합니다). 이름으로 정렬합니다.
   const staff = await soft(
-    async () => pageAll((f, t) => sb.from('staff').select('*').order('insured_from').range(f, t)),
+    async () => pageAll((f, t) => sb.from('staff').select(STAFF_COLS).order('name').range(f, t)),
     [] as Row[],
     '직원 명부',
+  )
+
+  //  4대보험 자격취득일은 **관리자만** 봅니다 (0064). 상품 원가와 같은 방식 —
+  //  새 함수가 있으면 그쪽에서, 아직 없으면 예전처럼 표에서. 둘 다 soft 입니다.
+  const hrRows = await soft(
+    async () => unwrap<Row[]>(await sb.rpc('staff_hr')),
+    null as Row[] | null,
+  )
+  const hrFallback =
+    hrRows == null
+      ? await soft(
+          async () =>
+            pageAll((f, t) => sb.from('staff').select('id, insured_from, insurance').order('id').range(f, t)),
+          [] as Row[],
+        )
+      : []
+  const hrById = new Map<string, { insured_from: unknown; insurance: unknown }>(
+    [...(hrRows ?? []), ...hrFallback].map((r) => [
+      String(r.id),
+      { insured_from: r.insured_from, insurance: r.insurance },
+    ]),
   )
 
   //  국세청 신고 매출 (0047). 현장은 RLS 로 막혀 있고, 마이그레이션 전
@@ -612,7 +701,10 @@ export async function loadAppData(): Promise<AppData> {
         spec: r.spec ?? '',
         unit: r.unit ?? '개',
         salePrice: Number(r.sale_price ?? 0),
-        costPrice: Number(r.cost_price ?? 0),
+        //  ⚠ 원가는 **못 받을 수도 있습니다** (현장·병원은 못 봅니다).
+        //     그때 0 으로 채우면 「원가 0원 = 이익 100%」라는 거짓말이 됩니다.
+        //     모르면 null 입니다 — 화면이 「모름」이라고 적습니다.
+        costPrice: costById.has(String(r.id)) ? costById.get(String(r.id)) ?? null : null,
         stockKey: r.stock_key ?? null,
         available: !!r.available,
         imageUrl: r.image_url ?? '',
@@ -659,8 +751,10 @@ export async function loadAppData(): Promise<AppData> {
         name: r.name,
         position: r.position,
         wasteScope: r.waste_scope,
-        insuredFrom: r.insured_from ?? null,
-        insurance: (r.insurance ?? {}) as Record<string, string | null>,
+        //  자격취득일·보험 상세는 관리자만 받습니다 (0064). 못 받으면 null —
+        //  「없다」가 아니라 「이 계정은 볼 수 없다」입니다.
+        insuredFrom: (hrById.get(String(r.id))?.insured_from as string | null | undefined) ?? null,
+        insurance: (hrById.get(String(r.id))?.insurance ?? {}) as Record<string, string | null>,
         active: !!r.active,
         note: r.note ?? '',
       }),

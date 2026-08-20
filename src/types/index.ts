@@ -227,7 +227,13 @@ export interface Product {
   spec: string
   unit: string
   salePrice: number
-  costPrice: number
+  /**
+   * 매입원가. **null 이면 「이 계정은 볼 수 없다」** 입니다 (0064).
+   *
+   *  0 으로 채우지 않습니다 — 원가 0원은 「이익 100%」라는 뜻이 되어,
+   *  못 본 것과 재 봤더니 0원인 것이 같은 숫자로 섞입니다.
+   */
+  costPrice: number | null
   /** 사무실 재고의 어느 칸에서 빠지는가. null = 재고를 두지 않는 물건 */
   stockKey: string | null
   available: boolean

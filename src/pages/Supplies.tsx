@@ -276,6 +276,19 @@ function ProductsTab({
 
   async function save() {
     setErr('')
+    //  ⚠ **원가를 못 받은 채로 저장하면 기존 원가가 0원이 됩니다.**
+    //
+    //   서버 함수(upsert_product)는 원가를 반드시 받습니다. 화면이 못 받은
+    //   값을 「없으니 0」으로 채워 보내면 그 순간 진짜 원가가 지워집니다.
+    //   자료를 망가뜨리느니 저장을 막고 이유를 말합니다.
+    //   (사무실·관리자는 원가를 받으므로 평소에는 이 길로 오지 않습니다)
+    if (editing && editing.costPrice == null) {
+      setErr(
+        '이 계정에서는 매입원가를 읽지 못해 상품을 수정할 수 없습니다. ' +
+          '지금 저장하면 원가가 0원으로 덮어써집니다. 관리자 계정으로 수정해 주세요.',
+      )
+      return
+    }
     const r = await onSave({
       id: editing?.id,
       name: String(form.name ?? '').trim(),
@@ -370,7 +383,13 @@ function ProductsTab({
                       {p.salePrice > 0 ? (
                         <>
                           <b className="t-body tabular-nums text-navy-900">{won(p.salePrice)}</b>
-                          <span className="t-muted tabular-nums">원가 {won(p.costPrice)}</span>
+                          {/*  ⚠ 원가를 못 받았으면 **0원이라고 적지 않습니다.**
+                               원가 0원은 「이익 100%」라는 뜻이 되어, 못 본 것과
+                               재 봤더니 0원인 것이 같은 숫자로 섞입니다.
+                               (0064 뒤에는 사무실·관리자만 원가를 받습니다) */}
+                          <span data-product-cost={p.id} className="t-muted tabular-nums">
+                            {p.costPrice == null ? '원가 미확인' : `원가 ${won(p.costPrice)}`}
+                          </span>
                         </>
                       ) : (
                         <b data-product-noprice={p.id} className="t-body text-amber-700">
