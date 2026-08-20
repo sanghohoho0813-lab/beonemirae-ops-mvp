@@ -22,7 +22,10 @@ create temp table _chk(구분 text, 항목 text, 값 text, 판정 text) on commi
 --    다르면 앱이 없는 칸을 찾다가 화면이 비거나 저장이 막힙니다.
 insert into _chk
 select '판 맞춤', 'DB schema_version', public.app_schema_version()::text,
-       case when public.app_schema_version() = 63 then '통과' else '확인 필요 — 앱은 63 을 기대합니다' end;
+--    ⚠ 이 숫자는 **앱의 EXPECTED_SCHEMA_VERSION**(src/lib/repo.ts) 과 같아야
+--      합니다. 마이그레이션을 올릴 때 여기도 같이 올리지 않으면, DB 는
+--      멀쩡한데 이 점검만 「확인 필요」로 나옵니다.
+       case when public.app_schema_version() = 64 then '통과' else '확인 필요 — 앱은 64 를 기대합니다' end;
 
 -- ── ② 자가진단 (0063 의 app_health_check) ──────────────────────────────────
 --
