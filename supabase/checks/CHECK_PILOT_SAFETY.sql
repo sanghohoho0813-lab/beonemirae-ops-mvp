@@ -154,11 +154,21 @@ select '파일럿 자료', '오늘 살아 있는 수거 예정',
   from public.schedules
  where date = (now() at time zone 'Asia/Seoul')::date and status <> '완료' and canceled_at is null;
 
+--  ⚠ 처음엔 이 줄을 **무조건** 「확인 필요」로 셌습니다. 흔적이 하나도 없어도
+--    확인하라고 하니, 정리가 끝난 뒤에도 이 줄은 영영 안 줄어듭니다.
+--    있을 때만 셉니다.
+with m as (
+  select (select count(*) from public.clients
+           where name like '[검증]%' or name like '[실증검증]%') as c,
+         (select count(*) from public.client_requests
+           where content like '[실증검증]%' or content like '[검증]%') as r
+)
 insert into _chk
 select '파일럿 자료', '검증용 흔적이 남은 기록',
-       (select count(*) from public.clients where name like '[검증]%' or name like '[실증검증]%')::text || '곳 · ' ||
-       (select count(*) from public.client_requests where content like '[실증검증]%')::text || '건',
-       '확인 필요 — 파일럿 전에 정리하실지 결정해 주세요';
+       c::text || '곳 · ' || r::text || '건',
+       case when c + r = 0 then '통과'
+            else '확인 필요 — 파일럿 전에 정리하실지 결정해 주세요' end
+  from m;
 
 -- ── 결과 ───────────────────────────────────────────────────────────────────
 select 구분, 항목, 값, 판정 from _chk order by
