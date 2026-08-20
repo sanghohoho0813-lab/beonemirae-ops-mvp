@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { DatabaseZap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
-import { EXPECTED_SCHEMA_VERSION, missingParts, schemaVersion } from '../lib/repo'
+import { EXPECTED_SCHEMA_VERSION, missingParts } from '../lib/repo'
+import { serverSchemaVersion } from '../lib/schemaGate'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DB 업데이트 안내
@@ -29,7 +30,10 @@ export function SchemaBar() {
   useEffect(() => {
     if (mode !== 'live' || !admin) return
     let alive = true
-    void schemaVersion().then((v) => {
+    //  ⚠ 여기와 달력이 **같은 값**을 씁니다. 각자 물어보면 화면을 옮길 때마다
+    //     서버를 한 번 더 부릅니다 (회귀가 그것을 잡았습니다). 한 번만 묻고
+    //     나눠 씁니다.
+    void serverSchemaVersion().then((v) => {
       if (alive) setVersion(v)
     })
     return () => {
