@@ -218,6 +218,21 @@ export function CollectionInput() {
   //  「오늘은 다른 차로 갔다」를 적을 길은 남겨 둡니다. 이 길이 없으면 대타로
   //  나간 날 기록이 통째로 틀립니다.
   const [showVehiclePick, setShowVehiclePick] = useState(false)
+
+  //  ── 현장은 차량을 아예 고르지 않습니다 (0067) ───────────────────────────
+  //
+  //   대표님 말씀: 「기사님이 생각하거나 선택해야 할 항목을 최대한 없애는 것」.
+  //
+  //   기사님은 늘 같은 차로 나갑니다. 관리자가 계정에 차량을 묶어 두면
+  //   (설정 → 사용자 → 담당 차량) 그 차로 저장됩니다. 이름은 **로그인한
+  //   본인**입니다 — 차량에 적힌 기본 기사가 아닙니다. 오늘 그 차로 나간
+  //   사람이 대타일 수 있고, 그러면 안 간 사람 이름이 기록에 남습니다.
+  //
+  //   ⚠ 사무실·관리자 화면은 그대로 고릅니다. 사무실은 여러 차를 대신
+  //     입력하는 자리라, 고르는 칸을 없애면 일이 안 됩니다.
+  const autoVehicle = role === 'field' && configured
+  //  묶인 차가 없으면 저장 직전에 막습니다 (아래 canSubmit·submit).
+  const noVehicleForField = autoVehicle && !myVehicle
   const vehicleHidden = !!boundVehicle && !showVehiclePick
 
   useEffect(() => {
@@ -226,6 +241,18 @@ export function CollectionInput() {
     const mine = (profile?.name ?? '').trim()
     if (mine && driverName !== mine) setDriverName(mine)
   }, [vehicleHidden, boundVehicle, vehicleId, driverName, profile?.name])
+
+  //  현장 계정 — 고르는 칸이 없으므로 여기서 값을 채웁니다.
+  //  ⚠ 구분이 안 맞는 차(의료폐기물 차인데 기저귀 수거)는 서버가 저장을
+  //    막습니다. 그때는 채우지 않고 비워 둬서, 아래 안내가 뜨게 합니다.
+  useEffect(() => {
+    if (!autoVehicle) return
+    const use = myVehicle && myVehicle.wasteType === wasteType ? myVehicle : null
+    const nextId = use ? use.id : ''
+    if (vehicleId !== nextId) setVehicleId(nextId)
+    const mine = (profile?.name ?? '').trim()
+    if (mine && driverName !== mine) setDriverName(mine)
+  }, [autoVehicle, myVehicle, wasteType, vehicleId, driverName, profile?.name])
 
   // 일정 선택 시 거래처/폐기물/차량/기사/시간/수거량 자동 채움
   function applySchedule(id: string) {
@@ -290,12 +317,15 @@ export function CollectionInput() {
 
   // 폐기물 구분이 바뀌면 해당 구분 차량으로 기본 배차
   useEffect(() => {
+    //  현장은 위 자동 채움이 담당합니다 — 여기서 아무 차나 잡으면 본인 차가
+    //  아닌 차로 저장됩니다.
+    if (autoVehicle) return
     if (vehicles.length && !vehicles.some((v) => v.id === vehicleId)) {
       setVehicleId(vehicles[0].id)
       setDriverName(vehicles[0].driver)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wasteType])
+  }, [wasteType, autoVehicle])
 
   // 이 거래처에 직전에 공급한 규격별 수량.
   // 현장은 대체로 비슷한 양을 다시 채워 주므로, 한 번 눌러 채울 수 있게 합니다.
@@ -349,6 +379,13 @@ export function CollectionInput() {
   const [openMemo, setOpenMemo] = useState(false)
   const [openRecent, setOpenRecent] = useState(false)
 
+  //  ── 단계 번호는 **그려진 순서대로** 매깁니다 (0067) ──────────────────────
+  //   현장 화면에서는 「차량·기사」 칸이 통째로 빠집니다. 번호를 손으로 박아
+  //   두면 5 다음에 7 이 나와서, 기사님은 **빠진 단계를 찾습니다.**
+  //   JSX 는 위에서 아래로 평가되므로 여기서 하나씩 올려 주면 늘 이어집니다.
+  let stepNo = 0
+  const step = () => (stepNo += 1)
+
   function buildInput(): CollectionCompletionInput {
     return {
       scheduleId: scheduleId || null,
@@ -391,6 +428,16 @@ export function CollectionInput() {
     msgs.some((m) => /이미 완료 처리된 일정|이미 저장되어 있습니다/.test(m))
 
   async function submit() {
+    //  ── 차량이 안 묶인 계정은 여기서 멈춥니다 (0067) ──────────────────────
+    //   현장에는 차량 고르는 칸이 없으므로, 안 막으면 서버가 거절하는
+    //   화면을 기사님이 보게 됩니다. 단추도 잠기지만 여기서도 한 번 더
+    //   봅니다 — 단추만 믿으면 나중에 조건이 바뀌었을 때 새어 나갑니다.
+    if (noVehicleForField) {
+      setErrors(['담당 차량이 지정되지 않았습니다. 사무실에 문의해 주세요.'])
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
     //  평소와 크게 다른 수거량은 저장 **전에** 물어봅니다. 저장한 뒤에
     //  알려 주면 이미 그 금액으로 잡히고, 현장은 다음 화면으로 넘어간
     //  뒤라 고치러 돌아오지 않습니다.
@@ -438,7 +485,9 @@ export function CollectionInput() {
     setTime(nowTime())
   }
 
-  const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock
+  //  ⚠ 현장은 차량을 고르는 칸이 없으므로, 차량이 안 묶여 있으면 여기서
+  //    막습니다. 막지 않으면 서버가 거절하는 화면을 기사님이 보게 됩니다.
+  const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock && !noVehicleForField
 
   //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
   const timeOpen = openTime || visitDate !== today()
@@ -666,7 +715,7 @@ export function CollectionInput() {
           단추와 안내문뿐입니다. 기사님은 아무것도 고를 수 없는 칸을 250px
           밀고 지나가야 했습니다. 0건일 때는 한 줄로 알리기만 합니다.
         */}
-        <Section n={1} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
+        <Section n={step()} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
           <div className="flex flex-wrap gap-2">
             {todayPending.length > 0 && (
             <button
@@ -726,7 +775,7 @@ export function CollectionInput() {
         </Section>
 
         {/* 2. 거래처 · 폐기물 구분 */}
-        <Section n={2} title="거래처 · 폐기물 구분">
+        <Section n={step()} title="거래처 · 폐기물 구분">
           <div className="space-y-3">
             <div>
               <label className="field-label">거래처 *</label>
@@ -838,7 +887,7 @@ export function CollectionInput() {
           정작 손대야 할 수거량 칸이 두 번째 화면으로 밀려 있었습니다.
           시간·날짜는 「지금으로 저장됩니다」 한 줄로 접고, 바꿀 때만 폅니다.
         */}
-        <Section n={3} title="실제 수거 시간 · 수거량" tour="collect-form">
+        <Section n={step()} title="실제 수거 시간 · 수거량" tour="collect-form">
           {/*  시간과 수거량을 반씩 나눠 놓으면, 폰에서 시간 칸이 손가락보다
                좁아집니다 (버튼 두 개 + 숫자 칸이 150px 안에 들어갑니다).
                시간은 한 줄을 통째로 씁니다 — 대표님이 「너무 조그맣게 있어서
@@ -918,7 +967,7 @@ export function CollectionInput() {
 
         {/* 4. 용기별 배출 수량 */}
         <Section
-          n={4}
+          n={step()}
           title="용기별 배출 수량"
           desc="수거대장 초안에 그대로 반영됩니다"
           fold={{
@@ -956,7 +1005,7 @@ export function CollectionInput() {
 
         {/* 5. 자재 동시공급 */}
         <Section
-          n={5}
+          n={step()}
           title="자재 동시공급"
           desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)"
           fold={{
@@ -1065,7 +1114,38 @@ export function CollectionInput() {
         </Section>
 
         {/* 6. 차량 · 기사 */}
-        {vehicleHidden && boundVehicle ? (
+        {autoVehicle ? (
+          //  ── 현장: 고르는 칸이 없습니다 ────────────────────────────────────
+          //   무엇으로 저장되는지는 그대로 보여 줍니다. 안 보여 주면
+          //   「내 차로 들어갔나」를 알 수 없습니다.
+          <section data-auto-vehicle className="card p-4 sm:p-5">
+            {noVehicleForField ? (
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+                <p data-vehicle-unset className="t-body min-w-0 break-keep font-bold text-amber-800">
+                  담당 차량이 지정되지 않았습니다. 사무실에 문의해 주세요.
+                </p>
+              </div>
+            ) : myVehicle && myVehicle.wasteType !== wasteType ? (
+              //  묶인 차가 이번 구분과 다른 경우 — 서버가 저장을 막으므로
+              //  「왜 저장이 안 되는지」를 여기서 미리 말해 줍니다.
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+                <p data-vehicle-mismatch className="t-body min-w-0 break-keep font-bold text-amber-800">
+                  담당 차량 {myVehicle.name}는 {myVehicle.wasteType} 차량이라 {wasteType} 수거를 저장할 수
+                  없습니다. 사무실에 문의해 주세요.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <Truck size={19} strokeWidth={2.3} className="shrink-0 text-navy-400" />
+                <p data-vehicle-auto className="t-body min-w-0 break-keep text-navy-600">
+                  <b className="text-navy-900">{myVehicle?.name}</b> · {profile?.name} 기사님으로 저장됩니다
+                </p>
+              </div>
+            )}
+          </section>
+        ) : vehicleHidden && boundVehicle ? (
           //  관리자가 이 계정에 차량을 묶어 뒀습니다 — 매번 고르지 않습니다.
           //  대신 무엇으로 저장되는지는 그대로 보여 줍니다. 안 보여 주면
           //  틀린 차량으로 기록이 쌓여도 알 방법이 없습니다.
@@ -1090,7 +1170,7 @@ export function CollectionInput() {
             </button>
           </div>
         ) : (
-        <Section n={6} title="차량 · 기사">
+        <Section n={step()} title="차량 · 기사">
           {/*  차량이 한 대도 없으면 여기서 고를 것이 없고, 저장 버튼도
                끝까지 잠깁니다. 예전에는 그 이유를 아무 데도 적어 두지 않아
                현장에서는 "저장이 안 된다"만 알고 왜인지 몰랐습니다. */}
@@ -1161,7 +1241,7 @@ export function CollectionInput() {
 
         {/* 7. 처리장 인계 상태 */}
         <Section
-          n={7}
+          n={step()}
           title="처리장 인계 상태"
           fold={{
             open: handoverOpen,
@@ -1187,7 +1267,7 @@ export function CollectionInput() {
 
         {/* 8. 특이사항 */}
         <Section
-          n={8}
+          n={step()}
           title="특이사항"
           fold={{
             open: memoOpen,

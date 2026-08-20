@@ -21,6 +21,36 @@ export function schedulesOn(data: AppData, date: string): Schedule[] {
     .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
 }
 
+/**
+ *  앞으로 갈 곳 — 오늘 다음 날부터 `days` 일까지의 살아 있는 일정 (0067).
+ *
+ *  대표님 말씀: 기사님들이 몇 주치 일정을 미리 받아서 본인 동선을 스스로
+ *  짭니다. 그동안은 종이나 카톡으로 봤습니다.
+ *
+ *  ⚠ **새로 저장하는 것은 없습니다.** 이미 읽어 둔 일정을 날짜순으로
+ *    묶기만 합니다. 누구 일정을 주는지는 서버가 정합니다 — 현장 계정은
+ *    담당 거래처의 일정만 내려옵니다(0056). 화면에서 거르지 않습니다.
+ *
+ *  ⚠ 오늘은 넣지 않습니다. 오늘은 위 「오늘 일정」이 이미 보여 줍니다 —
+ *    두 군데에 같은 것이 뜨면 「어느 쪽이 맞나」가 생깁니다.
+ */
+export function upcomingSchedules(data: AppData, from = today(), days = 28): Schedule[] {
+  const start = new Date(`${from}T00:00:00`)
+  const end = new Date(start)
+  end.setDate(end.getDate() + days)
+  const endStr = end.toLocaleDateString('sv-SE')
+  return data.schedules
+    .filter((s) => isLive(s) && s.date > from && s.date <= endStr)
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date)
+      //  같은 날은 기사님이 정한 방문 순서 → 없으면 시간순 (0067)
+      const ao = a.visitOrder ?? 99
+      const bo = b.visitOrder ?? 99
+      if (ao !== bo) return ao - bo
+      return a.scheduledTime.localeCompare(b.scheduledTime)
+    })
+}
+
 /** 이번 달 완료 일정의 폐기물 구분별 실제 수거량 합계 (kg) */
 export function monthlyCollected(data: AppData, month = thisMonth()): Record<WasteType, number> {
   const result: Record<WasteType, number> = { 의료폐기물: 0, 일회용기저귀: 0 }

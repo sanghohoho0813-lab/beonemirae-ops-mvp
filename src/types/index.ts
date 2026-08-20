@@ -314,6 +314,17 @@ export interface Schedule {
   eventId?: string | null // 이 완료를 생성/처리한 수거 이벤트 id
   origin?: RecordOrigin // 데이터 출처 (seed/field/demo/migrated/system)
   /**
+   * 같은 날 방문 순서 (1,2,3…) — 0067.
+   *
+   *  ⚠ `null`/`undefined` 는 **「정하지 않음」**이지 「첫 번째」가 아닙니다.
+   *    0 으로 채우면 안 정한 곳이 전부 맨 앞으로 올라옵니다.
+   *    안 정했으면 지금까지처럼 예정 시간순으로 봅니다.
+   *
+   *  판 67 이전 DB 에서는 이 칸이 없어 늘 undefined 입니다 — 화면이
+   *  깨지지 않게 읽는 쪽에서 없는 것으로 다룹니다.
+   */
+  visitOrder?: number | null
+  /**
    * 사람이 날짜를 정해 잡은 방문 (0058, ISO).
    *
    *  자동 편성으로 생긴 예정과 **무게가 다릅니다.** 자동 예정은 틀리면

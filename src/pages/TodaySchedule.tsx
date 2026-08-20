@@ -18,6 +18,7 @@ import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { BookVisitModal } from '../components/BookVisit'
 import { MoveVisitModal } from '../components/MoveVisit'
 import { ScheduleCalendar } from '../components/ScheduleCalendar'
+import { UpcomingVisits } from '../components/UpcomingVisits'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
@@ -462,6 +463,11 @@ export function TodaySchedule() {
       {/*  달력 — 하루씩 화살표로 넘기지 않아도 한 달이 보입니다 (대표님 요청).
            날짜를 누르면 위 목록이 그날로 바뀌고, 앞으로 올 날의 ＋ 로 그
            자리에서 방문을 잡습니다. */}
+      {/*  앞으로 갈 곳 (0067) — 종이·카톡 없이 앞일을 앱에서 봅니다.
+           달력보다 위에 둡니다: 기사님이 알고 싶은 것은 「며칠에 어디」이지
+           「8월 달력」이 아닙니다. */}
+      <UpcomingVisits />
+
       {/*
         ── 폰에서는 달력을 접습니다 (0065) ────────────────────────────────────
         한 달 달력은 620px 에 누를 수 있는 칸이 42개입니다. 기사님이 첫 화면에서

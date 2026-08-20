@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { useSchemaAtLeast } from '../lib/schemaGate'
 import { BookVisitModal } from './BookVisit'
 import { monthCalendar, shiftMonth, type CalendarDay } from '../lib/calendar'
 
@@ -113,7 +114,12 @@ export function ScheduleCalendar({
 }) {
   const { data } = useData()
   const { role, mode } = useAuth()
-  const canBook = role === 'admin' || role === 'office' || !mode
+  //  ── 기사님도 본인 담당 거래처는 스스로 잡습니다 (0067) ──────────────────
+  //   ⚠ 서버 판이 67 이상일 때만 열어 줍니다. 66 이하에서는 book_visit 이
+  //     사무실·관리자 전용이라, ＋ 를 그려 놓으면 눌러도 거절당합니다.
+  //     판이 올라가면 저절로 나타납니다.
+  const fieldCanBook = useSchemaAtLeast(67) === true && role === 'field'
+  const canBook = role === 'admin' || role === 'office' || !mode || fieldCanBook
 
   const [month, setMonth] = useState(() => selected.slice(0, 7))
   const [bookDate, setBookDate] = useState<string | null>(null)

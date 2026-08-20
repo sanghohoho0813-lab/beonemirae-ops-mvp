@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { resetSchemaCache } from '../lib/schemaGate'
 import { supabase, isSupabaseConfigured, friendlyError } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -201,6 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signOut = useCallback(async () => {
+    //  다음에 다른 환경·다른 계정으로 들어올 수 있습니다. 판 번호를 들고
+    //  있으면 그 판 기준으로 단추가 그려집니다 (0067).
+    resetSchemaCache()
     if (!supabase) return
     //  이 기기에서만 로그아웃합니다.
     //
