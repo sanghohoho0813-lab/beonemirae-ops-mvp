@@ -27,6 +27,21 @@ import { FieldGuidePicker } from './FieldGuidePicker'
 
 const PAD = 6
 
+/**
+ *  같은 이름표가 **폰용·PC용 두 벌** 붙어 있는 화면이 있습니다
+ *  (오늘 목록이 그렇습니다). 첫 번째를 그냥 집으면 폰에서 숨어 있는
+ *  PC용을 짚어, 아무것도 없는 곳에 동그라미가 그려집니다.
+ *  **지금 눈에 보이는 것**을 집습니다.
+ */
+function anchor(at: string): Element | null {
+  const all = [...document.querySelectorAll(`[data-guide="${at}"]`)]
+  for (const el of all) {
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) return el
+  }
+  return null
+}
+
 export function FieldGuide({
   guideId,
   onClose,
@@ -73,7 +88,7 @@ export function FieldGuide({
   //     가리키며 설명하면 기사님이 화면에서 그것을 찾다가 포기합니다.
   const findTarget = useCallback(() => {
     if (!step?.at) return null
-    const el = document.querySelector(`[data-guide="${step.at}"]`)
+    const el = anchor(step.at)
     if (!el) return null
     const r = el.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) return null
@@ -197,7 +212,7 @@ export function FieldGuide({
   //   넘어갑니다 — 기사님이 「보고만」 있지 않고 직접 해 봅니다.
   useEffect(() => {
     if (!step?.tapToGo || !step.at) return
-    const el = document.querySelector(`[data-guide="${step.at}"]`)
+    const el = anchor(step.at)
     if (!el) return
     const on = () => {
       //  화면이 바뀌는 데 시간이 조금 걸립니다. 그 뒤에 다음 단계로.

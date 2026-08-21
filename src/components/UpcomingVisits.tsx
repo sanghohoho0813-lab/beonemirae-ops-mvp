@@ -76,12 +76,32 @@ export function UpcomingVisits({ days = 28 }: { days?: number }) {
         />
       </button>
 
+      {/*  ⚠ 0071 — 접혀 있으면 「몇 곳」이라는 숫자만 보입니다. 대표님 말씀대로
+           **가까운 곳 두어 개는 열지 않아도** 보이게 합니다. 열면 전부 나옵니다. */}
+      {!open && rows.length > 0 && (
+        <div data-upcoming-peek className="mt-1.5 space-y-1 px-1">
+          {rows.slice(0, 2).map((s) => (
+            <p key={s.id} className="flex items-baseline gap-2 break-keep text-[1.05rem] text-navy-600">
+              <span className="shrink-0 font-extrabold tabular-nums text-navy-800">
+                {Number(s.date.slice(5, 7))}/{Number(s.date.slice(8, 10))}
+              </span>
+              <span className="min-w-0 truncate">{clientById(s.clientId)?.name ?? '거래처'}</span>
+            </p>
+          ))}
+          {rows.length > 2 && (
+            <p className="text-[1rem] text-navy-500">그 밖에 {rows.length - 2}곳</p>
+          )}
+        </div>
+      )}
+
       {open && (
         <div data-upcoming-body className="mt-2 space-y-3">
+          {/*  ⚠ 0071 — 없을 때 카드 하나를 통째로 그렸습니다. 앞일이 없는
+               날에는 그 빈 카드가 화면에서 제일 큰 덩어리가 됩니다.
+               한 줄로 줄입니다. */}
           {rows.length === 0 && (
-            <p className="card break-keep p-4 text-[1.05rem] text-navy-400">
-              앞으로 {days}일 안에 잡힌 방문이 없습니다. 달력에서 <b className="text-navy-600">＋</b> 로 잡을
-              수 있습니다.
+            <p className="break-keep px-1 text-[1.05rem] text-navy-500">
+              앞으로 {days}일 안에 잡힌 방문이 없습니다.
             </p>
           )}
           {groups.map(([bucket, list]) => (

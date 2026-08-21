@@ -104,14 +104,16 @@ export function FieldDayStrip({
             {/*  일정이 있으면 **숫자로** 답니다. 점만 찍으면 몇 곳인지 모릅니다. */}
             {n > 0 ? (
               <span
-                className={`min-w-[1.15rem] rounded-full px-1 text-[0.85rem] font-extrabold leading-[1.15rem] ${
-                  on ? 'bg-white text-navy-900' : 'bg-teal-500 text-white'
+                //  0071 — 13.6px 이라 이 화면에서 유일하게 작은 글자였습니다.
+                //  「그 날 몇 곳 가나」는 기사님이 띠를 훑으며 읽는 숫자입니다.
+                className={`min-w-[1.3rem] rounded-full px-1 text-[1rem] font-extrabold leading-[1.3rem] ${
+                  on ? 'bg-white text-navy-900' : 'bg-teal-600 text-white'
                 }`}
               >
                 {n}
               </span>
             ) : (
-              <span className="h-[1.15rem]" />
+              <span className="h-[1.3rem]" />
             )}
           </button>
         )

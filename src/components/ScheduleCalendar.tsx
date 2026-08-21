@@ -61,10 +61,12 @@ function DayCell({
         onClick={() => onPick(d.date)}
         className="block w-full flex-1 text-left"
       >
-        <span className={`text-[0.98rem] font-extrabold tabular-nums ${tone}`}>{d.dayOfMonth}</span>
-        {d.isToday && <span className="ml-1 text-[0.82rem] font-bold text-teal-600">오늘</span>}
+        {/*  ⚠ 0071 — 17.6px 였습니다. 폰에서 한 칸이 53px 라 숫자를 키워도
+             들어갑니다. 50~60대 기사님이 달리는 차 안에서 보는 숫자입니다. */}
+        <span className={`text-[1.15rem] font-extrabold tabular-nums ${tone}`}>{d.dayOfMonth}</span>
+        {d.isToday && <span className="ml-1 text-[1rem] font-bold text-teal-700">오늘</span>}
         {d.holiday && (
-          <span className="ml-1 block truncate text-[0.8rem] font-bold text-rose-400">{d.holiday}</span>
+          <span className="ml-1 block truncate text-[0.88rem] font-bold text-rose-600">{d.holiday}</span>
         )}
 
         {/*  숫자만 놓습니다. 거래처 이름을 다 적으면 폰에서 칸이 터집니다 —
@@ -72,12 +74,12 @@ function DayCell({
         {d.total > 0 && (
           <span data-cal-count={d.date} className="mt-1 flex flex-wrap gap-0.5">
             {d.done > 0 && (
-              <span className="rounded bg-teal-500 px-1 text-[0.8rem] font-extrabold text-white">
+              <span className="rounded bg-teal-600 px-1 text-[0.95rem] font-extrabold text-white">
                 {d.done}
               </span>
             )}
             {d.pending > 0 && (
-              <span className="rounded bg-navy-700 px-1 text-[0.8rem] font-extrabold text-white">
+              <span className="rounded bg-navy-700 px-1 text-[0.95rem] font-extrabold text-white">
                 {d.pending}
               </span>
             )}
@@ -168,7 +170,7 @@ export function ScheduleCalendar({
         {WD.map((w, i) => (
           <p
             key={w}
-            className={`border-r border-navy-100 py-1.5 text-center text-[0.9rem] font-extrabold ${
+            className={`border-r border-navy-100 py-1.5 text-center text-[1rem] font-extrabold ${
               i === 0 ? 'text-rose-400' : i === 6 ? 'text-sky-500' : 'text-navy-400'
             }`}
           >
@@ -192,10 +194,10 @@ export function ScheduleCalendar({
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 sm:px-4">
         <span className="t-muted flex items-center gap-1 text-navy-500">
-          <span className="rounded bg-teal-500 px-1 text-[0.8rem] font-extrabold text-white">n</span> 다녀옴
+          <span className="rounded bg-teal-600 px-1 text-[0.95rem] font-extrabold text-white">n</span> 다녀옴
         </span>
         <span className="t-muted flex items-center gap-1 text-navy-500">
-          <span className="rounded bg-navy-700 px-1 text-[0.8rem] font-extrabold text-white">n</span> 갈 곳
+          <span className="rounded bg-navy-700 px-1 text-[0.95rem] font-extrabold text-white">n</span> 갈 곳
         </span>
         <span data-cal-total className="t-muted ml-auto text-navy-500">
           이 달 다녀옴 {cal.done}건 · 남은 방문 {cal.pending}건

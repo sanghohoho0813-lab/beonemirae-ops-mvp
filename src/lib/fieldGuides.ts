@@ -89,6 +89,11 @@ export const FIELD_GUIDES: FieldGuide[] = [
       },
       {
         route: '/today',
+        at: 'guide-month',
+        say: '한 달을 통째로 보려면 여기를 봅니다. 폰에서는 「월간 일정 보기」를 한 번 누르면 펼쳐집니다.',
+      },
+      {
+        route: '/today',
         at: 'guide-add',
         say: '일정을 직접 넣을 때는 이 단추를 누릅니다.',
         tapToGo: true,

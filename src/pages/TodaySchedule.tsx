@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -80,6 +80,8 @@ export function TodaySchedule() {
   const [date, setDate] = useState(today())
   //  일정 추가 시트 (0068)
   const [addOpen, setAddOpen] = useState(false)
+  //  월간 일정 — 폰에서는 접어 둡니다 (0071)
+  const [monthOpen, setMonthOpen] = useState(false)
   //  ⚠ 기사님에게 ＋ 를 열어 주려면 **서버 판이 67 이상**이어야 합니다.
   //    66 이하에서는 book_visit 이 사무실·관리자 전용이라, 눌러도 거절당합니다.
   //    사무실·관리자는 지금까지처럼 판과 상관없이 잡습니다.
@@ -283,7 +285,6 @@ export function TodaySchedule() {
         넓은 화면은 예전 네비를 그대로 씁니다 — 마우스로는 화살표가 편합니다.
       */}
       <div className="mb-3 sm:hidden">
-        <CarNotice />
         <div className="mb-2 flex items-center gap-2">
           <p data-day-title className="text-[1.15rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
           {date !== today() && (
@@ -374,6 +375,7 @@ export function TodaySchedule() {
                      완료 뱃지까지 같은 청록으로 맞춰 초록이 여러 가지로 갈리지
                      않게 했습니다. 시간도 같은 색 옅은 칩에 넣어 먼저 눈에 닿게 합니다. */}
                 <button
+                  data-guide={si === 0 ? 'guide-today-list' : undefined}
                   onClick={() => (done ? openEdit(s) : navigate(`/collection?schedule=${s.id}`))}
                   className={`flex w-full items-center gap-3 border-l-[5px] py-3.5 pl-3 pr-4 text-left transition active:bg-navy-50 lg:hidden ${
                     done ? 'border-accent-400 bg-accent-50/30' : 'border-teal-500'
@@ -580,6 +582,9 @@ export function TodaySchedule() {
         </button>
       )}
 
+      {/*  호차 안내 — 오늘 할 일을 다 본 **뒤에** 옵니다 (0071) */}
+      <CarNotice />
+
       {/*  3.5톤 공용차 — 본사 앞에 있고, 필요한 분이 잡아서 씁니다 (0070).
            누가 잡았는지 병원 빼고 다 보입니다. */}
       <SharedTruck date={date} />
@@ -597,14 +602,36 @@ export function TodaySchedule() {
         달력이 필요한 날에는 한 번 눌러서 폅니다. 넓은 화면은 그대로 둡니다.
       */}
       {/*
-        ── 폰에서는 한 달 달력을 아예 안 그립니다 (0068) ──────────────────────
-        위 **날짜 띠**가 같은 일을 더 잘 합니다 — 4주가 한 번에 밀려 지나가고,
-        일정이 있는 날에는 건수가 숫자로 붙습니다. 달력까지 두면 「앞으로 갈
-        곳」이 두 줄로 겹쳐 보이고, 기사님은 둘 중 무엇이 맞는지 고민합니다.
-        넓은 화면(사무실)은 지금까지처럼 한 달 달력을 그대로 씁니다.
+        ── 월간 일정 — 폰에서도 열립니다 (0071) ───────────────────────────────
+
+        ⚠ 0068 에서 폰의 한 달 달력을 **아예 없앴습니다.** 날짜 띠가 4주를
+          보여 주니 충분하다고 봤는데, 그건 제 판단이 지나쳤습니다.
+          「이번 달에 몇 번이나 가나」, 「지난주 화요일이 며칠이었나」는
+          띠로는 안 됩니다. 게다가 640px 이 넘는 화면(폴드폰을 편 상태)에만
+          달력이 떠서, **보통 폰에서는 아예 월간을 볼 길이 없었습니다.**
+
+        그래서 되살리되 **접어 둡니다.** 첫 화면은 지금처럼 오늘 중심이고,
+        한 번 누르면 그 자리에서 한 달이 펼쳐집니다. 다시 누르면 접힙니다.
+        넓은 화면은 지금까지처럼 늘 펼친 채로 둡니다 — 자리가 남으니까요.
       */}
-      <div data-calendar-body className="mt-4 hidden sm:block">
-        <ScheduleCalendar selected={date} onPick={setDate} />
+      <div className="mt-4" data-guide="guide-month">
+        <button
+          type="button"
+          data-month-toggle
+          onClick={() => setMonthOpen((v) => !v)}
+          className="card flex min-h-[3.5rem] w-full items-center gap-2.5 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
+        >
+          <CalendarDays size={20} strokeWidth={2.3} className="shrink-0 text-navy-500" />
+          <span className="text-[1.12rem] font-extrabold text-navy-900">월간 일정 보기</span>
+          <ChevronDown
+            size={19}
+            strokeWidth={2.5}
+            className={`ml-auto shrink-0 text-navy-400 transition ${monthOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <div data-calendar-body className={`${monthOpen ? 'mt-3' : 'hidden'} sm:mt-0 sm:block`}>
+          <ScheduleCalendar selected={date} onPick={setDate} />
+        </div>
       </div>
 
       {/* 병원 요청은 사무실 업무라, 좁은 화면에서는 일정 아래로 내립니다 */}

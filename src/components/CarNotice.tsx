@@ -41,9 +41,18 @@ export function CarNotice() {
   if (hidden) return null
 
   return (
-    <div data-car-notice className="mb-3 flex items-start gap-2 rounded-2xl bg-navy-50 px-3.5 py-2.5">
+    //  ⚠ 0071 — 세 줄이라 첫 화면 위쪽 90px 을 차지했습니다. 매일 아침
+    //    여는 화면에서 **오늘 갈 곳보다 먼저** 읽히면 안 됩니다.
+    //    한 줄로 줄이고, 자리도 오늘 일정 아래로 내렸습니다.
+    //    자세한 것은 「도움말 → 사용 방법」에 늘 있습니다.
+    <div data-car-notice className="mt-3 flex items-center gap-2 rounded-2xl bg-navy-50 px-3.5 py-2">
+      {/*  ⚠ truncate 로 한 줄에 욱여넣었더니 「바꾸실 수 있습니다」가 잘려
+             나갔습니다. 대표님이 붙이라 하신 **안심시키는 쪽**이 잘리면
+             안내를 붙인 뜻이 없어집니다. 두 줄까지 허용합니다 — 이 칸은
+             이제 오늘 일정 **아래**에 있어서 첫 화면을 밀지 않습니다.
+             말투도 「사용 방법」의 안내와 같게 맞춥니다 (바꾸실 수 있습니다). */}
       <p className="min-w-0 flex-1 break-keep text-[0.95rem] leading-snug text-navy-500">
-        호차는 출생연도 순으로 배정했습니다. 바꾸실 수 있으니 필요하면 사무실에 말씀해 주세요.
+        호차는 출생연도 순입니다 · 바꾸실 수 있습니다
       </p>
       <button
         data-car-notice-close

@@ -19,6 +19,14 @@ export function FieldGuidePicker({ onPick }: { onPick: (id: string) => void }) {
       </div>
       <p className="break-keep text-[1.1rem] text-navy-500">알고 싶은 것을 하나 고르세요.</p>
 
+      {/*  ⚠ 0071 — 호차 안내를 여기에도 둡니다. 첫 화면에서는 한 번 닫으면
+           다시 안 뜨는데, 나중에 「내가 왜 3호차지?」가 궁금해지면 찾을 곳이
+           없었습니다. 매일 보는 자리에서 내리고, 궁금할 때 찾는 자리에 둡니다. */}
+      <p data-car-help className="break-keep rounded-2xl bg-navy-50 px-4 py-3 text-[1.02rem] leading-snug text-navy-600">
+        담당 호차는 <b className="text-navy-800">출생연도 순</b>으로 배정했습니다. 바꾸실 수 있으니 필요하면
+        사무실에 말씀해 주세요.
+      </p>
+
       {FIELD_GUIDES.map((g) => (
         <button
           key={g.id}

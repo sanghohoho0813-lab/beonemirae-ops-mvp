@@ -57,7 +57,9 @@ export function NextVisitCard({
         <span className="t-label whitespace-nowrap text-navy-500">오늘 방문</span>
         <span className="t-card whitespace-nowrap text-navy-900">
           {list.length - done}
-          <span className="t-label text-navy-400"> / {list.length}건 남음</span>
+          {/*  ⚠ 0071 — navy-400 은 흰 바탕에서 3.5:1 로 기준에 못 미칩니다.
+               「몇 건 남았나」는 기사님이 첫 화면에서 가장 먼저 보는 숫자입니다. */}
+          <span className="t-label text-navy-500"> / {list.length}건 남음</span>
         </span>
         <span className="ml-auto flex h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-navy-100">
           <span className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
@@ -69,7 +71,7 @@ export function NextVisitCard({
 
         <div className="mt-1.5 flex items-baseline gap-2.5">
           <span className="t-kpi-sm shrink-0 tabular-nums text-navy-900">{next.scheduledTime}</span>
-          <span className="t-label whitespace-nowrap text-navy-400">{next.wasteType}</span>
+          <span className="t-label whitespace-nowrap text-navy-500">{next.wasteType}</span>
         </div>
 
         <p className="mt-1.5 break-keep text-[1.55rem] font-extrabold leading-tight tracking-tight text-navy-900">
@@ -107,7 +109,8 @@ export function NextVisitCard({
         </button>
         <button
           onClick={() => client && navigate(`/clients/${client.id}`)}
-          className="mt-2 flex w-full items-center justify-center gap-1 py-2 text-[1.08rem] font-bold text-navy-500"
+          //  0071 — 41px 이라 손가락 기준(44px)에 못 미쳤습니다
+          className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center gap-1 py-2 text-[1.08rem] font-bold text-navy-500"
         >
           이 병원 정보 보기 <ChevronRight size={17} />
         </button>

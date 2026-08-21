@@ -268,9 +268,23 @@ export function CollectionInput() {
     if (!s) return
     setClientId(s.clientId)
     setWasteType(s.wasteType)
-    setVehicleId(s.vehicleId)
-    const v = data.vehicles.find((x) => x.id === s.vehicleId)
-    setDriverName(v?.driver ?? '')
+    //  ⚠ 현장 계정은 차량을 **고르지 않습니다** — 위 자동 채움(0067)이 담당합니다.
+    //
+    //    여기서 일정에 적힌 차량으로 덮으면 안 됩니다. 예정 일정은 대개
+    //    차량이 비어 있어서(null) 빈 값으로 덮이는데, 자동 채움은 이미
+    //    같은 묶음에서 끝난 뒤입니다. 그러면 상태가 「빈 값 → 3호차 → 빈 값」
+    //    으로 한 번에 처리돼 **바뀐 것이 없는 셈**이 되고, 자동 채움이 다시
+    //    돌지 않아 차량이 영영 비어 있게 됩니다. 저장 단추가 계속 꺼져 있어
+    //    기사님은 이유도 모른 채 저장을 못 합니다.
+    //
+    //    ⚠ 이 길은 「오늘 일정 → 병원 줄 → 수거 입력」입니다. 자료가 이미
+    //      들어와 있을 때만 이렇게 되므로, 주소창에 직접 쳐서 들어가는
+    //      시험에서는 드러나지 않습니다. 기사님의 실제 길이 그 길입니다.
+    if (!autoVehicle) {
+      setVehicleId(s.vehicleId)
+      const v = data.vehicles.find((x) => x.id === s.vehicleId)
+      setDriverName(v?.driver ?? '')
+    }
     setTime(s.scheduledTime || nowTime())
     setAmount(String(s.expectedAmount))
   }
@@ -679,7 +693,8 @@ export function CollectionInput() {
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="pill bg-teal-50 text-teal-700">지금 이 병원</span>
               {client && <WasteBadge type={wasteType} />}
-              <span className="t-caption text-navy-400">{picked.scheduledTime || '시간 미정'}</span>
+              {/*  0071 — 예정 시간도 기사님이 눈으로 맞춰 보는 값입니다 (3.5:1 → 기준 미달) */}
+              <span className="t-caption text-navy-500">{picked.scheduledTime || '시간 미정'}</span>
             </div>
             <p data-collect-here-name className="mt-1.5 break-keep text-[1.32rem] font-extrabold leading-snug text-navy-900">
               {client?.name ?? '거래처'}
@@ -694,7 +709,11 @@ export function CollectionInput() {
                   <>
                     {' · '}
                     {/*  현장에서 바로 걸 수 있어야 합니다 — 번호를 옮겨 적지 않게. */}
-                    <a href={`tel:${client.phone}`} className="font-bold text-teal-700 underline-offset-2 hover:underline">
+                    {/*  0071 — 「지금 이 병원」 칸의 전화. 글자 높이(21px)면 손가락으로 빗나갑니다. */}
+                    <a
+                      href={`tel:${client.phone}`}
+                      className="-my-2 inline-flex min-h-[2.75rem] items-center font-bold text-teal-700 underline-offset-2 hover:underline"
+                    >
                       {client.phone}
                     </a>
                   </>
@@ -704,7 +723,8 @@ export function CollectionInput() {
             <button
               data-collect-repick
               onClick={() => setPickOpen(true)}
-              className="-mx-2 mt-1 flex min-h-[2.75rem] items-center gap-1 px-2 text-[1.02rem] font-bold text-navy-400"
+              //  0071 — navy-400 은 흰 바탕에서 3.5:1 이라 기준(4.5:1)에 못 미칩니다
+              className="-mx-2 mt-1 flex min-h-[2.75rem] items-center gap-1 px-2 text-[1.02rem] font-bold text-navy-500"
             >
               다른 일정 고르기
             </button>
@@ -867,7 +887,9 @@ export function CollectionInput() {
                       <a
                         data-collect-tel
                         href={`tel:${client.phone}`}
-                        className="font-bold text-teal-700 underline-offset-2 hover:underline"
+                        //  0071 — 전화는 기사님이 실제로 누르는 자리입니다.
+                        //  글자 높이(21px)로 두면 손가락으로 빗나갑니다.
+                        className="-my-2 inline-flex min-h-[2.75rem] items-center font-bold text-teal-700 underline-offset-2 hover:underline"
                       >
                         {client.phone}
                       </a>
@@ -971,6 +993,72 @@ export function CollectionInput() {
           </div>
         </Section>
 
+
+        </div>
+
+        {/* ── 우측: 현장 정보 · 자재 · 차량 · 저장 ── */}
+        <div className="min-w-0 space-y-4">
+        {/* 현장 메모 — 이 거래처에 기록해둔 특이사항 */}
+        {client && notesFor(client.id).some((n) => !n.done) && (
+          <div className="card p-5">
+            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항 <span className="font-medium text-navy-400">(거래처 상세에 기록해 둔 내용)</span></p>
+            <NoteChips notes={notesFor(client.id)} max={4} />
+          </div>
+        )}
+
+        {/*  자주 쓰는 칸 — 완료상태와 특이사항은 수거량 바로 다음입니다 (0071) */}
+        <Section
+          n={step()}
+          title="처리장 인계 상태"
+          fold={{
+            open: handoverOpen,
+            onOpen: () => setOpenHandover(true),
+            summary: handover,
+            id: 'handover',
+          }}
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {HANDOVERS.map((h) => (
+              <button
+                key={h}
+                onClick={() => setHandover(h)}
+                className={`rounded-xl px-2 py-3 text-[1.03rem] font-bold transition active:scale-[0.97] ${
+                  handover === h ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
+                }`}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        {/* 8. 특이사항 */}
+        <Section
+          n={step()}
+          title="특이사항"
+          fold={{
+            open: memoOpen,
+            onOpen: () => setOpenMemo(true),
+            summary: '없음',
+            id: 'memo',
+          }}
+        >
+          <textarea
+            className="field-input"
+            rows={2}
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="현장 특이사항을 입력하세요 (선택)"
+          />
+        </Section>
+
+
+        {/*
+          ── 매번 쓰지 않는 칸은 아래로 (0071) ─────────────────────────────
+          대표님이 정해 주신 순서: 병원 → 수거량 → 완료상태 → 특이사항 → 저장.
+          용기와 자재는 **놓고 오는 날만** 씁니다. 둘 다 접힌 채로, 자주 쓰는
+          칸 아래에 나란히 둡니다 — 위에 있으면 매일 지나쳐야 합니다.
+        */}
         {/* 4. 용기별 배출 수량 */}
         <Section
           n={step()}
@@ -998,19 +1086,7 @@ export function CollectionInput() {
           {containerSum > 0 && <p className="mt-2 text-[0.98rem] font-semibold text-navy-500">합계 {containerSum}개</p>}
         </Section>
 
-        </div>
-
-        {/* ── 우측: 현장 정보 · 자재 · 차량 · 저장 ── */}
-        <div className="min-w-0 space-y-4">
-        {/* 현장 메모 — 이 거래처에 기록해둔 특이사항 */}
-        {client && notesFor(client.id).some((n) => !n.done) && (
-          <div className="card p-5">
-            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항 <span className="font-medium text-navy-400">(거래처 상세에 기록해 둔 내용)</span></p>
-            <NoteChips notes={notesFor(client.id)} max={4} />
-          </div>
-        )}
-
-        {/* 5. 자재 동시공급 */}
+        {/* 자재 동시공급 */}
         <Section
           n={step()}
           title="자재 동시공급"
@@ -1247,51 +1323,6 @@ export function CollectionInput() {
         )}
 
         {/* 7. 처리장 인계 상태 */}
-        <Section
-          n={step()}
-          title="처리장 인계 상태"
-          fold={{
-            open: handoverOpen,
-            onOpen: () => setOpenHandover(true),
-            summary: handover,
-            id: 'handover',
-          }}
-        >
-          <div className="grid grid-cols-3 gap-2">
-            {HANDOVERS.map((h) => (
-              <button
-                key={h}
-                onClick={() => setHandover(h)}
-                className={`rounded-xl px-2 py-3 text-[1.03rem] font-bold transition active:scale-[0.97] ${
-                  handover === h ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'
-                }`}
-              >
-                {h}
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        {/* 8. 특이사항 */}
-        <Section
-          n={step()}
-          title="특이사항"
-          fold={{
-            open: memoOpen,
-            onOpen: () => setOpenMemo(true),
-            summary: '없음',
-            id: 'memo',
-          }}
-        >
-          <textarea
-            className="field-input"
-            rows={2}
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder="현장 특이사항을 입력하세요 (선택)"
-          />
-        </Section>
-
         {/* 경고 (진행 가능) */}
         {warnings.length > 0 && (
           <div className="card border border-amber-200 bg-amber-50 p-4">
@@ -1309,16 +1340,20 @@ export function CollectionInput() {
             <p className="t-label mb-2.5 flex items-center gap-1.5 text-teal-700">
               <ClipboardList size={14} /> 저장 전 확인
             </p>
+            {/*  ⚠ 0071 — 이 줄들은 **저장 직전에 마지막으로 읽는 곳**입니다.
+                 navy-400 은 흰 바탕에서 3.3:1 이라 기준(4.5:1)에 못 미쳤습니다.
+                 50~60대 기사님이 밝은 데서 폰을 보는 자리라 더 그렇습니다.
+                 navy-500 으로 올립니다 — 굵기·크기는 그대로입니다. */}
             <div className="t-body grid grid-cols-2 gap-y-2 text-navy-700">
-              <span className="text-navy-400">거래처</span>
+              <span className="text-navy-500">거래처</span>
               <span className="text-right font-bold">{client?.name}</span>
-              <span className="text-navy-400">수거량</span>
+              <span className="text-navy-500">수거량</span>
               <span className="text-right font-bold">{weight(Number(amount) || 0)}</span>
-              <span className="text-navy-400">용기 합계</span>
+              <span className="text-navy-500">용기 합계</span>
               <span className="text-right font-bold">{containerSum}개</span>
-              <span className="text-navy-400">자재 동시공급</span>
+              <span className="text-navy-500">자재 동시공급</span>
               <span className="text-right font-bold">{suppliedSum > 0 ? `${suppliedSum}점` : '없음'}</span>
-              <span className="text-navy-400">처리장 인계</span>
+              <span className="text-navy-500">처리장 인계</span>
               <span className="text-right font-bold">{handover}</span>
             </div>
           </div>
@@ -1328,10 +1363,24 @@ export function CollectionInput() {
             저장 중에는 눌리지 않게 합니다 — 현장 모바일에서 응답이 느릴 때
             두 번 누르면 같은 수거가 두 번 올라갑니다. (DB 에서도 막지만,
             사용자가 오류 화면을 보는 것보다 아예 못 누르게 하는 편이 낫습니다) */}
+        {/*
+          ── 저장은 늘 손 닿는 곳에 (0071) ──────────────────────────────────
+          긴 화면을 내려가다 보면 「어디서 끝내지?」가 됩니다. 폰에서는
+          채울 것을 다 채우면 **아래에 붙여 둡니다** — 아래 메뉴 위에 얹혀
+          늘 보입니다. 넓은 화면은 지금까지처럼 흐름 안에 둡니다.
+
+          ⚠ 채우기 전에는 붙이지 않습니다. 아직 못 누르는 단추가 화면을
+            계속 가리면 그게 더 답답합니다.
+        */}
         <button
           data-tour="collect-save"
           data-guide="guide-save"
-          className="btn-primary w-full py-5 !text-[1.15rem] disabled:opacity-50"
+          data-collect-save
+          className={`btn-primary w-full py-5 !text-[1.15rem] disabled:opacity-50 ${
+            canSubmit && !sync.saving
+              ? 'max-sm:fixed max-sm:inset-x-3 max-sm:bottom-[4.75rem] max-sm:z-30 max-sm:w-auto max-sm:shadow-xl'
+              : ''
+          }`}
           style={{ minHeight: 48 }}
           onClick={submit}
           disabled={!canSubmit || sync.saving}
@@ -1347,6 +1396,9 @@ export function CollectionInput() {
         {/*  예전엔 여기에 「현장 담당자 (Demo) · 실제 적용 시 … 연동 예정」이
              적혀 있었습니다. 이제는 실제 계정으로 저장되므로, 지어낸 문구
              대신 **누구 이름으로 남는지**를 그대로 적습니다. */}
+        {/*  붙어 있는 동안 원래 자리에 같은 높이를 남겨 둡니다 — 안 남기면
+             아래 글이 위로 올라와 화면이 출렁입니다. */}
+        {canSubmit && !sync.saving && <div aria-hidden className="h-[4.5rem] sm:hidden" />}
         {profile?.name && (
           <p data-collect-actor className="t-muted text-center">
             {profile.name} 이름으로 저장됩니다
