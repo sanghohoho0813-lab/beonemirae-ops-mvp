@@ -293,7 +293,9 @@ export function TodaySchedule() {
             </button>
           )}
         </div>
-        <FieldDayStrip data={data} selected={date} onPick={setDate} />
+        <div data-guide="guide-day-strip">
+          <FieldDayStrip data={data} selected={date} onPick={setDate} />
+        </div>
       </div>
 
       {/* 날짜 네비게이션 (넓은 화면) */}
@@ -339,6 +341,7 @@ export function TodaySchedule() {
               {canAddVisit ? (
                 <button
                   data-empty-add
+                  data-guide="guide-add"
                   onClick={() => setAddOpen(true)}
                   className="btn-primary mx-auto mt-4 !text-[1.08rem]"
                   style={{ minHeight: 48 }}
@@ -432,6 +435,7 @@ export function TodaySchedule() {
                 <div className="p-4">
                   <div
                     data-tour={si === 0 ? 'today-list' : undefined}
+                    data-guide={si === 0 ? 'guide-today-list' : undefined}
                     className="flex items-start justify-between gap-3"
                   >
                     <div className="min-w-0">
@@ -564,6 +568,7 @@ export function TodaySchedule() {
       {canAddVisit && list.length > 0 && (
         <button
           data-add-fab
+          data-guide="guide-add"
           onClick={() => setAddOpen(true)}
           aria-label="일정 추가"
           className="fixed bottom-[5.5rem] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-navy-900 text-white shadow-lg transition active:scale-95 sm:hidden"

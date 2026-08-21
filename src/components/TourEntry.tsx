@@ -1,6 +1,8 @@
 import { Lightbulb, PlayCircle } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { openGuide, PICK } from '../lib/fieldGuides'
 import { useTour } from '../context/TourContext'
 import { markTourSeen, shouldShowIntro, snoozeToday, TOURS, type TourId } from '../lib/tour'
 
@@ -149,10 +151,21 @@ export function TourButton({
   children?: ReactNode
 }) {
   const { start } = useTour()
+  const { role } = useAuth()
   return (
     <button
       data-tour-start
-      onClick={() => start(tourId ? TOURS[tourId] : undefined)}
+      onClick={() => {
+        //  ── 현장 기사에게는 새 안내를 엽니다 (0069) ────────────────────────
+        //   ⚠ 「사용 방법」 들어가는 문이 **두 군데**입니다 — 도움말 시트와
+        //     더보기 메뉴. 한 곳만 바꿔 두면 기사님이 다른 문으로 들어가
+        //     예전 투어를 봅니다. 실제로 그렇게 남아 있었습니다.
+        if (role === 'field' && !tourId) {
+          openGuide(PICK)
+          return
+        }
+        start(tourId ? TOURS[tourId] : undefined)
+      }}
       className={className}
       title="사용 방법 다시 보기"
     >

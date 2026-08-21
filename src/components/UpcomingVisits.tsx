@@ -60,6 +60,7 @@ export function UpcomingVisits({ days = 28 }: { days?: number }) {
       <button
         type="button"
         data-upcoming-toggle
+        data-guide="guide-upcoming"
         onClick={() => setOpen((v) => !v)}
         className="card flex min-h-[3.25rem] w-full items-center gap-2.5 px-4 py-3 text-left transition active:scale-[0.99]"
       >

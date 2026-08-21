@@ -114,8 +114,16 @@
     @apply break-keep text-[1rem] font-bold leading-snug sm:text-[1.08rem];
   }
   .t-muted {
-    /* 보조 문구 — 17px / 21px */
-    @apply break-keep text-[0.95rem] leading-snug text-navy-400 sm:text-[1rem];
+    /*  보조 문구 — 18px / 21px
+     *
+     *  ⚠ 0069 — 색을 navy-400(#7e8a99) 에서 navy-500(#5b6677) 로 내렸습니다.
+     *    흰 바탕에서 navy-400 은 대비가 3.4:1 로, 읽기 기준(4.5:1)에 못
+     *    미칩니다. 50~60대 기사님 화면을 재 보니 오늘 일정 글자의 **36%**
+     *    가 이 흐린 회색이었습니다. navy-500 은 5.6:1 로 기준을 넘습니다.
+     *    글자 크기도 17px → 18px 로 올렸습니다.
+     *  ⚠ 이 한 줄이 앱 전체의 보조 문구에 함께 걸립니다. 화면마다 따로
+     *    고치면 반드시 몇 군데를 빠뜨립니다. */
+    @apply break-keep text-[1.02rem] leading-snug text-navy-500 sm:text-[1rem];
   }
   .t-nav {
     /* 사이드바 메뉴 — 20px / 25px */
@@ -172,11 +180,14 @@
   }
 
   /* 텍스트 위계 -------------------------------------------------------- */
+  /*  ⚠ 0069 — 0.87rem 은 폰에서 15px 입니다. 거래처 목록의 「관리팀 · 주 1회」
+   *    가 이 크기였습니다. 16px 아래는 노안에서 확연히 읽기 어려워, 바닥을
+   *    16px 로 올렸습니다. 색도 대비 기준을 넘게 내렸습니다. */
   .t-caption {
-    @apply text-[0.87rem] font-medium leading-snug text-navy-400;
+    @apply text-[0.95rem] font-medium leading-snug text-navy-500;
   }
   .t-sub {
-    @apply text-[0.87rem] text-navy-400;
+    @apply text-[0.95rem] text-navy-500;
   }
 
   /* pill 형태 뱃지 공통 */

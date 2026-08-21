@@ -96,6 +96,7 @@ function Section({
   title,
   desc,
   tour,
+  guideAt,
   fold,
   children,
 }: {
@@ -104,12 +105,14 @@ function Section({
   desc?: string
   /** 제품 투어 대상 표시 */
   tour?: string
+  /** 사용 안내(0069)가 짚는 자리 */
+  guideAt?: string
   fold?: Fold
   children: React.ReactNode
 }) {
   const folded = !!fold && !fold.open
   return (
-    <div data-tour={tour} className="card">
+    <div data-tour={tour} data-guide={guideAt} className="card">
       {folded && (
         <button
           type="button"
@@ -123,7 +126,7 @@ function Section({
           <span className="min-w-0 break-keep text-[1.1rem] font-extrabold text-navy-900">{title}</span>
           <span
             data-fold-summary={fold.id}
-            className="ml-auto flex shrink-0 items-center gap-1 text-[1.02rem] font-bold text-navy-400"
+            className="ml-auto flex shrink-0 items-center gap-1 text-[1.02rem] font-bold text-navy-500"
           >
             {fold.summary}
             <ChevronDown size={16} strokeWidth={2.4} />
@@ -137,7 +140,8 @@ function Section({
           </span>
           <div>
             <h2 className="text-[1.15rem] font-extrabold text-navy-900">{title}</h2>
-            {desc && <p className="mt-0.5 text-[0.98rem] text-navy-400">{desc}</p>}
+            {/*  ⚠ 0069 — 설명 줄 색을 기준(4.5:1) 위로 올립니다 */}
+            {desc && <p className="mt-0.5 text-[0.98rem] text-navy-500">{desc}</p>}
           </div>
         </div>
         {children}
@@ -747,7 +751,7 @@ export function CollectionInput() {
               )
             })}
             {todayPending.length === 0 && (
-              <p data-pick-mode className="text-[1.08rem] text-navy-400">
+              <p data-pick-mode className="text-[1.08rem] text-navy-500">
                 오늘 예정된 수거가 없어 <b className="text-navy-600">직접 입력</b>으로 넣습니다.
               </p>
             )}
@@ -778,7 +782,7 @@ export function CollectionInput() {
         <Section n={step()} title="거래처 · 폐기물 구분">
           <div className="space-y-3">
             <div>
-              <label className="field-label">거래처 *</label>
+              <label className="field-label" data-guide="guide-client">거래처 *</label>
               {/*  자주 가는 곳 — 목록을 열지 않고 한 번에 고릅니다.
                    일정에서 들어왔으면 이미 정해져 있으니 안 보여 줍니다. */}
               {!scheduleId && quickClients.length > 0 && (
@@ -945,7 +949,9 @@ export function CollectionInput() {
             <TimeField value={time} onChange={setTime} />
             </div>
             <div>
-              <label className="field-label" htmlFor="collection-amount">실제 수거량 (kg) *</label>
+              <label className="field-label" htmlFor="collection-amount" data-guide="guide-amount">
+                실제 수거량 (kg) *
+              </label>
               {/*  집을 수 있는 이름을 답니다. 시간 칸도 숫자 칸이라, 「첫 번째
                    숫자 칸」으로 집으면 수거량 대신 시(時)에 값이 들어갑니다. */}
               <input
@@ -970,6 +976,7 @@ export function CollectionInput() {
           n={step()}
           title="용기별 배출 수량"
           desc="수거대장 초안에 그대로 반영됩니다"
+          guideAt="guide-folds"
           fold={{
             open: containersOpen,
             onOpen: () => setOpenContainers(true),
@@ -1323,6 +1330,7 @@ export function CollectionInput() {
             사용자가 오류 화면을 보는 것보다 아예 못 누르게 하는 편이 낫습니다) */}
         <button
           data-tour="collect-save"
+          data-guide="guide-save"
           className="btn-primary w-full py-5 !text-[1.15rem] disabled:opacity-50"
           style={{ minHeight: 48 }}
           onClick={submit}
@@ -1434,7 +1442,9 @@ export function CollectionInput() {
         <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} client={client} />
       )}
 
-      <p className="mt-6 text-center text-[0.98rem] text-navy-300">{prettyDate(today())} 기준</p>
+      {/*  ⚠ 0069 — navy-300 은 흰 바탕에서 대비 1.9:1 입니다. 거의 안 보이는
+           글자를 화면에 두는 것은 자리만 차지합니다. 기준선(4.5:1)을 넘깁니다. */}
+      <p className="mt-6 text-center text-[0.98rem] text-navy-500">{prettyDate(today())} 기준</p>
 
       {/* 완료 취소 확인 모달 (시연 중 실수 방지) */}
       <Modal

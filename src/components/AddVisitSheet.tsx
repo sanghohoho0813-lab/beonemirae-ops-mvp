@@ -110,7 +110,10 @@ export function AddVisitSheet({
         onClick={onClose}
         className="absolute inset-0 bg-navy-900/40 backdrop-blur-[1px]"
       />
-      <div className="relative max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-[30rem] sm:rounded-3xl">
+      <div
+        data-guide="guide-add-sheet"
+        className="relative max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-[30rem] sm:rounded-3xl"
+      >
         <div className="mb-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[1.3rem] font-extrabold text-navy-900">일정 추가</p>

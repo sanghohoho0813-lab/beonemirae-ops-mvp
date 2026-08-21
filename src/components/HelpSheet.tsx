@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Lightbulb, MessageSquarePlus, PlayCircle } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
+import { FieldGuidePicker } from './FieldGuidePicker'
+import { openGuide } from '../lib/fieldGuides'
 import { useTour } from '../context/TourContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -40,6 +42,25 @@ export function HelpSheet({
   //  같이 뺍니다 — 하나만 있는데 "둘은 다른 내용입니다" 는 읽는 사람을
   //  헷갈리게 합니다.
   const showWhy = !configured || canAccess(role, '/why')
+
+  //  ── 현장 기사에게는 **업무별 짧은 안내**를 줍니다 (0069) ────────────────
+  //   예전에는 한 줄기 투어 하나뿐이라 「수거 입력만 다시 보고 싶다」가
+  //   안 됐습니다. 알고 싶은 것 하나를 골라 3~4단계로 끝냅니다.
+  if (role === 'field' && configured) {
+    return (
+      <BottomSheet open={open} title="도움말" onClose={onClose}>
+        <div data-help-sheet className="pb-2">
+          <FieldGuidePicker
+            onPick={(id) => {
+              onClose()
+              //  시트가 닫힌 뒤에 켭니다 — 바로 켜면 짚은 자리가 시트 뒤에 가립니다.
+              window.setTimeout(() => openGuide(id), 260)
+            }}
+          />
+        </div>
+      </BottomSheet>
+    )
+  }
 
   return (
     <BottomSheet open={open} title="도움말" onClose={onClose}>

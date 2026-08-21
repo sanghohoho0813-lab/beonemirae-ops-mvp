@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import { motion } from 'framer-motion'
@@ -23,6 +23,8 @@ import { TONE } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
+import { FieldGuide } from './FieldGuide'
+import { guideStore, openGuide } from '../lib/fieldGuides'
 import { MoreMenu } from './MoreMenu'
 import {
   COMPANY,
@@ -495,10 +497,12 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
 }
 
 // ── 모바일 하단 탭바 ─────────────────────────────────────────────────────────
-function NavTab({ active, icon: Icon, label, onClick }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void }) {
+function NavTab({ active, icon: Icon, label, onClick, guideAt }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void; guideAt?: string }) {
   return (
     <button
       onClick={onClick}
+      data-guide={guideAt}
+      data-nav-tab={label}
       className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5"
     >
       {active && (
@@ -559,6 +563,7 @@ function BottomNav({
               active={active}
               icon={item.icon}
               label={item.label}
+              guideAt={item.to === '/collection' ? 'guide-nav-collect' : undefined}
               onClick={() => {
                 onCloseSheets()
                 navigate(item.to)
@@ -585,6 +590,9 @@ export function Layout() {
   // 새로고침하면 언제나 모바일 화면으로 돌아옵니다.
   const [pcView, setPcView] = useState(false)
   usePcViewport(pcView)
+  //  지금 켜져 있는 사용 안내 (0069)
+  const store = useMemo(() => guideStore(), [])
+  const guideOn = useSyncExternalStore(store.subscribe, store.get, store.get)
 
   return (
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
@@ -666,6 +674,13 @@ export function Layout() {
 
       {/* 개발자에게 요청하기 — 더보기 시트 바깥에 두어야 시트가 닫혀도 남습니다 */}
       <DevRequestSheet open={devOpen} onClose={() => setDevOpen(false)} />
+
+      {/*
+        사용 안내 (0069) — **화면 위에** 뜹니다. 안내가 화면을 옮겨도 살아
+        있어야 해서 Layout 에 답니다. 현장 기사에게만 켭니다 —
+        사무실·관리자는 지금까지 쓰던 투어가 따로 있습니다.
+      */}
+      {role === 'field' && <FieldGuide guideId={guideOn} onClose={() => openGuide(null)} />}
 
       {/* PC 화면으로 보기 중일 때만 — 돌아가는 길을 항상 띄워 둡니다 */}
       {pcView && <PcViewBar onExit={() => setPcView(false)} />}

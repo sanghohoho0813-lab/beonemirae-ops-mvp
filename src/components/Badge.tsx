@@ -17,7 +17,9 @@ import type { ScheduleStatus, WasteType, PaymentStatus } from '../types'
 
 export function WasteBadge({ type }: { type: WasteType }) {
   const styles =
-    type === '의료폐기물' ? 'bg-rose-50 text-rose-500' : 'bg-accent-50 text-accent-700'
+    //  ⚠ 0069 — rose-500 은 rose-50 바탕에서 대비 3.3:1 입니다. 목록에
+    //    거래처마다 하나씩 붙어 이 화면 흐린 글자의 대부분이었습니다.
+    type === '의료폐기물' ? 'bg-rose-50 text-rose-700' : 'bg-accent-50 text-accent-800'
   const dot = type === '의료폐기물' ? 'bg-rose-400' : 'bg-accent-500'
   return (
     <span className={`pill min-w-0 !shrink !whitespace-normal ${styles}`}>
@@ -28,10 +30,10 @@ export function WasteBadge({ type }: { type: WasteType }) {
 }
 
 const statusStyles: Record<ScheduleStatus, string> = {
-  예정: 'bg-navy-100 text-navy-500',
-  완료: 'bg-emerald-50 text-emerald-600',
-  지연: 'bg-amber-50 text-amber-600',
-  긴급: 'bg-rose-50 text-rose-500',
+  예정: 'bg-navy-100 text-navy-600',
+  완료: 'bg-emerald-50 text-emerald-700',
+  지연: 'bg-amber-50 text-amber-700',
+  긴급: 'bg-rose-50 text-rose-700',
 }
 
 export function StatusBadge({ status }: { status: ScheduleStatus }) {

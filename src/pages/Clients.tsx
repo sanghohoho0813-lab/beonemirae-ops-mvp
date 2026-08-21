@@ -141,7 +141,7 @@ export function Clients() {
       <div className="mb-4">
         <div className="mb-1.5 flex items-center justify-between px-1">
           <p className="text-[1.03rem] font-bold text-navy-700">거래처 데이터 세트</p>
-          {clientSet > 0 && <span className="text-[0.95rem] font-medium text-navy-400">현재 시연 데이터 기준</span>}
+          {clientSet > 0 && <span className="text-[0.95rem] font-medium text-navy-500">현재 시연 데이터 기준</span>}
         </div>
         <div className="flex gap-1 rounded-2xl bg-navy-50 p-1">
           {CLIENT_SETS.map((s) => {
@@ -191,14 +191,18 @@ export function Clients() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
-        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+        <ul data-guide="guide-client-list" className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {filtered.map((c, ci) => {
             const unpaid = clientOutstanding(data, c.id) > 0
             // 이 거래처의 최우선 추천 (수거이력·자재·청구 데이터 기반)
             const topAction = nextActionsFor(data, c)[0]
             const meta = topAction ? actionMeta[topAction.kind] : null
             return (
-              <li key={c.id} data-tour={ci === 0 ? 'client-list' : undefined}>
+              <li
+                key={c.id}
+                data-tour={ci === 0 ? 'client-list' : undefined}
+                data-guide={ci === 0 ? 'guide-client-first' : undefined}
+              >
                 <button onClick={() => navigate(`/clients/${c.id}`)} className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -212,7 +216,9 @@ export function Clients() {
                     </div>
                     <p className="mt-1 break-keep t-caption">{c.manager} · {c.collectionCycle}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-rose-500">의료</span>}
+                      {/*  ⚠ 0069 — rose-500/rose-50 은 대비 3.3:1, 글자도 16px 로 작았습니다.
+                           거래처마다 하나씩 붙어 이 화면에서 가장 많이 보이는 글자입니다. */}
+                      {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.95rem] font-bold text-rose-700">의료</span>}
                       {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-teal-600">기저귀</span>}
                       {unpaid && showMoney && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-600">미수금</span>}
                     </div>

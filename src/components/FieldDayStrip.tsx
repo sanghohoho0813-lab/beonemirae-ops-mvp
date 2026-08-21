@@ -90,7 +90,10 @@ export function FieldDayStrip({
           >
             <span
               className={`text-[0.9rem] font-bold ${
-                on ? 'text-white/70' : dow === 0 ? 'text-rose-400' : dow === 6 ? 'text-sky-500' : 'text-navy-400'
+                //  ⚠ 0069 — 요일 글자가 navy-400 이라 대비가 3.4:1 이었습니다.
+                //    날짜 띠 한 줄에 스물아홉 개라, 이 화면에서 흐린 글자의
+                //    대부분이 여기였습니다. 기준(4.5:1)을 넘는 색으로 올립니다.
+                on ? 'text-white' : dow === 0 ? 'text-rose-600' : dow === 6 ? 'text-sky-700' : 'text-navy-500'
               }`}
             >
               {isToday ? '오늘' : DOW[dow]}
