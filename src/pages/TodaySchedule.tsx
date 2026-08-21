@@ -21,6 +21,8 @@ import { ScheduleCalendar } from '../components/ScheduleCalendar'
 import { UpcomingVisits } from '../components/UpcomingVisits'
 import { FieldDayStrip } from '../components/FieldDayStrip'
 import { AddVisitSheet } from '../components/AddVisitSheet'
+import { SharedTruck } from '../components/SharedTruck'
+import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
@@ -281,6 +283,7 @@ export function TodaySchedule() {
         넓은 화면은 예전 네비를 그대로 씁니다 — 마우스로는 화살표가 편합니다.
       */}
       <div className="mb-3 sm:hidden">
+        <CarNotice />
         <div className="mb-2 flex items-center gap-2">
           <p data-day-title className="text-[1.15rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
           {date !== today() && (
@@ -576,6 +579,10 @@ export function TodaySchedule() {
           <CalendarPlus size={24} strokeWidth={2.4} />
         </button>
       )}
+
+      {/*  3.5톤 공용차 — 본사 앞에 있고, 필요한 분이 잡아서 씁니다 (0070).
+           누가 잡았는지 병원 빼고 다 보입니다. */}
+      <SharedTruck date={date} />
 
       {/*  앞으로 갈 곳 (0067) — 종이·카톡 없이 앞일을 앱에서 봅니다.
            달력보다 위에 둡니다: 기사님이 알고 싶은 것은 「며칠에 어디」이지

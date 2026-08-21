@@ -260,6 +260,10 @@ interface DataContextValue {
     /** 방문 목적 (0067) — 안 주면 서버가 「정기수거」로 봅니다 */
     purpose?: VisitPurpose
   }) => Promise<{ ok: boolean; error: string | null }>
+  /** 공용 차량을 그 날짜로 잡습니다 (0070) */
+  reserveVehicle: (vehicleId: string, date: string, note?: string) => Promise<{ ok: boolean; error: string | null }>
+  /** 잡아 둔 예약을 무릅니다 (0070) */
+  releaseVehicle: (id: string) => Promise<{ ok: boolean; error: string | null }>
   /** 사전 등록(초대) 만들기·고치기 (0056). 비밀번호는 본인이 정합니다 */
   saveStaffInvite: (input: {
     email: string
@@ -1842,6 +1846,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [live, runLive, reload],
   )
 
+  //  ── 공용 차량 예약 (0070) ───────────────────────────────────────────────
+  //   판단(지난 날짜·이미 잡힘·본인 것인지)은 전부 서버에 있습니다.
+  //   화면에서 한 번 더 쓰지 않습니다 — 두 곳에 두면 언젠가 서로 달라집니다.
+  const reserveVehicleFn = useCallback(
+    async (vehicleId: string, date: string, note = '') => {
+      if (!live) return { ok: false, error: '차량 예약은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.reserveVehicle(vehicleId, date, note)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
+  const releaseVehicleFn = useCallback(
+    async (id: string) => {
+      if (!live) return { ok: false, error: '차량 예약은 실제 운영 모드에서만 됩니다.' }
+      const r = await runLive(async () => {
+        await repo.releaseVehicle(id)
+      })
+      if (r.ok) await reload()
+      return { ok: r.ok, error: r.error ?? null }
+    },
+    [live, runLive, reload],
+  )
+
   //  ── 옮기기·무르기 (0059) ───────────────────────────────────────────────
   //
   //   판단(완료 여부·지난 날짜·겹침·이유 필수)은 전부 서버에 있습니다.
@@ -2231,6 +2262,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeHoliday,
       setClientDrivers,
       bookVisit,
+      reserveVehicle: reserveVehicleFn,
+      releaseVehicle: releaseVehicleFn,
       moveVisit,
       updateVisit,
       submitScheduleFeedback,
@@ -2311,6 +2344,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeHoliday,
       setClientDrivers,
       bookVisit,
+      reserveVehicleFn,
+      releaseVehicleFn,
       moveVisit,
       updateVisit,
       submitScheduleFeedback,

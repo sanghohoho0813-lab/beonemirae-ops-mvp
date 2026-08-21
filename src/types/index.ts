@@ -306,6 +306,25 @@ export interface Vehicle {
   driver: string // 담당자
 }
 
+/**
+ *  공용 차량 예약 (0070) — 3.5톤 트럭은 본사 앞에 서 있고, 필요한 분이
+ *  가서 몰고 나갑니다. 그래서 **누가 언제 쓰는지**를 서로 봐야 합니다.
+ *
+ *  ⚠ 하루 단위입니다. 시간까지 쪼개면 겹침을 따지는 규칙이 필요한데,
+ *    현장에서 그렇게까지 정밀하게 쓰지 않습니다.
+ *  ⚠ 병원 계정에는 내려오지 않습니다 — 우리 차 사정은 병원이 알 일이
+ *    아닙니다. 화면이 아니라 **서버가** 거릅니다.
+ */
+export interface VehicleReservation {
+  id: string
+  vehicleId: string
+  date: string // YYYY-MM-DD
+  profileId: string
+  /** 잡은 사람 이름 — 서버가 함께 내려 줍니다 */
+  who: string
+  note: string
+}
+
 // ── 수거일정 ─────────────────────────────────────────────────────────────────
 export interface Schedule {
   id: string
@@ -527,6 +546,8 @@ export interface StaffInvite {
 export interface AppData {
   clients: Client[]
   vehicles: Vehicle[]
+  /** 공용 차량 예약 (0070). 판 69 이하이거나 병원 계정이면 빈 배열입니다 */
+  vehicleReservations: VehicleReservation[]
   schedules: Schedule[]
   materials: MaterialSupply[]
   payments: Payment[]
@@ -814,6 +835,7 @@ export const EMPTY_EXPERIMENT: ExperimentConfig = { startDate: null }
 export const EMPTY_APP_DATA: AppData = {
   clients: [],
   vehicles: [],
+  vehicleReservations: [],
   schedules: [],
   materials: [],
   payments: [],

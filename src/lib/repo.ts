@@ -548,6 +548,18 @@ export async function loadAppData(): Promise<AppData> {
   //    예전에는 insured_from 으로 정렬했는데, 0064 가 그 칸을 잠그면
   //    **정렬만으로도** 요청이 거절됩니다(칸을 안 읽어도 정렬에 쓰면 권한이
   //    필요합니다). 이름으로 정렬합니다.
+  //  ── 공용 차량 예약 (0070) ───────────────────────────────────────────────
+  //   ⚠ 판 69 이하에는 이 표가 없습니다. soft() 가 「없는 표」를 삼키고 빈
+  //     배열을 돌려주므로, DB 를 아직 안 올리셨어도 앱이 안 깨집니다.
+  //   ⚠ 병원 계정에는 서버가 아무것도 안 줍니다(RLS). 화면에서 거르지
+  //     않습니다 — 화면에서 거르면 「화면엔 없는데 서버는 주더라」가 됩니다.
+  const reservations = await soft(
+    async () =>
+      pageAll((f, t) =>
+        sb.from('vehicle_reservations').select('id, vehicle_id, date, profile_id, note').order('date').range(f, t)),
+    [] as Row[],
+  )
+
   const staff = await soft(
     async () => pageAll((f, t) => sb.from('staff').select(STAFF_COLS).order('name').range(f, t)),
     [] as Row[],
@@ -682,6 +694,17 @@ export async function loadAppData(): Promise<AppData> {
     retiredClients: applyTerms(clients.filter((c) => !c.active).map(toClient), billingTerms),
     vehicles: vehicles.filter((v) => v.active).map(toVehicle),
     retiredVehicles: vehicles.filter((v) => !v.active).map(toVehicle),
+    //  ⚠ 잡은 사람 **이름**은 여기서 못 붙입니다 — 현장 계정은 남의 프로필을
+    //    못 읽습니다. 화면에서 「내 예약 / 다른 분 예약」으로만 가릅니다.
+    //    이름을 지어내지 않습니다.
+    vehicleReservations: reservations.map((r) => ({
+      id: String(r.id),
+      vehicleId: String(r.vehicle_id),
+      date: String(r.date),
+      profileId: String(r.profile_id),
+      who: '',
+      note: String(r.note ?? ''),
+    })),
     receipts: receipts.map(
       (r): PaymentReceipt => ({
         id: r.id,
@@ -2385,6 +2408,20 @@ export async function unassignScheduleVehicles(ids: string[]): Promise<{ cleared
 // ── 청구 확정 · DB 버전 (0032) ──────────────────────────────────────────────
 
 /** 앱이 기대하는 DB 스키마 버전 — 마이그레이션을 추가할 때마다 함께 올립니다 */
+/** 공용 차량을 그 날짜로 잡습니다 (0070) */
+export async function reserveVehicle(vehicleId: string, date: string, note = ''): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('reserve_vehicle', { p_vehicle_id: vehicleId, p_date: date, p_note: note })
+  if (error) throw new Error(error.message)
+}
+
+/** 잡아 둔 예약을 무릅니다 (0070) */
+export async function releaseVehicle(id: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('release_vehicle', { p_id: id })
+  if (error) throw new Error(error.message)
+}
+
 export const EXPECTED_SCHEMA_VERSION = 64
 
 /**

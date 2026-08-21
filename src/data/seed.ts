@@ -440,6 +440,7 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
   const clients = buildClients(demoCount)
   return {
     clients,
+    vehicleReservations: [],
     vehicles: seedVehicles,
     schedules: buildSchedules(clients, base),
     materials: buildMaterials(clients, base),
@@ -466,6 +467,7 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
   const base = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   return {
     clients,
+    vehicleReservations: [],
     vehicles: seedVehicles,
     schedules: buildSchedules(clients, base),
     materials: buildMaterials(clients, base),
