@@ -1,4 +1,5 @@
 import type {
+  VisitPurpose,
   AppData,
   Client,
   ClientRequest,
@@ -1236,6 +1237,11 @@ export async function bookVisit(input: {
   memo?: string
   expected?: number | null
   requestId?: string | null
+  /**
+   *  방문 목적 (0067). 안 주면 서버가 「정기수거」로 봅니다 —
+   *  판 66 이하에서는 이 칸이 없으므로 **보내지 않습니다**(아래 참고).
+   */
+  purpose?: VisitPurpose
 }): Promise<{ id: string; date: string; clientName: string; requestUpdated: boolean }> {
   const sb = need()
   const { data, error } = await sb.rpc('book_visit', {
@@ -1247,6 +1253,9 @@ export async function bookVisit(input: {
     p_memo: input.memo ?? '',
     p_expected: input.expected ?? null,
     p_request_id: input.requestId || null,
+    //  ⚠ 판 66 이하에는 이 인자가 없습니다. 늘 보내면 「그런 함수 없다」로
+    //    방문 예약이 통째로 죽습니다. **줄 때만** 넣습니다.
+    ...(input.purpose ? { p_purpose: input.purpose } : {}),
   })
   if (error) throw new Error(error.message)
   const r = (data ?? {}) as Record<string, unknown>

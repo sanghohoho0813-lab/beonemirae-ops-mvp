@@ -142,6 +142,13 @@ comment on policy profiles_update_self on public.profiles is
 --     · 새로 만드는 줄의 origin ('system' → 기사면 'field')
 --   나머지(중복 방지·구분 검사·날짜 범위·차량 검사·요청 연결)는 그대로입니다.
 
+--  ⚠⚠ **먼저 옛 함수를 지웁니다.** 인자를 하나 늘리면 파라미터 목록이 달라
+--     `create or replace` 가 아니라 **덧붙이기(overload)** 가 됩니다. 그러면
+--     8인자짜리와 9인자짜리가 같이 남아, 부를 때
+--       ERROR: function public.book_visit(...) is not unique
+--     로 **방문 예약이 통째로 죽습니다.** 격리 DB 에서 실제로 그렇게 났습니다.
+drop function if exists public.book_visit(uuid, date, text, text, uuid, text, integer, uuid);
+
 create or replace function public.book_visit(
   p_client_id   uuid,
   p_date        date,
@@ -150,7 +157,13 @@ create or replace function public.book_visit(
   p_vehicle_id  uuid    default null,
   p_memo        text    default '',
   p_expected    integer default null,
-  p_request_id  uuid    default null
+  p_request_id  uuid    default null,
+  --  0067 — 방문 목적. **새 칸을 만들지 않습니다.** 이미 있는 두 칸에 담습니다.
+  --    정기수거 → status '예정'  · is_additional false   (지금까지와 같음)
+  --    추가수거 → status '예정'  · is_additional **true**
+  --    긴급수거 → status **'긴급'** · is_additional false
+  --    기타     → 정기와 같게 두고 메모에 적습니다
+  p_purpose     text    default '정기수거'
 )
 returns jsonb
 language plpgsql
@@ -165,6 +178,9 @@ declare
   v_kg      integer := greatest(0, coalesce(p_expected, 0));
   v_memo    text := btrim(coalesce(p_memo, ''));
   v_time    text := btrim(coalesce(p_time, ''));
+  v_purpose text := coalesce(nullif(btrim(p_purpose), ''), '정기수거');
+  v_status  text;
+  v_extra   boolean;
   v_id      uuid;
 begin
   --  「누가」는 감사기록 트리거(0015)가 서버에서 직접 적습니다.
@@ -191,6 +207,14 @@ begin
   if p_client_id is null or p_date is null then
     raise exception '거래처와 날짜를 모두 정해 주세요.' using errcode = 'P0001';
   end if;
+
+  --  ⚠ 모르는 목적을 조용히 「정기」로 바꾸지 않습니다. 화면이 잘못 보내면
+  --    그대로 알려 줘야 고칩니다 — 조용히 넘기면 몇 달 뒤에 발견합니다.
+  if v_purpose not in ('정기수거', '추가수거', '긴급수거', '기타') then
+    raise exception '방문 목적이 올바르지 않습니다: %', v_purpose using errcode = 'P0001';
+  end if;
+  v_status := case when v_purpose = '긴급수거' then '긴급' else '예정' end;
+  v_extra  := (v_purpose = '추가수거');
 
   --  거래처 행을 잠그고 시작합니다 (0040 과 같은 이유). 두 사람이 같은
   --  순간에 같은 날을 잡아도 하나만 통과합니다.
@@ -293,12 +317,12 @@ begin
     (date, client_id, waste_type, vehicle_id, scheduled_time, status,
      expected_amount, actual_amount, memo, origin, is_additional, booked_at)
   values
-    (p_date, p_client_id, p_waste_type, p_vehicle_id, v_time, '예정',
+    (p_date, p_client_id, p_waste_type, p_vehicle_id, v_time, v_status,
      v_kg, null, v_memo,
      --  0067 — 누가 잡았는지 남깁니다. 사무실이 짠 확정 일정('system')과
      --  기사님이 스스로 잡은 것('field')을 화면이 구별해야 합니다.
      case when public.is_staff() then 'system' else 'field' end,
-     false, now())
+     v_extra, now())
   on conflict (client_id, date, waste_type)
     --  0059 — 색인에 canceled_at 조건이 붙었습니다. 여기 조건이 색인과
   --  **글자 하나까지 같아야** 합니다. 안 그러면 「제약을 찾을 수 없다」로

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -11,7 +11,7 @@ import { NextVisitCard } from '../components/NextVisit'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
-import { EmptyState } from '../components/ui'
+
 import { LoadGate } from '../components/LoadState'
 import { DeadlineBanner } from '../components/DeadlineBanner'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
@@ -19,6 +19,9 @@ import { BookVisitModal } from '../components/BookVisit'
 import { MoveVisitModal } from '../components/MoveVisit'
 import { ScheduleCalendar } from '../components/ScheduleCalendar'
 import { UpcomingVisits } from '../components/UpcomingVisits'
+import { FieldDayStrip } from '../components/FieldDayStrip'
+import { AddVisitSheet } from '../components/AddVisitSheet'
+import { useSchemaAtLeast } from '../lib/schemaGate'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
@@ -46,6 +49,21 @@ function defaultContainers(wasteType: WasteType, amount: number): ContainerBreak
   return { corrugated: Math.max(1, Math.round(amount / 45)), plastic: 1, bag: 0, etc: 0 }
 }
 
+/**
+ *  저장된 일정에서 **방문 목적**을 되읽습니다 (0068).
+ *
+ *  ⚠ 목적을 따로 저장하는 칸은 없습니다. 넣을 때 두 칸으로 나눠 담았으니
+ *    (status '긴급' · is_additional true) 여기서도 그 두 칸으로 읽습니다.
+ *    「표시를 위해 한 번 더 저장」하지 않습니다.
+ *  ⚠ 정기수거는 `null` — 대부분이 정기라, 적으면 모든 줄에 같은 글자가
+ *    붙어 아무 뜻이 없어집니다.
+ */
+function purposeOf(s: Schedule): '추가수거' | '긴급수거' | null {
+  if (s.status === '긴급') return '긴급수거'
+  if ((s as { isAdditional?: boolean }).isAdditional) return '추가수거'
+  return null
+}
+
 export function TodaySchedule() {
   const { data, clientById, completeSchedule, completeCollection, notesFor } = useData()
   const { configured, role } = useAuth()
@@ -58,8 +76,13 @@ export function TodaySchedule() {
   const canGoMaterials = !configured || canAccess(role, '/materials')
   const navigate = useNavigate()
   const [date, setDate] = useState(today())
-  //  폰에서 달력은 기본 접힘입니다 (아래 주석 참고)
-  const [calOpen, setCalOpen] = useState(false)
+  //  일정 추가 시트 (0068)
+  const [addOpen, setAddOpen] = useState(false)
+  //  ⚠ 기사님에게 ＋ 를 열어 주려면 **서버 판이 67 이상**이어야 합니다.
+  //    66 이하에서는 book_visit 이 사무실·관리자 전용이라, 눌러도 거절당합니다.
+  //    사무실·관리자는 지금까지처럼 판과 상관없이 잡습니다.
+  const fieldCanAdd = useSchemaAtLeast(67) === true && role === 'field'
+  const canAddVisit = canBook || fieldCanAdd
 
   // 완료된 건 수정 (기존 동작 유지)
   const [editTarget, setEditTarget] = useState<Schedule | null>(null)
@@ -250,8 +273,31 @@ export function TodaySchedule() {
         <RequestBanner requests={pendingRequests} onGo={() => navigate('/requests')} className="mb-4 hidden lg:grid" />
       )}
 
-      {/* 날짜 네비게이션 */}
-      <div className="card mb-4 flex items-center justify-between p-2">
+      {/*
+        ── 날짜 띠 (0068) — 폰에서 날짜 네비 대신 ──────────────────────────
+        예전에는 화살표 두 개와 「오늘로 이동」뿐이라, 며칠 뒤에 무엇이
+        있는지 보려면 하루씩 눌러야 했습니다. 띠는 한 번 밀면 2~4주가
+        지나가고, **일정이 있는 날에는 건수가 숫자로** 붙습니다.
+        넓은 화면은 예전 네비를 그대로 씁니다 — 마우스로는 화살표가 편합니다.
+      */}
+      <div className="mb-3 sm:hidden">
+        <div className="mb-2 flex items-center gap-2">
+          <p data-day-title className="text-[1.15rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
+          {date !== today() && (
+            <button
+              data-go-today
+              onClick={() => setDate(today())}
+              className="ml-auto min-h-[2.5rem] rounded-xl bg-teal-50 px-3 text-[1rem] font-extrabold text-teal-700 transition active:scale-95"
+            >
+              오늘로
+            </button>
+          )}
+        </div>
+        <FieldDayStrip data={data} selected={date} onPick={setDate} />
+      </div>
+
+      {/* 날짜 네비게이션 (넓은 화면) */}
+      <div className="card mb-4 hidden items-center justify-between p-2 sm:flex">
         <button
           className="flex h-11 w-11 items-center justify-center rounded-2xl bg-navy-50 text-navy-500 transition active:scale-95"
           onClick={() => setDate((d) => shiftDate(d, -1))}
@@ -283,11 +329,28 @@ export function TodaySchedule() {
         <LoadGate
           loadingTitle="오늘 일정을 불러오는 중입니다"
           empty={
-            <EmptyState
-              icon={CalendarX2}
-              title="등록된 일정이 없어요"
-              subtitle="다른 날짜를 확인하거나 수거 입력에서 등록하세요."
-            />
+            //  ⚠ 빈 화면에 「없어요」만 띄우면 기사님은 **거기서 멈춥니다.**
+            //    없으면 다음에 무엇을 할 수 있는지 같이 줍니다 (대표님 요청).
+            <div data-empty-day className="card p-6 text-center">
+              <CalendarX2 size={34} className="mx-auto text-navy-200" strokeWidth={1.8} />
+              <p className="mt-3 text-[1.15rem] font-extrabold text-navy-900">
+                {date === today() ? '오늘은 잡힌 일정이 없어요' : `${prettyDate(date)}에 잡힌 일정이 없어요`}
+              </p>
+              {canAddVisit ? (
+                <button
+                  data-empty-add
+                  onClick={() => setAddOpen(true)}
+                  className="btn-primary mx-auto mt-4 !text-[1.08rem]"
+                  style={{ minHeight: 48 }}
+                >
+                  <CalendarPlus size={18} strokeWidth={2.4} /> 이 날 일정 추가
+                </button>
+              ) : (
+                <p className="mt-2 break-keep text-[1.02rem] text-navy-400">
+                  다른 날짜를 확인하거나 수거 입력에서 등록하세요.
+                </p>
+              )}
+            </div>
           }
         />
       ) : (
@@ -325,9 +388,30 @@ export function TodaySchedule() {
                     >
                       {client?.name ?? '알 수 없는 거래처'}
                     </span>
-                    <span className="t-muted mt-0.5 block break-keep">
-                      {s.wasteType} · {weight(s.actualAmount ?? s.expectedAmount)}
-                      {s.memo ? ' · 특이사항 있음' : ''}
+                    {/*
+                      ── 둘째 줄은 **방문 목적**부터 (0068) ─────────────────
+                      대표님 말씀: "병원명, 예정시간, 방문목적 정도만 우선
+                      노출". 예전에는 구분·예상량이 먼저였는데, 기사님이
+                      줄을 훑을 때 알아야 하는 건 「이건 무슨 방문인가」입니다.
+                      ⚠ 정기수거는 **적지 않습니다.** 대부분이 정기라, 적으면
+                        모든 줄에 같은 글자가 붙어 아무 뜻이 없어집니다.
+                        평소와 다른 것만 눈에 띄게 합니다.
+                    */}
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                      {purposeOf(s) && (
+                        <span
+                          data-visit-purpose={s.id}
+                          className={`pill ${
+                            purposeOf(s) === '긴급수거' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {purposeOf(s)}
+                        </span>
+                      )}
+                      <span className="t-muted break-keep">
+                        {s.wasteType} · {weight(s.actualAmount ?? s.expectedAmount)}
+                        {s.memo ? ' · 특이사항 있음' : ''}
+                      </span>
                     </span>
                   </span>
                   {done ? (
@@ -463,6 +547,31 @@ export function TodaySchedule() {
       {/*  달력 — 하루씩 화살표로 넘기지 않아도 한 달이 보입니다 (대표님 요청).
            날짜를 누르면 위 목록이 그날로 바뀌고, 앞으로 올 날의 ＋ 로 그
            자리에서 방문을 잡습니다. */}
+      {/*  일정 추가 시트 — 빈 날 CTA·떠 있는 ＋ 둘 다 이것을 엽니다 */}
+      {canAddVisit && (
+        <AddVisitSheet
+          date={date}
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          onDone={(d) => setDate(d)}
+        />
+      )}
+
+      {/*
+        떠 있는 ＋ (폰) — 어느 날을 보고 있든 한 번에 잡습니다.
+        ⚠ 아래 메뉴(약 64px)를 피해 앉힙니다. 겹치면 ＋ 를 누를 수 없습니다.
+      */}
+      {canAddVisit && list.length > 0 && (
+        <button
+          data-add-fab
+          onClick={() => setAddOpen(true)}
+          aria-label="일정 추가"
+          className="fixed bottom-[5.5rem] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-navy-900 text-white shadow-lg transition active:scale-95 sm:hidden"
+        >
+          <CalendarPlus size={24} strokeWidth={2.4} />
+        </button>
+      )}
+
       {/*  앞으로 갈 곳 (0067) — 종이·카톡 없이 앞일을 앱에서 봅니다.
            달력보다 위에 둡니다: 기사님이 알고 싶은 것은 「며칠에 어디」이지
            「8월 달력」이 아닙니다. */}
@@ -475,24 +584,15 @@ export function TodaySchedule() {
         화면의 대부분이 달력이었습니다. 날짜를 옮기는 것은 위 화살표로 되고,
         달력이 필요한 날에는 한 번 눌러서 폅니다. 넓은 화면은 그대로 둡니다.
       */}
-      <div className="mt-4">
-        <button
-          type="button"
-          data-calendar-toggle
-          onClick={() => setCalOpen((v) => !v)}
-          className="card flex min-h-[3.25rem] w-full items-center gap-2 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
-        >
-          <CalendarDays size={18} strokeWidth={2.3} className="shrink-0 text-navy-400" />
-          <span className="text-[1.07rem] font-extrabold text-navy-800">앞으로 갈 곳 · 달력으로 보기</span>
-          <ChevronDown
-            size={17}
-            strokeWidth={2.4}
-            className={`ml-auto shrink-0 text-navy-400 transition ${calOpen ? 'rotate-180' : ''}`}
-          />
-        </button>
-        <div data-calendar-body className={`${calOpen ? 'mt-3' : 'hidden'} sm:mt-0 sm:block`}>
-          <ScheduleCalendar selected={date} onPick={setDate} />
-        </div>
+      {/*
+        ── 폰에서는 한 달 달력을 아예 안 그립니다 (0068) ──────────────────────
+        위 **날짜 띠**가 같은 일을 더 잘 합니다 — 4주가 한 번에 밀려 지나가고,
+        일정이 있는 날에는 건수가 숫자로 붙습니다. 달력까지 두면 「앞으로 갈
+        곳」이 두 줄로 겹쳐 보이고, 기사님은 둘 중 무엇이 맞는지 고민합니다.
+        넓은 화면(사무실)은 지금까지처럼 한 달 달력을 그대로 씁니다.
+      */}
+      <div data-calendar-body className="mt-4 hidden sm:block">
+        <ScheduleCalendar selected={date} onPick={setDate} />
       </div>
 
       {/* 병원 요청은 사무실 업무라, 좁은 화면에서는 일정 아래로 내립니다 */}

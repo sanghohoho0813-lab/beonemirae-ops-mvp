@@ -30,6 +30,20 @@ export type StorageSize = '큼' | '보통' | '작음'
 /** 수거일정 상태 */
 export type ScheduleStatus = '예정' | '완료' | '지연' | '긴급'
 
+/**
+ *  방문 목적 (0067) — 기사님이 일정을 잡을 때 고릅니다.
+ *
+ *  ⚠ **새 칸이 아닙니다.** 이미 있는 두 칸으로 옮겨 담습니다 —
+ *    정기수거 → status '예정' · is_additional false
+ *    추가수거 → is_additional **true** (청구서에 「추가 수거」라고 적히고,
+ *               **금액은 안 바뀝니다** — 수량×단가 그대로입니다)
+ *    긴급수거 → status **'긴급'**
+ *    기타     → 정기와 같게 두고 메모에 적습니다
+ */
+export type VisitPurpose = '정기수거' | '추가수거' | '긴급수거' | '기타'
+
+export const VISIT_PURPOSES: VisitPurpose[] = ['정기수거', '추가수거', '긴급수거', '기타']
+
 /** 입금상태 */
 export type PaymentStatus = '입금완료' | '미수금' | '확인필요' | '취소'
 

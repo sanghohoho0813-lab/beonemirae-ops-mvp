@@ -26,6 +26,7 @@ import type {
   Product,
   ProductOrderStatus,
   WasteType,
+  VisitPurpose,
 } from '../types'
 import { EMPTY_APP_DATA } from '../types'
 import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
@@ -256,6 +257,8 @@ interface DataContextValue {
     memo?: string
     expected?: number | null
     requestId?: string | null
+    /** 방문 목적 (0067) — 안 주면 서버가 「정기수거」로 봅니다 */
+    purpose?: VisitPurpose
   }) => Promise<{ ok: boolean; error: string | null }>
   /** 사전 등록(초대) 만들기·고치기 (0056). 비밀번호는 본인이 정합니다 */
   saveStaffInvite: (input: {
@@ -1827,6 +1830,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       memo?: string
       expected?: number | null
       requestId?: string | null
+      purpose?: VisitPurpose
     }) => {
       if (!live) return { ok: false, error: '방문 예약은 실제 운영 모드에서만 됩니다.' }
       const r = await runLive(async () => {
