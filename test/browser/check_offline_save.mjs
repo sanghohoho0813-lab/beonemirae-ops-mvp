@@ -117,4 +117,87 @@ async function run(mode) {
 }
 
 for (const m of ['off', 'lost-reply']) await run(m)
+
+// ── 일정 추가도 같은 갈래를 겪습니다 ───────────────────────────────────────
+//
+//   「이 날로 잡기」를 지하에서 누르고 엘리베이터를 타면, 요청은 닿았는데
+//   답만 못 받습니다. 다시 누르면 서버가 「이미 잡혀 있습니다」로 막는데,
+//   그건 **그 날 방문이 잡혀 있다는 뜻**입니다. 빨간 실패로 뜨면 안 됩니다.
+const day = (n) => { const d = new Date(`${T}T00:00:00`); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE') }
+async function runBook(mode) {
+  const reached = []; const stored = []
+  let net = 'on'
+  const target = day(4)
+  const state = { reqs: 0, writes: [], profile: W.profileFor('field'),
+    schedules: [{ id: 't1', date: T, client_id: C1, waste_type: '의료폐기물', vehicle_id: null,
+      scheduled_time: '09:00', status: '예정', expected_amount: 120, actual_amount: null, completed_at: null,
+      memo: '', origin: 'system', canceled_at: null, is_additional: false,
+      created_at: `${T}T00:00:00Z`, updated_at: `${T}T00:00:00Z` }] }
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  W.wire(ctx, state)
+  await ctx.route('**/rpc/book_visit*', async (r) => {
+    if (net === 'off') return r.abort('internetdisconnected')
+    const q = JSON.parse(r.request().postData() ?? '{}')
+    reached.push(q)
+    //  서버 규칙 그대로 — 같은 날 같은 구분이 이미 있으면 거절 (0058)
+    const dup = state.schedules.some((s) => s.date === q.p_date && s.client_id === q.p_client_id
+      && s.waste_type === q.p_waste_type && !s.canceled_at)
+    if (dup) {
+      if (net === 'lost-reply') return r.abort('timedout')
+      return r.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'P0001',
+        message: `${F.clients[0].name}의 ${q.p_date} 의료폐기물 방문은 이미 잡혀 있습니다. 같은 날 한 번 더 가야 하면, 그날 수거 입력에서 「추가 수거」로 기록해 주세요.` }) })
+    }
+    state.schedules = [...state.schedules, { id: 'bk1', date: q.p_date, client_id: q.p_client_id,
+      waste_type: q.p_waste_type, vehicle_id: null, scheduled_time: q.p_time, status: '예정',
+      expected_amount: 0, actual_amount: null, completed_at: null, memo: '', origin: 'field',
+      canceled_at: null, is_additional: false, created_at: `${q.p_date}T00:00:00Z`, updated_at: `${q.p_date}T00:00:00Z` }]
+    stored.push(q)
+    if (net === 'lost-reply') return r.abort('timedout')
+    return r.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id: 'bk1', date: q.p_date, clientName: F.clients[0].name, requestUpdated: false }) })
+  })
+  const p = await ctx.newPage()
+  await p.addInitScript(([k, u]) => window.localStorage.setItem(k, JSON.stringify({
+    access_token: 't', token_type: 'bearer', expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u,
+  })), ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: state.profile.email, app_metadata: {}, user_metadata: {} }])
+  await p.goto(`${W.BASE}/`, { waitUntil: 'domcontentloaded' })
+  await W.settle(p, state, 800, 30000)
+  await p.locator(`[data-day="${target}"]`).dispatchEvent('click')
+  await p.waitForTimeout(900)
+  const sel = (await p.locator('[data-empty-add]').count()) ? '[data-empty-add]' : '[data-add-fab]'
+  await p.locator(sel).dispatchEvent('click')
+  await p.waitForTimeout(800)
+  await p.selectOption('[data-add-visit-client]', C1)
+
+  net = mode
+  await p.locator('[data-add-visit-save]').dispatchEvent('click')
+  await p.waitForTimeout(3500)
+  const label = `일정 추가 · ${mode === 'off' ? '아예 안 나감' : '나갔는데 답이 안 옴'}`
+  const mid = await p.evaluate(() => ({
+    sheet: !!document.querySelector('[data-add-visit]'),
+    done: !!document.querySelector('[data-add-visit-done]'),
+    said: /네트워크|통신|연결할 수 없|잡지 못/.test(document.body.innerText ?? ''),
+  }))
+  ok(mid.sheet, `${label} — 시트가 안 닫힘 (고른 것이 안 날아감)`)
+  ok(!mid.done, `${label} — **안 잡혔는데 잡혔다고 하지 않음**`)
+  ok(mid.said, `${label} — 무슨 일인지 말해 줌`)
+
+  net = 'on'
+  await p.locator('[data-add-visit-save]').dispatchEvent('click').catch(() => {})
+  await p.waitForTimeout(3500)
+  const fin = await p.evaluate(() => ({
+    done: !!document.querySelector('[data-add-visit-done]'),
+    bar: !!document.querySelector('[data-sync-error]'),
+    err: (document.querySelector('[data-add-visit-error]')?.textContent ?? '').trim(),
+    line: (document.querySelector('[data-add-visit-done-line]')?.textContent ?? '').trim(),
+  }))
+  ok(stored.length === 1, `${label} — **실제로 잡힌 것은 한 건뿐**`, `닿은 요청 ${reached.length}건 · 잡힘 ${stored.length}건`)
+  ok(fin.done, `${label} — **잡혔다는 것을 알려 줌**`, fin.line)
+  ok(!fin.bar, `${label} — 빨간 띠가 안 남음`)
+  ok(fin.err === '', `${label} — 빨간 오류글이 안 남음`, fin.err.slice(0, 40))
+  await ctx.close()
+}
+for (const m of ['off', 'lost-reply']) await runBook(m)
+
 await b.close()

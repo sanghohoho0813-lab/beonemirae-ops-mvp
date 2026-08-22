@@ -36,12 +36,12 @@ export function AddVisitSheet({
   onClose: () => void
   onDone?: (date: string) => void
 }) {
-  const { data, bookVisit } = useData()
+  const { data, bookVisit, clearSyncError } = useData()
   const { profile } = useAuth()
   const navigate = useNavigate()
   //  잡고 나서 **다음에 무엇을 하는가**. 시트를 그냥 닫아 버리면 기사님은
   //  「됐나?」 하고 목록을 다시 훑습니다 (0075).
-  const [done, setDone] = useState<{ date: string; clientId: string; name: string } | null>(null)
+  const [done, setDone] = useState<{ date: string; clientId: string; name: string; already?: boolean } | null>(null)
 
   const [clientId, setClientId] = useState('')
   const [hour, setHour] = useState('09')
@@ -99,6 +99,26 @@ export function AddVisitSheet({
     })
     setBusy(false)
     if (!r.ok) {
+      //  ── 「이미 잡혀 있습니다」는 실패가 아닙니다 (0077) ──────────────────
+      //
+      //   지하에서 「이 날로 잡기」를 누르고 엘리베이터를 타면, 요청은
+      //   서버에 닿았는데 답만 못 받는 일이 생깁니다. 다시 누르면 서버가
+      //   「이미 잡혀 있습니다」로 막습니다 — **그 날 방문은 잡혀 있다는
+      //   뜻**인데 빨간 글씨로 뜨니 기사님은 안 된 줄 알고 또 누릅니다.
+      //
+      //   ⚠ 사무실이 먼저 잡아 둔 날일 수도 있습니다. 어느 쪽이든 기사님이
+      //     바라던 결과 — **그 날 그 병원 방문이 잡혀 있는 것** — 은 같습니다.
+      //     그래서 「이미 잡혀 있었습니다」라고 **사실대로** 말합니다.
+      //     제가 잡았다고 지어내지 않습니다.
+      if (/이미 잡혀 있습니다/.test(r.error ?? '')) {
+        setError(null)
+        //  위쪽 빨간 통신 띠도 내립니다 — 안 내리면 한 화면이 서로 반대되는
+        //  말을 합니다 (위: 저장 실패, 아래: 이미 잡혀 있음).
+        clearSyncError()
+        onDone?.(date)
+        setDone({ date, clientId, name: data.clients.find((c) => c.id === clientId)?.name ?? '', already: true })
+        return
+      }
       setError(r.error ?? '잡지 못했습니다.')
       return
     }
@@ -143,11 +163,16 @@ export function AddVisitSheet({
               <CheckCircle2 size={26} strokeWidth={2.4} className="mt-0.5 shrink-0 text-teal-600" />
               <div className="min-w-0 flex-1">
                 <p className="break-keep text-[1.3rem] font-extrabold leading-snug text-navy-900">
-                  일정을 잡았습니다
+                  {done.already ? '이미 잡혀 있습니다' : '일정을 잡았습니다'}
                 </p>
                 <p data-add-visit-done-line className="mt-1 break-keep text-[1.1rem] font-bold text-teal-700">
                   {prettyDate(done.date)} · {done.name}
                 </p>
+                {done.already && (
+                  <p className="mt-1 break-keep text-[1.02rem] text-navy-500">
+                    다시 잡지 않으셔도 됩니다.
+                  </p>
+                )}
               </div>
             </div>
 
