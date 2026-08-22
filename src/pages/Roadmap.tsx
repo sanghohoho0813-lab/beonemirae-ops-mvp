@@ -317,7 +317,7 @@ export function Roadmap() {
             {PHASES.map((p) => (
               <div key={p.tag} className="relative flex gap-3.5">
                 <span
-                  className={`relative z-10 mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.95rem] font-extrabold ring-4 ring-[#f5f7fa] ${
+                  className={`relative z-10 mt-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.95rem] font-extrabold ring-4 ring-app ${
                     p.current ? 'bg-teal-500 text-white' : 'bg-white text-navy-500 shadow-card'
                   }`}
                 >

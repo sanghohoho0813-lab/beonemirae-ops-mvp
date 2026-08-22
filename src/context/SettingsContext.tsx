@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from './AuthContext'
+import { DEFAULT_THEME, THEME_IDS } from '../lib/themes'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UI 설정 컨텍스트 — 글자 크기 모드
@@ -29,6 +30,7 @@ export const FONT_SCALE_OPTIONS: { value: FontScale; label: string; hint: string
 ]
 
 const STORAGE_KEY = 'beonemirae-ops:font-scale'
+const THEME_KEY = 'beonemirae-ops:theme'
 const SCALE_CLASS: Record<FontScale, string> = {
   normal: 'scale-normal',
   large: 'scale-lg',
@@ -63,9 +65,31 @@ function loadScale(): FontScale {
   return defaultScale()
 }
 
+// ── 테마 (0081) ──────────────────────────────────────────────────────────────
+//
+//  색만 갈아 끼웁니다. <html data-theme="..."> 하나만 바뀌고, 나머지는 전부
+//  CSS 변수가 받습니다(src/themes.css). 화면 코드도 배치도 건드리지 않습니다.
+//
+//  ⚠ 저장은 이 기기의 localStorage 입니다. 같은 기기에서는 재접속해도
+//    그대로지만, **다른 기기까지 따라가지는 않습니다.** 계정에 저장하려면
+//    profiles 에 칸을 하나 늘리는 SQL 이 필요한데, 그건 대표님이 실행하실
+//    일이라 여기서 임의로 만들지 않았습니다. 글자 크기처럼 계정에 붙이길
+//    원하시면 그때 SQL 을 따로 올리겠습니다.
+function loadTheme(): string {
+  try {
+    const raw = localStorage.getItem(THEME_KEY)
+    if (raw && THEME_IDS.includes(raw)) return raw
+  } catch {
+    /* noop */
+  }
+  return DEFAULT_THEME
+}
+
 interface SettingsContextValue {
   fontScale: FontScale
   setFontScale: (scale: FontScale) => void
+  theme: string
+  setTheme: (id: string) => void
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
@@ -76,6 +100,7 @@ const FROM_DB: Record<'normal' | 'lg' | 'xl', FontScale> = { normal: 'normal', l
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [fontScale, setFontScaleState] = useState<FontScale>(() => loadScale())
+  const [theme, setThemeState] = useState<string>(() => loadTheme())
   const { profile, updateProfile } = useAuth()
 
   // 로그인하면 사용자 계정에 저장된 글자 크기를 따라갑니다(기기가 바뀌어도 동일).
@@ -95,6 +120,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [fontScale])
 
+  //  <html data-theme> 동기화 + 이 기기에 저장
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try {
+      localStorage.setItem(THEME_KEY, theme)
+    } catch {
+      /* noop */
+    }
+  }, [theme])
+
+  const setTheme = useCallback((id: string) => {
+    //  모르는 이름이 들어오면 무시합니다 — 저장된 값이 오래돼 지금 없는
+    //  테마를 가리키면, 색이 하나도 안 정해진 화면이 됩니다.
+    if (THEME_IDS.includes(id)) setThemeState(id)
+  }, [])
+
   const setFontScale = useCallback(
     (scale: FontScale) => {
       setFontScaleState(scale)
@@ -104,7 +145,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [profile, updateProfile],
   )
 
-  const value = useMemo(() => ({ fontScale, setFontScale }), [fontScale, setFontScale])
+  const value = useMemo(
+    () => ({ fontScale, setFontScale, theme, setTheme }),
+    [fontScale, setFontScale, theme, setTheme],
+  )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>
 }

@@ -51,7 +51,7 @@ export function MobilePreview() {
             data-mobile-frame
             title="비원미래 운영관리 모바일 미리보기"
             src={home}
-            className="h-full w-full rounded-[34px] border-0 bg-[#f5f7fa]"
+            className="h-full w-full rounded-[34px] border-0 bg-app"
           />
         </div>
       </div>

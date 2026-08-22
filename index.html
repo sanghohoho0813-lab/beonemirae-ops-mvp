@@ -82,6 +82,23 @@
     </script>
   </head>
   <body>
+    <!--
+      화면 색 (0081) — React 가 뜨기 **전에** 정합니다.
+      이걸 React 안에서만 하면, 첫 그림은 기본색으로 그려졌다가 곧바로
+      고른 색으로 튑니다. 켤 때마다 화면이 한 번 번쩍이는 셈입니다.
+      값이 없거나 모르는 이름이면 아무것도 하지 않습니다 — 기본색입니다.
+      (실제 색 값은 CSS 안에 있습니다. 여기서는 이름표만 붙입니다.)
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('beonemirae-ops:theme')
+          if (t && /^[a-z-]{3,32}$/.test(t)) document.documentElement.setAttribute('data-theme', t)
+        } catch (e) {
+          /* 사생활 보호 모드 등에서 저장소를 못 읽어도 그냥 기본색으로 갑니다 */
+        }
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

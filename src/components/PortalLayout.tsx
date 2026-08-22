@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
 import { LiveClock } from './LiveClock'
+import { ThemeButton } from './ThemePicker'
 import { PageMotion } from './motion'
 import { TourButton } from './TourEntry'
 
@@ -39,7 +40,7 @@ export function PortalLayout() {
   const clientName = data.clients[0]?.name ?? ''
 
   return (
-    <div className="min-h-[100dvh] bg-[#f5f7fa]">
+    <div className="min-h-[100dvh] bg-app">
       {/* 상단 바 — 병원 이름이 가장 먼저 보이게 합니다 */}
       <header className="bg-navy-950">
         {/*  ⚠ 0080 — 여기에 gap-y-2(세로 간격)만 있고 flex-wrap 이 없었습니다.
@@ -82,12 +83,20 @@ export function PortalLayout() {
             </div>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          {/*  ⚠ 0081 — 「화면 색」 단추가 하나 늘면서 이 묶음이 다시 화면을
+               넘겼습니다(673px 33px · 768px 「매우 크게」 68px, 「로그아웃」이
+               화면 밖). 0080 에서 **바깥 줄**만 접히게 해 뒀는데, 묶음 자체가
+               한 줄을 넘기면 소용이 없습니다. 묶음 안에서도 접히게 둡니다.
+               ⚠ shrink-0 은 뗐습니다 — 안 줄고 안 접히면 넘치는 수밖에 없습니다. */}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             <TourButton
               compact
               tourId="client"
               className="flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             />
+            {/*  화면 색 (0081) — 병원 담당자도 바꿀 수 있습니다.
+                 어두운 머리띠 위라 흰 테두리 꼴로 둡니다. */}
+            <ThemeButton className="flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5" />
             <a
               href={`tel:${CLIENT_TEL}`}
               className="flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
@@ -136,7 +145,7 @@ export function PortalLayout() {
                 end={n.to === '/portal'}
                 className={({ isActive }) =>
                   `t-nav flex flex-1 shrink-0 items-center justify-center gap-2 rounded-t-xl px-3 py-3.5 transition sm:flex-none sm:justify-start sm:px-4 ${
-                    isActive ? 'bg-[#f5f7fa] text-navy-900' : 'text-navy-300 hover:bg-white/10 hover:text-white'
+                    isActive ? 'bg-app text-navy-900' : 'text-navy-300 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >

@@ -653,7 +653,7 @@ export function ClientDetail() {
            않아도 됩니다. PC 는 지금처럼 흐릅니다. */}
       <div
         data-client-tabs
-        className="sticky top-0 z-20 -mx-4 grid grid-cols-2 gap-2 bg-[#f5f7fa]/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:flex sm:flex-wrap sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none lg:gap-1.5">
+        className="sticky top-0 z-20 -mx-4 grid grid-cols-2 gap-2 bg-app/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:flex sm:flex-wrap sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none lg:gap-1.5">
         {visibleTabs.map((t) => (
           <button
             key={t.id}

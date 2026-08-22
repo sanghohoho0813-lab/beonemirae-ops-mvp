@@ -20,6 +20,7 @@ const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
 import { LiveClock } from './LiveClock'
+import { ThemeButton } from './ThemePicker'
 import { TONE } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
@@ -454,7 +455,7 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
         폭이 아니라 **높이**로 가릅니다 — 세로로 든 폰(844px)과 태블릿은
         그대로입니다. 시계는 남깁니다: 대표님이 「어느 계정이든 보이게」
         요청한 것이라, 자리가 좁다고 뺄 것이 아닙니다. */
-    <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg [@media(max-height:480px)]:py-1.5 lg:hidden">
+    <header className="sticky top-0 z-30 bg-app/90 px-4 py-2.5 backdrop-blur-lg [@media(max-height:480px)]:py-1.5 lg:hidden">
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[1.08rem] font-black text-teal-300">
           비
@@ -493,6 +494,11 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
             {SYSTEM_TAGLINE}
           </p>
         </div>
+        {/*  화면 색 (0081) — 폰에서도 오른쪽 위입니다.
+             ⚠ 420px 미만에서는 글자를 접고 아이콘만 남깁니다(ThemePicker 안).
+               여기서 글자까지 달면 상호가 「㈜비…」로 잘립니다 — 0080 에서
+               같은 자리를 두고 이미 한 번 다툰 적이 있습니다. */}
+        <ThemeButton className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-2 text-[0.95rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition active:bg-navy-50" />
         {/* 도움말은 두 갈래입니다 — 사용 방법 / 만든 이유.
             폰 헤더에는 둘을 나란히 둘 자리가 없습니다. 하나만 내놓았더니
             나머지는 더보기를 뒤져야 나오는 상태가 됐습니다.
@@ -637,7 +643,7 @@ export function Layout() {
   const guideOn = useSyncExternalStore(store.subscribe, store.get, store.get)
 
   return (
-    <div className="min-h-[100dvh] bg-[#f5f7fa]">
+    <div className="min-h-[100dvh] bg-app">
       <div className="flex w-full">
         <Sidebar />
         <div className="min-w-0 flex-1 overflow-x-hidden">
@@ -654,6 +660,12 @@ export function Layout() {
                 사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
                 안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
             <div className="mb-3 hidden items-center justify-end gap-2 lg:flex">
+              {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
+                   설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
+                   설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
+                   새 줄을 만들지 않고 이미 있던 오른쪽 위 줄에 얹었습니다 —
+                   배치를 바꾸지 않는 것이 이번 작업의 전제입니다. */}
+              <ThemeButton className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900" />
               {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
               {showWhy && (
                 <TourWhyButton className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />

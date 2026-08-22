@@ -1,3 +1,12 @@
+/*  테마 색 (0081) — 값은 scripts/gen_themes.mjs 가 만듭니다.
+
+    ⚠ @import 는 **파일 맨 앞**이어야 합니다. 처음에 @tailwind 뒤에 뒀더니
+      빌드 결과에서 변수가 통째로 빠졌고, 그러면 rgb(var(--c-teal-500) / 1)
+      이 잘못된 값이 되어 **속성 자체가 버려집니다.** 화면에서는 저장 단추의
+      파란 배경이 사라져 흰 바탕에 흰 글자가 됐습니다(대비 1:1).
+      「색이 좀 이상하다」가 아니라 **글자가 아예 안 보이는** 상태였습니다. */
+@import './themes.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,7 +74,7 @@
 
   body {
     /* 토스풍의 아주 밝은 블루그레이 배경 · Pretendard→시스템 폰트 fallback */
-    @apply bg-[#f5f7fa] font-sans text-navy-900 antialiased;
+    @apply bg-app font-sans text-navy-900 antialiased;
     font-feature-settings: 'tnum' 1;
     line-height: 1.5;
   }

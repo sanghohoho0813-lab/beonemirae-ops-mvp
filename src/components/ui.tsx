@@ -88,7 +88,7 @@ export function AreaHeader({
         <span /*  ⚠ 0080 — 흰 글자를 teal-500 위에 올리면 3.7:1 입니다. 큰 글자면 기준(3:1)을
               넘지만 이건 12px 짜리 숫자라 4.5:1 이 필요합니다. 이 작은 알림 숫자만
               한 단계 진한 파랑으로 둡니다 — 저장 단추의 브랜드 파랑은 그대로입니다. */
-        className="absolute -right-1 -top-1 flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-teal-600 text-[0.72rem] font-black text-white ring-2 ring-[#f5f7fa]">
+        className="absolute -right-1 -top-1 flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-teal-600 text-[0.72rem] font-black text-white ring-2 ring-app">
           {n}
         </span>
       </span>

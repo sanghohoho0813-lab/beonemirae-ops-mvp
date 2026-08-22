@@ -4,61 +4,152 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 토스풍 뉴트럴 블루그레이 — 밝은 단계는 차분한 회색, 어두운 단계는 네이비 유지
+        //  ⚠ 0081 — 색을 **CSS 변수**로 뺐습니다. 값은 src/themes.css 에 있고
+        //    그 파일은 scripts/gen_themes.mjs 가 만듭니다.
+        //
+        //    이렇게 두면 화면 코드는 한 줄도 안 바뀝니다. 지금 쓰이는
+        //    text-navy-400 · bg-teal-500 같은 클래스 3,000여 곳이 그대로
+        //    테마를 따라갑니다 — 배치도 정보 구조도 건드리지 않고 색만
+        //    갈아 끼우는 것이 목적이라, 이 방식이 가장 덜 헤집습니다.
+        //
+        //    rgb(var(--x) / <alpha-value>) 꼴이라 bg-teal-500/20 처럼
+        //    투명도를 쓰던 자리도 그대로 동작합니다.
         navy: {
-          50: '#f4f6fa',
-          100: '#eaeef3',
-          200: '#d7dde6',
-          300: '#aeb8c4',
-          //  ⚠ 0080 — 예전 값은 #7e8a99 였습니다. 이 색의 **일**은 캡션 글자인데,
-          //    정작 흰 바탕에서 3.5:1, 카드 바탕(#f4f6fa)에서 3.2:1 로 읽기 기준
-          //    (4.5:1)에 못 미쳤습니다. 네 역할 · 네 화면 · 세 글자 크기로 재 보니
-          //    대비 미달 173개 중 **111개가 이 한 색**이었습니다.
-          //    「보조 글자」라서 흐린 것이 아니라, 흐려서 **안 읽히는** 상태였습니다.
-          //    회색 계열과 채도는 그대로 두고 밝기만 낮췄습니다:
-          //    흰 바탕 5.3:1 · #f4f6fa 4.9:1 · #eaeef3 4.6:1 — 모두 기준을 넘깁니다.
-          //    (어두운 바탕에 얹는 흐린 글자는 navy-300 을 씁니다. 이 색이 아닙니다.)
-          400: '#626c7a', // 보조/캡션 텍스트용 뮤트 그레이 (밝은 바탕 전용)
-          500: '#5b6677',
-          600: '#3a4658',
-          700: '#26303f',
-          800: '#18222f',
-          900: '#0f1a2e',
-          950: '#080f1c', // 홈페이지 다크 테마용 근-블랙 네이비
+          50: 'rgb(var(--c-navy-50) / <alpha-value>)',
+          100: 'rgb(var(--c-navy-100) / <alpha-value>)',
+          200: 'rgb(var(--c-navy-200) / <alpha-value>)',
+          300: 'rgb(var(--c-navy-300) / <alpha-value>)',
+          //  이 색의 **일**은 캡션 글자입니다. 0080 에서 밝기를 낮춰
+          //  대비 기준을 넘겼고(흰 바탕 5.3:1), 테마를 바꿔도 **밝기는
+          //  그대로 두고 색상만** 바뀌므로 그 결과가 아홉 테마에서 유지됩니다.
+          400: 'rgb(var(--c-navy-400) / <alpha-value>)',
+          500: 'rgb(var(--c-navy-500) / <alpha-value>)',
+          600: 'rgb(var(--c-navy-600) / <alpha-value>)',
+          700: 'rgb(var(--c-navy-700) / <alpha-value>)',
+          800: 'rgb(var(--c-navy-800) / <alpha-value>)',
+          900: 'rgb(var(--c-navy-900) / <alpha-value>)',
+          950: 'rgb(var(--c-navy-950) / <alpha-value>)',
         },
-        // 홈페이지(공개 사이트) 프리미엄 포인트 — 틸/에메랄드 그린
         accent: {
-          50: '#effcf9',
-          100: '#c9f7ef',
-          200: '#96ede0',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
+          50: 'rgb(var(--c-accent-50) / <alpha-value>)',
+          100: 'rgb(var(--c-accent-100) / <alpha-value>)',
+          200: 'rgb(var(--c-accent-200) / <alpha-value>)',
+          300: 'rgb(var(--c-accent-300) / <alpha-value>)',
+          400: 'rgb(var(--c-accent-400) / <alpha-value>)',
+          500: 'rgb(var(--c-accent-500) / <alpha-value>)',
+          600: 'rgb(var(--c-accent-600) / <alpha-value>)',
+          700: 'rgb(var(--c-accent-700) / <alpha-value>)',
+          800: 'rgb(var(--c-accent-800) / <alpha-value>)',
+          900: 'rgb(var(--c-accent-900) / <alpha-value>)',
         },
-        // 포인트 컬러 — 토스풍 블루 (key 는 호환을 위해 teal 유지)
+        // 포인트 컬러 (key 는 호환을 위해 teal 유지 — 실제 색은 테마가 정합니다)
         teal: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3182f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: 'rgb(var(--c-teal-50) / <alpha-value>)',
+          100: 'rgb(var(--c-teal-100) / <alpha-value>)',
+          200: 'rgb(var(--c-teal-200) / <alpha-value>)',
+          300: 'rgb(var(--c-teal-300) / <alpha-value>)',
+          400: 'rgb(var(--c-teal-400) / <alpha-value>)',
+          500: 'rgb(var(--c-teal-500) / <alpha-value>)',
+          600: 'rgb(var(--c-teal-600) / <alpha-value>)',
+          700: 'rgb(var(--c-teal-700) / <alpha-value>)',
+          800: 'rgb(var(--c-teal-800) / <alpha-value>)',
+          900: 'rgb(var(--c-teal-900) / <alpha-value>)',
         },
-        // 일회용기저귀 등 보조 식별용 슬레이트 블루
+        // 일회용기저귀 등 보조 식별용
         slate2: {
-          50: '#f1f5f9',
-          100: '#e2e8f0',
-          500: '#64748b',
-          600: '#475569',
+          50: 'rgb(var(--c-slate2-50) / <alpha-value>)',
+          100: 'rgb(var(--c-slate2-100) / <alpha-value>)',
+          500: 'rgb(var(--c-slate2-500) / <alpha-value>)',
+          600: 'rgb(var(--c-slate2-600) / <alpha-value>)',
         },
+        //  ── 뜻이 붙어 있는 색 ──────────────────────────────────────────────
+        //   ⚠ 이 색들은 **뜻을 지고 있습니다.** 테마가 바뀌어도 초록은 초록,
+        //     빨강은 빨강으로 남습니다 — 색상을 최대 ±14° 까지만 테마 쪽으로
+        //     끌어오고, 밝기는 건드리지 않습니다(scripts/gen_themes.mjs).
+        //     「완료」가 「경고」로 읽히는 일은 구조적으로 일어나지 않습니다.
+        //     이름을 emerald/amber/rose 로 그대로 둔 이유도 같습니다 —
+        //     코드에서 색 이름이 곧 뜻입니다.
+        // 상승 · 완료
+        emerald: {
+          50: 'rgb(var(--c-emerald-50) / <alpha-value>)',
+          100: 'rgb(var(--c-emerald-100) / <alpha-value>)',
+          200: 'rgb(var(--c-emerald-200) / <alpha-value>)',
+          300: 'rgb(var(--c-emerald-300) / <alpha-value>)',
+          400: 'rgb(var(--c-emerald-400) / <alpha-value>)',
+          500: 'rgb(var(--c-emerald-500) / <alpha-value>)',
+          600: 'rgb(var(--c-emerald-600) / <alpha-value>)',
+          700: 'rgb(var(--c-emerald-700) / <alpha-value>)',
+          800: 'rgb(var(--c-emerald-800) / <alpha-value>)',
+          900: 'rgb(var(--c-emerald-900) / <alpha-value>)',
+        },
+        // 주의 · 확인 필요
+        amber: {
+          50: 'rgb(var(--c-amber-50) / <alpha-value>)',
+          100: 'rgb(var(--c-amber-100) / <alpha-value>)',
+          200: 'rgb(var(--c-amber-200) / <alpha-value>)',
+          300: 'rgb(var(--c-amber-300) / <alpha-value>)',
+          400: 'rgb(var(--c-amber-400) / <alpha-value>)',
+          500: 'rgb(var(--c-amber-500) / <alpha-value>)',
+          600: 'rgb(var(--c-amber-600) / <alpha-value>)',
+          700: 'rgb(var(--c-amber-700) / <alpha-value>)',
+          800: 'rgb(var(--c-amber-800) / <alpha-value>)',
+          900: 'rgb(var(--c-amber-900) / <alpha-value>)',
+        },
+        // 경고 · 하락 · 긴급
+        rose: {
+          50: 'rgb(var(--c-rose-50) / <alpha-value>)',
+          100: 'rgb(var(--c-rose-100) / <alpha-value>)',
+          200: 'rgb(var(--c-rose-200) / <alpha-value>)',
+          300: 'rgb(var(--c-rose-300) / <alpha-value>)',
+          400: 'rgb(var(--c-rose-400) / <alpha-value>)',
+          500: 'rgb(var(--c-rose-500) / <alpha-value>)',
+          600: 'rgb(var(--c-rose-600) / <alpha-value>)',
+          700: 'rgb(var(--c-rose-700) / <alpha-value>)',
+          800: 'rgb(var(--c-rose-800) / <alpha-value>)',
+          900: 'rgb(var(--c-rose-900) / <alpha-value>)',
+        },
+        // 정보 · 교육 · 리포트
+        sky: {
+          50: 'rgb(var(--c-sky-50) / <alpha-value>)',
+          100: 'rgb(var(--c-sky-100) / <alpha-value>)',
+          200: 'rgb(var(--c-sky-200) / <alpha-value>)',
+          300: 'rgb(var(--c-sky-300) / <alpha-value>)',
+          400: 'rgb(var(--c-sky-400) / <alpha-value>)',
+          500: 'rgb(var(--c-sky-500) / <alpha-value>)',
+          600: 'rgb(var(--c-sky-600) / <alpha-value>)',
+          700: 'rgb(var(--c-sky-700) / <alpha-value>)',
+          800: 'rgb(var(--c-sky-800) / <alpha-value>)',
+          900: 'rgb(var(--c-sky-900) / <alpha-value>)',
+        },
+        // 소모품 · 병원 고객
+        violet: {
+          50: 'rgb(var(--c-violet-50) / <alpha-value>)',
+          100: 'rgb(var(--c-violet-100) / <alpha-value>)',
+          200: 'rgb(var(--c-violet-200) / <alpha-value>)',
+          300: 'rgb(var(--c-violet-300) / <alpha-value>)',
+          400: 'rgb(var(--c-violet-400) / <alpha-value>)',
+          500: 'rgb(var(--c-violet-500) / <alpha-value>)',
+          600: 'rgb(var(--c-violet-600) / <alpha-value>)',
+          700: 'rgb(var(--c-violet-700) / <alpha-value>)',
+          800: 'rgb(var(--c-violet-800) / <alpha-value>)',
+          900: 'rgb(var(--c-violet-900) / <alpha-value>)',
+        },
+        // 추가 수거
+        orange: {
+          50: 'rgb(var(--c-orange-50) / <alpha-value>)',
+          100: 'rgb(var(--c-orange-100) / <alpha-value>)',
+          200: 'rgb(var(--c-orange-200) / <alpha-value>)',
+          300: 'rgb(var(--c-orange-300) / <alpha-value>)',
+          400: 'rgb(var(--c-orange-400) / <alpha-value>)',
+          500: 'rgb(var(--c-orange-500) / <alpha-value>)',
+          600: 'rgb(var(--c-orange-600) / <alpha-value>)',
+          700: 'rgb(var(--c-orange-700) / <alpha-value>)',
+          800: 'rgb(var(--c-orange-800) / <alpha-value>)',
+          900: 'rgb(var(--c-orange-900) / <alpha-value>)',
+        },
+        //  앱 바탕 — 예전에는 #f5f7fa 를 열 군데에 **손으로 적어** 두었습니다.
+        //  테마가 바뀌어도 바탕만 안 바뀌면 그게 제일 어색합니다.
+        app: 'rgb(var(--c-app) / <alpha-value>)',
       },
       borderRadius: {
         '4xl': '28px',

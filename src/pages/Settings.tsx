@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
   ChevronDown,
+  Palette,
   Type,
   Building2,
   Download,
@@ -36,6 +37,7 @@ import { PageShell } from '../components/ui'
 import { SetupGapsCard } from '../components/SetupGapsCard'
 import { PageHeader } from '../components/PageHeader'
 import { FontSizeControl } from '../components/FontSizeControl'
+import { ThemePicker } from '../components/ThemePicker'
 import { Modal } from '../components/Modal'
 import { exportData, parseImportFile } from '../lib/backup'
 import { exportTables, downloadCsv } from '../lib/exportData'
@@ -458,6 +460,25 @@ export function Settings() {
             </button>
             </div>
           </section>
+
+          {/*  화면 색 (0081) — 글자 크기 바로 위에 둡니다. 둘 다 「보이는 것」을
+               맞추는 설정이라 한자리에 모여 있어야 찾습니다. */}
+          <SettingCard
+            icon={Palette}
+            title="화면 색"
+            desc="시스템 전체 색을 바꿉니다. 화면 배치와 기능은 그대로이고 색만 바뀝니다. 고른 색은 이 기기에 저장됩니다."
+            tone="navy"
+          >
+            <ThemePicker />
+            {/*  ⚠ 어떤 색을 골라도 글자가 안 보이게 되지는 않습니다. 아홉 가지
+                 모두 **각 단계의 밝기를 같게** 두고 색상만 바꿔 만들었기
+                 때문에, 읽히는 정도(대비)가 기본색과 똑같습니다. 그 사실을
+                 여기 적어 두는 이유는, 색을 바꾸기 전에 망설이지 않게
+                 하려는 것입니다. */}
+            <p className="t-muted mt-3.5 break-keep text-navy-500">
+              어떤 색을 골라도 글자가 읽히는 정도는 같습니다 — 색만 바뀌고 밝기는 그대로 두었습니다.
+            </p>
+          </SettingCard>
 
           <SettingCard
             icon={Type}

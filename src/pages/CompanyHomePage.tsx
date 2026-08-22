@@ -456,7 +456,7 @@ export function CompanyHomePage() {
         </section>
 
         {/* ═══ 섹션 2 · 핵심 운영 기준 (분할: 텍스트 좌 / 대시보드 우) ═══════ */}
-        <section id="about" className="w-full scroll-mt-16 overflow-hidden bg-[#f5f7fa] py-[clamp(48px,6vw,90px)]">
+        <section id="about" className="w-full scroll-mt-16 overflow-hidden bg-app py-[clamp(48px,6vw,90px)]">
           <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
             <div>
               <Reveal>
