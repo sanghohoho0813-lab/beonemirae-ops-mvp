@@ -1,0 +1,1407 @@
+{
+ "더원요양병원": {
+  "file": "75aa9bdf-202602_____________.xlsx",
+  "rows": [
+   {
+    "kind": "수거",
+    "date": "2026-08-05",
+    "wasteType": "의료폐기물",
+    "kg": 472,
+    "where": "2026 거래명세서 17행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-02",
+    "wasteType": "일회용기저귀",
+    "kg": 1000,
+    "where": "2026 거래명세서 38행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-05",
+    "wasteType": "일회용기저귀",
+    "kg": 1270,
+    "where": "2026 거래명세서 39행"
+   },
+   {
+    "kind": "자재",
+    "date": "2026-08-05",
+    "items": {
+     "plastic20": 50
+    },
+    "where": "2026 거래명세서 20행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-02",
+    "medicalKg": 1644,
+    "diaperKg": 7010,
+    "revenue": 6698400,
+    "cost": 2773650,
+    "profit": 3924750,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 1456,
+    "diaperKg": 8850,
+    "revenue": 7329200,
+    "cost": 2798425,
+    "profit": 4530775,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 1819,
+    "diaperKg": 9500,
+    "revenue": 8418050,
+    "cost": 3437100,
+    "profit": 4980950,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 1388,
+    "diaperKg": 9000,
+    "revenue": 7748600,
+    "cost": 3167810,
+    "profit": 4580790,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 1440,
+    "diaperKg": 8700,
+    "revenue": 7545000,
+    "cost": 2971355,
+    "profit": 4573645,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 2071,
+    "diaperKg": 10510,
+    "revenue": 9324050,
+    "cost": 3878580,
+    "profit": 5445470,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 472,
+    "diaperKg": 2270,
+    "revenue": 2296600,
+    "cost": 1038340,
+    "profit": 1258260,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2026-02-01",
+   "contractEnd": "2028-04-30",
+   "paymentTerms": "익월20일",
+   "paymentDueDay": 20,
+   "pricing": {
+    "medical": {
+     "sale": 950,
+     "cost": 350
+    },
+    "plastic2": {
+     "sale": 3000,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": 5000,
+     "cost": 1639
+    },
+    "plastic20": {
+     "sale": 7000,
+     "cost": 3399
+    },
+    "diaper": {
+     "sale": 660,
+     "cost": 220
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1045
+    },
+    "box30": {
+     "sale": null,
+     "cost": 594
+    },
+    "box12": {
+     "sale": null,
+     "cost": 341
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    },
+    "diaperBag40": {
+     "sale": null,
+     "cost": 149
+    }
+   }
+  },
+  "expect": {
+   "collections": 3,
+   "supplies": 1,
+   "kgSum": 2742
+  }
+ },
+ "남양주백병원": {
+  "file": "6ab67acb-202509_____________.xlsx",
+  "rows": [],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 4650,
+    "diaperKg": 0,
+    "revenue": 4441000,
+    "cost": 2779190,
+    "profit": 1661810,
+    "hasDated": false
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 4257,
+    "diaperKg": 0,
+    "revenue": 4045800,
+    "cost": 2531800,
+    "profit": 1514000,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 4198,
+    "diaperKg": 0,
+    "revenue": 3961200,
+    "cost": 2452650,
+    "profit": 1508550,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 3917,
+    "diaperKg": 0,
+    "revenue": 3722800,
+    "cost": 2046180,
+    "profit": 1676620,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 4159,
+    "diaperKg": 0,
+    "revenue": 3972100,
+    "cost": 2429240,
+    "profit": 1542860,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 4248,
+    "diaperKg": 0,
+    "revenue": 4033200,
+    "cost": 2327835,
+    "profit": 1705365,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 4259,
+    "diaperKg": 0,
+    "revenue": 4068100,
+    "cost": 2491405,
+    "profit": 1576695,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 1341,
+    "diaperKg": 0,
+    "revenue": 1274400,
+    "cost": 829550,
+    "profit": 444850,
+    "hasDated": false
+   }
+  ],
+  "patch": {
+   "contractStart": "2025-09-01",
+   "contractEnd": "2028-08-31",
+   "paymentTerms": "익월 15일",
+   "paymentDueDay": 15,
+   "pricing": {
+    "medical": {
+     "sale": 900,
+     "cost": 400
+    },
+    "plastic2": {
+     "sale": 1500,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": 2500,
+     "cost": 1639
+    },
+    "plastic20": {
+     "sale": 6000,
+     "cost": 3399
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1045
+    },
+    "box30": {
+     "sale": null,
+     "cost": 594
+    },
+    "box12": {
+     "sale": null,
+     "cost": 352
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    },
+    "pouch12": {
+     "sale": null,
+     "cost": 90
+    }
+   }
+  },
+  "expect": {
+   "collections": 0,
+   "supplies": 0,
+   "kgSum": 0
+  }
+ },
+ "오남한양병원": {
+  "file": "7c6daff4-202304_____________.xlsx",
+  "rows": [],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 9531,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 5779350,
+    "profit": 3220650,
+    "hasDated": false
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 7040,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 4755200,
+    "profit": 4244800,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 8652,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 5338990,
+    "profit": 3661010,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 8633,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 5637230,
+    "profit": 3362770,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 7603,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 4964950,
+    "profit": 4035050,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 7578,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 4855690,
+    "profit": 4144310,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 7713,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 5065050,
+    "profit": 3934950,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 2802,
+    "diaperKg": 0,
+    "revenue": 9000000,
+    "cost": 2745280,
+    "profit": 6254720,
+    "hasDated": false
+   }
+  ],
+  "patch": {
+   "contractStart": "2025-05-01",
+   "contractEnd": "2028-04-30",
+   "paymentTerms": "익월 25일",
+   "paymentDueDay": 25,
+   "pricing": {
+    "medicalMonthly": {
+     "sale": 9000000,
+     "cost": null
+    },
+    "medical": {
+     "sale": null,
+     "cost": 450
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1045
+    },
+    "box35": {
+     "sale": null,
+     "cost": 660
+    },
+    "box12": {
+     "sale": null,
+     "cost": 374
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    },
+    "plastic2": {
+     "sale": null,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": null,
+     "cost": 1639
+    },
+    "plastic20": {
+     "sale": null,
+     "cost": 3399
+    }
+   }
+  },
+  "expect": {
+   "collections": 0,
+   "supplies": 0,
+   "kgSum": 0
+  }
+ },
+ "서울온케어의원": {
+  "file": "2cb0894a-202404______________.xlsx",
+  "rows": [
+   {
+    "kind": "자재",
+    "date": "2026-08-10",
+    "items": {
+     "box35": 17,
+     "plastic2": 3,
+     "plastic5": 1
+    },
+    "where": "2026 거래명세서 17행, 2026 거래명세서 19행, 2026 거래명세서 20행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 248,
+    "diaperKg": 0,
+    "revenue": 472000,
+    "cost": 189840,
+    "profit": 282160,
+    "hasDated": false
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 209,
+    "diaperKg": 0,
+    "revenue": 417000,
+    "cost": 134200,
+    "profit": 282800,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 217,
+    "diaperKg": 0,
+    "revenue": 450000,
+    "cost": 169415,
+    "profit": 280585,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 222,
+    "diaperKg": 0,
+    "revenue": 423000,
+    "cost": 150600,
+    "profit": 272400,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 192,
+    "diaperKg": 0,
+    "revenue": 370000,
+    "cost": 176800,
+    "profit": 193200,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 259,
+    "diaperKg": 0,
+    "revenue": 462000,
+    "cost": 186290,
+    "profit": 275710,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 193,
+    "diaperKg": 0,
+    "revenue": 328000,
+    "cost": 155660,
+    "profit": 172340,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 78,
+    "diaperKg": 0,
+    "revenue": 150000,
+    "cost": 58800,
+    "profit": 91200,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2025-05-01",
+   "contractEnd": "2028-04-30",
+   "paymentTerms": "익월10일",
+   "paymentDueDay": 10,
+   "pricing": {
+    "box35": {
+     "sale": 8000,
+     "cost": 660
+    },
+    "box12": {
+     "sale": 4000,
+     "cost": 374
+    },
+    "plastic2": {
+     "sale": 3000,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": 5000,
+     "cost": 1639
+    },
+    "medical": {
+     "sale": null,
+     "cost": 500
+    }
+   }
+  },
+  "expect": {
+   "collections": 0,
+   "supplies": 1,
+   "kgSum": 0
+  }
+ },
+ "신세계서울병원": {
+  "file": "5c124930-202412______________.xlsx",
+  "rows": [
+   {
+    "kind": "수거",
+    "date": "2026-08-04",
+    "wasteType": "의료폐기물",
+    "kg": 364,
+    "where": "2026 거래명세서 17행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-07",
+    "wasteType": "의료폐기물",
+    "kg": 261,
+    "where": "2026 거래명세서 18행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-11",
+    "wasteType": "의료폐기물",
+    "kg": 361,
+    "where": "2026 거래명세서 19행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 2823,
+    "diaperKg": 0,
+    "revenue": 2427780,
+    "cost": 1592860,
+    "profit": 834920,
+    "hasDated": false
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 2893,
+    "diaperKg": 0,
+    "revenue": 2487980,
+    "cost": 1572385,
+    "profit": 915595,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 3427,
+    "diaperKg": 0,
+    "revenue": 2947220,
+    "cost": 1877170,
+    "profit": 1070050,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 2854,
+    "diaperKg": 0,
+    "revenue": 2454440,
+    "cost": 1648350,
+    "profit": 806090,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 3008,
+    "diaperKg": 0,
+    "revenue": 2666880,
+    "cost": 1725330,
+    "profit": 941550,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 2921,
+    "diaperKg": 0,
+    "revenue": 2692060,
+    "cost": 1648885,
+    "profit": 1043175,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 2903,
+    "diaperKg": 0,
+    "revenue": 2576580,
+    "cost": 1607865,
+    "profit": 968715,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 986,
+    "diaperKg": 0,
+    "revenue": 847960,
+    "cost": 605535,
+    "profit": 242425,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2025-05-01",
+   "contractEnd": "2027-11-30",
+   "paymentTerms": "익월말일",
+   "paymentDueDay": 31,
+   "pricing": {
+    "medical": {
+     "sale": 860,
+     "cost": 370
+    },
+    "plastic20": {
+     "sale": 8000,
+     "cost": 3399
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1045
+    },
+    "box35": {
+     "sale": null,
+     "cost": 660
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    },
+    "plastic2": {
+     "sale": null,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": null,
+     "cost": 1639
+    },
+    "diaperBag40": {
+     "sale": null,
+     "cost": 149
+    }
+   }
+  },
+  "expect": {
+   "collections": 3,
+   "supplies": 0,
+   "kgSum": 986
+  }
+ },
+ "목동현대웰병원": {
+  "file": "fc41707f-202505______________.xlsx",
+  "rows": [
+   {
+    "kind": "수거",
+    "date": "2026-08-03",
+    "wasteType": "일회용기저귀",
+    "kg": 297,
+    "where": "2026 거래명세서 17행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-06",
+    "wasteType": "일회용기저귀",
+    "kg": 227,
+    "where": "2026 거래명세서 18행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-10",
+    "wasteType": "일회용기저귀",
+    "kg": 275,
+    "where": "2026 거래명세서 19행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 0,
+    "diaperKg": 2098,
+    "revenue": 1107744,
+    "cost": 583672,
+    "profit": 524072,
+    "hasDated": false
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 0,
+    "diaperKg": 1846,
+    "revenue": 974688,
+    "cost": 517144,
+    "profit": 457544,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 0,
+    "diaperKg": 2260,
+    "revenue": 1193280,
+    "cost": 641340,
+    "profit": 551940,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 0,
+    "diaperKg": 2461,
+    "revenue": 1299408,
+    "cost": 724204,
+    "profit": 575204,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 0,
+    "diaperKg": 1828,
+    "revenue": 965184,
+    "cost": 482592,
+    "profit": 482592,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 0,
+    "diaperKg": 2162,
+    "revenue": 1141536,
+    "cost": 600568,
+    "profit": 540968,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 0,
+    "diaperKg": 2305,
+    "revenue": 1217040,
+    "cost": 638320,
+    "profit": 578720,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 0,
+    "diaperKg": 799,
+    "revenue": 421872,
+    "cost": 210936,
+    "profit": 210936,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2025-05-01",
+   "contractEnd": "2028-04-30",
+   "paymentTerms": "익월10일",
+   "paymentDueDay": 10,
+   "pricing": {
+    "diaper": {
+     "sale": 480,
+     "cost": 264
+    },
+    "diaperVatPct": {
+     "sale": 10,
+     "cost": null
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1045
+    },
+    "box30": {
+     "sale": null,
+     "cost": 594
+    },
+    "plastic2": {
+     "sale": null,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": null,
+     "cost": 1639
+    },
+    "plastic20": {
+     "sale": null,
+     "cost": 3399
+    },
+    "diaperBoxM": {
+     "sale": null,
+     "cost": 495
+    },
+    "diaperBag40": {
+     "sale": null,
+     "cost": 149
+    }
+   }
+  },
+  "expect": {
+   "collections": 3,
+   "supplies": 0,
+   "kgSum": 799
+  }
+ },
+ "서울본브릿지병원": {
+  "file": "1bf6cc2d-202608_______________.xlsx",
+  "rows": [
+   {
+    "kind": "수거",
+    "date": "2026-08-06",
+    "wasteType": "의료폐기물",
+    "kg": 181,
+    "where": "2026 거래명세서 17행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-10",
+    "wasteType": "의료폐기물",
+    "kg": 155,
+    "where": "2026 거래명세서 18행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-08",
+    "medicalKg": 336,
+    "diaperKg": 0,
+    "revenue": 475680,
+    "cost": 325400,
+    "profit": 150280,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2026-08-01",
+   "contractEnd": "2028-04-30",
+   "paymentTerms": "익월 말일",
+   "paymentDueDay": 31,
+   "pricing": {
+    "medical": {
+     "sale": 880,
+     "cost": 450
+    },
+    "plastic2": {
+     "sale": 3000,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": 5000,
+     "cost": 1639
+    },
+    "plastic10": {
+     "sale": 6000,
+     "cost": 2240
+    },
+    "plastic20": {
+     "sale": 7000,
+     "cost": 3090
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1145
+    },
+    "box30": {
+     "sale": null,
+     "cost": 713
+    },
+    "box12": {
+     "sale": null,
+     "cost": 402
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    }
+   }
+  },
+  "expect": {
+   "collections": 2,
+   "supplies": 0,
+   "kgSum": 336
+  }
+ },
+ "엠에스병원": {
+  "file": "ec9615a7-202608____________.xlsx",
+  "rows": [
+   {
+    "kind": "수거",
+    "date": "2026-08-10",
+    "wasteType": "의료폐기물",
+    "kg": 74,
+    "where": "2026 거래명세서 17행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-08",
+    "medicalKg": 74,
+    "diaperKg": 0,
+    "revenue": 74000,
+    "cost": 85220,
+    "profit": -11220,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2026-08-01",
+   "contractEnd": "2028-04-30",
+   "paymentTerms": "익월 말일",
+   "paymentDueDay": 31,
+   "pricing": {
+    "medical": {
+     "sale": 1000,
+     "cost": 500
+    },
+    "box79": {
+     "sale": null,
+     "cost": 1245
+    },
+    "box30": {
+     "sale": null,
+     "cost": 713
+    },
+    "box12": {
+     "sale": null,
+     "cost": 402
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    },
+    "plastic2": {
+     "sale": null,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": null,
+     "cost": 1639
+    }
+   }
+  },
+  "expect": {
+   "collections": 1,
+   "supplies": 0,
+   "kgSum": 74
+  }
+ },
+ "서울인화": {
+  "file": "4d162046-202512_______________________.xlsx",
+  "rows": [
+   {
+    "kind": "자재",
+    "date": "2026-08-11",
+    "items": {
+     "box30": 3,
+     "plastic5": 2
+    },
+    "where": "2026 거래명세서 17행, 2026 거래명세서 18행"
+   },
+   {
+    "kind": "자재",
+    "date": "2026-01-05",
+    "items": {
+     "box30": 2,
+     "plastic5": 1
+    },
+    "where": "2026 거래명세서 (2) 21행, 2026 거래명세서 (2) 22행"
+   },
+   {
+    "kind": "자재",
+    "date": "2026-01-12",
+    "items": {
+     "box30": 1,
+     "plastic5": 1
+    },
+    "where": "2026 거래명세서 (2) 23행, 2026 거래명세서 (2) 24행"
+   },
+   {
+    "kind": "자재",
+    "date": "2026-01-26",
+    "items": {
+     "box30": 4,
+     "plastic5": 2
+    },
+    "where": "2026 거래명세서 (2) 25행, 2026 거래명세서 (2) 26행"
+   },
+   {
+    "kind": "자재",
+    "date": "2026-02-09",
+    "items": {
+     "box30": 3,
+     "plastic5": 1
+    },
+    "where": "2026 거래명세서 (2) 27행, 2026 거래명세서 (2) 28행"
+   },
+   {
+    "kind": "자재",
+    "date": "2026-02-23",
+    "items": {
+     "box30": 3,
+     "plastic5": 2
+    },
+    "where": "2026 거래명세서 (2) 29행, 2026 거래명세서 (2) 30행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 38,
+    "diaperKg": 0,
+    "revenue": 82000,
+    "cost": 19000,
+    "profit": 63000,
+    "hasDated": true
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 38,
+    "diaperKg": 0,
+    "revenue": 69000,
+    "cost": 19000,
+    "profit": 50000,
+    "hasDated": true
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 44,
+    "diaperKg": 0,
+    "revenue": 89000,
+    "cost": 33880,
+    "profit": 55120,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 46,
+    "diaperKg": 0,
+    "revenue": 82000,
+    "cost": 39390,
+    "profit": 42610,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 40,
+    "diaperKg": 0,
+    "revenue": 69000,
+    "cost": 25940,
+    "profit": 43060,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 59,
+    "diaperKg": 0,
+    "revenue": 102000,
+    "cost": 49575,
+    "profit": 52425,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 38,
+    "diaperKg": 0,
+    "revenue": 66000,
+    "cost": 41330,
+    "profit": 24670,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 22,
+    "diaperKg": 0,
+    "revenue": 36000,
+    "cost": 11000,
+    "profit": 25000,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2025-12-01",
+   "contractEnd": "2028-11-30",
+   "paymentTerms": "익월10일",
+   "paymentDueDay": 10,
+   "pricing": {
+    "box30": {
+     "sale": 10000,
+     "cost": 594
+    },
+    "plastic5": {
+     "sale": 3000,
+     "cost": 1639
+    },
+    "medical": {
+     "sale": null,
+     "cost": 500
+    },
+    "box4": {
+     "sale": null,
+     "cost": 220
+    },
+    "plastic2": {
+     "sale": null,
+     "cost": 985
+    }
+   }
+  },
+  "expect": {
+   "collections": 0,
+   "supplies": 6,
+   "kgSum": 0
+  }
+ },
+ "해올요양병원": {
+  "file": "28270947-202601_____________.xlsx",
+  "rows": [
+   {
+    "kind": "수거",
+    "date": "2026-08-06",
+    "wasteType": "의료폐기물",
+    "kg": 498,
+    "where": "2026 거래명세서 17행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-11",
+    "wasteType": "의료폐기물",
+    "kg": 691,
+    "where": "2026 거래명세서 18행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-03",
+    "wasteType": "일회용기저귀",
+    "kg": 896,
+    "where": "2026 거래명세서 27행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-05",
+    "wasteType": "일회용기저귀",
+    "kg": 448,
+    "where": "2026 거래명세서 28행"
+   },
+   {
+    "kind": "수거",
+    "date": "2026-08-10",
+    "wasteType": "일회용기저귀",
+    "kg": 880,
+    "where": "2026 거래명세서 29행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-01",
+    "medicalKg": 2203,
+    "diaperKg": 5457,
+    "revenue": 4300000,
+    "cost": 2556335,
+    "profit": 1743665,
+    "hasDated": false
+   },
+   {
+    "month": "2026-02",
+    "medicalKg": 2024,
+    "diaperKg": 5094,
+    "revenue": 4300000,
+    "cost": 2338570,
+    "profit": 1961430,
+    "hasDated": false
+   },
+   {
+    "month": "2026-03",
+    "medicalKg": 2621,
+    "diaperKg": 6200,
+    "revenue": 4300000,
+    "cost": 2720560,
+    "profit": 1579440,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 2922,
+    "diaperKg": 5852,
+    "revenue": 4300000,
+    "cost": 2898620,
+    "profit": 1401380,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 2242,
+    "diaperKg": 5656,
+    "revenue": 4300000,
+    "cost": 2606320,
+    "profit": 1693680,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 2448,
+    "diaperKg": 5792,
+    "revenue": 4300000,
+    "cost": 2694480,
+    "profit": 1605520,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 2862,
+    "diaperKg": 5792,
+    "revenue": 4300000,
+    "cost": 2912825,
+    "profit": 1387175,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 1189,
+    "diaperKg": 2224,
+    "revenue": 4300000,
+    "cost": 1102890,
+    "profit": 3197110,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2024-01-01",
+   "contractEnd": "2026-12-31",
+   "paymentTerms": "익월 말일",
+   "paymentDueDay": 31,
+   "pricing": {
+    "medicalMonthly": {
+     "sale": 1300000,
+     "cost": null
+    },
+    "diaperMonthly": {
+     "sale": 3000000,
+     "cost": null
+    },
+    "medical": {
+     "sale": null,
+     "cost": 350
+    },
+    "diaper": {
+     "sale": null,
+     "cost": 220
+    },
+    "box63": {
+     "sale": null,
+     "cost": 1251
+    },
+    "box30": {
+     "sale": null,
+     "cost": 594
+    },
+    "box12": {
+     "sale": null,
+     "cost": 374
+    },
+    "plastic2": {
+     "sale": null,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": null,
+     "cost": 1639
+    },
+    "plastic20": {
+     "sale": null,
+     "cost": 3399
+    },
+    "diaperBag40": {
+     "sale": null,
+     "cost": 204
+    }
+   }
+  },
+  "expect": {
+   "collections": 5,
+   "supplies": 0,
+   "kgSum": 3413
+  }
+ },
+ "삼성서울연합의원": {
+  "file": "8bc15213-202603_______________.xlsx",
+  "rows": [
+   {
+    "kind": "자재",
+    "date": "2026-08-03",
+    "items": {
+     "box63": 12,
+     "plastic20": 3
+    },
+    "where": "2026 거래명세서 17행, 2026 거래명세서 20행"
+   }
+  ],
+  "monthly": [
+   {
+    "month": "2026-03",
+    "medicalKg": 193,
+    "diaperKg": 0,
+    "revenue": 294000,
+    "cost": 151390,
+    "profit": 142610,
+    "hasDated": false
+   },
+   {
+    "month": "2026-04",
+    "medicalKg": 356,
+    "diaperKg": 0,
+    "revenue": 555000,
+    "cost": 281235,
+    "profit": 273765,
+    "hasDated": false
+   },
+   {
+    "month": "2026-05",
+    "medicalKg": 297,
+    "diaperKg": 0,
+    "revenue": 450000,
+    "cost": 213840,
+    "profit": 236160,
+    "hasDated": false
+   },
+   {
+    "month": "2026-06",
+    "medicalKg": 316,
+    "diaperKg": 0,
+    "revenue": 420000,
+    "cost": 223340,
+    "profit": 196660,
+    "hasDated": false
+   },
+   {
+    "month": "2026-07",
+    "medicalKg": 321,
+    "diaperKg": 0,
+    "revenue": 495000,
+    "cost": 177495,
+    "profit": 317505,
+    "hasDated": false
+   },
+   {
+    "month": "2026-08",
+    "medicalKg": 183,
+    "diaperKg": 0,
+    "revenue": 261000,
+    "cost": 129395,
+    "profit": 131605,
+    "hasDated": true
+   }
+  ],
+  "patch": {
+   "contractStart": "2026-03-15",
+   "contractEnd": "2029-02-28",
+   "paymentTerms": "익월10일",
+   "paymentDueDay": 10,
+   "pricing": {
+    "box63": {
+     "sale": 18000,
+     "cost": 1045
+    },
+    "plastic2": {
+     "sale": 3000,
+     "cost": 985
+    },
+    "plastic5": {
+     "sale": 5000,
+     "cost": 1639
+    },
+    "plastic20": {
+     "sale": 15000,
+     "cost": 3399
+    },
+    "medical": {
+     "sale": null,
+     "cost": 500
+    }
+   }
+  },
+  "expect": {
+   "collections": 0,
+   "supplies": 1,
+   "kgSum": 0
+  }
+ }
+}

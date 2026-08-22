@@ -8,7 +8,9 @@ const DB = 'ops70q'
 //  ⚠ 이 검사는 **늘 새 DB** 에서 돌아야 합니다. 앞선 실행이 남은 DB 에
 //    준비물을 또 넣으면 거래처·차량이 두 개가 되고, 「이름이 안 바뀌었다」로
 //    잘못 읽힙니다 — 실제로 그렇게 났습니다.
-execFileSync('bash', ['xl/setup_db.sh', DB], { stdio: 'ignore' })
+//  ⚠ 저장소로 옮기면서 자리가 바뀌었습니다. 돌리는 자리(cwd)가 어디든
+//    **이 파일 옆의** setup_db.sh 를 부르도록 합니다.
+execFileSync('bash', [new URL('./setup_db.sh', import.meta.url).pathname, DB], { stdio: 'ignore' })
 const P = ['-h','/var/tmp/pgt','-p','55432','-U','postgres','-d',DB,'-qtA','-v','ON_ERROR_STOP=1']
 const asRole = (uid, sql) =>
   `set local role authenticated; set local request.jwt.claims = '{"sub":"${uid}","role":"authenticated"}'; ${sql}`
