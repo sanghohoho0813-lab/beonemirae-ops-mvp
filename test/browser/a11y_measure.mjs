@@ -77,8 +77,20 @@ export async function measure(p, SMALL = 16) {
     })
     const tooSmall = boxes.filter((x) => x.h < 44 || x.w < 44)
     //  서로 붙어 있는 것 — 세로 간격 8px 미만
+    //
+    //  ⚠ 떠 있는 것(position: fixed·sticky)은 **문서 흐름 위에 얹혀** 있습니다.
+    //    화면 아래 떠 있는 ＋ 단추를 흐름 안 요소처럼 세면, 그 아래 우연히
+    //    걸린 목록 줄과 「4px 붙었다」로 잡힙니다. 실제로는 겹쳐 떠 있는
+    //    것이지 나란히 있는 것이 아닙니다. 흐름 안 것끼리만 견줍니다.
+    const flow = taps.filter((el) => {
+      const pos = getComputedStyle(el).position
+      return pos !== 'fixed' && pos !== 'sticky'
+    })
     let tight = 0
-    const sorted = [...boxes].sort((a, b) => a.y - b.y)
+    const sorted = flow.map((el) => {
+      const r = el.getBoundingClientRect()
+      return { y: Math.round(r.top + window.scrollY), h: Math.round(r.height) }
+    }).sort((a, b) => a.y - b.y)
     for (let i = 1; i < sorted.length; i += 1) {
       const gap = sorted[i].y - (sorted[i - 1].y + sorted[i - 1].h)
       if (gap >= 0 && gap < 8) tight += 1
