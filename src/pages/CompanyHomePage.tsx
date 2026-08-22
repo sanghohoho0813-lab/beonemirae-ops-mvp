@@ -471,7 +471,7 @@ export function CompanyHomePage() {
                 <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy-500 sm:text-[30px]">
                   정기·추가 수거, 전용 용기, 수거대장까지 — 담당자가 일일이 챙기던 일을 비원미래가 함께 관리합니다.
                 </p>
-                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-5 py-2.5 text-[16px] sm:text-[24px] font-bold text-amber-600">
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-5 py-2.5 text-[16px] sm:text-[24px] font-bold text-amber-700">
                   <Check size={16} strokeWidth={3} /> 위생 폐기물 수거 포함
                 </span>
               </Reveal>

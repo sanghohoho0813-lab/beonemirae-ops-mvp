@@ -71,20 +71,20 @@ import { REQUEST_KIND_LABEL, type Client } from '../types'
 
 const reqStatusStyle: Record<RequestStatus, string> = {
   접수: 'bg-navy-100 text-navy-600',
-  '확인 중': 'bg-amber-50 text-amber-600',
+  '확인 중': 'bg-amber-50 text-amber-700',
   '일정 반영': 'bg-teal-50 text-teal-700',
   '처리 완료': 'bg-emerald-50 text-emerald-600',
 }
 const usageStyle: Record<UsageStatus, string> = {
   정상: 'bg-emerald-50 text-emerald-600',
-  '확인 필요': 'bg-amber-50 text-amber-600',
+  '확인 필요': 'bg-amber-50 text-amber-700',
   '점검 필요': 'bg-rose-50 text-rose-500',
 }
 const billStyle: Record<BillStatus, string> = {
   정상: 'bg-emerald-50 text-emerald-600',
   부분입금: 'bg-sky-50 text-sky-600',
   '입금 예정': 'bg-navy-100 text-navy-600',
-  '확인 필요': 'bg-amber-50 text-amber-600',
+  '확인 필요': 'bg-amber-50 text-amber-700',
   '장기 미수': 'bg-rose-50 text-rose-500',
   취소: 'bg-navy-100 text-navy-400 line-through',
 }
@@ -622,8 +622,8 @@ export function ClientDetail() {
           <div className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-navy-800 px-2.5 py-1 text-[0.98rem] font-bold text-white">{inspection.type}</span>
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-600">인증 D-{inspection.dday}</span>
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-600">{inspection.status}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-700">인증 D-{inspection.dday}</span>
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-700">{inspection.status}</span>
             </div>
             <p className="mt-3 text-[1.08rem] font-semibold text-navy-700">필요 자료 체크리스트</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -1013,7 +1013,7 @@ function Cond({ label, tone = 'navy' }: { label: string; tone?: 'navy' | 'rose' 
     navy: 'bg-navy-50 text-navy-600',
     rose: 'bg-rose-50 text-rose-500',
     teal: 'bg-teal-50 text-teal-600',
-    amber: 'bg-amber-50 text-amber-600',
+    amber: 'bg-amber-50 text-amber-700',
   }[tone]
   return <span className={`rounded-full px-3 py-1.5 text-[0.98rem] font-bold ${styles}`}>{label}</span>
 }

@@ -322,7 +322,7 @@ export function AxEvidencePanels({
         </SectionTitle>
 
         <div className="card mb-3 flex gap-3 border-amber-200 bg-amber-50/60 p-4">
-          <AlertTriangle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.3} />
+          <AlertTriangle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.3} />
           <p className="t-body min-w-0 break-keep leading-snug text-navy-700">
             <b className="text-amber-700">거리(km)와 소요시간은 계산하지 않습니다.</b> 거래처 좌표가 없습니다 — 주소는
             글자일 뿐이라 「몇 km 줄어듭니다」를 말할 수 없습니다. 여기 숫자는 전부{' '}

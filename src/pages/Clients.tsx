@@ -220,7 +220,7 @@ export function Clients() {
                            거래처마다 하나씩 붙어 이 화면에서 가장 많이 보이는 글자입니다. */}
                       {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.95rem] font-bold text-rose-700">의료</span>}
                       {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-teal-600">기저귀</span>}
-                      {unpaid && showMoney && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-600">미수금</span>}
+                      {unpaid && showMoney && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-700">미수금</span>}
                     </div>
                     {/*  추천은 영업 판단이고 금액이 함께 붙습니다(「추가 수거 제안 · +70만원」).
                         현장 담당자에게는 띄우지 않습니다 — 방문해서 수거하는 데

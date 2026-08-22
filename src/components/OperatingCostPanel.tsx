@@ -176,7 +176,7 @@ export function OperatingCostPanel({ pnl }: { pnl: MonthlyPnl }) {
         {pnl.missing.length > 0 && pnl.operatingCost != null && (
           <>
             {' '}
-            <b className="text-amber-600">
+            <b className="text-amber-700">
               아직 {pnl.missing.join(' · ')}이(가) 빠져 있어 영업이익이 실제보다 큽니다.
             </b>
           </>

@@ -179,7 +179,7 @@ function MetricCard({ m, onSetBaseline }: { m: MetricRow; onSetBaseline: () => v
           <button
             onClick={onSetBaseline}
             /*  이사님이 실제로 눌러야 하는 자리입니다 — 26px 이면 폰에서 안 눌립니다. */
-            className="-mx-2 inline-flex min-h-[2.75rem] items-center rounded-xl px-2 text-left font-bold text-amber-600 underline underline-offset-4 transition hover:bg-amber-50"
+            className="-mx-2 inline-flex min-h-[2.75rem] items-center rounded-xl px-2 text-left font-bold text-amber-700 underline underline-offset-4 transition hover:bg-amber-50"
           >
             도입 전 기준값 입력하기
           </button>
@@ -356,7 +356,7 @@ export function Performance() {
 
       {!hasBaseline && (
         <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-amber-50 px-5 py-4">
-          <AlertTriangle size={22} className="shrink-0 text-amber-600" />
+          <AlertTriangle size={22} className="shrink-0 text-amber-700" />
           <p className="t-body w-full min-w-0 font-bold text-amber-700 sm:w-auto sm:flex-1">
             도입 전 기준값이 입력되지 않아 개선율을 계산할 수 없습니다. 설정에서 실제 업무 기준값을 입력해 주세요.
           </p>

@@ -99,14 +99,14 @@ export function PricingAudit() {
         </div>
         <div className="bg-white px-3 py-4 text-center">
           <p className="t-label text-navy-500">세금계산서</p>
-          <p className={`t-stat mt-1 tabular-nums ${audit.taxMissing.length > 0 ? 'text-amber-600' : 'text-navy-900'}`}>
+          <p className={`t-stat mt-1 tabular-nums ${audit.taxMissing.length > 0 ? 'text-amber-700' : 'text-navy-900'}`}>
             {audit.taxMissing.length}곳
           </p>
         </div>
         <div className="bg-white px-3 py-4 text-center">
           <p className="t-label text-navy-500">월정액 정책</p>
           <p
-            className={`t-stat mt-1 tabular-nums ${audit.flatUndecided.length > 0 ? 'text-amber-600' : 'text-navy-900'}`}
+            className={`t-stat mt-1 tabular-nums ${audit.flatUndecided.length > 0 ? 'text-amber-700' : 'text-navy-900'}`}
           >
             {audit.flatUndecided.length}곳
           </p>
@@ -141,7 +141,7 @@ export function PricingAudit() {
       {audit.taxMissingBilled.length > 0 && (
         <div data-tax-warn className="card mb-4 border-amber-200 bg-amber-50/50 p-5">
           <div className="flex items-start gap-2.5">
-            <FileSpreadsheet size={20} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.5} />
+            <FileSpreadsheet size={20} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.5} />
             <div className="min-w-0 flex-1">
               <p className="t-body font-extrabold text-navy-900">
                 청구가 나간 거래처 {audit.taxMissingBilled.length}곳은 아직 세금계산서를 끊을 수 없습니다
@@ -164,7 +164,7 @@ export function PricingAudit() {
       {audit.flatUndecided.length > 0 && (
         <div data-flat-warn className="card mb-4 border-amber-200 bg-amber-50/50 p-5">
           <div className="flex items-start gap-2.5">
-            <CalendarX size={20} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.5} />
+            <CalendarX size={20} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.5} />
             <div className="min-w-0 flex-1">
               <p className="t-body font-extrabold text-navy-900">
                 월정액 거래처 {audit.flatUndecided.length}곳은 배출이 없는 달에 청구를 만들 수 없습니다

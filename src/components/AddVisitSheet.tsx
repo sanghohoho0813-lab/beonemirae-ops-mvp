@@ -230,7 +230,7 @@ export function AddVisitSheet({
 
         {isPast && (
           <div className="mb-4 flex items-start gap-2.5 rounded-2xl bg-amber-50 px-4 py-3.5">
-            <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+            <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
             <p className="t-body min-w-0 break-keep font-bold text-amber-800">
               지난 날짜에는 방문을 잡을 수 없습니다. 이미 다녀오셨으면 「수거 입력」에 기록해 주세요.
             </p>

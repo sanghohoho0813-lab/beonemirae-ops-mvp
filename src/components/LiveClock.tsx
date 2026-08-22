@@ -16,6 +16,13 @@ import { useEffect, useState } from 'react'
 //
 //  ⚠ 숫자는 tabular-nums 로 둡니다. 아니면 초가 바뀔 때마다 글자 폭이 달라져
 //    시계가 좌우로 떨립니다.
+//
+//  ⚠ 0080 — 처음에는 **줄 전체**를 nowrap 으로 묶었습니다. 그래서 병원 포털을
+//    「큰 글씨」로 켠 393px 폰에서 이 한 줄이 화면보다 길어져, **페이지 전체가
+//    가로로 밀렸습니다** (아래 탭까지 같이 밀려 「이력」이 화면 밖으로 나갔습니다).
+//    이제 **날짜 덩어리**와 **시각 덩어리**만 각각 붙여 두고, 그 사이는 줄이
+//    바뀔 수 있게 둡니다. 초가 바뀔 때 떨리지 않는 이유(tabular-nums)는 그대로
+//    두면서, 좁은 화면에서는 두 줄로 접힙니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TZ = 'Asia/Seoul'
@@ -60,10 +67,14 @@ export function LiveClock({ full = false, className = '' }: { full?: boolean; cl
   }, [])
 
   return (
-    <span data-live-clock className={`tabular-nums whitespace-nowrap ${className}`}>
-      {full && <>{t.y}년 </>}
-      {t.m}월 {t.d}일 ({t.dow}) <span className="text-navy-300">·</span> {t.ampm}{' '}
-      {t.h12}:{t.mm}:{t.ss}
+    <span data-live-clock className={`tabular-nums ${className}`}>
+      <span className="whitespace-nowrap">
+        {full && <>{t.y}년 </>}
+        {t.m}월 {t.d}일 ({t.dow})
+      </span>{' '}
+      <span className="whitespace-nowrap">
+        <span className="text-navy-400">·</span> {t.ampm} {t.h12}:{t.mm}:{t.ss}
+      </span>
     </span>
   )
 }

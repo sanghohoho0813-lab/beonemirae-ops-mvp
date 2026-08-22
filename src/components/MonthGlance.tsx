@@ -56,7 +56,7 @@ export function MonthGlance({ data }: { data: AppData }) {
       key: 'unpaid',
       label: '미수금',
       value: wonShort(unpaid),
-      tone: unpaid > 0 ? 'text-amber-600' : 'text-navy-900',
+      tone: unpaid > 0 ? 'text-amber-700' : 'text-navy-900',
       mobile: false,
       sub:
         overdue.rows.length > 0

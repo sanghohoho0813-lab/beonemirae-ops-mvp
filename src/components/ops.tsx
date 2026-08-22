@@ -32,7 +32,7 @@ import { weight } from '../lib/format'
 
 const riskStyle: Record<RiskLevel, string> = {
   긴급: 'bg-rose-50 text-rose-500',
-  주의: 'bg-amber-50 text-amber-600',
+  주의: 'bg-amber-50 text-amber-700',
   낮음: 'bg-navy-100 text-navy-500',
 }
 export function RiskBadge({ level }: { level: RiskLevel }) {

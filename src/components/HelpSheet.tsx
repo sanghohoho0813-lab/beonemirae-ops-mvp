@@ -95,7 +95,7 @@ export function HelpSheet({
           }}
           className="card flex w-full items-start gap-3.5 p-4 text-left transition active:bg-navy-50"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
             <Lightbulb size={22} strokeWidth={2.2} />
           </span>
           <span className="min-w-0 flex-1">

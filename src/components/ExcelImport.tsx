@@ -422,7 +422,7 @@ function Verdict({ counts, name }: { counts: PlanCounts; name: string }) {
       {clean ? (
         <CheckCircle2 size={20} strokeWidth={2.4} className="mt-0.5 shrink-0 text-teal-600" />
       ) : (
-        <AlertTriangle size={20} strokeWidth={2.4} className="mt-0.5 shrink-0 text-amber-600" />
+        <AlertTriangle size={20} strokeWidth={2.4} className="mt-0.5 shrink-0 text-amber-700" />
       )}
       <div className="min-w-0">
         <p className={`t-body break-keep font-extrabold ${clean ? 'text-teal-800' : 'text-amber-800'}`}>
@@ -454,7 +454,7 @@ function Line({ k, v }: { k: string; v: string }) {
 
 function Count({ label, n, tone }: { label: string; n: number; tone: 'teal' | 'navy' | 'amber' | 'rose' }) {
   const color =
-    tone === 'teal' ? 'text-teal-600' : tone === 'amber' ? 'text-amber-600' : tone === 'rose' ? 'text-rose-600' : 'text-navy-500'
+    tone === 'teal' ? 'text-teal-600' : tone === 'amber' ? 'text-amber-700' : tone === 'rose' ? 'text-rose-600' : 'text-navy-500'
   return (
     <div className="kpi-box min-w-0 rounded-2xl bg-navy-50 px-3.5 py-3">
       <p className="t-muted break-keep">{label}</p>

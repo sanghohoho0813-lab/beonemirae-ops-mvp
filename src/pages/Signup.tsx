@@ -68,7 +68,7 @@ export function Signup() {
           {!configured ? (
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3.5">
-                <AlertCircle size={22} className="mt-0.5 shrink-0 text-amber-600" />
+                <AlertCircle size={22} className="mt-0.5 shrink-0 text-amber-700" />
                 <p className="t-body min-w-0 break-keep font-medium text-amber-700">
                   서버 연결이 설정되지 않아 가입 신청을 받을 수 없습니다.
                 </p>

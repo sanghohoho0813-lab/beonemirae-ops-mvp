@@ -84,7 +84,7 @@ export function UrgentRiskBanner({ limit = 3 }: { limit?: number }) {
   return (
     <section data-urgent-banner className="card mb-3 overflow-hidden border-amber-200">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-amber-100 bg-amber-50/70 px-5 py-3">
-        <AlertTriangle size={17} strokeWidth={2.5} className="shrink-0 text-amber-600" />
+        <AlertTriangle size={17} strokeWidth={2.5} className="shrink-0 text-amber-700" />
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">
           급한 요청이 반복되는데 앞이 비어 있는 곳 {rows.length}곳
         </p>
@@ -142,7 +142,7 @@ export function UrgentRiskCard({ clientId }: { clientId: string }) {
         <AlertTriangle
           size={17}
           strokeWidth={2.5}
-          className={`shrink-0 ${act ? 'text-amber-600' : 'text-navy-300'}`}
+          className={`shrink-0 ${act ? 'text-amber-700' : 'text-navy-300'}`}
         />
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">
           {act

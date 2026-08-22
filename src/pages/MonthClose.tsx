@@ -178,7 +178,7 @@ export function MonthClose() {
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">기본 단가 섞임</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-amber-600">
+          <p className="mt-1.5 text-2xl font-extrabold text-amber-700">
             {close.defaultPricedCount}
             <span className="ml-0.5 text-base text-navy-300">곳</span>
           </p>
@@ -251,7 +251,7 @@ export function MonthClose() {
 
       {close.defaultPricedCount > 0 && (
         <div data-close-warn className="card flex gap-3 border-amber-200 bg-amber-50/60 p-4 sm:p-5">
-          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-600" />
+          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-700" />
           <p className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
             <b className="text-amber-700">{close.defaultPricedCount}곳은 거래처 단가가 없어 시스템 기본 단가로 계산됐습니다.</b>{' '}
             그대로 확정하면 추정 금액이 병원에 나가는 청구서가 됩니다. 처음부터 체크를 꺼 두었으니, 단가를 넣거나 금액을

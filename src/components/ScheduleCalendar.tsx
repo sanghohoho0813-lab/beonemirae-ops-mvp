@@ -94,12 +94,21 @@ function DayCell({
           data-cal-book={d.date}
           onClick={() => onBook(d.date)}
           aria-label={`${d.date} 방문 잡기`}
-          /*  누르는 자리를 36px 로 잡습니다. 폰에서 칸 하나가 56px 밖에 안 되어
-              44px 로 키우면 ＋ 가 칸을 거의 다 덮어 **날짜 고르기를 가로챕니다.**
-              날짜 숫자는 왼쪽 위에 있으니 오른쪽 아래 36px 이 서로 안 겹칩니다. */
-          className="absolute bottom-0 right-0 flex h-9 w-9 items-end justify-end rounded-lg p-1.5 text-navy-300 transition hover:bg-navy-800 hover:text-white sm:items-center sm:justify-center"
+          /*  누르는 자리를 폰에서는 36px 로 잡습니다. 폰에서 칸 하나가 56px 밖에
+              안 되어 44px 로 키우면 ＋ 가 칸을 거의 다 덮어 **날짜 고르기를
+              가로챕니다.** 날짜 숫자는 왼쪽 위에 있으니 오른쪽 아래 36px 이
+              서로 안 겹칩니다.
+
+              ⚠ 0080 — 그런데 이 「좁아서 어쩔 수 없다」가 **넓은 화면까지**
+                따라가 있었습니다. 접는 폰을 편 673px 에서는 칸 하나가 96px 라
+                자리가 남는데도 40px 그대로였습니다. 손가락 기준(44px)에
+                1~4px 모자란 단추가 15개 잡혔습니다. 칸이 넓어지는 지점(sm:)
+                부터는 44px 로 키웁니다 — 폰의 36px 은 그대로 둡니다.
+                min-* 을 함께 두는 이유는 rem 이라 노트북(root 15.8px)에서
+                2.75rem 이 43.45px 로 **1px 모자라게** 떨어지기 때문입니다. */
+          className="absolute bottom-0 right-0 flex h-9 w-9 items-end justify-end rounded-lg p-1.5 text-navy-300 transition hover:bg-navy-800 hover:text-white sm:h-11 sm:w-11 sm:min-h-[44px] sm:min-w-[44px] sm:items-center sm:justify-center"
         >
-          <Plus size={14} strokeWidth={3} />
+          <Plus className="h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]" strokeWidth={3} />
         </button>
       )}
     </div>
@@ -170,8 +179,15 @@ export function ScheduleCalendar({
         {WD.map((w, i) => (
           <p
             key={w}
+            /*  ⚠ 0080 — 요일 머리글이 흰 바탕에서 대비 기준에 못 미쳤습니다:
+                  일 2.5:1 · 월~금 3.2:1 (기준 4.5:1). 요일은 「무슨 색인지」가
+                  아니라 「무슨 글자인지」를 읽는 자리라, 옅은 색은 그냥 안
+                  읽히는 것입니다. 색이 뜻하는 바(일=빨강 · 토=파랑)는 그대로
+                  두고 **한 단계씩 진하게**만 했습니다.
+                  (이 표는 접는 폰·태블릿·노트북에서 함께 보입니다.
+                   폰 390px 에서는 날짜 띠를 쓰기 때문에 여태 안 잡혔습니다.) */
             className={`border-r border-navy-100 py-1.5 text-center text-[1rem] font-extrabold ${
-              i === 0 ? 'text-rose-400' : i === 6 ? 'text-sky-500' : 'text-navy-400'
+              i === 0 ? 'text-rose-700' : i === 6 ? 'text-sky-700' : 'text-navy-500'
             }`}
           >
             {w}

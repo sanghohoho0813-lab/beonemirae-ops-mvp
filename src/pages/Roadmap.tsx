@@ -38,7 +38,7 @@ type StepStatus = '운영 중' | '개발 중' | '고도화 예정'
 const STATUS_STYLE: Record<StepStatus, string> = {
   '운영 중': 'bg-emerald-50 text-emerald-600',
   '개발 중': 'bg-teal-50 text-teal-600',
-  '고도화 예정': 'bg-amber-50 text-amber-600',
+  '고도화 예정': 'bg-amber-50 text-amber-700',
 }
 
 interface FlowStep {
@@ -75,7 +75,7 @@ const phaseStateStyle: Record<PhaseState, string> = {
   완료: 'bg-emerald-500 text-white',
   'MVP 구현': 'bg-teal-500 text-white',
   '준비 중': 'bg-teal-500 text-white',
-  예정: 'bg-amber-50 text-amber-600',
+  예정: 'bg-amber-50 text-amber-700',
 }
 
 // 활용 계획 하단 시연 진입 버튼 노출 여부 (당분간 숨김 — true 로 바꾸면 다시 표시)
@@ -167,7 +167,7 @@ const PHASES_VIS: {
   { no: '①', title: '준비', desc: '거래처·수거조건 등록\n오늘 일정 확인', steps: 'STEP 1–2', icons: [Building2, CalendarClock], chip: 'bg-navy-100 text-navy-700', ring: 'ring-navy-100' },
   { no: '②', title: '운행', desc: '배차·경로 추천\n현장 수거 입력', steps: 'STEP 3–4', icons: [Truck, PlusCircle], chip: 'bg-teal-50 text-teal-600', ring: 'ring-teal-200' },
   { no: '③', title: '정리', desc: '자재공급·수거대장\n청구·미수금', steps: 'STEP 5–7', icons: [Boxes, FileText, Wallet], chip: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-100' },
-  { no: '④', title: '축적', desc: '통계·운영 데이터\n축적', steps: 'STEP 8', icons: [PieChart, Database], chip: 'bg-amber-50 text-amber-600', ring: 'ring-amber-100' },
+  { no: '④', title: '축적', desc: '통계·운영 데이터\n축적', steps: 'STEP 8', icons: [PieChart, Database], chip: 'bg-amber-50 text-amber-700', ring: 'ring-amber-100' },
 ]
 
 function FlowInfographic() {

@@ -43,7 +43,7 @@ export function StatusBadge({ status }: { status: ScheduleStatus }) {
 const paymentStyles: Record<PaymentStatus, string> = {
   입금완료: 'bg-emerald-50 text-emerald-600',
   미수금: 'bg-rose-50 text-rose-500',
-  확인필요: 'bg-amber-50 text-amber-600',
+  확인필요: 'bg-amber-50 text-amber-700',
   //  취소한 청구는 지우지 않고 남겨 둡니다. 눈에 띄되 살아 있는 청구와
   //  헷갈리지 않도록 회색으로 둡니다.
   취소: 'bg-navy-100 text-navy-400 line-through',

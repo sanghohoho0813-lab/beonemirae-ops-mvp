@@ -82,7 +82,9 @@ export function TimeField({
           onStep={(by) => push({ hour12: stepHour(parts.hour12, by) })}
           unit="시"
         />
-        <span className="hidden self-center text-[1.4rem] font-extrabold text-navy-300 sm:block">:</span>
+        {/*  0080 — navy-300 은 흰 바탕에서 2:1 입니다. 시와 분을 가르는
+             기호라 안 보이면 두 칸이 무슨 관계인지 읽히지 않습니다. */}
+        <span className="hidden self-center text-[1.4rem] font-extrabold text-navy-500 sm:block">:</span>
         <NumberBox
           testId="min"
           aria="분"
@@ -100,7 +102,9 @@ export function TimeField({
 
       {/*  실제로 저장되는 값을 그대로 보여 줍니다. 오전/오후를 잘못 눌러
            점심 수거가 새벽으로 남는 일을 여기서 눈으로 잡습니다. */}
-      <p data-time-value={value} className="t-muted mt-1.5 font-bold text-navy-400">
+      {/*  0080 — navy-400 은 3.5:1 로 기준(4.5)에 못 미쳤습니다. 하필 이 줄은
+           「눈으로 잡으라」고 만든 줄이라, 안 읽히면 있으나 마나입니다. */}
+      <p data-time-value={value} className="t-muted mt-1.5 font-bold text-navy-500">
         저장될 시간 <span className="tabular-nums text-navy-700">{value}</span>
       </p>
     </div>

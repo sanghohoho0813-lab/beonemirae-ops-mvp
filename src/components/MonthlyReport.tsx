@@ -24,7 +24,7 @@ import { PlannedBadge, ExpandableSection } from './ui'
 
 function changeStyle(pct: number) {
   if (pct === 0) return { icon: Minus, cls: 'text-navy-500' }
-  return pct > 0 ? { icon: TrendingUp, cls: 'text-teal-600' } : { icon: TrendingDown, cls: 'text-amber-600' }
+  return pct > 0 ? { icon: TrendingUp, cls: 'text-teal-600' } : { icon: TrendingDown, cls: 'text-amber-700' }
 }
 
 /** 리포트 상단 핵심 지표 1칸 */
@@ -139,9 +139,9 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
               report.education.needed ? 'bg-amber-50' : 'bg-navy-50'
             }`}
           >
-            <GraduationCap size={19} className={`shrink-0 ${report.education.needed ? 'text-amber-600' : 'text-navy-400'}`} />
+            <GraduationCap size={19} className={`shrink-0 ${report.education.needed ? 'text-amber-700' : 'text-navy-400'}`} />
             <div className="min-w-0">
-              <p className={`text-[1rem] font-bold ${report.education.needed ? 'text-amber-600' : 'text-navy-400'}`}>
+              <p className={`text-[1rem] font-bold ${report.education.needed ? 'text-amber-700' : 'text-navy-400'}`}>
                 배출자 교육
               </p>
               {/*  ⚠ 교육일을 안 적어 뒀으면 「정상」이 아닙니다 — **모르는**

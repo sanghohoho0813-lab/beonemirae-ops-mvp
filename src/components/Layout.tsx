@@ -446,15 +446,19 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
   const { mode } = useAuth()
   const live = mode === 'live'
   return (
-    <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg lg:hidden">
+    /*  ⚠ 0080 — 폰을 **가로로 들면** 화면 높이가 390px 밖에 안 됩니다
+        (트럭 안에서 실제로 이렇게 듭니다). 그런데 위 머리띠 102px + 아래 탭
+        58px 이 그대로 붙어 있어, **화면의 41%** 를 붙박이가 먹고 일할 자리는
+        230px 만 남았습니다. 「매우 크게」로 켜면 46% 까지 갑니다.
+        높이가 짧을 때만(가로로 든 폰) 이름표·태그라인을 접고 여백을 줄입니다.
+        폭이 아니라 **높이**로 가릅니다 — 세로로 든 폰(844px)과 태블릿은
+        그대로입니다. 시계는 남깁니다: 대표님이 「어느 계정이든 보이게」
+        요청한 것이라, 자리가 좁다고 뺄 것이 아닙니다. */
+    <header className="sticky top-0 z-30 bg-[#f5f7fa]/90 px-4 py-2.5 backdrop-blur-lg [@media(max-height:480px)]:py-1.5 lg:hidden">
       <div className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[1.08rem] font-black text-teal-300">
           비
         </div>
-        {/* 폰 헤더는 가로가 390px 뿐입니다. 회사명·담당자·사용법·상태배지를
-            다 넣으면 글자 크기를 '크게'로 둔 사용자에게서 서로 밀어냅니다.
-            그래서 이 블록만 줄어들게 두고(min-w-0 + truncate),
-            오른쪽 두 개는 절대 줄지 않게 했습니다. */}
         {/* 폰 헤더는 가로가 390px 뿐입니다. 회사명·담당자·사용법·상태배지를
             다 넣으면 글자 크기를 '매우 크게'로 둔 사용자에게서 서로 밀어냅니다.
             그래서 이 블록만 줄어들게 두고(min-w-0 + truncate),
@@ -468,9 +472,16 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
           <p className="truncate text-[15px] font-extrabold tracking-tight text-navy-900">{COMPANY}</p>
           {/*  PC 사이드바와 **같은 이름표**입니다. 폰에서는 지금까지 더보기
               맨 아래까지 내려가야 볼 수 있었습니다. */}
+          {/*  ⚠ 0080 — 여기에 truncate 가 걸려 있어, 「매우 크게」로 켠 폰에서
+                 「BEONEMIRAE · BUSINESS A…」로 잘렸습니다. 글자 크기는 px 로
+                 고정돼 있어도 **옆에 있는 것들이 rem 이라 커지면서** 이 칸의
+                 남는 폭을 가져가기 때문입니다.
+                 이름표는 잘려 있으면 「고장 난 화면」으로 읽힙니다. 한 줄을
+                 고집하지 않고 **접히게** 둡니다 — 헤더가 한 줄 길어질 뿐입니다.
+                 (px 로 둔 이유 자체는 위 설명 그대로 유지합니다.) */}
           <p
             data-brand-ax-header
-            className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.06em] text-amber-500"
+            className="mt-1 break-keep text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-amber-500 [@media(max-height:480px)]:hidden"
           >
             {SYSTEM_WORDMARK}
             <span className="text-navy-300"> · </span>
@@ -478,7 +489,7 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
           </p>
           {/*  무엇을 하는 시스템인지. 아주 좁은 폰(360px 미만)에서는 상호를
               밀어내므로 그때만 접습니다 — 이름이 잘리는 것보다 낫습니다. */}
-          <p className="mt-0.5 hidden truncate text-[9.5px] font-medium text-navy-400 min-[360px]:block">
+          <p className="mt-0.5 hidden break-keep text-[9.5px] font-medium leading-tight text-navy-400 min-[360px]:block [@media(max-height:480px)]:hidden">
             {SYSTEM_TAGLINE}
           </p>
         </div>
@@ -501,17 +512,24 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
             **「시연용」은 그대로 둡니다.** 이건 안내가 아니라 경고입니다 —
             시연 자료를 실제 기록으로 착각하면 그게 진짜 사고입니다. */}
         {!live && (
-          <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.9rem] font-bold text-amber-600 ring-1 ring-amber-100">
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.9rem] font-bold text-amber-700 ring-1 ring-amber-100">
             시연용
           </span>
         )}
+        {/*  가로로 든 폰에서는 시계를 **이 줄 안**에 넣습니다. 아래 줄을
+             따로 쓰지 않아 머리띠가 한 줄 짧아집니다(26px). 이 줄을 피해
+             아래로 내렸던 이유는 「폰은 가로가 390px 뿐」이라서인데,
+             가로로 들면 844px 이라 그 이유가 없어집니다. */}
+        <span className="hidden shrink-0 whitespace-nowrap text-[0.98rem] font-bold text-navy-500 [@media(max-height:480px)]:inline">
+          <LiveClock />
+        </span>
       </div>
       {/*  ── 오늘 날짜 · 지금 시각 (0078) ────────────────────────────────────
            대표님 요청으로 어느 계정이든 보이게 답니다.
            ⚠ 위 머리글 **안**에 넣지 않았습니다. 폰은 가로가 390px 뿐이라
              상호·도움말과 자리를 다투다 상호가 「㈜비…」로 잘립니다.
              한 줄 아래에 통째로 두면 아무것도 밀어내지 않습니다. */}
-      <p className="mt-1.5 text-right text-[1rem] font-bold text-navy-500">
+      <p className="mt-1.5 text-right text-[1rem] font-bold text-navy-500 [@media(max-height:480px)]:hidden">
         <LiveClock />
       </p>
     </header>
@@ -525,7 +543,9 @@ function NavTab({ active, icon: Icon, label, onClick, guideAt }: { active: boole
       onClick={onClick}
       data-guide={guideAt}
       data-nav-tab={label}
-      className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5"
+      /*  0080 — 가로로 든 폰에서는 58px 을 48px 로 줄입니다. 손가락 기준
+          44px 은 그대로 지킵니다 — 줄이는 것은 여유분이지 기준이 아닙니다. */
+      className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5 [@media(max-height:480px)]:min-h-[48px] [@media(max-height:480px)]:py-0.5"
     >
       {active && (
         <motion.span

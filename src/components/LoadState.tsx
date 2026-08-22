@@ -72,7 +72,7 @@ export function LoadFailedState({
       data-load-state="failed"
       className="card flex flex-col items-center justify-center px-6 py-12 text-center"
     >
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
         <AlertTriangle size={26} strokeWidth={2.2} />
       </span>
       <p className="t-card mt-3.5 break-keep text-navy-700">자료를 불러오지 못했습니다</p>

@@ -98,7 +98,7 @@ function SettingCard({
   const toneStyle = {
     navy: 'bg-navy-50 text-navy-600',
     teal: 'bg-teal-50 text-teal-600',
-    amber: 'bg-amber-50 text-amber-600',
+    amber: 'bg-amber-50 text-amber-700',
     rose: 'bg-rose-50 text-rose-500',
   }[tone]
   return (

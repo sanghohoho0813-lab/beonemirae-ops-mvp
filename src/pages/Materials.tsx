@@ -27,7 +27,7 @@ const emptyForm = {
 
 const usageStyle: Record<UsageStatus, string> = {
   정상: 'bg-emerald-50 text-emerald-600',
-  '확인 필요': 'bg-amber-50 text-amber-600',
+  '확인 필요': 'bg-amber-50 text-amber-700',
   '점검 필요': 'bg-rose-50 text-rose-500',
 }
 
@@ -183,7 +183,7 @@ export function Materials() {
                     <div className="flex items-center gap-2">
                       <span className="text-[1.07rem] font-bold text-navy-900">{client?.name ?? '알 수 없음'}</span>
                       {m.isAdditionalRequest && (
-                        <span className="pill bg-amber-50 text-amber-600">추가요청</span>
+                        <span className="pill bg-amber-50 text-amber-700">추가요청</span>
                       )}
                     </div>
                     <p className="mt-0.5 t-caption">{prettyDate(m.date)}</p>

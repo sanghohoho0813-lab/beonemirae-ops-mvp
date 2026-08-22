@@ -73,7 +73,7 @@ export function PendingApprovals() {
     >
       <span
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-          days >= 2 ? 'bg-amber-100 text-amber-600' : 'bg-teal-50 text-teal-600'
+          days >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-teal-50 text-teal-600'
         }`}
       >
         <UserPlus size={20} strokeWidth={2.4} />

@@ -1239,7 +1239,7 @@ export function CollectionInput() {
           <section data-auto-vehicle className="card p-4 sm:p-5">
             {noVehicleForField ? (
               <div className="flex items-start gap-2.5">
-                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
                 <p data-vehicle-unset className="t-body min-w-0 break-keep font-bold text-amber-800">
                   담당 차량이 지정되지 않았습니다. 사무실에 문의해 주세요.
                 </p>
@@ -1248,7 +1248,7 @@ export function CollectionInput() {
               //  묶인 차가 이번 구분과 다른 경우 — 서버가 저장을 막으므로
               //  「왜 저장이 안 되는지」를 여기서 미리 말해 줍니다.
               <div className="flex items-start gap-2.5">
-                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
                 <p data-vehicle-mismatch className="t-body min-w-0 break-keep font-bold text-amber-800">
                   담당 차량 {myVehicle.name}는 {myVehicle.wasteType} 차량이라 {wasteType} 수거를 저장할 수
                   없습니다. 사무실에 문의해 주세요.
@@ -1307,7 +1307,7 @@ export function CollectionInput() {
           ) : (
             data.vehicles.length === 0 && (
               <div data-vehicle-none className="mb-3 flex items-start gap-2.5 rounded-2xl bg-amber-50 px-4 py-3.5">
-                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-600" strokeWidth={2.2} />
+                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
                 <p className="t-body min-w-0 break-keep font-bold text-amber-800">
                   등록된 차량이 없어 저장할 수 없습니다. 관리자에게 「설정 → 운행 차량」에서 차량 등록을
                   요청해 주세요.

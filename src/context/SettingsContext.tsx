@@ -35,12 +35,22 @@ const SCALE_CLASS: Record<FontScale, string> = {
   xlarge: 'scale-xl',
 }
 
-/** 저장된 값이 없을 때의 기본값: 모바일은 '크게', 데스크탑은 '기본' */
+/** 저장된 값이 없을 때의 기본값: 손에 들고 보는 기기는 '크게', 그 외는 '기본'
+ *
+ *  ⚠ 0080 — 예전에는 「640px 이하」만 폰으로 봤습니다. 그래서 **접는 폰을 편**
+ *    673px 이나 태블릿 768px 은 노트북 취급을 받아 '기본'으로 시작했습니다.
+ *    폭만으로는 「손에 들었는지」를 알 수 없습니다. 그래서 폭과 함께
+ *    **손가락으로 누르는 기기인지**(pointer: coarse)를 봅니다 —
+ *    창을 900px 로 줄인 노트북은 마우스라서 그대로 '기본'이고,
+ *    펼친 폴더블은 손가락이라 '크게'로 시작합니다.
+ *    (root 글자 크기의 경계도 0080 에서 1024px 로 맞췄습니다. index.css 참고 —
+ *     경계를 두 군데 서로 다르게 두면 나중에 반드시 어긋납니다.) */
 function defaultScale(): FontScale {
-  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
-    return 'large'
-  }
-  return 'normal'
+  if (typeof window === 'undefined') return 'normal'
+  const handheld = window.matchMedia('(max-width: 1023px) and (pointer: coarse)').matches
+  //  pointer 를 못 읽는 오래된 브라우저를 위해 예전 기준도 남겨 둡니다
+  const narrow = window.matchMedia('(max-width: 640px)').matches
+  return handheld || narrow ? 'large' : 'normal'
 }
 
 function loadScale(): FontScale {

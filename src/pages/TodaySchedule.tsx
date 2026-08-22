@@ -478,7 +478,7 @@ export function TodaySchedule() {
                         {client?.address} · {vehicle?.name ?? '미배정'}
                       </p>
                       {s.memo && (
-                          <p className="mt-1.5 flex items-start gap-1.5 text-[1.08rem] font-medium text-amber-600">
+                          <p className="mt-1.5 flex items-start gap-1.5 text-[1.08rem] font-medium text-amber-700">
                             <Pin size={14} strokeWidth={2.4} className="mt-1 shrink-0" />
                             <span className="break-keep">{s.memo}</span>
                           </p>

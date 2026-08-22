@@ -42,7 +42,19 @@ export function PortalLayout() {
     <div className="min-h-[100dvh] bg-[#f5f7fa]">
       {/* 상단 바 — 병원 이름이 가장 먼저 보이게 합니다 */}
       <header className="bg-navy-950">
-        <div className="mx-auto flex w-full max-w-[1240px] items-center gap-x-3 gap-y-2 px-4 py-3.5 lg:gap-x-4 lg:px-8">
+        {/*  ⚠ 0080 — 여기에 gap-y-2(세로 간격)만 있고 flex-wrap 이 없었습니다.
+             줄이 바뀔 수 없으니 세로 간격은 처음부터 쓰일 일이 없었고, 대신
+             오른쪽 단추들이 **화면 밖으로 밀려났습니다** — 768px 태블릿에서
+             91px, 「매우 크게」로 켜면 254px 이 잘렸습니다(「로그아웃」이
+             화면 밖). 원래 의도대로 접히게 둡니다.
+
+             ⚠ 단, **sm: 부터**입니다. 390px 폰에서는 오른쪽 단추가 이미
+               아이콘만 남아 좁은데, 여기까지 접히게 두면 단추가 한 줄
+               내려가 머리글이 140px → 176px 로 **오히려 커집니다.**
+               폰에서는 병원 이름 쪽이 줄어드는 것이 맞습니다(min-w-0 +
+               두 줄까지 허용). 접기는 글자가 다 보이기 시작하는
+               sm: 부터 필요한 것입니다. */}
+        <div className="mx-auto flex w-full max-w-[1240px] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:flex-wrap lg:gap-x-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white sm:h-12 sm:w-12 sm:text-[1.3rem]">
               비
@@ -58,8 +70,13 @@ export function PortalLayout() {
               <p className="t-muted mt-1 hidden break-keep text-navy-300 sm:block">㈜비원미래 병원 운영지원 서비스</p>
               {/*  ⚠ 0078 — 폰에서는 여기에 답니다. 오른쪽 단추들과 가로를
                    다투면 병원 이름이 밀려 잘립니다. 넓은 화면에서는 오른쪽
-                   단추 옆(아래 md:inline)에 따로 보입니다. */}
-              <p className="mt-1 break-keep text-[0.98rem] font-bold text-navy-300 md:hidden">
+                   단추 옆(아래 lg:inline)에 따로 보입니다.
+                   ⚠ 0080 — 자리를 바꾸는 경계를 md(768px)에서 lg(1024px)로
+                     옮겼습니다. 768px 은 오른쪽에 시계까지 낄 자리가 없어,
+                     끼워 넣은 순간 「로그아웃」이 화면 밖으로 나갔습니다.
+                     글자 크기 경계(index.css)와 같은 1024px 을 씁니다 —
+                     경계를 두 군데 다르게 두면 반드시 어긋납니다. */}
+              <p className="mt-1 break-keep text-[0.98rem] font-bold text-navy-300 lg:hidden">
                 <LiveClock />
               </p>
             </div>
@@ -79,7 +96,7 @@ export function PortalLayout() {
               <span className="t-btn hidden sm:inline">{CLIENT_TEL}</span>
             </a>
             {/*  오늘 날짜 · 지금 시각 (0078) — 병원 담당자도 봅니다 */}
-            <span className="hidden text-[1rem] font-bold text-white/80 md:inline">
+            <span className="hidden text-[1rem] font-bold text-white/80 lg:inline">
               <LiveClock />
             </span>
             {profile?.name && (

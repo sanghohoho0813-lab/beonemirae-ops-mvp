@@ -89,7 +89,7 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 sm:px-6">
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">병원의 행동이 매출이 되는 흐름</p>
-        {demo && <span className="pill shrink-0 bg-amber-50 text-amber-600">시연 데이터</span>}
+        {demo && <span className="pill shrink-0 bg-amber-50 text-amber-700">시연 데이터</span>}
         {/* 시연에서 "병원은 이 화면을 봅니다"를 한 번에 보여주기 위한 바로가기 */}
         <Link to="/portal" className="t-btn flex shrink-0 items-center gap-1 text-navy-500 hover:underline">
           <Hospital size={16} strokeWidth={2.4} /> 병원 화면

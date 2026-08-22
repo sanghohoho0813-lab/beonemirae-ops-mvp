@@ -60,7 +60,7 @@ import { prettyDate, today, wonShort, thisMonth } from '../lib/format'
 
 const statusMeta: Record<CheckStatus, { icon: LucideIcon; color: string; chip: string }> = {
   긴급: { icon: AlertTriangle, color: 'text-rose-500', chip: 'bg-rose-50 text-rose-500' },
-  주의: { icon: AlertCircle, color: 'text-amber-600', chip: 'bg-amber-50 text-amber-600' },
+  주의: { icon: AlertCircle, color: 'text-amber-700', chip: 'bg-amber-50 text-amber-700' },
   정보: { icon: Circle, color: 'text-navy-500', chip: 'bg-navy-50 text-navy-500' },
   완료: { icon: CheckCircle2, color: 'text-emerald-600', chip: 'bg-emerald-50 text-emerald-600' },
 }

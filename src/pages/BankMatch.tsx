@@ -317,7 +317,7 @@ export function BankMatch() {
             </div>
             <div className="card p-4">
               <p className="text-[1.03rem] font-semibold text-navy-400">확인 필요</p>
-              <p className="mt-1.5 text-2xl font-extrabold text-amber-600">
+              <p className="mt-1.5 text-2xl font-extrabold text-amber-700">
                 {sum.check}
                 <span className="ml-0.5 text-base text-navy-300">건</span>
               </p>

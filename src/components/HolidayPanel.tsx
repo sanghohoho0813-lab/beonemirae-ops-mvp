@@ -69,7 +69,7 @@ export function HolidayPanel({ from, to }: { from: string; to: string }) {
         data-holiday-status
         className={`card flex gap-3 p-4 sm:p-5 ${covered ? '' : 'border-amber-200 bg-amber-50/50'}`}
       >
-        <CalendarOff size={19} className={`mt-0.5 shrink-0 ${covered ? 'text-navy-400' : 'text-amber-600'}`} strokeWidth={2.4} />
+        <CalendarOff size={19} className={`mt-0.5 shrink-0 ${covered ? 'text-navy-400' : 'text-amber-700'}`} strokeWidth={2.4} />
         <div className="min-w-0 flex-1 text-[1.05rem] leading-relaxed text-navy-700">
           {covered ? (
             <p>

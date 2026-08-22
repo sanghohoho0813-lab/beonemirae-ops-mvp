@@ -85,7 +85,10 @@ export function AreaHeader({
       <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-navy-900 text-white lg:h-10 lg:w-10">
         <Icon size={18} strokeWidth={2.3} />
         {/* 번호는 아이콘 위에 작게 — 제목 줄의 글자 흐름을 끊지 않습니다 */}
-        <span className="absolute -right-1 -top-1 flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-teal-500 text-[0.72rem] font-black text-white ring-2 ring-[#f5f7fa]">
+        <span /*  ⚠ 0080 — 흰 글자를 teal-500 위에 올리면 3.7:1 입니다. 큰 글자면 기준(3:1)을
+              넘지만 이건 12px 짜리 숫자라 4.5:1 이 필요합니다. 이 작은 알림 숫자만
+              한 단계 진한 파랑으로 둡니다 — 저장 단추의 브랜드 파랑은 그대로입니다. */
+        className="absolute -right-1 -top-1 flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-teal-600 text-[0.72rem] font-black text-white ring-2 ring-[#f5f7fa]">
           {n}
         </span>
       </span>
@@ -399,7 +402,7 @@ const iconToneStyle: Record<IconTone, string> = {
   navy: 'bg-navy-50 text-navy-600',
   teal: 'bg-teal-50 text-teal-600',
   rose: 'bg-rose-50 text-rose-500',
-  amber: 'bg-amber-50 text-amber-600',
+  amber: 'bg-amber-50 text-amber-700',
   emerald: 'bg-emerald-50 text-emerald-600',
 }
 
@@ -582,7 +585,7 @@ const kpiToneStyle: Record<IconTone, string> = {
   navy: 'bg-navy-50 text-navy-600',
   teal: 'bg-teal-50 text-teal-600',
   rose: 'bg-rose-50 text-rose-500',
-  amber: 'bg-amber-50 text-amber-600',
+  amber: 'bg-amber-50 text-amber-700',
   emerald: 'bg-emerald-50 text-emerald-600',
 }
 
@@ -682,7 +685,7 @@ export function ProgressStat({
   const textTone = {
     teal: 'text-teal-600',
     rose: 'text-rose-500',
-    amber: 'text-amber-600',
+    amber: 'text-amber-700',
     navy: 'text-navy-700',
   }[tone]
   const pct = Math.max(0, Math.min(100, percent))

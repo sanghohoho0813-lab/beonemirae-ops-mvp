@@ -30,7 +30,7 @@ export const TONE: Record<Tone, ToneStyle> = {
   blue:    { tile: 'bg-teal-50 text-teal-600',      chip: 'bg-teal-50 text-teal-700',      dot: 'bg-teal-500',   text: 'text-teal-700' },
   teal:    { tile: 'bg-accent-50 text-accent-600',  chip: 'bg-accent-50 text-accent-700',  dot: 'bg-accent-500', text: 'text-accent-700' },
   emerald: { tile: 'bg-emerald-50 text-emerald-600',chip: 'bg-emerald-50 text-emerald-700',dot: 'bg-emerald-500',text: 'text-emerald-700' },
-  amber:   { tile: 'bg-amber-50 text-amber-600',    chip: 'bg-amber-50 text-amber-700',    dot: 'bg-amber-500',  text: 'text-amber-700' },
+  amber:   { tile: 'bg-amber-50 text-amber-700',    chip: 'bg-amber-50 text-amber-700',    dot: 'bg-amber-500',  text: 'text-amber-700' },
   orange:  { tile: 'bg-orange-50 text-orange-600',  chip: 'bg-orange-50 text-orange-700',  dot: 'bg-orange-500', text: 'text-orange-700' },
   rose:    { tile: 'bg-rose-50 text-rose-600',      chip: 'bg-rose-50 text-rose-600',      dot: 'bg-rose-500',   text: 'text-rose-600' },
   violet:  { tile: 'bg-violet-50 text-violet-600',  chip: 'bg-violet-50 text-violet-700',  dot: 'bg-violet-500', text: 'text-violet-700' },

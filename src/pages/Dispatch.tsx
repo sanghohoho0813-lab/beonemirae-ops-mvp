@@ -72,7 +72,7 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
                   </span>
                 )}
                 {p.materialCount > 0 && (
-                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-600">
+                  <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[0.98rem] font-bold text-amber-700">
                     <Package size={12} /> 자재 동시공급 {p.materialCount}건
                   </span>
                 )}
@@ -123,8 +123,8 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
 const fleetStatusStyle: Record<string, string> = {
   '운행 중': 'bg-teal-50 text-teal-700',
   대기: 'bg-navy-100 text-navy-500',
-  '정비 예정': 'bg-amber-50 text-amber-600',
-  '검사 예정': 'bg-amber-50 text-amber-600',
+  '정비 예정': 'bg-amber-50 text-amber-700',
+  '검사 예정': 'bg-amber-50 text-amber-700',
 }
 
 export function Dispatch() {
@@ -182,7 +182,7 @@ export function Dispatch() {
           data-dispatch-unassigned
           className="card flex items-center gap-3 border-amber-200 bg-amber-50/60 p-4 transition hover:bg-amber-50 sm:p-5"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
             <Truck size={20} />
           </span>
           <span className="min-w-0 flex-1 text-[1.05rem] leading-relaxed text-navy-700">
@@ -209,7 +209,7 @@ export function Dispatch() {
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">자재 동시공급</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-amber-600">{materialCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+          <p className="mt-1.5 text-2xl font-extrabold text-amber-700">{materialCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
         </div>
       </div>
 

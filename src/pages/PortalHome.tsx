@@ -187,7 +187,9 @@ export function PortalHome() {
             {s.nextTime && ` ${s.nextTime}`}
           </span>
           {s.nextIsEstimate && <span className="pill bg-navy-100 text-navy-500">수거주기 기준 예상</span>}
-          <span className="text-navy-300">·</span>
+          {/*  0080 — navy-300 은 1.9:1 입니다. 「다음 수거 …」와 「수거주기 …」를
+               가르는 기호라, 안 보이면 두 값이 한 문장으로 붙어 읽힙니다. */}
+          <span className="text-navy-400">·</span>
           <span>수거주기 {client.collectionCycle || '미설정'}</span>
         </p>
       </div>

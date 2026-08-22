@@ -70,7 +70,7 @@ export function Login() {
             // 환경변수가 없으면 가짜 로그인을 만들지 않고 사실을 그대로 알립니다.
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3.5">
-                <AlertCircle size={22} className="mt-0.5 shrink-0 text-amber-600" />
+                <AlertCircle size={22} className="mt-0.5 shrink-0 text-amber-700" />
                 <div className="min-w-0">
                   <p className="t-card break-keep text-amber-800">서버 연결이 설정되지 않았습니다</p>
                   <p className="t-body mt-1.5 break-keep font-medium text-amber-700">

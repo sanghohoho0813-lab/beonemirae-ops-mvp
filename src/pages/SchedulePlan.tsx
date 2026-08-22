@@ -34,7 +34,7 @@ const RANGES = [
 const MAX_ROWS = 500
 
 function Stat({ label, value, unit, tone = 'navy' }: { label: string; value: number; unit: string; tone?: 'navy' | 'teal' | 'amber' }) {
-  const color = tone === 'teal' ? 'text-teal-600' : tone === 'amber' ? 'text-amber-600' : 'text-navy-900'
+  const color = tone === 'teal' ? 'text-teal-600' : tone === 'amber' ? 'text-amber-700' : 'text-navy-900'
   return (
     <div className="card p-4">
       <p className="text-[1.03rem] font-semibold text-navy-400">{label}</p>
