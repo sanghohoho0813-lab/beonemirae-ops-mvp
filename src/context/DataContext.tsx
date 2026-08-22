@@ -379,6 +379,19 @@ interface DataContextValue {
   reload: () => Promise<void>
   /** 마지막 실패한 저장을 다시 시도 */
   retry: () => Promise<void>
+  /**
+   *  「다시 시도」를 **그 화면 방식으로** 하게 맡깁니다 (0077).
+   *
+   *   ⚠ 왜 필요한가 — 통신 띠의 「다시 시도」는 실패한 요청을 그대로 다시
+   *     쐈습니다. 서버에는 저장이 되는데 **화면은 그것을 모릅니다.** 그래서
+   *     기사님은 저장이 끝났는데도 빨간 띠와 입력칸을 그대로 보고 있었고,
+   *     또 눌렀습니다. 수거 입력 화면의 「수거 완료 저장」은 성공·이미저장·
+   *     실패를 모두 제대로 가리므로, 그 화면이 켜져 있는 동안에는 **그 처리를
+   *     그대로 쓰게** 합니다.
+   *   ⚠ 화면을 떠날 때 반드시 null 로 지웁니다. 안 지우면 사라진 화면의
+   *     함수를 부르게 됩니다.
+   */
+  setRetryHandler: (fn: (() => Promise<void>) | null) => void
   clearSyncError: () => void
 }
 
@@ -563,7 +576,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  //  화면이 맡긴 「다시 시도」 (0077) — 있으면 이것을 먼저 씁니다
+  const retryHandler = useRef<(() => Promise<void>) | null>(null)
+  const setRetryHandler = useCallback((fn: (() => Promise<void>) | null) => {
+    retryHandler.current = fn
+  }, [])
+
   const retry = useCallback(async () => {
+    //  그 화면이 스스로 다시 하는 법을 알고 있으면 맡깁니다.
+    //  (수거 입력은 「이미 저장돼 있음」까지 가려서 안심시켜 줍니다)
+    if (retryHandler.current) {
+      await retryHandler.current()
+      return
+    }
     const fn = pending.current
     if (fn) await runLive(fn)
   }, [runLive])
@@ -2298,6 +2323,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       sync: { loading, saving, error: syncError, lastSavedAt, ready: !live || firstLoadDone },
       reload,
       retry,
+      setRetryHandler,
       clearSyncError,
     }),
     [
@@ -2385,6 +2411,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       lastSavedAt,
       reload,
       retry,
+      setRetryHandler,
       clearSyncError,
     ],
   )

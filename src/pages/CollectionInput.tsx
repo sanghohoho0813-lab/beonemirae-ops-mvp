@@ -151,7 +151,7 @@ function Section({
 }
 
 export function CollectionInput() {
-  const { data, completeCollection, revertCollection, notesFor, sync } = useData()
+  const { data, completeCollection, revertCollection, notesFor, sync, setRetryHandler, clearSyncError } = useData()
   const { configured, role, profile } = useAuth()
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const canGoHistory = !configured || canAccess(role, '/history')
@@ -445,6 +445,23 @@ export function CollectionInput() {
   const alreadySaved = (msgs: string[]) =>
     msgs.some((m) => /이미 완료 처리된 일정|이미 저장되어 있습니다/.test(m))
 
+  //  ── 「다시 시도」를 이 화면이 맡습니다 (0077) ──────────────────────────
+  //
+  //   통신 띠의 「다시 시도」는 실패한 요청을 그대로 다시 쐈습니다. 서버에는
+  //   저장이 되는데 **화면은 그것을 몰라서**, 기사님은 저장이 끝났는데도
+  //   빨간 띠와 입력칸을 그대로 보고 또 눌렀습니다.
+  //   아래 submit() 은 성공 · 「이미 저장돼 있음」 · 진짜 실패를 모두 가려
+  //   주므로, 이 화면이 떠 있는 동안에는 그 처리를 그대로 쓰게 합니다.
+  //
+  //   ⚠ submitRef 로 잡아 두는 이유 — submit 은 매 렌더마다 새로 만들어지는
+  //     함수입니다. 그대로 맡기면 등록한 순간의 **낡은 값**(수거량 등)을
+  //     들고 있는 함수가 불립니다.
+  const submitRef = useRef<() => Promise<void>>(async () => {})
+  useEffect(() => {
+    setRetryHandler(() => submitRef.current())
+    return () => setRetryHandler(null)
+  }, [setRetryHandler])
+
   async function submit() {
     //  ── 차량이 안 묶인 계정은 여기서 멈춥니다 (0067) ──────────────────────
     //   현장에는 차량 고르는 칸이 없으므로, 안 막으면 서버가 거절하는
@@ -475,6 +492,12 @@ export function CollectionInput() {
       if (alreadySaved(result.errors)) {
         //  이미 들어가 있습니다 — 다시 넣을 필요가 없다는 것만 알려 줍니다.
         setErrors([])
+        //  ⚠ 0077 — 위쪽 빨간 통신 띠도 내립니다. 안 내리면 화면 위에서는
+        //    「저장 실패 · 다시 시도」라고 하고 아래에서는 「이미 저장돼
+        //    있습니다」라고 해서, **한 화면이 서로 반대되는 말**을 합니다.
+        //    기사님은 위쪽 빨간 것을 믿고 또 누릅니다.
+        //    이건 실패가 아니라 **이미 끝난 일**입니다.
+        clearSyncError()
         setDupNotice(result.errors[0] ?? '')
         window.scrollTo({ top: 0, behavior: 'smooth' })
         return
@@ -506,6 +529,9 @@ export function CollectionInput() {
   //  ⚠ 현장은 차량을 고르는 칸이 없으므로, 차량이 안 묶여 있으면 여기서
   //    막습니다. 막지 않으면 서버가 거절하는 화면을 기사님이 보게 됩니다.
   const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock && !noVehicleForField
+
+  //  ⚠ 매 렌더마다 최신 submit 을 넣어 둡니다 — 위 setRetryHandler 참고
+  submitRef.current = submit
 
   //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
   const timeOpen = openTime || visitDate !== today()
