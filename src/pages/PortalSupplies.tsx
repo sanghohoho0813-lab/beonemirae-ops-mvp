@@ -140,7 +140,7 @@ export function PortalSupplies() {
             {needs.needs.map((n) => {
               const p = productFor(n)
               return (
-                <li key={n.key} data-need={n.key} className="rounded-2xl bg-navy-50/60 p-3.5">
+                <li key={n.key} data-need={n.key} className="rounded-2xl bg-navy-50 p-3.5">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <b className="t-body text-navy-900">{n.label}</b>
                     {/*  ⚠ 병원이 지금 결정해야 하는 것은 딱 하나입니다 —
@@ -233,7 +233,7 @@ export function PortalSupplies() {
           <label
             data-with-pickup
             className={`mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-2xl p-3.5 ${
-              withPickup ? 'bg-teal-50/70 ring-1 ring-teal-200' : 'bg-navy-50/60'
+              withPickup ? 'bg-teal-50 ring-1 ring-teal-200' : 'bg-navy-50'
             }`}
           >
             <input

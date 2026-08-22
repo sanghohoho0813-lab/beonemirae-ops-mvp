@@ -176,7 +176,7 @@ export function TodaySchedule() {
 
   return (
     <div>
-      <div className={flash ? 'rounded-2xl bg-teal-50/70 transition-colors duration-700' : 'transition-colors duration-700'}>
+      <div className={flash ? 'rounded-2xl bg-teal-50 transition-colors duration-700' : 'transition-colors duration-700'}>
         {/*
           안내물은 이 화면에 두지 않습니다.
 
@@ -225,7 +225,7 @@ export function TodaySchedule() {
         모릅니다. 지우지는 않습니다 — 명절에도 가야 하는 곳이 있습니다.
       */}
       {holidayName && (
-        <div data-holiday-today className="card border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+        <div data-holiday-today className="card border-amber-200 bg-amber-50 p-4 sm:p-5">
           <p className="t-body font-extrabold text-navy-900">
             {prettyDate(date)}은 휴무일입니다 — {holidayName}
           </p>
@@ -378,7 +378,7 @@ export function TodaySchedule() {
                   data-guide={si === 0 ? 'guide-today-list' : undefined}
                   onClick={() => (done ? openEdit(s) : navigate(`/collection?schedule=${s.id}`))}
                   className={`flex w-full items-center gap-3 border-l-[5px] py-3.5 pl-3 pr-4 text-left transition active:bg-navy-50 lg:hidden ${
-                    done ? 'border-accent-400 bg-accent-50/30' : 'border-teal-500'
+                    done ? 'border-accent-400 bg-accent-50' : 'border-teal-500'
                   }`}
                 >
                   <span
@@ -909,7 +909,7 @@ function TodayDeliveries({ data, list }: { data: AppData; list: Schedule[] }) {
 
   const nameOf = (id: string) => data.clients.find((c) => c.id === id)?.name ?? '거래처'
   return (
-    <div data-today-deliveries className="card border-teal-200 bg-teal-50/50 p-4 sm:p-5">
+    <div data-today-deliveries className="card border-teal-200 bg-teal-50 p-4 sm:p-5">
       <p className="t-body font-extrabold text-navy-900">오늘 전달할 물품이 있습니다 — {rows.length}건</p>
       <ul className="mt-2 flex flex-col gap-1.5">
         {rows.map((o) => (

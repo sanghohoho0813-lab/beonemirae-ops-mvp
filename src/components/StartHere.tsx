@@ -68,7 +68,12 @@ export function StartHere({ data }: { data: AppData }) {
             key={s.label}
             to={s.to}
             className={`flex items-center gap-3.5 px-5 py-4 transition hover:bg-navy-50 sm:px-6 ${
-              s.done ? 'opacity-55' : ''
+              /*  ⚠ 0082 — 여기 opacity-55 가 걸려 있었습니다. **부모가 흐려지면
+                  자식 글자도 같이 흐려집니다** — 19px 제목이 2.3:1 까지
+                  떨어졌습니다. 끝난 줄인 것은 취소선과 글자색이 이미 말해
+                  주고 있으니, 통째로 흐리게 만들 이유가 없습니다.
+                  흐림이 필요하면 **배경색에만** 넣습니다. */
+              s.done ? 'bg-navy-50' : ''
             }`}
           >
             <span

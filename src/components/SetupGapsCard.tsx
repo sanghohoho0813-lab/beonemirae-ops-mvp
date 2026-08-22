@@ -36,7 +36,7 @@ export function SetupGapsCard() {
 
   if (scan.gaps.length === 0) {
     return (
-      <div data-setup-gaps data-setup-clear className="card border-teal-200 bg-teal-50/60 p-4 sm:p-5">
+      <div data-setup-gaps data-setup-clear className="card border-teal-200 bg-teal-50 p-4 sm:p-5">
         <div className="flex items-start gap-2.5">
           <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-600" strokeWidth={2.4} />
           <div className="min-w-0">
@@ -74,7 +74,7 @@ export function SetupGapsCard() {
         {scan.gaps.map((g) => {
           const t = TONE[g.weight]
           return (
-            <li key={g.key} data-setup-gap={g.key} className={`rounded-2xl bg-navy-50/60 px-3.5 py-3 ring-1 ${t.ring}`}>
+            <li key={g.key} data-setup-gap={g.key} className={`rounded-2xl bg-navy-50 px-3.5 py-3 ring-1 ${t.ring}`}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.92rem] font-bold ${t.chip}`}>
                   {g.weight}
@@ -124,7 +124,7 @@ export function SetupGapsLine({ className = '' }: { className?: string } = {}) {
     <Link
       to="/settings"
       data-setup-line
-      className={`flex items-center gap-2.5 rounded-2xl bg-white px-4 py-3 shadow-card transition hover:bg-navy-50/50 ${className}`}
+      className={`flex items-center gap-2.5 rounded-2xl bg-white px-4 py-3 shadow-card transition hover:bg-navy-50 ${className}`}
     >
       <Wrench size={17} className="shrink-0 text-navy-400" />
       <span className="min-w-0 flex-1 break-keep text-[1.02rem] font-bold text-navy-700">

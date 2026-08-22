@@ -105,7 +105,7 @@ export function ClientInfoPaste() {
         )}
 
         {willChange.length > 0 && (
-          <div data-paste-preview className="mt-3 rounded-xl bg-navy-50/70 p-3.5">
+          <div data-paste-preview className="mt-3 rounded-xl bg-navy-50 p-3.5">
             <p className="t-body font-bold text-navy-800">채울 거래처 {willChange.length}곳</p>
             <ul className="mt-1.5 flex flex-col gap-1">
               {willChange.slice(0, 12).map((r) => (

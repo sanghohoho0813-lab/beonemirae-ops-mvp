@@ -180,7 +180,7 @@ export function Dispatch() {
         <Link
           to="/plan"
           data-dispatch-unassigned
-          className="card flex items-center gap-3 border-amber-200 bg-amber-50/60 p-4 transition hover:bg-amber-50 sm:p-5"
+          className="card flex items-center gap-3 border-amber-200 bg-amber-50 p-4 transition hover:bg-amber-50 sm:p-5"
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
             <Truck size={20} />

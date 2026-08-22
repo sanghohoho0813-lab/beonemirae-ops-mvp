@@ -23,7 +23,7 @@ export function ClientLeadHistory({
   clientId: string
   flat?: boolean
 }) {
-  const box = flat ? 'rounded-2xl bg-navy-50/50' : 'card'
+  const box = flat ? 'rounded-2xl bg-navy-50' : 'card'
   const leads = leadsOfClient(data, clientId)
   if (leads.length === 0) {
     return (

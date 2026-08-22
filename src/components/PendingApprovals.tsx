@@ -68,7 +68,7 @@ export function PendingApprovals() {
       to="/users"
       data-pending-approvals
       className={`card flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3.5 transition hover:bg-navy-50 sm:px-5 ${
-        days >= 2 ? 'border-amber-200 bg-amber-50/60' : ''
+        days >= 2 ? 'border-amber-200 bg-amber-50' : ''
       }`}
     >
       <span

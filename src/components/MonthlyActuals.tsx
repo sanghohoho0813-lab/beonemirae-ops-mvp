@@ -79,7 +79,7 @@ export function MonthlyActuals({
       <p className="t-muted mt-2 break-keep">{NOTE[purpose]}</p>
 
       {canEdit && editing && (
-        <div data-actual-form className="mt-3 rounded-2xl bg-navy-50/70 p-4">
+        <div data-actual-form className="mt-3 rounded-2xl bg-navy-50 p-4">
           <p className="t-body break-keep font-bold text-navy-800">
             {sorted.find((r) => r.id === editing)?.month} 실적 고치기
           </p>
@@ -203,7 +203,7 @@ export function MonthlyActuals({
                 )}
               </tr>
             ))}
-            <tr className="bg-navy-50/60 font-extrabold text-navy-900">
+            <tr className="bg-navy-50 font-extrabold text-navy-900">
               <td className="px-2.5 py-2">합계</td>
               <td colSpan={2} className="px-2.5 py-2 text-right tabular-nums">
                 {weight(totalKg)}

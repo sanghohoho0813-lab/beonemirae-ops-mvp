@@ -630,7 +630,7 @@ export function Settings() {
                 <div
                   key={t.key}
                   data-export-row={t.key}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-navy-50/70 px-3.5 py-3"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-navy-50 px-3.5 py-3"
                 >
                   <span className="min-w-0 flex-1 basis-[8rem]">
                     <span className="block break-keep font-bold text-navy-900">

@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const whole = this.props.scope === 'app'
     return (
       <div data-error-boundary={whole ? 'app' : 'page'} className={whole ? 'p-6' : ''}>
-        <div className="card mx-auto max-w-2xl border-rose-200 bg-rose-50/40 p-6">
+        <div className="card mx-auto max-w-2xl border-rose-200 bg-rose-50 p-6">
           <div className="flex items-start gap-3">
             <AlertTriangle size={22} className="mt-0.5 shrink-0 text-rose-500" strokeWidth={2.6} />
             <div className="min-w-0 flex-1">

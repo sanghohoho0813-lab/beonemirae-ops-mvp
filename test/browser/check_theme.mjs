@@ -181,6 +181,109 @@ for (const theme of THEMES) {
   await ctx.close()
 }
 
+// ── ⑤ 선명도 — 화면 전체 (0082) ─────────────────────────────────────────────
+//
+//   ⚠ 여태 자(a11y_measure)가 **main 안만** 봤습니다. 그래서 사이드바·머리띠·
+//     하단 탭은 한 번도 잰 적이 없었고, 거기서 「밝은 바탕용 캡션색(navy-400)」이
+//     어두운 사이드바에 얹혀 3.2:1 로 있던 것을 못 잡았습니다.
+//     여기서는 **body 전체**를 봅니다.
+//
+//   ⚠ 그리고 **조상에 걸린 opacity 를 곱해서** 봅니다. 부모를 흐리게 만들면
+//     자식 글자도 같이 흐려집니다 — 실제로 「시작하기」 목록과 달력 지난 달
+//     칸이 그 방식이라 19px 제목이 2.3:1 까지 떨어져 있었습니다.
+//     흐림은 **배경색에만** 넣습니다.
+async function sharpness(p) {
+  return await p.evaluate(() => {
+    const srgb = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+    const lum = ([r, g, b]) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
+    const parse = (c) => { const m = c.match(/rgba?\((\d+), ?(\d+), ?(\d+)(?:, ?([\d.]+))?/)
+      return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : null }
+    const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el)
+      return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && s.opacity !== '0' }
+    const effOpacity = (el) => { let n = el, o = 1
+      while (n && n !== document.documentElement) { o *= Number(getComputedStyle(n).opacity || 1); n = n.parentElement }
+      return o }
+    const bgOf = (el) => { let n = el
+      while (n && n !== document.documentElement) { const q = parse(getComputedStyle(n).backgroundColor)
+        if (q && q[3] > 0.55) return q.slice(0, 3); n = n.parentElement }
+      return [255, 255, 255] }
+    const ratio = (f, g) => { const a = lum(f) + 0.05, c = lum(g) + 0.05; return a > c ? a / c : c / a }
+    const low = []
+    let faded = 0
+    for (const el of [...document.body.querySelectorAll('*')].filter(vis)) {
+      if (![...el.childNodes].some((x) => x.nodeType === 3 && (x.textContent ?? '').trim())) continue
+      //  비활성 컨트롤은 WCAG 대비 기준의 적용 대상이 아닙니다 —
+      //  「지금은 못 누른다」를 흐리게 보여 주는 것이 그 자체로 정보입니다.
+      if (el.closest('[disabled],[aria-disabled="true"]')) continue
+      const st = getComputedStyle(el); const fg = parse(st.color); if (!fg) continue
+      const px = parseFloat(st.fontSize), bold = Number(st.fontWeight) >= 700
+      const need = (px >= 24 || (px >= 18.66 && bold)) ? 3 : 4.5
+      const bg = bgOf(el)
+      const op = effOpacity(el) * (fg[3] ?? 1)
+      if (op < 0.95) faded += 1
+      const eff = fg.slice(0, 3).map((v, i) => v * op + bg[i] * (1 - op))
+      const r = ratio(eff, bg)
+      if (r < need) low.push(`${Math.round(px)}px ${r.toFixed(1)}:1 "${(el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 16)}"`)
+    }
+    return { low, faded }
+  })
+}
+
+//  ⚠ 기본 테마(딥 네이비 블루)에는 아는 미달이 남아 있습니다 — **브랜드 파랑
+//    위의 흰 글자**(주 단추 라벨, 17~18px, 3.7:1)입니다. 대표님이 이 색을
+//    가독성 레퍼런스로 지정하셨고, 「주요 UI 최소 3:1」 기준은 넘기므로
+//    색을 저희가 임의로 바꾸지 않았습니다. 다만 **개수를 못 박아** 둡니다 —
+//    이보다 늘면 다른 곳이 나빠진 것입니다.
+const KNOWN_BRAND_CTA = 8
+const SHARP_SCREENS = [['대시보드', 'admin', '/'], ['오늘 일정', 'field', '/today'],
+  ['거래처', 'admin', '/clients'], ['수거 입력', 'field', '/collection'], ['설정', 'admin', '/settings']]
+for (const theme of THEMES) {
+  let low = 0, faded = 0
+  const worst = []
+  for (const [label, role, path] of SHARP_SCREENS) {
+    for (const width of [1440, 390]) {
+      const { ctx, p } = await open(role, width, theme, path)
+      const r = await sharpness(p)
+      low += r.low.length; faded += r.faded
+      if (r.low.length) worst.push(`[${label}/${width}] ${r.low.slice(0, 2).join(' | ')}`)
+      await ctx.close()
+    }
+  }
+  const budget = theme === 'navy-blue' ? KNOWN_BRAND_CTA : 0
+  ok(`${theme} — 화면 전체에 대비 미달 없음`, low <= budget, `${low}개 (허용 ${budget}) · ${worst.slice(0, 2).join(' / ')}`)
+  //  글자에 걸린 투명도는 0 이어야 합니다 — 흐림은 배경색에만.
+  ok(`${theme} — 부모 opacity 로 흐려진 글자 없음`, faded === 0, `${faded}개`)
+}
+
+// ── ⑥ 카드 경계가 보이는가 (0082) ───────────────────────────────────────────
+//   .card 에 테두리가 아예 없어서 경계를 그림자에만 기대고 있었습니다.
+//   그 그림자는 네이비로 고정이라 따뜻한 바탕의 테마에서는 거의 안 보였고,
+//   그래서 카드가 바탕에 녹아 「경계가 또렷하지 않다」가 됐습니다.
+for (const theme of THEMES) {
+  const { ctx, p } = await open('admin', 1440, theme, '/')
+  const r = await p.evaluate(() => {
+    const srgb = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+    const lum = ([r2, g, b]) => 0.2126 * srgb(r2) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
+    const parse = (c) => { const m = c.match(/rgba?\((\d+), ?(\d+), ?(\d+)/); return m ? [+m[1], +m[2], +m[3]] : null }
+    //  ⚠ 첫 번째 .card 를 집으면 바탕이 흰색이 아닌 카드(경고 카드 등)를
+    //    집을 수 있습니다. **흰 카드**를 찾아 재야 값이 맞습니다.
+    const card = [...document.querySelectorAll('.card')]
+      .find((el) => getComputedStyle(el).backgroundColor === 'rgb(255, 255, 255)')
+      ?? document.querySelector('.card')
+    if (!card) return null
+    const st = getComputedStyle(card)
+    const line = parse(st.borderTopColor), face = parse(st.backgroundColor)
+    if (!line || !face) return null
+    const a = lum(line) + 0.05, b2 = lum(face) + 0.05
+    return { w: parseFloat(st.borderTopWidth), ratio: Math.round((a > b2 ? a / b2 : b2 / a) * 100) / 100,
+      shadow: st.boxShadow.slice(0, 40) }
+  })
+  ok(`${theme} — 카드에 테두리가 있음`, !!r && r.w >= 1, r ? `${r.w}px` : '카드를 못 찾음')
+  ok(`${theme} — 카드 테두리가 눈에 보임`, !!r && r.ratio >= 1.25, r ? `${r.ratio}:1` : '-')
+  ok(`${theme} — 카드 그림자가 테마를 따름`, !!r && !/15, ?26, ?46/.test(r.shadow), r ? r.shadow : '-')
+  await ctx.close()
+}
+
 await b.close()
 console.log(`check_theme :: 검사 ${pass + fail} · 실패 ${fail}`)
 process.exit(fail ? 1 : 0)

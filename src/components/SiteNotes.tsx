@@ -130,7 +130,7 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
               <div
                 key={n.id}
                 className={`flex items-start gap-3 rounded-2xl px-4 py-3.5 transition ${
-                  n.done ? 'bg-navy-50/60' : 'bg-navy-50'
+                  n.done ? 'bg-navy-50' : 'bg-navy-50'
                 }`}
               >
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${m.chip}`}>

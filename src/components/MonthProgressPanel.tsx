@@ -128,7 +128,7 @@ function MarkBox({ month }: { month: string }) {
               key={step}
               data-mark-row={step}
               className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl px-3.5 py-3 ${
-                on ? 'bg-teal-50/70 ring-1 ring-teal-200' : 'bg-navy-50/70'
+                on ? 'bg-teal-50 ring-1 ring-teal-200' : 'bg-navy-50'
               }`}
             >
               <span className="min-w-0 flex-1 basis-[12rem]">

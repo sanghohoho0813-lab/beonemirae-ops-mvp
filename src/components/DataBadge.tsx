@@ -95,7 +95,7 @@ export function TierProgress({
             <div
               key={s.tier}
               className={`rounded-2xl px-4 py-3 transition ${
-                i === idx ? 'bg-navy-900 text-white' : done ? 'bg-navy-50 text-navy-600' : 'bg-navy-50/60 text-navy-400'
+                i === idx ? 'bg-navy-900 text-white' : done ? 'bg-navy-50 text-navy-600' : 'bg-navy-50 text-navy-400'
               }`}
             >
               <p className="t-body break-keep font-extrabold">{TIER_LABEL[s.tier]}</p>

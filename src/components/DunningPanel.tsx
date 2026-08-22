@@ -48,7 +48,7 @@ export function DunningPanel() {
 
   return (
     <section data-dunning className="mb-5">
-      <div className="card border-rose-200 bg-rose-50/40 p-5">
+      <div className="card border-rose-200 bg-rose-50 p-5">
         <div className="flex items-start gap-2.5">
           <AlarmClock size={20} className="mt-0.5 shrink-0 text-rose-500" strokeWidth={2.6} />
           <div className="min-w-0 flex-1">

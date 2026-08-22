@@ -83,7 +83,7 @@ export function UrgentRiskBanner({ limit = 3 }: { limit?: number }) {
   const shown = rows.slice(0, limit)
   return (
     <section data-urgent-banner className="card mb-3 overflow-hidden border-amber-200">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-amber-100 bg-amber-50/70 px-5 py-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-amber-100 bg-amber-50 px-5 py-3">
         <AlertTriangle size={17} strokeWidth={2.5} className="shrink-0 text-amber-700" />
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">
           급한 요청이 반복되는데 앞이 비어 있는 곳 {rows.length}곳
@@ -102,7 +102,7 @@ export function UrgentRiskBanner({ limit = 3 }: { limit?: number }) {
           외 {rows.length - shown.length}곳
         </p>
       )}
-      <p className="t-muted break-keep border-t border-navy-50 bg-navy-50/40 px-5 py-2.5 text-navy-500">
+      <p className="t-muted break-keep border-t border-navy-50 bg-navy-50 px-5 py-2.5 text-navy-500">
         수거 주기는 <b className="text-navy-600">시스템이 바꾸지 않습니다</b> — 계약이기 때문입니다. 위 사실을 보고
         방문을 잡으실지 대표님이 정하시면 됩니다.
       </p>
@@ -138,7 +138,7 @@ export function UrgentRiskCard({ clientId }: { clientId: string }) {
       data-urgent-client={clientId}
       className={`card overflow-hidden ${act ? 'border-amber-200' : ''}`}
     >
-      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-3.5 ${act ? 'bg-amber-50/70' : ''}`}>
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-3.5 ${act ? 'bg-amber-50' : ''}`}>
         <AlertTriangle
           size={17}
           strokeWidth={2.5}
@@ -162,7 +162,7 @@ export function UrgentRiskCard({ clientId }: { clientId: string }) {
       <p data-urgent-reason={clientId} className="t-body break-keep border-t border-navy-50 px-5 py-3 text-navy-600">
         {risk.reason}
       </p>
-      <p className="t-muted break-keep border-t border-navy-50 bg-navy-50/40 px-5 py-2.5 text-navy-500">
+      <p className="t-muted break-keep border-t border-navy-50 bg-navy-50 px-5 py-2.5 text-navy-500">
         수거 주기는 <b className="text-navy-600">시스템이 바꾸지 않습니다</b>. 위 사실만 적습니다 — 주기를 늘릴지는
         계약이라 대표님이 정하십니다.
       </p>

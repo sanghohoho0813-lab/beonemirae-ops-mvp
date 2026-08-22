@@ -78,7 +78,7 @@ export function Receivables() {
       <PageHeader title="미수금 관리" subtitle="거래처별 청구 · 입금 현황" />
 
       {error && (
-        <div data-pay-error className="card mb-4 border-rose-200 bg-rose-50/60 p-4 text-[1.05rem] font-semibold text-rose-600">
+        <div data-pay-error className="card mb-4 border-rose-200 bg-rose-50 p-4 text-[1.05rem] font-semibold text-rose-600">
           {error}
         </div>
       )}
@@ -110,7 +110,7 @@ export function Receivables() {
          어느 쪽이 맞는지 알 수 있습니다.
       */}
       {stranded.length > 0 && (
-        <div data-stranded className="card mb-5 border-rose-200 bg-rose-50/60 p-4 sm:p-5">
+        <div data-stranded className="card mb-5 border-rose-200 bg-rose-50 p-4 sm:p-5">
           <p className="break-keep text-[1.05rem] font-bold text-rose-600">
             취소한 청구에 입금 {won(strandedSum)}이 남아 있습니다 ({stranded.length}건)
           </p>

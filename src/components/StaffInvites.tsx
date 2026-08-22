@@ -106,7 +106,7 @@ export function StaffInvites() {
       </p>
 
       {open && (
-        <div data-invite-form className="mt-3 space-y-3 rounded-2xl bg-navy-50/70 p-4">
+        <div data-invite-form className="mt-3 space-y-3 rounded-2xl bg-navy-50 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="field-label">이메일 *</label>
@@ -240,7 +240,7 @@ export function StaffInvites() {
       )}
 
       {waiting.length > 0 && (
-        <div className="mt-3 divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50/60">
+        <div className="mt-3 divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50">
           {waiting.map((i) => (
             <div key={i.email} data-invite-row={i.email} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 bg-white px-4 py-3">
               <div className="min-w-0 flex-1">

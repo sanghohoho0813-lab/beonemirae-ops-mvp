@@ -155,7 +155,7 @@ function AssignStep({ from, to }: { from: string; to: string }) {
       </div>
 
       {done && (
-        <div data-assign-result className="card flex gap-3 border-teal-200 bg-teal-50/60 p-4 sm:p-5">
+        <div data-assign-result className="card flex gap-3 border-teal-200 bg-teal-50 p-4 sm:p-5">
           <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-600" />
           <div className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
             <p className="font-bold text-teal-700">
@@ -180,7 +180,7 @@ function AssignStep({ from, to }: { from: string; to: string }) {
       )}
 
       {error && (
-        <div data-assign-error className="card border-rose-200 bg-rose-50/60 p-4 text-[1.05rem] font-semibold text-rose-600">
+        <div data-assign-error className="card border-rose-200 bg-rose-50 p-4 text-[1.05rem] font-semibold text-rose-600">
           {error}
         </div>
       )}
@@ -450,7 +450,7 @@ export function SchedulePlan() {
       {done && (
         <div
           data-plan-result
-          className="card flex gap-3 border-teal-200 bg-teal-50/60 p-4 sm:p-5"
+          className="card flex gap-3 border-teal-200 bg-teal-50 p-4 sm:p-5"
         >
           <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-600" />
           <div className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
@@ -476,7 +476,7 @@ export function SchedulePlan() {
       )}
 
       {error && (
-        <div data-plan-error className="card border-rose-200 bg-rose-50/60 p-4 text-[1.05rem] font-semibold text-rose-600">
+        <div data-plan-error className="card border-rose-200 bg-rose-50 p-4 text-[1.05rem] font-semibold text-rose-600">
           {error}
         </div>
       )}

@@ -891,7 +891,11 @@ export function CollectionInput() {
                     className={`whitespace-nowrap rounded-2xl px-2 py-3.5 text-[1.08rem] font-bold transition active:scale-[0.97] disabled:opacity-60 ${
                       wasteType === w
                         ? w === '의료폐기물'
-                          ? 'bg-rose-500 text-white shadow-sm'
+                          /*  0082 — rose-500 위의 흰 글자는 17px 에서 3.7:1 이라
+                              기준(4.5)에 못 미쳤습니다. 지금 무엇을 고른 상태인지
+                              알려 주는 칸이라 안 읽히면 안 됩니다. 한 단계
+                              진하게 — 빨강(의료폐기물)이라는 뜻은 그대로입니다. */
+                          ? 'bg-rose-600 text-white shadow-sm'
                           : 'bg-teal-600 text-white shadow-sm'
                         : 'bg-navy-50 text-navy-500'
                     }`}
@@ -1371,7 +1375,7 @@ export function CollectionInput() {
 
         {/* 저장 전 요약 */}
         {canSubmit && (
-          <div className="card border border-teal-100 bg-teal-50/50 p-4">
+          <div className="card border border-teal-100 bg-teal-50 p-4">
             <p className="t-label mb-2.5 flex items-center gap-1.5 text-teal-700">
               <ClipboardList size={14} /> 저장 전 확인
             </p>

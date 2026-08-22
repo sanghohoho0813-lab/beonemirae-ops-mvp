@@ -135,7 +135,7 @@ export function Revenue() {
       {msg && (
         <div
           data-revenue-msg
-          className={`card p-4 text-[1.05rem] font-bold ${msg.ok ? 'border-teal-200 bg-teal-50/60 text-teal-700' : 'border-rose-200 bg-rose-50/60 text-rose-600'}`}
+          className={`card p-4 text-[1.05rem] font-bold ${msg.ok ? 'border-teal-200 bg-teal-50 text-teal-700' : 'border-rose-200 bg-rose-50 text-rose-600'}`}
         >
           {msg.text}
         </div>

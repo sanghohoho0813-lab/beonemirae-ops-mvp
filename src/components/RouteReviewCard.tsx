@@ -84,7 +84,7 @@ export function RouteReviewCard({ data }: { data: AppData }) {
 
       {/*  무엇을 계산하지 않았는지 — 맨 위에 둡니다.
            아래를 먼저 읽고 나면 「거리도 봤겠지」로 굳어집니다. */}
-      <div data-route-limits className="card mb-3 border-navy-200 bg-navy-50/60 p-4">
+      <div data-route-limits className="card mb-3 border-navy-200 bg-navy-50 p-4">
         <div className="flex items-start gap-2.5">
           <Ruler size={18} className="mt-0.5 shrink-0 text-navy-400" />
           <div className="min-w-0">
@@ -159,7 +159,7 @@ export function RouteReviewCard({ data }: { data: AppData }) {
           {openSkip && (
             <ul data-route-skipped className="mt-2 flex flex-col gap-1.5">
               {rv.skipped.map((s, i) => (
-                <li key={`${s.clientName}|${i}`} className="rounded-xl bg-navy-50/70 px-3.5 py-2.5">
+                <li key={`${s.clientName}|${i}`} className="rounded-xl bg-navy-50 px-3.5 py-2.5">
                   <b className="t-caption text-navy-800">{s.clientName}</b>
                   <span className="t-caption break-keep text-navy-500"> — {s.reason}</span>
                 </li>

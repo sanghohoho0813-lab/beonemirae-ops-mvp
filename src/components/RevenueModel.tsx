@@ -98,7 +98,13 @@ export function RevenueModelCard({ data }: { data: AppData }) {
         data-tour="perf-model"
         className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-navy-100 px-5 py-4 sm:px-6"
       >
-        <p className="t-label min-w-0 flex-1 break-keep text-navy-500">거래처당 매출 5가지</p>
+        {/*  ⚠ 0082 — flex-1 에 최소 폭이 없어, 옆의 알약 세 개가 자리를 다
+             가져가면 이 글자가 44px 까지 눌려 **세로로 한 자씩 늘어졌습니다**
+             (「거래/처당/매출」). 부모에 flex-wrap 이 있으니 최소 폭만 주면
+             알약이 아랫줄로 접힙니다 — 글자가 눌리는 것보다 낫습니다.
+             (카드 테두리가 생기면서 안쪽 폭이 2px 줄자 드러났습니다.
+              원래부터 2px 여유밖에 없던 자리입니다.) */}
+        <p className="t-label min-w-[7.5rem] flex-1 break-keep text-navy-500">거래처당 매출 5가지</p>
         {(['구현됨', '실증 중', '개발 예정'] as Status[]).map((st) => (
           <span key={st} className={`pill ${STATUS_META[st].chip}`}>
             {st} {count(st)}

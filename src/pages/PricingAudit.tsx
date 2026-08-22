@@ -118,7 +118,7 @@ export function PricingAudit() {
         핵심입니다. 아직 수거도 청구도 없는 신규 거래처는 급하지 않습니다.
       */}
       {audit.onDefaultBilled.length > 0 && (
-        <div data-price-warn className="card mb-3 border-rose-200 bg-rose-50/50 p-5">
+        <div data-price-warn className="card mb-3 border-rose-200 bg-rose-50 p-5">
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={20} className="mt-0.5 shrink-0 text-rose-500" strokeWidth={2.6} />
             <div className="min-w-0 flex-1">
@@ -139,7 +139,7 @@ export function PricingAudit() {
       )}
 
       {audit.taxMissingBilled.length > 0 && (
-        <div data-tax-warn className="card mb-4 border-amber-200 bg-amber-50/50 p-5">
+        <div data-tax-warn className="card mb-4 border-amber-200 bg-amber-50 p-5">
           <div className="flex items-start gap-2.5">
             <FileSpreadsheet size={20} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.5} />
             <div className="min-w-0 flex-1">
@@ -162,7 +162,7 @@ export function PricingAudit() {
         엑셀로 넘어갑니다. 확정을 눌러 보기 전에 여기서 먼저 보이게 합니다.
       */}
       {audit.flatUndecided.length > 0 && (
-        <div data-flat-warn className="card mb-4 border-amber-200 bg-amber-50/50 p-5">
+        <div data-flat-warn className="card mb-4 border-amber-200 bg-amber-50 p-5">
           <div className="flex items-start gap-2.5">
             <CalendarX size={20} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.5} />
             <div className="min-w-0 flex-1">

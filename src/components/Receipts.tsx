@@ -95,7 +95,7 @@ export function ReceiptPanel({
   }
 
   return (
-    <div data-receipts={paymentId} className="rounded-2xl bg-navy-50/60 p-4">
+    <div data-receipts={paymentId} className="rounded-2xl bg-navy-50 p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-navy-600">
           <Banknote size={17} strokeWidth={2.3} />

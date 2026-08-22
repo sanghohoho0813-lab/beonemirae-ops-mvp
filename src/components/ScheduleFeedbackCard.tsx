@@ -56,7 +56,7 @@ export function ScheduleFeedbackCard() {
   }
 
   return (
-    <section data-schedule-feedback className="card border-sky-200 bg-sky-50/60 p-4 sm:p-5">
+    <section data-schedule-feedback className="card border-sky-200 bg-sky-50 p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
           <MessageSquare size={19} />

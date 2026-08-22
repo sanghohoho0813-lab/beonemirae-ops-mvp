@@ -129,7 +129,7 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
               />
             </div>
             {pnl.operatingCost == null && (
-              <p className="break-keep border-t border-navy-100 bg-amber-50/60 px-5 py-3 text-[1.02rem] leading-relaxed text-navy-600">
+              <p className="break-keep border-t border-navy-100 bg-amber-50 px-5 py-3 text-[1.02rem] leading-relaxed text-navy-600">
                 <b className="text-amber-700">운영비를 넣지 않아 영업이익을 계산하지 않았습니다.</b> 0원으로 두면
                 기여이익이 그대로 영업이익처럼 보여 이익을 부풀리게 됩니다. 아래에 그 달 실제 지출을 넣어 주세요.
               </p>

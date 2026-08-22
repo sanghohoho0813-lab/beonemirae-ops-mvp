@@ -113,7 +113,7 @@ export function TaxInvoicePanel({ month }: { month: string }) {
         홈택스에 들어갑니다.
       */}
       {list.needsCheck.length > 0 && (
-        <div data-tax-check className="card border-amber-200 bg-amber-50/50 p-4 sm:p-5">
+        <div data-tax-check className="card border-amber-200 bg-amber-50 p-4 sm:p-5">
           <div className="flex items-start gap-2.5">
             <FileSpreadsheet size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.5} />
             <div className="min-w-0 flex-1">

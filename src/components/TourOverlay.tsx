@@ -523,7 +523,7 @@ export function TourOverlay() {
           {step.linked && (
             <p
               data-tour-linked
-              className="mt-2 flex items-start gap-2 break-keep rounded-xl bg-teal-50/70 px-2.5 py-1.5 text-[1.04rem] leading-snug text-teal-800 sm:mt-2.5 sm:px-3 sm:py-2 sm:text-[1.2rem]"
+              className="mt-2 flex items-start gap-2 break-keep rounded-xl bg-teal-50 px-2.5 py-1.5 text-[1.04rem] leading-snug text-teal-800 sm:mt-2.5 sm:px-3 sm:py-2 sm:text-[1.2rem]"
             >
               <Link2 size={18} strokeWidth={2.5} className="mt-0.5 shrink-0 text-teal-600" />
               <span className="min-w-0">{step.linked}</span>

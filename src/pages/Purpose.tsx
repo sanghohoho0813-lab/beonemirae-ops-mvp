@@ -146,7 +146,7 @@ const P = ({ children }: { children: React.ReactNode }) => (
 
 /** 인용처럼 한 박자 쉬어 가는 핵심 문장 */
 const Key = ({ children }: { children: React.ReactNode }) => (
-  <p className="t-body break-keep rounded-2xl border-l-4 border-teal-400 bg-teal-50/60 px-4 py-3 font-bold leading-relaxed text-teal-900">
+  <p className="t-body break-keep rounded-2xl border-l-4 border-teal-400 bg-teal-50 px-4 py-3 font-bold leading-relaxed text-teal-900">
     {children}
   </p>
 )
@@ -366,11 +366,11 @@ export function Purpose() {
           색은 바탕과 테두리에만 씁니다 — 광고 배너처럼 늘어놓지 않습니다. */}
       <section
         id={SECTIONS[7].id}
-        className="scroll-mt-4 overflow-hidden rounded-3xl bg-teal-50/70 shadow-lg ring-2 ring-teal-300"
+        className="scroll-mt-4 overflow-hidden rounded-3xl bg-teal-50 shadow-lg ring-2 ring-teal-300"
       >
         {/* 머리글 — 위는 작은 라벨, 아래는 이 페이지의 핵심 질문.
             글자만 키우지 않고 여백·굵기·색 대비로 차이를 냅니다. */}
-        <div className="border-b border-teal-200 bg-teal-100/70 px-5 py-6 sm:px-7 sm:py-7">
+        <div className="border-b border-teal-200 bg-teal-100 px-5 py-6 sm:px-7 sm:py-7">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white">
               <Target size={19} strokeWidth={2.5} />

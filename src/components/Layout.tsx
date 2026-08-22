@@ -99,7 +99,14 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
           isActive
             ? 'bg-white/[0.14] text-white'
             : muted
-              ? 'text-navy-300/75 hover:bg-white/10 hover:text-white'
+              /*  0082 — 글자에 걸린 투명도(/75)를 뗐습니다. 글자를 흐리게 만드는
+                  방식이라 그만큼 대비가 깎입니다. 「덜 중요함」은 색 단계로
+                  나타냅니다.
+                  ⚠ 처음에 navy-400 을 골랐는데 그건 **밝은 바탕용** 색이라
+                    어두운 사이드바에서 3.2:1 밖에 안 나왔습니다. 흐림을
+                    나타내려다 안 읽히게 만든 것이라 navy-300 으로 되돌립니다.
+                    덜 중요함은 navy-100(밝음) ↔ navy-300(덜 밝음)으로 냅니다. */
+              ? 'text-navy-300 hover:bg-white/10 hover:text-white'
               : 'text-navy-100 hover:bg-white/10 hover:text-white'
         }`
       }
@@ -113,9 +120,16 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
       )}
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block break-keep">{item.label}</span>
-        {/* 설명은 사이드바가 넉넉해지는 xl 이상에서만 — 좁은 폭에서는 메뉴명만 보여 줍니다 */}
+        {/* 설명은 사이드바가 넉넉해지는 xl 이상에서만 — 좁은 폭에서는 메뉴명만 보여 줍니다.
+            ⚠ 0082 — 여기에 navy-400 이 걸려 있었습니다. 그 색의 **일**은
+              「밝은 바탕의 캡션」이라 0080 에서 일부러 어둡게 내린 색입니다.
+              어두운 사이드바에 얹으면 검정 위의 짙은 회색이 됩니다 —
+              실제로 3.2~3.8:1 로 기준(4.5)에 못 미쳤습니다.
+              어두운 바탕용은 navy-300 입니다. 팔레트 주석에도 그렇게 적어
+              두었는데 코드가 이미 어기고 있었고, 자(a11y_measure)가 main
+              안만 봐서 여태 안 잡혔습니다. */}
         {!muted && item.desc && (
-          <span className="mt-1 hidden break-keep text-[0.95rem] font-medium text-navy-400 xl:block">
+          <span className="mt-1 hidden break-keep text-[0.95rem] font-medium text-navy-300 xl:block">
             {item.desc}
           </span>
         )}
@@ -178,7 +192,9 @@ function GroupHeader({
       onClick={onToggle}
       aria-expanded={open}
       data-nav-group-header={title}
-      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+      /*  0082 — navy-400 은 「밝은 바탕의 캡션」 색입니다. 어두운 사이드바에
+          얹으니 3.2~3.6:1 로 기준(4.5)에 못 미쳤습니다. 어두운 바탕용은 navy-300. */
+      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-300 transition hover:bg-white/5 hover:text-white"
     >
       {Icon && <Icon size={13} className="shrink-0" />}
       <span className="min-w-0 flex-1 break-keep text-left leading-snug">{title}</span>
@@ -304,7 +320,9 @@ function Sidebar() {
           className="mt-3.5 select-none border-t border-white/10 pt-3 text-[0.98rem] font-black uppercase tracking-[0.22em] text-amber-300"
         >
           {SYSTEM_WORDMARK}
-          <span className="text-white/40"> · </span>
+          {/*  0082 — 글자에 alpha 를 걸면 그만큼 대비가 깎입니다(3.8:1).
+               투명도가 필요하면 배경색에만 씁니다. */}
+          <span className="text-navy-300"> · </span>
           <span className="text-amber-200">{SYSTEM_WORDMARK_TAIL}</span>
         </p>
       </div>
@@ -359,7 +377,9 @@ function Sidebar() {
             <p className="break-keep text-[1.12rem] font-bold text-white">
               {profile?.name || (configured ? '로그인 필요' : '비원미래 대표')}
             </p>
-            <p className="break-keep text-[1rem] text-navy-400">
+            {/*  0082 — 어두운 사이드바 위라 navy-300 입니다(navy-400 은 밝은
+                 바탕용이라 여기서는 3.2:1 밖에 안 나옵니다). */}
+            <p className="break-keep text-[1rem] text-navy-300">
               {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
             </p>
             {/*  오늘 날짜 · 지금 시각 (0078) — PC 는 자리가 넉넉해 연도까지 씁니다 */}
@@ -393,10 +413,10 @@ function Sidebar() {
             <Headset size={16} className="shrink-0 text-teal-300" />
             <div className="min-w-0 leading-tight">
               <p className="break-keep text-[1.12rem] font-bold text-white">{COMPANY_TEL}</p>
-              <p className="break-keep text-[1rem] text-navy-400">{COMPANY_HOURS}</p>
+              <p className="break-keep text-[1rem] text-navy-300">{COMPANY_HOURS}</p>
             </div>
           </div>
-          <p className="mt-1.5 break-keep text-[1rem] leading-snug text-navy-400">
+          <p className="mt-1.5 break-keep text-[1rem] leading-snug text-navy-300">
             팩스 {COMPANY_FAX}
             <br />
             {COMPANY_EMAIL}
@@ -482,10 +502,15 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
                  (px 로 둔 이유 자체는 위 설명 그대로 유지합니다.) */}
           <p
             data-brand-ax-header
-            className="mt-1 break-keep text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-amber-500 [@media(max-height:480px)]:hidden"
+            /*  0082 — amber-500 은 밝은 바탕에서 2.0:1 입니다. 사이드바(어두운
+                바탕)에서는 잘 보이는 금색이지만, 폰 머리띠는 밝은 바탕이라
+                같은 색을 쓰면 안 읽힙니다. 같은 계열의 어두운 단계로 둡니다. */
+            className="mt-1 break-keep text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-amber-800 [@media(max-height:480px)]:hidden"
           >
             {SYSTEM_WORDMARK}
-            <span className="text-navy-300"> · </span>
+            {/*  0082 — 밝은 바탕에서 navy-300 은 1.8:1 입니다. 이름표 글자와
+                 같은 색으로 둡니다 — 구분점만 유령처럼 흐릴 이유가 없습니다. */}
+            <span className="text-amber-800"> · </span>
             {SYSTEM_WORDMARK_TAIL}
           </p>
           {/*  무엇을 하는 시스템인지. 아주 좁은 폰(360px 미만)에서는 상호를

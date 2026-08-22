@@ -73,7 +73,11 @@ export function LiveClock({ full = false, className = '' }: { full?: boolean; cl
         {t.m}월 {t.d}일 ({t.dow})
       </span>{' '}
       <span className="whitespace-nowrap">
-        <span className="text-navy-400">·</span> {t.ampm} {t.h12}:{t.mm}:{t.ss}
+        {/*  ⚠ 0082 — 여기에 navy-400 을 못 박아 두었더니, 이 시계가 **어두운
+             사이드바**에도 붙어 있어 거기서 3.2:1 이 됐습니다. 한 색을 밝은
+             바탕과 어두운 바탕 양쪽에 쓴 것이 잘못입니다.
+             구분점은 **주변 글자색을 따라가게** 둡니다 — 어디에 붙든 맞습니다. */}
+        <span className="opacity-100">·</span> {t.ampm} {t.h12}:{t.mm}:{t.ss}
       </span>
     </span>
   )

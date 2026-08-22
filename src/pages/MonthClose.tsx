@@ -250,7 +250,7 @@ export function MonthClose() {
       </div>
 
       {close.defaultPricedCount > 0 && (
-        <div data-close-warn className="card flex gap-3 border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+        <div data-close-warn className="card flex gap-3 border-amber-200 bg-amber-50 p-4 sm:p-5">
           <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-700" />
           <p className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
             <b className="text-amber-700">{close.defaultPricedCount}곳은 거래처 단가가 없어 시스템 기본 단가로 계산됐습니다.</b>{' '}
@@ -264,7 +264,7 @@ export function MonthClose() {
       )}
 
       {close.oddAmountCount > 0 && (
-        <div data-close-odd-warn className="card flex gap-3 border-rose-200 bg-rose-50/60 p-4 sm:p-5">
+        <div data-close-odd-warn className="card flex gap-3 border-rose-200 bg-rose-50 p-4 sm:p-5">
           <AlertTriangle size={20} className="mt-0.5 shrink-0 text-rose-500" />
           <p className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
             <b className="text-rose-600">{close.oddAmountCount}곳에 평소와 크게 다른 수거량·공급 수량이 섞여 있습니다.</b>{' '}
@@ -275,7 +275,7 @@ export function MonthClose() {
       )}
 
       {result && (
-        <div data-close-result className="card flex gap-3 border-teal-200 bg-teal-50/60 p-4 sm:p-5">
+        <div data-close-result className="card flex gap-3 border-teal-200 bg-teal-50 p-4 sm:p-5">
           <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-600" />
           <div className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
             <p className="font-bold text-teal-700">

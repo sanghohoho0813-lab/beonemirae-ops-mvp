@@ -136,7 +136,7 @@ export function OpsSurveyCard() {
         <p className="t-label mt-5 text-navy-500">하루에 사람이 붙잡고 있던 시간</p>
         <ul data-survey-tasks className="mt-1.5 flex flex-col gap-1.5">
           {SURVEY_TASKS.map((task) => (
-            <li key={task.label} className="rounded-xl bg-navy-50/60 px-3.5 py-2.5">
+            <li key={task.label} className="rounded-xl bg-navy-50 px-3.5 py-2.5">
               <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                 <b className="t-body text-navy-900">{task.label}</b>
                 <span className="t-cell tabular-nums text-navy-700">
@@ -153,7 +153,7 @@ export function OpsSurveyCard() {
         </p>
 
         {/* ── 당일 소화율 ───────────────────────────────────────────────── */}
-        <div className="mt-4 rounded-2xl bg-emerald-50/70 px-3.5 py-3">
+        <div className="mt-4 rounded-2xl bg-emerald-50 px-3.5 py-3">
           <p className="t-body font-extrabold text-emerald-800">
             당일수거 정상 완료 {SURVEY_ON_TIME_PCT}%
           </p>

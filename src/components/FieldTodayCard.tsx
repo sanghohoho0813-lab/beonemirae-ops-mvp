@@ -61,7 +61,7 @@ export function FieldTodayCard() {
           <li
             key={i.scheduleId}
             data-field-input={i.clientId}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-navy-50/60 px-3.5 py-2.5"
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-navy-50 px-3.5 py-2.5"
           >
             {i.atTime && (
               <span className="t-caption shrink-0 tabular-nums font-bold text-navy-400">{i.atTime}</span>
@@ -126,7 +126,7 @@ export function FieldTodayCard() {
              쉬었을 수도, 내일 처리하기로 했을 수도 있습니다. 시스템은 그
              이유를 모릅니다 — 「아직 입력이 없다」는 사실만 적습니다. */}
       {day.pending.length > 0 && (
-        <div data-field-pending className="mt-3 rounded-2xl bg-amber-50/70 px-3.5 py-3">
+        <div data-field-pending className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-3">
           <p data-field-pending-headline className="break-keep text-[1.05rem] font-extrabold text-navy-900">
             아직 입력이 없는 곳 {day.pending.length}곳
           </p>

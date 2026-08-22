@@ -40,15 +40,23 @@ function DayCell({
   onBook: (date: string) => void
 }) {
   //  일요일·토요일과 휴무일은 글자색으로 구분합니다.
+  //  ⚠ 0082 — 이번 달이 아닌 칸을 opacity-40 으로 통째 흐리게 두었습니다.
+  //    **부모가 흐려지면 자식 글자도 같이 흐려져**, 날짜 숫자가 1.7~2.3:1 까지
+  //    떨어졌습니다. 지난 달 날짜도 읽을 수는 있어야 합니다.
+  //    흐림은 **배경색으로** 냅니다 — 글자는 그대로 두고 칸만 눌러 둡니다.
   const dim = !d.inMonth
-  const tone = d.holiday || d.weekday === 0 ? 'text-rose-500' : d.weekday === 6 ? 'text-sky-600' : 'text-navy-700'
+  //  ⚠ 0082 — 주말·휴무일 **날짜 숫자**가 흰 바탕에서 3.4~4.1:1 이었습니다.
+  //    0080 에서 요일 머리글(일·월·화…)은 진하게 고쳤는데, 정작 그 아래
+  //    날짜 숫자는 그대로였습니다. 색이 뜻하는 바(일=빨강 · 토=파랑)는
+  //    두고 한 단계씩 진하게만 합니다.
+  const tone = d.holiday || d.weekday === 0 ? 'text-rose-600' : d.weekday === 6 ? 'text-sky-700' : 'text-navy-700'
 
   return (
     <div
       data-cal-day={d.date}
       className={`relative flex min-h-[4.2rem] flex-col border-b border-r border-navy-100 p-1 sm:min-h-[5.4rem] sm:p-1.5 ${
-        selected ? 'bg-teal-50/70 ring-2 ring-inset ring-teal-400' : d.isToday ? 'bg-navy-50/60' : ''
-      } ${dim ? 'opacity-40' : ''}`}
+        selected ? 'bg-teal-50 ring-2 ring-inset ring-teal-400' : d.isToday ? 'bg-navy-50' : ''
+      } ${dim ? 'bg-navy-50 text-navy-400' : ''}`}
     >
       {/*  ⚠ 누르는 곳은 **칸 전체**여야 합니다.
            예전에는 이 버튼이 글자 높이(27px)만 차지해서, 칸(67px)의 아래쪽을
@@ -175,7 +183,7 @@ export function ScheduleCalendar({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 border-t border-navy-100 bg-navy-50/60">
+      <div className="grid grid-cols-7 border-t border-navy-100 bg-navy-50">
         {WD.map((w, i) => (
           <p
             key={w}
@@ -221,7 +229,7 @@ export function ScheduleCalendar({
       </div>
 
       {canBook && (
-        <p className="t-muted break-keep border-t border-navy-100 bg-navy-50/40 px-3 py-2.5 text-navy-500 sm:px-4">
+        <p className="t-muted break-keep border-t border-navy-100 bg-navy-50 px-3 py-2.5 text-navy-500 sm:px-4">
           날짜를 누르면 그날 일정이 위에 나옵니다. <b className="text-navy-600">앞으로 올 날의 ＋ 를 누르면 그
           자리에서 방문을 잡습니다.</b>
         </p>

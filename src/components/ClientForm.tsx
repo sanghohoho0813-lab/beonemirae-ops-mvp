@@ -232,7 +232,7 @@ export function ClientForm({
         올리면 병원에 잘못된 청구서가 나갑니다. 켜도 계약 기간 밖에는
         올리지 않습니다.
       */}
-      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-navy-50/60 p-3.5">
+      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-navy-50 p-3.5">
         <input
           type="checkbox"
           data-flat-empty
@@ -285,7 +285,7 @@ export function TaxFields({
   title?: string
 }) {
   return (
-    <div className="rounded-xl bg-navy-50/60 p-3.5">
+    <div className="rounded-xl bg-navy-50 p-3.5">
       <p className="t-label mb-2 text-navy-500">{title}</p>
       <div className="grid grid-cols-2 gap-3">
         <div>

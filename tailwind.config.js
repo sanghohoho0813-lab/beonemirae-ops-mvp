@@ -147,6 +147,9 @@ export default {
           800: 'rgb(var(--c-orange-800) / <alpha-value>)',
           900: 'rgb(var(--c-orange-900) / <alpha-value>)',
         },
+        //  카드 테두리 — .card 에 테두리가 아예 없어서 경계가 그림자에만
+        //  기대고 있었습니다(0082). 눈에 보이는 실선 한 겹을 답니다.
+        cardline: 'rgb(var(--c-cardline) / <alpha-value>)',
         //  앱 바탕 — 예전에는 #f5f7fa 를 열 군데에 **손으로 적어** 두었습니다.
         //  테마가 바뀌어도 바탕만 안 바뀌면 그게 제일 어색합니다.
         app: 'rgb(var(--c-app) / <alpha-value>)',
@@ -155,10 +158,15 @@ export default {
         '4xl': '28px',
       },
       boxShadow: {
-        // 매우 은은한 카드 그림자
-        card: '0 1px 2px rgba(15, 26, 46, 0.04), 0 8px 24px -12px rgba(15, 26, 46, 0.10)',
-        nav: '0 -1px 16px -6px rgba(15, 26, 46, 0.12)',
-        sheet: '0 -8px 40px -8px rgba(15, 26, 46, 0.25)',
+        //  ⚠ 0082 — 그림자 색이 rgba(15,26,46,…) **네이비로 고정**이었습니다.
+        //    따뜻한 크림 바탕 위에 차가운 네이비 그림자를 4% 로 얹으면 거의
+        //    안 보입니다. 그런데 .card 에는 테두리가 없어 경계를 오로지 이
+        //    그림자에 기대고 있었으니, 테마를 바꾸면 카드가 바탕에 녹았습니다.
+        //    이제 그 테마의 어두운 중립색을 씁니다. 세기도 한 단계 올렸습니다
+        //    (0.04 → 0.07 / 0.10 → 0.13) — 「또렷하게」가 이번 주문입니다.
+        card: '0 1px 2px rgb(var(--c-shadow) / 0.07), 0 8px 24px -12px rgb(var(--c-shadow) / 0.13)',
+        nav: '0 -1px 16px -6px rgb(var(--c-shadow) / 0.14)',
+        sheet: '0 -8px 40px -8px rgb(var(--c-shadow) / 0.28)',
       },
       fontFamily: {
         sans: [

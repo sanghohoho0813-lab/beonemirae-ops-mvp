@@ -294,7 +294,7 @@ export function Presentation() {
 
           {/* 표현 가이드 */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-teal-50/60 p-3">
+            <div className="rounded-2xl bg-teal-50 p-3">
               <p className="text-[0.98rem] font-bold text-teal-700">권장 표현</p>
               <ul className="mt-1.5 space-y-1 text-[0.98rem] leading-snug text-navy-600">
                 {SAY_DO.map((t) => (
@@ -302,7 +302,7 @@ export function Presentation() {
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl bg-rose-50/60 p-3">
+            <div className="rounded-2xl bg-rose-50 p-3">
               <p className="text-[0.98rem] font-bold text-rose-600">피해야 할 표현</p>
               <ul className="mt-1.5 space-y-1 text-[0.98rem] leading-snug text-navy-600">
                 {SAY_DONT.map((t) => (

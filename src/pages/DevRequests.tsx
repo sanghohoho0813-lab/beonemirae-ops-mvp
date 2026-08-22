@@ -108,7 +108,7 @@ export function DevRequests() {
 
       {/* 여러 사람이 같이 고른 것 — 먼저 볼 것 */}
       {hot.length > 0 && (
-        <div className="mb-4 rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-4">
+        <div className="mb-4 rounded-2xl border-2 border-amber-200 bg-amber-50 p-4">
           <p className="t-card mb-2 break-keep text-amber-900">여러 사람이 함께 고른 항목</p>
           <ul className="space-y-1.5">
             {hot.map(([t, n]) => (

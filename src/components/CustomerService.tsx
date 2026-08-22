@@ -153,7 +153,7 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
       {nextTodo && (
         <Link
           to={nextTodo.to}
-          className="flex w-full items-center justify-center gap-1.5 border-t border-navy-100 bg-teal-50/60 py-3.5 text-[1.08rem] font-extrabold text-teal-700 transition hover:bg-teal-50"
+          className="flex w-full items-center justify-center gap-1.5 border-t border-navy-100 bg-teal-50 py-3.5 text-[1.08rem] font-extrabold text-teal-700 transition hover:bg-teal-50"
         >
           <Send size={17} strokeWidth={2.5} /> 다음 할 일 · {nextTodo.label}
           <ChevronRight size={17} />

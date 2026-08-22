@@ -453,7 +453,7 @@ export function PricingModal({
         지난달까지 새 단가로 계산됩니다 — 3월분을 확정하기 전에 4월에
         단가를 올리면 3월 청구서가 새 단가로 나갑니다.
       */}
-      <div className="rounded-xl bg-navy-50/60 p-3.5">
+      <div className="rounded-xl bg-navy-50 p-3.5">
         <label className="field-label" htmlFor="price-from">
           이 단가를 적용하기 시작하는 날
         </label>
@@ -501,7 +501,7 @@ export function PricingModal({
       {/*  정산 규칙 — kg 단가가 아닌 거래처를 위한 칸.
            월정액을 넣으면 그 구분의 kg 는 매출로 잡히지 않고, 수거가 있는
            달에 월정액 한 줄이 청구됩니다. */}
-      <div className="rounded-2xl bg-navy-50/60 p-4">
+      <div className="rounded-2xl bg-navy-50 p-4">
         <p className="t-body mb-2 break-keep font-extrabold text-navy-800">정산 규칙 (해당할 때만)</p>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
           <div>

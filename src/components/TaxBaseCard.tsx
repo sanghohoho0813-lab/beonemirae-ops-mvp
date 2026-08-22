@@ -88,7 +88,7 @@ export function TaxBaseCard() {
       </div>
 
       {latest && (
-        <div data-tax-latest className="mt-3.5 rounded-2xl bg-navy-50/70 px-4 py-3.5">
+        <div data-tax-latest className="mt-3.5 rounded-2xl bg-navy-50 px-4 py-3.5">
           <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <span className="t-body font-extrabold text-navy-900">{latest.label}</span>
             <span className="t-stat tabular-nums text-navy-900">{won(latest.filing.baseTotal)}</span>

@@ -48,7 +48,7 @@ export function HealthCard() {
   return (
     <div
       data-health-card
-      className={`card px-4 py-3.5 sm:px-5 ${bad ? 'border-rose-200 bg-rose-50/60' : ''}`}
+      className={`card px-4 py-3.5 sm:px-5 ${bad ? 'border-rose-200 bg-rose-50' : ''}`}
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span

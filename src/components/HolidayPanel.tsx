@@ -67,7 +67,7 @@ export function HolidayPanel({ from, to }: { from: string; to: string }) {
       */}
       <div
         data-holiday-status
-        className={`card flex gap-3 p-4 sm:p-5 ${covered ? '' : 'border-amber-200 bg-amber-50/50'}`}
+        className={`card flex gap-3 p-4 sm:p-5 ${covered ? '' : 'border-amber-200 bg-amber-50'}`}
       >
         <CalendarOff size={19} className={`mt-0.5 shrink-0 ${covered ? 'text-navy-400' : 'text-amber-700'}`} strokeWidth={2.4} />
         <div className="min-w-0 flex-1 text-[1.05rem] leading-relaxed text-navy-700">
@@ -92,7 +92,7 @@ export function HolidayPanel({ from, to }: { from: string; to: string }) {
         실제로 있고, 그건 사람이 정할 일입니다.
       */}
       {clashes.length > 0 && (
-        <div data-holiday-clash className="card border-rose-200 bg-rose-50/50 p-4 sm:p-5">
+        <div data-holiday-clash className="card border-rose-200 bg-rose-50 p-4 sm:p-5">
           <p className="t-body font-extrabold text-navy-900">
             이미 만들어 둔 예정 {clashes.length}건이 휴무일에 잡혀 있습니다
           </p>
@@ -133,7 +133,7 @@ export function HolidayPanel({ from, to }: { from: string; to: string }) {
         </p>
 
         {parsed.rows.length > 0 && (
-          <div data-holiday-preview className="mt-3 rounded-xl bg-navy-50/70 p-3.5">
+          <div data-holiday-preview className="mt-3 rounded-xl bg-navy-50 p-3.5">
             <p className="t-body font-bold text-navy-800">{parsed.rows.length}일을 읽었습니다</p>
             <p className="t-caption mt-1 break-keep text-navy-600">
               {parsed.rows.slice(0, 12).map((h) => `${h.day} ${h.name}`).join(' · ')}

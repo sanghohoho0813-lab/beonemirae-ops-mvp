@@ -102,24 +102,48 @@ function atLum(h, s, targetLum) {
   return hsl2rgb(h, s, (lo + hi) / 2)
 }
 
+//  ⚠ 0082 — **글자로 쓰이는 단계**는 밝기를 절대로 못 올리게 막습니다.
+//
+//    0081 에서 사이드바에 색이 보이게 하려고 어두운 단계의 밝기를 1.4~2.6배
+//    올렸습니다. 그런데 navy-900 은 **글자 368곳 · 배경 47곳**입니다 —
+//    압도적으로 글자입니다. 그 바람에 제목·본문·KPI 숫자가 전부 옅어졌고
+//    (흰 바탕 대비 17.4:1 → 14.1~15.9:1), 화면이 뿌옇게 보였습니다.
+//    색 하나가 「어두운 배경」과 「어두운 글자」 두 일을 겸하고 있었고,
+//    저는 배경 쪽만 보고 값을 올린 것입니다.
+//
+//    사이드바 색은 navy-950 에서만 냅니다 — 이 단계는 **배경 전용**입니다
+//    (배경 19곳 · 글자 0곳). 글자 단계는 기준값 그대로 둡니다.
+const TEXT_STEPS = new Set([400, 500, 600, 700, 800, 900])
+
 /**  한 계열(ramp)을 만듭니다.
  *   @param base   밝기를 빌려 올 기준 계열
  *   @param hue    이 테마의 색상각
  *   @param satOf  단계별 채도 (0~1). 밝은 단계는 옅게, 중간은 진하게 둡니다.
  *   @param lumMul 단계별 휘도 배율 — 1 이면 기준과 **완전히 같은 대비**입니다.
  */
-function ramp(base, hue, satOf, lumMul = {}) {
+function ramp(base, hue, satOf, lumMul = {}, lockText = false) {
   const out = {}
   for (const [step, hex] of Object.entries(base)) {
-    const target = Math.min(1, Math.max(0, lumOf(hex2rgb(hex)) * (lumMul[step] ?? 1)))
-    out[step] = rgb2hex(atLum(hue, satOf(Number(step)), target))
+    const n = Number(step)
+    //  글자 단계는 배율을 무시합니다 — 실수로라도 옅어지지 않게 여기서 막습니다.
+    const mul = lockText && TEXT_STEPS.has(n) ? 1 : (lumMul[step] ?? 1)
+    const target = Math.min(1, Math.max(0, lumOf(hex2rgb(hex)) * mul))
+    out[step] = rgb2hex(atLum(hue, satOf(n), target))
   }
   return out
 }
 
 //  중립(회색) 계열 채도 — 아주 낮게. 배경·글자에 쓰이므로 색이 튀면 안 됩니다.
+//  ⚠ 0082 — 글자 단계(400~900)의 채도를 낮춰 둡니다. 「본문·숫자·제목은
+//    테마색에 따라 지나치게 변하지 않게, 충분히 어두운 중립색으로」가
+//    원칙입니다. 배경 단계(50~300 · 950)는 테마색을 그대로 냅니다.
 const neutSat = (mul = 1) => (s) =>
-  (s <= 100 ? 0.30 : s <= 200 ? 0.22 : s <= 300 ? 0.16 : s <= 600 ? 0.13 : 0.30) * mul
+  s <= 100 ? 0.30 * mul
+    : s <= 200 ? 0.22 * mul
+    : s <= 300 ? 0.16 * mul
+    : s <= 600 ? 0.10 * Math.min(mul, 1)
+    : s <= 900 ? 0.14 * Math.min(mul, 1)
+    : 0.34 * mul // 950 — 사이드바. 여기서만 색을 냅니다.
 //  포인트 계열 채도 — 진하게. 다만 아주 밝은 단계는 옅게 두어야 눈이 안 아픕니다.
 const pointSat = (mul = 1) => (s) =>
   Math.min(0.95, (s <= 100 ? 0.62 : s <= 200 ? 0.55 : s <= 400 ? 0.58 : s <= 700 ? 0.72 : 0.62) * mul)
@@ -210,9 +234,11 @@ function varsFor(t) {
     for (const [fam, steps] of Object.entries(BASE))
       for (const [s, hex] of Object.entries(steps)) lines.push(`    --c-${fam}-${s}: ${triplet(hex)};`)
     lines.push(`    --c-app: ${triplet(APP_BG)};`)
+    lines.push(`    --c-shadow: ${triplet(BASE.navy[900])};`)
+    lines.push(`    --c-cardline: ${atLum(215, 0.14, 0.606).join(' ')};`)
     return lines.join('\n')
   }
-  const navy = ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul)
+  const navy = ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true)
   const teal = ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul)
   const accent = ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul)
   //  slate2 는 보조 식별용이라 중립 계열을 따릅니다
@@ -223,6 +249,17 @@ function varsFor(t) {
   for (const [fam, steps] of Object.entries({ navy, teal, accent, slate2, ...sem }))
     for (const [s, hex] of Object.entries(steps)) lines.push(`    --c-${fam}-${s}: ${triplet(hex)};`)
   lines.push(`    --c-app: ${triplet(t.appBg)};`)
+  //  ⚠ 0082 — 그림자 색과 카드 테두리 색도 테마를 따릅니다.
+  //    전에는 그림자가 rgba(15,26,46,…) **네이비로 고정**이었습니다.
+  //    따뜻한 크림 바탕(#f6f3ec) 위에 차가운 네이비 그림자를 4% 로 얹으면
+  //    사실상 안 보입니다. 그런데 .card 에는 테두리가 없어 **경계를 오로지
+  //    그 그림자에 기대고** 있었습니다 — 그래서 카드가 바탕에 녹아 보였습니다.
+  //    그림자는 그 테마의 가장 어두운 중립색으로 냅니다.
+  lines.push(`    --c-shadow: ${triplet(navy[900])};`)
+  //  카드 테두리는 단계를 빌려 쓰지 않고 **밝기를 직접** 잡습니다.
+  //  navy-200 을 쓰면 흰 카드와 1.2:1 밖에 안 되어 「있는지 없는지」가 됩니다.
+  //  흰 바탕과 약 1.6:1 — 선이 보이되 상자처럼 답답하지 않은 세기입니다.
+  lines.push(`    --c-cardline: ${atLum(t.neutral.hue, 0.14, 0.606).join(' ')};`)
   return lines.join('\n')
 }
 
@@ -307,7 +344,7 @@ for (const t of THEMES) {
   for (const fam of SEM_FAMS) sem[fam] = t.base ? BASE[fam] : semRamp(fam, t.neutral.hue, t.semSat ?? 1)
   const p = t.base
     ? { navy: BASE.navy, teal: BASE.teal, accent: BASE.accent, app: APP_BG, ...sem }
-    : { navy: ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul),
+    : { navy: ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true),
         teal: ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul),
         accent: ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul),
         app: t.appBg, ...sem }

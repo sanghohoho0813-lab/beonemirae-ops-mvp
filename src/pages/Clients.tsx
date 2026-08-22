@@ -250,7 +250,7 @@ export function Clients() {
            거래처를 다시 살리는 것은 정산에 바로 영향을 주므로, 거래처를
            추가할 수 있는 분(사무실·관리자)에게만 보여 줍니다. */}
       {canAddClient && retired.length > 0 && (
-        <details data-retired-clients className="mt-4 rounded-2xl bg-navy-50/60 px-4 py-3">
+        <details data-retired-clients className="mt-4 rounded-2xl bg-navy-50 px-4 py-3">
           <summary className="t-body cursor-pointer break-keep font-bold text-navy-600">
             거래 종료한 거래처 {retired.length}곳
           </summary>

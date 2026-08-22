@@ -439,7 +439,7 @@ export function ClientDetail() {
             </SectionTitle>
             {/*  이미 카드 안입니다 — 여기서 또 card 를 쓰면 상자 속 상자가
                  됩니다. 옅은 바탕으로 「같은 카드의 한 칸」처럼 둡니다. */}
-            <div className="divide-y divide-navy-100 rounded-2xl bg-navy-50/50 p-2">
+            <div className="divide-y divide-navy-100 rounded-2xl bg-navy-50 p-2">
               {actions.map((a, i) => {
                 const meta = actionMeta[a.kind]
                 const Icon = meta.icon
@@ -539,7 +539,7 @@ export function ClientDetail() {
              추천과 같은 칸에 있지만 오늘 할 일은 아니라, 제목을 한 급 낮추고
              접어 둡니다. 지운 것이 아니라 눌러서 펼칩니다. */}
         {canSeeMoney && (
-          <details data-lead-history className="rounded-2xl bg-navy-50/60 px-3.5 py-2.5">
+          <details data-lead-history className="rounded-2xl bg-navy-50 px-3.5 py-2.5">
             <summary className="t-muted cursor-pointer list-none font-extrabold text-navy-500">
               영업 전환 이력 <span className="font-normal text-navy-300">· 담당자 기록 기준</span>
             </summary>
@@ -631,7 +631,7 @@ export function ClientDetail() {
                 <span key={n} className="break-keep rounded-lg bg-navy-50 px-2.5 py-1.5 text-[1rem] font-semibold text-navy-600">{n}</span>
               ))}
             </div>
-            <p className="mt-3 rounded-xl bg-amber-50/70 px-3.5 py-2.5 text-[0.98rem] leading-snug text-amber-700">
+            <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[0.98rem] leading-snug text-amber-700">
               사전 확인 필요 · 전용 용기 재고와 최근 수거대장을 미리 준비합니다. 체크리스트는 시연용이며, 문자·카카오 알림
               연동은 향후 고도화 예정입니다.
             </p>
@@ -856,7 +856,7 @@ export function ClientDetail() {
                     {r.requesterName && ` · ${r.requesterName}`}
                   </p>
                   {r.reply && (
-                    <p className="mt-1.5 rounded-xl bg-teal-50/70 px-3 py-2 text-[1.02rem] leading-snug text-teal-800">
+                    <p className="mt-1.5 rounded-xl bg-teal-50 px-3 py-2 text-[1.02rem] leading-snug text-teal-800">
                       회신: {r.reply}
                     </p>
                   )}

@@ -191,7 +191,7 @@ export function ExcelImport() {
   return (
     <div className="space-y-4">
       {/* 1. 파일 */}
-      <div className="rounded-2xl border border-dashed border-navy-200 bg-navy-50/40 p-4 sm:p-5">
+      <div className="rounded-2xl border border-dashed border-navy-200 bg-navy-50 p-4 sm:p-5">
         <input
           ref={fileRef}
           id="excel-file"

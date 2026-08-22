@@ -40,7 +40,7 @@ function RevenueInput({ lead }: { lead: SalesLead }) {
   }
 
   return (
-    <div className="mt-3 rounded-2xl bg-teal-50/70 p-3.5">
+    <div className="mt-3 rounded-2xl bg-teal-50 p-3.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="min-w-0">
           <p className="t-muted font-bold">예상 매출</p>
@@ -108,7 +108,7 @@ export function LeadStageControl({ action, month = thisMonth() }: { action: Next
   }
 
   return (
-    <div className="mt-3 rounded-2xl bg-navy-50/70 p-3.5">
+    <div className="mt-3 rounded-2xl bg-navy-50 p-3.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="t-muted font-bold text-navy-500">영업 진행</span>
         <span className={`pill ${STAGE_STYLE[stage]}`}>{stage}</span>

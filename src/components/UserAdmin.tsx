@@ -156,7 +156,7 @@ export function UserAdmin() {
           모든 데이터를 막습니다(0021). 역할은 여기서 정합니다 — 신청자가
           고른 값은 서버가 아예 읽지 않습니다. */}
       {pendingRows.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border-2 border-teal-200 bg-teal-50/50">
+        <div className="overflow-hidden rounded-2xl border-2 border-teal-200 bg-teal-50">
           <div className="flex items-center gap-2 border-b border-teal-200 bg-teal-50 px-4 py-3">
             <Clock size={19} strokeWidth={2.4} className="shrink-0 text-teal-600" />
             <p className="t-card break-keep text-teal-800">승인 대기 {pendingRows.length}명</p>
@@ -197,7 +197,7 @@ export function UserAdmin() {
       {error && <p className="t-body break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-600">{error}</p>}
       {done && <p className="t-body break-keep rounded-2xl bg-emerald-50 px-4 py-3 font-bold text-emerald-700">{done}</p>}
 
-      <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50/60">
+      <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50">
         {approvedRows.map((r) => {
           const self = r.id === profile?.id
           return (
@@ -216,7 +216,10 @@ export function UserAdmin() {
                     <button
                       data-user-rename={r.id}
                       disabled={busy}
-                      className="ml-2 align-middle text-[0.95rem] font-bold text-navy-300 underline transition hover:text-navy-600 disabled:opacity-40"
+                      /*  0082 — navy-300 은 흰 바탕에서 2.0:1 입니다. 눌러야 하는 링크가
+                          그 정도로 흐리면 있는 줄도 모릅니다. 밝은 바탕의
+                          보조 글자는 navy-500 입니다. */
+                      className="ml-2 align-middle text-[0.95rem] font-bold text-navy-500 underline transition hover:text-navy-800 disabled:opacity-40"
                       onClick={() => {
                         const next = window.prompt(
                           `${r.email} 계정에 표시할 이름을 적어 주세요.\n\n권한은 바뀌지 않습니다 — 호칭만 바뀝니다.`,
@@ -292,7 +295,7 @@ export function UserAdmin() {
                    차량·기사 칸이 사라집니다. 매번 같은 값을 고르지 않아도
                    되고, 기록에 남는 이름은 **로그인한 본인**입니다. */}
               {r.role !== 'client' && (
-                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-teal-50/60 px-3.5 py-2.5`}>
+                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-teal-50 px-3.5 py-2.5`}>
                   <span className="t-muted shrink-0 font-bold text-teal-700">담당 차량</span>
                   <select
                     data-user-vehicle={r.id}
@@ -319,7 +322,7 @@ export function UserAdmin() {
 
               {/* 병원 계정 — 어느 병원 소속인지, 그리고 바꾸는 길 */}
               {r.role === 'client' && (
-                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-sky-50/70 px-3.5 py-2.5`}>
+                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-sky-50 px-3.5 py-2.5`}>
                   <span className="t-muted shrink-0 font-bold text-sky-700">소속 병원</span>
                   <select
                     disabled={busy}
@@ -411,7 +414,7 @@ function PendingRow({
       </div>
 
       {role === 'client' && (
-        <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-2xl bg-sky-50/70 px-3.5 py-2.5">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-2xl bg-sky-50 px-3.5 py-2.5">
           <span className="t-muted shrink-0 font-bold text-sky-700">소속 병원</span>
           <select
             disabled={busy}

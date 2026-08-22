@@ -84,7 +84,7 @@ export function DeadlineBanner({ className = '' }: { className?: string } = {}) 
   const rest = scan.items.length - shown.length
 
   return (
-    <section data-deadlines className={`card border-amber-200 bg-amber-50/70 p-4 sm:p-5 ${className}`}>
+    <section data-deadlines className={`card border-amber-200 bg-amber-50 p-4 sm:p-5 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
           <CalendarClock size={19} />

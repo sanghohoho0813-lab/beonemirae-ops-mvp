@@ -33,7 +33,7 @@ function Column({
   return (
     <div
       className={`min-w-0 flex-1 rounded-3xl p-5 sm:p-6 ${
-        after ? 'bg-teal-50/70 ring-2 ring-teal-200' : 'bg-navy-50'
+        after ? 'bg-teal-50 ring-2 ring-teal-200' : 'bg-navy-50'
       }`}
     >
       <p className={`t-card ${after ? 'text-teal-800' : 'text-navy-500'}`}>{title}</p>

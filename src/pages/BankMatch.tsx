@@ -354,7 +354,7 @@ export function BankMatch() {
           </div>
 
           {result && (
-            <div data-bank-result className="card flex gap-3 border-teal-200 bg-teal-50/60 p-4 sm:p-5">
+            <div data-bank-result className="card flex gap-3 border-teal-200 bg-teal-50 p-4 sm:p-5">
               <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-teal-600" />
               <div className="min-w-0 text-[1.05rem] leading-relaxed text-navy-700">
                 <p className="font-bold text-teal-700">입금 {result.ok.toLocaleString('ko-KR')}건을 기록했습니다</p>

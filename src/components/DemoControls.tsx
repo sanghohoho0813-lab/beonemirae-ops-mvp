@@ -98,7 +98,7 @@ export function DemoSettingsPanel() {
   }
 
   return (
-    <div className="rounded-2xl bg-navy-50/70">
+    <div className="rounded-2xl bg-navy-50">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-[1.03rem] font-bold text-navy-500 transition hover:bg-navy-100"

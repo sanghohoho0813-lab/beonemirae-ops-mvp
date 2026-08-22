@@ -321,7 +321,7 @@ export function AxEvidencePanels({
           확장 AX — 같은 기사·차량으로 더 많은 곳을 봤는가
         </SectionTitle>
 
-        <div className="card mb-3 flex gap-3 border-amber-200 bg-amber-50/60 p-4">
+        <div className="card mb-3 flex gap-3 border-amber-200 bg-amber-50 p-4">
           <AlertTriangle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.3} />
           <p className="t-body min-w-0 break-keep leading-snug text-navy-700">
             <b className="text-amber-700">거리(km)와 소요시간은 계산하지 않습니다.</b> 거래처 좌표가 없습니다 — 주소는

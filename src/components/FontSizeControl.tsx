@@ -33,7 +33,10 @@ export function FontSizeControl({
             title={`${opt.label} — ${opt.hint}`}
             className={`relative flex flex-col items-center justify-center rounded-xl px-1 py-2.5 transition ${
               active
-                ? 'bg-teal-500 text-white shadow-sm'
+                /*  0082 — 켜진 칸의 작은 설명 글자(14px)가 teal-500 위에서
+                    3.4:1 이었습니다. 바탕을 한 단계 진하게 두어 흰 계열 글자가
+                    기준을 넘게 합니다 — 글자를 키우거나 설명을 빼지 않습니다. */
+                ? 'bg-teal-700 text-white shadow-sm'
                 : dark
                   ? 'bg-white/10 text-navy-200 hover:bg-white/20'
                   : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
@@ -47,7 +50,7 @@ export function FontSizeControl({
             {!compact && (
               <span
                 className={`mt-1 whitespace-nowrap text-[0.9rem] leading-none ${
-                  active ? 'text-teal-50' : dark ? 'text-navy-400' : 'text-navy-400'
+                  active ? 'text-white' : dark ? 'text-navy-300' : 'text-navy-500'
                 }`}
               >
                 {opt.hint}

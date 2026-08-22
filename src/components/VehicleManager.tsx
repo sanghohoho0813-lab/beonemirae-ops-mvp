@@ -66,7 +66,7 @@ export function VehicleManager() {
         </div>
       )}
 
-      <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50/60">
+      <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50">
         {data.vehicles.map((v) => (
           <div key={v.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-white px-4 py-3.5">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-navy-50 text-navy-600">
@@ -110,7 +110,7 @@ export function VehicleManager() {
 
       {/*  사용 중지한 차량 — 되돌리는 길. 평소에는 접어 둡니다. */}
       {retired.length > 0 && (
-        <details data-retired-vehicles className="rounded-2xl bg-navy-50/60 px-4 py-3">
+        <details data-retired-vehicles className="rounded-2xl bg-navy-50 px-4 py-3">
           <summary className="t-body cursor-pointer break-keep font-bold text-navy-600">
             사용 중지한 차량 {retired.length}대
           </summary>

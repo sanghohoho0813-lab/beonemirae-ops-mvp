@@ -67,7 +67,7 @@ export function ErrorLogCard() {
   const bad = (log?.total ?? 0) > 0
 
   return (
-    <div data-error-log className={`card px-4 py-3.5 sm:px-5 ${bad ? 'border-amber-200 bg-amber-50/50' : ''}`}>
+    <div data-error-log className={`card px-4 py-3.5 sm:px-5 ${bad ? 'border-amber-200 bg-amber-50' : ''}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${

@@ -139,7 +139,7 @@ export function InvoiceSheet({ invoice }: { invoice: Invoice }) {
             </tr>
           ))}
           {medicalLines.length > 0 && (
-            <tr className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
+            <tr className="border-b-2 border-navy-300 bg-navy-50 font-extrabold text-navy-900">
               <Td colSpan={3} className="text-left">
                 의료폐기물 수집운반비용 합계
               </Td>
@@ -166,7 +166,7 @@ export function InvoiceSheet({ invoice }: { invoice: Invoice }) {
             </tr>
           ))}
           {diaperLines.length > 0 && (
-            <tr className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
+            <tr className="border-b-2 border-navy-300 bg-navy-50 font-extrabold text-navy-900">
               <Td colSpan={3} className="text-left">
                 의료기관 일회용기저귀 수집운반비용 합계
               </Td>
@@ -194,7 +194,7 @@ export function InvoiceSheet({ invoice }: { invoice: Invoice }) {
             </tr>
           ))}
           {productLines.length > 0 && (
-            <tr data-invoice-product-subtotal className="border-b-2 border-navy-300 bg-navy-50/60 font-extrabold text-navy-900">
+            <tr data-invoice-product-subtotal className="border-b-2 border-navy-300 bg-navy-50 font-extrabold text-navy-900">
               <Td colSpan={5} className="text-left">
                 소모품 공급 합계
               </Td>
