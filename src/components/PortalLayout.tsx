@@ -4,6 +4,7 @@ import { PackageCheck, Building2, FileBarChart, History, Headset, LogOut, type L
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
+import { LiveClock } from './LiveClock'
 import { PageMotion } from './motion'
 import { TourButton } from './TourEntry'
 
@@ -55,6 +56,12 @@ export function PortalLayout() {
             <div className="min-w-0 leading-tight">
               <p className="t-card line-clamp-2 break-keep text-white">{clientName || '우리 병원'}</p>
               <p className="t-muted mt-1 hidden break-keep text-navy-300 sm:block">㈜비원미래 병원 운영지원 서비스</p>
+              {/*  ⚠ 0078 — 폰에서는 여기에 답니다. 오른쪽 단추들과 가로를
+                   다투면 병원 이름이 밀려 잘립니다. 넓은 화면에서는 오른쪽
+                   단추 옆(아래 md:inline)에 따로 보입니다. */}
+              <p className="mt-1 break-keep text-[0.98rem] font-bold text-navy-300 md:hidden">
+                <LiveClock />
+              </p>
             </div>
           </div>
 
@@ -71,6 +78,10 @@ export function PortalLayout() {
               <Headset size={17} strokeWidth={2.3} />
               <span className="t-btn hidden sm:inline">{CLIENT_TEL}</span>
             </a>
+            {/*  오늘 날짜 · 지금 시각 (0078) — 병원 담당자도 봅니다 */}
+            <span className="hidden text-[1rem] font-bold text-white/80 md:inline">
+              <LiveClock />
+            </span>
             {profile?.name && (
               <span data-portal-who className="hidden max-w-[9rem] truncate text-[1.02rem] font-bold text-white/80 sm:inline">
                 {profile.name}

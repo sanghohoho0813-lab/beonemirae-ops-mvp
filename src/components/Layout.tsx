@@ -19,6 +19,7 @@ import {
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
+import { LiveClock } from './LiveClock'
 import { TONE } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
@@ -360,6 +361,10 @@ function Sidebar() {
             <p className="break-keep text-[1rem] text-navy-400">
               {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
             </p>
+            {/*  오늘 날짜 · 지금 시각 (0078) — PC 는 자리가 넉넉해 연도까지 씁니다 */}
+            <p className="mt-1 break-keep text-[1rem] font-bold text-navy-300">
+              <LiveClock full />
+            </p>
           </div>
           {profile && (
             <button
@@ -501,6 +506,14 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
           </span>
         )}
       </div>
+      {/*  ── 오늘 날짜 · 지금 시각 (0078) ────────────────────────────────────
+           대표님 요청으로 어느 계정이든 보이게 답니다.
+           ⚠ 위 머리글 **안**에 넣지 않았습니다. 폰은 가로가 390px 뿐이라
+             상호·도움말과 자리를 다투다 상호가 「㈜비…」로 잘립니다.
+             한 줄 아래에 통째로 두면 아무것도 밀어내지 않습니다. */}
+      <p className="mt-1.5 text-right text-[1rem] font-bold text-navy-500">
+        <LiveClock />
+      </p>
     </header>
   )
 }
