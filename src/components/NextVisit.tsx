@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronRight, Clock, MapPin, Phone, PlusCircle, Truck } from 'lucide-react'
 import type { AppData, Schedule } from '../types'
+import { useAuth } from '../context/AuthContext'
 import { NoteChips } from './SiteNotes'
 import type { SiteNote } from '../types'
 
@@ -27,10 +28,18 @@ export function NextVisitCard({
   notesFor: (clientId: string) => SiteNote[]
 }) {
   const navigate = useNavigate()
+  const { profile, role } = useAuth()
   const done = list.filter((s) => s.status === '완료').length
   const next = list.find((s) => s.status !== '완료')
   const client = next ? data.clients.find((c) => c.id === next.clientId) : null
-  const vehicle = next ? data.vehicles.find((v) => v.id === next.vehicleId) : null
+  //  ⚠ 0076 — 예전에는 **일정에 적힌 차**만 봤습니다. 예정 일정은 차가 비어
+  //    있는 것이 보통이라 「차량 미배정」이 떴는데, 정작 저장은 계정에 묶인
+  //    차로 됩니다. 기사님이 읽으면 「차가 없어서 못 가나」로 읽힙니다.
+  //    **실제로 쓰일 차**를 보여 줍니다 — 일정에 지정된 차가 있으면 그것을,
+  //    없으면 본인 계정에 묶인 차를.
+  const myVehicle = profile?.vehicleId ? data.vehicles.find((v) => v.id === profile.vehicleId) : null
+  const vehicle = (next ? data.vehicles.find((v) => v.id === next.vehicleId) : null)
+    ?? (role === 'field' ? myVehicle : null)
   const pct = list.length ? Math.round((done / list.length) * 100) : 0
 
   if (list.length === 0) return null
@@ -107,7 +116,9 @@ export function NextVisitCard({
           <p className="t-body flex items-center gap-2 break-keep text-navy-500">
             <Truck size={17} strokeWidth={2.3} className="shrink-0 text-navy-300" />
             <span className="min-w-0">
-              {vehicle?.name ?? '차량 미배정'}
+              {/*  차가 정말 없을 때는 **무엇을 해야 하는지**까지 말합니다.
+                   「미배정」만으로는 기사님이 할 수 있는 일이 없습니다. */}
+              {vehicle?.name ?? (role === 'field' ? '담당 차량 없음 · 사무실에 문의' : '차량 미배정')}
               {next.expectedAmount > 0 && ` · 예상 ${next.expectedAmount}kg`}
             </span>
           </p>
