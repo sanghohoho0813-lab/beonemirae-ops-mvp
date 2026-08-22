@@ -41,6 +41,19 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
     })
   : null
 
+/**
+ *  서버에 **닿지 못한** 것인가 (0079).
+ *
+ *   서버가 「없다」·「권한 없다」고 **답한** 것과, 아예 닿지 못한 것은
+ *   전혀 다른 일입니다. 앞은 계정 문제이고 뒤는 통신 문제입니다.
+ *   섞으면 지하에서 앱을 연 기사님을 로그인 화면으로 보내게 됩니다.
+ */
+export function isOffline(e: unknown): boolean {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true
+  const msg = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e ?? '')
+  return /Failed to fetch|NetworkError|fetch failed|Load failed|ERR_INTERNET_DISCONNECTED|ERR_NETWORK|timeout|ETIMEDOUT/i.test(msg)
+}
+
 /** Supabase 오류를 사용자에게 보여줄 한국어 문구로 바꿉니다. */
 export function friendlyError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e ?? '')

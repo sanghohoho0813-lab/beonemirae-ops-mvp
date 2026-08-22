@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Clock, Loader2, LogOut, ShieldAlert } from 'lucide-react'
+import { Clock, CloudOff, Loader2, LogOut, RotateCw, ShieldAlert } from 'lucide-react'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
@@ -20,7 +20,7 @@ function FullScreen({ children }: { children: ReactNode }) {
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { configured, loading, session, profile, role, signOut } = useAuth()
+  const { configured, loading, session, profile, unreachable, role, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -43,6 +43,43 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         <p className="t-body flex items-center gap-2.5 font-bold text-navy-400">
           <Loader2 size={20} className="animate-spin" /> 로그인 상태를 확인하는 중…
         </p>
+      </FullScreen>
+    )
+  }
+
+  //  ── 세션은 살아 있는데 서버에 못 닿은 경우 (0079) ────────────────────
+  //
+  //   ⚠ 예전에는 여기서 곧바로 로그인 화면으로 보냈습니다. 그래서 기사님이
+  //     **지하 보관실에서 앱을 열면 「로그인해 주세요」가 떴습니다.** 토큰은
+  //     멀쩡히 있는데도요. 기사님은 자기가 로그아웃된 줄 알고, 비밀번호를
+  //     모르면(50~60대에게 흔합니다) 거기서 아무것도 못 하고 사무실에
+  //     전화합니다. 통신 문제를 **로그인 문제로 잘못 말한** 것입니다.
+  //
+  //   ⚠ 로그아웃시키지 않습니다. 신호가 돌아오면 그대로 이어서 일합니다.
+  if (session && !profile && unreachable) {
+    return (
+      <FullScreen>
+        <div data-auth-offline className="card max-w-[32rem] p-6 text-center sm:p-8">
+          <CloudOff size={40} className="mx-auto text-navy-400" strokeWidth={1.9} />
+          <p className="mt-4 break-keep text-[1.32rem] font-extrabold text-navy-900">
+            지금 통신이 안 됩니다
+          </p>
+          <p className="mt-2.5 break-keep text-[1.08rem] leading-relaxed text-navy-600">
+            <b className="text-navy-900">로그아웃된 것이 아닙니다.</b> 신호가 약한 곳(지하 보관실 등)에서는
+            자료를 못 불러옵니다. 밖으로 나오신 뒤 아래를 눌러 주세요.
+          </p>
+          <button
+            data-auth-offline-retry
+            onClick={() => void refreshProfile()}
+            className="btn-primary mx-auto mt-5 !text-[1.1rem]"
+            style={{ minHeight: 52 }}
+          >
+            <RotateCw size={18} strokeWidth={2.4} /> 다시 시도
+          </button>
+          <p className="mt-3 break-keep text-[1rem] text-navy-400">
+            여러 번 눌러도 안 되면 사무실에 알려 주세요.
+          </p>
+        </div>
       </FullScreen>
     )
   }

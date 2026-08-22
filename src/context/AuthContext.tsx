@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { resetSchemaCache } from '../lib/schemaGate'
-import { supabase, isSupabaseConfigured, friendlyError } from '../lib/supabase'
+import { supabase, isSupabaseConfigured, friendlyError, isOffline } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 인증 / 역할
@@ -64,6 +64,12 @@ interface AuthContextValue {
   loading: boolean
   session: Session | null
   profile: Profile | null
+  /**
+   *  세션은 살아 있는데 **서버에 닿지 못해** 내 정보를 못 읽은 상태 (0079).
+   *  ⚠ 「로그아웃됨」과 다릅니다. 이때 로그인 화면으로 보내면, 지하에서 앱을
+   *    연 기사님이 자기가 로그아웃된 줄 알고 사무실에 전화합니다.
+   */
+  unreachable: boolean
   role: UserRole | null
   mode: AppMode
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
@@ -112,21 +118,46 @@ const toProfile = (r: ProfileRow): Profile => ({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  //  세션은 살아 있는데 **서버에 닿지 못해** 프로필을 못 읽은 상태 (0079).
+  //  「로그아웃됨」과 절대 섞지 않습니다 — 아래 RequireAuth 참고.
+  const [unreachable, setUnreachable] = useState(false)
   // Supabase 미설정이면 확인할 세션이 없으므로 곧바로 로딩 완료 상태입니다.
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
-  const loadProfile = useCallback(async (userId: string) => {
-    if (!supabase) return null
-    const { data, error } = await supabase
-      .from('profiles')
-      //  칸 이름을 하나씩 적어 두면, 0056 을 아직 안 돌린 서버에서 vehicle_id
-      //  하나 때문에 요청 전체가 거절되고 **아무도 로그인하지 못합니다**.
-      //  있는 칸만 받아 쓰도록 통째로 읽습니다 — 본인 한 줄이라 양도 같습니다.
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-    if (error || !data) return null
-    return toProfile(data as ProfileRow)
+  /**
+   *  ⚠ 0079 — 「프로필이 **없다**」와 「지금 **못 읽었다**」는 전혀 다른 일입니다.
+   *
+   *   예전에는 둘 다 null 을 돌려줬습니다. 그래서 기사님이 **지하 보관실에서
+   *   앱을 열면 로그인 화면으로 튕겼습니다.** 토큰은 멀쩡히 있는데도요.
+   *   기사님은 자기가 로그아웃된 줄 알고, 비밀번호를 모르면(50~60대에게
+   *   흔합니다) 거기서 아무것도 못 하고 사무실에 전화합니다.
+   *
+   *   못 읽은 것은 **통신 문제**입니다. 로그인 문제가 아닙니다.
+   */
+  const loadProfile = useCallback(async (userId: string): Promise<
+    { kind: 'ok'; profile: Profile } | { kind: 'none' } | { kind: 'unreachable' }
+  > => {
+    if (!supabase) return { kind: 'none' }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        //  칸 이름을 하나씩 적어 두면, 0056 을 아직 안 돌린 서버에서 vehicle_id
+        //  하나 때문에 요청 전체가 거절되고 **아무도 로그인하지 못합니다**.
+        //  있는 칸만 받아 쓰도록 통째로 읽습니다 — 본인 한 줄이라 양도 같습니다.
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+      if (error) {
+        //  서버가 「없다」고 답한 것과 서버에 **닿지 못한** 것을 가릅니다.
+        //  닿았는데 권한·스키마 문제로 거절당한 것은 로그인 문제가 맞습니다.
+        return isOffline(error) ? { kind: 'unreachable' } : { kind: 'none' }
+      }
+      if (!data) return { kind: 'none' }
+      return { kind: 'ok', profile: toProfile(data as ProfileRow) }
+    } catch (e) {
+      //  fetch 자체가 터진 경우 — 신호가 없을 때 여기로 옵니다
+      return isOffline(e) ? { kind: 'unreachable' } : { kind: 'none' }
+    }
   }, [])
 
   // 초기 세션 복원 + 이후 변경 구독
@@ -134,17 +165,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return
     let alive = true
 
+    const apply = (r: { kind: 'ok'; profile: Profile } | { kind: 'none' } | { kind: 'unreachable' }) => {
+      if (r.kind === 'ok') { setProfile(r.profile); setUnreachable(false); return }
+      //  ⚠ 못 읽은 것이면 **프로필을 지우지 않습니다.** 지우면 이미 들어와
+      //    있던 화면이 그 자리에서 로그인으로 튕깁니다.
+      if (r.kind === 'unreachable') { setUnreachable(true); return }
+      setProfile(null); setUnreachable(false)
+    }
+
     supabase.auth.getSession().then(async ({ data }) => {
       if (!alive) return
       setSession(data.session)
-      if (data.session?.user) setProfile(await loadProfile(data.session.user.id))
+      if (data.session?.user) apply(await loadProfile(data.session.user.id))
       if (alive) setLoading(false)
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
       if (!alive) return
       setSession(s)
-      setProfile(s?.user ? await loadProfile(s.user.id) : null)
+      if (s?.user) apply(await loadProfile(s.user.id))
+      else { setProfile(null); setUnreachable(false) }
       setLoading(false)
     })
 
@@ -252,7 +292,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refreshProfile = useCallback(async () => {
-    if (session?.user) setProfile(await loadProfile(session.user.id))
+    if (!session?.user) return
+    const r = await loadProfile(session.user.id)
+    if (r.kind === 'ok') { setProfile(r.profile); setUnreachable(false) }
+    else if (r.kind === 'unreachable') setUnreachable(true)
+    else { setProfile(null); setUnreachable(false) }
   }, [session, loadProfile])
 
   const value = useMemo<AuthContextValue>(
@@ -261,6 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       session,
       profile,
+      unreachable,
       role: profile?.role ?? null,
       // 로그인된 상태에서만 실제 운영 모드입니다.
       mode: isSupabaseConfigured && !!session && !!profile ? 'live' : 'demo',
@@ -276,6 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       session,
       profile,
+      unreachable,
       signIn,
       signUp,
       signOut,
