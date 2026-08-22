@@ -243,6 +243,32 @@ export function MoreMenu({
       </section>
 
       {/*
+        ── 글자 크기를 위로 (0075) ────────────────────────────────────────
+        대표님 요청: 「현장직원이 매일 쓰는 기능 우선, 드물게 쓰는 기능은
+        아래로」. 눈이 침침하신 분에게 글자 크기는 **매일 쓰는 것**인데
+        예전에는 회사 홈페이지·올바로 링크보다 아래에 있어, 스크롤을 네 번
+        내려야 나왔습니다. 안내 바로 다음으로 올립니다.
+      */}
+      {/*
+        글자 크기.
+
+         글자 크기를 바꾸는 곳이 설정 화면 한 군데뿐인데 그 화면이 관리자
+         전용이라, 정작 폰으로만 일하는 현장 담당자는 글자를 키울 방법이
+         아예 없었습니다. 설정에 못 들어가는 분에게는 같은 조절기를 여기
+         그대로 놓아 둡니다. (설정에 들어갈 수 있으면 위 「관리」에 있습니다)
+      */}
+      {!canAccess(role, '/settings') && (
+        <section>
+          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">글자 크기</h3>
+          <div className="card p-4">
+            <p className="mb-2.5 text-[0.98rem] text-navy-400">화면 글자가 작으면 크기를 올리세요</p>
+            <FontSizeControl />
+          </div>
+        </section>
+      )}
+
+
+      {/*
         여기부터가 목차입니다 — PC 사이드바와 **같은 순서, 같은 분류**.
 
          병원 서비스 · 성과 → 운영 도구 · 추가 고도화 예정 → 추가 개발 예정
@@ -255,8 +281,16 @@ export function MoreMenu({
          한 줄에 하나씩 놓으면 목록이 화면 세 개 길이가 됩니다. 두 칸으로
          놓아 한눈에 들어오게 합니다.
       */}
+      {/*  ⚠ 0075 — 현장 담당자에게 이 묶음은 「병원 요청」 하나뿐인데 제목이
+           「병원 서비스 · 성과」였습니다. 없는 성과를 제목이 약속하면
+           기사님은 눌러 보고 없어서 헤맵니다. 들어 있는 만큼만 적습니다. */}
       {serviceNav.length > 0 && (
-        <NavSection title="병원 서비스 · 성과" items={serviceNav} onGo={go} hook="more-service" />
+        <NavSection
+          title={serviceNav.length === 1 ? serviceNav[0].label : '병원 서비스 · 성과'}
+          items={serviceNav}
+          onGo={go}
+          hook="more-service"
+        />
       )}
       {toolNav.length > 0 && (
         <NavSection
@@ -316,31 +350,19 @@ export function MoreMenu({
         </div>
       </section>
 
-      {/*
-        글자 크기.
-
-         글자 크기를 바꾸는 곳이 설정 화면 한 군데뿐인데 그 화면이 관리자
-         전용이라, 정작 폰으로만 일하는 현장 담당자는 글자를 키울 방법이
-         아예 없었습니다. 설정에 못 들어가는 분에게는 같은 조절기를 여기
-         그대로 놓아 둡니다. (설정에 들어갈 수 있으면 위 「관리」에 있습니다)
-      */}
-      {!canAccess(role, '/settings') && (
-        <section>
-          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">글자 크기</h3>
-          <div className="card p-4">
-            <p className="mb-2.5 text-[0.98rem] text-navy-400">화면 글자가 작으면 크기를 올리세요</p>
-            <FontSizeControl />
-          </div>
-        </section>
-      )}
-
       {/*  발표·확인용 — 매일 쓰는 것이 아니라 **가끔** 여는 것들입니다.
            예전에는 맨 위에 있어서, 목차를 보러 들어온 사람이 매번 이 둘을
            지나쳐 내려가야 했습니다. 성격이 같은 기술개발 현황 옆으로
            내립니다(특허출원번호가 여기 있습니다). */}
       {(onPcView || showDemo) && (
         <section data-more-showcase>
-          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">발표 · 확인용</h3>
+          {/*  ⚠ 0075 — 현장 담당자에게는 이 칸에 「PC 화면으로 보기」 하나만
+               있습니다. 그런데 제목이 「발표 · 확인용」이라, 기사님에게는
+               **자기와 상관없는 묶음**처럼 읽혔습니다. 들어 있는 것에 맞는
+               이름을 답니다. */}
+          <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">
+            {showDemo ? '발표 · 확인용' : '화면'}
+          </h3>
           <div className="grid grid-cols-2 gap-2.5">
             {showDemo && (
               <Tappable
@@ -366,9 +388,12 @@ export function MoreMenu({
                   <span data-pc-view-open className="block break-keep font-bold text-navy-900">
                     PC 화면으로 보기
                   </span>
-                  <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
-                    PC 전체 화면 구성 확인
-                  </span>
+                  {/*  설명을 줄입니다 — 제목만으로 뜻이 통합니다 (0075) */}
+                  {showDemo && (
+                    <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
+                      PC 전체 화면 구성 확인
+                    </span>
+                  )}
                 </span>
               </Tappable>
             )}

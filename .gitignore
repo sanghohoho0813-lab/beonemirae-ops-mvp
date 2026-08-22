@@ -36,3 +36,7 @@ dist-ssr
 supabase/.temp
 supabase/.branches
 dist-demo
+
+# 검사가 남기는 스크린샷 — 결과물이지 소스가 아닙니다 (0075)
+test/browser/*.png
+test/browser/shots/

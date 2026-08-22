@@ -629,7 +629,14 @@ export function CollectionInput() {
 
   return (
     <div className="pb-4">
-      <PageHeader title="수거 입력" subtitle="한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다" />
+      {/*  ⚠ 0075 — 이 부제는 **시스템 자랑**이지 기사님이 지금 할 일이
+           아닙니다. 매번 첫 줄에서 읽히면 정작 「어느 병원, 몇 kg」이
+           밀립니다. 사무실·관리자에게는 이 화면이 무엇을 이어 주는지
+           알려 줄 값이 있어 그대로 둡니다. */}
+      <PageHeader
+        title="수거 입력"
+        subtitle={role === 'field' ? undefined : '한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다'}
+      />
 
       {/*  이미 저장돼 있는 경우 — 빨강이 아니라 청록입니다.
            「안 됐다」가 아니라 「이미 됐다」이기 때문입니다. */}
@@ -1001,7 +1008,9 @@ export function CollectionInput() {
         {/* 현장 메모 — 이 거래처에 기록해둔 특이사항 */}
         {client && notesFor(client.id).some((n) => !n.done) && (
           <div className="card p-5">
-            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항 <span className="font-medium text-navy-400">(거래처 상세에 기록해 둔 내용)</span></p>
+            {/*  0075 — 「(거래처 상세에 기록해 둔 내용)」은 **어디서 왔는지**를
+                 설명하는 말입니다. 기사님에게는 내용만 필요합니다. */}
+            <p className="t-label mb-1 text-navy-500">현장 메모 · 특이사항</p>
             <NoteChips notes={notesFor(client.id)} max={4} />
           </div>
         )}
@@ -1399,7 +1408,13 @@ export function CollectionInput() {
         {/*  붙어 있는 동안 원래 자리에 같은 높이를 남겨 둡니다 — 안 남기면
              아래 글이 위로 올라와 화면이 출렁입니다. */}
         {canSubmit && !sync.saving && <div aria-hidden className="h-[4.5rem] sm:hidden" />}
-        {profile?.name && (
+        {/*  ⚠ 0075 — 여기 「{이름} 이름으로 저장됩니다」가 있었는데, 저장
+             단추 바로 위에 이미 「{차량} · {이름} 기사님으로 저장됩니다」가
+             있습니다. **같은 말이 한 화면에 두 번**이라 한쪽을 뺍니다.
+             차량까지 함께 말하는 위쪽을 남깁니다.
+             ⚠ 차량이 안 묶여 있어 위 줄이 안 뜨는 경우에는 누구 이름으로
+               남는지 알 길이 없어지므로, 그때는 이 줄을 그대로 띄웁니다. */}
+        {profile?.name && !boundVehicle && (
           <p data-collect-actor className="t-muted text-center">
             {profile.name} 이름으로 저장됩니다
           </p>

@@ -124,6 +124,30 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
   await s.p.waitForTimeout(1600)
   ok(booked[0]?.p_date === target, '③ **고른 날짜로 잡힘**', String(booked[0]?.p_date))
 
+  //  ⚠ 0075 — 잡고 나서 시트가 그냥 닫히면 기사님은 「됐나?」 하고 목록을
+  //    다시 훑습니다. 잡힌 것을 보여 주고 **다음으로 이어갈 길**을 둡니다.
+  const after = await s.p.evaluate(() => {
+    const box = document.querySelector('[data-add-visit-done]')
+    if (!box) return null
+    return {
+      line: (document.querySelector('[data-add-visit-done-line]')?.textContent ?? '').trim(),
+      client: !!document.querySelector('[data-add-visit-go-client]'),
+      collect: !!document.querySelector('[data-add-visit-go-collect]'),
+    }
+  })
+  ok(after !== null, '③ **잡힌 것이 그 자리에서 보임**')
+  ok((after?.line ?? '').includes(F.clients[0].name), '③ 어느 날 어느 병원인지 적혀 있음', after?.line ?? '')
+  ok(after?.client === true, '③ **병원 정보로 바로 이어짐**')
+  //  앞으로 올 날짜에는 수거 입력이 안 됩니다 — 막다른 길을 안 만듭니다
+  ok(after?.collect === false, '③ 앞으로 올 날에는 「수거 입력」을 안 내밂 (오늘만 됨)')
+
+  //  이어가기 — 병원 정보로
+  await s.p.locator('[data-add-visit-go-client]').dispatchEvent('click')
+  await s.p.waitForTimeout(2200)
+  ok(new URL(s.p.url()).pathname.startsWith('/clients/'), '③ 눌러서 병원 화면으로 감', new URL(s.p.url()).pathname)
+  await s.p.goBack({ waitUntil: 'domcontentloaded' })
+  await s.p.waitForTimeout(2200)
+
   // ── ④ 오늘로 돌아와 병원 선택 → 수거 입력 ───────────────────────────────
   if (await s.p.locator('[data-go-today]').count()) {
     await s.p.locator('[data-go-today]').dispatchEvent('click')

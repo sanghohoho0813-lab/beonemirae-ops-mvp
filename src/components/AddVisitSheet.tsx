@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, CalendarPlus, Loader2, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle, Building2, CalendarPlus, CheckCircle2, ClipboardEdit, Loader2, X } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { prettyDate, today } from '../lib/format'
@@ -37,6 +38,10 @@ export function AddVisitSheet({
 }) {
   const { data, bookVisit } = useData()
   const { profile } = useAuth()
+  const navigate = useNavigate()
+  //  잡고 나서 **다음에 무엇을 하는가**. 시트를 그냥 닫아 버리면 기사님은
+  //  「됐나?」 하고 목록을 다시 훑습니다 (0075).
+  const [done, setDone] = useState<{ date: string; clientId: string; name: string } | null>(null)
 
   const [clientId, setClientId] = useState('')
   const [hour, setHour] = useState('09')
@@ -78,6 +83,7 @@ export function AddVisitSheet({
   //  ⚠ 지난 날짜에는 못 잡습니다 (서버도 막습니다). 이미 다녀온 것은
   //    「수거 입력」이 할 일입니다 — 두 자리를 섞으면 실적이 어긋납니다.
   const isPast = date < today()
+  useEffect(() => { if (!open) setDone(null) }, [open])
 
   async function save() {
     if (!clientId || !wasteType) return
@@ -97,6 +103,13 @@ export function AddVisitSheet({
       return
     }
     onDone?.(date)
+    //  ⚠ 닫지 않습니다. 잡힌 것을 **눈으로 확인**하고, 바로 다음으로
+    //    이어갈 수 있게 합니다.
+    setDone({ date, clientId, name: data.clients.find((c) => c.id === clientId)?.name ?? '' })
+  }
+
+  function finish() {
+    setDone(null)
     onClose()
   }
 
@@ -114,6 +127,65 @@ export function AddVisitSheet({
         data-guide="guide-add-sheet"
         className="relative max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-[30rem] sm:rounded-3xl"
       >
+        {/*
+          ── 잡고 난 뒤 (0075) ─────────────────────────────────────────────
+          예전에는 잡히면 시트가 그냥 닫혔습니다. 기사님은 「됐나?」 하고
+          목록을 다시 훑어야 했습니다. 잡힌 것을 눈으로 보여 주고,
+          **다음에 할 수 있는 일**을 그 자리에 둡니다.
+
+          ⚠ 수거 입력은 **오늘·지난 날**만 됩니다. 앞으로 올 날짜에 「수거
+            입력」을 내밀면 눌렀다가 막히는 막다른 길이 됩니다. 그날이
+            오늘일 때만 내밉니다 — 없는 길을 만들지 않습니다.
+        */}
+        {done ? (
+          <div data-add-visit-done>
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={26} strokeWidth={2.4} className="mt-0.5 shrink-0 text-teal-600" />
+              <div className="min-w-0 flex-1">
+                <p className="break-keep text-[1.3rem] font-extrabold leading-snug text-navy-900">
+                  일정을 잡았습니다
+                </p>
+                <p data-add-visit-done-line className="mt-1 break-keep text-[1.1rem] font-bold text-teal-700">
+                  {prettyDate(done.date)} · {done.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-2.5">
+              {done.date === today() && (
+                <button
+                  data-add-visit-go-collect
+                  onClick={() => { finish(); navigate(`/collection?client=${done.clientId}`) }}
+                  className="btn-primary w-full py-4 !text-[1.12rem]"
+                  style={{ minHeight: 52 }}
+                >
+                  <ClipboardEdit size={19} strokeWidth={2.4} /> 지금 수거 입력하기
+                </button>
+              )}
+              <button
+                data-add-visit-go-client
+                onClick={() => { finish(); navigate(`/clients/${done.clientId}`) }}
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-4 text-[1.12rem] font-extrabold transition active:scale-[0.99] ${
+                  done.date === today()
+                    ? 'bg-navy-50 text-navy-700'
+                    : 'bg-teal-500 text-white shadow-sm'
+                }`}
+                style={{ minHeight: 52 }}
+              >
+                <Building2 size={19} strokeWidth={2.4} /> 병원 정보 보기
+              </button>
+              <button
+                data-add-visit-done-close
+                onClick={finish}
+                className="w-full rounded-2xl px-4 py-3.5 text-[1.08rem] font-bold text-navy-500"
+                style={{ minHeight: 48 }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         <div className="mb-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[1.3rem] font-extrabold text-navy-900">일정 추가</p>
@@ -233,6 +305,8 @@ export function AddVisitSheet({
         </button>
         {profile?.name && (
           <p className="mt-2 text-center text-[0.98rem] text-navy-400">{profile.name} 님 일정으로 저장됩니다</p>
+        )}
+        </>
         )}
       </div>
     </div>
