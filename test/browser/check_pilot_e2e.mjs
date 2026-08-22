@@ -82,6 +82,26 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
   ok(soon.strip, '② 날짜 줄에 사흘 뒤가 보임')
   ok(soon.upcoming, '② 「앞으로 갈 곳」이 있음')
 
+  //  ⚠ 0074 — 전화는 첫 화면에서 바로 걸려야 합니다. 예전에는 수거 입력까지
+  //    들어가야 전화 링크가 나왔습니다.
+  //  ⚠ 「다음 방문」 카드는 **폰 전용**입니다 (PC 는 목록 카드가 그 자리를
+  //    합니다). 안 보이는 것을 재면 높이 0 이 나와 헛되이 실패합니다.
+  //    보이는 화면에서만 잽니다.
+  const tel0 = await s.p.evaluate(() => {
+    const el = document.querySelector('[data-next-tel]')
+    const vis = el ? el.getBoundingClientRect().height > 2 : false
+    const txt = (document.querySelector('main')?.innerText ?? '')
+    return { vis, h: el ? Math.round(el.getBoundingClientRect().height) : 0,
+      말함: /전화번호 미등록/.test(txt) }
+  })
+  if (tel0.vis) {
+    ok(true, '② **첫 화면에서 전화가 바로 보임**', `링크 ${tel0.h}px`)
+    ok(tel0.h >= 44, '② 전화가 손가락 크기', `${tel0.h}px`)
+  } else {
+    //  폰 카드가 없는 폭 — 전화는 병원을 고른 뒤 화면에서 잽니다 (아래 ⑤)
+    ok(true, '② (이 폭에서는 「다음 방문」 카드가 없음 — ⑤에서 전화를 잽니다)')
+  }
+
   //  폰에서는 월간을 펼쳐서도 확인됩니다
   if (w < 700) {
     await s.p.locator('[data-month-toggle]').dispatchEvent('click')

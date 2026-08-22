@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Clock, MapPin, PlusCircle, Truck } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Clock, MapPin, Phone, PlusCircle, Truck } from 'lucide-react'
 import type { AppData, Schedule } from '../types'
 import { NoteChips } from './SiteNotes'
 import type { SiteNote } from '../types'
@@ -83,6 +83,27 @@ export function NextVisitCard({
             <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-navy-300" />
             <span className="min-w-0">{client?.address ?? '주소 없음'}</span>
           </p>
+          {/*  ⚠ 0074 — 주소는 있는데 **전화는 누를 수 없었습니다.** 기사님이
+               「문 앞인데 아무도 안 나온다」 할 때 여기서 바로 걸어야 하는데,
+               수거 입력 화면까지 들어가야 전화 링크가 나왔습니다.
+               같은 자료를 한 화면 앞으로 당깁니다 — 새로 만드는 것이 아닙니다.
+               ⚠ 번호가 없으면 「전화번호 미등록」이라고 **그대로** 말합니다.
+                 없는 번호를 지어내지 않습니다. */}
+          {client?.phone ? (
+            <a
+              data-next-tel
+              href={`tel:${client.phone}`}
+              className="t-body -my-1 flex min-h-[2.75rem] items-center gap-2 break-keep font-bold text-teal-700"
+            >
+              <Phone size={17} strokeWidth={2.4} className="shrink-0 text-teal-600" />
+              <span className="min-w-0">{client.phone}</span>
+            </a>
+          ) : (
+            <p className="t-body flex items-center gap-2 break-keep text-navy-400">
+              <Phone size={17} strokeWidth={2.3} className="shrink-0 text-navy-300" />
+              <span className="min-w-0">전화번호 미등록</span>
+            </p>
+          )}
           <p className="t-body flex items-center gap-2 break-keep text-navy-500">
             <Truck size={17} strokeWidth={2.3} className="shrink-0 text-navy-300" />
             <span className="min-w-0">
