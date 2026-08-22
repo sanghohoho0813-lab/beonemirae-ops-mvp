@@ -128,7 +128,22 @@ async function open(ver, seed = []) {
   ok(sent?.p_memo === '3층 처치실 앞', '메모도 그대로', String(sent?.p_memo))
   ok(sent?.p_waste_type === '의료폐기물', '그 병원이 배출하는 구분으로 감', String(sent?.p_waste_type))
 
-  ok((await p.locator('[data-add-visit]').count()) === 0, '저장되면 시트가 닫힘')
+  //  ⚠ 0075 에서 **일부러 바꾼 동작**입니다. 예전에는 저장되면 시트가 그냥
+  //    닫혔고, 기사님은 「됐나?」 하고 목록을 다시 훑어야 했습니다.
+  //    대표님 요청(「추가한 일정에서 바로 병원 상세 또는 수거입력으로 이어질
+  //    수 있게」)에 따라, 이제 잡힌 것을 그 자리에서 보여 주고 다음 길을
+  //    내밉니다. **닫히는지**가 아니라 **다음으로 이어지는지**를 봅니다.
+  ok((await p.locator('[data-add-visit-done]').count()) === 1,
+    '**저장되면 잡힌 것이 그 자리에서 보임**')
+  ok((await p.locator('[data-add-visit-go-client]').count()) === 1,
+    '**병원 정보로 바로 이어짐**')
+  ok((await p.locator('[data-add-visit-save]').count()) === 0,
+    '입력칸은 사라짐 (두 번 잡히지 않게)')
+
+  //  닫기를 누르면 그때 닫힙니다
+  await p.locator('[data-add-visit-done-close]').dispatchEvent('click')
+  await p.waitForTimeout(600)
+  ok((await p.locator('[data-add-visit]').count()) === 0, '**닫기를 누르면 시트가 닫힘**')
 
   // ── 저장 뒤 즉시 반영 ──────────────────────────────────────────────────
   await p.waitForTimeout(1200)
