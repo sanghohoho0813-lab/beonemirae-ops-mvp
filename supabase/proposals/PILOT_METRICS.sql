@@ -72,6 +72,30 @@ t3 as (
    where (at at time zone 'Asia/Seoul')::date between 기간.시작 and 기간.끝
 ),
 
+-- ⑤ 수거 저장 성공/실패 -----------------------------------------------------
+--     실패는 app_errors 에 kind='save' 로 남습니다 (0046).
+--     ⚠ 「실패 0」이 좋은 것이지만, 0 이 나와도 **저장을 아예 안 한 날**과
+--       구분해야 하므로 성공 건수와 함께 봅니다.
+t5 as (
+  select (select count(*) from public.collection_events, 기간
+           where (at at time zone 'Asia/Seoul')::date between 기간.시작 and 기간.끝
+             and coalesce(demo_session_id, '') = '') as 성공,
+         (select count(*) from public.app_errors, 기간
+           where kind = 'save'
+             and (at at time zone 'Asia/Seoul')::date between 기간.시작 and 기간.끝) as 실패
+),
+
+-- ⑥ 중복 저장 시도 (서버가 막은 것) -----------------------------------------
+--     ⚠ 자료가 두 번 들어간 것이 **아닙니다.** 서버가 막은 횟수입니다.
+--       지하에서 저장하고 다시 누른 횟수로 읽으시면 됩니다.
+t6 as (
+  select count(*) as 막힌
+    from public.app_errors, 기간
+   where kind = 'save'
+     and coalesce(message, '') ~ '이미 완료 처리된 일정|이미 저장되어 있습니다|이미 잡혀 있습니다'
+     and (at at time zone 'Asia/Seoul')::date between 기간.시작 and 기간.끝
+),
+
 -- ④ 요청 처리시간 -----------------------------------------------------------
 t4 as (
   select count(*) as 요청건,
@@ -107,4 +131,14 @@ select * from (
          case when 처리건 = 0 then '아직 없음'
               else '평균 ' || 평균시간 || '시간 · 중앙값 ' || 중앙값시간 || '시간' end
     from t4
+  union all
+  select 5, '⑤ 수거 저장 성공/실패', 성공::text || '/' || (성공 + 실패)::text || '건',
+         case when (성공 + 실패) = 0 then '아직 없음'
+              else '실패 ' || 실패 || '건' || case when 실패 > 0 then ' ⚠ 아래 오류기록 확인' else '' end end
+    from t5
+  union all
+  select 6, '⑥ 중복 저장 시도', 막힌::text || '건',
+         case when 막힌 = 0 then '없음'
+              else '서버가 ' || 막힌 || '건 막음 (자료는 안전) — 기사님이 두 번 누른 횟수' end
+    from t6
 ) x order by 순;
