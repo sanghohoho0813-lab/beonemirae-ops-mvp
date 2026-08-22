@@ -21,7 +21,6 @@ import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
 import { LiveClock } from './LiveClock'
 import { ThemeButton } from './ThemePicker'
-import { TONE } from '../lib/tone'
 import { SyncBar } from './SyncBar'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
@@ -111,10 +110,19 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
         }`
       }
     >
+      {/*  ⚠ 0083 — 아이콘 타일에 메뉴별 색(TONE)을 그대로 썼습니다. 그 색들은
+           파랑·하늘·보라 — **기본 남색 테마의 계열**입니다. 그래서 갈색이나
+           와인빛 사이드바로 바꿔도 아이콘 타일만 남색 계열로 남아,
+           「테마 위에 남색이 덧칠된」 것처럼 보였습니다.
+           사이드바에서는 **그 테마의 강조색 하나**로 통일합니다 —
+           시안 아홉 장이 모두 그렇게 되어 있습니다.
+           ⚠ 메뉴별 색 구분 자체를 없애는 것은 아닙니다. 밝은 본문 화면의
+             TONE 은 그대로입니다 — 거기서는 「무슨 일인지」를 색으로 구분하는
+             것이 실제로 도움이 됩니다. 어두운 사이드바에서만 소음이 됩니다. */}
       {muted ? (
         <Icon size={21} strokeWidth={2.2} className="ml-1 shrink-0" />
       ) : (
-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE[item.tone].tile}`}>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-300">
           <Icon size={22} strokeWidth={2.3} />
         </span>
       )}
