@@ -71,6 +71,11 @@ export function PortalLayout() {
               <Headset size={17} strokeWidth={2.3} />
               <span className="t-btn hidden sm:inline">{CLIENT_TEL}</span>
             </a>
+            {profile?.name && (
+              <span data-portal-who className="hidden max-w-[9rem] truncate text-[1.02rem] font-bold text-white/80 sm:inline">
+                {profile.name}
+              </span>
+            )}
             <button
               onClick={() => {
                 void signOut()
@@ -81,7 +86,13 @@ export function PortalLayout() {
               className="flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
             >
               <LogOut size={17} strokeWidth={2.3} />
-              <span className="t-btn hidden sm:inline">{profile?.name ?? '로그아웃'}</span>
+              {/*  ⚠ 0073 — 여기에 **본인 이름**이 적혀 있었습니다. 그래서 병원
+                   담당자가 자기 이름을 눌렀다가 그대로 **로그아웃**됐습니다.
+                   이름은 「내 정보」처럼 보이는 자리인데 하는 일은 나가기라,
+                   글자와 하는 일이 어긋나 있었습니다. 다시 들어오려면 비밀번호를
+                   쳐야 하는데, 병원 담당자는 그것을 모르는 경우가 많습니다.
+                   단추에는 **하는 일**을 적습니다. 이름은 옆에 따로 둡니다. */}
+              <span className="t-btn hidden sm:inline">로그아웃</span>
             </button>
           </div>
         </div>
