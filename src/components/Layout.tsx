@@ -274,6 +274,8 @@ function Sidebar() {
   const adminNav = !configured || profile?.role === 'admin' ? ADMIN_NAV : []
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다 — useVisibleNav 과 같은 규칙.
   const showPlanned = !configured || canAccess(profile?.role ?? null, '/roadmap')
+  //  0074 — 못 여는 역할에게는 그 단추를 아예 안 보입니다 (아래 ⚠ 참고)
+  const showMobilePreview = !configured || canAccess(profile?.role ?? null, '/mobile-preview')
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
@@ -405,13 +407,20 @@ function Sidebar() {
             <Globe size={18} strokeWidth={2.2} />
             <span className="break-keep text-[0.98rem] font-semibold">홈페이지</span>
           </button>
-          <button
-            onClick={() => navigate('/mobile-preview')}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
-          >
-            <Smartphone size={18} strokeWidth={2.2} />
-            <span className="break-keep text-[0.98rem] font-semibold">모바일 화면</span>
-          </button>
+          {/*  ⚠ 0074 — 이 단추가 **막힌 곳으로 가는 단추**였습니다. 현장
+               담당자에게도 보이는데 누르면 「접근 권한이 없는 화면입니다」가
+               떴습니다. 권한은 위에서 열었고, 여기서는 **못 여는 역할에게는
+               아예 안 보이게** 합니다. 보이면 눌리고, 눌리면 열려야 합니다. */}
+          {showMobilePreview && (
+            <button
+              data-go-mobile-preview
+              onClick={() => navigate('/mobile-preview')}
+              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            >
+              <Smartphone size={18} strokeWidth={2.2} />
+              <span className="break-keep text-[0.98rem] font-semibold">모바일 화면</span>
+            </button>
+          )}
           <a
             href={ALLBARO_URL}
             target="_blank"

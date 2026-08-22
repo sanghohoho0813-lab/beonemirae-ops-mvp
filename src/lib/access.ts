@@ -68,7 +68,18 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   //  현장 담당자가 폰으로 여는 것은 오늘 갈 곳과 입력 화면입니다. 발표용
   //  자료가 같은 메뉴에 섞여 있으면 업무 화면을 찾기가 더 어려워집니다.
   { prefix: '/why', roles: ['admin', 'office'] },
-  { prefix: '/mobile-preview', roles: ['admin', 'office'] },
+  //  모바일 미리보기 — **현장 담당자도 엽니다** (0074).
+  //
+  //   대표님 보고: 「field 계정에서 PC 버전 → 모바일 버전 전환이 안 된다.
+  //   admin 에서는 된다.」 원인이 여기였습니다. 왼쪽 아래에 「모바일 화면」
+  //   단추는 현장에게도 보이는데, 누르면 「접근 권한이 없는 화면입니다」가
+  //   떴습니다. **보이는데 막힌 단추**였습니다.
+  //
+  //   이 화면은 자료를 새로 보여 주지 않습니다 — 폰 크기 틀 안에 **본인이
+  //   원래 보는 화면**을 그대로 띄울 뿐이고, 그 안도 같은 로그인·같은 RLS 를
+  //   지납니다. 사무실 PC 로 나가기 전에 폰 화면을 확인하는 용도라
+  //   현장에 오히려 필요합니다.
+  { prefix: '/mobile-preview', roles: ['admin', 'office', 'field'] },
   // 관리자 전용
   { prefix: '/settings', roles: ['admin'] },
   { prefix: '/audit', roles: ['admin'] },

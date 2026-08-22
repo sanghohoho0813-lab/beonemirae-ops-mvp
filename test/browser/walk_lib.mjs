@@ -47,7 +47,10 @@ export function wire(ctx, state) {
     if (method !== 'GET') return json(single ? {} : [])
     if (url.includes('/profiles')) return json(single ? me : [me])
     if (url.includes('/site_notes')) return page(F.notes)
-    if (url.includes('/schedules')) return page(F.schedules)
+    //  ⚠ 공용 자료는 화·금에만 수거가 있습니다. 오늘이 토·일이면 「오늘 일정」이
+    //    비어서, 오늘 흐름을 재는 검사가 **누를 것을 못 찾습니다.**
+    //    부르는 쪽에서 오늘치를 끼워 넣을 수 있게 열어 둡니다.
+    if (url.includes('/schedules')) return page(state.schedules ?? F.schedules)
     if (url.includes('/materials')) return page(F.materials)
     if (url.includes('/payment_receipts')) return page(F.receipts)
     if (url.includes('/payments')) return page(F.payments)
