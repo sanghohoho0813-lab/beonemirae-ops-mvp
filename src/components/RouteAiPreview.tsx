@@ -136,7 +136,8 @@ export function RouteAiButton({ className = '' }: { className?: string }) {
  * 모바일 — 오늘 일정 위쪽에 놓는 얇은 줄.
  *
  *  ⚠ 폰에서 기사님이 제일 먼저 봐야 하는 것은 **오늘 갈 곳**입니다.
- *    그래서 카드가 아니라 한 줄로 두고 높이를 44px 로 묶습니다.
+ *    그래서 **새 줄을 만들지 않고** 이미 있는 날짜 줄 오른쪽에 얹습니다 —
+ *    처음에는 날짜 띠 아래 한 줄로 뒀는데 오늘 갈 곳 첫 줄이 55px 밀렸습니다.
  */
 export function RouteAiChip({ className = '' }: { className?: string }) {
   const [open, setOpen] = useState(false)
@@ -145,7 +146,7 @@ export function RouteAiChip({ className = '' }: { className?: string }) {
       <button
         data-routeai-open
         onClick={() => setOpen(true)}
-        className={`flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-2 text-left transition active:scale-[0.99] ${className}`}
+        className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-2xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-left transition active:scale-[0.99] ${className}`}
       >
         <Sparkles size={17} strokeWidth={2.4} className="shrink-0 text-violet-600" />
         <span className="min-w-0 flex-1 break-keep text-[1.02rem] font-extrabold text-violet-800">

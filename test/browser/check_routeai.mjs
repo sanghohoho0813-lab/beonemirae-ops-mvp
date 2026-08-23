@@ -147,13 +147,23 @@ async function checkPanel(p, where) {
   ok(/추천 동선/.test(flat(await chip.innerText())), '이름', flat(await chip.innerText()))
 
   const box = await chip.boundingBox()
-  //  ⚠ 「너무 큰 공간을 차지하지 않되 쉽게 발견 가능하게」 — 위쪽이면서,
-  //    한 줄(60px 이하)이어야 합니다. 오늘 갈 곳을 밀어내면 안 됩니다.
-  ok((box?.y ?? 9999) < 420, '**위쪽**에 있다', `y=${Math.round(box?.y ?? 0)}`)
+  //  ⚠ 「너무 큰 공간을 차지하지 않되 쉽게 발견 가능하게」.
+  //    처음에는 「화면 위쪽 420px 안」으로 재려 했는데, 그건 이 화면을
+  //    잘못 안 것이었습니다 — 폰에서 날짜 줄은 오늘 담당·가져다 줄 물품·
+  //    다음 방문 카드 **아래**입니다. 재야 할 것은 자리(y)가 아니라
+  //    **새 줄을 만들지 않았는가**와 **일정 목록 바로 위인가**입니다.
+  const title = await p.locator('[data-day-title]').boundingBox()
+  const mid = (b) => (b?.y ?? 0) + (b?.height ?? 0) / 2
+  ok(Math.abs(mid(box) - mid(title)) < 30,
+    '**새 줄을 만들지 않는다** (날짜 줄에 얹힘)',
+    `칩 ${Math.round(mid(box))} · 날짜 ${Math.round(mid(title))}`)
   ok((box?.height ?? 0) >= 44, '누르는 자리가 손가락 크기', `${Math.round(box?.height ?? 0)}px`)
-  ok((box?.height ?? 999) <= 60, '**자리를 뺏지 않는다** (한 줄)', `${Math.round(box?.height ?? 0)}px`)
   ok((box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= 391, '390px 밖으로 안 나간다',
     `${Math.round(box?.x ?? 0)}~${Math.round((box?.x ?? 0) + (box?.width ?? 0))}`)
+  //  ⚠ 같은 줄에 있는 「오늘로」를 밀어내면 안 됩니다.
+  const list0 = await p.locator('[data-sched-more="s1"]').boundingBox()
+  ok((box?.y ?? 9999) < (list0?.y ?? 0), '**일정 목록 바로 위**에 있다',
+    `칩 ${Math.round(box?.y ?? 0)} · 첫 일정 ${Math.round(list0?.y ?? 0)}`)
 
   await checkPanel(p, '폰')
   const bad = outbound.filter((u) => /tmap|openai|gpt|kakao|naver|google.*maps/i.test(u))
@@ -167,8 +177,13 @@ async function checkPanel(p, where) {
   const { ctx, p } = await open('/today', { role: 'field', w: 390 })
   const first = p.locator('[data-sched-more="s1"]')
   ok((await first.count()) === 1, '오늘 일정 줄은 그대로 있다')
-  const y = (await first.boundingBox())?.y ?? 9999
-  ok(y < 900, '첫 일정이 첫 화면 안에 그대로 보인다', `y=${Math.round(y)}`)
+  //  ⚠ 입구를 얹느라 오늘 갈 곳이 밀려나면 그게 진짜 손해입니다.
+  //    날짜 줄 전체가 한 줄(≤56px)에 머물러야 밀리지 않은 것입니다.
+  const row = await p.locator('[data-day-title]').evaluate((e) => {
+    const r = e.parentElement.getBoundingClientRect()
+    return r.height
+  })
+  ok(row <= 56, '**날짜 줄이 한 줄 그대로다** (오늘 갈 곳이 안 밀립니다)', `${Math.round(row)}px`)
   await ctx.close()
 }
 

@@ -314,11 +314,18 @@ export function TodaySchedule() {
       <div className="mb-3 sm:hidden">
         <div className="mb-2 flex items-center gap-2">
           <p data-day-title className="text-[1.15rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
+          {/*  ── 2단계 예정 기능의 입구 (폰) ──────────────────────────────
+               ⚠ 처음에는 날짜 띠 **아래 한 줄**로 뒀는데, 그러면 오늘 갈 곳
+                 첫 줄이 55px 아래로 밀립니다. 폰에서 제일 중요한 것은
+                 오늘 갈 곳이므로, 새 줄을 만들지 않고 **이미 있는 날짜 줄
+                 오른쪽**에 얹습니다. 자리를 거의 안 뺏으면서 일정 목록
+                 바로 위에 있어 눈에는 걸립니다. */}
+          <RouteAiChip className="ml-auto" />
           {date !== today() && (
             <button
               data-go-today
               onClick={() => setDate(today())}
-              className="ml-auto min-h-[2.5rem] rounded-xl bg-teal-50 px-3 text-[1rem] font-extrabold text-teal-700 transition active:scale-95"
+              className="min-h-[2.5rem] shrink-0 rounded-xl bg-teal-50 px-3 text-[1rem] font-extrabold text-teal-700 transition active:scale-95"
             >
               오늘로
             </button>
@@ -327,11 +334,6 @@ export function TodaySchedule() {
         <div data-guide="guide-day-strip">
           <FieldDayStrip data={data} selected={date} onPick={setDate} />
         </div>
-        {/*  ── 2단계 예정 기능의 입구 (폰) ──────────────────────────────
-             ⚠ 폰에서 제일 먼저 봐야 하는 것은 **오늘 갈 곳**입니다. 그래서
-               날짜 띠 바로 아래 한 줄로만 둡니다 — 눈에는 걸리되 자리를
-               뺏지 않게. 아직 안 되는 기능이라 「2단계」 딱지를 답니다. */}
-        <RouteAiChip className="mt-2" />
       </div>
 
       {/* 날짜 네비게이션 (넓은 화면) */}
