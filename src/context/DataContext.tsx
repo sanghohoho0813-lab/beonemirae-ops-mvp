@@ -1555,7 +1555,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
         //  합니다 (0043). 예전에는 여기서 네 번 따로 불렀고, 재고를 **화면이
         //  아는 옛 값에서 뺀 절대값**으로 썼습니다 — 두 사람이 같은 순간에
         //  넣으면 한쪽 차감이 통째로 사라졌고, 중간에 끊기면 자재만 남았습니다.
+        //  ⚠ 0075 — 규격이 있으면 **규격 그대로** 보냅니다. 옛 3칸으로 뭉개면
+        //    정산이 대표 규격 단가를 추정합니다(63L 과 12L 은 매입가가 다릅니다).
+        //    판 74 이하 서버에는 그 함수가 없으므로, 규격이 없을 때는
+        //    예전 길을 그대로 씁니다 — 배포 순서가 어긋나도 안 멎습니다.
+        const items = m.items && Object.keys(m.items).length > 0 ? m.items : null
         void runLive(async () => {
+          if (items) {
+            await repo.supplyMaterialsItems({
+              clientId: m.clientId,
+              date: m.date,
+              items,
+              isAdditionalRequest: m.isAdditionalRequest,
+              memo: m.memo,
+              requestId: m.requestId ?? null,
+            })
+            return
+          }
           await repo.supplyMaterials({
             clientId: m.clientId,
             date: m.date,

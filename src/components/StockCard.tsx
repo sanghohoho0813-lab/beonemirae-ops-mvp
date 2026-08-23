@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { PackagePlus } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { QtyField } from './ui'
+import { STOCK_KEYS } from '../lib/collection'
 import type { OfficeStock } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,42 +22,37 @@ import type { OfficeStock } from '../types'
 //  (원장 material_transactions 에 '입고' 로 남아 나중에 되짚을 수 있습니다)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FIELDS: { key: keyof OfficeStock; label: string }[] = [
-  { key: 'corrugatedBox', label: '골판지 전용박스' },
-  { key: 'plasticContainer', label: '합성수지 전용용기' },
-  { key: 'bag', label: '전용 봉투' },
-  { key: 'needleBox', label: '합성수지 바늘통' },
-]
-
-const EMPTY: Record<string, string> = {}
+//  ⚠ 이름표는 lib/collection.ts 한 곳에 있습니다 — 수거 입력·자재 화면·
+//    수거기록 상세가 전부 같은 것을 씁니다. 두 벌이면 한쪽만 고쳐집니다.
+const FIELDS = STOCK_KEYS
 
 export function StockCard() {
   const { data, receiveStock } = useData()
   const stock = data.officeStock
-  const [add, setAdd] = useState<Record<string, string>>(EMPTY)
+  const [add, setAdd] = useState<Record<string, number>>({})
   //  저장 시도 표 (0043) — 다시 눌러도 재고가 두 번 늘지 않게.
   //  성공하면 새 표를 만듭니다(다음 입고는 따로 세어야 하므로).
   const [requestId, setRequestId] = useState(() => crypto.randomUUID())
   const [memo, setMemo] = useState('')
   const [done, setDone] = useState<string | null>(null)
 
-  const total = FIELDS.reduce((s, f) => s + (Number(add[f.key]) || 0), 0)
+  const total = FIELDS.reduce((s, f) => s + (add[f.key] ?? 0), 0)
 
   function save() {
     if (total <= 0) return
     const patch: Partial<OfficeStock> = {}
     for (const f of FIELDS) {
-      const n = Number(add[f.key]) || 0
+      const n = add[f.key] ?? 0
       if (n > 0) patch[f.key] = n
     }
     receiveStock(patch, memo.trim(), requestId)
     setRequestId(crypto.randomUUID())
     setDone(
-      FIELDS.filter((f) => Number(add[f.key]) > 0)
-        .map((f) => `${f.label} +${Number(add[f.key])}`)
+      FIELDS.filter((f) => (add[f.key] ?? 0) > 0)
+        .map((f) => `${f.label} +${add[f.key]}`)
         .join(' · '),
     )
-    setAdd(EMPTY)
+    setAdd({})
     setMemo('')
     setTimeout(() => setDone(null), 4000)
   }
@@ -64,27 +61,29 @@ export function StockCard() {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2.5">
         {FIELDS.map((f) => (
-          <div key={f.key} className="min-w-0 rounded-2xl bg-navy-50 px-3.5 py-3">
+          <div key={f.key} data-stock-item={f.key} className="min-w-0 rounded-2xl bg-navy-50 px-3.5 py-3">
             <p className="t-muted break-keep">{f.label}</p>
             <div className="mt-1.5 flex items-baseline gap-1.5">
-              <span className="t-card tabular-nums text-navy-900">
+              <span data-stock-now={f.key} className="t-card tabular-nums text-navy-900">
                 {(stock?.[f.key] ?? 0).toLocaleString('ko-KR')}
               </span>
               <span className="t-muted">개</span>
+              {(add[f.key] ?? 0) > 0 && (
+                <span data-stock-after={f.key} className="t-caption tabular-nums font-bold text-teal-700">
+                  → {((stock?.[f.key] ?? 0) + (add[f.key] ?? 0)).toLocaleString('ko-KR')}개
+                </span>
+              )}
             </div>
-            <label className="mt-2 block">
-              <span className="sr-only">{f.label} 입고 수량</span>
-              <input
-                type="number"
-                min={0}
-                inputMode="numeric"
-                placeholder="입고 +"
-                aria-label={`${f.label} 입고 수량`}
-                className="no-spinner w-full rounded-xl border-0 bg-white px-3 py-2.5 text-[1.05rem] font-bold text-navy-900 outline-none ring-1 ring-navy-100 focus:ring-2 focus:ring-teal-400"
-                value={add[f.key] ?? ''}
-                onChange={(e) => setAdd({ ...add, [f.key]: e.target.value })}
+            {/*  ⚠ 0075 — ＋ － 로 누르셔도 되고 숫자를 직접 치셔도 됩니다.
+                 예전에는 숫자칸 하나뿐이라 폰에서 한 손으로 치기 어려웠습니다. */}
+            <div className="mt-2">
+              <QtyField
+                row
+                label={`${f.label} 입고 수량`}
+                value={add[f.key] ?? 0}
+                onChange={(v) => setAdd((cur) => ({ ...cur, [f.key]: v }))}
               />
-            </label>
+            </div>
           </div>
         ))}
       </div>

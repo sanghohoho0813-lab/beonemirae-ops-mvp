@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { PackageSearch } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { MetricCard, EmptyState, SectionTitle } from '../components/ui'
+import { MetricCard, EmptyState, SectionTitle, QtyField } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { MaterialRiskCard } from '../components/ops'
 import { StockCard } from '../components/StockCard'
@@ -12,10 +12,17 @@ import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
 import { materialUsage, type UsageStatus } from '../lib/ops'
 import { num, prettyDate, thisMonth, today, weight } from '../lib/format'
+import { SUPPLY_ITEMS, itemsOf, stockDeltaOf, isLegacySupply, type ItemCounts, type ItemKey } from '../lib/billing'
+import { STOCK_KEYS } from '../lib/collection'
 import type { MaterialSupply } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 자재 관리 — 거래처별 자재공급 내역 / 박스·비닐·바늘통 입력 / 추가요청 통계
+// 자재 관리 — 거래처별 자재공급 내역 / **규격별** 공급 입력 / 추가요청 통계
+//
+//  ⚠ 0075 — 이 화면만 옛 3칸(박스·비닐·바늘통)에 멈춰 있었습니다.
+//    수거 입력은 규격 13가지로 받고 정산도 규격마다 다른 단가를 쓰는데,
+//    여기서 등록하면 규격이 안 남아 **대표 규격 단가로 추정**됐습니다.
+//    63L 박스와 12L 박스는 매입가가 다릅니다 — 추정이 섞이면 원가가 틀립니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const emptyForm = {
@@ -26,7 +33,15 @@ const emptyForm = {
   needleBoxCount: 0,
   isAdditionalRequest: false,
   memo: '',
+  items: {} as ItemCounts,
 }
+
+//  규격을 재고 칸으로 묶어 보여 줍니다 — 「이 규격을 주면 어느 재고가 주는가」가
+//  한눈에 보여야 합니다. 순서·이름은 lib/billing.ts 의 품목표 그대로입니다.
+const GROUPS = STOCK_KEYS.map((b) => ({
+  ...b,
+  items: SUPPLY_ITEMS.filter((it) => it.bucket === b.key),
+})).filter((g) => g.items.length > 0)
 
 const usageStyle: Record<UsageStatus, string> = {
   정상: 'bg-emerald-50 text-emerald-600',
@@ -38,7 +53,7 @@ export function Materials() {
   const { data, addMaterial, removeMaterial, clientById } = useData()
   const { role } = useAuth()
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState<Omit<MaterialSupply, 'id'>>(emptyForm)
+  const [form, setForm] = useState<Omit<MaterialSupply, 'id'> & { items: ItemCounts }>(emptyForm)
   /*
     저장 시도 표 (0043).
 
@@ -53,6 +68,25 @@ export function Materials() {
     () => [...data.materials].sort((a, b) => b.date.localeCompare(a.date)),
     [data.materials],
   )
+
+  //  ⚠ 0075 — 이번 달 **규격별** 공급. 대표님 지적: 「지금은 4개밖에 없잖아?
+  //    10개 이상 정리돼야 하고」. 아래 넉 장 카드는 재고 칸 합계라 63L 인지
+  //    12L 인지가 안 보입니다 — 그 둘은 매입가가 다릅니다.
+  //  ⚠ 규격이 없는 옛 기록은 **지어내서 채우지 않고** 따로 셉니다.
+  const monthItems = useMemo(() => {
+    const m = thisMonth()
+    const sum: ItemCounts = {}
+    let legacy = 0
+    for (const r of data.materials) {
+      if (!r.date.startsWith(m)) continue
+      if (isLegacySupply(r)) {
+        legacy += r.boxCount + r.vinylCount + r.needleBoxCount
+        continue
+      }
+      for (const [k, n] of Object.entries(itemsOf(r))) sum[k as ItemKey] = (sum[k as ItemKey] ?? 0) + (n ?? 0)
+    }
+    return { sum, legacy }
+  }, [data.materials])
 
   const month = thisMonth()
   const monthList = sorted.filter((m) => m.date.startsWith(month))
@@ -70,25 +104,17 @@ export function Materials() {
   //  이 화면의 공급도 이제 사무실 재고에서 빠집니다(수거 입력과 같은 결과).
   //  그래서 남은 것보다 많이 넣으면 서버가 재고 음수를 막아 기록만 남고
   //  재고는 안 빠지는 어긋난 상태가 됩니다. 저장 전에 여기서 걸러 냅니다.
-  const overStock = (() => {
-    const stock = data.officeStock
-    const need = {
-      corrugatedBox: Number(form.boxCount) || 0,
-      bag: Number(form.vinylCount) || 0,
-      plasticContainer: Number(form.needleBoxCount) || 0,
-    }
-    const over = []
-    if (need.corrugatedBox > (stock?.corrugatedBox ?? 0))
-      over.push(`골판지 전용박스 (남은 ${stock?.corrugatedBox ?? 0}개)`)
-    if (need.bag > (stock?.bag ?? 0)) over.push(`전용 봉투 (남은 ${stock?.bag ?? 0}개)`)
-    if (need.plasticContainer > (stock?.plasticContainer ?? 0))
-      over.push(`합성수지 전용용기 (남은 ${stock?.plasticContainer ?? 0}개)`)
-    return over
-  })()
+  //  ⚠ 0075 — 규격에서 재고 칸으로 묶어 계산합니다. 예전에는 화면이
+  //    「바늘통 칸 → 합성수지 재고」로 보고, 서버는 「바늘통 재고」에서
+  //    뺐습니다 — 두 곳이 서로 다른 칸을 보고 있었습니다.
+  const need = stockDeltaOf(form.items)
+  const overStock = STOCK_KEYS.filter(({ key }) => need[key] > (data.officeStock?.[key] ?? 0))
+    .map(({ key, label }) => `${label} (남은 ${data.officeStock?.[key] ?? 0}개)`)
+  const itemTotal = Object.values(form.items).reduce((a, b) => a + (b ?? 0), 0)
 
   function save() {
     if (!form.clientId) return
-    if (overStock.length > 0) return
+    if (overStock.length > 0 || itemTotal <= 0) return
     //  현장이 수거하면서 자재를 함께 주면 그 입력에서 이미 기록됩니다.
     //  같은 거래처·같은 날짜로 여기서 또 넣으면 공급이 두 번 잡히고 재고도
     //  두 번 빠집니다. 막지는 않습니다 — 정말 두 번 나간 날도 있습니다.
@@ -103,11 +129,14 @@ export function Materials() {
     }
     //  저장 시도 표 (0043) — 통신이 끊겨 다시 눌러도 두 줄이 되지 않게.
     //  창을 열 때 만든 표를 그대로 보냅니다. 자재는 청구에 들어갑니다.
+    //  ⚠ 옛 3칸은 **규격에서 계산해** 넣습니다. 화면이 두 번 세지 않습니다.
+    //    (서버도 같은 규칙으로 다시 계산합니다 — 어긋날 수 없습니다.)
     addMaterial({
       ...form,
-      boxCount: Number(form.boxCount),
-      vinylCount: Number(form.vinylCount),
-      needleBoxCount: Number(form.needleBoxCount),
+      boxCount: need.corrugatedBox,
+      vinylCount: need.bag,
+      needleBoxCount: need.plasticContainer + need.needleBox,
+      items: form.items,
       requestId,
     })
     setForm(emptyForm)
@@ -153,6 +182,34 @@ export function Materials() {
         <MetricCard label="비닐 공급" value={num(totals.vinyl)} unit="개" tone="navy" />
         <MetricCard label="바늘통 공급" value={num(totals.needle)} unit="개" tone="navy" />
       </div>
+
+      {/*  이번 달 규격별 공급 — 「무엇을 몇 개 주고 왔나」.
+           ⚠ 0인 규격도 **줄을 남깁니다.** 안 보이면 그 규격을 쓰는 병원이
+             있는지조차 알 수 없고, 재고를 채울 때 빠뜨립니다. */}
+      <section data-month-items className="card mb-5 p-4">
+        <SectionTitle size="sub">이번 달 규격별 공급</SectionTitle>
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3 lg:grid-cols-4">
+          {SUPPLY_ITEMS.map((it) => {
+            const n = monthItems.sum[it.key as ItemKey] ?? 0
+            return (
+              <div key={it.key} data-month-item={it.key} className="flex items-baseline justify-between gap-2">
+                <span className={`break-keep text-[1.02rem] ${n > 0 ? 'font-bold text-navy-800' : 'text-navy-400'}`}>
+                  {it.label}
+                </span>
+                <span className={`shrink-0 tabular-nums text-[1.12rem] font-extrabold ${n > 0 ? 'text-navy-900' : 'text-navy-300'}`}>
+                  {num(n)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        {monthItems.legacy > 0 && (
+          <p data-month-legacy className="t-caption mt-2.5 break-keep leading-snug text-amber-700">
+            규격이 안 적힌 옛 기록 {num(monthItems.legacy)}개가 따로 있습니다 — 위 표에는 안 넣었습니다.
+            어느 규격인지 모르는 것을 지어내지 않습니다.
+          </p>
+        )}
+      </section>
 
       {/* 자재 소진 위험 */}
       <section className="mb-5">
@@ -221,7 +278,13 @@ export function Materials() {
                       if (
                         window.confirm(
                           `${who} · ${prettyDate(m.date)} 공급 기록을 지웁니다.\n\n` +
-                            `박스 ${m.boxCount} · 비닐 ${m.vinylCount} · 바늘통 ${m.needleBoxCount}\n\n` +
+                            `${
+                              isLegacySupply(m)
+                                ? `박스 ${m.boxCount} · 비닐 ${m.vinylCount} · 바늘통 ${m.needleBoxCount}`
+                                : SUPPLY_ITEMS.filter((it) => (itemsOf(m)[it.key as ItemKey] ?? 0) > 0)
+                                    .map((it) => `${it.label} ${itemsOf(m)[it.key as ItemKey]}`)
+                                    .join(' · ')
+                            }\n\n` +
                             '공급하며 깎였던 사무실 재고는 되돌립니다. 되돌릴 수 없습니다. 진행할까요?',
                         )
                       ) {
@@ -232,10 +295,24 @@ export function Materials() {
                     삭제
                   </button>
                 </div>
-                <div className="mt-2.5 flex gap-4 text-[1.08rem] font-medium text-navy-500">
-                  <span>박스 <b className="text-navy-900">{m.boxCount}</b></span>
-                  <span>비닐 <b className="text-navy-900">{m.vinylCount}</b></span>
-                  <span>바늘통 <b className="text-navy-900">{m.needleBoxCount}</b></span>
+                {/*  ⚠ 0075 — 규격 그대로 적습니다. 「박스 12」로 뭉개면 63L 인지
+                     12L 인지 알 수 없고, 그 둘은 매입가가 다릅니다.
+                     규격이 없는 옛 기록은 **지어내지 않고** 그렇다고 말합니다. */}
+                <div data-supply-line={m.id} className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[1.08rem] font-medium text-navy-500">
+                  {isLegacySupply(m) ? (
+                    <>
+                      <span>박스 <b className="text-navy-900">{m.boxCount}</b></span>
+                      <span>비닐 <b className="text-navy-900">{m.vinylCount}</b></span>
+                      <span>바늘통 <b className="text-navy-900">{m.needleBoxCount}</b></span>
+                      <span data-supply-legacy={m.id} className="pill bg-amber-50 text-amber-700">규격 미상</span>
+                    </>
+                  ) : (
+                    SUPPLY_ITEMS.filter((it) => (itemsOf(m)[it.key as ItemKey] ?? 0) > 0).map((it) => (
+                      <span key={it.key}>
+                        {it.label} <b className="text-navy-900">{itemsOf(m)[it.key as ItemKey]}</b>
+                      </span>
+                    ))
+                  )}
                 </div>
                 {m.memo && <p className="mt-1.5 t-caption">{m.memo}</p>}
               </li>
@@ -283,40 +360,68 @@ export function Materials() {
             onChange={(e) => setForm({ ...form, date: e.target.value })}
           />
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="field-label">박스</label>
-            <input
-              type="number"
-              className="field-input"
-              value={form.boxCount}
-              onChange={(e) => setForm({ ...form, boxCount: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <label className="field-label">비닐</label>
-            <input
-              type="number"
-              className="field-input"
-              value={form.vinylCount}
-              onChange={(e) => setForm({ ...form, vinylCount: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <label className="field-label">바늘통</label>
-            <input
-              type="number"
-              className="field-input"
-              value={form.needleBoxCount}
-              onChange={(e) => setForm({ ...form, needleBoxCount: Number(e.target.value) })}
-            />
-          </div>
+        {/*  ⚠ 규격 그대로 받습니다 — 정산이 규격마다 다른 단가를 씁니다.
+             ＋ － 로 누르셔도 되고 숫자를 직접 치셔도 됩니다(QtyField).
+             재고 칸별로 묶어, 어느 재고가 주는지 함께 보여 줍니다. */}
+        <div data-supply-items className="flex flex-col gap-3">
+          {GROUPS.map((g) => {
+            const out = need[g.key]
+            const have = data.officeStock?.[g.key] ?? 0
+            return (
+              <div key={g.key} data-supply-group={g.key} className="rounded-2xl border border-navy-100 p-3">
+                <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
+                  <p className="text-[1.05rem] font-extrabold text-navy-900">{g.label}</p>
+                  <span
+                    data-supply-group-stock={g.key}
+                    className={`t-caption tabular-nums ${out > have ? 'font-bold text-rose-600' : 'text-navy-500'}`}
+                  >
+                    창고 <b className="text-navy-800">{have}개</b>
+                    {out > 0 && (
+                      <>
+                        {' → 이번 공급 '}
+                        <b className="text-navy-800">{out}개</b>
+                        {' → 저장 후 '}
+                        <b className={have - out < 0 ? 'text-rose-600' : 'text-teal-700'}>{have - out}개</b>
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="divide-y divide-navy-50">
+                  {g.items.map((it) => (
+                    <div key={it.key} data-supply-item={it.key}>
+                      <QtyField
+                        row
+                        label={it.label}
+                        value={form.items[it.key as ItemKey] ?? 0}
+                        badge={
+                          <span className={`pill ${it.billable ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}>
+                            {it.billable ? '유상' : '무상'}
+                          </span>
+                        }
+                        onChange={(v) =>
+                          setForm((f) => {
+                            const items = { ...f.items }
+                            if (v > 0) items[it.key as ItemKey] = v
+                            else delete items[it.key as ItemKey]
+                            return { ...f, items }
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
+        {itemTotal === 0 && (
+          <p className="t-caption break-keep text-navy-500">규격마다 몇 개를 드렸는지 넣어 주세요.</p>
+        )}
         {overStock.length > 0 && (
           <p className="t-body break-keep rounded-2xl bg-rose-50 px-3.5 py-3 font-bold text-rose-600">
             사무실 재고보다 많이 공급할 수 없습니다 — {overStock.join(' · ')}
             <span className="mt-1 block font-medium">
-              창고에 들어온 자재는 설정 &gt; 사무실 자재 재고에서 입고로 먼저 적어 주세요.
+              창고에 들어온 자재는 이 화면 맨 위 「사무실 자재 재고」에서 입고로 먼저 적어 주세요.
             </span>
           </p>
         )}

@@ -1542,6 +1542,35 @@ export async function supplyMaterials(input: {
 }
 
 /**
+ * 규격별 자재 공급 (0075).
+ *
+ *  ⚠ 예전 supplyMaterials 는 박스·비닐·바늘통 **세 칸**만 보냈습니다.
+ *    그러면 규격이 안 남아 정산이 대표 규격 단가를 **추정**합니다 —
+ *    63L 박스와 12L 박스는 매입가가 다릅니다.
+ *  ⚠ 옛 3칸은 서버가 규격에서 계산해 함께 채웁니다. 화면이 두 번 세지 않습니다.
+ */
+export async function supplyMaterialsItems(input: {
+  clientId: string
+  date: string
+  items: Record<string, number>
+  isAdditionalRequest?: boolean
+  memo?: string
+  requestId?: string | null
+}): Promise<{ id: string; alreadySaved: boolean }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('supply_materials_items', {
+    p_client_id: input.clientId,
+    p_date: input.date,
+    p_items: input.items,
+    p_additional: input.isAdditionalRequest ?? false,
+    p_memo: input.memo ?? '',
+    p_request_id: input.requestId ?? null,
+  })
+  if (error) throw new Error(error.message)
+  return data as { id: string; alreadySaved: boolean }
+}
+
+/**
  * 월정액 빈 달 정책을 **사람이 정했다고 기록** (0044).
  *
  *  값만 바꾸는 것이 아니라 「누가 언제 정했는지」를 남깁니다. 「아니오」도
