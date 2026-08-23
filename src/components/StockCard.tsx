@@ -59,7 +59,12 @@ export function StockCard() {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2.5">
+      {/*  ⚠ 0076 — 폰에서는 **한 줄에 하나**입니다.
+           ＋ － 입력칸을 붙이면서 두 칸 격자로 두었더니, 390px 에서 ＋ 단추와
+           「개」가 화면 밖으로 밀려났습니다(실측: 오른쪽 424px). 칸이 좁으면
+           누를 수 있는 크기(44px)를 줄이는 수밖에 없는데, 그건 손가락 크기
+           약속을 깨는 것이라 대신 줄을 나눕니다. */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {FIELDS.map((f) => (
           <div key={f.key} data-stock-item={f.key} className="min-w-0 rounded-2xl bg-navy-50 px-3.5 py-3">
             <p className="t-muted break-keep">{f.label}</p>

@@ -1,8 +1,3 @@
-import { useEffect, useState } from 'react'
-import { AlertCircle, Loader2, Undo2 } from 'lucide-react'
-import { Modal } from './Modal'
-import { useData } from '../context/DataContext'
-import { useSchemaAtLeast } from '../lib/schemaGate'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 수거 완료 되돌리기 — **왜** 되돌리는지 (0088)
@@ -71,101 +66,10 @@ export function RevertReasonFields({
   )
 }
 
-export function RevertReasonModal({
-  eventId,
-  label,
-  onClose,
-  onDone,
-}: {
-  /** 되돌릴 입력. null 이면 닫혀 있습니다 */
-  eventId: string | null
-  /** 「8월 23일 OO병원」 — 무엇을 되돌리는지 사람 말로 */
-  label?: string
-  onClose: () => void
-  onDone?: (r: { ok: boolean; errors: string[] }) => void
-}) {
-  const { revertCollection } = useData()
-  //  ⚠ null(아직 모름) 과 false(옛 서버) 를 구분합니다. 모르는 동안에는
-  //    사유를 강제하지 않습니다 — 못 누르는 단추를 만들지 않습니다.
-  const needReason = useSchemaAtLeast(73) === true
-  const [reason, setReason] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  //  다른 줄을 되돌리려고 열면 앞 줄의 사유가 남아 있으면 안 됩니다.
-  useEffect(() => {
-    if (eventId) { setReason(''); setError('') }
-  }, [eventId])
-
-  const ready = !needReason || reason.trim().length > 0
-
-  async function go() {
-    if (!eventId || !ready) return
-    setBusy(true)
-    setError('')
-    const r = await revertCollection(eventId, needReason ? reason.trim() : '')
-    setBusy(false)
-    if (!r.ok) {
-      setError(r.errors.join(' ') || '되돌리지 못했습니다.')
-      onDone?.({ ok: false, errors: r.errors })
-      return
-    }
-    onDone?.({ ok: true, errors: [] })
-    onClose()
-  }
-
-  return (
-    <Modal
-      open={eventId !== null}
-      title="수거 완료 되돌리기"
-      onClose={onClose}
-      footer={
-        <>
-          <button className="btn-ghost flex-1" onClick={onClose} disabled={busy}>
-            닫기
-          </button>
-          <button
-            data-revert-go
-            className="btn-primary flex-1 disabled:opacity-50"
-            disabled={!ready || busy}
-            onClick={() => void go()}
-          >
-            {busy ? <Loader2 size={18} className="animate-spin" /> : <Undo2 size={18} strokeWidth={2.5} />}
-            되돌리기
-          </button>
-        </>
-      }
-    >
-      {label && (
-        <p data-revert-label className="break-keep text-[1.12rem] font-extrabold text-navy-900">{label}</p>
-      )}
-      <p className="mt-1.5 break-keep text-[1.05rem] leading-relaxed text-navy-600">
-        일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다. 그 달 정산·청구 금액도 같이 바뀝니다.
-        <b className="text-navy-800"> 기록을 지우는 것은 아닙니다</b> — 원본은 「취소됨」으로 남습니다.
-      </p>
-      {/*  ⚠ 이 한 줄은 **판 73 부터만** 적습니다. 그 전 서버에는 막는 자리가
-           없습니다 — 없는 보호장치를 있다고 적어 두면 사람은 그 말을 믿고
-           누릅니다. (예전 화면이 정확히 그랬습니다.) */}
-      {needReason && (
-        <p data-revert-billguard className="t-caption mt-1.5 break-keep text-navy-500">
-          이미 확정한 청구에 들어간 수거는 서버가 막습니다. 청구를 먼저 취소해 주세요.
-        </p>
-      )}
-
-      {needReason && (
-        <div className="mt-4">
-          <RevertReasonFields reason={reason} onChange={setReason} />
-          {!ready && (
-            <p className="t-caption mt-1.5 text-navy-500">사유를 적어야 되돌릴 수 있습니다.</p>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <p data-revert-error className="mt-3 flex items-start gap-2 break-keep rounded-2xl bg-rose-50 px-4 py-3 text-[1.02rem] font-bold text-rose-700">
-          <AlertCircle size={18} className="mt-0.5 shrink-0" strokeWidth={2.3} /> {error}
-        </p>
-      )}
-    </Modal>
-  )
-}
+//  ⚠ 0076 — 여기 있던 `RevertReasonModal` 을 지웠습니다.
+//
+//   되돌리기가 **수거기록 상세 시트 한 곳**으로 모였습니다(0074·0076).
+//   수거 입력·수거이력·오늘 일정·대시보드가 전부 그 시트를 씁니다.
+//   쓰이지 않는 창을 남겨 두면 검사만 통과하면서 「이것도 있다」는
+//   착각을 만듭니다 — 다음 사람이 둘 중 어느 것을 고쳐야 할지 모릅니다.
+//   사유를 고르는 칸(RevertReasonFields)은 그대로 씁니다.

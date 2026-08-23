@@ -1,6 +1,10 @@
 import { chromium, EXEC } from './_pw.mjs'
 
-//  0088 — 수거 완료 되돌리기에 **사유**를 남깁니다
+//  0088 → 0076 — 수거 완료 되돌리기에 **사유**를 남깁니다
+//
+//   ⚠ 되돌리기 창이 **수거기록 상세 시트 한 곳**으로 모였습니다(0074·0076).
+//     예전에는 화면마다 따로 창을 띄웠고, 그러면 한쪽만 고쳐집니다.
+//     이 검사도 그 시트를 밟습니다 — 창이 옮겨 갔을 뿐 봐야 할 것은 같습니다.
 //
 //   되돌리기 자체는 예전부터 됐습니다. 안 남는 것이 **이유**였습니다.
 //   한 번에 자재·재고·요청·그 달 청구가 함께 되돌아가는데, 나중에
@@ -79,16 +83,19 @@ async function open(ver) {
 // ── ① 판 73 — 사유 없이는 못 되돌립니다 ────────────────────────────────────
 {
   const { ctx, p, state } = await open(73)
-  ok((await p.locator('[data-history-revert="s1"]').count()) === 1, '되돌리기 자리가 있음')
-  await p.locator('[data-history-revert="s1"]').dispatchEvent('click')
+  ok((await p.locator('[data-history-open="s1"]').count()) === 1, '보기·수정 자리가 있음')
+  //  줄 아무 데나 눌러 상세를 열고, 거기서 「기록 취소」로 들어갑니다.
+  await p.locator('[data-history-row="s1"] td').first().click()
+  await p.waitForTimeout(700)
+  await p.locator('[data-record-revert]').click()
   await p.waitForTimeout(600)
 
   //  ⚠ 예전에는 window.confirm 이라 여기 자체가 없었습니다.
   ok((await p.locator('[data-revert-reason]').count()) === 1, '**사유 적는 자리가 있음**')
-  const label = flat(await p.locator('[data-revert-label]').textContent())
+  const label = flat(await p.locator('[data-record-client]').textContent())
   ok(/한마음요양병원/.test(label), '무엇을 되돌리는지 사람 말로 적혀 있음', label)
 
-  const body = flat(await p.locator('[data-revert-reason]').locator('xpath=ancestor::*[3]').first().innerText())
+  const body = flat(await p.locator('[data-record]').innerText())
   ok(/지우는 것은 아닙니다|취소됨/.test(body), '**지우는 게 아니라는 것을 적어 줌**', body.slice(0, 80))
   //  ⚠ 예전 화면은 「확정한 청구가 있으면 서버가 막습니다」라고 적어 두었지만
   //    실제로 막는 자리가 없었습니다. 0073 에서 막는 자리를 만들었으니 이제
@@ -96,8 +103,8 @@ async function open(ver) {
   ok((await p.locator('[data-revert-billguard]').count()) === 1,
     '확정한 청구는 막힌다고 알려 줌 (판 73)')
 
-  ok(await p.locator('[data-revert-go]').isDisabled(), '**사유가 비면 되돌릴 수 없음**')
-  await p.locator('[data-revert-go]').dispatchEvent('click')
+  ok(await p.locator('[data-record-revert-go]').isDisabled(), '**사유가 비면 되돌릴 수 없음**')
+  await p.locator('[data-record-revert-go]').dispatchEvent('click')
   await p.waitForTimeout(700)
   ok(state.calls.length === 0, '사유 없이 누른 것은 서버로 가지 않음', JSON.stringify(state.calls))
 
@@ -109,8 +116,8 @@ async function open(ver) {
   const filled = await p.locator('[data-revert-reason]').inputValue()
   ok(filled.length > 0, '단추를 누르면 사유 칸이 채워짐', filled)
 
-  ok(!(await p.locator('[data-revert-go]').isDisabled()), '사유가 있으면 되돌릴 수 있음')
-  await p.locator('[data-revert-go]').dispatchEvent('click')
+  ok(!(await p.locator('[data-record-revert-go]').isDisabled()), '사유가 있으면 되돌릴 수 있음')
+  await p.locator('[data-record-revert-go]').dispatchEvent('click')
   await p.waitForTimeout(1500)
   const sent = state.calls.find(([k]) => k === 'reason')
   ok(!!sent, '**사유와 함께 서버로 감**', JSON.stringify(state.calls))
@@ -125,14 +132,16 @@ async function open(ver) {
 //   「적었는데 안 남았다」가 제일 나쁩니다.
 {
   const { ctx, p, state } = await open(70)
-  await p.locator('[data-history-revert="s1"]').dispatchEvent('click')
+  await p.locator('[data-history-row="s1"] td').first().click()
+  await p.waitForTimeout(700)
+  await p.locator('[data-record-revert]').click()
   await p.waitForTimeout(600)
   ok((await p.locator('[data-revert-reason]').count()) === 0,
     '**판 70 에서는 사유 칸을 안 보여 줌** (저장할 자리가 없습니다)')
   ok((await p.locator('[data-revert-billguard]').count()) === 0,
     '**없는 보호장치를 있다고 적지 않음** (판 70 에는 막는 자리가 없습니다)')
-  ok(!(await p.locator('[data-revert-go]').isDisabled()), '그래도 되돌리기는 됩니다')
-  await p.locator('[data-revert-go]').dispatchEvent('click')
+  ok(!(await p.locator('[data-record-revert-go]').isDisabled()), '그래도 되돌리기는 됩니다')
+  await p.locator('[data-record-revert-go]').dispatchEvent('click')
   await p.waitForTimeout(1500)
   ok(!!state.calls.find(([k]) => k === 'plain'), '옛 함수로 그대로 감 (배포 순서가 어긋나도 안 멎음)',
     JSON.stringify(state.calls))

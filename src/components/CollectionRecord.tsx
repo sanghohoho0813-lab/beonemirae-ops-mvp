@@ -44,6 +44,10 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
   //    없애려던 그 전화입니다. 취소하고 다시 넣으면 재고·자재까지 정확히
   //    되돌아갑니다(revert_collection).
   const canCancel = mode === 'live' && (staff || role === 'field')
+  //  ⚠ 사유는 **판 73 부터** 저장할 자리가 있습니다. 그 전 서버에서 받아 두면
+  //    그대로 버려집니다 — 「적었는데 안 남았다」가 제일 나쁩니다.
+  //    (지금 서버는 76 이라 늘 참입니다. 배포 순서가 어긋나도 안 멎게 둡니다.)
+  const needReason = useSchemaAtLeast(73) === true
 
   //  ⚠ 창 하나 안에서 **단계만** 바꿉니다. 창 안에서 다른 창을 열면, 뒤 창이
   //    닫히며 부르는 history.back() 이 방금 뜬 앞 창을 곧바로 다시 닫습니다
@@ -147,10 +151,10 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
   }
 
   async function doRevert() {
-    if (!ev || reason.trim().length === 0) return
+    if (!ev || (needReason && reason.trim().length === 0)) return
     setBusy(true)
     setError('')
-    const r = await revertCollection(ev.id, reason.trim())
+    const r = await revertCollection(ev.id, needReason ? reason.trim() : '')
     setBusy(false)
     if (!r.ok) {
       setError(r.errors.join(' ') || '취소하지 못했습니다.')
@@ -184,7 +188,7 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
               <button
                 data-record-revert-go
                 className="btn-primary flex-1 disabled:opacity-50"
-                disabled={reason.trim().length === 0 || busy}
+                disabled={(needReason && reason.trim().length === 0) || busy}
                 onClick={() => void doRevert()}
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Undo2 size={17} strokeWidth={2.5} />}
@@ -276,10 +280,14 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                   같이 바뀝니다. <b className="text-navy-800">기록을 지우는 것은 아닙니다</b> — 원본은
                   「취소됨」으로 남습니다.
                 </p>
-                <p className="t-caption break-keep text-navy-500">
-                  이미 확정한 청구에 들어간 수거는 서버가 막습니다. 청구를 먼저 취소해 주세요.
-                </p>
-                <RevertReasonFields reason={reason} onChange={setReason} />
+                {/*  ⚠ 없는 보호장치를 있다고 적지 않습니다 — 사람은 그 말을
+                     믿고 누릅니다. 막는 자리는 판 73 부터 있습니다. */}
+                {needReason && (
+                  <p data-revert-billguard className="t-caption break-keep text-navy-500">
+                    이미 확정한 청구에 들어간 수거는 서버가 막습니다. 청구를 먼저 취소해 주세요.
+                  </p>
+                )}
+                {needReason && <RevertReasonFields reason={reason} onChange={setReason} />}
                 {!staff && (
                   <p className="t-caption break-keep leading-snug text-navy-500">
                     지운 뒤 <b className="text-navy-700">수거 입력에서 다시 넣으시면 됩니다.</b>{' '}

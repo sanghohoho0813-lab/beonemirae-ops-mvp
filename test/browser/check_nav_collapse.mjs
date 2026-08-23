@@ -56,10 +56,15 @@ ok(await toolsBtn.getAttribute('aria-expanded') === 'false', '운영 도구 aria
 // 접혀 있으면 안쪽 메뉴명이 사이드바에 없어야 합니다
 const asideText = () => aside.textContent().then((t) => t ?? '')
 const t0 = await asideText()
-for (const m of ['자재 관리', '미수금 관리', '감사로그', '사용자 관리', '엑셀 가져오기']) {
+for (const m of ['미수금 관리', '감사로그', '사용자 관리', '엑셀 가져오기']) {
   ok(!t0.includes(m), `접힌 상태에서 「${m}」 안 보임`)
 }
+//  ⚠ 0076 — **자재 관리와 수거이력은 접히지 않습니다.** 매일 여는 화면이라
+//    「핵심 운영」으로 올라갔습니다(대표님 지시). 접히는 쪽에 두면 재고를
+//    보려고 매번 묶음을 펼쳐야 합니다.
 ok(t0.includes('대시보드') && t0.includes('수거 입력') && t0.includes('거래처'), '매일 쓰는 메뉴는 그대로 보임')
+ok(t0.includes('자재 관리'), '**자재 관리는 접혀도 보임** (매일 여는 화면)')
+ok(t0.includes('수거이력'), '**수거이력도 접혀도 보임** (잘못된 입력을 찾는 자리)')
 
 // 접힌 묶음 개수 배지
 //  숫자를 여기에 적어 두면 메뉴가 늘 때마다 검사가 아니라 기대값을 고치게
@@ -81,7 +86,7 @@ await p.screenshot({ path: `${SHOT}/nav-collapsed.png`, fullPage: false })
 await toolsBtn.click()
 await p.waitForTimeout(350)
 ok((await tools.count()) === 1, '누르면 운영 도구가 펼쳐짐')
-ok((await asideText()).includes('자재 관리'), '펼치면 「자재 관리」가 보임')
+ok((await asideText()).includes('미수금 관리'), '펼치면 「미수금 관리」가 보임')
 //  배지 숫자 = 펼쳤을 때 실제로 있는 줄 수 (쓸 수 있는 것 + 예정)
 const usable = await tools.locator('a').count()
 const planned = await tools.locator('[data-nav-planned]').count()
@@ -115,9 +120,12 @@ ok((await p.locator('[data-nav-group="admin"]').count()) === 1, '펼친 상태�
 
 // 5) 접힌 묶음 안의 화면으로 바로 들어가면 저절로 펼쳐져야 합니다
 await p.evaluate(() => window.localStorage.removeItem('beonemirae-ops:nav-open'))
-await p.goto(`${BASE}/materials`, { waitUntil: 'domcontentloaded' })
+//  ⚠ 자재 관리는 이제 접히는 묶음 밖에 있습니다 — 접힌 묶음 **안쪽** 화면으로
+//    미수금 관리를 씁니다. 확인하려는 것은 「접힌 묶음 안으로 바로 들어가면
+//    저절로 펼쳐지는가」이지 특정 화면이 아닙니다.
+await p.goto(`${BASE}/receivables`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2000)
-ok((await p.locator('[data-nav-group="tools"]').count()) === 1, '자재 관리 화면에서는 운영 도구가 저절로 펼쳐짐')
+ok((await p.locator('[data-nav-group="tools"]').count()) === 1, '접힌 묶음 안쪽 화면으로 들어가면 저절로 펼쳐짐')
 const active = await p.locator('aside a[href="/materials"]').count()
 ok(active === 1, '지금 보는 화면이 메뉴에 표시됨')
 ok((await p.locator('[data-nav-group="admin"]').count()) === 0, '상관없는 「관리」는 접힌 채로 둠')

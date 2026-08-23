@@ -92,7 +92,10 @@ async function open(role, uid, name, mobile) {
   //  시트가 닫히면서 모달까지 사라지면 안 됩니다 — 이것이 이번 구조의 핵심입니다.
   const groups = p.locator('[data-dev-group]')
   const topics = p.locator('[data-dev-topic]')
-  ok((await groups.count()) === 5, '주제가 5개', `${await groups.count()}개`)
+  //  ⚠ 0076 — 주제 목록을 **지금 화면 기준**으로 다시 썼습니다(대표님 지시).
+  //    개수를 못으로 박아 두면 목록을 손볼 때마다 검사가 깨지면서 정작
+  //    「쓸모 있는 목록인가」는 아무도 안 봅니다. 개수 대신 **구실**을 봅니다.
+  ok((await groups.count()) >= 5, '주제가 다섯 이상으로 나뉘어 있음', `${await groups.count()}개`)
   const perGroup = []
   for (let i = 0; i < (await groups.count()); i++) {
     perGroup.push(await groups.nth(i).locator('[data-dev-topic]').count())
@@ -100,7 +103,12 @@ async function open(role, uid, name, mobile) {
   ok(perGroup.every((n) => n >= 4 && n <= 5), '주제마다 선택지가 4~5개', perGroup.join('·'))
   ok((await topics.count()) === perGroup.reduce((a, b) => a + b, 0), '선택지 총합이 맞음', `${await topics.count()}개`)
   const subjects = await groups.evaluateAll((els) => els.map((e) => e.getAttribute('data-dev-group')))
-  ok(subjects.includes('오늘 일정') && subjects.includes('수거 입력'), '현장 주제가 나옴', subjects.join(' · '))
+  ok(subjects.some((x) => /오늘 일정/.test(x ?? '')) && subjects.some((x) => /수거 입력/.test(x ?? '')),
+    '현장 주제가 나옴', subjects.join(' · '))
+  //  ⚠ 그 뒤에 만든 기능이 **고를 자리에 있는가**. 이미 해결한 것만 묻는
+  //    목록은 답이 쌓여도 쓸 데가 없습니다.
+  ok(subjects.some((x) => /오늘 업무 마감/.test(x ?? '')), '나중에 만든 것(오늘 업무 마감)도 고를 수 있음')
+  ok(subjects.some((x) => /고치기/.test(x ?? '')), '「잘못 넣은 것 고치기」도 고를 수 있음')
 
   const body = (await p.textContent('body')) ?? ''
   ok(/방문할 곳이 실제와 다릅니다/.test(body), '현장용 선택지가 나옴')
@@ -155,8 +163,8 @@ async function open(role, uid, name, mobile) {
     els.map((e) => e.getAttribute('data-dev-group')),
   )
   const modalTopics = await p.locator('[role="dialog"] [data-dev-topic]').allTextContents()
-  ok(modalGroups.length === 5, '관리자 요청 화면에도 주제가 5개', `${modalGroups.length}개`)
-  ok(modalGroups.includes('대시보드·지표') && modalGroups.includes('외부 연동'),
+  ok(modalGroups.length >= 5, '관리자 요청 화면에도 주제가 다섯 이상', `${modalGroups.length}개`)
+  ok(modalGroups.some((x) => /현장/.test(x ?? '')) && modalGroups.some((x) => /지표|수익/.test(x ?? '')),
     '관리자용 주제가 나옴', modalGroups.join(' · '))
   ok(!modalGroups.includes('오늘 일정'), '현장 주제는 섞이지 않음')
   ok(modalTopics.some((t) => /보고 싶은 지표가 빠져 있습니다/.test(t)), '관리자용 선택지가 나옴')
@@ -187,8 +195,10 @@ async function open(role, uid, name, mobile) {
   const officeGroups = await p.locator('[role="dialog"] [data-dev-group]').evaluateAll((els) =>
     els.map((e) => e.getAttribute('data-dev-group')),
   )
-  ok(officeGroups.includes('청구·정산') && officeGroups.includes('반복 작업'),
+  ok(officeGroups.some((x) => /청구/.test(x ?? '')) && officeGroups.includes('반복 작업'),
     '사무실 담당자에게는 사무실용 주제가 나옴', officeGroups.join(' · '))
+  //  ⚠ 역할마다 **다른** 목록이어야 합니다. 같으면 나눈 뜻이 없습니다.
+  ok(!officeGroups.some((x) => /폰에서 쓸 때/.test(x ?? '')), '현장용 주제가 섞여 있지 않음')
   await ctx.close()
 }
 

@@ -172,7 +172,13 @@ for (const role of ['office', 'field']) {
   const first = sent[0]
   ok(typeof first?.p_request_id === 'string' && first.p_request_id.length === 36,
     '저장 시도 표를 실제로 보냄', first?.p_request_id ?? '(없음)')
-  ok(first?.p_box === 12, '박스 12개를 그대로 보냄', String(first?.p_box))
+  //  ⚠ 0075 부터 자재 공급은 **규격별**로 갑니다(p_items). 예전에는 박스·비닐·
+  //    바늘통 세 칸으로 뭉개 보내서, 63L 인지 12L 인지가 안 남았습니다 —
+  //    그 둘은 매입가가 다릅니다. 뭉갠 값이 아니라 규격이 그대로 갔는지 봅니다.
+  const sentQty = Object.values(first?.p_items ?? {}).reduce((a, b) => a + Number(b ?? 0), 0)
+  ok(sentQty === 12, '넣은 12개가 그대로 서버로 감', JSON.stringify(first?.p_items))
+  ok(Object.keys(first?.p_items ?? {}).length === 1, '**규격 하나로 콕 집어 감** (뭉개지 않음)',
+    JSON.stringify(first?.p_items))
   ok(first?.p_client_id === CA, '거래처도 그대로')
   await ctx.close()
 }

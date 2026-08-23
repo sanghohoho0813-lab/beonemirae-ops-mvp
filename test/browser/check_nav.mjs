@@ -133,8 +133,15 @@ async function open(role, width = 390, height = 900) {
 
   const tools = await p.locator('[data-more-section="more-tools"] [data-more-item]').evaluateAll(
     (els) => els.map((e) => e.getAttribute('data-more-item')))
-  ok(tools.join(',') === '/plan,/dispatch,/materials,/billing,/pricing,/receivables,/bank,/history,/stats,/roadmap',
-    '운영 도구 10개가 PC 와 같은 순서', tools.join(','))
+  //  ⚠ 0076 — **자재 관리와 수거이력이 「핵심 운영」으로 올라갔습니다**
+  //    (대표님 지시). 매일 여는 화면인데 도구 열 줄 사이에 묻혀 있었습니다.
+  //    목록을 통째로 못 박아 두면 메뉴를 손볼 때마다 검사가 깨지면서 정작
+  //    「폰과 PC 가 같은 순서인가」는 안 보게 됩니다. 순서 규칙만 봅니다.
+  ok(tools.join(',') === '/plan,/dispatch,/billing,/pricing,/receivables,/bank,/stats,/roadmap',
+    '운영 도구가 PC 와 같은 순서', tools.join(','))
+  //  ⚠ 같은 메뉴가 두 자리에 있으면 어느 쪽이 진짜인지 헷갈립니다.
+  ok(!tools.includes('/materials') && !tools.includes('/history'),
+    '**자재 관리·수거이력은 도구에 남아 있지 않음** (핵심으로 올라갔습니다)', tools.join(','))
   //  거래처 점검(/pricing)은 예전 더보기에 아예 없었습니다 — 폰에서는 못 열었습니다
   ok(tools.includes('/pricing'), '거래처 점검이 폰에서도 열림 (예전에는 목록에 없었음)')
 
