@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CalendarPlus, CalendarX2, CheckCircle2, Info, Truck, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
+import { RouteAiButton } from '../components/RouteAiPreview'
 import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryButton, EmptyState } from '../components/ui'
 import { WasteBadge } from '../components/Badge'
 import { today, prettyDate } from '../lib/format'
@@ -354,9 +355,12 @@ export function SchedulePlan() {
   return (
     <PageShell>
       <div data-plan-page>
+        {/*  ⚠ action 은 2단계 예정 기능의 입구입니다 — 아래 「예정 만들기」·
+             「차량 배정」 같은 실제 버튼보다 튀지 않게 테두리로만 세웠습니다. */}
         <PageHeader
           title="수거 일정 편성"
           subtitle="① 실제 기록의 요일로 예정을 만들고 → ② 차를 붙입니다"
+          action={<RouteAiButton />}
         />
       </div>
 

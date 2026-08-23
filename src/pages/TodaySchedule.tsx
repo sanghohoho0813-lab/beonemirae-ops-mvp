@@ -24,6 +24,7 @@ import { AddVisitSheet } from '../components/AddVisitSheet'
 import { SharedTruck } from '../components/SharedTruck'
 import { CollectionRecord } from '../components/CollectionRecord'
 import { ScheduleSheet } from '../components/ScheduleSheet'
+import { RouteAiChip } from '../components/RouteAiPreview'
 import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
@@ -326,6 +327,11 @@ export function TodaySchedule() {
         <div data-guide="guide-day-strip">
           <FieldDayStrip data={data} selected={date} onPick={setDate} />
         </div>
+        {/*  ── 2단계 예정 기능의 입구 (폰) ──────────────────────────────
+             ⚠ 폰에서 제일 먼저 봐야 하는 것은 **오늘 갈 곳**입니다. 그래서
+               날짜 띠 바로 아래 한 줄로만 둡니다 — 눈에는 걸리되 자리를
+               뺏지 않게. 아직 안 되는 기능이라 「2단계」 딱지를 답니다. */}
+        <RouteAiChip className="mt-2" />
       </div>
 
       {/* 날짜 네비게이션 (넓은 화면) */}

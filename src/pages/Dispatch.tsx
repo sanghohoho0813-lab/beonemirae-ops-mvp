@@ -4,6 +4,7 @@ import { Route, Siren, Package, Target, FlaskConical, ChevronDown, ChevronRight,
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
+import { RouteAiButton } from '../components/RouteAiPreview'
 import { WasteBadge } from '../components/Badge'
 import { PageShell, SectionTitle, ExpandableSection } from '../components/ui'
 import { SeparationNotice, VehicleFleetCard, FacilityCard, IsolationCard } from '../components/ops'
@@ -151,7 +152,11 @@ export function Dispatch() {
 
   return (
     <PageShell>
-      <PageHeader title="배차·경로 추천" subtitle="차량 적재율·긴급수거·처리장 인계 고려" />
+      <PageHeader
+        title="배차·경로 추천"
+        subtitle="차량 적재율·긴급수거·처리장 인계 고려"
+        action={<RouteAiButton />}
+      />
 
       {/* 히어로 */}
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 p-5 text-white shadow-lg">
