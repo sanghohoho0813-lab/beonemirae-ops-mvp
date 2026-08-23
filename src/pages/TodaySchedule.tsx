@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, MoreHorizontal, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -23,6 +23,7 @@ import { FieldDayStrip } from '../components/FieldDayStrip'
 import { AddVisitSheet } from '../components/AddVisitSheet'
 import { SharedTruck } from '../components/SharedTruck'
 import { CollectionRecord } from '../components/CollectionRecord'
+import { ScheduleSheet } from '../components/ScheduleSheet'
 import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
@@ -92,6 +93,8 @@ export function TodaySchedule() {
 
   // 완료된 건 수정
   const [recordId, setRecordId] = useState<string | null>(null)
+  //  ⚠ 0077 — 「이 일정 누가 넣었지?」에 답하는 자리. 줄마다 ⋯ 하나로 엽니다.
+  const [schedId, setSchedId] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<Schedule | null>(null)
   const [editAmount, setEditAmount] = useState('')
   const [editMemo, setEditMemo] = useState('')
@@ -453,6 +456,20 @@ export function TodaySchedule() {
                     <ChevronRight size={18} className="shrink-0 text-navy-300" />
                   )}
                 </button>
+                {/*  ⚠ 0077 — 줄 자체를 누르면 지금처럼 **수거 입력**으로 갑니다
+                     (하루에 제일 많이 하는 동작이라 그대로 둡니다).
+                     「이 일정 누가 넣었지 · 안 가게 됐다」는 ⋯ 하나로 엽니다.
+                     같은 줄에 목적지를 둘 두면 어느 쪽이 눌릴지 예상이 안 되므로
+                     ⋯ 는 줄 **밖**에 따로 놓습니다. */}
+                <button
+                  data-sched-more={s.id}
+                  onClick={() => setSchedId(s.id)}
+                  aria-label={`${client?.name ?? '이 일정'} 자세히`}
+                  className="flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-500 transition active:bg-navy-50 lg:hidden"
+                >
+                  <MoreHorizontal size={17} strokeWidth={2.5} />
+                  {s.createdVia ? `${s.createdVia} · 자세히` : '자세히'}
+                </button>
 
                 <div className="hidden lg:block">
                 {urgent && (
@@ -531,6 +548,18 @@ export function TodaySchedule() {
                           onClick={() => openEdit(s)}
                         >
                           수정
+                        </button>
+                      )}
+                      {/*  ⚠ 끝난 줄에도 남깁니다 — 「이 일정 누가 넣었나」는
+                           다녀온 뒤에 더 자주 묻습니다. 고치는 길은 그
+                           안에서 수거기록 쪽으로 보냅니다. */}
+                      {(
+                        <button
+                          data-sched-more-pc={s.id}
+                          onClick={() => setSchedId(s.id)}
+                          className="mt-1.5 flex items-center gap-1 rounded-full bg-navy-50 px-3 py-1 text-[0.98rem] font-bold text-navy-500 transition active:scale-95"
+                        >
+                          <MoreHorizontal size={15} strokeWidth={2.6} /> 자세히
                         </button>
                       )}
                     </div>
@@ -796,6 +825,13 @@ export function TodaySchedule() {
       </Modal>
 
       <CollectionRecord eventId={recordId} onClose={() => setRecordId(null)} />
+      <ScheduleSheet
+        scheduleId={schedId}
+        onClose={() => setSchedId(null)}
+        //  ⚠ 「그 수거기록에서 고치세요」라고 말만 하고 끝내면 기사님은 그
+        //    기록을 다시 찾아야 합니다. 말한 김에 열어 줍니다.
+        onOpenRecord={(id) => window.setTimeout(() => setRecordId(id), 320)}
+      />
 
       {/*  완료 건 수정 모달 — **엑셀로 들어온 옛 기록 전용**입니다.
            수거 기록(event)이 붙어 있는 건은 위 상세 시트로 갑니다. */}

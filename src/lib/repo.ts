@@ -260,6 +260,10 @@ const toSchedule = (r: Row): Schedule => ({
   driverName: r.driver_name ?? undefined,
   handoverStatus: r.handover_status ?? undefined,
   handoverAt: r.handover_at ?? null,
+  createdByName: (r as { created_by_name?: string }).created_by_name ?? '',
+  createdVia: (r as { created_via?: string }).created_via ?? '',
+  createdBy: (r as { created_by?: string | null }).created_by ?? null,
+  createdAt: (r as { created_at?: string }).created_at ?? '',
   eventId: r.event_id ?? null,
   origin: r.origin ?? 'field',
   //  0058 이전 서버에는 이 칸이 없습니다 — 없으면 없는 대로 둡니다.
@@ -2137,6 +2141,26 @@ export async function correctStock(
   const { data, error } = await sb.rpc('correct_stock', { p_item: item, p_qty: qty, p_reason: reason })
   if (error) throw new Error(error.message)
   return data as { item: string; before: number; after: number }
+}
+
+/**
+ * 본인이 넣은 미완료 방문 무르기 (0077).
+ *
+ *  ⚠ 지우지 않습니다. 「무름」으로 남고 누가·언제·왜가 감사기록에 남습니다.
+ *  ⚠ 사무실이 잡은 일정과 수거기록이 붙은 일정은 **서버가** 막습니다 —
+ *    화면에서 지어내 막지 않습니다.
+ */
+export async function cancelMyVisit(scheduleId: string, reason: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('cancel_my_visit', { p_schedule_id: scheduleId, p_reason: reason })
+  if (error) throw new Error(error.message)
+}
+
+/** 본인이 넣은 미완료 방문 시간 바꾸기 (0077). 날짜 이동은 사무실 일입니다 */
+export async function retimeMyVisit(scheduleId: string, time: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('retime_my_visit', { p_schedule_id: scheduleId, p_time: time })
+  if (error) throw new Error(error.message)
 }
 
 export async function revertCollection(eventId: string): Promise<void> {
