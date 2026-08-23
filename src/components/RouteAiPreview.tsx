@@ -33,7 +33,9 @@ function StageBadge({ className = '' }: { className?: string }) {
   return (
     <span
       data-routeai-badge
-      className={`shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[0.85rem] font-extrabold tracking-tight text-violet-700 ${className}`}
+      //  ⚠ 0.85rem(13.6px) 이었습니다. 폰에서 16px 미만 글자는 안 됩니다 —
+      //    검사(check_scale)가 잡았습니다. 딱지라고 작게 두면 결국 못 읽습니다.
+      className={`shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[1rem] font-extrabold leading-tight tracking-tight text-violet-700 ${className}`}
     >
       2단계
     </span>

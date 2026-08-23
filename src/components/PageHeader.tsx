@@ -16,7 +16,11 @@ export function PageHeader({ title, subtitle, action }: PageHeaderProps) {
     //    시작되는 자리를 그만큼 늦춥니다. 폰만 12px 로 줄입니다 (넓은
     //    화면은 그대로 — 자리가 남으니까요).
     <div className="mb-3 flex flex-wrap items-end justify-between gap-3 sm:mb-6">
-      <div className="min-w-0 flex-1">
+      {/*  ⚠ 0078 — `flex-1`(basis 0) 이라 옆에 단추가 붙으면 제목이 **줄바꿈
+           대신 짓눌렸습니다.** 큰 글씨에서 「수거 일정 편성」이 폭 36px ·
+           높이 241px 로 세로로 늘어졌습니다(검사가 잡았습니다).
+           basis 를 주면 자리가 모자랄 때 **접혀서 다음 줄로** 갑니다. */}
+      <div className="min-w-0 flex-[1_1_14rem]">
         {/*  폰에서 33px 제목은 한 줄을 통째로 씁니다. 화면 이름은 아래
              메뉴에도 있으니, 폰에서는 한 단계 줄입니다. */}
         <h1 className="t-page min-w-0 max-sm:text-[1.5rem] text-navy-900">{title}</h1>
