@@ -55,6 +55,35 @@ export default {
           800: 'rgb(var(--c-teal-800) / <alpha-value>)',
           900: 'rgb(var(--c-teal-900) / <alpha-value>)',
         },
+        //  ⚠ 0084 — 테마마다 색을 3가지에서 **5가지**로 늘렸습니다
+        //    (중립 · 주색 · 강조 · 강조2 · 강조3). 강조색 양옆의 이웃 색상이라
+        //    서로 싸우지 않습니다. 뜻이 붙은 색(완료 초록 · 경고 빨강)과
+        //    메뉴별 색(TONE)은 건드리지 않습니다 — 새 색은 테마가 소유한
+        //    자리에만 씁니다.
+        accent2: {
+          50: 'rgb(var(--c-accent2-50) / <alpha-value>)',
+          100: 'rgb(var(--c-accent2-100) / <alpha-value>)',
+          200: 'rgb(var(--c-accent2-200) / <alpha-value>)',
+          300: 'rgb(var(--c-accent2-300) / <alpha-value>)',
+          400: 'rgb(var(--c-accent2-400) / <alpha-value>)',
+          500: 'rgb(var(--c-accent2-500) / <alpha-value>)',
+          600: 'rgb(var(--c-accent2-600) / <alpha-value>)',
+          700: 'rgb(var(--c-accent2-700) / <alpha-value>)',
+          800: 'rgb(var(--c-accent2-800) / <alpha-value>)',
+          900: 'rgb(var(--c-accent2-900) / <alpha-value>)',
+        },
+        accent3: {
+          50: 'rgb(var(--c-accent3-50) / <alpha-value>)',
+          100: 'rgb(var(--c-accent3-100) / <alpha-value>)',
+          200: 'rgb(var(--c-accent3-200) / <alpha-value>)',
+          300: 'rgb(var(--c-accent3-300) / <alpha-value>)',
+          400: 'rgb(var(--c-accent3-400) / <alpha-value>)',
+          500: 'rgb(var(--c-accent3-500) / <alpha-value>)',
+          600: 'rgb(var(--c-accent3-600) / <alpha-value>)',
+          700: 'rgb(var(--c-accent3-700) / <alpha-value>)',
+          800: 'rgb(var(--c-accent3-800) / <alpha-value>)',
+          900: 'rgb(var(--c-accent3-900) / <alpha-value>)',
+        },
         // 일회용기저귀 등 보조 식별용
         slate2: {
           50: 'rgb(var(--c-slate2-50) / <alpha-value>)',

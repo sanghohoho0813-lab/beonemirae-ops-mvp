@@ -53,15 +53,15 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
                 aria-hidden
               />
             )}
-            {/*  색 세 방울 — 바탕 · 주색 · 강조.
+            {/*  색 다섯 방울 — 바탕 · 주색 · 강조 · 강조2 · 강조3 (0084).
                 ⚠ 이 값만 실제 색을 그대로 적습니다. 견본은 **지금 켜진 테마와
                   상관없이** 그 테마의 색을 보여 줘야 하기 때문입니다.
                   (토큰을 쓰면 아홉 개가 전부 똑같이 보입니다.) */}
-            <span className="flex gap-1" aria-hidden>
+            <span className="flex gap-[3px]" aria-hidden>
               {t.swatch.map((c, i) => (
                 <span
                   key={i}
-                  className="h-5 w-5 rounded-full ring-1 ring-black/10"
+                  className="h-[1.15rem] w-[1.15rem] rounded-full ring-1 ring-black/10"
                   style={{ backgroundColor: c }}
                 />
               ))}

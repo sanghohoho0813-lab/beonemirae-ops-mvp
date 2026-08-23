@@ -73,7 +73,10 @@ export function Statistics() {
         <h2 className="mb-2 text-[1.08rem] font-semibold text-navy-500">폐기물 구분 비중</h2>
         <div className="card p-4">
           <div className="mb-2 flex h-5 overflow-hidden rounded-full bg-navy-50">
-            <div className="flex items-center justify-center bg-navy-500 text-[0.9rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
+            {/*  0084 — 두 갈래 막대는 회색+파랑이었습니다. 테마가 소유한 두 색으로
+                두면 그래프도 테마를 따라갑니다(의미가 붙은 색이 아니라
+                단순 구분이라 바꿔도 뜻이 헷갈리지 않습니다). */}
+          <div className="flex items-center justify-center bg-accent3-600 text-[0.9rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
               {medicalPct >= 12 ? `${medicalPct}%` : ''}
             </div>
             <div className="flex items-center justify-center bg-teal-500 text-[0.9rem] font-bold text-white" style={{ width: `${diaperPct}%` }}>

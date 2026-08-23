@@ -19,6 +19,7 @@ import {
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
+import { TONE } from '../lib/tone'
 import { LiveClock } from './LiveClock'
 import { ThemeButton } from './ThemePicker'
 import { SyncBar } from './SyncBar'
@@ -105,24 +106,25 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
                     어두운 사이드바에서 3.2:1 밖에 안 나왔습니다. 흐림을
                     나타내려다 안 읽히게 만든 것이라 navy-300 으로 되돌립니다.
                     덜 중요함은 navy-100(밝음) ↔ navy-300(덜 밝음)으로 냅니다. */
-              ? 'text-navy-300 hover:bg-white/10 hover:text-white'
-              : 'text-navy-100 hover:bg-white/10 hover:text-white'
+              /*  0084 — 대표님 요청: 「왼쪽 목차 글자들은 다 흰색으로 명확하게」.
+                  덜 중요한 줄도 **글자는 흰색**으로 두고, 덜 중요함은
+                  아이콘 크기와 묶음(접힘)으로 나타냅니다 — 글자를 흐리게
+                  만들어서 나타내지 않습니다. */
+              ? 'text-white hover:bg-white/10'
+              : 'text-white hover:bg-white/10'
         }`
       }
     >
-      {/*  ⚠ 0083 — 아이콘 타일에 메뉴별 색(TONE)을 그대로 썼습니다. 그 색들은
-           파랑·하늘·보라 — **기본 남색 테마의 계열**입니다. 그래서 갈색이나
-           와인빛 사이드바로 바꿔도 아이콘 타일만 남색 계열로 남아,
-           「테마 위에 남색이 덧칠된」 것처럼 보였습니다.
-           사이드바에서는 **그 테마의 강조색 하나**로 통일합니다 —
-           시안 아홉 장이 모두 그렇게 되어 있습니다.
-           ⚠ 메뉴별 색 구분 자체를 없애는 것은 아닙니다. 밝은 본문 화면의
-             TONE 은 그대로입니다 — 거기서는 「무슨 일인지」를 색으로 구분하는
-             것이 실제로 도움이 됩니다. 어두운 사이드바에서만 소음이 됩니다. */}
+      {/*  아이콘 타일은 **메뉴별 색(TONE)** 을 그대로 씁니다.
+           ⚠ 0083 에서 이것을 테마 강조색 하나로 통일해 봤는데, 대표님이
+             처음 색이 낫다고 하셔서 되돌렸습니다. 「덧칠된 느낌」의 원인은
+             이 타일이 아니라 **글자가 뿌옇던 것**이었습니다(0084 에서
+             글자를 무채색으로 바꿔 해결했습니다). 원인을 잘못 짚어
+             멀쩡한 것을 건드렸던 셈입니다. */}
       {muted ? (
         <Icon size={21} strokeWidth={2.2} className="ml-1 shrink-0" />
       ) : (
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-300">
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE[item.tone].tile}`}>
           <Icon size={22} strokeWidth={2.3} />
         </span>
       )}
@@ -137,7 +139,7 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
               두었는데 코드가 이미 어기고 있었고, 자(a11y_measure)가 main
               안만 봐서 여태 안 잡혔습니다. */}
         {!muted && item.desc && (
-          <span className="mt-1 hidden break-keep text-[0.95rem] font-medium text-navy-300 xl:block">
+          <span className="mt-1 hidden break-keep text-[0.95rem] font-medium text-navy-200 xl:block">
             {item.desc}
           </span>
         )}
@@ -202,7 +204,7 @@ function GroupHeader({
       data-nav-group-header={title}
       /*  0082 — navy-400 은 「밝은 바탕의 캡션」 색입니다. 어두운 사이드바에
           얹으니 3.2~3.6:1 로 기준(4.5)에 못 미쳤습니다. 어두운 바탕용은 navy-300. */
-      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-300 transition hover:bg-white/5 hover:text-white"
+      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-200 transition hover:bg-white/5 hover:text-white"
     >
       {Icon && <Icon size={13} className="shrink-0" />}
       <span className="min-w-0 flex-1 break-keep text-left leading-snug">{title}</span>
