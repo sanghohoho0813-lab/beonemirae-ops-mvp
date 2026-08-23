@@ -118,7 +118,7 @@ interface DataContextValue {
   completeSchedule: (id: string, actualAmount: number, memo?: string) => void
   // 수거 완료 통합 커맨드 (3단계) — 입력 한 번으로 일정/이력/자재/재고/요청/감사기록 연결
   completeCollection: (input: CollectionCompletionInput) => Promise<CommandResult>
-  revertCollection: (eventId: string) => Promise<CommandResult>
+  revertCollection: (eventId: string, reason?: string) => Promise<CommandResult>
   // 시연 안정화 (3.5단계)
   resetDemo: () => void // 시연용 변경만 기준 상태로 복원
   startDemo: () => void // 기준 복원 + 새 시연 세션 시작
@@ -998,14 +998,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   const revertCollection = useCallback(
-    async (eventId: string): Promise<CommandResult> => {
+    //  ⚠ 0088 — **사유**를 함께 받습니다. 되돌리기는 돈과 재고가 같이
+    //    되돌아가는 일이라, 이유가 안 남으면 나중에 아무도 설명하지 못합니다.
+    //    판 73 이 아직인 서버에서는 화면이 사유를 안 받고 빈 문자열로 옵니다 —
+    //    그때는 예전 함수를 그대로 씁니다(배포 순서가 어긋나도 안 멎습니다).
+    async (eventId: string, reason = ''): Promise<CommandResult> => {
       if (live) {
         const e = data.events.find((x) => x.id === eventId)
         if (!e) return { ok: false, errors: ['취소할 입력을 찾을 수 없습니다.'], warnings: [] }
         if (e.reverted) return { ok: false, errors: ['이미 취소된 입력입니다.'], warnings: [] }
         // 수거 완료와 같은 이유로 서버 결과를 기다립니다 —
         // 되돌려지지 않았는데 "되돌렸습니다"라고 말하면 안 됩니다.
-        const done = await runLive(async () => repo.revertCollection(eventId))
+        const why = reason.trim()
+        const done = await runLive(async () =>
+          why ? repo.revertCollectionWithReason(eventId, why) : repo.revertCollection(eventId),
+        )
         if (!done.ok) {
           return { ok: false, errors: [done.error ?? '되돌리지 못했습니다. 잠시 후 다시 시도해 주세요.'], warnings: [] }
         }

@@ -50,6 +50,14 @@ export function chromiumPath() {
 }
 
 const pw = await load()
-export const chromium = pw.chromium
+//  ⚠ playwright 는 CommonJS 로도 깔립니다(전역 설치가 특히 그렇습니다).
+//    그때는 이름들이 `default` 안에 들어와 `pw.chromium` 이 **undefined** 가
+//    됩니다. 그러면 검사들은 「playwright 를 찾았다」고 여긴 채 첫 줄에서
+//    터지고, runner 에는 「검사 0」으로만 남습니다 — 원인이 안 보입니다.
+const chromium_ = pw.chromium ?? pw.default?.chromium
+if (!chromium_) {
+  throw new Error('playwright 는 찾았는데 chromium 이 없습니다 — 설치가 깨졌을 수 있습니다.')
+}
+export const chromium = chromium_
 /** 검사들이 그대로 쓰던 이름 */
 export const EXEC = chromiumPath()

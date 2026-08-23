@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 import { FilterChip } from '../components/ui'
+import { RevertReasonModal } from '../components/RevertReason'
 import { facilityByWaste } from '../data/ops'
 import { weight, today, shiftDays } from '../lib/format'
 import type { WasteType } from '../types'
@@ -22,14 +23,18 @@ type PeriodFilter = '전체' | '최근 7일' | '이번 달'
 const shift = shiftDays
 
 export function CollectionHistory() {
-  const { data, clientById, revertCollection } = useData()
+  const { data, clientById } = useData()
   const { role, mode } = useAuth()
   const navigate = useNavigate()
   //  ⚠ 잘못 올라간 기록을 지우는 것은 **돈이 바뀌는 일**입니다 —
   //    그 달 정산·청구·매출이 같이 바뀝니다. 사무실·관리자만 합니다.
   const canRevert = mode !== 'live' || role === 'admin' || role === 'office'
-  const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  //  ⚠ 0088 — window.confirm 을 씁니다가 **사유를 받을 자리가 없었습니다.**
+  //    되돌리기는 자재·재고·요청·그 달 청구가 함께 되돌아가는 일이라
+  //    이유가 안 남으면 나중에 아무도 설명하지 못합니다. 수거 입력 화면과
+  //    **같은 부품**을 씁니다 — 두 벌이면 한쪽만 고쳐집니다.
+  const [revert, setRevert] = useState<{ eventId: string; label: string } | null>(null)
   const [waste, setWaste] = useState<WasteFilter>('전체')
   const [kind, setKind] = useState<KindFilter>('전체')
   const [period, setPeriod] = useState<PeriodFilter>('전체')
@@ -169,23 +174,9 @@ export function CollectionHistory() {
                     {r.completed && r.eventId ? (
                       <button
                         data-history-revert={r.id}
-                        disabled={busy === r.eventId}
                         onClick={() => {
-                          if (
-                            !window.confirm(
-                              `${r.date} ${r.clientName} 수거 기록을 되돌릴까요?\n\n` +
-                                '이 수거로 빠졌던 재고와 처리했던 요청이 함께 되돌아갑니다.\n' +
-                                '그 달 정산·청구 금액도 같이 바뀝니다. 확정한 청구가 있으면 서버가 막습니다.',
-                            )
-                          ) {
-                            return
-                          }
-                          setBusy(r.eventId!)
                           setError('')
-                          void revertCollection(r.eventId!).then((res) => {
-                            setBusy('')
-                            if (!res.ok) setError(res.errors.join(' ') || '되돌리지 못했습니다.')
-                          })
+                          setRevert({ eventId: r.eventId!, label: `${r.date} · ${r.clientName}` })
                         }}
                         className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-rose-500 transition hover:bg-rose-50 disabled:opacity-40"
                       >
@@ -217,6 +208,13 @@ export function CollectionHistory() {
         </p>
       )}
       {rows.length > 60 && <p className="mt-2 px-1 text-[0.98rem] text-navy-400">최근 60건까지 표시합니다.</p>}
+
+      <RevertReasonModal
+        eventId={revert?.eventId ?? null}
+        label={revert?.label}
+        onClose={() => setRevert(null)}
+        onDone={(r) => { if (!r.ok) setError(r.errors.join(' ') || '되돌리지 못했습니다.') }}
+      />
     </div>
   )
 }

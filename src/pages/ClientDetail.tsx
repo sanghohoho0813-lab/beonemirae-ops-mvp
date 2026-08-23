@@ -105,20 +105,28 @@ const billStyle: Record<BillStatus, string> = {
  */
 const SHOW_INSPECTION = false
 
+//  ⚠ 0087 — 탭 순서를 **실제로 자주 보는 것 먼저**로 바꿨습니다.
+//    예전에는 「운영조건」이 맨 앞이었습니다. 그건 한 번 정해 두고 거의
+//    안 여는 **설정성 정보**인데, 병원을 열면 그것부터 보였습니다.
+//    정작 매일 보는 것은 「지난번에 얼마 가져갔나 · 자재는 뭘 두고 왔나 ·
+//    현장에서 뭘 조심하라 했나」입니다.
+//    원칙: **과거 운영기록과 오늘 필요한 정보가 먼저, 설정성 정보가 뒤.**
+//    (병원명·주소·전화·주의사항은 탭과 무관하게 늘 위쪽 요약에 있습니다.)
 const TABS = [
-  { id: 'ops', label: '운영조건', money: false },
+  { id: 'history', label: '수거이력', money: false },
+  { id: 'materials', label: '자재관리', money: false },
+  { id: 'notes', label: '현장 메모', money: false },
+  { id: 'billing', label: '결제·미수금', money: true },
   { id: 'settlement', label: '월 정산·명세서', money: true },
+  { id: 'requests', label: '요청·알림', money: false },
   //  ⚠ 0063 부터 월 실적(매출·원가·이익)은 **서버가** 현장에 안 줍니다.
   //    kg 도 같은 표에 있어 함께 막힙니다. 탭을 열어 두면 현장에서는
   //    빈 표가 뜨는데, 그건 「기록이 없다」로 읽혀 더 나쁩니다.
   //    이 리포트는 사무실이 병원에 드리는 자료라 원래 사무실 일입니다
   //    (/reports 도 이미 사무실·관리자 전용입니다).
   { id: 'report', label: '월간 리포트', money: true },
-  { id: 'notes', label: '현장 메모', money: false },
-  { id: 'history', label: '수거이력', money: false },
-  { id: 'materials', label: '자재관리', money: false },
-  { id: 'requests', label: '요청·알림', money: false },
-  { id: 'billing', label: '결제·미수금', money: true },
+  //  설정성 정보 — 맨 뒤.
+  { id: 'ops', label: '운영조건', money: false },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
@@ -156,7 +164,9 @@ export function ClientDetail() {
   const [allActions, setAllActions] = useState(false)
   //  영업 진행상태는 폰에서만 접습니다 (PC 는 항상 보입니다).
   const [stageOpen, setStageOpen] = useState(false)
-  const [tab, setTab] = useState<TabId>('ops')
+  //  0087 — 처음 열었을 때 보이는 탭도 「수거이력」입니다. 병원을 열면
+  //  가장 먼저 궁금한 것이 「지난번에 언제 얼마 가져갔나」입니다.
+  const [tab, setTab] = useState<TabId>('history')
   //  현장 담당자에게는 매출·원가·이익·청구가 보이는 탭을 열지 않습니다.
   //  주소를 직접 쳐서 들어와도 탭이 없으므로 그 내용은 그려지지 않습니다.
   //

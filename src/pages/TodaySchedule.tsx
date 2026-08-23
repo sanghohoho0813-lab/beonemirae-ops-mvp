@@ -22,6 +22,7 @@ import { UpcomingVisits } from '../components/UpcomingVisits'
 import { FieldDayStrip } from '../components/FieldDayStrip'
 import { AddVisitSheet } from '../components/AddVisitSheet'
 import { SharedTruck } from '../components/SharedTruck'
+import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
@@ -587,7 +588,13 @@ export function TodaySchedule() {
 
       {/*  3.5톤 공용차 — 본사 앞에 있고, 필요한 분이 잡아서 씁니다 (0070).
            누가 잡았는지 병원 빼고 다 보입니다. */}
-      <SharedTruck date={date} />
+      <SharedTruck date={date} onPick={setDate} />
+
+      {/*  오늘 업무 마감 (0088) — 하루 마지막 동작입니다.
+           ⚠ **오늘 날짜를 보고 있을 때만** 나옵니다. 지난 날을 넘겨보다가
+             마감이 눌리면 그건 근무 기록이 틀어지는 것입니다.
+           ⚠ 기사님 계정에만 나옵니다(컴포넌트 안에서 다시 막습니다). */}
+      {date === today() && <DayClose date={date} />}
 
       {/*  앞으로 갈 곳 (0067) — 종이·카톡 없이 앞일을 앱에서 봅니다.
            달력보다 위에 둡니다: 기사님이 알고 싶은 것은 「며칠에 어디」이지

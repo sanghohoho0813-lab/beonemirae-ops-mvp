@@ -26,7 +26,7 @@ function sharedTrucks(vehicles: { id: string; name: string; tonnage: number }[])
   return vehicles.filter((v) => v.tonnage >= 2)
 }
 
-export function SharedTruck({ date }: { date: string }) {
+export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: string) => void }) {
   const { data, reserveVehicle, releaseVehicle } = useData()
   const { profile, role } = useAuth()
   const ready = useSchemaAtLeast(70) === true
@@ -49,6 +49,18 @@ export function SharedTruck({ date }: { date: string }) {
   const isPast = date < today()
   const isMine = held?.profileId === mine
 
+  //  ── 반납 지연 (0088) ──────────────────────────────────────────────────
+  //   예약을 무르는 것이 곧 반납입니다(줄이 지워집니다). 그러니 **지난
+  //   날짜에 줄이 남아 있다** = 아직 안 놓은 것입니다.
+  //   ⚠ 예전에는 지난 날짜에서 단추를 통째로 숨겼습니다. 그래서 한 번
+  //     밀린 예약은 **무를 방법이 화면에 아예 없었습니다** — 차가 영원히
+  //     잡혀 있는 것으로 보입니다. 여기서 놓을 수 있게 엽니다.
+  //   ⚠ 강한 빨강은 **여기에만** 씁니다. 평소 예약까지 빨갛게 하면
+  //     빨강이 아무 뜻도 없어집니다.
+  const overdue = (data.vehicleReservations ?? []).filter(
+    (r) => r.vehicleId === truck.id && r.date < today(),
+  )
+
   async function go() {
     if (!truck) return
     setBusy(true)
@@ -63,11 +75,34 @@ export function SharedTruck({ date }: { date: string }) {
       <div className="flex items-center gap-2.5">
         <Truck size={20} strokeWidth={2.3} className="shrink-0 text-navy-500" />
         <p className="text-[1.12rem] font-extrabold text-navy-900">{truck.name}</p>
+        {/*  다섯 가지 — 사용 가능 / 예약 / 사용 중 / 반납 완료 / 반납 지연.
+             ⚠ 「반납 지연」에만 강한 빨강을 씁니다. */}
         <span
           data-truck-state
-          className={`ml-auto pill ${held ? (isMine ? 'bg-teal-600 text-white' : 'bg-amber-50 text-amber-800') : 'bg-navy-100 text-navy-600'}`}
+          data-truck-overdue={held && isPast ? 'yes' : undefined}
+          className={`ml-auto pill ${
+            held && isPast
+              ? 'bg-rose-600 text-white'
+              : held
+                ? isMine
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-amber-50 text-amber-800'
+                : 'bg-navy-100 text-navy-600'
+          }`}
         >
-          {held ? (isMine ? '내가 씁니다' : '다른 분이 씁니다') : '비어 있음'}
+          {held
+            ? isPast
+              ? '반납 지연'
+              : date === today()
+                ? isMine
+                  ? '내가 씁니다'
+                  : '다른 분이 씁니다'
+                : isMine
+                  ? '내가 예약함'
+                  : '다른 분 예약'
+            : isPast
+              ? '반납 완료'
+              : '사용 가능'}
         </span>
       </div>
 
@@ -84,22 +119,59 @@ export function SharedTruck({ date }: { date: string }) {
       {/*  ⚠ 남이 잡은 것은 **누를 수 없게** 합니다. 눌러 봐야 서버가 거절합니다.
            사무실·관리자는 뺄 수 있어야 해서 열어 둡니다 (휴가 간 사람 차가
            계속 잡혀 있으면 아무도 못 씁니다). */}
-      {!isPast && (held == null || isMine || role === 'admin' || role === 'office') && (
+      {(!isPast || held != null) && (held == null || isMine || role === 'admin' || role === 'office') && (
         <button
           data-truck-toggle
           onClick={() => void go()}
           disabled={busy}
           className={`mt-3 flex w-full items-center justify-center gap-2 rounded-2xl text-[1.1rem] font-extrabold transition active:scale-[0.98] disabled:opacity-50 ${
-            held ? 'bg-navy-50 text-navy-600' : 'bg-navy-900 text-white'
+            held ? (isPast ? 'bg-rose-600 text-white' : 'bg-navy-50 text-navy-600') : 'bg-navy-900 text-white'
           }`}
           style={{ minHeight: 52 }}
         >
           {busy && <Loader2 size={18} className="animate-spin" />}
-          {held ? (isMine ? '예약 무르기' : '예약 빼기 (사무실)') : '이 날 예약하기'}
+          {held
+            ? isPast
+              ? isMine
+                ? '지금 반납 처리'
+                : '반납 처리 (사무실)'
+              : isMine
+                ? '예약 무르기'
+                : '예약 빼기 (사무실)'
+            : '이 날 예약하기'}
         </button>
       )}
 
-      {isPast && <p className="mt-3 text-[1.02rem] text-navy-500">지난 날짜는 예약할 수 없습니다.</p>}
+      {isPast && held == null && (
+        <p className="mt-3 text-[1.02rem] text-navy-500">지난 날짜는 예약할 수 없습니다.</p>
+      )}
+
+      {/*  다른 날에 밀려 있는 것 — 오늘 화면을 보고 있어도 알아야 합니다.
+           ⚠ 「누가」는 안 적습니다. 서버가 이름을 안 줍니다(현장 계정은 남의
+             프로필을 못 읽습니다) — 모르는 것을 지어내지 않습니다. */}
+      {overdue.length > 0 && !(held && isPast) && (
+        <div data-truck-overdue-list className="mt-3 rounded-2xl bg-rose-50 px-4 py-3">
+          <p className="flex items-start gap-2 break-keep text-[1.05rem] font-extrabold text-rose-700">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" strokeWidth={2.4} />
+            아직 반납 처리가 안 된 날이 {overdue.length}일 있습니다
+          </p>
+          <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+            {overdue.slice(0, 6).map((r) => (
+              <li key={r.id} data-truck-overdue-day={r.date}>
+                <button
+                  onClick={() => onPick?.(r.date)}
+                  className="text-[1.02rem] font-bold text-rose-700 underline underline-offset-4"
+                >
+                  {prettyDate(r.date)}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="t-caption mt-1.5 break-keep leading-snug text-rose-700">
+            날짜를 누르면 그 날로 가서 반납 처리를 할 수 있습니다.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

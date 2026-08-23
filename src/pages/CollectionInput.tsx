@@ -22,7 +22,7 @@ import { canAccess } from '../lib/access'
 import { NoteChips } from '../components/SiteNotes'
 import { SUPPLY_ITEMS, stockDeltaOf, itemsOf, type ItemCounts, type ItemKey } from '../lib/billing'
 import { PageHeader } from '../components/PageHeader'
-import { Modal } from '../components/Modal'
+import { RevertReasonModal } from '../components/RevertReason'
 import { BookVisitModal } from '../components/BookVisit'
 import { QtyField } from '../components/ui'
 import { TimeField } from '../components/TimeField'
@@ -151,7 +151,7 @@ function Section({
 }
 
 export function CollectionInput() {
-  const { data, completeCollection, revertCollection, notesFor, sync, setRetryHandler, clearSyncError } = useData()
+  const { data, completeCollection, notesFor, sync, setRetryHandler, clearSyncError } = useData()
   const { configured, role, profile } = useAuth()
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const canGoHistory = !configured || canAccess(role, '/history')
@@ -1543,35 +1543,15 @@ export function CollectionInput() {
            글자를 화면에 두는 것은 자리만 차지합니다. 기준선(4.5:1)을 넘깁니다. */}
       <p className="mt-6 text-center text-[0.98rem] text-navy-500">{prettyDate(today())} 기준</p>
 
-      {/* 완료 취소 확인 모달 (시연 중 실수 방지) */}
-      <Modal
-        open={confirmRevert !== null}
-        title="수거 완료 취소"
+      {/*  완료 취소 — **사유를 함께 받습니다** (0088).
+           ⚠ 모달 자체가 화면 두 곳(여기·수거이력)에서 같아야 합니다.
+             두 벌로 두면 한쪽만 고쳐지고, 그때부터 같은 일에 다른 규칙이
+             적용됩니다. 그래서 공용 부품 하나만 씁니다. */}
+      <RevertReasonModal
+        eventId={confirmRevert}
         onClose={() => setConfirmRevert(null)}
-        footer={
-          <>
-            <button className="btn-ghost flex-1" onClick={() => setConfirmRevert(null)}>
-              닫기
-            </button>
-            <button
-              className="btn-primary flex-1"
-              onClick={async () => {
-                if (confirmRevert) {
-                  const r = await revertCollection(confirmRevert)
-                  if (!r.ok) setErrors(r.errors)
-                }
-                setConfirmRevert(null)
-              }}
-            >
-              완료 취소
-            </button>
-          </>
-        }
-      >
-        <p className="text-[1.08rem] leading-relaxed text-navy-700">
-          이 수거 완료 입력을 취소하면 일정·수거이력·자재·재고·요청 상태가 입력 전으로 되돌아갑니다.
-        </p>
-      </Modal>
+        onDone={(r) => { if (!r.ok) setErrors(r.errors) }}
+      />
     </div>
   )
 }

@@ -349,9 +349,15 @@ async function open(ctx, path) {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } })
   wire(ctx)
   const p = await open(ctx, `/clients/${C1}`)
+  //  ⚠ 0087 에서 탭 순서가 바뀌었습니다 — 예전에는 「운영조건」이 맨 앞이라
+  //    화면을 열자마자 이 패널이 보였습니다. 지금은 「수거이력」이 첫 탭이고
+  //    (매일 보는 것이 먼저), 이 패널은 설정성 정보와 함께 맨 뒤에 있습니다.
+  //    **패널이 없어진 것이 아니라 자리가 바뀐 것**이라, 검사도 그 자리로 갑니다.
+  await p.locator('[data-client-tab="ops"]').first().dispatchEvent('click')
+  await p.waitForTimeout(700)
   const t = flat(await p.textContent('body'))
 
-  ok((await p.locator('[data-client-ax]').count()) > 0, '⑱ 거래처 상세에 「지금 아는 것」이 있음')
+  ok((await p.locator('[data-client-ax]').count()) > 0, '⑱ 거래처 상세에 「지금 아는 것」이 있음 (운영조건 탭)')
   //  ⚠ 근거 없는 영업추천이 있으면 안 됩니다.
   //
   //   처음에 **본문 전체**에서 찾았다가 FAIL 이 났습니다. 잡힌 것은 이 화면에
@@ -377,6 +383,9 @@ async function open(ctx, path) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx)
   const p = await open(ctx, `/clients/${C1}`)
+  //  ⚠ 0087 탭 순서 변경 — 이 패널은 「운영조건」 탭에 있습니다 (위 참조).
+  await p.locator('[data-client-tab="ops"]').first().dispatchEvent('click')
+  await p.waitForTimeout(700)
 
   const more = p.locator('[data-client-ax-more]')
   ok((await more.count()) === 1, '㉓ 폰에서는 한 줄로 접혀 있음')

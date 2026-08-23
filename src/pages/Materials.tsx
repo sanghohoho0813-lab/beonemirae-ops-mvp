@@ -5,6 +5,8 @@ import { PageHeader } from '../components/PageHeader'
 import { MetricCard, EmptyState, SectionTitle } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { MaterialRiskCard } from '../components/ops'
+import { StockCard } from '../components/StockCard'
+import { useAuth } from '../context/AuthContext'
 import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
 import { materialUsage, type UsageStatus } from '../lib/ops'
@@ -33,6 +35,7 @@ const usageStyle: Record<UsageStatus, string> = {
 
 export function Materials() {
   const { data, addMaterial, removeMaterial, clientById } = useData()
+  const { role } = useAuth()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<Omit<MaterialSupply, 'id'>>(emptyForm)
   /*
@@ -121,6 +124,22 @@ export function Materials() {
           </button>
         }
       />
+
+      {/*  ⚠ 0087 — 사무실 재고(현재 수량 · 입고 · 재고 조정 · 최근 변동)가
+           **설정 화면 깊숙한 곳에만** 있었습니다. 운영 중 자주 여는 것인데
+           설정까지 들어가야 했습니다.
+           원칙을 이렇게 잡습니다 —
+             「설정」 = 자재 품목·기본값 같은 **구조 설정**
+             「운영 화면」 = 지금 몇 개 있나 · 넣고 · 바로잡고 · 최근 변동
+           그래서 자재 화면 맨 위로 올립니다. 설정에 있던 것도 그대로
+           둡니다(없애면 거기서 찾던 분이 헤맵니다) — 같은 부품입니다.
+           ⚠ 현장 담당자에게는 안 보입니다. 사무실 재고는 사무실 일이고,
+             최소권한 원칙을 그대로 지킵니다. */}
+      {(role === 'admin' || role === 'office') && (
+        <div className="mb-5">
+          <StockCard />
+        </div>
+      )}
 
       {/* 이번 달 통계 */}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

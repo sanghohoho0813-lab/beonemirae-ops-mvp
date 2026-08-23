@@ -3,6 +3,7 @@ import { ArrowRight, ClipboardCheck } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { fieldDay, lastCollectionLine, lastCollectionOf } from '../lib/fieldActivity'
+import { DayCloseStatus } from './DayClose'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 오늘 현장에서 들어온 입력 — 대표·사무실 화면
@@ -33,27 +34,50 @@ export function FieldTodayCard() {
   const shown = day.inputs.slice(0, FIRST)
   const rest = day.inputs.length - shown.length
 
+  //  ⚠ 0087 — 대표님 지적: 「현장직원이 입력해도 작고 눈에 잘 안 띈다」.
+  //    내용은 이미 다 있었습니다 — **크기와 위계**가 문제였습니다.
+  //    카드 자체를 키우고, 맨 위에 오늘 숫자 넉 줄(예정·완료·미완료·추가)을
+  //    큰 글씨로 답니다. 이 화면을 여는 이유가 그 넷이기 때문입니다.
+  const done = day.inputs.length
+  const planned = done + day.pending.length
+  const left = day.pending.length
+
   return (
-    <section data-field-today className="card p-4 sm:p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-          <ClipboardCheck size={19} />
+    <section data-field-today className="card border-2 border-teal-200 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+          <ClipboardCheck size={23} strokeWidth={2.3} />
         </span>
         <div className="min-w-0 flex-1">
-          <p data-field-today-headline className="break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">
-            {day.inputs.length > 0
-              ? `오늘 현장에서 ${day.inputs.length}건 들어왔습니다`
-              : '오늘 현장 입력이 아직 없습니다'}
+          <p data-field-today-headline className="break-keep text-[1.45rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[1.7rem]">
+            오늘 현장 현황
           </p>
-          {/*  들어온 것이 없으면 「0곳 · 0kg」을 적지 않습니다 — 숫자만
-               읽고 「오늘 아무 일도 없었다」로 오해할 수 있습니다. */}
-          <p className="t-caption mt-0.5 break-keep text-navy-500">
-            {day.inputs.length > 0
+          <p className="t-body mt-0.5 break-keep text-navy-500">
+            {done > 0
               ? `${day.clients}곳 · 모두 ${day.totalKg.toLocaleString('ko-KR')}kg`
-              : '예정은 아래에 있습니다'}
-            {day.adHoc > 0 && ` · 예정에 없던 수거 ${day.adHoc}건`}
+              : '아직 들어온 입력이 없습니다'}
           </p>
         </div>
+      </div>
+
+      {/*  ⚠ 숫자 넷 — 카톡으로 물어보던 그것입니다.
+           「몇 군데 남았나」가 제일 급하니 **미완료를 강조**합니다.
+           0 이면 조용히 회색으로 둡니다 — 다 끝난 것도 정보입니다. */}
+      <div data-field-counts className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {[
+          { k: 'planned', label: '오늘 예정', v: planned, tone: 'text-navy-900' },
+          { k: 'done', label: '완료', v: done, tone: done > 0 ? 'text-teal-700' : 'text-navy-400' },
+          { k: 'left', label: '미완료', v: left, tone: left > 0 ? 'text-amber-700' : 'text-navy-400' },
+          { k: 'adhoc', label: '추가수거', v: day.adHoc, tone: day.adHoc > 0 ? 'text-navy-900' : 'text-navy-400' },
+        ].map((c) => (
+          <div key={c.k} data-field-count={c.k} className="rounded-2xl bg-navy-50 px-3.5 py-3">
+            <p className="t-caption break-keep font-bold text-navy-500">{c.label}</p>
+            <p className={`mt-0.5 text-[1.9rem] font-extrabold leading-none tabular-nums ${c.tone}`}>
+              {c.v}
+              <span className="t-caption ml-1 font-bold text-navy-400">건</span>
+            </p>
+          </div>
+        ))}
       </div>
 
       <ul className="mt-3 flex flex-col gap-1.5">
@@ -61,22 +85,22 @@ export function FieldTodayCard() {
           <li
             key={i.scheduleId}
             data-field-input={i.clientId}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-navy-50 px-3.5 py-2.5"
+            className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-2xl border border-navy-100 bg-white px-4 py-3"
           >
             {i.atTime && (
-              <span className="t-caption shrink-0 tabular-nums font-bold text-navy-400">{i.atTime}</span>
+              <span className="shrink-0 tabular-nums text-[1.05rem] font-bold text-navy-500">{i.atTime}</span>
             )}
             <Link
               to={`/clients/${i.clientId}`}
-              className="min-w-0 break-keep text-[1.03rem] font-bold text-navy-900 underline-offset-4 hover:underline"
+              className="min-w-0 break-keep text-[1.2rem] font-extrabold text-navy-900 underline-offset-4 hover:underline"
             >
               {i.clientName}
             </Link>
-            <span className="t-caption shrink-0 tabular-nums font-bold text-teal-700">
+            <span className="shrink-0 tabular-nums text-[1.2rem] font-extrabold text-teal-700">
               {i.amountKg.toLocaleString('ko-KR')}kg
             </span>
             {/*  이름이 안 적혀 있으면 지어내지 않고 그 자리를 비웁니다. */}
-            {i.who && <span className="t-caption shrink-0 text-navy-500">{i.who}</span>}
+            {i.who && <span className="shrink-0 text-[1.03rem] font-bold text-navy-600">{i.who}</span>}
             {i.adHoc && <span className="pill shrink-0 bg-amber-100 text-amber-700">예정 외</span>}
 
             {/*  ⚠ 이사님이 카카오톡 사진을 다시 여는 이유가 **용기 개수와
@@ -176,6 +200,10 @@ export function FieldTodayCard() {
             ))}
         </div>
       )}
+
+      {/*  누가 오늘 업무를 마감했나 (0088) — 카톡으로 「다 끝났습니다」를
+           받던 자리입니다. 판 73 전에는 아무것도 안 그립니다. */}
+      <DayCloseStatus />
 
       {day.noName > 0 && (
         <p data-field-noname className="t-caption mt-2 break-keep text-navy-400">

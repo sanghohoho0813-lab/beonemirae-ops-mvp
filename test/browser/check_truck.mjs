@@ -86,7 +86,10 @@ async function open(ver, { role = 'field', uid = ME, holds = [] } = {}) {
   const { ctx, p, state } = await open(70)
   ok((await p.locator('[data-shared-truck]').count()) === 1, '**공용차 칸이 보임**')
   ok(/3\.5톤/.test(flat(await p.locator('[data-shared-truck]').innerText())), '3.5톤이라고 적혀 있음')
-  ok(flat(await p.locator('[data-truck-state]').textContent()) === '비어 있음', '비어 있다고 알려 줌')
+  //  ⚠ 0088 — 말이 바뀌었습니다. 「비어 있음」은 **왜** 비어 있는지를 안
+  //    말합니다. 대표님이 정한 다섯 가지(사용 가능 / 예약 / 사용 중 /
+  //    반납 완료 / 반납 지연) 중 하나를 그대로 씁니다.
+  ok(flat(await p.locator('[data-truck-state]').textContent()) === '사용 가능', '사용할 수 있다고 알려 줌')
 
   const btn = await p.locator('[data-truck-toggle]').boundingBox()
   ok((btn?.height ?? 0) >= 44, '단추가 손가락 크기', `${Math.round(btn?.height ?? 0)}px`)
@@ -152,6 +155,41 @@ async function open(ver, { role = 'field', uid = ME, holds = [] } = {}) {
   await p.reload({ waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(2500)
   ok((await p.locator('[data-car-notice]').count()) === 0, '**다시 열어도 안 뜸**')
+  await ctx.close()
+}
+
+// ── ⑦ 반납 지연 — 지난 날짜에 남아 있는 예약 ───────────────────────────────
+//   ⚠ 예전에는 지난 날짜에서 단추를 통째로 숨겼습니다. 그래서 한 번 밀린
+//     예약은 **무를 방법이 화면에 아예 없었습니다** — 서버는 되는데 화면이
+//     길을 안 냈습니다. 여기가 그 자리입니다.
+{
+  const Y = new Date(Date.now() - 2 * 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  const holds = [{ id: 'r7', vehicle_id: V35, date: Y, profile_id: ME, note: '' }]
+  const { ctx, p, state } = await open(70, { holds })
+
+  //  오늘 화면에서도 「다른 날에 밀려 있다」를 알아야 합니다.
+  const list = p.locator('[data-truck-overdue-list]')
+  ok((await list.count()) === 1, '**오늘 화면에서도 밀린 날이 있다고 알려 줌**')
+  ok(/반납/.test(flat(await list.innerText())), '반납이라는 말이 적혀 있음', flat(await list.innerText()).slice(0, 40))
+
+  //  그 날짜를 누르면 그 날로 갑니다.
+  await p.locator(`[data-truck-overdue-day="${Y}"] button`).dispatchEvent('click')
+  await p.waitForTimeout(900)
+  ok(flat(await p.locator('[data-truck-state]').textContent()) === '반납 지연',
+    '**밀린 날에서는 「반납 지연」**')
+  ok((await p.locator('[data-truck-state][data-truck-overdue="yes"]').count()) === 1,
+    '강한 표시는 이 상태에만 붙음')
+
+  const btn = p.locator('[data-truck-toggle]')
+  ok((await btn.count()) === 1, '**밀린 예약도 여기서 놓을 수 있음**')
+  ok(/반납/.test(flat(await btn.textContent())), '단추에 「반납」이라고 적혀 있음', flat(await btn.textContent()))
+  await btn.dispatchEvent('click')
+  await p.waitForTimeout(1400)
+  const sent = state.calls.find(([k]) => k === 'release')
+  ok(!!sent, '반납이 서버로 감')
+  ok(sent?.[1]?.p_id === 'r7', '밀려 있던 그 예약을 놓음', String(sent?.[1]?.p_id))
+  ok(flat(await p.locator('[data-truck-state]').textContent()) === '반납 완료',
+    '놓고 나면 「반납 완료」')
   await ctx.close()
 }
 

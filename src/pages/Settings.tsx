@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
   ChevronDown,
@@ -29,7 +29,6 @@ import { useAuth } from '../context/AuthContext'
 import { ImportLocalCard } from '../components/AdminPanels'
 import { UserAdmin } from '../components/UserAdmin'
 import { VehicleManager } from '../components/VehicleManager'
-import { StockCard } from '../components/StockCard'
 import { PasswordCard } from '../components/PasswordCard'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
 import { SURVEY_TAKEN_ON, surveyBaselineFields } from '../lib/opsSurvey'
@@ -670,13 +669,26 @@ export function Settings() {
             </p>
           </SettingCard>
 
-          {/* 사무실 자재 재고 — 공급으로 줄기만 하던 것을 채울 수 있게 합니다 */}
+          {/*  사무실 자재 재고는 **자재 관리 화면으로 옮겼습니다** (0088).
+               ⚠ 대표님 정리: 「설정」은 한 번 정해 두고 잘 안 바꾸는 **구조**,
+                 재고·입고·조정·최근 변동은 **매일 보는 운영**입니다. 매일
+                 쓰는 것을 설정 안쪽에 두면 매번 설정을 열게 됩니다.
+               ⚠ 같은 화면을 두 자리에 두지 않습니다 — 두 자리에 있으면
+                 「어느 쪽이 진짜인가」가 생깁니다. 여기에는 **가는 길만** 둡니다.
+                 습관대로 설정을 여신 분이 길을 잃지 않게. */}
           <SettingCard
             icon={Package}
             title="사무실 자재 재고"
-            desc="지금 창고에 남은 수량입니다. 새로 들어온 만큼 적어 주세요."
+            desc="자재 관리 화면으로 옮겼습니다. 매일 보는 것이라 설정 안쪽에 두지 않았습니다."
           >
-            <StockCard />
+            <Link
+              data-stock-moved
+              to="/materials"
+              className="btn-ghost inline-flex"
+              style={{ minHeight: 48 }}
+            >
+              자재 관리 화면 열기
+            </Link>
           </SettingCard>
 
           {/*  차량 — 한 대도 없으면 수거 완료 입력이 불가능합니다.

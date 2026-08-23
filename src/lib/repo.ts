@@ -2422,6 +2422,91 @@ export async function releaseVehicle(id: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 0065 — 실사용 마감 세 가지
+//
+//  ⚠ 전부 서버 함수를 부릅니다. 화면이 여러 번 나눠 부르면 그 사이에 통신이
+//    끊겼을 때 반쪽만 남습니다. 「가져갔는데 기록이 없다」가 그런 식입니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+//  ⚠ 공용차량 사용·반납은 **여기에 새로 만들지 않았습니다.**
+//    0070 에 이미 예약·해제(vehicle_reservations · SharedTruck)가 있습니다.
+//    같은 것을 두 벌 만들면 「어느 쪽이 진짜인가」가 생기고, 그때부터
+//    현장과 사무실이 서로 다른 화면을 봅니다.
+
+export interface DayCloseSummary {
+  planned: number
+  done: number
+  left: number
+  kg: number
+  openVehicles: number
+}
+
+/**
+ *  오늘 업무 마감.
+ *
+ *  ⚠ 숫자는 **서버가 셉니다.** 기사님이 이미 넣은 것을 다시 입력하게 하면
+ *    그건 마감이 아니라 두 번째 보고입니다 — 없애려던 바로 그것입니다.
+ *  ⚠ 두 번 눌러도 한 번입니다(`already: true`).
+ */
+export async function closeDay(date: string, note = ''): Promise<{ already: boolean; summary: DayCloseSummary }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('close_day', { p_date: date, p_note: note })
+  if (error) throw new Error(error.message)
+  const d = (data ?? {}) as { already?: boolean; summary?: Partial<DayCloseSummary> }
+  const s = d.summary ?? {}
+  return {
+    already: Boolean(d.already),
+    summary: {
+      planned: Number(s.planned ?? 0), done: Number(s.done ?? 0), left: Number(s.left ?? 0),
+      kg: Number(s.kg ?? 0), openVehicles: Number(s.openVehicles ?? 0),
+    },
+  }
+}
+
+export interface DayClose {
+  profileId: string
+  /** 마감한 사람 이름 — **마감 순간에 서버가 얼려 둔 값**입니다.
+   *  현장 계정은 남의 프로필을 못 읽습니다(RLS). 여기 없으면 사무실 화면이
+   *  이름을 못 적거나, 적으려고 프로필 권한을 열어야 합니다. */
+  who: string
+  date: string
+  note: string
+  closedAt: string
+  summary: Partial<DayCloseSummary>
+}
+
+/** 그날의 마감 기록 (본인 것 + 사무실·관리자는 전원) */
+export async function dayCloses(date: string): Promise<DayClose[]> {
+  const sb = need()
+  const { data, error } = await sb
+    .from('day_closes')
+    .select('profile_id, profile_name, date, note, closed_at, summary')
+    .eq('date', date)
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => {
+    const x = r as Record<string, unknown>
+    return {
+      profileId: String(x.profile_id), who: String(x.profile_name ?? ''),
+      date: String(x.date), note: String(x.note ?? ''),
+      closedAt: String(x.closed_at), summary: (x.summary ?? {}) as Partial<DayCloseSummary>,
+    }
+  })
+}
+
+/** 수거 완료 취소 — **사유와 함께**. 되돌리는 일 자체는 기존 함수가 합니다. */
+export async function revertCollectionWithReason(eventId: string, reason: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('revert_collection_with_reason', {
+    p_event_id: eventId, p_reason: reason,
+  })
+  if (error) throw new Error(error.message)
+}
+
+//  ⚠ 이 값은 **앱이 돌아가기 위한 최소 판**입니다. 지금 실제 서버는 70 입니다
+//    (0066·0067·0070·0072 는 supabase/proposals/ 에 있고 대표님이 실행하셨습니다).
+//    새 기능은 이 값을 올려서 켜지 않습니다 — useSchemaAtLeast(n) 로 그 기능만
+//    가립니다. 이 값을 올리면 SQL 을 아직 안 돌린 순간 **앱 전체가 멎습니다.**
 export const EXPECTED_SCHEMA_VERSION = 64
 
 /**
