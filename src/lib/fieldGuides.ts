@@ -38,6 +38,17 @@ export interface GuideStep {
   tapToGo?: boolean
   /** 이 화면으로 바뀌면 저절로 다음 단계가 됩니다 */
   goesTo?: string
+  /**
+   * 열린 경로(`/clients/` 처럼 끝이 열린 것)일 때 **어디로 데려갈지** (0076).
+   *
+   *  ⚠ 예전에는 열린 경로면 아무 데도 안 갔습니다. 그래서 기사님이 안내를
+   *    「다음」으로만 넘기면, **거래처 목록 화면에 그대로 선 채로** 「주소와
+   *    전화번호가 여기 있습니다」를 읽게 됐습니다. 짚을 것이 없으니 테두리도
+   *    안 그려져서, 엉뚱한 데를 보며 설명만 흘렀습니다.
+   *
+   *   'firstClient'  맡은 거래처 중 첫 곳을 열어 줍니다.
+   */
+  land?: 'firstClient'
 }
 
 export interface FieldGuide {
@@ -151,6 +162,7 @@ export const FIELD_GUIDES: FieldGuide[] = [
       },
       {
         route: '/clients/',
+        land: 'firstClient',
         say: '주소와 전화번호가 여기 있습니다. 전화번호를 누르면 바로 걸립니다.',
       },
     ],

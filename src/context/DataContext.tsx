@@ -981,8 +981,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         //  곳에서 저장을 누르면 "수거 완료가 반영되었습니다" 화면이 뜨고 입력값이
         //  지워지는데, 실제로는 아무것도 저장되지 않았습니다. 기사는 저장된 줄
         //  알고 떠나고 그 수거는 사라집니다. 현장에서 가장 위험한 종류입니다.
+        let eventId: string | undefined
         const saved = await runLive(async () => {
-          await repo.completeCollection(input)
+          //  ⚠ 0076 — 서버가 준 기록 번호를 여기서 버리지 않습니다. 저장
+          //    **직후**가 실수를 알아채는 순간이고, 그때 지우려면 이 번호가
+          //    필요합니다. 예전에는 기사님이 오늘 일정으로 돌아가 그 줄을
+          //    다시 찾아야 했습니다.
+          const r = await repo.completeCollection(input)
+          eventId = r?.eventId
         })
         if (!saved.ok) {
           return {
@@ -991,7 +997,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             warnings: precheck.warnings,
           }
         }
-        return { ok: true, errors: [], warnings: precheck.warnings }
+        return { ok: true, errors: [], warnings: precheck.warnings, eventId }
       }
 
       // 시연 모드: 로컬에서 순수 함수로 처리하고 시연 기록으로 태깅합니다.

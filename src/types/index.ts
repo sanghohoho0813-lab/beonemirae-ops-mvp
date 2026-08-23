@@ -106,6 +106,12 @@ export interface ClientRequest {
   requesterName: string
   /** 비원미래 회신 — 병원 포털에 그대로 보입니다 */
   reply: string
+  /**
+   * 이 날짜까지 목록에서 내려 둠 (0076). 지나면 저절로 돌아옵니다.
+   *  ⚠ 「처리 완료」와 다릅니다 — 안 한 일을 했다고 적지 않습니다.
+   */
+  snoozedUntil?: string | null
+  snoozeReason?: string
   handledBy: string | null
   handledAt: string | null
   createdAt: string

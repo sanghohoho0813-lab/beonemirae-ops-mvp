@@ -420,6 +420,9 @@ export interface RequestItem {
   /** 수거 완료로 자동 종료된 건 */
   autoProcessed?: boolean
   processedAt?: string
+  /** 이 날짜까지 목록에서 내려 둠 (0076) */
+  snoozedUntil?: string | null
+  snoozeReason?: string
 }
 
 const whenOf = (iso: string) => {
@@ -447,12 +450,33 @@ export function clientRequests(data: AppData): RequestItem[] {
       desiredDate: r.desiredDate,
       autoProcessed: r.status === '처리 완료' && r.reply === '수거 완료로 처리되었습니다.',
       processedAt: r.handledAt ?? undefined,
+      snoozedUntil: r.snoozedUntil ?? null,
+      snoozeReason: r.snoozeReason ?? '',
     }))
 }
 
 /** 아직 처리되지 않은 요청 */
+/**
+ * 아직 남아 있는 요청.
+ *
+ *  ⚠ 0076 — **잠시 내려 둔 것**은 빼고 셉니다. 대표님 지적: 검증용 요청
+ *    2건이 몇 주째 떠 있었습니다. 늘 떠 있는 숫자는 곧 안 보게 됩니다.
+ *  ⚠ 내려 둔 것은 지운 것도, 처리한 것도 아닙니다. 기한이 지나면 저절로
+ *    이 목록으로 돌아옵니다.
+ */
 export function openRequests(data: AppData): RequestItem[] {
-  return clientRequests(data).filter((r) => r.status !== '처리 완료')
+  const t = today()
+  return clientRequests(data).filter(
+    (r) => r.status !== '처리 완료' && !(r.snoozedUntil && r.snoozedUntil > t),
+  )
+}
+
+/** 잠시 내려 둔 요청 — 「보류함」에서만 봅니다 */
+export function snoozedRequests(data: AppData): RequestItem[] {
+  const t = today()
+  return clientRequests(data).filter(
+    (r) => r.status !== '처리 완료' && !!r.snoozedUntil && r.snoozedUntil > t,
+  )
 }
 
 /** 특정 거래처의 요청사항 */

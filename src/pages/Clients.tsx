@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, ChevronRight, RotateCcw, SearchX } from 'lucide-react'
+import { Building2, ChevronRight, RotateCcw, Search, SearchX } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canSeeMoney } from '../lib/access'
@@ -23,6 +23,12 @@ import type { Client } from '../types'
 
 type Filter = '전체' | '실제' | '시연용' | '병원' | '요양병원' | '의원' | '기타'
 const FILTERS: Filter[] = ['전체', '실제', '시연용', '병원', '요양병원', '의원', '기타']
+
+//  ⚠ 0076 — 대표님: 「거래처관리에서 시연용 목차는 빼 주고」.
+//    운영 모드에는 시연 거래처가 아예 없습니다. 그런데도 「실제 / 시연용」
+//    칩이 떠 있으면, 눌러 보고 **아무것도 안 나오는 목록**을 보게 됩니다.
+//    시연 모드에서는 그대로 둡니다 — 거기서는 실제로 갈립니다.
+const LIVE_FILTERS: Filter[] = FILTERS.filter((f) => f !== '실제' && f !== '시연용')
 
 function matchFilter(c: Client, f: Filter): boolean {
   switch (f) {
@@ -165,11 +171,27 @@ export function Clients() {
       </div>
       )}
 
-      <input className="field-input mb-3" placeholder="거래처명 · 주소 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+      {/*  ⚠ 0076 — 대표님: 「거래처명, 주소검색 할 수 있는 칸 처음부터 커서
+           깜빡이게. 입력할 수 있는 공간이라는 게 보여야 해」.
+           ⚠ 폰에서는 **자동으로 커서를 두지 않습니다.** 키보드가 올라와
+             화면 절반을 덮어 버려, 목록을 보러 온 분이 매번 키보드를
+             닫아야 합니다. 대신 칸 자체를 눈에 띄게 만듭니다. */}
+      <label className="relative mb-3 block">
+        <Search size={18} strokeWidth={2.4} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-400" />
+        <input
+          data-client-search
+          autoFocus={typeof window !== 'undefined' && window.innerWidth >= 1024}
+          className="field-input !pl-11 ring-2 ring-teal-200 focus:ring-teal-500"
+          placeholder="거래처명 · 주소 검색"
+          aria-label="거래처명 · 주소 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
 
       {/* 필터 칩 (가로 스크롤) */}
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {FILTERS.map((f) => (
+        {(live ? LIVE_FILTERS : FILTERS).map((f) => (
           <FilterChip key={f} active={filter === f} onClick={() => setFilter(f)}>{f}</FilterChip>
         ))}
       </div>

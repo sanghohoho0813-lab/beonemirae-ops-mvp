@@ -167,7 +167,13 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
     <>
       <Modal
         open={eventId !== null}
-        title={mode2 === 'edit' ? '수거기록 수정' : mode2 === 'cancel' ? '수거기록 취소' : '수거기록'}
+        title={
+          mode2 === 'edit'
+            ? '수거기록 수정'
+            : mode2 === 'cancel'
+              ? staff ? '수거기록 취소' : '잘못 넣은 입력 지우기'
+              : '수거기록'
+        }
         onClose={onClose}
         footer={
           mode2 === 'cancel' ? (
@@ -182,7 +188,7 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                 onClick={() => void doRevert()}
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Undo2 size={17} strokeWidth={2.5} />}
-                기록 취소
+                {staff ? '기록 취소' : '지우기'}
               </button>
             </>
           ) : mode2 === 'edit' ? (
@@ -208,7 +214,12 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                   className="btn-ghost flex-1 !text-rose-600"
                   onClick={() => { setReason(''); setError(''); setMode2('cancel') }}
                 >
-                  <Undo2 size={17} strokeWidth={2.5} /> 기록 취소
+                  {/*  ⚠ 기사님에게는 「취소」보다 「지우기」가 실제로 하는 일에
+                       가깝게 읽힙니다(그분의 오늘 목록에서 사라집니다).
+                       사무실에는 「기록 취소」 그대로 — 돈이 함께 되돌아가는
+                       일이라 무게가 다릅니다. 아래 본문에 원본은 「취소됨」으로
+                       남는다고 적어 둡니다. */}
+                  <Undo2 size={17} strokeWidth={2.5} /> {staff ? '기록 취소' : '이 입력 지우기'}
                 </button>
               )}
               {canAmend ? (
@@ -271,8 +282,9 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                 <RevertReasonFields reason={reason} onChange={setReason} />
                 {!staff && (
                   <p className="t-caption break-keep leading-snug text-navy-500">
-                    취소한 뒤 <b className="text-navy-700">수거 입력에서 다시 넣으시면 됩니다.</b>{' '}
-                    자재와 재고도 함께 되돌아갑니다.
+                    지운 뒤 <b className="text-navy-700">수거 입력에서 다시 넣으시면 됩니다.</b>{' '}
+                    자재와 재고도 함께 되돌아갑니다. <b className="text-navy-700">본인이 넣으신 것만</b>{' '}
+                    지울 수 있습니다.
                   </p>
                 )}
               </div>

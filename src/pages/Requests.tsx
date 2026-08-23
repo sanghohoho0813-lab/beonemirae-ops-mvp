@@ -16,6 +16,8 @@ import {
   GraduationCap,
   Inbox,
   CalendarPlus,
+  Clock,
+  Undo2,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -27,6 +29,9 @@ import { BookVisitModal } from '../components/BookVisit'
 import { Modal } from '../components/Modal'
 import { clientRequests, type RequestItem } from '../lib/ops'
 import { customerServiceStats } from '../lib/portal'
+import { useSchemaAtLeast } from '../lib/schemaGate'
+import { snoozeRequest } from '../lib/repo'
+import { prettyDate, shiftDays, today } from '../lib/format'
 import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 
@@ -49,10 +54,10 @@ const KIND_ICON: Record<RequestKind, typeof Siren> = {
 
 const FLOW: RequestStatus[] = ['접수', '확인 중', '일정 반영', '처리 완료']
 
-type Filter = '진행 중' | '전체' | '병원 직접' | '긴급'
+type Filter = '진행 중' | '전체' | '병원 직접' | '긴급' | '내려 둔 것'
 
 export function Requests() {
-  const { data, handleRequest, addRequest } = useData()
+  const { data, handleRequest, addRequest, reload } = useData()
   //  ── 현장 담당자에게는 「연결되는 매출」을 안 적습니다 ────────────────────
   //
   //   이 화면은 현장 담당자도 엽니다 — 병원이 올린 요청을 보고 가야 하기
@@ -78,6 +83,13 @@ export function Requests() {
   const [replyTo, setReplyTo] = useState<RequestItem | null>(null)
   const [replyText, setReplyText] = useState('')
   const [newOpen, setNewOpen] = useState(false)
+  //  ── 요청 잠시 내려 두기 (0076) ────────────────────────────────────────
+  const canSnooze = useSchemaAtLeast(76) === true && (role === 'admin' || role === 'office') && mode === 'live'
+  const [snoozeFor, setSnoozeFor] = useState<RequestItem | null>(null)
+  const [snoozeDays, setSnoozeDays] = useState(30)
+  const [snoozeWhy, setSnoozeWhy] = useState('')
+  const [snoozeErr, setSnoozeErr] = useState('')
+  const [snoozeBusy, setSnoozeBusy] = useState(false)
   const [newError, setNewError] = useState<string | null>(null)
   //  한 번의 「접수」에 하나. 실패해도 바뀌지 않습니다 (0055).
   const [newRequestId, setNewRequestId] = useState(() => crypto.randomUUID())
@@ -88,12 +100,46 @@ export function Requests() {
   const all = useMemo(() => clientRequests(data), [data])
   const stats = useMemo(() => customerServiceStats(data), [data])
 
+  //  ⚠ 0076 — **잠시 내려 둔 것**은 「진행 중」에서 뺍니다. 대표님 지적:
+  //    검증용 요청 2건이 몇 주째 떠 있었습니다. 늘 떠 있는 숫자는 곧 안 보게
+  //    되고, 그러면 진짜 요청이 와도 눈에 안 들어옵니다.
+  //  ⚠ 지운 것도 처리한 것도 아닙니다 — 「내려 둔 것」에서 언제든 볼 수 있고,
+  //    기한이 지나면 저절로 돌아옵니다.
+  const t = today()
+  const isSnoozed = (r: RequestItem) => !!r.snoozedUntil && r.snoozedUntil > t
+  const snoozedCount = all.filter((r) => r.status !== '처리 완료' && isSnoozed(r)).length
+
   const rows = all.filter((r) => {
+    if (filter === '내려 둔 것') return r.status !== '처리 완료' && isSnoozed(r)
+    if (isSnoozed(r) && filter !== '전체') return false
     if (filter === '진행 중') return r.status !== '처리 완료'
     if (filter === '병원 직접') return r.source === 'portal'
     if (filter === '긴급') return r.urgent
     return true
   })
+
+  async function doSnooze() {
+    if (!snoozeFor) return
+    setSnoozeBusy(true)
+    setSnoozeErr('')
+    try {
+      await snoozeRequest(snoozeFor.id, shiftDays(snoozeDays), snoozeWhy.trim())
+      await reload()
+      setSnoozeFor(null)
+    } catch (e) {
+      setSnoozeErr(e instanceof Error ? e.message : '내려 두지 못했습니다.')
+    }
+    setSnoozeBusy(false)
+  }
+
+  async function unsnooze(id: string) {
+    try {
+      await snoozeRequest(id, null, '')
+      await reload()
+    } catch (e) {
+      setSnoozeErr(e instanceof Error ? e.message : '다시 꺼내지 못했습니다.')
+    }
+  }
 
   const submitReply = () => {
     if (!replyTo) return
@@ -151,9 +197,15 @@ export function Requests() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {(['진행 중', '전체', '병원 직접', '긴급'] as Filter[]).map((f) => (
+        {/*  ⚠ 「내려 둔 것」은 **있을 때만** 칩을 그립니다. 늘 있으면 그것도
+             또 하나의 늘 떠 있는 것이 됩니다. */}
+        {([
+          '진행 중', '전체', '병원 직접', '긴급',
+          ...(snoozedCount > 0 ? (['내려 둔 것'] as Filter[]) : []),
+        ] as Filter[]).map((f) => (
           <FilterChip key={f} active={filter === f} onClick={() => setFilter(f)}>
             {f}
+            {f === '내려 둔 것' && ` ${snoozedCount}`}
           </FilterChip>
         ))}
       </div>
@@ -191,6 +243,14 @@ export function Requests() {
                   {r.clientName}
                 </Link>
                 <span className={`pill ${TONE[REQUEST_TONE[r.type]].chip}`}>{REQUEST_KIND_LABEL[r.type]}</span>
+                {/*  ⚠ 내려 둔 것은 **왜·언제까지**를 그 자리에 적습니다.
+                     안 적으면 「전체」에서 보고 「이건 왜 안 뜨지」가 됩니다. */}
+                {isSnoozed(r) && (
+                  <span data-snoozed={r.id} className="pill bg-navy-100 text-navy-600">
+                    {prettyDate(r.snoozedUntil ?? '')}까지 내려 둠
+                    {r.snoozeReason ? ` · ${r.snoozeReason}` : ''}
+                  </span>
+                )}
                 {r.urgent && (
                   <span className="pill bg-rose-50 text-rose-600">
                     <AlertTriangle size={13} strokeWidth={2.6} /> 긴급
@@ -260,6 +320,28 @@ export function Requests() {
                   >
                     <CalendarPlus size={15} strokeWidth={2.5} /> 날짜 잡기
                   </button>
+                )}
+                {/*  ⚠ 0076 — 지금 못 하는 요청을 기한까지 내려 둡니다.
+                     지우지도, 「처리 완료」로 바꾸지도 않습니다 — 안 한 일을
+                     했다고 적는 것이 제일 나쁩니다. 기한이 지나면 돌아옵니다. */}
+                {canSnooze && r.status !== '처리 완료' && (
+                  isSnoozed(r) ? (
+                    <button
+                      data-unsnooze={r.id}
+                      onClick={() => void unsnooze(r.id)}
+                      className="t-btn flex items-center gap-1 rounded-full bg-amber-100 px-3.5 py-2 font-extrabold text-amber-800"
+                    >
+                      <Undo2 size={15} strokeWidth={2.5} /> 다시 꺼내기
+                    </button>
+                  ) : (
+                    <button
+                      data-snooze={r.id}
+                      onClick={() => { setSnoozeFor(r); setSnoozeDays(30); setSnoozeWhy(''); setSnoozeErr('') }}
+                      className="t-btn flex items-center gap-1 rounded-full bg-navy-50 px-3.5 py-2 font-extrabold text-navy-600"
+                    >
+                      <Clock size={15} strokeWidth={2.5} /> 나중에 보기
+                    </button>
+                  )
                 )}
                 <button
                   onClick={() => {
@@ -403,6 +485,87 @@ export function Requests() {
             />
           </div>
         </div>
+      </Modal>
+      {/*  ── 요청 잠시 내려 두기 (0076) ──────────────────────────────────
+           대표님: 「검증용 요청 2건이 몇 주째 떠 있는데 당분간 안 뜨게」.
+           ⚠ 반드시 **언제까지**를 받습니다. 기한 없는 숨김은 영원히 안 보이는
+             것과 같고, 그러면 진짜 잊힙니다. */}
+      <Modal
+        open={snoozeFor !== null}
+        title="이 요청 나중에 보기"
+        onClose={() => setSnoozeFor(null)}
+        footer={
+          <>
+            <button className="btn-ghost flex-1" onClick={() => setSnoozeFor(null)} disabled={snoozeBusy}>
+              닫기
+            </button>
+            <button
+              data-snooze-go
+              className="btn-primary flex-1 disabled:opacity-50"
+              disabled={snoozeBusy}
+              onClick={() => void doSnooze()}
+            >
+              <Clock size={17} strokeWidth={2.5} /> {shiftDays(snoozeDays)}까지 내려 두기
+            </button>
+          </>
+        }
+      >
+        {snoozeFor && (
+          <>
+            <p className="break-keep text-[1.12rem] font-extrabold text-navy-900">
+              {snoozeFor.clientName} · {snoozeFor.type}
+            </p>
+            <p className="t-body mt-1 break-keep leading-relaxed text-navy-600">
+              목록에서 잠시 내려 둡니다. <b className="text-navy-800">지우는 것도, 「처리 완료」로
+              바꾸는 것도 아닙니다</b> — 그 날짜가 지나면 저절로 다시 올라옵니다.
+            </p>
+
+            <div className="mt-4">
+              <label className="field-label">언제까지</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { d: 7, label: '1주일' },
+                  { d: 30, label: '1개월' },
+                  { d: 90, label: '3개월' },
+                  { d: 180, label: '6개월' },
+                ].map((o) => (
+                  <button
+                    key={o.d}
+                    type="button"
+                    data-snooze-days={o.d}
+                    onClick={() => setSnoozeDays(o.d)}
+                    className={`min-h-[3rem] flex-1 rounded-2xl px-3 text-[1.05rem] font-extrabold transition active:scale-[0.98] ${
+                      snoozeDays === o.d ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-700'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              <p data-snooze-until className="t-caption mt-1.5 tabular-nums text-navy-500">
+                {prettyDate(shiftDays(snoozeDays))}에 다시 올라옵니다.
+              </p>
+            </div>
+
+            <div className="mt-3">
+              <label className="field-label">왜 내려 두나요? (없으면 비워 두세요)</label>
+              <input
+                data-snooze-why
+                className="input"
+                maxLength={200}
+                value={snoozeWhy}
+                onChange={(e) => setSnoozeWhy(e.target.value)}
+                placeholder="예: 검증용 요청 — 테스트 끝나면 정리"
+              />
+            </div>
+
+            {snoozeErr && (
+              <p data-snooze-error className="t-body mt-3 break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-700">
+                {snoozeErr}
+              </p>
+            )}
+          </>
+        )}
       </Modal>
     </PageShell>
   )

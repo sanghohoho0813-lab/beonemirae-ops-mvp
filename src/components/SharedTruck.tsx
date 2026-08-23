@@ -16,9 +16,11 @@ import { useSchemaAtLeast } from '../lib/schemaGate'
 //  ⚠ **하루 한 사람**입니다. 시간까지 쪼개지 않습니다 — 겹침을 따지는 규칙이
 //    필요해지는데 현장에서 그렇게까지 정밀하게 쓰지 않습니다.
 //  ⚠ 병원에게 안 보이는 것은 **서버가** 합니다(RLS). 화면에서 거르지 않습니다.
-//  ⚠ 잡은 사람 **이름**은 서버가 안 줍니다 — 현장 계정은 남의 프로필을 못
-//    읽습니다. 그래서 「내가 잡음 / 다른 분이 잡음」으로만 적습니다.
-//    모르는 것을 아는 척하지 않습니다.
+//  ⚠ 잡은 사람 **이름**은 0076 부터 나옵니다. 예약하는 순간 서버가 그 줄에
+//    적어 둔 값입니다 — 화면이 프로필을 다시 읽지 않습니다. 그 권한을 열면
+//    기사님이 남의 개인정보를 전부 읽게 됩니다.
+//    판 75 이하 서버에서는 이름이 빈 값으로 오므로 예전처럼 「다른 분이
+//    씁니다」로만 적습니다. 모르는 것을 아는 척하지 않습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 이름에 톤수가 들어간 공용차를 찾습니다 (3.5톤) */
@@ -48,6 +50,9 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
 
   const isPast = date < today()
   const isMine = held?.profileId === mine
+  //  ⚠ 0076 — 누가 잡았는지. 대표님: 「예약 누르면 누가 눌렀는지도 같이 뜨게」.
+  //    예전에는 「다른 분이 씁니다」뿐이라, 급하면 결국 전화를 걸어야 했습니다.
+  const who = (held?.who ?? '').trim()
 
   //  ── 반납 지연 (0088) ──────────────────────────────────────────────────
   //   예약을 무르는 것이 곧 반납입니다(줄이 지워집니다). 그러니 **지난
@@ -96,10 +101,14 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
               : date === today()
                 ? isMine
                   ? '내가 씁니다'
-                  : '다른 분이 씁니다'
+                  : who
+                    ? `${who} 님이 씁니다`
+                    : '다른 분이 씁니다'
                 : isMine
                   ? '내가 예약함'
-                  : '다른 분 예약'
+                  : who
+                    ? `${who} 님 예약`
+                    : '다른 분 예약'
             : isPast
               ? '반납 완료'
               : '사용 가능'}
@@ -109,6 +118,15 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
       <p className="mt-1.5 break-keep text-[1.02rem] text-navy-500">
         {prettyDate(date)} · 본사 앞에 있습니다
       </p>
+      {/*  ⚠ 딱지에만 이름을 넣으면 폰에서 잘립니다. 한 줄로 다시 적습니다.
+           ⚠ 이름이 없는 옛 예약(판 75 이전)에는 이 줄을 안 그립니다 —
+             「알 수 없음」이라고 적으면 고장으로 보입니다. */}
+      {held && who && (
+        <p data-truck-who className="mt-1 break-keep text-[1.08rem] font-extrabold text-navy-800">
+          {isMine ? `${who} 님(나)이 잡으셨습니다` : `${who} 님이 잡으셨습니다`}
+          {held.note ? <span className="font-bold text-navy-500"> · {held.note}</span> : null}
+        </p>
+      )}
 
       {error && (
         <p data-truck-error className="mt-3 flex items-start gap-2 break-keep rounded-2xl bg-rose-50 px-4 py-3 text-[1.02rem] font-bold text-rose-700">
@@ -146,9 +164,7 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
         <p className="mt-3 text-[1.02rem] text-navy-500">지난 날짜는 예약할 수 없습니다.</p>
       )}
 
-      {/*  다른 날에 밀려 있는 것 — 오늘 화면을 보고 있어도 알아야 합니다.
-           ⚠ 「누가」는 안 적습니다. 서버가 이름을 안 줍니다(현장 계정은 남의
-             프로필을 못 읽습니다) — 모르는 것을 지어내지 않습니다. */}
+      {/*  다른 날에 밀려 있는 것 — 오늘 화면을 보고 있어도 알아야 합니다. */}
       {overdue.length > 0 && !(held && isPast) && (
         <div data-truck-overdue-list className="mt-3 rounded-2xl bg-rose-50 px-4 py-3">
           <p className="flex items-start gap-2 break-keep text-[1.05rem] font-extrabold text-rose-700">
@@ -163,6 +179,7 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
                   className="text-[1.02rem] font-bold text-rose-700 underline underline-offset-4"
                 >
                   {prettyDate(r.date)}
+                  {r.who ? ` · ${r.who} 님` : ''}
                 </button>
               </li>
             ))}

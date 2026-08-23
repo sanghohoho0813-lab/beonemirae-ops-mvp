@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useData } from '../context/DataContext'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { guideById, openGuide, PICK, type FieldGuide as Guide } from '../lib/fieldGuides'
 import { FieldGuidePicker } from './FieldGuidePicker'
@@ -56,6 +57,9 @@ export function FieldGuide({
   const guide: Guide | null = guideId && !picking ? guideById(guideId) : null
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  //  ⚠ 열린 경로(`/clients/`)에서 **어디로 데려갈지** 정하려면 거래처가
+  //    필요합니다 (0076).
+  const { data } = useData()
   const [i, setI] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
   //  안내를 시작한 자리 — 끝나면 여기로 돌려보냅니다
@@ -73,14 +77,31 @@ export function FieldGuide({
   }, [guideId])
 
   //  그 단계의 화면으로 옮깁니다. 이미 그 화면이면 아무 일도 안 합니다.
+  //
+  //  ⚠ 0076 — 예전에는 **열린 경로면 아무 데도 안 갔습니다.**
+  //    `if (!okHere && !step.route.endsWith('/')) navigate(...)`
+  //    그래서 기사님이 「다음」으로만 넘기면 거래처 목록에 선 채로
+  //    「주소와 전화번호가 여기 있습니다」를 읽게 됐습니다. 짚을 것이 없으니
+  //    테두리도 없어서, **엉뚱한 데를 보며 설명만 흘렀습니다.**
+  //    이제 열린 경로에도 데려갈 곳(land)을 정해 두고 실제로 옮깁니다.
   useEffect(() => {
     if (!step) return
     //  '/clients/' 처럼 끝이 열린 경로는 「그 아래 어디든」이라는 뜻입니다.
     const okHere = step.route.endsWith('/')
       ? pathname.startsWith(step.route)
       : pathname === step.route
-    if (!okHere && !step.route.endsWith('/')) navigate(step.route)
-  }, [step, pathname, navigate])
+    if (okHere) return
+    if (!step.route.endsWith('/')) {
+      navigate(step.route)
+      return
+    }
+    if (step.land === 'firstClient') {
+      //  ⚠ 거래처가 아직 안 왔으면(서버에서 오는 중) 옮기지 않습니다.
+      //    다음 렌더에 다시 옵니다 — 없는 곳으로 데려가지 않습니다.
+      const first = data.clients[0]
+      if (first) navigate(`/clients/${first.id}`)
+    }
+  }, [step, pathname, navigate, data.clients])
 
   //  ── 짚을 곳 찾기 ────────────────────────────────────────────────────────
   //   ⚠ 화면이 막 바뀐 직후에는 아직 그려지지 않았을 수 있습니다. 몇 번
@@ -313,6 +334,16 @@ export function FieldGuide({
         <p data-guide-say className="break-keep text-[1.22rem] font-bold leading-snug text-navy-900">
           {step.say}
         </p>
+
+        {/*  ⚠ 0076 — 짚어야 할 것이 있는데 **못 찾았을 때** 솔직히 말합니다.
+             예전에는 아무 말 없이 설명만 흘러서, 기사님이 화면에서 그것을
+             찾다가 「이 안내는 엉뚱한 데를 보고 있다」고 느꼈습니다.
+             (그게 정확한 관찰이었습니다.) */}
+        {step.at && !rect && (
+          <p data-guide-nospot className="mt-1.5 break-keep text-[1.02rem] font-bold text-amber-700">
+            지금 화면에는 이 자리가 없습니다 — 다음으로 넘어가셔도 됩니다.
+          </p>
+        )}
 
         <div className="mt-4 flex items-center gap-2">
           <button

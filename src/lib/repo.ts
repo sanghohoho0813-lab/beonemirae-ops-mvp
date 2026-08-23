@@ -339,6 +339,8 @@ const toRequest = (r: Row): ClientRequest => ({
   source: r.source ?? 'portal',
   requesterName: r.requester_name ?? '',
   reply: r.reply ?? '',
+  snoozedUntil: (r as { snoozed_until?: string | null }).snoozed_until ?? null,
+  snoozeReason: (r as { snooze_reason?: string }).snooze_reason ?? '',
   handledBy: r.handled_by ?? null,
   handledAt: r.handled_at ?? null,
   createdAt: r.created_at,
@@ -556,7 +558,7 @@ export async function loadAppData(): Promise<AppData> {
   const reservations = await soft(
     async () =>
       pageAll((f, t) =>
-        sb.from('vehicle_reservations').select('id, vehicle_id, date, profile_id, note').order('date').range(f, t)),
+        sb.from('vehicle_reservations').select('id, vehicle_id, date, profile_id, profile_name, note').order('date').range(f, t)),
     [] as Row[],
   )
 
@@ -694,15 +696,15 @@ export async function loadAppData(): Promise<AppData> {
     retiredClients: applyTerms(clients.filter((c) => !c.active).map(toClient), billingTerms),
     vehicles: vehicles.filter((v) => v.active).map(toVehicle),
     retiredVehicles: vehicles.filter((v) => !v.active).map(toVehicle),
-    //  ⚠ 잡은 사람 **이름**은 여기서 못 붙입니다 — 현장 계정은 남의 프로필을
-    //    못 읽습니다. 화면에서 「내 예약 / 다른 분 예약」으로만 가릅니다.
-    //    이름을 지어내지 않습니다.
+    //  ⚠ 이름은 **예약하는 순간 서버가 그 줄에 적어 둔 값**입니다 (0076).
+    //    여기서 프로필을 다시 읽지 않습니다 — 그 권한을 열면 기사님이 남의
+    //    개인정보를 전부 읽게 됩니다. 판 75 이하에는 빈 문자열로 옵니다.
     vehicleReservations: reservations.map((r) => ({
       id: String(r.id),
       vehicleId: String(r.vehicle_id),
       date: String(r.date),
       profileId: String(r.profile_id),
-      who: '',
+      who: String(r.profile_name ?? ''),
       note: String(r.note ?? ''),
     })),
     receipts: receipts.map(
@@ -2140,6 +2142,18 @@ export async function correctStock(
 export async function revertCollection(eventId: string): Promise<void> {
   const sb = need()
   const { error } = await sb.rpc('revert_collection', { p_event_id: eventId })
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * 요청을 기한까지 내려 두기 (0076). `until` 이 null 이면 다시 꺼냅니다.
+ *
+ *  ⚠ 지우지도, 「처리 완료」로 바꾸지도 않습니다. 상태는 그대로 두고
+ *    목록에서만 잠시 내려 둡니다 — 안 한 일을 했다고 적지 않습니다.
+ */
+export async function snoozeRequest(id: string, until: string | null, reason = ''): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('snooze_request', { p_id: id, p_until: until, p_reason: reason })
   if (error) throw new Error(error.message)
 }
 

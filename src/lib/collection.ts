@@ -103,6 +103,12 @@ export interface CommandResult {
   ok: boolean
   data?: AppData
   event?: CollectionEvent
+  /**
+   * 방금 저장된 수거 기록 번호 (0076).
+   *  ⚠ 저장 직후가 실수를 알아채는 순간입니다. 그때 지우려면 이 번호가
+   *    필요한데, 예전에는 서버가 준 값을 여기서 버렸습니다.
+   */
+  eventId?: string
   errors: string[] // 처리 차단 사유
   warnings: string[] // 진행은 가능하나 확인 권장
 }

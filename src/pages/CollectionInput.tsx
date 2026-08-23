@@ -12,6 +12,8 @@ import {
   ArrowRight,
   CalendarPlus,
   ChevronDown,
+  Undo2,
+  ChevronUp,
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
 import { addDays } from '../lib/performance'
@@ -22,7 +24,7 @@ import { canAccess } from '../lib/access'
 import { NoteChips } from '../components/SiteNotes'
 import { SUPPLY_ITEMS, stockDeltaOf, itemsOf, type ItemCounts, type ItemKey } from '../lib/billing'
 import { PageHeader } from '../components/PageHeader'
-import { RevertReasonModal } from '../components/RevertReason'
+import { CollectionRecord } from '../components/CollectionRecord'
 import { BookVisitModal } from '../components/BookVisit'
 import { QtyField } from '../components/ui'
 import { TimeField } from '../components/TimeField'
@@ -78,6 +80,14 @@ type Fold = {
   /** 펼쳐져 있는가 — 부모가 「기본값과 다르면 true」로 계산해서 넘깁니다 */
   open: boolean
   onOpen: () => void
+  /**
+   * 다시 접기 (0076).
+   *  ⚠ 예전에는 **한 번 펴면 못 접었습니다.** 대표님 지적: 「5번 특이사항 ~
+   *    7번 주고 온 자재까지 펼쳤다가 다시 접을 수 있게」. 값이 들어 있어
+   *    저절로 펴진 칸은 접어도 다시 펴집니다 — 그건 접는 게 아니라
+   *    **저장될 값을 숨기는 것**이라 그렇게 두지 않습니다.
+   */
+  onFold?: () => void
   /** 접힌 줄 오른쪽에 지금 값을 적습니다 — 열지 않아도 무엇으로 저장되는지 보이게 */
   summary: React.ReactNode
   id: string
@@ -130,11 +140,23 @@ function Section({
           <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
             {n}
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="text-[1.15rem] font-extrabold text-navy-900">{title}</h2>
             {/*  ⚠ 0069 — 설명 줄 색을 기준(4.5:1) 위로 올립니다 */}
             {desc && <p className="mt-0.5 text-[0.98rem] text-navy-500">{desc}</p>}
           </div>
+          {/*  다시 접기 (0076) — 폰에서만. 넓은 화면은 원래 다 펴져 있습니다. */}
+          {fold?.onFold && !folded && (
+            <button
+              type="button"
+              data-fold-close={fold.id}
+              onClick={fold.onFold}
+              aria-label={`${title} 접기`}
+              className="-mr-1 -mt-1 flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl text-navy-400 transition active:scale-95 sm:hidden"
+            >
+              <ChevronUp size={20} strokeWidth={2.6} />
+            </button>
+          )}
         </div>
         {children}
       </div>
@@ -187,7 +209,9 @@ export function CollectionInput() {
   const [dupNotice, setDupNotice] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
-  const [success, setSuccess] = useState<null | { client: string; amount: number; supplied: number; created: boolean }>(
+  //  방금 넣은 것을 그 자리에서 지우기 (0076)
+  const [undoId, setUndoId] = useState<string | null>(null)
+  const [success, setSuccess] = useState<null | { client: string; amount: number; supplied: number; created: boolean; eventId?: string }>(
     null,
   )
 
@@ -383,10 +407,21 @@ export function CollectionInput() {
   //   ⚠ open 계산에 **값 조건**을 함께 넣습니다. 그래야 넣어 둔 값이 접힌 채로
   //     숨지 않습니다 — 접기는 보여 주기일 뿐, 저장은 그대로 됩니다.
   const [openTime, setOpenTime] = useState(false)
-  const [openContainers, setOpenContainers] = useState(false)
-  const [openSupply, setOpenSupply] = useState(false)
-  const [openHandover, setOpenHandover] = useState(false)
-  const [openMemo, setOpenMemo] = useState(false)
+  //  ── 접었다 폈다 (0076) ────────────────────────────────────────────────
+  //
+  //   ⚠ 예전에는 `false` 하나였습니다 — **펴기만 되고 접기는 안 됐습니다.**
+  //     게다가 「값이 들어 있으면 자동으로 편다」와 섞여 있어, 접어도 값이
+  //     있으면 곧바로 다시 펴졌습니다.
+  //   세 가지 상태로 둡니다:
+  //     null   아직 사람이 안 건드림 → 값이 있으면 펴짐 (예전 그대로)
+  //     true   사람이 폈음
+  //     false  사람이 접었음 → **값이 있어도 접힌 채**
+  //   ⚠ 접혀 있어도 저장될 값은 접힌 줄에 그대로 적습니다(summary).
+  //     안 적으면 그건 접는 게 아니라 숨기는 것입니다.
+  const [openContainers, setOpenContainers] = useState<boolean | null>(null)
+  const [openSupply, setOpenSupply] = useState<boolean | null>(null)
+  const [openHandover, setOpenHandover] = useState<boolean | null>(null)
+  const [openMemo, setOpenMemo] = useState<boolean | null>(null)
   const [openRecent, setOpenRecent] = useState(false)
 
   //  ── 단계 번호는 **그려진 순서대로** 매깁니다 (0067) ──────────────────────
@@ -505,6 +540,9 @@ export function CollectionInput() {
       amount: Number(amount) || 0,
       supplied: suppliedSum,
       created: !scheduleId,
+      //  ⚠ 0076 — 저장 **직후**가 실수를 알아채는 순간입니다. 그때 바로
+      //    지울 수 있게 기록 번호를 들고 있습니다.
+      eventId: result.eventId,
     })
     // 폼 초기화
     setScheduleId('')
@@ -527,10 +565,12 @@ export function CollectionInput() {
 
   //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
   const timeOpen = openTime || visitDate !== today()
-  const containersOpen = openContainers || containerSum > 0
-  const supplyOpen = openSupply || suppliedSum > 0 || overStock
-  const handoverOpen = openHandover || handover !== '수거 완료'
-  const memoOpen = openMemo || memo.trim().length > 0
+  const containersOpen = openContainers ?? containerSum > 0
+  //  ⚠ 재고를 넘겼을 때는 **접히지 않습니다.** 접으면 빨간 경고가 사라져
+  //    무엇이 잘못됐는지 못 봅니다.
+  const supplyOpen = overStock || (openSupply ?? suppliedSum > 0)
+  const handoverOpen = openHandover ?? handover !== '수거 완료'
+  const memoOpen = openMemo ?? memo.trim().length > 0
 
   const recentEvents = data.events.slice(0, 4)
 
@@ -637,7 +677,29 @@ export function CollectionInput() {
               </Link>
             )}
           </div>
-          <button className="mt-3 text-[1.08rem] font-bold text-navy-500" onClick={() => setSuccess(null)}>
+          {/*  ⚠ 0076 — 대표님: 「수거입력 실수로 시작했다가 지우는 게 없네.
+               기사도 그냥 지울 수 있게 해줘야 해. 단 본인이 올린 것에 한해서.
+               이게 처음엔 실수가 많을 거란 말이야.」
+               ⚠ 남의 것은 서버가 막습니다 — 「본인이 입력한 수거만 취소할 수
+                 있습니다」라고 대답합니다. 화면에서 지어내 막지 않습니다. */}
+          {success.eventId && (
+            <button
+              data-undo-just-saved
+              onClick={() => setUndoId(success.eventId ?? null)}
+              className="mt-3 inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-2xl px-3 text-[1.08rem] font-bold text-rose-600 transition active:scale-95"
+            >
+              <Undo2 size={17} strokeWidth={2.5} /> 방금 넣은 것 지우기
+            </button>
+          )}
+          <CollectionRecord
+            eventId={undoId}
+            onClose={() => {
+              setUndoId(null)
+              //  지웠으면 「반영되었습니다」 화면을 그대로 둘 수 없습니다.
+              if (!data.events.find((e) => e.id === success.eventId && !e.reverted)) setSuccess(null)
+            }}
+          />
+          <button className="mt-3 block w-full text-[1.08rem] font-bold text-navy-500" onClick={() => setSuccess(null)}>
             + 직접 골라서 입력
           </button>
         </motion.div>
@@ -1044,6 +1106,7 @@ export function CollectionInput() {
           fold={{
             open: handoverOpen,
             onOpen: () => setOpenHandover(true),
+            onFold: () => setOpenHandover(false),
             summary: handover,
             id: 'handover',
           }}
@@ -1070,7 +1133,9 @@ export function CollectionInput() {
           fold={{
             open: memoOpen,
             onOpen: () => setOpenMemo(true),
-            summary: '없음',
+            onFold: () => setOpenMemo(false),
+            //  ⚠ 접혀 있어도 **저장될 값**을 적습니다 — 접는 것과 숨기는 것은 다릅니다.
+            summary: memo.trim() ? `적었습니다 (${memo.trim().length}자)` : '없음',
             id: 'memo',
           }}
         >
@@ -1099,7 +1164,8 @@ export function CollectionInput() {
           fold={{
             open: containersOpen,
             onOpen: () => setOpenContainers(true),
-            summary: '가져온 용기 없음',
+            onFold: () => setOpenContainers(false),
+            summary: containerSum > 0 ? `${containerSum}개 가져옴` : '가져온 용기 없음',
             id: 'containers',
           }}
         >
@@ -1125,7 +1191,8 @@ export function CollectionInput() {
           fold={{
             open: supplyOpen,
             onOpen: () => setOpenSupply(true),
-            summary: '드린 자재 없음',
+            onFold: overStock ? undefined : () => setOpenSupply(false),
+            summary: suppliedSum > 0 ? `${suppliedSum}점 드림` : '드린 자재 없음',
             id: 'supply',
           }}
         >
@@ -1553,15 +1620,10 @@ export function CollectionInput() {
            글자를 화면에 두는 것은 자리만 차지합니다. 기준선(4.5:1)을 넘깁니다. */}
       <p className="mt-6 text-center text-[0.98rem] text-navy-500">{prettyDate(today())} 기준</p>
 
-      {/*  완료 취소 — **사유를 함께 받습니다** (0088).
-           ⚠ 모달 자체가 화면 두 곳(여기·수거이력)에서 같아야 합니다.
-             두 벌로 두면 한쪽만 고쳐지고, 그때부터 같은 일에 다른 규칙이
-             적용됩니다. 그래서 공용 부품 하나만 씁니다. */}
-      <RevertReasonModal
-        eventId={confirmRevert}
-        onClose={() => setConfirmRevert(null)}
-        onDone={(r) => { if (!r.ok) setErrors(r.errors) }}
-      />
+      {/*  완료 취소 — 수거이력·오늘 일정과 **같은 상세 시트**를 씁니다 (0076).
+           예전에는 여기만 사유 창을 따로 띄웠습니다. 두 벌이면 한쪽만
+           고쳐지고, 그때부터 같은 일에 다른 규칙이 적용됩니다. */}
+      <CollectionRecord eventId={confirmRevert} onClose={() => setConfirmRevert(null)} />
     </div>
   )
 }
