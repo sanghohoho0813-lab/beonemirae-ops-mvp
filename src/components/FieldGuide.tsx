@@ -43,6 +43,35 @@ function anchor(at: string): Element | null {
   return null
 }
 
+/** 눈에 실제로 보이는가 — 자리를 차지하지 않으면 없는 것으로 봅니다 */
+function shown(sel: string): boolean {
+  for (const el of document.querySelectorAll(sel)) {
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) return true
+  }
+  return false
+}
+
+/**
+ * 접혀 있으면 펴 줍니다 (0078).
+ *
+ *  ⚠ 이미 펴져 있으면 **누르지 않습니다.** 누르면 도로 접힙니다 —
+ *    안내가 화면을 닫아 버리는 것만큼 이상한 것이 없습니다.
+ *  ⚠ 눌러야 할 것이 화면에 없으면 조용히 넘어갑니다. 억지로 만들지 않습니다.
+ */
+function prepareStep(p?: { tap: string; until: string }): boolean {
+  if (!p) return false
+  if (shown(p.until)) return false
+  for (const el of document.querySelectorAll(p.tap)) {
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) {
+      ;(el as HTMLElement).click()
+      return true
+    }
+  }
+  return false
+}
+
 export function FieldGuide({
   guideId,
   onClose,
@@ -62,6 +91,10 @@ export function FieldGuide({
   const { data } = useData()
   const [i, setI] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  //  ⚠ 대신 짚은 것이면 문장도 그에 맞게 바꿉니다 (0078) — 「오늘 갈
+  //    병원이 시간 순서로 나옵니다」라고 하면서 「없어요」 카드를
+  //    감싸고 있으면 그게 더 이상합니다.
+  const [onAlt, setOnAlt] = useState(false)
   //  안내를 시작한 자리 — 끝나면 여기로 돌려보냅니다
   const cameFrom = useRef<string>(pathname)
 
@@ -109,12 +142,34 @@ export function FieldGuide({
   //     가리키며 설명하면 기사님이 화면에서 그것을 찾다가 포기합니다.
   const findTarget = useCallback(() => {
     if (!step?.at) return null
-    const el = anchor(step.at)
+    //  ⚠ 원래 짚을 것이 없으면 **대신 짚을 것**을 봅니다 (0078).
+    //    오늘 갈 곳이 없는 날에는 목록 자체가 없습니다 — 그때는 그 자리에
+    //    실제로 있는 「없어요」 카드를 짚고 문장도 바꿉니다.
+    const el = anchor(step.at) ?? (step.alt ? anchor(step.alt) : null)
     if (!el) return null
     const r = el.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) return null
-    return { el, r }
+    return { el, r, isAlt: el.getAttribute('data-guide') !== step.at }
   }, [step])
+
+  //  ⚠ 짚기 **전에** 폅니다 (0078). 순서가 중요합니다 — 펴기 전에 재면
+  //    아직 없으므로 「이 자리가 없습니다」가 뜹니다.
+  useEffect(() => {
+    if (!guide || !step?.prepare) return
+    let alive = true
+    let tries = 0
+    const open = () => {
+      if (!alive) return
+      if (prepareStep(step.prepare)) return
+      //  눌러야 할 것이 아직 안 그려졌을 수 있습니다 — 잠깐 기다립니다.
+      if (shown(step.prepare!.until)) return
+      tries += 1
+      if (tries > 20) return
+      window.setTimeout(open, 60)
+    }
+    open()
+    return () => { alive = false }
+  }, [guide, step, i])
 
   useEffect(() => {
     if (!guide || !step) return
@@ -145,12 +200,13 @@ export function FieldGuide({
             if (Math.abs(now.top - lastTop) < 0.5) same += 1
             else same = 0
             lastTop = now.top
-            if (same >= 2) { setRect(now); return }
+            if (same >= 2) { setRect(now); setOnAlt(hit.isAlt); return }
             window.requestAnimationFrame(settle)
           }
           window.requestAnimationFrame(settle)
         } else {
           setRect(r)
+          setOnAlt(hit.isAlt)
         }
         return
       }
@@ -198,12 +254,23 @@ export function FieldGuide({
     //    짚을 것이 **안내 띠 뒤로 숨어** 버립니다. 그러면 테두리는 맞는데
     //    가려져서 누를 수가 없습니다 — 실제로 그 상태였습니다.
     //    숨었으면 **다시 끌어올립니다.**
+    //  ⚠ 0078 — 여기에 **떨림**이 있었습니다. 짚을 것이 띠보다 크면
+    //    가운데로 굴려도 아래가 여전히 띠에 걸립니다. 그러면 매 30ms 마다
+    //    다시 굴려서, 대표님 눈에는 뒤 화면이 계속 흔들리는 것으로 보입니다.
+    //    그래서 ① 띠보다 큰 것은 굴리지 않고(어차피 다 못 담습니다)
+    //         ② 한 번 굴린 뒤에는 400ms 동안 다시 굴리지 않습니다.
+    let lastScroll = 0
     const keepVisible = () => {
       const hit = findTarget()
       if (!hit) return
       const bar = document.querySelector('[data-guide-bar]')
       const barTop = bar ? bar.getBoundingClientRect().top : window.innerHeight
+      const room = barTop - 12 - 8
+      if (hit.r.height > room) return
       if (hit.r.top < 8 || hit.r.bottom > barTop - 12) {
+        const now = Date.now()
+        if (now - lastScroll < 400) return
+        lastScroll = now
         hit.el.scrollIntoView({ block: 'center', behavior: 'auto' })
       }
     }
@@ -332,7 +399,7 @@ export function FieldGuide({
 
         {/*  한 문장. 큰 글자. */}
         <p data-guide-say className="break-keep text-[1.22rem] font-bold leading-snug text-navy-900">
-          {step.say}
+          {onAlt && step.altSay ? step.altSay : step.say}
         </p>
 
         {/*  ⚠ 0076 — 짚어야 할 것이 있는데 **못 찾았을 때** 솔직히 말합니다.

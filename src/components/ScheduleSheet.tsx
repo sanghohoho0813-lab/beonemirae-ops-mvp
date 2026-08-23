@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertCircle, CalendarX2, Clock, Loader2, MapPin, Phone, UserRound } from 'lucide-react'
+import { AlertCircle, CalendarX2, Clock, Loader2, MapPin, MessageSquare, Phone, Send, UserRound } from 'lucide-react'
 import { Modal } from './Modal'
 import { TimeField } from './TimeField'
 import { useData } from '../context/DataContext'
@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { useSchemaAtLeast } from '../lib/schemaGate'
 import { cancelMyVisit, retimeMyVisit } from '../lib/repo'
 import { prettyDate, weight } from '../lib/format'
+import { FEEDBACK_KINDS, type FeedbackKind } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 일정 상세 — 「이 일정 누가 넣었지?」에 답하고, 본인 것은 여기서 정리합니다
@@ -48,13 +49,19 @@ export function ScheduleSheet({
    */
   onOpenRecord?: (eventId: string) => void
 }) {
-  const { data, clientById, reload } = useData()
+  const { data, clientById, reload, submitScheduleFeedback } = useData()
   const { profile, role, mode } = useAuth()
   const ready = useSchemaAtLeast(77) === true
 
-  const [step, setStep] = useState<'view' | 'cancel' | 'retime'>('view')
+  const [step, setStep] = useState<'view' | 'cancel' | 'retime' | 'say'>('view')
   const [reason, setReason] = useState('')
   const [time, setTime] = useState('')
+  //  사무실에 알리기 (0062 의 「현장 의견」을 그대로 씁니다 — 새로 만들지
+  //  않습니다). 한 번의 보내기에 하나입니다.
+  const [sayKind, setSayKind] = useState<FeedbackKind>('일정변경')
+  const [sayBody, setSayBody] = useState('')
+  const [saySent, setSaySent] = useState(false)
+  const [reqId, setReqId] = useState(() => crypto.randomUUID())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -68,6 +75,8 @@ export function ScheduleSheet({
     setStep('view')
     setError('')
     setReason('')
+    setSayBody('')
+    setSaySent(false)
     setTime(s?.scheduledTime ?? '')
   }, [scheduleId, s?.scheduledTime])
 
@@ -81,6 +90,9 @@ export function ScheduleSheet({
   //  ⚠ 「고칠 수 있나」의 최종 판단은 서버입니다. 화면은 **눌러도 안 되는
   //    단추를 만들지 않으려고** 같은 조건을 한 번 더 볼 뿐입니다.
   const canTouch = ready && mode === 'live' && !done && !linked && !canceled && (staff || mine)
+  //  ⚠ 못 고치는 일정이라도 **할 수 있는 것**은 남깁니다 — 사무실에 알리기.
+  //    이미 끝난 일정·무른 일정은 알릴 것이 없으므로 뺍니다.
+  const canSay = !canTouch && mode === 'live' && role === 'field' && !done && !linked && !canceled
 
   async function doCancel() {
     if (!s || reason.trim().length === 0) return
@@ -108,12 +120,33 @@ export function ScheduleSheet({
     setBusy(false)
   }
 
+  //  ⚠ 새 기능이 아닙니다 — 0062 의 「현장 의견」을 여기서도 부를 뿐입니다.
+  //    막다른 길을 없애는 것이 목적입니다: 「사무실에 말씀해 주세요」라고만
+  //    하면 결국 전화이고, 전화는 기록이 안 남습니다.
+  async function doSay() {
+    if (!s || sayBody.trim().length === 0) return
+    setBusy(true); setError('')
+    const r = await submitScheduleFeedback({
+      scheduleId: s.id, kind: sayKind, body: sayBody.trim(), requestId: reqId,
+    })
+    setBusy(false)
+    if (!r.ok) { setError(r.error ?? '보내지 못했습니다.'); return }
+    setReqId(crypto.randomUUID())
+    setSayBody('')
+    setSaySent(true)
+  }
+
   const via = s?.createdVia || '알 수 없음'
 
   return (
     <Modal
       open={scheduleId !== null}
-      title={step === 'cancel' ? '이 방문 안 가기' : step === 'retime' ? '시간 바꾸기' : '일정'}
+      title={
+        step === 'cancel' ? '이 방문 안 가기'
+          : step === 'retime' ? '시간 바꾸기'
+            : step === 'say' ? '사무실에 알리기'
+              : '일정'
+      }
       onClose={onClose}
       footer={
         step === 'cancel' ? (
@@ -158,6 +191,36 @@ export function ScheduleSheet({
               onClick={() => { const id = s.eventId!; onClose(); onOpenRecord(id) }}
             >
               수거기록 열기
+            </button>
+          </>
+        ) : step === 'say' ? (
+          <>
+            <button className="btn-ghost flex-1" onClick={() => setStep('view')} disabled={busy}>
+              되돌아가기
+            </button>
+            <button
+              data-sched-say-go
+              className="btn-primary flex-1 disabled:opacity-50"
+              disabled={sayBody.trim().length === 0 || busy}
+              onClick={() => void doSay()}
+            >
+              {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={17} strokeWidth={2.5} />}
+              보내기
+            </button>
+          </>
+        ) : canSay ? (
+          //  ⚠ 막다른 길을 만들지 않습니다. 「사무실에 말씀해 주세요」로만
+          //    끝내면 결국 전화이고, 전화는 아무 데도 안 남습니다.
+          <>
+            <button className="btn-ghost flex-1" onClick={onClose}>
+              닫기
+            </button>
+            <button
+              data-sched-say
+              className="btn-primary flex-1"
+              onClick={() => { setSayBody(''); setSaySent(false); setError(''); setStep('say') }}
+            >
+              <MessageSquare size={17} strokeWidth={2.5} /> 사무실에 알리기
             </button>
           </>
         ) : canTouch ? (
@@ -273,7 +336,11 @@ export function ScheduleSheet({
                     : canceled
                       ? '이미 안 가기로 한 방문입니다.'
                       : !ready
-                        ? '서버 준비가 끝나면 여기서 바로 고칠 수 있습니다.'
+                        //  ⚠ 0078 — 예전에는 「서버 준비가 끝나면…」이었습니다.
+                        //    판 77 이 올라간 지금 그 문장은 **거짓**입니다.
+                        //    여기까지 오는 경우는 서버 판을 못 물어봤을 때뿐이라
+                        //    그대로 말합니다.
+                        ? '지금 서버와 연결이 원활하지 않습니다. 잠시 뒤 다시 열어 주세요.'
                         : mode !== 'live'
                           //  ⚠ 시연 화면에서 「내가 넣은 일정이 아닙니다」라고
                           //    적으면 거짓말입니다 — 시연 자료에는 넣은 사람이
@@ -316,6 +383,47 @@ export function ScheduleSheet({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="직접 적으셔도 됩니다"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 'say' && (
+            <div className="mt-3 flex flex-col gap-3">
+              {saySent ? (
+                <p data-sched-say-done className="break-keep rounded-2xl bg-teal-50 px-4 py-3 text-[1.05rem] font-bold leading-snug text-teal-800">
+                  사무실로 보냈습니다. 「오늘 일정」 화면에서 답을 확인하실 수 있습니다.
+                </p>
+              ) : (
+                <p className="break-keep text-[1.05rem] leading-relaxed text-navy-600">
+                  이 일정은 <b className="text-navy-800">{via}</b>이라 여기서 바로 못 고칩니다.
+                  대신 사무실에 알려 두면 <b className="text-navy-800">기록으로 남습니다</b> — 전화는 남지 않습니다.
+                </p>
+              )}
+              <div>
+                <label className="field-label">무엇 때문인가요?</label>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {FEEDBACK_KINDS.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      data-sched-say-kind={k}
+                      onClick={() => setSayKind(k)}
+                      className={`min-h-[2.5rem] rounded-xl px-3 text-[1rem] font-bold transition active:scale-95 ${
+                        sayKind === k ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-700'
+                      }`}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  data-sched-say-body
+                  className="input min-h-[5.5rem]"
+                  maxLength={500}
+                  value={sayBody}
+                  onChange={(e) => setSayBody(e.target.value)}
+                  placeholder="예: 이 날은 병원이 쉰다고 합니다. 다음 주 화요일이 낫습니다."
                 />
               </div>
             </div>

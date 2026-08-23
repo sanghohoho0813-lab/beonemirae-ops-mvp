@@ -371,7 +371,7 @@ export function TodaySchedule() {
           empty={
             //  ⚠ 빈 화면에 「없어요」만 띄우면 기사님은 **거기서 멈춥니다.**
             //    없으면 다음에 무엇을 할 수 있는지 같이 줍니다 (대표님 요청).
-            <div data-empty-day className="card p-6 text-center">
+            <div data-empty-day data-guide="guide-empty-day" className="card p-6 text-center">
               <CalendarX2 size={34} className="mx-auto text-navy-200" strokeWidth={1.8} />
               <p className="mt-3 text-[1.15rem] font-extrabold text-navy-900">
                 {date === today() ? '오늘은 잡힌 일정이 없어요' : `${prettyDate(date)}에 잡힌 일정이 없어요`}

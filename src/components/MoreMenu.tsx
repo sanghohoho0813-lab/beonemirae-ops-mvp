@@ -197,33 +197,18 @@ export function MoreMenu({
       <section data-more-help>
         <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">안내 · 요청</h3>
         <div className="grid grid-cols-2 gap-2.5">
-          {/*  ── 「사용 방법」 입구를 **하나로** 합쳤습니다 (0077) ────────────
-               대표님: 「더보기 > 사용방법에서 시작하는 튜토리얼은 화면 이동과
-               Spotlight 가 어색해서 오히려 혼란스럽다. 반면 모바일 홈 우측
-               상단의 도움말 진입은 정상적으로 보인다.」
+          {/*  ── 현장 담당자에게는 이 칸이 **아예 없습니다** (0078) ──────────
+               대표님: 「모바일 우측 상단 도움말이 정상 진입점으로 잘 작동하므로,
+               더보기의 "사용 방법" 또는 "오른쪽 위 도움말에서 여세요" 같은
+               중복 안내 카드는 아예 제거해줘.」
 
-               ⚠ 원인이 있었습니다. 여기서 열면 **더보기 시트가 열린 채로**
-                 안내가 시작됩니다. 시트가 닫히면서 부르는 history.back() 이
-                 방금 뜬 안내를 건드리고, 시트가 스크롤을 되돌리는 사이에
-                 안내는 「굴린 뒤 자리」를 들고 있어 테두리가 엉뚱한 것을
-                 감쌌습니다. 위쪽 도움말은 시트를 먼저 닫고 260ms 뒤에 열어
-                 그 문제가 없었습니다.
+               0077 에서는 없애는 대신 「오른쪽 위에서 여세요」를 적어 뒀습니다.
+               그런데 그것도 결국 **도움말 이야기가 두 군데**라는 뜻입니다.
+               찾을 곳이 하나면 안내문도 필요 없습니다 — 지웁니다.
 
-               ⚠ 두 입구를 다 살리면서 한쪽만 고치는 길도 있었지만, 그러면
-                 **또 두 벌**입니다. 잘 되는 쪽 하나만 남깁니다.
-                 현장 담당자에게는 이 칸 대신 **어디서 여는지**를 적습니다 —
-                 없애기만 하면 「사용 방법 어디 갔지?」가 됩니다. */}
-          {role === 'field' ? (
-            <div data-more-help-moved className="card flex flex-col gap-2 p-3.5">
-              <IconChip icon={BookOpen} tone="teal" />
-              <span className="min-w-0">
-                <span className="block break-keep font-bold text-navy-900">사용 방법</span>
-                <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-500">
-                  화면 <b className="text-navy-700">오른쪽 위 「도움말」</b>에서 여세요
-                </span>
-              </span>
-            </div>
-          ) : (
+               ⚠ 사무실·관리자는 그대로 둡니다. 그쪽은 폰 위쪽 「도움말」이
+                 아니라 PC 오른쪽 위에서 여는 다른 흐름입니다. */}
+          {role !== 'field' && (
             <TourButton className="card flex cursor-pointer flex-col gap-2 p-3.5 text-left" label="">
               <IconChip icon={BookOpen} tone="teal" />
               <span className="min-w-0">

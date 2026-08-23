@@ -250,10 +250,15 @@ async function open(ver, { role = 'field', w = 390, scheds = [], events = [] } =
     b?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   })
   await p.waitForTimeout(900)
+  //  ⚠ 0078 — 0077 에서는 「오른쪽 위 도움말에서 여세요」 안내 칸을 남겼는데,
+  //    대표님 말씀대로 그것도 결국 **도움말 이야기가 두 군데**라는 뜻입니다.
+  //    이제 현장 담당자의 더보기에는 사용 방법 이야기가 **아예 없습니다.**
   const moved = await p.locator('[data-more-help-moved]').count()
   const oldEntry = await p.locator('[data-more-help] [data-tour-start]').count()
-  ok(moved === 1, '**더보기에는 「오른쪽 위 도움말에서 여세요」만 남는다**', `${moved}`)
+  const sheetText = flat(await p.locator('[data-more-help]').innerText())
+  ok(moved === 0, '**더보기에 「도움말에서 여세요」 안내 칸이 없다** (지웠습니다)', `${moved}`)
   ok(oldEntry === 0, '**더보기에서 안내가 바로 시작되지 않는다** (시트가 열린 채로 시작해 어긋났습니다)')
+  ok(!/사용 방법/.test(sheetText), '**더보기에 「사용 방법」이 아예 없다**', sheetText.slice(0, 60))
   await ctx.close()
 }
 

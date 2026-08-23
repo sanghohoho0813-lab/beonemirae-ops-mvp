@@ -49,6 +49,30 @@ export interface GuideStep {
    *   'firstClient'  맡은 거래처 중 첫 곳을 열어 줍니다.
    */
   land?: 'firstClient'
+  /**
+   * 접혀 있으면 **펴 줍니다** (0078).
+   *
+   *  ⚠ 대표님: 「설명하려는 요소가 현재 화면에 없거나 접혀 있어서 "지금
+   *    화면에는 이 자리가 없습니다" 가 뜬다. 완성도가 많이 떨어져 보인다.」
+   *
+   *  ⚠ 원인이 이것이었습니다. 「앞으로 갈 곳」·「월간 일정」은 폰에서 접혀
+   *    있고, 「일정 추가」 시트는 눌러야 열립니다. 안내가 그것을 짚으려 해도
+   *    화면에 없으니 못 짚습니다.
+   *
+   *   tap    없으면 눌러 줄 자리 (CSS 선택자, 여럿이면 쉼표로)
+   *   until  이것이 **눈에 보이면** 이미 펴진 것입니다 — 그때는 안 누릅니다
+   */
+  prepare?: { tap: string; until: string }
+  /**
+   * 원래 짚을 것이 없을 때 **대신** 짚을 곳 (0078).
+   *
+   *  ⚠ 오늘 일정이 하나도 없는 날에는 「오늘 갈 병원 목록」이 아예 없습니다.
+   *    그날 안내를 켜면 예전에는 「이 자리가 없습니다」로 끝났습니다.
+   *    없으면 없는 대로 **그 자리에 실제로 있는 것**을 짚고, 문장도 바꿉니다.
+   */
+  alt?: string
+  /** `alt` 를 짚을 때 대신 할 말 */
+  altSay?: string
 }
 
 export interface FieldGuide {
@@ -74,7 +98,11 @@ export const FIELD_GUIDES: FieldGuide[] = [
       {
         route: '/today',
         at: 'guide-today-list',
+        //  ⚠ 오늘 갈 곳이 하나도 없는 날에는 이 목록이 **아예 없습니다.**
+        //    그때는 그 자리에 실제로 있는 「없어요」 카드를 짚습니다.
+        alt: 'guide-empty-day',
         say: '오늘 갈 병원이 시간 순서로 나옵니다. 병원을 누르면 바로 수거 입력이 열립니다.',
+        altSay: '오늘은 잡힌 일정이 없는 날입니다. 일정이 있는 날에는 여기에 갈 병원이 시간 순서로 나옵니다.',
       },
       {
         route: '/today',
@@ -96,12 +124,16 @@ export const FIELD_GUIDES: FieldGuide[] = [
       {
         route: '/today',
         at: 'guide-upcoming',
-        say: '「앞으로 갈 곳」을 누르면 이번 주·다음 주로 묶여서 한 번에 보입니다.',
+        //  접혀 있으면 펴 놓고 설명합니다 — 접힌 줄만 짚고 「묶여서 보입니다」
+        //  라고 하면, 기사님 눈에는 아무것도 안 보입니다.
+        prepare: { tap: '[data-upcoming-toggle]', until: '[data-upcoming-body]' },
+        say: '「앞으로 갈 곳」입니다. 이번 주·다음 주로 묶여서 한 번에 보입니다.',
       },
       {
         route: '/today',
         at: 'guide-month',
-        say: '한 달을 통째로 보려면 여기를 봅니다. 폰에서는 「월간 일정 보기」를 한 번 누르면 펼쳐집니다.',
+        prepare: { tap: '[data-month-toggle]', until: '[data-calendar-body] [data-cal-day]' },
+        say: '한 달을 통째로 보려면 여기를 봅니다. 다시 누르면 접힙니다.',
       },
       {
         route: '/today',
@@ -112,6 +144,9 @@ export const FIELD_GUIDES: FieldGuide[] = [
       {
         route: '/today',
         at: 'guide-add-sheet',
+        //  ⚠ 앞 단계를 **누르지 않고** 「다음」으로 넘어온 경우입니다. 그때는
+        //    시트가 안 열려 있어 짚을 것이 없었습니다. 대신 열어 줍니다.
+        prepare: { tap: '[data-add-fab], [data-empty-add]', until: '[data-guide="guide-add-sheet"]' },
         say: '병원을 고르고 「이 날로 잡기」를 누르면 끝입니다.',
       },
     ],
