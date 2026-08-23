@@ -174,72 +174,80 @@ const pointSat = (mul = 1) => (s) =>
 //  금색은 밝아서 그 위에 흰 글자를 얹으면 안 읽히기 때문입니다 — 색을 위해
 //  가독성을 깎지 않습니다. 어두운 금(브론즈)으로 내려서 흰 글자를 살립니다.
 const THEMES = [
+  //  ⚠ 0085 — 아홉 테마가 서로 **충분히 달라야** 합니다.
+  //    처음에는 아홉 중 **여섯의 강조색이 전부 같은 금색**(색상각 34~44°)
+  //    이었습니다. 이름만 다르고 눈에는 비슷해 보였습니다 —
+  //    「에메랄드골드와 포레스트세이지가 거의 같다」,
+  //    「오닉스골드와 버건디브론즈도 차이가 없다」가 그래서 나왔습니다.
+  //
+  //    세 축을 **모두** 벌립니다.
+  //      ① 사이드바 — 색상각과 **색기(채도)** 를 서로 다르게
+  //      ② 주색 — 색상환에 고르게 흩뿌리기
+  //      ③ 강조 — 금색을 여섯 번 쓰지 않습니다. 금색을 쓰는 테마끼리도
+  //                밝기·채도를 달리해 「밝은 금 / 깊은 앤티크 금 / 연한
+  //                샴페인 / 붉은 브론즈」로 갈라 둡니다.
+  //    아래 검산에서 **닮은 쌍이 있으면 실패**로 잡습니다.
+
   { id: 'navy-blue', name: '딥 네이비 블루', desc: '지금 쓰는 기본색', base: true,
     swatch: ['#0f1a2e', '#3182f6', '#14b8a6'] },
 
-  //  ⚠ 어두운 단계(800·900·950)는 휘도를 **올립니다.** 처음에 반대로 내렸더니
-  //    아홉 테마의 사이드바가 전부 거의 같은 검정으로 나왔습니다 — 휘도가
-  //    0에 가까우면 색상은 보이지 않기 때문입니다. 시안의 사이드바는
-  //    「짙은 초록」·「짙은 와인」처럼 **색이 보이는 어두움**입니다.
-  //    올려도 흰 글자 대비가 19:1 → 15:1 수준이라 여유가 큽니다.
+  //  검정 + 밝은 금. 사이드바는 **거의 무채색 검정**(채도를 최소로) —
+  //  버건디의 와인빛 사이드바와 확실히 갈립니다.
+  { id: 'onyx-gold', name: '오닉스 골드', desc: '검정 바탕 · 밝은 금빛',
+    neutral: { hue: 40, sat: neutSat(0.35), lumMul: { 800: 1.6, 900: 1.8, 950: 2.0 } },
+    primary: { hue: 42, sat: pointSat(1), lumMul: { 500: 0.66, 600: 0.72, 700: 0.84 } },
+    accent:  { hue: 48, sat: pointSat(1), lumMul: { 500: 1.0 } },   // 밝고 선명한 금
+    swatch: ['#1a1712', '#9a6410', '#d4a20a'] },
 
-  { id: 'onyx-gold', name: '오닉스 골드', desc: '검정 바탕 · 금빛 포인트',
-    appBg: '#f6f3ec',
-    neutral: { hue: 32, sat: neutSat(0.9), lumMul: { 800: 1.8, 900: 2.0, 950: 2.2 } },
-    primary: { hue: 36, sat: pointSat(0.9), lumMul: { 500: 0.62, 600: 0.68, 700: 0.8 } },
-    accent:  { hue: 44, sat: pointSat(1.0), lumMul: { 500: 0.85, 600: 0.9 } },
-    swatch: ['#1a1611', '#8f601b', '#c1901f'] },
+  //  와인 + 붉은 브론즈. 사이드바 색기를 **크게** 올려 와인빛이 보이게.
+  { id: 'burgundy-bronze', name: '버건디 브론즈', desc: '짙은 와인 · 붉은 청동',
+    neutral: { hue: 352, sat: neutSat(1.7), lumMul: { 800: 2.0, 900: 2.4, 950: 2.7 } },
+    primary: { hue: 350, sat: pointSat(1), lumMul: { 500: 0.5, 600: 0.6, 700: 0.78 } },
+    accent:  { hue: 24, sat: pointSat(1), lumMul: { 500: 0.72 } },  // 어둡고 붉은 브론즈
+    swatch: ['#2b1418', '#a3143f', '#a35a1c'] },
 
-  { id: 'burgundy-bronze', name: '버건디 브론즈', desc: '와인빛 · 청동 포인트',
-    appBg: '#f3eeee',
-    neutral: { hue: 348, sat: neutSat(0.85), lumMul: { 800: 1.9, 900: 2.2, 950: 2.4 } },
-    //  채도를 낮춥니다 — 밝은 자홍은 「화려」하지 「고급」스럽지 않습니다.
-    primary: { hue: 344, sat: pointSat(0.68), lumMul: { 500: 0.42, 600: 0.5, 700: 0.7 } },
-    accent:  { hue: 34, sat: pointSat(0.9), lumMul: { 500: 0.85 } },
-    swatch: ['#241318', '#7d2140', '#b98a4b'] },
+  //  아이보리 + 밝은 에메랄드 + 연한 샴페인. 초록을 **더 파랗게·더 진하게**.
+  { id: 'emerald-gold', name: '에메랄드 골드', desc: '아이보리 · 밝은 에메랄드',
+    neutral: { hue: 166, sat: neutSat(1.1), lumMul: { 800: 1.7, 900: 1.9, 950: 2.1 } },
+    primary: { hue: 166, sat: pointSat(1), lumMul: { 500: 0.72, 600: 0.82 } },
+    accent:  { hue: 52, sat: pointSat(0.8), lumMul: { 500: 1.15 } }, // 연한 샴페인
+    swatch: ['#0f2019', '#068a5e', '#d8bb3a'] },
 
-  { id: 'emerald-gold', name: '에메랄드 골드', desc: '아이보리 · 짙은 초록',
-    appBg: '#f5f3ea',
-    neutral: { hue: 120, sat: neutSat(0.65), lumMul: { 800: 1.9, 900: 2.2, 950: 2.5 } },
-    primary: { hue: 156, sat: pointSat(0.8), lumMul: { 500: 0.55, 600: 0.66, 700: 0.82 } },
-    accent:  { hue: 44, sat: pointSat(0.92), lumMul: { 500: 0.85 } },
-    swatch: ['#16261c', '#1c6b47', '#c2a24a'] },
-
+  //  깊은 숲 + 세이지. 초록을 **더 노랗게·더 탁하게**, 사이드바도 더 어둡게 —
+  //  에메랄드와 값(밝기)까지 달라야 다르게 보입니다.
   { id: 'forest-sage', name: '포레스트 세이지', desc: '깊은 숲 · 세이지',
-    appBg: '#f2f4ee',
-    neutral: { hue: 132, sat: neutSat(0.6), lumMul: { 800: 2.0, 900: 2.3, 950: 2.6 } },
-    primary: { hue: 150, sat: pointSat(0.72), lumMul: { 500: 0.58, 600: 0.7 } },
-    accent:  { hue: 78, sat: pointSat(0.72), lumMul: { 500: 0.9 } },
-    swatch: ['#17251c', '#256c4a', '#8a9a52'] },
+    neutral: { hue: 112, sat: neutSat(0.5), lumMul: { 800: 1.3, 900: 1.4, 950: 1.5 } },
+    primary: { hue: 132, sat: pointSat(0.62), lumMul: { 500: 0.5, 600: 0.6 } },
+    accent:  { hue: 84, sat: pointSat(0.72), lumMul: { 500: 0.82 } }, // 세이지
+    swatch: ['#101a10', '#2b5c30', '#7d8f3a'] },
 
-  { id: 'deep-teal', name: '딥 틸', desc: '흰 바탕 · 짙은 청록',
-    appBg: '#f2f7f7',
-    neutral: { hue: 192, sat: neutSat(0.8), lumMul: { 800: 1.7, 900: 1.9, 950: 2.1 } },
-    primary: { hue: 186, sat: pointSat(0.9), lumMul: { 500: 0.68, 600: 0.78 } },
-    accent:  { hue: 40, sat: pointSat(0.92), lumMul: { 500: 0.85 } },
-    swatch: ['#0e2a2e', '#0f6c74', '#c08a2e'] },
+  //  청록 + **테라코타**. 금색을 쓰지 않습니다.
+  { id: 'deep-teal', name: '딥 틸', desc: '흰 바탕 · 청록과 테라코타',
+    neutral: { hue: 194, sat: neutSat(0.9), lumMul: { 800: 1.7, 900: 1.9, 950: 2.1 } },
+    primary: { hue: 188, sat: pointSat(1), lumMul: { 500: 0.7, 600: 0.8 } },
+    accent:  { hue: 18, sat: pointSat(0.92), lumMul: { 500: 0.86 } }, // 테라코타
+    swatch: ['#0e1e21', '#0b7d8b', '#c05a26'] },
 
-  { id: 'navy-gold', name: '네이비 골드', desc: '남색 바탕 · 금빛 강조',
-    appBg: '#f4f6fb',
-    neutral: { hue: 220, sat: neutSat(1.15), lumMul: { 800: 1.4, 900: 1.5, 950: 1.7 } },
-    primary: { hue: 222, sat: pointSat(0.88), lumMul: { 500: 0.62, 600: 0.74 } },
-    accent:  { hue: 44, sat: pointSat(1.0), lumMul: { 500: 0.85 } },
-    swatch: ['#0d1a33', '#1e46a8', '#c9a227'] },
+  //  남색 + **깊은 앤티크 금**. 기본 테마(남색+틸)와 강조로 갈립니다.
+  { id: 'navy-gold', name: '네이비 골드', desc: '남색 바탕 · 앤티크 금',
+    neutral: { hue: 224, sat: neutSat(1.3), lumMul: { 800: 1.4, 900: 1.5, 950: 1.7 } },
+    primary: { hue: 228, sat: pointSat(1), lumMul: { 500: 0.6, 600: 0.72 } },
+    accent:  { hue: 40, sat: pointSat(1), lumMul: { 500: 0.74 } },  // 깊은 금
+    swatch: ['#0f1526', '#1f4fd8', '#a8790a'] },
 
-  { id: 'plum-champagne', name: '플럼 샴페인', desc: '자줏빛 · 샴페인 골드',
-    appBg: '#f5f1f4',
-    neutral: { hue: 322, sat: neutSat(0.8), lumMul: { 800: 1.9, 900: 2.2, 950: 2.4 } },
-    //  자홍이 아니라 **자두**입니다 — 채도를 크게 낮추고 더 어둡게 둡니다.
-    primary: { hue: 328, sat: pointSat(0.6), lumMul: { 500: 0.4, 600: 0.5, 700: 0.7 } },
-    accent:  { hue: 40, sat: pointSat(0.85), lumMul: { 500: 0.88 } },
-    swatch: ['#26141f', '#7a2b56', '#c9a86a'] },
+  //  자주 + **연한 샴페인**. 버건디(와인 350°)와 갈리도록 **310°** 로 옮깁니다.
+  { id: 'plum-champagne', name: '플럼 샴페인', desc: '자줏빛 · 연한 샴페인',
+    neutral: { hue: 310, sat: neutSat(1.5), lumMul: { 800: 1.9, 900: 2.2, 950: 2.4 } },
+    primary: { hue: 306, sat: pointSat(0.86), lumMul: { 500: 0.46, 600: 0.56, 700: 0.74 } },
+    accent:  { hue: 46, sat: pointSat(0.62), lumMul: { 500: 1.2 } }, // 아주 연한 샴페인
+    swatch: ['#291628', '#7c1580', '#e0c977'] },
 
-  { id: 'rose-copper', name: '로즈 코퍼', desc: '차콜 · 로즈 코퍼',
-    appBg: '#f6efe9',
-    neutral: { hue: 22, sat: neutSat(0.7), lumMul: { 800: 1.9, 900: 2.2, 950: 2.4 } },
-    primary: { hue: 14, sat: pointSat(0.68), lumMul: { 500: 0.55, 600: 0.66, 700: 0.82 } },
-    accent:  { hue: 26, sat: pointSat(0.8), lumMul: { 500: 0.85 } },
-    swatch: ['#241a16', '#9a4a34', '#b9764a'] },
+  //  차콜 + 러스트 + 코퍼. 버건디(와인)와는 주색이 붉은 주황이라 갈립니다.
+  { id: 'rose-copper', name: '로즈 코퍼', desc: '차콜 · 러스트와 코퍼',
+    neutral: { hue: 16, sat: neutSat(0.55), lumMul: { 800: 1.6, 900: 1.8, 950: 1.9 } },
+    primary: { hue: 12, sat: pointSat(0.95), lumMul: { 500: 0.62, 600: 0.72, 700: 0.86 } },
+    accent:  { hue: 30, sat: pointSat(1), lumMul: { 500: 1.05 } },  // 밝은 코퍼
+    swatch: ['#1e1714', '#bb3c14', '#e88a2a'] },
 ]
 
 /** 고르는 화면에 찍을 다섯 방울 — 실제로 쓰이는 색에서 그대로 뽑습니다 */
@@ -426,7 +434,9 @@ for (const t of THEMES) {
     : { navy: ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true),
         teal: ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul),
         accent: ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul),
-        app: t.appBg, ...sem }
+        //  앱 바탕은 이제 손으로 고르지 않고 만들어 냅니다(0083) —
+        //  검산도 같은 식으로 계산해야 실제 화면과 맞습니다.
+        app: rgb2hex(atLum(t.neutral.hue, 0.08, lumOf(hex2rgb(APP_BG)))), ...sem }
   const cells = PAIRS.map(([, fn, need]) => {
     const v = fn(p); if (v < need) { bad += 1 }
     worst = Math.min(worst, v / need)
@@ -458,3 +468,42 @@ for (const t of THEMES) {
   }
 }
 console.log(`뜻이 바뀔 만큼 돌아간 색 ${turned}개 (한도 ${MAX_TURN}°)`)
+
+// ── 아홉이 서로 충분히 다른가 ────────────────────────────────────────────────
+//
+//  ⚠ 이 검산이 없어서 「에메랄드골드와 포레스트세이지가 거의 같다」,
+//    「오닉스골드와 버건디브론즈도 차이가 없다」가 나왔습니다.
+//    한 테마씩 예쁘게 고르다 보면 **서로 닮았다는 사실은 아무도 안 봅니다.**
+//    사이드바 · 주색 · 강조 세 색을 묶어 거리를 재고, 너무 가까우면 실패입니다.
+const KEY = ['navy-950', 'teal-500', 'accent-500']
+const MIN_GAP = 130
+function keyColors(t) {
+  if (t.base) return { 'navy-950': hex2rgb(BASE.navy[950]), 'teal-500': hex2rgb(BASE.teal[500]),
+    'accent-500': hex2rgb(BASE.accent[500]) }
+  return {
+    'navy-950': hex2rgb(ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true)[950]),
+    'teal-500': hex2rgb(ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul)[500]),
+    'accent-500': hex2rgb(ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul)[500]),
+  }
+}
+const rgbDist = (a, b) => Math.sqrt(a.reduce((s2, v, i) => s2 + (v - b[i]) ** 2, 0))
+const close = []
+for (let i = 0; i < THEMES.length; i += 1) {
+  for (let j = i + 1; j < THEMES.length; j += 1) {
+    const A = keyColors(THEMES[i]), B = keyColors(THEMES[j])
+    const d = KEY.reduce((s2, k) => s2 + rgbDist(A[k], B[k]), 0)
+    if (d < MIN_GAP) close.push(`  ✗ ${THEMES[i].name} ↔ ${THEMES[j].name} — 거리 ${d.toFixed(0)} (최소 ${MIN_GAP})`)
+  }
+}
+//  가장 가까운 다섯 쌍은 늘 보여 줍니다 — 숫자를 봐야 감이 잡힙니다.
+const all = []
+for (let i = 0; i < THEMES.length; i += 1)
+  for (let j = i + 1; j < THEMES.length; j += 1) {
+    const A = keyColors(THEMES[i]), B = keyColors(THEMES[j])
+    all.push([KEY.reduce((s2, k) => s2 + rgbDist(A[k], B[k]), 0), THEMES[i].name, THEMES[j].name])
+  }
+console.log('\n가장 닮은 다섯 쌍:')
+all.sort((x, y) => x[0] - y[0]).slice(0, 5).forEach(([d, a2, b2]) =>
+  console.log(`  ${d.toFixed(0).padStart(4)}  ${a2} ↔ ${b2}`))
+console.log(close.length ? `\n너무 닮은 쌍 ${close.length}개\n${close.join('\n')}` : `\n너무 닮은 쌍 0개 (최소 거리 ${MIN_GAP})`)
+if (close.length) process.exitCode = 1
