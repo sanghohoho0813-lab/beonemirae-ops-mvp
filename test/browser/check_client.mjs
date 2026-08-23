@@ -89,6 +89,16 @@ const txt = async (sel) => ((await p.textContent(sel)) ?? '').replace(/\s+/g, ' 
 await p.goto(`${BASE}/clients/${CID}`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2400)
 
+//  ⚠ 0087 에서 탭 순서가 바뀌었습니다 — 예전에는 「운영조건」이 첫 탭이라
+//    화면을 열자마자 여기 값들이 보였습니다. 지금은 매일 보는 「수거이력」이
+//    먼저이고, 수거주기·처리장 같은 **설정성 정보**는 맨 뒤입니다.
+//    값이 없어진 것이 아니라 자리가 바뀐 것이라, 검사도 그 자리로 갑니다.
+const toOps = async () => {
+  await p.locator('[data-client-tab="ops"]').first().dispatchEvent('click')
+  await p.waitForTimeout(700)
+}
+await toOps()
+
 // ── 1. 넣을 칸이 없던 값들 ────────────────────────────────────────────────
 const before = await txt('main')
 ok(/수거 가능시간.*미등록/.test(before), '처음에는 수거 가능시간이 「미등록」', before.slice(before.indexOf('수거 가능시간'), before.indexOf('수거 가능시간') + 30))
@@ -117,6 +127,7 @@ ok(patch?.diaper_cycle === '주 1회', '기저귀 주기를 따로 보냄 — �
 ok(patch?.collection_cycle === '주 2회', '의료폐기물 주기는 그대로')
 
 await p.waitForTimeout(600)
+await toOps()
 const after = await txt('main')
 ok(/평일 09:00~17:00/.test(after), '넣은 값이 운영조건에 바로 보임')
 ok(/○○환경 소각장/.test(after), '처리장도 화면에 반영')

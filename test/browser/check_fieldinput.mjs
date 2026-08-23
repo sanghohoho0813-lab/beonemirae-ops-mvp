@@ -173,7 +173,15 @@ const TODAY_IN = [mkSched('s1', TODAY, CA), mkSched('s2', TODAY, CB, { actual_am
   const p = await open(ctx, '/')
   ok(await seen(p, '[data-field-today]'), '**오늘 들어온 입력이 대표님 화면에 뜸**')
   const head = flat(await p.textContent('[data-field-today-headline]'))
-  ok(/오늘 현장에서 2건 들어왔습니다/.test(head), '몇 건인지', head)
+  //  ⚠ 0087 에서 제목과 숫자가 갈라졌습니다. 예전에는 제목 한 줄에
+  //    「2건 들어왔습니다」가 섞여 있었는데, 대표님이 이 화면에서 알고 싶은
+  //    것은 **예정·완료·미완료·추가 넷**이라 그 넷을 큰 숫자로 따로 뽑았습니다.
+  //    건수가 없어진 것이 아니라 제목에서 숫자 칸으로 옮겨 간 것이라,
+  //    검사도 숫자 칸을 봅니다 — 이쪽이 원래 재려던 것에 더 가깝습니다.
+  ok(/오늘 현장 현황/.test(head), '무슨 화면인지', head)
+  const cnt = async (k) => flat(await p.textContent(`[data-field-count="${k}"]`))
+  ok(/완료.*\b2\b/.test(await cnt('done')), '몇 건 들어왔는지 (완료)', await cnt('done'))
+  ok(/미완료/.test(await cnt('left')), '아직 남은 곳도 함께', await cnt('left'))
   const card = flat(await p.textContent('[data-field-today]'))
   ok(/2곳/.test(card) && /200kg/.test(card), '몇 곳 · 모두 몇 kg', card.slice(0, 80))
   ok(/가나요양병원/.test(card) && /120kg/.test(card), '어느 병원 · 얼마', card.slice(0, 120))

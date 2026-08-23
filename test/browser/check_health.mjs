@@ -156,9 +156,14 @@ for (const role of ['office', 'field']) {
   await p.waitForTimeout(500)
 
   //  거래처 고르고 박스 수량 넣기
-  const sel = p.locator('select').first()
+  //  ⚠ 0088 부터 자재 화면 **맨 위에 사무실 재고 칸**이 있습니다(설정에서
+  //    옮겨 왔습니다). 그 칸에도 숫자 입력이 넷 있어서, 화면 전체에서
+  //    `first()` 를 집으면 **창 뒤에 있는 재고 칸**을 집습니다. 사람은 창이
+  //    떠 있는 동안 뒤를 못 누르는데 검사만 누른 셈이라, 창 안으로 좁힙니다.
+  const dlg = p.locator('[role="dialog"]')
+  const sel = dlg.locator('select').first()
   if (await sel.count()) await sel.selectOption(CA).catch(() => {})
-  const nums = p.locator('input[inputmode="numeric"], input[type="number"]')
+  const nums = dlg.locator('input[inputmode="numeric"], input[type="number"]')
   await nums.first().fill('12')
   await p.getByRole('button', { name: /^등록|저장/ }).last().click()
   await p.waitForTimeout(1200)

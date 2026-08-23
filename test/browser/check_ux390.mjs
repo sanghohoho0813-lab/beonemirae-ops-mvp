@@ -305,6 +305,12 @@ async function measure(p) {
       const s = getComputedStyle(el)
       if (s.overflowX !== 'hidden' && s.overflow !== 'hidden') continue
       if (s.textOverflow === 'ellipsis') continue
+      //  ⚠ 화면 낭독기 전용 글자(sr-only)는 **일부러** 1px 칸에 숨긴 것입니다.
+      //    눈으로 보라고 둔 글자가 아니라 「이 칸이 무엇인지」를 낭독기에만
+      //    알려 주는 자리라, 여기서 「잘렸다」고 세면 접근성을 챙길수록
+      //    점수가 나빠집니다. 눈에 보이는 크기가 아닌 것은 재지 않습니다.
+      const rr = el.getBoundingClientRect()
+      if (rr.width <= 1 || rr.height <= 1) continue
       const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 3)
       if (!own) continue
       if (el.scrollWidth > el.clientWidth + 2) clipped.push({ what: label(el), over: el.scrollWidth - el.clientWidth })

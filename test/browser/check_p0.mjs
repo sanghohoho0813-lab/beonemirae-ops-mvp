@@ -92,6 +92,11 @@ await p.screenshot({ path: `${SHOT}/p0-monthly-only.png`, fullPage: true })
 // ── 운영조건 탭의 가짜 값이 사라졌는지 ────────────────────────────────────
 await p.goto(`${BASE}/clients/${C1}`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2200)
+//  ⚠ 0087 탭 순서 변경 — 거래 시작일·결제조건·처리장은 「운영조건」 탭에
+//    있습니다. 예전에는 그게 첫 탭이었습니다. 값이 사라진 것이 아니라
+//    자리가 뒤로 갔습니다 (매일 보는 수거이력이 앞으로 왔습니다).
+await p.locator('[data-client-tab="ops"]').first().dispatchEvent('click')
+await p.waitForTimeout(700)
 const c = await p.textContent('main')
 ok(/2025\.05/.test(c), '거래 시작일이 엑셀의 계약일(2025.05)')
 ok(!/2022\.02|2021\.|2023\./.test(c), '★ id 로 지어낸 시작일이 사라짐')
