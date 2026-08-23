@@ -5,20 +5,20 @@ export interface ThemeDef {
   name: string
   /** 한 줄 설명 — 고르는 사람이 무엇이 바뀌는지 알 수 있게 */
   desc: string
-  /** 고르는 화면에 찍을 색 다섯 방울 [바탕·주색·강조·강조2·강조3] */
+  /** 고르는 화면에 찍을 색 다섯 방울 [사이드바·주색·강조·강조2·강조3] */
   swatch: [string, string, string, string, string]
 }
 
 export const THEMES: ThemeDef[] = [
-  { id: 'navy-blue', name: '딥 네이비 블루', desc: '지금 쓰는 기본색', swatch: ['#080f1c', '#3182f6', '#14b8a6', '#06aa4d', '#c55312'] },
-  { id: 'onyx-gold', name: '오닉스 골드', desc: '검정 바탕 · 밝은 금빛', swatch: ['#1a1915', '#8f6605', '#c7a007', '#f66612', '#0e84a1'] },
-  { id: 'burgundy-bronze', name: '버건디 브론즈', desc: '짙은 와인 · 붉은 청동', swatch: ['#3a0f15', '#c20726', '#eb6309', '#f71f26', '#0d748d'] },
-  { id: 'emerald-gold', name: '에메랄드 골드', desc: '아이보리 · 밝은 에메랄드', swatch: ['#0d1d19', '#058164', '#c7ae12', '#f77918', '#d15913'] },
-  { id: 'forest-sage', name: '포레스트 세이지', desc: '깊은 숲 · 세이지', swatch: ['#10160f', '#0a701e', '#6aa70f', '#8e8905', '#b14b10'] },
-  { id: 'deep-teal', name: '딥 틸', desc: '흰 바탕 · 청록과 테라코타', swatch: ['#101c1f', '#057c8e', '#f07642', '#f8455c', '#d05812'] },
-  { id: 'navy-gold', name: '네이비 골드', desc: '남색 바탕 · 앤티크 금', swatch: ['#0f1527', '#2e56f7', '#c08307', '#ed3e09', '#c15211'] },
-  { id: 'plum-champagne', name: '플럼 샴페인', desc: '자줏빛 · 연한 샴페인', swatch: ['#30102a', '#a70f97', '#dbad13', '#f87c3f', '#0c7088'] },
-  { id: 'rose-copper', name: '로즈 코퍼', desc: '차콜 · 러스트와 코퍼', swatch: ['#1d1714', '#c7320c', '#f78e24', '#f9665c', '#0e809d'] },
+  { id: 'navy-blue', name: '딥 네이비 블루', desc: '남색 · 파랑 · 틸', swatch: ['#080f1c', '#2f82f7', '#07b8a1', '#06ad4f', '#d18152'] },
+  { id: 'navy-gold', name: '네이비 골드', desc: '남색 · 앤티크 금', swatch: ['#0d1424', '#3158f8', '#bd8707', '#f04709', '#b46030'] },
+  { id: 'emerald-gold', name: '에메랄드 골드', desc: '짙은 초록 · 샴페인 금', swatch: ['#0b1f18', '#058160', '#c9ac18', '#e98440', '#c16834'] },
+  { id: 'forest-sage', name: '포레스트 세이지', desc: '깊은 숲 · 세이지', swatch: ['#0f1d17', '#187333', '#6ca71e', '#90901a', '#a95b2d'] },
+  { id: 'deep-teal', name: '딥 틸', desc: '청록 · 테라코타', swatch: ['#0b1c20', '#057c8e', '#f17945', '#f2576c', '#bf6633'] },
+  { id: 'onyx-gold', name: '오닉스 골드', desc: '차콜 · 밝은 금빛', swatch: ['#12161c', '#8b6705', '#cba407', '#f77326', '#2a849b'] },
+  { id: 'burgundy-slate', name: '버건디 슬레이트', desc: '슬레이트 · 와인 포인트', swatch: ['#141821', '#c0072c', '#e66c0e', '#f33c3c', '#257588'] },
+  { id: 'plum-indigo', name: '플럼 인디고', desc: '인디고 · 자줏빛 포인트', swatch: ['#141329', '#a911a9', '#9c8bf5', '#6188f1', '#257588'] },
+  { id: 'steel-platinum', name: '스틸 플래티넘', desc: '스틸 그레이 · 은빛 블루', swatch: ['#171b21', '#106eb1', '#73b8d2', '#39b29d', '#b46030'] },
 ]
 
 export const THEME_IDS = THEMES.map((t) => t.id)

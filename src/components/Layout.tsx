@@ -209,7 +209,7 @@ function GroupHeader({
       {Icon && <Icon size={13} className="shrink-0" />}
       <span className="min-w-0 flex-1 break-keep text-left leading-snug">{title}</span>
       {!open && (
-        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.9rem] font-bold text-navy-300">
+        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.9rem] font-bold text-navy-200">
           {count}
         </span>
       )}
@@ -293,6 +293,11 @@ function NavGroup({
   )
 }
 
+//  ⚠ 0086 — 사이드바 글자는 **테마와 무관하게 항상 밝습니다.**
+//    메뉴 이름은 흰색, 나머지 보조 글자는 navy-200(#d7dde6, near-white)
+//    입니다. navy-300 으로 두면 어두운 바탕에서 「회색빛으로 흐리다」는
+//    인상이 남습니다. 글자에 투명도는 쓰지 않습니다 — 흐림은 배경색에만.
+//    중립색이 고정이라(0086) 어느 테마에서도 같은 밝기로 보입니다.
 function Sidebar() {
   const navigate = useNavigate()
   const { configured, profile, signOut } = useAuth()
@@ -315,7 +320,7 @@ function Sidebar() {
           </div>
           <div className="min-w-0 leading-tight">
             <p className="break-keep text-[1.42rem] font-extrabold tracking-tight text-white">{COMPANY}</p>
-            <p className="mt-1.5 break-keep text-[1.03rem] font-medium leading-snug text-navy-300">
+            <p className="mt-1.5 break-keep text-[1.03rem] font-medium leading-snug text-navy-200">
               {SYSTEM_TAGLINE}
             </p>
           </div>
@@ -332,7 +337,7 @@ function Sidebar() {
           {SYSTEM_WORDMARK}
           {/*  0082 — 글자에 alpha 를 걸면 그만큼 대비가 깎입니다(3.8:1).
                투명도가 필요하면 배경색에만 씁니다. */}
-          <span className="text-navy-300"> · </span>
+          <span className="text-navy-200"> · </span>
           <span className="text-amber-200">{SYSTEM_WORDMARK_TAIL}</span>
         </p>
       </div>
@@ -389,11 +394,11 @@ function Sidebar() {
             </p>
             {/*  0082 — 어두운 사이드바 위라 navy-300 입니다(navy-400 은 밝은
                  바탕용이라 여기서는 3.2:1 밖에 안 나옵니다). */}
-            <p className="break-keep text-[1rem] text-navy-300">
+            <p className="break-keep text-[1rem] text-navy-200">
               {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
             </p>
             {/*  오늘 날짜 · 지금 시각 (0078) — PC 는 자리가 넉넉해 연도까지 씁니다 */}
-            <p className="mt-1 break-keep text-[1rem] font-bold text-navy-300">
+            <p className="mt-1 break-keep text-[1rem] font-bold text-navy-200">
               <LiveClock full />
             </p>
           </div>
@@ -405,7 +410,7 @@ function Sidebar() {
               }}
               title="로그아웃"
               aria-label="로그아웃"
-              className="shrink-0 rounded-lg p-2 text-navy-300 transition hover:bg-white/10 hover:text-white"
+              className="shrink-0 rounded-lg p-2 text-navy-200 transition hover:bg-white/10 hover:text-white"
             >
               <LogOut size={16} strokeWidth={2.2} />
             </button>
@@ -423,10 +428,10 @@ function Sidebar() {
             <Headset size={16} className="shrink-0 text-teal-300" />
             <div className="min-w-0 leading-tight">
               <p className="break-keep text-[1.12rem] font-bold text-white">{COMPANY_TEL}</p>
-              <p className="break-keep text-[1rem] text-navy-300">{COMPANY_HOURS}</p>
+              <p className="break-keep text-[1rem] text-navy-200">{COMPANY_HOURS}</p>
             </div>
           </div>
-          <p className="mt-1.5 break-keep text-[1rem] leading-snug text-navy-300">
+          <p className="mt-1.5 break-keep text-[1rem] leading-snug text-navy-200">
             팩스 {COMPANY_FAX}
             <br />
             {COMPANY_EMAIL}
@@ -438,7 +443,7 @@ function Sidebar() {
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => navigate('/company')}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-200 transition hover:bg-white/10 hover:text-white"
           >
             <Globe size={18} strokeWidth={2.2} />
             <span className="break-keep text-[0.98rem] font-semibold">홈페이지</span>
@@ -451,7 +456,7 @@ function Sidebar() {
             <button
               data-go-mobile-preview
               onClick={() => navigate('/mobile-preview')}
-              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-200 transition hover:bg-white/10 hover:text-white"
             >
               <Smartphone size={18} strokeWidth={2.2} />
               <span className="break-keep text-[0.98rem] font-semibold">모바일 화면</span>
@@ -461,7 +466,7 @@ function Sidebar() {
             href={ALLBARO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-300 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-200 transition hover:bg-white/10 hover:text-white"
           >
             <ExternalLink size={18} strokeWidth={2.2} />
             <span className="break-keep text-[0.98rem] font-semibold">올바로</span>

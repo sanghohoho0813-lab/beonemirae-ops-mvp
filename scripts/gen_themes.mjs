@@ -1,38 +1,65 @@
-//  테마 팔레트 생성기 (0081)
+//  테마 팔레트 생성기 (0086 — 전면 재정리)
 //
-//  ⚠ 핵심 원칙: **각 단계의 밝기(상대휘도)를 그대로 두고 색상(hue)만 바꿉니다.**
-//    WCAG 대비는 오로지 휘도로만 계산됩니다. 그러니 휘도를 보존하면
-//    0080 에서 173개 → 0개로 만든 대비 결과가 **아홉 테마 전부에서 그대로**
-//    유지됩니다. 색을 예쁘게 고르다 글자가 안 보이게 되는 일이 구조적으로
-//    일어나지 않습니다.
+//  ══════════════════════════════════════════════════════════════════════════
+//   가장 중요한 원칙 하나
 //
-//  생성한 값은 그대로 CSS 파일로 떨궈 저장소에 남깁니다 — 런타임에 색을
-//  계산하지 않습니다. 나중에 누가 값을 확인하고 싶을 때 파일만 보면 됩니다.
+//     **테마색은 포인트로만 씁니다. 중립색은 테마와 무관하게 고정입니다.**
+//
+//   0081~0085 의 구조적 결함이 여기 있었습니다. 중립 계열(배경·카드·테두리·
+//   글자)을 **테마의 색상각에서 만들어 내고** 있었습니다. 그러니 채도를
+//   아무리 낮춰도 따뜻한 테마에서는 회색이 적갈색으로 나왔고, 화면 전체가
+//   「뿌옇고 붉게」 보였습니다. 채도를 낮추는 것으로는 못 고칩니다 —
+//   **중립색을 테마에서 떼어 내야** 고쳐집니다.
+//
+//   이제 이렇게 갈라 둡니다.
+//
+//     고정 (아홉 테마 전부 같은 값)
+//       navy-50 ~ navy-900   배경 · 카드 · 테두리 · 표 · 모든 글자
+//       app                  페이지 바탕 (깨끗한 쿨톤 라이트)
+//       cardline / shadow    테두리 · 그림자
+//       emerald/amber/rose/sky/violet/orange  뜻이 붙은 색
+//
+//     테마가 정하는 것 (포인트)
+//       navy-950             사이드바 바탕 — **차가운 계열만** 허용
+//       teal-*               주 단추
+//       accent-* / accent2-* / accent3-*   강조
+//  ══════════════════════════════════════════════════════════════════════════
 
-const BASE = {
-  navy: { 50:'#f4f6fa',100:'#eaeef3',200:'#d7dde6',300:'#aeb8c4',400:'#626c7a',500:'#5b6677',
-          600:'#3a4658',700:'#26303f',800:'#18222f',900:'#0f1a2e',950:'#080f1c' },
-  teal: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3182f6',
-          600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
-  accent:{50:'#effcf9',100:'#c9f7ef',200:'#96ede0',300:'#5eead4',400:'#2dd4bf',500:'#14b8a6',
-          600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a' },
-  slate2:{50:'#f1f5f9',100:'#e2e8f0',500:'#64748b',600:'#475569' },
-  //  ── 뜻이 붙어 있는 색 (Tailwind 기본값) ──────────────────────────────────
-  //   상승/완료 = emerald · 주의 = amber · 하락/경고 = rose · 정보 = sky
-  //   부가 = violet · 추가수거 = orange
-  //   ⚠ 이 색들은 **뜻을 지고 있습니다.** 테마에 맞춘다고 초록을 빨강 쪽으로
-  //     돌리면 「완료」가 「경고」로 읽힙니다. 그래서 아래 SEMANTIC_TURN 에서
-  //     **최대 ±14° 까지만** 돌립니다 — 초록은 초록으로, 빨강은 빨강으로
-  //     남는 범위입니다. 톤만 맞추고 뜻은 건드리지 않습니다.
+// ── 고정 중립 (쿨톤 슬레이트) ───────────────────────────────────────────────
+//   ⚠ 이 값들은 **어떤 테마에서도 바뀌지 않습니다.**
+//     50~300 배경/테두리 · 400~900 글자. 0080 에서 대비를 173개 → 0개로
+//     만든 값 그대로입니다.
+const NEUTRAL = {
+  50: '#f4f6fa', 100: '#eaeef3', 200: '#d7dde6', 300: '#aeb8c4',
+  400: '#626c7a', // 보조 글자 (밝은 바탕 전용) — 흰 바탕 5.3:1
+  500: '#5b6677', 600: '#3a4658', 700: '#26303f', 800: '#18222f',
+  900: '#0f1a2e', // 제목·본문 — 진한 네이비 슬레이트
+}
+const APP_BG = '#f5f7fa'      // 페이지 바탕 — 깨끗한 쿨톤 라이트
+const CARD_LINE = '#dbe1e9'   // 카드 테두리 — 중립 회색 (흰 카드와 약 1.5:1)
+const SHADOW = '#0f1a2e'      // 그림자 — 중립 슬레이트
+
+//  주색·강조의 **모양(밝기 곡선)** 을 빌려 올 기준 계열
+const SHAPE = {
+  primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',
+             500:'#3182f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+  accent:  { 50:'#effcf9',100:'#c9f7ef',200:'#96ede0',300:'#5eead4',400:'#2dd4bf',
+             500:'#14b8a6',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a' },
+}
+//  기본 테마의 사이드바 (다른 테마는 각자 정합니다)
+const BASE_SIDEBAR = '#080f1c'
+
+// ── 뜻이 붙은 색 — 고정입니다 ───────────────────────────────────────────────
+//   ⚠ 0081~0085 에서는 이 색들도 테마 쪽으로 ±14° 씩 돌렸습니다. 그 때문에
+//     초록이 누렇게, 빨강이 탁하게 보였습니다. 「증가/감소/주의의 뜻이
+//     분명해야 한다」는 요구와 정면으로 부딪칩니다. **돌리지 않습니다.**
+const SEMANTIC = {
   emerald:{50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',
            600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b'},
   amber:{50:'#fffbeb',100:'#fef3c7',200:'#fde68a',300:'#fcd34d',400:'#fbbf24',500:'#f59e0b',
          600:'#d97706',700:'#b45309',800:'#92400e',900:'#78350f'},
   //  ⚠ rose-600 만 Tailwind 기본값(#e11d48)에서 한 눈금 내렸습니다.
-  //    「긴급」 칩이 bg-rose-50 + text-rose-600 인데, 원래 값은 그 위에서
-  //    4.3:1 로 기준(4.5)에 0.2 모자랐습니다. 하필 **긴급**이라고 적힌
-  //    칩이 제일 안 읽히는 상태였습니다. 색은 그대로 빨강이고 밝기만
-  //    낮췄습니다 → 4.6:1.
+  //    「긴급」 칩이 bg-rose-50 위에서 4.3:1 로 기준(4.5)에 모자랐습니다.
   rose:{50:'#fff1f2',100:'#ffe4e6',200:'#fecdd3',300:'#fda4af',400:'#fb7185',500:'#f43f5e',
         600:'#d81643',700:'#be123c',800:'#9f1239',900:'#881337'},
   sky:{50:'#f0f9ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',500:'#0ea5e9',
@@ -42,329 +69,189 @@ const BASE = {
   orange:{50:'#fff7ed',100:'#ffedd5',200:'#fed7aa',300:'#fdba74',400:'#fb923c',500:'#f97316',
           600:'#ea580c',700:'#c2410c',800:'#9a3412',900:'#7c2d12'},
 }
-//  뜻이 붙은 색의 **원래 색상각**. 여기서 테마 쪽으로 조금만 끌어옵니다.
-const SEM_HUE = { emerald: 160, amber: 38, rose: 350, sky: 199, violet: 258, orange: 25 }
-const SEM_FAMS = ['emerald', 'amber', 'rose', 'sky', 'violet', 'orange']
-/** 최대 몇 도까지 돌릴 것인가 — 뜻이 안 바뀌는 한도입니다 */
-const MAX_TURN = 14
-
-/** a 에서 b 로 가는 최단 각도차 (-180~180) */
-function angleDelta(a, b) { return ((((b - a) % 360) + 540) % 360) - 180 }
-
-/**  뜻이 붙은 색 계열을 테마 쪽으로 **조금만** 끌어옵니다.
- *   밝기는 그대로라 대비는 변하지 않고, 색상만 최대 ±14° 움직입니다.
- */
-function semRamp(fam, themeHue, sat) {
-  const base = BASE[fam]
-  const own = SEM_HUE[fam]
-  const d = angleDelta(own, themeHue)
-  const hue = own + Math.max(-MAX_TURN, Math.min(MAX_TURN, d))
-  const out = {}
-  for (const [step, hex] of Object.entries(base)) {
-    const rgb = hex2rgb(hex)
-    //  원래 색의 채도를 그대로 씁니다 — 뜻이 붙은 색은 선명해야 눈에 띕니다
-    out[step] = rgb2hex(atLum(hue, satOfHex(rgb) * sat, lumOf(rgb)))
-  }
-  return out
-}
-/** RGB 에서 HSL 채도를 되뽑습니다 */
-function satOfHex([r, g, b]) {
-  const R = r / 255, G = g / 255, B = b / 255
-  const mx = Math.max(R, G, B), mn = Math.min(R, G, B)
-  const l = (mx + mn) / 2
-  if (mx === mn) return 0
-  return (mx - mn) / (1 - Math.abs(2 * l - 1))
-}
-const APP_BG = '#f5f7fa'
+//  보조 식별용(일회용기저귀 막대 등) — **중립 회색**입니다.
+//  ⚠ 그래프의 비교/보조 계열은 회색이어야 합니다. 여기에 색을 넣으면
+//    「어느 쪽이 주인공인지」가 사라져 두 막대가 뭉개집니다.
+const SLATE2 = { 50:'#f1f5f9',100:'#e2e8f0',500:'#64748b',600:'#475569' }
 
 // ── 색 계산 ──────────────────────────────────────────────────────────────────
 const srgb = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
 const lumOf = ([r, g, b]) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
-const hex2rgb = (h) => { const s = h.replace('#',''); return [0,2,4].map((i)=>parseInt(s.slice(i,i+2),16)) }
-const rgb2hex = ([r,g,b]) => '#' + [r,g,b].map((v)=>Math.round(v).toString(16).padStart(2,'0')).join('')
+const hex2rgb = (h) => { const s = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16)) }
+const rgb2hex = ([r, g, b]) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
 function hsl2rgb(h, s, l) {
   h = ((h % 360) + 360) % 360
   const c = (1 - Math.abs(2 * l - 1)) * s
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
   const m = l - c / 2
-  const t = h < 60 ? [c,x,0] : h < 120 ? [x,c,0] : h < 180 ? [0,c,x]
-          : h < 240 ? [0,x,c] : h < 300 ? [x,0,c] : [c,0,x]
+  const t = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+          : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]
   return t.map((v) => Math.round((v + m) * 255))
 }
-
-/** 목표 휘도를 맞추는 밝기(l)를 이분탐색으로 찾습니다 — l 에 대해 휘도는 단조증가입니다 */
-function atLum(h, s, targetLum) {
+/** 목표 휘도를 맞추는 밝기를 이분탐색으로 — 휘도는 밝기에 대해 단조증가입니다 */
+function atLum(h, s, target) {
   let lo = 0, hi = 1
   for (let i = 0; i < 40; i += 1) {
     const mid = (lo + hi) / 2
-    if (lumOf(hsl2rgb(h, s, mid)) < targetLum) lo = mid; else hi = mid
+    if (lumOf(hsl2rgb(h, s, mid)) < target) lo = mid; else hi = mid
   }
   return hsl2rgb(h, s, (lo + hi) / 2)
 }
+const hueOf = ([r, g, b]) => {
+  const R = r / 255, G = g / 255, B = b / 255
+  const mx = Math.max(R, G, B), mn = Math.min(R, G, B), d = mx - mn
+  if (!d) return 0
+  const h = mx === R ? ((G - B) / d) % 6 : mx === G ? (B - R) / d + 2 : (R - G) / d + 4
+  return ((h * 60) % 360 + 360) % 360
+}
 
-//  ⚠ 0082 — **글자로 쓰이는 단계**는 밝기를 절대로 못 올리게 막습니다.
-//
-//    0081 에서 사이드바에 색이 보이게 하려고 어두운 단계의 밝기를 1.4~2.6배
-//    올렸습니다. 그런데 navy-900 은 **글자 368곳 · 배경 47곳**입니다 —
-//    압도적으로 글자입니다. 그 바람에 제목·본문·KPI 숫자가 전부 옅어졌고
-//    (흰 바탕 대비 17.4:1 → 14.1~15.9:1), 화면이 뿌옇게 보였습니다.
-//    색 하나가 「어두운 배경」과 「어두운 글자」 두 일을 겸하고 있었고,
-//    저는 배경 쪽만 보고 값을 올린 것입니다.
-//
-//    사이드바 색은 navy-950 에서만 냅니다 — 이 단계는 **배경 전용**입니다
-//    (배경 19곳 · 글자 0곳). 글자 단계는 기준값 그대로 둡니다.
-const TEXT_STEPS = new Set([400, 500, 600, 700, 800, 900])
+//  포인트 계열 채도 — 진하게. 밝은 단계만 옅게 둡니다.
+const pointSat = (mul = 1) => (s) =>
+  Math.min(0.98, (s <= 100 ? 0.66 : s <= 200 ? 0.62 : s <= 400 ? 0.78 : s <= 700 ? 0.93 : 0.80)
+    * Math.max(0.55, mul))
 
-/**  한 계열(ramp)을 만듭니다.
- *   @param base   밝기를 빌려 올 기준 계열
- *   @param hue    이 테마의 색상각
- *   @param satOf  단계별 채도 (0~1). 밝은 단계는 옅게, 중간은 진하게 둡니다.
- *   @param lumMul 단계별 휘도 배율 — 1 이면 기준과 **완전히 같은 대비**입니다.
+/**  포인트 계열 한 벌 — 밝기 곡선은 기준에서 빌리고 색상만 바꿉니다.
+ *   대비는 휘도로만 계산되므로, 밝기를 보존하면 어떤 색을 골라도
+ *   읽히는 정도가 기준과 같습니다.
  */
-function ramp(base, hue, satOf, lumMul = {}, lockText = false) {
+function pointRamp(shape, hue, satMul = 1, lumMul = {}) {
+  const sat = pointSat(satMul)
   const out = {}
-  for (const [step, hex] of Object.entries(base)) {
-    const n = Number(step)
-    //  글자 단계는 배율을 무시합니다 — 실수로라도 옅어지지 않게 여기서 막습니다.
-    const mul = lockText && TEXT_STEPS.has(n) ? 1 : (lumMul[step] ?? 1)
-    const target = Math.min(1, Math.max(0, lumOf(hex2rgb(hex)) * mul))
-    out[step] = rgb2hex(atLum(hue, satOf(n), target))
+  for (const [step, hex] of Object.entries(shape)) {
+    const target = Math.min(1, Math.max(0, lumOf(hex2rgb(hex)) * (lumMul[step] ?? 1)))
+    out[step] = rgb2hex(atLum(hue, sat(Number(step)), target))
   }
   return out
 }
 
-//  중립(회색) 계열 채도 — 아주 낮게. 배경·글자에 쓰이므로 색이 튀면 안 됩니다.
-//  ⚠ 0084 — 글자 단계(400~900)는 채도를 **0** 으로 둡니다. 완전한 무채색입니다.
+// ── 아홉 가지 ───────────────────────────────────────────────────────────────
 //
-//    0082 에서 채도를 0.10~0.14 로 낮췄지만 그것으로 부족했습니다. 이유는
-//    사람 눈과 WCAG 공식이 다르게 보기 때문입니다 —
-//    휘도 공식에서 초록은 0.7152, 빨강은 0.2126, 파랑은 0.0722 입니다.
-//    그래서 **따뜻한 회색은 같은 휘도를 맞추려면 R 값이 훨씬 커야** 합니다.
+//  ⚠ 사이드바(navy-950)는 **차가운 계열만** 씁니다 — 딥네이비 · 딥그린 ·
+//    딥틸 · 차콜 슬레이트. 적갈색 검정 · 와인빛 검정 · 붉은 회색은 쓰지
+//    않습니다. 아래 검산에서 색상각이 이 범위를 벗어나면 실패로 잡습니다.
 //
-//      기준 캡션  #626c7a (R98)      플럼 캡션  #786772 (R120)
-//      기준 제목  #0f1a2e            플럼 제목  #1f191c
-//
-//    계산상 대비는 똑같은데 **눈에는 옅고 뿌옇게** 보입니다. 대표님이
-//    「갈색·빨강 톤이 섞이면 배경도 글자도 뿌옇다」고 하신 것이 이것입니다.
-//    무채색으로 두면 아홉 테마의 글자가 **모두 같은 검정·같은 회색**이 됩니다.
-//    색은 사이드바·단추·강조에서 냅니다. 글자에서는 내지 않습니다.
-const neutSat = (mul = 1) => (s) =>
-  s <= 100 ? 0.22 * mul
-    : s <= 200 ? 0.16 * mul
-    : s <= 300 ? 0.12 * mul
-    : s <= 900 ? 0 // 글자 — 무채색
-    : 0.34 * mul // 950 — 사이드바. 여기서만 색을 냅니다.
-//  포인트 계열 채도 — **진하게**. 아주 밝은 단계만 옅게 둡니다.
-//
-//  ⚠ 0083 — 여기에 테마별 배율(0.6~0.9)을 곱하고 있었습니다. 그 바람에
-//    주 단추의 채도가 기준(딥 네이비 197)의 절반도 안 되는 80~112 로
-//    눌렸고, **빨강이 갈색으로, 자주가 팥색으로** 보였습니다.
-//    대표님이 「갈색·빨간색 톤에 가까울 때 뿌옇다」고 하신 것이 이것입니다.
-//    어두운 단계는 밝기(lumMul)로 잡고, **채도는 깎지 않습니다** —
-//    같은 밝기라도 채도가 높아야 「짙은 와인」이지 「흙빛」이 아닙니다.
-//    (배율은 인자로 남겨 두되 0.9 아래로는 못 내려가게 막습니다.)
-const pointSat = (mul = 1) => (s) =>
-  Math.min(0.98, (s <= 100 ? 0.66 : s <= 200 ? 0.62 : s <= 400 ? 0.78 : s <= 700 ? 0.93 : 0.80)
-    * Math.max(0.9, mul))
-
-// ── 아홉 가지 테마 ───────────────────────────────────────────────────────────
-//  시안 9장을 계열로 묶은 것입니다. 배치는 하나도 바꾸지 않고 색만 갈아 끼웁니다.
-//
-//  lumMul 로 **포인트 색만** 살짝 어둡게 하는 테마가 있습니다(골드 계열).
-//  금색은 밝아서 그 위에 흰 글자를 얹으면 안 읽히기 때문입니다 — 색을 위해
-//  가독성을 깎지 않습니다. 어두운 금(브론즈)으로 내려서 흰 글자를 살립니다.
+//  ⚠ 주색·강조는 **포인트**라 따뜻한 색도 씁니다. 화면에서 차지하는 면적이
+//    작고, 중립색이 고정이라 화면 전체가 물들 일이 없습니다.
+const COOL_MIN = 150   // 사이드바 색상각 허용 범위 (차가운 계열)
+const COOL_MAX = 265
 const THEMES = [
-  //  ⚠ 0085 — 아홉 테마가 서로 **충분히 달라야** 합니다.
-  //    처음에는 아홉 중 **여섯의 강조색이 전부 같은 금색**(색상각 34~44°)
-  //    이었습니다. 이름만 다르고 눈에는 비슷해 보였습니다 —
-  //    「에메랄드골드와 포레스트세이지가 거의 같다」,
-  //    「오닉스골드와 버건디브론즈도 차이가 없다」가 그래서 나왔습니다.
-  //
-  //    세 축을 **모두** 벌립니다.
-  //      ① 사이드바 — 색상각과 **색기(채도)** 를 서로 다르게
-  //      ② 주색 — 색상환에 고르게 흩뿌리기
-  //      ③ 강조 — 금색을 여섯 번 쓰지 않습니다. 금색을 쓰는 테마끼리도
-  //                밝기·채도를 달리해 「밝은 금 / 깊은 앤티크 금 / 연한
-  //                샴페인 / 붉은 브론즈」로 갈라 둡니다.
-  //    아래 검산에서 **닮은 쌍이 있으면 실패**로 잡습니다.
+  { id: 'navy-blue', name: '딥 네이비 블루', desc: '남색 · 파랑 · 틸',
+    sidebar: BASE_SIDEBAR,
+    primary: { hue: 215, sat: 1 },
+    accent:  { hue: 172, sat: 1 } },
 
-  { id: 'navy-blue', name: '딥 네이비 블루', desc: '지금 쓰는 기본색', base: true,
-    swatch: ['#0f1a2e', '#3182f6', '#14b8a6'] },
+  { id: 'navy-gold', name: '네이비 골드', desc: '남색 · 앤티크 금',
+    sidebar: '#0d1424',
+    primary: { hue: 228, sat: 1, lumMul: { 500: 0.62, 600: 0.74 } },
+    accent:  { hue: 42, sat: 1, lumMul: { 500: 0.76 } } },
 
-  //  검정 + 밝은 금. 사이드바는 **거의 무채색 검정**(채도를 최소로) —
-  //  버건디의 와인빛 사이드바와 확실히 갈립니다.
-  { id: 'onyx-gold', name: '오닉스 골드', desc: '검정 바탕 · 밝은 금빛',
-    neutral: { hue: 40, sat: neutSat(0.35), lumMul: { 800: 1.6, 900: 1.8, 950: 2.0 } },
-    primary: { hue: 42, sat: pointSat(1), lumMul: { 500: 0.66, 600: 0.72, 700: 0.84 } },
-    accent:  { hue: 48, sat: pointSat(1), lumMul: { 500: 1.0 } },   // 밝고 선명한 금
-    swatch: ['#1a1712', '#9a6410', '#d4a20a'] },
+  { id: 'emerald-gold', name: '에메랄드 골드', desc: '짙은 초록 · 샴페인 금',
+    sidebar: '#0b1f18',
+    primary: { hue: 164, sat: 1, lumMul: { 500: 0.72, 600: 0.82 } },
+    accent:  { hue: 50, sat: 0.85, lumMul: { 500: 1.12 } } },
 
-  //  와인 + 붉은 브론즈. 사이드바 색기를 **크게** 올려 와인빛이 보이게.
-  { id: 'burgundy-bronze', name: '버건디 브론즈', desc: '짙은 와인 · 붉은 청동',
-    neutral: { hue: 352, sat: neutSat(1.7), lumMul: { 800: 2.0, 900: 2.4, 950: 2.7 } },
-    primary: { hue: 350, sat: pointSat(1), lumMul: { 500: 0.5, 600: 0.6, 700: 0.78 } },
-    accent:  { hue: 24, sat: pointSat(1), lumMul: { 500: 0.72 } },  // 어둡고 붉은 브론즈
-    swatch: ['#2b1418', '#a3143f', '#a35a1c'] },
-
-  //  아이보리 + 밝은 에메랄드 + 연한 샴페인. 초록을 **더 파랗게·더 진하게**.
-  { id: 'emerald-gold', name: '에메랄드 골드', desc: '아이보리 · 밝은 에메랄드',
-    neutral: { hue: 166, sat: neutSat(1.1), lumMul: { 800: 1.7, 900: 1.9, 950: 2.1 } },
-    primary: { hue: 166, sat: pointSat(1), lumMul: { 500: 0.72, 600: 0.82 } },
-    accent:  { hue: 52, sat: pointSat(0.8), lumMul: { 500: 1.15 } }, // 연한 샴페인
-    swatch: ['#0f2019', '#068a5e', '#d8bb3a'] },
-
-  //  깊은 숲 + 세이지. 초록을 **더 노랗게·더 탁하게**, 사이드바도 더 어둡게 —
-  //  에메랄드와 값(밝기)까지 달라야 다르게 보입니다.
   { id: 'forest-sage', name: '포레스트 세이지', desc: '깊은 숲 · 세이지',
-    neutral: { hue: 112, sat: neutSat(0.5), lumMul: { 800: 1.3, 900: 1.4, 950: 1.5 } },
-    primary: { hue: 132, sat: pointSat(0.62), lumMul: { 500: 0.5, 600: 0.6 } },
-    accent:  { hue: 84, sat: pointSat(0.72), lumMul: { 500: 0.82 } }, // 세이지
-    swatch: ['#101a10', '#2b5c30', '#7d8f3a'] },
+    //  ⚠ 처음에 138° 로 뒀더니 사이드바 검산에 걸렸습니다(허용 150~265°).
+    //    138° 는 초록이긴 하나 노란 쪽으로 기울어 「탁한 올리브 검정」이
+    //    됩니다. 사이드바는 152° 의 제대로 된 숲 초록으로 두고, 주색만
+    //    노란 초록으로 둡니다 — 이웃 색이라 서로 어울립니다.
+    sidebar: '#0f1d17',
+    primary: { hue: 138, sat: 0.7, lumMul: { 500: 0.54, 600: 0.64 } },
+    accent:  { hue: 86, sat: 0.75, lumMul: { 500: 0.84 } } },
 
-  //  청록 + **테라코타**. 금색을 쓰지 않습니다.
-  { id: 'deep-teal', name: '딥 틸', desc: '흰 바탕 · 청록과 테라코타',
-    neutral: { hue: 194, sat: neutSat(0.9), lumMul: { 800: 1.7, 900: 1.9, 950: 2.1 } },
-    primary: { hue: 188, sat: pointSat(1), lumMul: { 500: 0.7, 600: 0.8 } },
-    accent:  { hue: 18, sat: pointSat(0.92), lumMul: { 500: 0.86 } }, // 테라코타
-    swatch: ['#0e1e21', '#0b7d8b', '#c05a26'] },
+  { id: 'deep-teal', name: '딥 틸', desc: '청록 · 테라코타',
+    sidebar: '#0b1c20',
+    primary: { hue: 188, sat: 1, lumMul: { 500: 0.7, 600: 0.8 } },
+    accent:  { hue: 18, sat: 0.92, lumMul: { 500: 0.88 } } },
 
-  //  남색 + **깊은 앤티크 금**. 기본 테마(남색+틸)와 강조로 갈립니다.
-  { id: 'navy-gold', name: '네이비 골드', desc: '남색 바탕 · 앤티크 금',
-    neutral: { hue: 224, sat: neutSat(1.3), lumMul: { 800: 1.4, 900: 1.5, 950: 1.7 } },
-    primary: { hue: 228, sat: pointSat(1), lumMul: { 500: 0.6, 600: 0.72 } },
-    accent:  { hue: 40, sat: pointSat(1), lumMul: { 500: 0.74 } },  // 깊은 금
-    swatch: ['#0f1526', '#1f4fd8', '#a8790a'] },
+  //  ⚠ 오닉스 골드 — 사이드바를 「적갈색 검정」에서 **차콜 슬레이트**로
+  //    바꿨습니다. 금색은 포인트로만 씁니다.
+  { id: 'onyx-gold', name: '오닉스 골드', desc: '차콜 · 밝은 금빛',
+    sidebar: '#12161c',
+    primary: { hue: 44, sat: 1, lumMul: { 500: 0.66, 600: 0.74, 700: 0.86 } },
+    accent:  { hue: 48, sat: 1, lumMul: { 500: 1.05 } } },
 
-  //  자주 + **연한 샴페인**. 버건디(와인 350°)와 갈리도록 **310°** 로 옮깁니다.
-  { id: 'plum-champagne', name: '플럼 샴페인', desc: '자줏빛 · 연한 샴페인',
-    neutral: { hue: 310, sat: neutSat(1.5), lumMul: { 800: 1.9, 900: 2.2, 950: 2.4 } },
-    primary: { hue: 306, sat: pointSat(0.86), lumMul: { 500: 0.46, 600: 0.56, 700: 0.74 } },
-    accent:  { hue: 46, sat: pointSat(0.62), lumMul: { 500: 1.2 } }, // 아주 연한 샴페인
-    swatch: ['#291628', '#7c1580', '#e0c977'] },
+  //  ⚠ 버건디 — 사이드바가 **와인빛 검정**이라 화면이 붉게 보였습니다.
+  //    사이드바는 차가운 슬레이트로 바꾸고, 와인은 **주 단추와 강조**에만
+  //    남깁니다. 이름이 뜻하는 색은 그대로 살아 있습니다.
+  { id: 'burgundy-slate', name: '버건디 슬레이트', desc: '슬레이트 · 와인 포인트',
+    sidebar: '#141821',
+    primary: { hue: 348, sat: 1, lumMul: { 500: 0.5, 600: 0.6, 700: 0.78 } },
+    accent:  { hue: 26, sat: 0.95, lumMul: { 500: 0.74 } } },
 
-  //  차콜 + 러스트 + 코퍼. 버건디(와인)와는 주색이 붉은 주황이라 갈립니다.
-  { id: 'rose-copper', name: '로즈 코퍼', desc: '차콜 · 러스트와 코퍼',
-    neutral: { hue: 16, sat: neutSat(0.55), lumMul: { 800: 1.6, 900: 1.8, 950: 1.9 } },
-    primary: { hue: 12, sat: pointSat(0.95), lumMul: { 500: 0.62, 600: 0.72, 700: 0.86 } },
-    accent:  { hue: 30, sat: pointSat(1), lumMul: { 500: 1.05 } },  // 밝은 코퍼
-    swatch: ['#1e1714', '#bb3c14', '#e88a2a'] },
+  //  ⚠ 플럼 — 같은 이유로 사이드바를 인디고 슬레이트로.
+  { id: 'plum-indigo', name: '플럼 인디고', desc: '인디고 · 자줏빛 포인트',
+    sidebar: '#141329',
+    primary: { hue: 300, sat: 0.88, lumMul: { 500: 0.5, 600: 0.6, 700: 0.78 } },
+    accent:  { hue: 250, sat: 0.9, lumMul: { 500: 0.86 } } },
+
+  //  ⚠ 로즈 코퍼 대신 **스틸 플래티넘** — 「차콜 + 러스트 + 코퍼」는 정체가
+  //    통째로 따뜻한 색이라, 붉은기를 빼면 남는 것이 없습니다. 되살리는
+  //    대신 **차가운 계열의 담백한 테마** 하나로 갈음했습니다.
+  //    (예전에 로즈 코퍼를 골라 두신 분은 기본색으로 돌아갑니다 —
+  //     모르는 이름은 기본색으로 가게 되어 있습니다.)
+  { id: 'steel-platinum', name: '스틸 플래티넘', desc: '스틸 그레이 · 은빛 블루',
+    sidebar: '#171b21',
+    primary: { hue: 205, sat: 0.9, lumMul: { 500: 0.62, 600: 0.74 } },
+    accent:  { hue: 196, sat: 0.5, lumMul: { 500: 1.15 } } },
 ]
 
-/** 고르는 화면에 찍을 다섯 방울 — 실제로 쓰이는 색에서 그대로 뽑습니다 */
-function swatchOf(t) {
-  if (t.base) return [BASE.navy[950], BASE.teal[500], BASE.accent[500],
-    rgb2hex(atLum(146, pointSat(1)(500), lumOf(hex2rgb(BASE.accent[500])) * 0.78)),
-    rgb2hex(atLum(22, pointSat(0.62)(500), lumOf(hex2rgb(BASE.teal[500])) * 0.78))]
-  const navy = ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true)
-  const teal = ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul)
-  const accent = ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul)
-  const a2 = ramp(BASE.accent, t.accent2Hue ?? (t.accent.hue - 26), pointSat(1),
-    { ...(t.accent.lumMul ?? {}), 500: (t.accent.lumMul?.[500] ?? 1) * 0.78 })
-  const w = ((t.primary.hue % 360) + 360) % 360
-  const a3 = ramp(BASE.accent, t.accent3Hue ?? ((w >= 300 || w <= 60) ? 192 : 22), pointSat(0.62),
-    { ...(t.primary.lumMul ?? {}), 500: (t.primary.lumMul?.[500] ?? 1) * 0.78 })
-  return [navy[950], teal[500], accent[500], a2[500], a3[500]]
-}
-
-// ── CSS 만들기 ───────────────────────────────────────────────────────────────
+// ── 한 테마의 CSS 변수 ──────────────────────────────────────────────────────
 const triplet = (hex) => hex2rgb(hex).join(' ')
 
 function varsFor(t) {
-  if (t.base) {
-    //  기본 테마는 **지금 쓰는 값 그대로**입니다 — 테마를 안 바꾼 분은
-    //  화면이 한 픽셀도 안 달라집니다.
-    const lines = []
-    for (const [fam, steps] of Object.entries(BASE))
-      for (const [s, hex] of Object.entries(steps)) lines.push(`    --c-${fam}-${s}: ${triplet(hex)};`)
-    //  기본 테마도 같은 규칙으로 두 색을 더 갖습니다(강조 172° 기준 +38 / 주색 217° −34)
-    //  기본 테마도 같은 규칙 — 강조(172°)의 형제 146°, 주색(217°)의 깊은 보색 12°
-    for (const [fam, hue, sat, mul] of [['accent2', 146, pointSat(1), 0.78], ['accent3', 22, pointSat(0.62), 0.78]])
-      for (const [st, hex] of Object.entries(BASE.accent))
-        lines.push(`    --c-${fam}-${st}: ${atLum(hue, sat(Number(st)), lumOf(hex2rgb(hex)) * (Number(st) === 500 ? mul : 1)).join(' ')};`)
-    lines.push(`    --c-app: ${triplet(APP_BG)};`)
-    lines.push(`    --c-shadow: ${triplet(BASE.navy[900])};`)
-    lines.push(`    --c-cardline: ${atLum(215, 0.14, 0.606).join(' ')};`)
-    return lines.join('\n')
-  }
-  const navy = ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true)
-  const teal = ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul)
-  const accent = ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul)
-  //  ⚠ 0084 — 대표님 요청: 「테마마다 3가지 말고 4~5가지 조화로운 색으로」.
-  //    강조색 양옆의 **이웃 색상**을 둘 더 만듭니다(기본 +38° / −34°).
-  //    이웃 색끼리는 서로 싸우지 않아 「조화로운」 조합이 됩니다.
-  //    ⚠ 뜻이 붙은 색(완료 초록 · 경고 빨강)과 메뉴별 색(TONE)은 **건드리지
-  //      않습니다.** 새 색은 테마가 소유한 자리에만 씁니다 —
-  //      보조 식별용 계열(slate2)과 두 갈래 막대그래프입니다.
-  //  ⚠ 처음에 +38° / −34° 로 뒀더니 금색 테마에 **라임과 빨강**이 붙었습니다.
-  //    각도만 벌리면 「다채로움」이 아니라 「따로 노는 색」이 됩니다.
-  //    규칙을 둘로 나눕니다 —
-  //      강조2 = 강조색의 **형제**(−26°). 같은 계열이라 반드시 어울립니다.
-  //      강조3 = **온도의 반대편**. 수학적 보색(+155°)을 써 봤더니 초록
-  //              계열에 마젠타가 붙었습니다 — 계산은 맞지만 눈에는
-  //              안 어울립니다. 따뜻한 테마에는 **깊은 청록**, 차가운
-  //              테마에는 **깊은 테라코타**를 둡니다. 금색+청록,
-  //              초록+테라코타, 남색+테라코타 — 고전적인 배색입니다.
-  //              채도를 낮추고 어둡게 두어 「튀는 색」이 아니라
-  //              「깊은 색」이 되게 합니다.
-  const a2Hue = t.accent2Hue ?? (t.accent.hue - 26)
-  const warm = ((t.primary.hue % 360) + 360) % 360
-  const isWarm = warm >= 300 || warm <= 60
-  const a3Hue = t.accent3Hue ?? (isWarm ? 192 : 22)
-  //  형제 색도 한 단계 깊게 — 밝은 주황·연어색은 「고급」보다 「화려」에 가깝습니다.
-  const accent2 = ramp(BASE.accent, a2Hue, pointSat(1),
-    { ...(t.accent.lumMul ?? {}), 500: (t.accent.lumMul?.[500] ?? 1) * 0.78 })
-  //  보조 식별용(일회용기저귀 등)은 **두 번째 강조색**을 따릅니다 —
-  //  0084 이전에는 중립 계열이라 회색 막대였습니다. 이제 테마의 색입니다.
-  const slate2 = ramp(BASE.slate2, a2Hue, pointSat(0.95))
-  //  보색은 **채도를 낮추고 한 단계 어둡게** — 그래야 「튀는 색」이 아니라
-  //  「깊은 색」이 됩니다.
-  const accent3 = ramp(BASE.accent, a3Hue, pointSat(0.62),
-    { ...(t.primary.lumMul ?? {}), 500: (t.primary.lumMul?.[500] ?? 1) * 0.78 })
-  const sem = {}
-  for (const fam of SEM_FAMS) sem[fam] = semRamp(fam, t.neutral.hue, t.semSat ?? 1)
   const lines = []
-  for (const [fam, steps] of Object.entries({ navy, teal, accent, accent2, accent3, slate2, ...sem }))
+  //  ① 중립 — 아홉 테마 전부 같은 값입니다.
+  for (const [s, hex] of Object.entries(NEUTRAL)) lines.push(`    --c-navy-${s}: ${triplet(hex)};`)
+  //  ② 사이드바만 테마가 정합니다 (배경 전용 · 글자로 쓰이지 않는 단계).
+  lines.push(`    --c-navy-950: ${triplet(t.sidebar)};`)
+  //  ③ 주색 · 강조 — 포인트.
+  const teal = pointRamp(SHAPE.primary, t.primary.hue, t.primary.sat, t.primary.lumMul ?? {})
+  const accent = pointRamp(SHAPE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul ?? {})
+  //  강조의 **형제**(−26°)와 주색의 **온도 반대편** — 그래프 계열을 위한 색.
+  const w = ((t.primary.hue % 360) + 360) % 360
+  const a2 = pointRamp(SHAPE.accent, t.accent.hue - 26, t.accent.sat,
+    { ...(t.accent.lumMul ?? {}), 500: (t.accent.lumMul?.[500] ?? 1) * 0.82 })
+  const a3 = pointRamp(SHAPE.accent, (w >= 300 || w <= 60) ? 192 : 22, 0.62,
+    { ...(t.primary.lumMul ?? {}), 500: (t.primary.lumMul?.[500] ?? 1) * 0.8 })
+  for (const [fam, steps] of Object.entries({ teal, accent, accent2: a2, accent3: a3 }))
     for (const [s, hex] of Object.entries(steps)) lines.push(`    --c-${fam}-${s}: ${triplet(hex)};`)
-  //  ⚠ 0083 — 앱 바탕을 테마마다 손으로 골랐더니 색기(채도)가 제각각이었습니다
-  //    (기준 5, 오닉스 10, 에메랄드 11, 로즈 13). **화면에서 가장 넓은 면**이라
-  //    여기에 색기가 끼면 화면 전체에 얇은 막이 낀 것처럼 보입니다.
-  //    색은 사이드바·단추·강조처럼 **작거나 어두운 자리**에서 냅니다.
-  //    기준과 같은 밝기, 아주 낮은 채도로 만들어 냅니다.
-  //  0084 — 가장 넓은 면이라 색기를 더 낮춥니다(0.16 → 0.08).
-  lines.push(`    --c-app: ${atLum(t.neutral.hue, 0.08, lumOf(hex2rgb(APP_BG))).join(' ')};`)
-  //  ⚠ 0082 — 그림자 색과 카드 테두리 색도 테마를 따릅니다.
-  //    전에는 그림자가 rgba(15,26,46,…) **네이비로 고정**이었습니다.
-  //    따뜻한 크림 바탕(#f6f3ec) 위에 차가운 네이비 그림자를 4% 로 얹으면
-  //    사실상 안 보입니다. 그런데 .card 에는 테두리가 없어 **경계를 오로지
-  //    그 그림자에 기대고** 있었습니다 — 그래서 카드가 바탕에 녹아 보였습니다.
-  //    그림자는 그 테마의 가장 어두운 중립색으로 냅니다.
-  lines.push(`    --c-shadow: ${triplet(navy[900])};`)
-  //  카드 테두리는 단계를 빌려 쓰지 않고 **밝기를 직접** 잡습니다.
-  //  navy-200 을 쓰면 흰 카드와 1.2:1 밖에 안 되어 「있는지 없는지」가 됩니다.
-  //  흰 바탕과 약 1.6:1 — 선이 보이되 상자처럼 답답하지 않은 세기입니다.
-  //  0084 — 흰 카드 위의 선이 갈색이면 그것도 「때」로 보입니다. 무채색으로.
-  lines.push(`    --c-cardline: ${atLum(t.neutral.hue, 0.03, 0.606).join(' ')};`)
+  //  ④ 뜻이 붙은 색 · 보조 회색 · 바탕 · 테두리 · 그림자 — 전부 고정.
+  for (const [fam, steps] of Object.entries({ ...SEMANTIC, slate2: SLATE2 }))
+    for (const [s, hex] of Object.entries(steps)) lines.push(`    --c-${fam}-${s}: ${triplet(hex)};`)
+  lines.push(`    --c-app: ${triplet(APP_BG)};`)
+  lines.push(`    --c-cardline: ${triplet(CARD_LINE)};`)
+  lines.push(`    --c-shadow: ${triplet(SHADOW)};`)
   return lines.join('\n')
 }
 
-let css = `/*  ⚠ 이 파일은 손으로 고치지 않습니다 — scripts/gen_themes.mjs 가 만듭니다.
-    고칠 것이 있으면 그 스크립트의 THEMES 를 고치고 다시 돌리세요.
+/** 고르는 화면에 찍을 다섯 방울 — 실제로 쓰이는 색에서 그대로 뽑습니다 */
+function swatchOf(t) {
+  const teal = pointRamp(SHAPE.primary, t.primary.hue, t.primary.sat, t.primary.lumMul ?? {})
+  const accent = pointRamp(SHAPE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul ?? {})
+  const w = ((t.primary.hue % 360) + 360) % 360
+  const a2 = pointRamp(SHAPE.accent, t.accent.hue - 26, t.accent.sat,
+    { ...(t.accent.lumMul ?? {}), 500: (t.accent.lumMul?.[500] ?? 1) * 0.82 })
+  const a3 = pointRamp(SHAPE.accent, (w >= 300 || w <= 60) ? 192 : 22, 0.62,
+    { ...(t.primary.lumMul ?? {}), 500: (t.primary.lumMul?.[500] ?? 1) * 0.8 })
+  return [t.sidebar, teal[500], accent[500], a2[500], a3[500]]
+}
 
-    테마마다 **각 단계의 밝기(상대휘도)를 기준 팔레트와 같게** 두고 색상만
-    바꿉니다. WCAG 대비는 휘도로만 계산되므로, 0080 에서 대비 미달을
-    173개 → 0개로 만든 결과가 아홉 테마 전부에서 그대로 유지됩니다.
-    (금색처럼 밝아서 흰 글자가 안 읽히는 색만 휘도를 낮춰 어둡게 잡았습니다.
-     색을 위해 가독성을 깎지 않습니다.) */
+let css = `/*  ⚠ 이 파일은 손으로 고치지 않습니다 — scripts/gen_themes.mjs 가 만듭니다.
+
+    0086 — **테마색은 포인트로만. 중립색은 테마와 무관하게 고정.**
+    배경 · 카드 · 테두리 · 표 · 모든 글자, 그리고 뜻이 붙은 색(완료 초록 ·
+    경고 빨강)은 아홉 테마에서 **완전히 같은 값**입니다.
+    테마가 정하는 것은 사이드바 바탕과 주 단추 · 강조뿐입니다. */
 
 @layer base {
 `
 for (const t of THEMES) {
-  const sel = t.base ? ':root, [data-theme="navy-blue"]' : `[data-theme="${t.id}"]`
+  const sel = t.id === 'navy-blue' ? ':root, [data-theme="navy-blue"]' : `[data-theme="${t.id}"]`
   css += `  /* ${t.name} — ${t.desc} */\n  ${sel} {\n${varsFor(t)}\n  }\n\n`
 }
 css += '}\n'
 
-// 테마 목록 (TS)
 let ts = `//  ⚠ 이 파일은 손으로 고치지 않습니다 — scripts/gen_themes.mjs 가 만듭니다.
 export interface ThemeDef {
   id: string
@@ -372,15 +259,12 @@ export interface ThemeDef {
   name: string
   /** 한 줄 설명 — 고르는 사람이 무엇이 바뀌는지 알 수 있게 */
   desc: string
-  /** 고르는 화면에 찍을 색 다섯 방울 [바탕·주색·강조·강조2·강조3] */
+  /** 고르는 화면에 찍을 색 다섯 방울 [사이드바·주색·강조·강조2·강조3] */
   swatch: [string, string, string, string, string]
 }
 
 export const THEMES: ThemeDef[] = [
-${THEMES.map((t) => {
-  const sw = swatchOf(t)
-  return `  { id: '${t.id}', name: '${t.name}', desc: '${t.desc}', swatch: ['${sw.join("', '")}'] },`
-}).join('\n')}
+${THEMES.map((t) => `  { id: '${t.id}', name: '${t.name}', desc: '${t.desc}', swatch: ['${swatchOf(t).join("', '")}'] },`).join('\n')}
 ]
 
 export const THEME_IDS = THEMES.map((t) => t.id)
@@ -395,115 +279,85 @@ const SRC = new URL('../src/', import.meta.url)
 fs.writeFileSync(new URL('themes.css', SRC), css)
 fs.writeFileSync(new URL('lib/themes.ts', SRC), ts)
 
-// ── 만든 자리에서 바로 검산 ──────────────────────────────────────────────────
-//   실제로 화면에서 쓰이는 짝만 골라 봅니다.
-const ratio = (a, b) => { const la = lumOf(hex2rgb(a)) + 0.05, lb = lumOf(hex2rgb(b)) + 0.05
-  return Math.round((Math.max(la,lb) / Math.min(la,lb)) * 100) / 100 }
+// ══ 검산 ════════════════════════════════════════════════════════════════════
+const ratio = (a, b) => {
+  const la = lumOf(hex2rgb(a)) + 0.05, lb = lumOf(hex2rgb(b)) + 0.05
+  return Math.round((Math.max(la, lb) / Math.min(la, lb)) * 100) / 100
+}
 const PAIRS = [
-  ['캡션 navy-400 / 흰 바탕', (p) => ratio(p.navy[400], '#ffffff'), 4.5],
-  ['캡션 navy-400 / 카드 navy-50', (p) => ratio(p.navy[400], p.navy[50]), 4.5],
-  ['본문 navy-500 / 흰 바탕', (p) => ratio(p.navy[500], '#ffffff'), 4.5],
-  ['제목 navy-900 / 흰 바탕', (p) => ratio(p.navy[900], '#ffffff'), 4.5],
+  ['캡션 navy-400 / 흰 바탕', (p) => ratio(NEUTRAL[400], '#ffffff'), 4.5],
+  ['본문 navy-500 / 흰 바탕', (p) => ratio(NEUTRAL[500], '#ffffff'), 4.5],
+  ['제목 navy-900 / 흰 바탕', (p) => ratio(NEUTRAL[900], '#ffffff'), 4.5],
+  ['본문 navy-600 / 앱 바탕', (p) => ratio(NEUTRAL[600], APP_BG), 4.5],
+  ['카드 테두리 / 흰 카드', (p) => ratio(CARD_LINE, '#ffffff'), 1.25],
   ['흰 글자 / 주단추 teal-500', (p) => ratio('#ffffff', p.teal[500]), 3.0],
   ['주색 글자 teal-600 / 흰 바탕', (p) => ratio(p.teal[600], '#ffffff'), 4.5],
   ['주색 글자 teal-700 / teal-50', (p) => ratio(p.teal[700], p.teal[50]), 4.5],
-  ['사이드바 글자 navy-300 / navy-900', (p) => ratio(p.navy[300], p.navy[900]), 4.5],
-  ['사이드바 흰글자 / navy-950', (p) => ratio('#ffffff', p.navy[950]), 4.5],
-  //  ⚠ accent-600 을 「흰 바탕 작은 글자」로 재려다 틀렸습니다. 이 색이
-  //    실제로 쓰이는 자리는 (1) 공개 홈페이지의 **큰 굵은 글자**(18~27px →
-  //    기준 3:1)와 (2) accent-50 타일 위입니다. 흰 바탕 작은 글자로 쓰는
-  //    곳은 없습니다. 색을 고칠 일이 아니라 **자를 고칠 일**이었습니다.
+  ['사이드바 흰글자 / 사이드바', (p) => ratio('#ffffff', p.sidebar), 12],
+  ['사이드바 navy-200 / 사이드바', (p) => ratio(NEUTRAL[200], p.sidebar), 7],
   ['강조 accent-600 / 흰 바탕 (큰 글자)', (p) => ratio(p.accent[600], '#ffffff'), 3.0],
-  ['강조 accent-600 / 타일 accent-50', (p) => ratio(p.accent[600], p.accent[50]), 3.0],
   ['강조 accent-700 / 칩 accent-50', (p) => ratio(p.accent[700], p.accent[50]), 4.5],
-  ['본문 navy-600 / 앱 바탕', (p) => ratio(p.navy[600], p.app), 4.5],
-  //  ── 뜻이 붙은 색도 같이 잽니다 ──────────────────────────────────────────
-  ['주의 amber-700 / amber-50', (p) => ratio(p.amber[700], p.amber[50]), 4.5],
-  ['경고 rose-600 / rose-50', (p) => ratio(p.rose[600], p.rose[50]), 4.5],
-  ['완료 emerald-700 / emerald-50', (p) => ratio(p.emerald[700], p.emerald[50]), 4.5],
-  ['정보 sky-700 / sky-50', (p) => ratio(p.sky[700], p.sky[50]), 4.5],
-  ['경고 rose-600 / 흰 바탕', (p) => ratio(p.rose[600], '#ffffff'), 4.5],
+  ['주의 amber-700 / amber-50', () => ratio(SEMANTIC.amber[700], SEMANTIC.amber[50]), 4.5],
+  ['경고 rose-600 / rose-50', () => ratio(SEMANTIC.rose[600], SEMANTIC.rose[50]), 4.5],
+  ['완료 emerald-700 / emerald-50', () => ratio(SEMANTIC.emerald[700], SEMANTIC.emerald[50]), 4.5],
+  ['정보 sky-700 / sky-50', () => ratio(SEMANTIC.sky[700], SEMANTIC.sky[50]), 4.5],
 ]
-console.log('테마'.padEnd(18), PAIRS.map((x, i) => `#${i + 1}`).join('  '))
-let worst = 999, bad = 0
+console.log('테마'.padEnd(18), PAIRS.map((x, i) => `#${i + 1}`).join(' '))
+let bad = 0
 for (const t of THEMES) {
-  const sem = {}
-  for (const fam of SEM_FAMS) sem[fam] = t.base ? BASE[fam] : semRamp(fam, t.neutral.hue, t.semSat ?? 1)
-  const p = t.base
-    ? { navy: BASE.navy, teal: BASE.teal, accent: BASE.accent, app: APP_BG, ...sem }
-    : { navy: ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true),
-        teal: ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul),
-        accent: ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul),
-        //  앱 바탕은 이제 손으로 고르지 않고 만들어 냅니다(0083) —
-        //  검산도 같은 식으로 계산해야 실제 화면과 맞습니다.
-        app: rgb2hex(atLum(t.neutral.hue, 0.08, lumOf(hex2rgb(APP_BG)))), ...sem }
-  const cells = PAIRS.map(([, fn, need]) => {
-    const v = fn(p); if (v < need) { bad += 1 }
-    worst = Math.min(worst, v / need)
-    return `${v < need ? '✗' : ' '}${v.toFixed(1)}`
-  })
+  const p = {
+    teal: pointRamp(SHAPE.primary, t.primary.hue, t.primary.sat, t.primary.lumMul ?? {}),
+    accent: pointRamp(SHAPE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul ?? {}),
+    sidebar: t.sidebar,
+  }
+  const cells = PAIRS.map(([, fn, need]) => { const v = fn(p); if (v < need) bad += 1; return `${v < need ? '✗' : ' '}${v.toFixed(1)}` })
   console.log(t.name.padEnd(16), cells.join(' '))
 }
 console.log('\n짝 이름:')
 PAIRS.forEach(([n, , need], i) => console.log(`  #${i + 1} ${n} (기준 ${need})`))
 console.log(`\n기준 미달 ${bad}개`)
 
-//  ── 뜻이 안 바뀌었는가 ───────────────────────────────────────────────────────
-//   초록이 초록으로, 빨강이 빨강으로 남아 있는지 각도로 확인합니다.
-//   여기가 틀어지면 「완료」가 「경고」로 읽힙니다 — 대비보다 더 큰 사고입니다.
-function hueOf([r, g, b]) {
-  const R=r/255,G=g/255,B=b/255,mx=Math.max(R,G,B),mn=Math.min(R,G,B),d=mx-mn
-  if (!d) return 0
-  const h = mx===R ? ((G-B)/d)%6 : mx===G ? (B-R)/d+2 : (R-G)/d+4
-  return ((h*60)%360+360)%360
-}
-let turned = 0
+//  ── 사이드바가 차가운 계열인가 ──────────────────────────────────────────────
+//   적갈색 검정 · 와인빛 검정 · 붉은 회색을 막습니다.
+let warmSide = 0
 for (const t of THEMES) {
-  if (t.base) continue
-  for (const fam of SEM_FAMS) {
-    const r = semRamp(fam, t.neutral.hue, t.semSat ?? 1)
-    const got = hueOf(hex2rgb(r[500]))
-    const off = Math.abs(angleDelta(SEM_HUE[fam], got))
-    if (off > MAX_TURN + 3) { console.log(`  ✗ ${t.name} ${fam}: ${off.toFixed(0)}° 돌아감`); turned += 1 }
+  const rgb = hex2rgb(t.sidebar)
+  const h = hueOf(rgb)
+  const chroma = Math.max(...rgb) - Math.min(...rgb)
+  //  색기가 거의 없으면(중립 검정) 색상각은 따지지 않습니다.
+  if (chroma > 6 && (h < COOL_MIN || h > COOL_MAX)) {
+    console.log(`  ✗ ${t.name} 사이드바 ${t.sidebar} — 색상각 ${Math.round(h)}° (허용 ${COOL_MIN}~${COOL_MAX}°)`)
+    warmSide += 1
   }
 }
-console.log(`뜻이 바뀔 만큼 돌아간 색 ${turned}개 (한도 ${MAX_TURN}°)`)
+console.log(`따뜻한 사이드바 ${warmSide}개 (0 이어야 합니다)`)
 
-// ── 아홉이 서로 충분히 다른가 ────────────────────────────────────────────────
-//
-//  ⚠ 이 검산이 없어서 「에메랄드골드와 포레스트세이지가 거의 같다」,
-//    「오닉스골드와 버건디브론즈도 차이가 없다」가 나왔습니다.
-//    한 테마씩 예쁘게 고르다 보면 **서로 닮았다는 사실은 아무도 안 봅니다.**
-//    사이드바 · 주색 · 강조 세 색을 묶어 거리를 재고, 너무 가까우면 실패입니다.
-const KEY = ['navy-950', 'teal-500', 'accent-500']
-const MIN_GAP = 130
-function keyColors(t) {
-  if (t.base) return { 'navy-950': hex2rgb(BASE.navy[950]), 'teal-500': hex2rgb(BASE.teal[500]),
-    'accent-500': hex2rgb(BASE.accent[500]) }
-  return {
-    'navy-950': hex2rgb(ramp(BASE.navy, t.neutral.hue, t.neutral.sat, t.neutral.lumMul, true)[950]),
-    'teal-500': hex2rgb(ramp(BASE.teal, t.primary.hue, t.primary.sat, t.primary.lumMul)[500]),
-    'accent-500': hex2rgb(ramp(BASE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul)[500]),
-  }
+//  ── 중립색이 정말 고정인가 ─────────────────────────────────────────────────
+//   이 검산이 이번 재정리의 핵심입니다. 중립이 한 테마에서라도 달라지면
+//   그 테마만 뿌옇게 보이기 시작합니다.
+const neutralBlocks = [...css.matchAll(/\[data-theme="[^"]+"\][^{]*\{([\s\S]*?)\n  \}/g)]
+  .map((m) => (m[1].match(/--c-navy-(?:50|100|200|300|400|500|600|700|800|900):[^;]+;/g) ?? []).join('|'))
+const neutralSame = new Set(neutralBlocks).size <= 1
+console.log(`중립색이 아홉 테마에서 동일: ${neutralSame ? '예' : '**아니오 — 실패**'}`)
+
+//  ── 서로 충분히 다른가 ─────────────────────────────────────────────────────
+const MIN_GAP = 120
+const key = (t) => {
+  const teal = pointRamp(SHAPE.primary, t.primary.hue, t.primary.sat, t.primary.lumMul ?? {})
+  const accent = pointRamp(SHAPE.accent, t.accent.hue, t.accent.sat, t.accent.lumMul ?? {})
+  return [hex2rgb(t.sidebar), hex2rgb(teal[500]), hex2rgb(accent[500])]
 }
-const rgbDist = (a, b) => Math.sqrt(a.reduce((s2, v, i) => s2 + (v - b[i]) ** 2, 0))
-const close = []
-for (let i = 0; i < THEMES.length; i += 1) {
-  for (let j = i + 1; j < THEMES.length; j += 1) {
-    const A = keyColors(THEMES[i]), B = keyColors(THEMES[j])
-    const d = KEY.reduce((s2, k) => s2 + rgbDist(A[k], B[k]), 0)
-    if (d < MIN_GAP) close.push(`  ✗ ${THEMES[i].name} ↔ ${THEMES[j].name} — 거리 ${d.toFixed(0)} (최소 ${MIN_GAP})`)
-  }
-}
-//  가장 가까운 다섯 쌍은 늘 보여 줍니다 — 숫자를 봐야 감이 잡힙니다.
+const dist = (a, b) => Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0))
 const all = []
 for (let i = 0; i < THEMES.length; i += 1)
   for (let j = i + 1; j < THEMES.length; j += 1) {
-    const A = keyColors(THEMES[i]), B = keyColors(THEMES[j])
-    all.push([KEY.reduce((s2, k) => s2 + rgbDist(A[k], B[k]), 0), THEMES[i].name, THEMES[j].name])
+    const A = key(THEMES[i]), B = key(THEMES[j])
+    all.push([A.reduce((s, c, k) => s + dist(c, B[k]), 0), THEMES[i].name, THEMES[j].name])
   }
+all.sort((x, y) => x[0] - y[0])
 console.log('\n가장 닮은 다섯 쌍:')
-all.sort((x, y) => x[0] - y[0]).slice(0, 5).forEach(([d, a2, b2]) =>
-  console.log(`  ${d.toFixed(0).padStart(4)}  ${a2} ↔ ${b2}`))
-console.log(close.length ? `\n너무 닮은 쌍 ${close.length}개\n${close.join('\n')}` : `\n너무 닮은 쌍 0개 (최소 거리 ${MIN_GAP})`)
-if (close.length) process.exitCode = 1
+all.slice(0, 5).forEach(([d, a, b]) => console.log(`  ${d.toFixed(0).padStart(4)}  ${a} ↔ ${b}`))
+const tooClose = all.filter(([d]) => d < MIN_GAP)
+console.log(`너무 닮은 쌍 ${tooClose.length}개 (최소 ${MIN_GAP})`)
+
+if (bad || warmSide || !neutralSame || tooClose.length) process.exitCode = 1

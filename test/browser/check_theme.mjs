@@ -25,9 +25,14 @@ const ok = (name, cond, detail = '') => {
   console.log(`${cond ? ' OK ' : 'FAIL'} | ${name}${detail && !cond ? ` — ${detail}` : ''}`)
 }
 
+//  ⚠ 0086 — 이름이 바뀐 테마가 있습니다(버건디 브론즈 → 버건디 슬레이트,
+//    플럼 샴페인 → 플럼 인디고, 로즈 코퍼 → 스틸 플래티넘).
+//    사이드바를 「적갈색 검정 / 와인빛 검정」에서 차가운 슬레이트로 옮기면서
+//    성격이 달라졌기 때문입니다. 예전 이름이 저장돼 있던 분은 기본색으로
+//    돌아갑니다 — 아래 ②-2 가 그것을 확인합니다.
 const THEMES = [
-  'navy-blue', 'onyx-gold', 'burgundy-bronze', 'emerald-gold', 'forest-sage',
-  'deep-teal', 'navy-gold', 'plum-champagne', 'rose-copper',
+  'navy-blue', 'navy-gold', 'emerald-gold', 'forest-sage', 'deep-teal',
+  'onyx-gold', 'burgundy-slate', 'plum-indigo', 'steel-platinum',
 ]
 const b = await chromium.launch({ executablePath: EXEC })
 

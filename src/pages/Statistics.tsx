@@ -73,10 +73,12 @@ export function Statistics() {
         <h2 className="mb-2 text-[1.08rem] font-semibold text-navy-500">폐기물 구분 비중</h2>
         <div className="card p-4">
           <div className="mb-2 flex h-5 overflow-hidden rounded-full bg-navy-50">
-            {/*  0084 — 두 갈래 막대는 회색+파랑이었습니다. 테마가 소유한 두 색으로
-                두면 그래프도 테마를 따라갑니다(의미가 붙은 색이 아니라
-                단순 구분이라 바꿔도 뜻이 헷갈리지 않습니다). */}
-          <div className="flex items-center justify-center bg-accent3-600 text-[0.9rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
+            {/*  ⚠ 0086 — 0084 에서 이 막대를 테마 색으로 바꿨는데 되돌립니다.
+                그래프 규칙은 **주 계열 = 테마 포인트색 · 비교/보조 계열 =
+                중립 회색**입니다. 둘 다 색을 넣으면 어느 쪽이 주인공인지
+                사라져 두 막대가 뭉개집니다. 여기서 의료폐기물이 주 계열
+                (아래 teal-500), 이 막대가 보조 계열입니다. */}
+          <div className="flex items-center justify-center bg-slate2-600 text-[0.9rem] font-bold text-white" style={{ width: `${medicalPct}%` }}>
               {medicalPct >= 12 ? `${medicalPct}%` : ''}
             </div>
             <div className="flex items-center justify-center bg-teal-500 text-[0.9rem] font-bold text-white" style={{ width: `${diaperPct}%` }}>
