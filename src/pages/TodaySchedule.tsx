@@ -123,10 +123,18 @@ export function TodaySchedule() {
   //   ⚠ 엑셀로 들어온 옛 기록에는 event 가 없습니다. 그때는 고칠 길이
   //     서버에 없으므로 예전 모달을 그대로 씁니다(일정 숫자만 손보는 자리).
   function openEdit(s: Schedule) {
-    if (s.eventId && (role === 'admin' || role === 'office')) {
+    //  수거 기록이 붙어 있으면 **누구든** 상세 시트로 갑니다.
+    //  ⚠ 기사님에게 옛 모달을 남겨 두면, 그 길은 schedules 표만 고쳐서
+    //    수거이력·자재·재고를 예전 값으로 남깁니다 — 어긋난 채 굳습니다.
+    //    시트에서 기사님은 고치지는 못하고 **취소하고 다시 넣습니다**(서버가
+    //    본인 것만 허용). 그 길은 재고까지 정확히 되돌립니다.
+    if (s.eventId) {
       setRecordId(s.eventId)
       return
     }
+    //  엑셀로 들어온 옛 기록에는 event 가 없습니다 — 서버에 되돌릴 것이
+    //  없으므로 일정 숫자만 손보는 예전 모달을 씁니다(사무실·관리자만).
+    if (!(role === 'admin' || role === 'office')) return
     setEditTarget(s)
     setEditAmount(s.actualAmount != null ? String(s.actualAmount) : String(s.expectedAmount))
     setEditMemo(s.memo)

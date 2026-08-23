@@ -214,9 +214,22 @@ async function open(ver, { role = 'admin', path = '/history', w = 1280 } = {}) {
   await ctx.close()
 }
 {
+  //  현장 계정 — 수거이력 화면 자체가 안 열립니다. 오늘 일정에서 자기가
+  //  넣은 건을 눌러 봅니다.
   const { ctx, p } = await open(74, { role: 'field', path: '/today', w: 390 })
-  //  현장 계정에는 수거이력 자체가 안 열립니다 — 오늘 일정에서 확인합니다.
-  ok((await p.locator('[data-record-edit]').count()) === 0, '현장 계정 화면에는 고치는 길이 없음')
+  await p.locator('[data-guide="guide-today-list"]').first().click()
+  await p.waitForTimeout(900)
+  ok((await p.locator('[data-record]').count()) === 1, '기사님도 자기 기록 상세를 볼 수 있다')
+  ok((await p.locator('[data-record-edit]').count()) === 0,
+    '**기사님에게는 「수정」이 없다** (남의 입력까지 고쳐지면 안 됩니다)')
+  //  ⚠ 그런데 **취소는 있어야 합니다.** 없으면 기사님이 자기 오타를 고칠
+  //    길이 사무실 전화뿐이고, 그게 없애려던 그 전화입니다.
+  ok((await p.locator('[data-record-revert]').count()) === 1,
+    '**기사님은 취소하고 다시 넣을 수 있다**')
+  await p.locator('[data-record-revert]').click()
+  await p.waitForTimeout(600)
+  const t = flat(await p.locator('[data-record]').innerText())
+  ok(/다시 넣으시면/.test(t), '취소 뒤 무엇을 해야 하는지 적혀 있음', t.slice(-90))
   await ctx.close()
 }
 

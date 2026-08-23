@@ -35,7 +35,15 @@ import type { ContainerBreakdown, WasteType } from '../types'
 export function CollectionRecord({ eventId, onClose }: { eventId: string | null; onClose: () => void }) {
   const { data, clientById, amendCollection, revertCollection } = useData()
   const { role, mode } = useAuth()
-  const canAmend = useSchemaAtLeast(74) === true && (role === 'admin' || role === 'office') && mode === 'live'
+  const staff = role === 'admin' || role === 'office'
+  //  고치는 것은 사무실·관리자만입니다(서버도 그렇게 막습니다).
+  const canAmend = useSchemaAtLeast(74) === true && staff && mode === 'live'
+  //  ⚠ **취소는 기사님도 하십니다.** 서버가 「본인이 입력한 수거만」으로
+  //    막고 있어서(0008), 남의 것을 누르면 서버가 이유를 말해 줍니다.
+  //    이 길이 없으면 기사님이 자기 오타를 고칠 방법이 사무실 전화뿐입니다 —
+  //    없애려던 그 전화입니다. 취소하고 다시 넣으면 재고·자재까지 정확히
+  //    되돌아갑니다(revert_collection).
+  const canCancel = mode === 'live' && (staff || role === 'field')
 
   //  ⚠ 창 하나 안에서 **단계만** 바꿉니다. 창 안에서 다른 창을 열면, 뒤 창이
   //    닫히며 부르는 history.back() 이 방금 뜬 앞 창을 곧바로 다시 닫습니다
@@ -192,18 +200,26 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                 이대로 고치기
               </button>
             </>
-          ) : canAmend && ev && !ev.reverted ? (
+          ) : ev && !ev.reverted && (canCancel || canAmend) ? (
             <>
-              <button
-                data-record-revert
-                className="btn-ghost flex-1 !text-rose-600"
-                onClick={() => { setReason(''); setError(''); setMode2('cancel') }}
-              >
-                <Undo2 size={17} strokeWidth={2.5} /> 기록 취소
-              </button>
-              <button data-record-edit className="btn-primary flex-1" onClick={() => setMode2('edit')}>
-                <Pencil size={17} strokeWidth={2.5} /> 수정
-              </button>
+              {canCancel && (
+                <button
+                  data-record-revert
+                  className="btn-ghost flex-1 !text-rose-600"
+                  onClick={() => { setReason(''); setError(''); setMode2('cancel') }}
+                >
+                  <Undo2 size={17} strokeWidth={2.5} /> 기록 취소
+                </button>
+              )}
+              {canAmend ? (
+                <button data-record-edit className="btn-primary flex-1" onClick={() => setMode2('edit')}>
+                  <Pencil size={17} strokeWidth={2.5} /> 수정
+                </button>
+              ) : (
+                <button className="btn-ghost flex-1" onClick={onClose}>
+                  닫기
+                </button>
+              )}
             </>
           ) : (
             <button className="btn-ghost flex-1" onClick={onClose}>
@@ -253,6 +269,12 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                   이미 확정한 청구에 들어간 수거는 서버가 막습니다. 청구를 먼저 취소해 주세요.
                 </p>
                 <RevertReasonFields reason={reason} onChange={setReason} />
+                {!staff && (
+                  <p className="t-caption break-keep leading-snug text-navy-500">
+                    취소한 뒤 <b className="text-navy-700">수거 입력에서 다시 넣으시면 됩니다.</b>{' '}
+                    자재와 재고도 함께 되돌아갑니다.
+                  </p>
+                )}
               </div>
             ) : mode2 === 'view' ? (
               <dl className="mt-3 flex flex-col gap-2">
