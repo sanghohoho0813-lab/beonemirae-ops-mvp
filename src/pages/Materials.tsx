@@ -6,6 +6,7 @@ import { MetricCard, EmptyState, SectionTitle } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { MaterialRiskCard } from '../components/ops'
 import { StockCard } from '../components/StockCard'
+import { StockLedger } from '../components/StockLedger'
 import { useAuth } from '../context/AuthContext'
 import { Modal } from '../components/Modal'
 import { additionalMaterialCount } from '../lib/selectors'
@@ -131,13 +132,17 @@ export function Materials() {
            원칙을 이렇게 잡습니다 —
              「설정」 = 자재 품목·기본값 같은 **구조 설정**
              「운영 화면」 = 지금 몇 개 있나 · 넣고 · 바로잡고 · 최근 변동
-           그래서 자재 화면 맨 위로 올립니다. 설정에 있던 것도 그대로
-           둡니다(없애면 거기서 찾던 분이 헤맵니다) — 같은 부품입니다.
+           그래서 자재 화면 맨 위로 올립니다. 설정에는 **가는 길만** 남겼습니다
+           (0088) — 같은 화면이 두 자리에 있으면 어느 쪽이 진짜인지 헷갈립니다.
            ⚠ 현장 담당자에게는 안 보입니다. 사무실 재고는 사무실 일이고,
-             최소권한 원칙을 그대로 지킵니다. */}
+             최소권한 원칙을 그대로 지킵니다.
+           ⚠ 0074 — 그 아래에 **최근 재고 변동**을 답니다. 지금까지 이 표는
+             쓰기만 하고 한 번도 읽지 않았습니다. 숫자만 보여 주고 왜 그
+             숫자인지 안 보여 주면, 이상할 때 되짚을 방법이 없습니다. */}
       {(role === 'admin' || role === 'office') && (
         <div className="mb-5">
           <StockCard />
+          <StockLedger />
         </div>
       )}
 

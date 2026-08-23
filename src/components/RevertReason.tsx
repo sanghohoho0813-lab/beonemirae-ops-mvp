@@ -19,7 +19,57 @@ import { useSchemaAtLeast } from '../lib/schemaGate'
 //    「기타」는 직접 적게 합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const QUICK = ['잘못 입력했습니다', '중복으로 입력했습니다', '수거량을 잘못 적었습니다', '다른 거래처에 입력했습니다', '방문이 취소됐습니다']
+/**
+ * 자주 쓰는 취소 이유.
+ *  ⚠ 수거기록 상세도 **같은 목록**을 씁니다 — 두 벌이면 한쪽만 고쳐집니다.
+ */
+export const REVERT_REASONS = ['잘못 입력했습니다', '중복으로 입력했습니다', '수거량을 잘못 적었습니다', '다른 거래처에 입력했습니다', '방문이 취소됐습니다']
+
+/**
+ * 사유를 고르는 칸 — 창(Modal) 없이 **내용만**.
+ *
+ *  ⚠ 이렇게 뽑아 둔 이유가 있습니다. 창 안에서 다른 창을 열면 **뒤 창이 닫히며
+ *    부르는 history.back() 이, 방금 뜬 앞 창을 곧바로 다시 닫습니다.**
+ *    (useHistoryDismiss 가 뒤로 가기와 창을 이어 놓았기 때문입니다.)
+ *    그래서 창을 겹치지 않고 **한 창 안에서 단계만 바꿉니다.**
+ */
+export function RevertReasonFields({
+  reason,
+  onChange,
+}: {
+  reason: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div>
+      <p className="text-[1.05rem] font-extrabold text-navy-900">
+        왜 되돌리시나요? <span className="text-rose-600">*</span>
+      </p>
+      <div data-revert-quick className="mt-2 flex flex-wrap gap-2">
+        {REVERT_REASONS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => onChange(q)}
+            className={`min-h-[2.5rem] rounded-xl px-3 text-[1rem] font-bold transition active:scale-95 ${
+              reason === q ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-700'
+            }`}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+      <input
+        data-revert-reason
+        value={reason}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="직접 적으셔도 됩니다"
+        maxLength={200}
+        className="input mt-2.5"
+      />
+    </div>
+  )
+}
 
 export function RevertReasonModal({
   eventId,
@@ -104,31 +154,7 @@ export function RevertReasonModal({
 
       {needReason && (
         <div className="mt-4">
-          <p className="text-[1.05rem] font-extrabold text-navy-900">
-            왜 되돌리시나요? <span className="text-rose-600">*</span>
-          </p>
-          <div data-revert-quick className="mt-2 flex flex-wrap gap-2">
-            {QUICK.map((q) => (
-              <button
-                key={q}
-                type="button"
-                onClick={() => setReason(q)}
-                className={`min-h-[2.5rem] rounded-xl px-3 text-[1rem] font-bold transition active:scale-95 ${
-                  reason === q ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-700'
-                }`}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-          <input
-            data-revert-reason
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="직접 적으셔도 됩니다"
-            maxLength={200}
-            className="input mt-2.5"
-          />
+          <RevertReasonFields reason={reason} onChange={setReason} />
           {!ready && (
             <p className="t-caption mt-1.5 text-navy-500">사유를 적어야 되돌릴 수 있습니다.</p>
           )}

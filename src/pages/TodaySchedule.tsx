@@ -22,6 +22,7 @@ import { UpcomingVisits } from '../components/UpcomingVisits'
 import { FieldDayStrip } from '../components/FieldDayStrip'
 import { AddVisitSheet } from '../components/AddVisitSheet'
 import { SharedTruck } from '../components/SharedTruck'
+import { CollectionRecord } from '../components/CollectionRecord'
 import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
@@ -89,7 +90,8 @@ export function TodaySchedule() {
   const fieldCanAdd = useSchemaAtLeast(67) === true && role === 'field'
   const canAddVisit = canBook || fieldCanAdd
 
-  // 완료된 건 수정 (기존 동작 유지)
+  // 완료된 건 수정
+  const [recordId, setRecordId] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<Schedule | null>(null)
   const [editAmount, setEditAmount] = useState('')
   const [editMemo, setEditMemo] = useState('')
@@ -112,7 +114,19 @@ export function TodaySchedule() {
   //  이 날이 휴무일인지 — 넣어 둔 휴무일만 봅니다.
   const holidayName = useMemo(() => holidayMap(data).get(date), [data, date])
 
+  //  0074 — 수거 기록이 붙어 있으면 **상세 시트**를 엽니다.
+  //
+  //   ⚠ 예전 모달은 수거량과 메모 두 칸만 바꾸면서 schedules 표를 직접
+  //     고쳤습니다. 그러면 수거이력·자재·재고는 예전 값 그대로 남습니다 —
+  //     일정에는 320kg, 수거이력에는 100kg 인 상태가 굳습니다.
+  //     사무실·관리자는 이제 서버가 되돌리고 다시 넣는 길로 갑니다.
+  //   ⚠ 엑셀로 들어온 옛 기록에는 event 가 없습니다. 그때는 고칠 길이
+  //     서버에 없으므로 예전 모달을 그대로 씁니다(일정 숫자만 손보는 자리).
   function openEdit(s: Schedule) {
+    if (s.eventId && (role === 'admin' || role === 'office')) {
+      setRecordId(s.eventId)
+      return
+    }
     setEditTarget(s)
     setEditAmount(s.actualAmount != null ? String(s.actualAmount) : String(s.expectedAmount))
     setEditMemo(s.memo)
@@ -773,7 +787,10 @@ export function TodaySchedule() {
         )}
       </Modal>
 
-      {/* 완료 건 수정 모달 */}
+      <CollectionRecord eventId={recordId} onClose={() => setRecordId(null)} />
+
+      {/*  완료 건 수정 모달 — **엑셀로 들어온 옛 기록 전용**입니다.
+           수거 기록(event)이 붙어 있는 건은 위 상세 시트로 갑니다. */}
       <Modal
         open={editTarget !== null}
         title="수거 내역 수정"

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Undo2 } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 import { FilterChip } from '../components/ui'
-import { RevertReasonModal } from '../components/RevertReason'
+import { CollectionRecord } from '../components/CollectionRecord'
 import { facilityByWaste } from '../data/ops'
 import { weight, today, shiftDays } from '../lib/format'
 import type { WasteType } from '../types'
@@ -34,7 +34,7 @@ export function CollectionHistory() {
   //    되돌리기는 자재·재고·요청·그 달 청구가 함께 되돌아가는 일이라
   //    이유가 안 남으면 나중에 아무도 설명하지 못합니다. 수거 입력 화면과
   //    **같은 부품**을 씁니다 — 두 벌이면 한쪽만 고쳐집니다.
-  const [revert, setRevert] = useState<{ eventId: string; label: string } | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
   const [waste, setWaste] = useState<WasteFilter>('전체')
   const [kind, setKind] = useState<KindFilter>('전체')
   const [period, setPeriod] = useState<PeriodFilter>('전체')
@@ -148,14 +148,23 @@ export function CollectionHistory() {
         <table className="w-full border-collapse text-left text-[0.98rem]">
           <thead>
             <tr className="bg-navy-50 text-navy-500">
-              {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고', ...(canRevert ? ['정정'] : [])].map((h) => (
+              {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고', ...(canRevert ? ['보기·수정'] : [])].map((h) => (
                 <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.slice(0, 60).map((r) => (
-              <tr key={r.id} className="border-t border-navy-100 text-navy-700">
+              <tr
+                key={r.id}
+                data-history-row={r.id}
+                //  ⚠ 줄 아무 데나 눌러도 열립니다. 오른쪽 끝의 작은 글자를
+                //    찾아 누르게 하지 않습니다 — 그게 「찾기 어렵다」의 정체였습니다.
+                onClick={canRevert && r.completed && r.eventId ? () => { setError(''); setOpenId(r.eventId!) } : undefined}
+                className={`border-t border-navy-100 text-navy-700 ${
+                  canRevert && r.completed && r.eventId ? 'cursor-pointer transition hover:bg-teal-50/60' : ''
+                }`}
+              >
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.date.slice(5)} {r.time}</td>
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">
                   {r.clientName}
@@ -171,19 +180,21 @@ export function CollectionHistory() {
                 <td className="whitespace-nowrap px-2.5 py-2">{r.note}</td>
                 {canRevert && (
                   <td className="whitespace-nowrap px-2.5 py-2">
+                    {/*  ⚠ 0074 — 예전에는 여기 「되돌리기」라는 작은 빨간 글자
+                         하나뿐이었습니다. 대표님 말씀: 「의미가 애매한 작은
+                         버튼을 찾아야 하는 구조」. 지금은 **줄 아무 데나** 눌러
+                         상세를 열고, 거기서 고치거나 취소합니다. 이 칸은 그
+                         길이 있다는 표시만 합니다. */}
                     {r.completed && r.eventId ? (
                       <button
-                        data-history-revert={r.id}
-                        onClick={() => {
-                          setError('')
-                          setRevert({ eventId: r.eventId!, label: `${r.date} · ${r.clientName}` })
-                        }}
-                        className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-rose-500 transition hover:bg-rose-50 disabled:opacity-40"
+                        data-history-open={r.id}
+                        onClick={() => { setError(''); setOpenId(r.eventId!) }}
+                        className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-teal-700 transition hover:bg-teal-50"
                       >
-                        <Undo2 size={14} strokeWidth={2.5} /> 되돌리기
+                        <Pencil size={14} strokeWidth={2.5} /> 보기·수정
                       </button>
                     ) : (
-                      //  왜 못 지우는지 적습니다 — 빈 칸이면 고장으로 보입니다.
+                      //  왜 못 고치는지 적습니다 — 빈 칸이면 고장으로 보입니다.
                       <span className="text-[0.95rem] text-navy-300">
                         {r.completed ? '엑셀 기록' : '아직 미완료'}
                       </span>
@@ -209,12 +220,7 @@ export function CollectionHistory() {
       )}
       {rows.length > 60 && <p className="mt-2 px-1 text-[0.98rem] text-navy-400">최근 60건까지 표시합니다.</p>}
 
-      <RevertReasonModal
-        eventId={revert?.eventId ?? null}
-        label={revert?.label}
-        onClose={() => setRevert(null)}
-        onDone={(r) => { if (!r.ok) setError(r.errors.join(' ') || '되돌리지 못했습니다.') }}
-      />
+      <CollectionRecord eventId={openId} onClose={() => setOpenId(null)} />
     </div>
   )
 }

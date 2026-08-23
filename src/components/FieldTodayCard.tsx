@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ClipboardCheck } from 'lucide-react'
+import { ArrowRight, ClipboardCheck, Pencil } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { fieldDay, lastCollectionLine, lastCollectionOf } from '../lib/fieldActivity'
 import { DayCloseStatus } from './DayClose'
+import { CollectionRecord } from './CollectionRecord'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 오늘 현장에서 들어온 입력 — 대표·사무실 화면
@@ -20,6 +22,9 @@ import { DayCloseStatus } from './DayClose'
 export function FieldTodayCard() {
   const { data } = useData()
   const { role } = useAuth()
+  //  ⚠ 훅은 일찍 돌려보내기 **앞에** 있어야 합니다 — 아래 return null 뒤에
+  //    두면 역할에 따라 훅 개수가 달라져 React 가 멎습니다.
+  const [openId, setOpenId] = useState<string | null>(null)
   //  현장 담당자에게는 안 띄웁니다 — 자기가 방금 넣은 것을 다시 보여 줄
   //  이유가 없고, 남이 넣은 것까지 볼 자리도 아닙니다.
   if (role === 'field' || role === 'client') return null
@@ -85,6 +90,9 @@ export function FieldTodayCard() {
           <li
             key={i.scheduleId}
             data-field-input={i.clientId}
+            //  ⚠ 0074 — 「방금 들어온 기록이 이상하다 → 눌러서 → 고친다」가
+            //    이 화면의 핵심 동작입니다. 예전에는 수거이력 화면으로 나가서
+            //    그 줄을 다시 찾아야 했습니다.
             className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-2xl border border-navy-100 bg-white px-4 py-3"
           >
             {i.atTime && (
@@ -102,6 +110,18 @@ export function FieldTodayCard() {
             {/*  이름이 안 적혀 있으면 지어내지 않고 그 자리를 비웁니다. */}
             {i.who && <span className="shrink-0 text-[1.03rem] font-bold text-navy-600">{i.who}</span>}
             {i.adHoc && <span className="pill shrink-0 bg-amber-100 text-amber-700">예정 외</span>}
+            {/*  ⚠ 병원 이름은 거래처로 가는 링크라 그대로 둡니다. 고치는 길은
+                 따로 답니다 — 한 줄에 목적지가 둘이면 어느 쪽이 눌릴지
+                 사람이 예상하지 못합니다. */}
+            {i.eventId && (
+              <button
+                data-field-input-edit={i.clientId}
+                onClick={() => setOpenId(i.eventId)}
+                className="ml-auto flex min-h-[2.5rem] shrink-0 items-center gap-1 rounded-xl px-2.5 text-[1rem] font-bold text-teal-700 transition hover:bg-teal-50"
+              >
+                <Pencil size={14} strokeWidth={2.6} /> 보기·수정
+              </button>
+            )}
 
             {/*  ⚠ 이사님이 카카오톡 사진을 다시 여는 이유가 **용기 개수와
                  공급 자재**입니다. 수거량만 있으면 이 화면으로 사진을
@@ -204,6 +224,8 @@ export function FieldTodayCard() {
       {/*  누가 오늘 업무를 마감했나 (0088) — 카톡으로 「다 끝났습니다」를
            받던 자리입니다. 판 73 전에는 아무것도 안 그립니다. */}
       <DayCloseStatus />
+
+      <CollectionRecord eventId={openId} onClose={() => setOpenId(null)} />
 
       {day.noName > 0 && (
         <p data-field-noname className="t-caption mt-2 break-keep text-navy-400">

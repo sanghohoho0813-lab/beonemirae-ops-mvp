@@ -2020,6 +2020,94 @@ export async function completeCollection(input: CollectionCompletionInput): Prom
   return data as CompleteResult
 }
 
+/**
+ * 수거 기록 고쳐 넣기 (0074).
+ *
+ *  ⚠ 서버가 **되돌리기 + 다시 입력을 한 트랜잭션에서** 합니다. 그래서 여기서
+ *    재고 증감을 따로 계산하지 않습니다 — 계산을 세 벌로 만들면 셋이 어긋납니다.
+ *  ⚠ 안 보낸 칸은 서버가 원래 값을 그대로 씁니다.
+ *  ⚠ 거래처는 못 바꿉니다. 거래처를 바꾸는 것은 「고치기」가 아니라 다른
+ *    기록이고, 그렇게 하면 그 병원의 청구가 조용히 바뀝니다.
+ */
+export async function amendCollection(
+  eventId: string,
+  reason: string,
+  input: Partial<CollectionCompletionInput>,
+): Promise<CompleteResult> {
+  const sb = need()
+  const { data, error } = await sb.rpc('amend_collection', {
+    p_event_id: eventId,
+    p_reason: reason,
+    p: {
+      wasteType: input.wasteType ?? null,
+      vehicleId: input.vehicleId,
+      driverName: input.driverName ?? '',
+      actualAmount: input.actualAmount,
+      actualTime: input.actualTime,
+      date: input.date ?? null,
+      containers: input.containers ?? null,
+      handoverStatus: input.handoverStatus ?? null,
+      supplied: input.supplied,
+      suppliedItems: input.suppliedItems ?? null,
+      isAdditional: input.isAdditional ?? false,
+      memo: input.memo ?? '',
+    },
+  })
+  if (error) throw new Error(error.message)
+  return data as CompleteResult
+}
+
+/** 재고 원장 한 줄 — 「왜 숫자가 바뀌었나」 */
+export interface StockMove {
+  id: string
+  at: string
+  kind: '입고' | '공급' | '조정' | '취소'
+  item: keyof OfficeStock
+  qty: number
+  clientName: string
+  memo: string
+}
+
+/**
+ * 최근 재고 변동 (0074).
+ *
+ *  ⚠ 이 표는 지금까지 **쓰기만 하고 한 번도 읽지 않았습니다.** 그래서
+ *    「재고가 왜 이 숫자가 됐지」에 답할 화면이 없었습니다.
+ */
+export async function stockLedger(limit = 40): Promise<StockMove[]> {
+  const sb = need()
+  const { data, error } = await sb
+    .from('material_transactions')
+    .select('id, created_at, kind, item, qty, memo, clients(name)')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => {
+    const x = r as Record<string, unknown>
+    const c = x.clients as { name?: string } | null
+    return {
+      id: String(x.id), at: String(x.created_at),
+      kind: String(x.kind) as StockMove['kind'],
+      item: String(x.item) as keyof OfficeStock,
+      qty: Number(x.qty ?? 0),
+      clientName: c?.name ?? '',
+      memo: String(x.memo ?? ''),
+    }
+  })
+}
+
+/** 재고 정정 — 숫자를 덮어쓰지 않고 원장에 이유와 함께 남깁니다 (0074) */
+export async function correctStock(
+  item: keyof OfficeStock,
+  qty: number,
+  reason: string,
+): Promise<{ item: string; before: number; after: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('correct_stock', { p_item: item, p_qty: qty, p_reason: reason })
+  if (error) throw new Error(error.message)
+  return data as { item: string; before: number; after: number }
+}
+
 export async function revertCollection(eventId: string): Promise<void> {
   const sb = need()
   const { error } = await sb.rpc('revert_collection', { p_event_id: eventId })

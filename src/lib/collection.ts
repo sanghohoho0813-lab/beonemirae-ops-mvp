@@ -39,6 +39,31 @@ export interface SuppliedMaterials {
   needleBox: number // 합성수지 바늘통
 }
 
+//  ─────────────────────────────────────────────────────────────────────────
+//  용기 · 재고 칸 이름 (0074 에 여기로 옮겨 왔습니다)
+//
+//   ⚠ 예전에는 수거 입력 화면 안에만 있었습니다. 그래서 수거기록 상세에서
+//     같은 값을 보여 주려면 이름표를 **두 벌** 만들어야 했고, 두 벌이 되는
+//     순간 한쪽만 고쳐집니다. 저장하는 쪽과 보여 주는 쪽이 같은 이름을 씁니다.
+//
+//   ⚠ **두 표를 절대 섞지 마세요.**
+//     CONTAINER_KEYS  병원에서 **배출되어 우리가 가져온** 용기 수 — 재고와 무관
+//     STOCK_KEYS      회사 창고에서 **병원에 새로 주고 온** 자재 수 — 재고가 줄어듦
+//     둘 다 「골판지 전용박스」라고 적히지만 방향이 반대입니다.
+export const CONTAINER_KEYS: { key: keyof ContainerBreakdown; label: string }[] = [
+  { key: 'corrugated', label: '골판지 전용박스' },
+  { key: 'plastic', label: '합성수지 전용용기' },
+  { key: 'bag', label: '전용 봉투' },
+  { key: 'etc', label: '기타' },
+]
+
+export const STOCK_KEYS: { key: keyof OfficeStock; label: string }[] = [
+  { key: 'corrugatedBox', label: '골판지 전용박스' },
+  { key: 'plasticContainer', label: '합성수지 전용용기' },
+  { key: 'bag', label: '전용 봉투' },
+  { key: 'needleBox', label: '합성수지 바늘통' },
+]
+
 export interface CollectionCompletionInput {
   scheduleId: string | null // null = 직접 입력(새 완료 일정 생성)
   clientId: string

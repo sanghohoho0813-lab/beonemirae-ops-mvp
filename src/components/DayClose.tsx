@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Loader2, Moon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useData } from '../context/DataContext'
+import { schedulesOn } from '../lib/selectors'
+import { SUPPLY_ITEMS, itemsOf, type ItemKey } from '../lib/billing'
 import { useSchemaAtLeast } from '../lib/schemaGate'
 import { closeDay, dayCloses, type DayClose as DayCloseRow, type DayCloseSummary } from '../lib/repo'
 import { today } from '../lib/format'
@@ -22,6 +25,7 @@ import { today } from '../lib/format'
 
 export function DayClose({ date = today() }: { date?: string }) {
   const { profile, role, mode } = useAuth()
+  const { data } = useData()
   const ready = useSchemaAtLeast(73) === true
   const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle')
   const [summary, setSummary] = useState<DayCloseSummary | null>(null)
@@ -50,6 +54,33 @@ export function DayClose({ date = today() }: { date?: string }) {
       .catch(() => { /* 못 읽어도 화면은 그대로 — 눌러 보면 서버가 알려 줍니다 */ })
     return () => { alive = false }
   }, [ready, mode, profile, date])
+
+  //  ── 눌러야 할 것을 **누르기 전에** 보여 줍니다 ────────────────────────
+  //
+  //   ⚠ 예전에는 마감을 누른 **뒤에야** 숫자가 나왔습니다. 그러면 기사님은
+  //     「내가 뭘 마감하는 건지」 모른 채 누르게 되고, 결국 확인하려고
+  //     오늘 일정 화면으로 다시 갑니다. 시스템이 이미 아는 것을 미리 적습니다.
+  //   ⚠ 이 숫자는 **화면이 지금 가지고 있는 것**입니다. 마감을 누르면 서버가
+  //     다시 셉니다 — 그래서 「지금까지 들어온 것」이라고만 적습니다.
+  //   ⚠ 기사 계정에 보이는 일정은 서버가 이미 본인 것만 줍니다(RLS).
+  const list = schedulesOn(data, date)
+  const doneN = list.filter((s) => s.status === '완료').length
+  const leftN = list.length - doneN
+  const kgN = list.reduce((n, s) => n + (s.status === '완료' ? s.actualAmount ?? 0 : 0), 0)
+  //  그날 나간 자재 — 「무엇을 몇 개 드리고 왔나」. 없으면 줄을 안 그립니다.
+  const supplyLine = (() => {
+    const sum: Partial<Record<ItemKey, number>> = {}
+    for (const m of data.materials.filter((m) => m.date === date)) {
+      for (const [k, n] of Object.entries(itemsOf(m))) sum[k as ItemKey] = (sum[k as ItemKey] ?? 0) + (n ?? 0)
+    }
+    return SUPPLY_ITEMS.filter((it) => (sum[it.key as ItemKey] ?? 0) > 0)
+      .map((it) => `${it.label} ${sum[it.key as ItemKey]}`)
+      .join(' · ')
+  })()
+  //  아직 안 놓은 공용차 — 있으면 마감 전에 알려 줍니다(막지는 않습니다).
+  const openTrucks = (data.vehicleReservations ?? []).filter(
+    (r) => r.profileId === profile?.id && r.date <= date,
+  )
 
   if (!ready || mode !== 'live') return null
   //  병원 계정에는 없습니다. 사무실·관리자는 자기 마감이 필요 없습니다.
@@ -105,6 +136,45 @@ export function DayClose({ date = today() }: { date?: string }) {
         <b className="text-navy-700"> 다시 적지 않으셔도 됩니다.</b>
       </p>
 
+      {/*  ⚠ 누르기 전에 보여 줍니다 — 확인만 하시면 됩니다. */}
+      <div data-day-close-preview className="mt-3 rounded-2xl bg-navy-50 px-4 py-3">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { k: 'planned', label: '오늘 예정', v: list.length, tone: 'text-navy-900' },
+            { k: 'done', label: '완료', v: doneN, tone: doneN > 0 ? 'text-teal-700' : 'text-navy-400' },
+            { k: 'left', label: '아직', v: leftN, tone: leftN > 0 ? 'text-amber-700' : 'text-navy-400' },
+          ].map((c) => (
+            <div key={c.k} data-day-close-count={c.k}>
+              <p className="t-caption break-keep font-bold text-navy-500">{c.label}</p>
+              <p className={`text-[1.6rem] font-extrabold leading-none tabular-nums ${c.tone}`}>
+                {c.v}
+                <span className="t-caption ml-0.5 font-bold text-navy-400">건</span>
+              </p>
+            </div>
+          ))}
+        </div>
+        <p data-day-close-kg className="t-body mt-2 break-keep font-bold text-navy-800">
+          모두 {kgN.toLocaleString('ko-KR')}kg
+        </p>
+        {supplyLine && (
+          <p data-day-close-supply className="t-caption mt-0.5 break-keep text-navy-600">
+            드린 자재 {supplyLine}
+          </p>
+        )}
+        {/*  ⚠ 공용차는 **막지 않습니다.** 밤늦게 마감하고 아침에 놓는 일이
+             실제로 있습니다 — 사실만 알려 드립니다. */}
+        {openTrucks.length > 0 && (
+          <p data-day-close-truck className="t-body mt-1.5 break-keep font-bold text-rose-700">
+            공용차가 아직 잡혀 있습니다 — 반납 처리를 잊지 마세요.
+          </p>
+        )}
+        {leftN > 0 && (
+          <p className="t-caption mt-1.5 break-keep leading-snug text-navy-500">
+            아직 {leftN}곳이 남아 있어도 마감하실 수 있습니다 — 사무실에 그대로 보입니다.
+          </p>
+        )}
+      </div>
+
       {/*  한 줄만. 없으면 비워 두셔도 됩니다. */}
       <input
         data-day-close-note
@@ -126,7 +196,7 @@ export function DayClose({ date = today() }: { date?: string }) {
         className="btn-primary mt-3.5 w-full py-4 !text-[1.15rem] disabled:opacity-50"
       >
         {state === 'busy' ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle2 size={20} strokeWidth={2.5} />}
-        오늘 업무 마감
+        확인했습니다 · 오늘 업무 마감
       </button>
     </section>
   )

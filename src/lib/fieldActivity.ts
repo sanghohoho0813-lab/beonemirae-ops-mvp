@@ -34,6 +34,11 @@ import { isLive } from './scheduleLive'
 
 export interface FieldInput {
   scheduleId: string
+  /**
+   * 수거 기록(event) 번호 — 이것이 있어야 **눌러서 고칠 수** 있습니다 (0074).
+   *  엑셀로 들어온 옛 기록에는 없습니다(그때는 event 를 안 만들었습니다).
+   */
+  eventId: string | null
   clientId: string
   clientName: string
   wasteType: WasteType
@@ -92,6 +97,7 @@ function toInput(s: Schedule, clientName: string, adHoc: boolean, supplyLine = '
   const c = containerText(s.containers)
   return {
     scheduleId: s.id,
+    eventId: s.eventId ?? null,
     clientId: s.clientId,
     clientName,
     wasteType: s.wasteType,

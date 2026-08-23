@@ -119,6 +119,12 @@ interface DataContextValue {
   // 수거 완료 통합 커맨드 (3단계) — 입력 한 번으로 일정/이력/자재/재고/요청/감사기록 연결
   completeCollection: (input: CollectionCompletionInput) => Promise<CommandResult>
   revertCollection: (eventId: string, reason?: string) => Promise<CommandResult>
+  /** 수거 기록 고쳐 넣기 (0074) — 서버가 되돌리고 다시 넣습니다 */
+  amendCollection: (
+    eventId: string,
+    reason: string,
+    input: Partial<CollectionCompletionInput>,
+  ) => Promise<CommandResult>
   // 시연 안정화 (3.5단계)
   resetDemo: () => void // 시연용 변경만 기준 상태로 복원
   startDemo: () => void // 기준 복원 + 새 시연 세션 시작
@@ -1023,6 +1029,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return result
     },
     [data, live, runLive],
+  )
+
+  /**
+   * 수거 기록 고쳐 넣기 (0074).
+   *
+   *  ⚠ 재고 증감을 여기서 계산하지 않습니다. 서버가 **되돌리기 + 다시 입력**을
+   *    한 트랜잭션에서 합니다 — 계산을 세 벌로 만들면 셋이 어긋납니다.
+   *  ⚠ 시연 모드에는 없습니다. 시연 자료에는 되돌릴 서버 기록이 없습니다.
+   */
+  const amendCollection = useCallback(
+    async (eventId: string, reason: string, input: Partial<CollectionCompletionInput>): Promise<CommandResult> => {
+      if (!live) {
+        return { ok: false, errors: ['시연 모드에서는 수거 기록을 고칠 수 없습니다.'], warnings: [] }
+      }
+      const e = data.events.find((x) => x.id === eventId)
+      if (!e) return { ok: false, errors: ['고칠 수거 기록을 찾을 수 없습니다.'], warnings: [] }
+      if (e.reverted) return { ok: false, errors: ['이미 취소된 기록입니다.'], warnings: [] }
+      const done = await runLive(async () => {
+        await repo.amendCollection(eventId, reason, input)
+      })
+      if (!done.ok) {
+        return { ok: false, errors: [done.error ?? '고치지 못했습니다.'], warnings: [] }
+      }
+      return { ok: true, errors: [], warnings: [] }
+    },
+    [data.events, live, runLive],
   )
 
   // ── 시연 안정화 ─────────────────────────────────────────────────────────
@@ -2270,6 +2302,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       completeSchedule,
       completeCollection,
       revertCollection,
+      amendCollection,
       resetDemo,
       startDemo,
       restoreToday,
@@ -2353,6 +2386,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       completeSchedule,
       completeCollection,
       revertCollection,
+      amendCollection,
       resetDemo,
       startDemo,
       restoreToday,

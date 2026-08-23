@@ -30,19 +30,21 @@ import { WasteBadge } from '../components/Badge'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import {
+  CONTAINER_KEYS,
   EMPTY_CONTAINERS,
   EMPTY_SUPPLIED,
+  STOCK_KEYS,
   containerTotal,
   suppliedTotal,
   type CollectionCompletionInput,
 } from '../lib/collection'
-import type { ContainerBreakdown, HandoverStatus, OfficeStock, WasteType } from '../types'
+import type { ContainerBreakdown, HandoverStatus, WasteType } from '../types'
 import { isPending } from '../lib/scheduleLive'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 수거 입력 (3단계) — 현장 담당자가 한 번 입력하면 일정·이력·자재·통계로 자동 연결
-//   오늘 일정 선택 → 거래처·폐기물 자동 → 실제시간·수거량 → 용기별 배출 →
-//   자재 동시공급(재고 차감) → 차량·기사 → 처리장 인계 → 특이사항 → 요약 → 완료
+//   오늘 일정 선택 → 거래처·폐기물 자동 → 실제시간·수거량 → 가져온 용기 →
+//   주고 온 자재(재고 차감) → 차량·기사 → 처리장 인계 → 특이사항 → 요약 → 완료
 // ─────────────────────────────────────────────────────────────────────────────
 
 //  저장되는 값이므로 기기 시각이 아니라 한국 시각을 씁니다 (lib/format).
@@ -50,19 +52,9 @@ const nowTime = nowHm
 
 const HANDOVERS: HandoverStatus[] = ['수거 완료', '인계 대기', '인계 완료']
 
-const SUPPLY_KEYS: { key: keyof OfficeStock; label: string }[] = [
-  { key: 'corrugatedBox', label: '골판지 전용박스' },
-  { key: 'plasticContainer', label: '합성수지 전용용기' },
-  { key: 'bag', label: '전용 봉투' },
-  { key: 'needleBox', label: '합성수지 바늘통' },
-]
-
-const CONTAINER_KEYS: { key: keyof ContainerBreakdown; label: string }[] = [
-  { key: 'corrugated', label: '골판지 전용박스' },
-  { key: 'plastic', label: '합성수지 전용용기' },
-  { key: 'bag', label: '전용 봉투' },
-  { key: 'etc', label: '기타' },
-]
+//  ⚠ 이름표는 lib/collection.ts 한 곳에 있습니다 — 수거기록 상세도 같은 것을
+//    씁니다. 두 벌이면 한쪽만 고쳐집니다.
+const SUPPLY_KEYS = STOCK_KEYS
 
 /**
  *  ── 폰에서 접는 칸 (0065) ──────────────────────────────────────────────────
@@ -1098,16 +1090,16 @@ export function CollectionInput() {
           용기와 자재는 **놓고 오는 날만** 씁니다. 둘 다 접힌 채로, 자주 쓰는
           칸 아래에 나란히 둡니다 — 위에 있으면 매일 지나쳐야 합니다.
         */}
-        {/* 4. 용기별 배출 수량 */}
+        {/* 4. 가져온 용기 (병원에서 배출된 것) */}
         <Section
           n={step()}
-          title="용기별 배출 수량"
-          desc="수거대장 초안에 그대로 반영됩니다"
+          title="가져온 용기"
+          desc="병원에서 배출되어 우리가 가져온 수량입니다 — 회사 재고와 무관합니다"
           guideAt="guide-folds"
           fold={{
             open: containersOpen,
             onOpen: () => setOpenContainers(true),
-            summary: '놓고 온 것 없음',
+            summary: '가져온 용기 없음',
             id: 'containers',
           }}
         >
@@ -1128,12 +1120,12 @@ export function CollectionInput() {
         {/* 자재 동시공급 */}
         <Section
           n={step()}
-          title="자재 동시공급"
-          desc="공급 시 사무실 재고에서 자동 차감됩니다 (선택)"
+          title="주고 온 자재"
+          desc="회사 창고에서 병원에 새로 드린 수량입니다 — 저장하면 재고가 그만큼 줄어듭니다 (선택)"
           fold={{
             open: supplyOpen,
             onOpen: () => setOpenSupply(true),
-            summary: '공급 없음',
+            summary: '드린 자재 없음',
             id: 'supply',
           }}
         >
@@ -1205,17 +1197,35 @@ export function CollectionInput() {
               다른 규격 {hiddenItemCount}개 보기
             </button>
           )}
-          {/* 재고는 규격이 아니라 종류 단위로 관리하므로 여기서 함께 보여 줍니다 */}
-          <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-            {SUPPLY_KEYS.map(({ key, label }) => (
-              <span
-                key={key}
-                className={`t-muted tabular-nums ${supplied[key] > stock[key] ? 'font-bold text-rose-600' : ''}`}
-              >
-                {label} 재고 {stock[key] - supplied[key]}
-                {supplied[key] > 0 && <span className="text-navy-400"> (-{supplied[key]})</span>}
-              </span>
-            ))}
+          {/*  재고는 규격이 아니라 종류 단위로 관리하므로 여기서 함께 보여 줍니다.
+               ⚠ 0074 — 예전에는 **저장 뒤 숫자만** 적었습니다(「재고 65」).
+                 그러면 「지금 몇 개인데 몇 개가 빠지는 건가」를 알 수 없어,
+                 자재 화면을 따로 열어 보게 됩니다. 지금 → 나감 → 저장 후를
+                 그대로 적습니다. */}
+          <div data-supply-stock className="mt-2.5 flex flex-col gap-1">
+            {SUPPLY_KEYS.map(({ key, label }) => {
+              const out = supplied[key]
+              const after = stock[key] - out
+              return (
+                <span
+                  key={key}
+                  data-supply-stock-row={key}
+                  className={`t-muted tabular-nums ${out > stock[key] ? 'font-bold text-rose-600' : ''}`}
+                >
+                  {label} <b className="text-navy-800">{stock[key]}개</b>
+                  {out > 0 ? (
+                    <>
+                      {' → 이번 공급 '}
+                      <b className="text-navy-800">{out}개</b>
+                      {' → 저장 후 '}
+                      <b className={after < 0 ? 'text-rose-600' : 'text-teal-700'}>{after}개</b>
+                    </>
+                  ) : (
+                    <span className="text-navy-400"> (이번엔 안 나감)</span>
+                  )}
+                </span>
+              )
+            })}
           </div>
           {(suppliedSum > 0 || alreadyToday) && (
             <label className="mt-3 flex items-center gap-2 text-[1.08rem] font-semibold text-navy-600">
