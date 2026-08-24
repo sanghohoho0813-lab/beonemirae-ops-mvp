@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT } from './_pilot.mjs'
 
 //  0080 — Pilot 모드: 지금 쓰는 것만 보이는가
 //
@@ -119,7 +120,11 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
     (body.match(/.{0,20}병원 요청.{0,20}/) ?? [''])[0])
   ok(!/처리 대기 요청/.test(body), '「처리 대기 요청」 카드가 없다')
   ok(!/긴급 요청/.test(body), '「긴급 요청」 카드가 없다')
-  ok(!/소모품 주문/.test(body), '**「소모품 주문」 메뉴가 없다**')
+  //  ⚠ 소모품은 실사에서 보여 드릴 화면이라 다시 켰습니다 (0081).
+  //    그래도 「켜져 있으면 실제로 보이는가」는 그대로 봅니다 — 스위치가
+  //    한쪽으로만 무는 것이 아니라는 뜻입니다.
+  ok(PILOT.supplies ? !/소모품 주문/.test(body) : /소모품 주문/.test(body),
+    PILOT.supplies ? '**「소모품 주문」 메뉴가 없다**' : '**「소모품 주문」 메뉴가 다시 보인다** (실사용)')
 
   //  ⚠ 핵심은 남아 있어야 합니다 — 없애기만 하면 안 됩니다.
   ok(/오늘 일정/.test(body), '**「오늘 일정」은 그대로 있다**')
@@ -132,7 +137,10 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
 // ── ② 주소를 직접 쳐도 안 열린다 ──────────────────────────────────────────
 {
   //  ⚠ 메뉴에서만 빼면 옛 링크·즐겨찾기로 그대로 들어갑니다.
-  for (const [path, label] of [['/requests', '병원 요청'], ['/supplies', '소모품 주문']]) {
+  for (const [path, label] of [
+    ['/requests', '병원 요청'],
+    ...(PILOT.supplies ? [['/supplies', '소모품 주문']] : []),
+  ]) {
     const { ctx, p } = await open(path, { role: 'admin' })
     const body = flat(await p.locator('body').innerText())
     ok(/권한|접근|찾을 수 없/.test(body) || !new RegExp(label).test(body),
@@ -146,7 +154,8 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   const { ctx, p } = await open('/', { role: 'office' })
   const body = flat(await p.locator('body').innerText())
   ok(!/병원 요청/.test(body), '**이사님 화면에도 「병원 요청」이 없다**')
-  ok(!/소모품 주문/.test(body), '이사님 화면에도 「소모품 주문」이 없다')
+  ok(PILOT.supplies ? !/소모품 주문/.test(body) : /소모품 주문/.test(body),
+    PILOT.supplies ? '이사님 화면에도 「소모품 주문」이 없다' : '이사님 화면에도 「소모품 주문」이 다시 보인다')
   ok((await p.locator('[data-urgent-banner]').count()) === 0, '요청 경고 배너도 없다')
   ok(/오늘 일정/.test(body) && /수거 입력/.test(body), '**핵심 업무는 그대로 보인다**')
   await ctx.close()
@@ -167,7 +176,9 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   await p.waitForTimeout(900)
   const more = flat(await p.locator('body').innerText())
   ok(!/병원 요청/.test(more), '**「더보기」 안에도 없다**')
-  ok(!/소모품 주문/.test(more), '「더보기」 안에 소모품도 없다')
+  //  ⚠ 현장은 스위치와 무관하게 원래 소모품을 못 봅니다 — 판매가·원가가
+  //    붙는 화면이라 access.ts 가 admin·office 로 막아 둡니다.
+  ok(!/소모품 주문/.test(more), '「더보기」 안에 소모품도 없다 (현장은 원래 권한 없음)')
   await ctx.close()
 }
 
@@ -238,8 +249,9 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   //  ㉮ 스위치가 정말 한 곳인가 — 화면마다 흩어져 있으면 다시 켤 때
   //     한 군데는 반드시 빠집니다.
   const flagSrc = readFileSync('src/lib/pilotMode.ts', 'utf-8')
-  ok(/clientRequests:\s*true/.test(flagSrc) && /supplies:\s*true/.test(flagSrc),
-    '**스위치가 `src/lib/pilotMode.ts` 한 곳에 있다**')
+  ok(/clientRequests:\s*(true|false)/.test(flagSrc) && /supplies:\s*(true|false)/.test(flagSrc),
+    '**스위치가 `src/lib/pilotMode.ts` 한 곳에 있다**',
+    `요청 ${PILOT.requests ? '내림' : '켬'} · 소모품 ${PILOT.supplies ? '내림' : '켬'}`)
 
   //  ㉯ 코드를 지우지 않았는가 — 요청·소모품 화면이 그대로 있어야
   //     스위치만 되돌려도 예전처럼 돌아옵니다.
@@ -294,11 +306,17 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   //  ㉰ 어느 화면에도 내려 둔 곳으로 가는 링크가 없다
   for (const path of ['/', '/today', '/clients', '/materials']) {
     const { ctx, p } = await open(path, { role: 'admin' })
-    const bad = await p.evaluate(() =>
-      [...document.querySelectorAll('a[href]')]
-        .map((a) => a.getAttribute('href') ?? '')
-        //  병원 포털(/portal/supplies)은 병원 담당자 화면이라 대상이 아닙니다.
-        .filter((h) => /^\/(requests|supplies)(\/|$)/.test(h)),
+    //  ⚠ 이 함수는 **브라우저 안에서** 돕니다 — 바깥의 PILOT 을 그냥 쓰면
+    //    `PILOT is not defined` 로 터집니다. 값으로 넘겨 줍니다.
+    const bad = await p.evaluate(
+      (hide) =>
+        [...document.querySelectorAll('a[href]')]
+          .map((a) => a.getAttribute('href') ?? '')
+          //  병원 포털(/portal/supplies)은 병원 담당자 화면이라 대상이 아닙니다.
+          .filter((h) =>
+            (hide.requests && /^\/requests(\/|$)/.test(h)) ||
+            (hide.supplies && /^\/supplies(\/|$)/.test(h))),
+      PILOT,
     )
     ok(bad.length === 0, `**${path} 에 내려 둔 화면으로 가는 링크가 없다**`,
       bad.length ? bad.join(', ') : '0개')

@@ -28,9 +28,11 @@ export interface PilotHidden {
    */
   clientRequests: boolean
   /**
-   * 소모품 주문·판매 — 다음 단계 기능입니다.
+   * 소모품 주문·판매.
    *
-   *  대표님: 「"이것도 지금 써야 하나?" 라고 생각하지 않도록 하는 게 중요하다.」
+   *  ⚠ 지금은 **켜 둡니다** (0081). 대표님: 「소모품주문 화면은 다시 띄워줘.
+   *    실사 당시에 보여줘야 되거든.」 실사에서 보여 드릴 화면이라
+   *    Pilot 동안에도 열어 둡니다.
    */
   supplies: boolean
 }
@@ -48,7 +50,8 @@ export interface PilotHidden {
  */
 export const PILOT_HIDDEN: PilotHidden = {
   clientRequests: true,
-  supplies: true,
+  //  0081 — 실사에서 보여 드릴 화면이라 다시 켰습니다.
+  supplies: false,
 }
 
 /** 병원 요청을 화면에서 내려 두는가 */
