@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { skipIfHidden } from './_pilot.mjs'
 
 //  방문 예약과 긴급 신호가 화면에서 실제로 되는가 (0058).
 //
@@ -262,7 +263,7 @@ async function open(ctx, path, me = admin, wait = 2600) {
 }
 
 // ── ⑤ 요청 화면 — 수거 요청에만 「날짜 잡기」 ───────────────────────────────
-{
+if (!skipIfHidden('requests', '⑤ 요청 화면의 「날짜 잡기」')) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1800 } })
   wire(ctx)
   const p = await open(ctx, '/requests')
@@ -289,7 +290,7 @@ async function open(ctx, path, me = admin, wait = 2600) {
 }
 
 // ── ⑥ 긴급 신호 ────────────────────────────────────────────────────────────
-{
+if (!skipIfHidden('requests', '⑥ 급한 요청이 반복되는 곳 알림')) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1800 } })
   wire(ctx)
   const p = await open(ctx, '/today')
@@ -344,10 +345,12 @@ async function open(ctx, path, me = admin, wait = 2600) {
 
   //  거래처 화면에는 남되 어조가 다릅니다 — 그 병원을 보고 있는 사람에게는
   //  「급한 요청이 세 번 있었다」가 그 자체로 알아야 할 사실입니다.
-  const p2 = await open(ctx, `/clients/${CA}`)
-  const c = await text(p2.locator(`[data-urgent-client="${CA}"]`))
-  ok(/다음 방문은 잡혀 있습니다/.test(c), '거래처 화면에는 사실로 남김', c.slice(0, 70))
-  ok((await p2.locator(`[data-urgent-book="${CA}"]`).count()) === 0, '재촉하는 단추는 없음')
+  if (!skipIfHidden('requests', '⑦ 거래처 화면의 급한 요청 근거')) {
+    const p2 = await open(ctx, `/clients/${CA}`)
+    const c = await text(p2.locator(`[data-urgent-client="${CA}"]`))
+    ok(/다음 방문은 잡혀 있습니다/.test(c), '거래처 화면에는 사실로 남김', c.slice(0, 70))
+    ok((await p2.locator(`[data-urgent-book="${CA}"]`).count()) === 0, '재촉하는 단추는 없음')
+  }
   await ctx.close()
 }
 

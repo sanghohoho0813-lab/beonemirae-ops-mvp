@@ -28,6 +28,7 @@ import { RouteAiChip } from '../components/RouteAiPreview'
 import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
+import { hideRequests } from '../lib/pilotMode'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
@@ -199,7 +200,8 @@ export function TodaySchedule() {
   }
 
   const doneCount = list.filter((s) => s.status === '완료').length
-  const pendingRequests = openRequests(data)
+  //  Pilot 동안 병원 요청은 안 씁니다 — 위아래 배너가 같이 사라집니다 (0080)
+  const pendingRequests = hideRequests() ? [] : openRequests(data)
 
   return (
     <div>

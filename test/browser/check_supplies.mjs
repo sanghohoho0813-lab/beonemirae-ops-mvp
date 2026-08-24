@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { skipIfHidden } from './_pilot.mjs'
 
 //  소모품 추천·주문·수거연계 — 매출 AX 화면 (0048).
 //
@@ -249,7 +250,7 @@ async function open(ctx, path) {
 }
 
 // ── 5. 사무실 — 주문을 매출로 잇는 자리 ──────────────────────────────────
-{
+if (!skipIfHidden('supplies', '5. 사무실 소모품 주문 → 매출')) {
   const calls = []
   const orders = [{
     id: 'o1', client_id: CA, status: '요청', requester_name: '가나 담당자', source: 'portal',
@@ -281,7 +282,7 @@ async function open(ctx, path) {
 }
 
 // ── 6. 실적은 전달완료만 · 없으면 없다고 ─────────────────────────────────
-{
+if (!skipIfHidden('supplies', '6. 소모품 판매 실적')) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1100 } })
   wire(ctx, { role: 'admin', sales: { from: '', to: '', orders: 0, clients: 0, revenue: 0, cost: 0, profit: 0, withPickup: 0 } })
   const p = await open(ctx, '/supplies')
@@ -293,7 +294,7 @@ async function open(ctx, path) {
   ok(/예상 실적을 실제 성과처럼 표시하지 않습니다/.test(t), '없을 때 허위 실적을 안 만든다고 밝힘')
   await ctx.close()
 }
-{
+if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 1')) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1100 } })
   wire(ctx, { role: 'admin', sales: { from: '', to: '', orders: 3, clients: 2, revenue: 432000, cost: 249600, profit: 182400, withPickup: 3, repeatClients: 1, repeatOrders: 2 } })
   const p = await open(ctx, '/supplies')
@@ -318,7 +319,7 @@ async function open(ctx, path) {
 // ── 6-b. 「다시 산 곳」을 못 세는 옛 서버 ────────────────────────────────
 //   0049 이전 서버는 이 칸을 안 보냅니다. 없는 것을 0 으로 바꿔 보여 주면
 //   「아무도 다시 안 샀다」는 거짓말이 됩니다 — 「—」로 둡니다.
-{
+if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 2')) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1100 } })
   wire(ctx, { role: 'admin', sales: { from: '', to: '', orders: 3, clients: 2, revenue: 432000, cost: 249600, profit: 182400, withPickup: 3 } })
   const p = await open(ctx, '/supplies')
@@ -336,7 +337,7 @@ async function open(ctx, path) {
 //
 //   품목만 있고 단가가 없으면 병원 화면에는 **하나도 안 뜹니다.** 그 사실을
 //   숨기면 「등록했는데 왜 안 보이지」가 됩니다.
-{
+if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 3')) {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1600 } })
   wire(ctx, { role: 'admin', prods: catalog })
   const p = await open(ctx, '/supplies')
@@ -406,7 +407,9 @@ async function open(ctx, path) {
 //   빈 칸 한 줄만 나왔습니다 — 무엇을 파는지 보려면 한 번 더 눌러야 했습니다.
 //
 //   PC 와 폰 **둘 다** 확인합니다. 폰만 고치고 PC 를 빠뜨리는 자리입니다.
-for (const [w, h, where] of [[1440, 1600, 'PC'], [390, 844, '폰']]) {
+for (const [w, h, where] of skipIfHidden('supplies', '6-f. 소모품 화면을 처음 열면 「상품」')
+  ? []
+  : [[1440, 1600, 'PC'], [390, 844, '폰']]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h } })
   wire(ctx, { role: 'admin', prods: catalog })
   const p = await open(ctx, '/supplies')
@@ -427,7 +430,7 @@ for (const [w, h, where] of [[1440, 1600, 'PC'], [390, 844, '폰']]) {
 
 //  들어온 주문을 놓치지 않는가 — 기본 화면이 바뀐 대가입니다.
 //  칩의 숫자가 처리할 건수를 그대로 들고 있어야 합니다.
-{
+if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 4')) {
   const orders = [{
     id: 'o1', client_id: CA, status: '요청', requester_name: '가나 담당자', source: 'portal',
     note: '', deliver_schedule_id: null, deliver_on: null,
@@ -452,7 +455,7 @@ for (const [w, h, where] of [[1440, 1600, 'PC'], [390, 844, '폰']]) {
   await ctx.close()
 }
 //  주문이 0건이면 붉게 띄우지 않습니다 — 늘 붉으면 아무도 안 봅니다.
-{
+if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 5')) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
   wire(ctx, { role: 'admin', prods: catalog })
   const p = await open(ctx, '/supplies')

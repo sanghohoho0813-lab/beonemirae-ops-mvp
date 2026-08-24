@@ -3,6 +3,7 @@ import { today } from './format'
 import { addDays } from './performance'
 import { shiftMonth } from './deadlines'
 import { isPending } from './scheduleLive'
+import { hideSupplies } from './pilotMode'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 아직 값이 비어서 못 쓰는 기능
@@ -96,7 +97,9 @@ export function scanSetupGaps(data: AppData, asOf: string = today()): SetupScan 
   // ── 소모품 판매가 ─────────────────────────────────────────────────────────
   //  단가가 없으면 병원 화면에 **하나도 안 뜹니다.** 병원 눈에는 고장입니다.
   {
-    const products = (data.products ?? []).filter((p) => p.active)
+    //  Pilot 동안 소모품 판매는 안 씁니다 — 「단가를 넣으세요」라고
+    //  재촉할 이유가 없습니다. 갈 화면 자체가 내려가 있습니다 (0080).
+    const products = hideSupplies() ? [] : (data.products ?? []).filter((p) => p.active)
     const noPrice = products.filter((p) => (p.salePrice ?? 0) <= 0)
     const visible = products.filter((p) => p.available && (p.salePrice ?? 0) > 0).length
     if (noPrice.length > 0) {

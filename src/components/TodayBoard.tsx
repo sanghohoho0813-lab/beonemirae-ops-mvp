@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { AppData } from '../types'
 import { openRequests, todayProgress } from '../lib/ops'
+import { hideRequests } from '../lib/pilotMode'
 import { daysToContractEnd } from '../lib/billing'
 import { today } from '../lib/format'
 import { TONE, type Tone } from '../lib/tone'
@@ -53,7 +54,8 @@ function expiringSoon(data: AppData): number {
 export function TodayBoard({ data }: { data: AppData }) {
   const navigate = useNavigate()
   const progress = todayProgress(data)
-  const open = openRequests(data)
+  //  Pilot 동안 병원 요청은 안 씁니다 (0080)
+  const open = hideRequests() ? [] : openRequests(data)
   const urgent = open.filter((r) => r.urgent)
 
   const tasks = useMemo<Task[]>(() => {

@@ -1,4 +1,5 @@
 import type { UserRole } from '../context/AuthContext'
+import { isHiddenRoute } from './pilotMode'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 제품 투어 (사용 방법 보기)
@@ -105,9 +106,16 @@ export interface Tour {
 /** 하단 탭바가 있는 폰 기준 — 이 아래로는 모바일 단계를 씁니다 */
 export const MOBILE_MAX = 1023
 
-/** 이 화면 폭에서 실제로 보여줄 단계 */
+/**
+ * 이 화면 폭에서 실제로 보여줄 단계.
+ *
+ *  ⚠ Pilot 동안 내려 둔 화면(`/requests`·`/supplies`)으로 데려가는 단계는
+ *    뺍니다 (0080). 안 빼면 안내를 따라가다 「접근 권한이 없는 화면입니다」로
+ *    끝납니다 — 처음 쓰시는 분께 제일 나쁜 경험입니다.
+ */
 export function stepsFor(tour: Tour, width: number): TourStep[] {
-  return width <= MOBILE_MAX && tour.stepsMobile ? tour.stepsMobile : tour.steps
+  const steps = width <= MOBILE_MAX && tour.stepsMobile ? tour.stepsMobile : tour.steps
+  return steps.filter((s) => !isHiddenRoute(s.route))
 }
 
 // ── A. 대표 · 사무실 담당자 ──────────────────────────────────────────────────

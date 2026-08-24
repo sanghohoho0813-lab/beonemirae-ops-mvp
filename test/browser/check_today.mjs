@@ -139,13 +139,22 @@ const headY = (p) => p.evaluate(() => {
   wire(ctx)
   const p = await open(ctx, '/')
   const body = ((await p.textContent('body')) ?? '').replace(/\s+/g, ' ')
-  ok(/시작하기/.test(body), '대시보드에는 「시작하기」가 그대로 있음')
+  //  0080 — 이미 굴러가는 회사에서는 큰 카드가 **한 줄로 줄어듭니다.**
+  //  없어진 것이 아니라 자리를 덜 차지하는 것이라, 둘 중 하나는 있어야
+  //  합니다. (한 줄로 줄었는지 자체는 check_pilot80 이 봅니다)
+  const startHere =
+    (await p.locator('[data-start-here-mini]').count()) +
+    (await p.locator('[data-start-here-full]').count())
+  ok(startHere === 1, '대시보드에는 「시작하기」가 그대로 있음 (한 줄이든 카드든)', `${startHere}개`)
   ok(/도입 전 기준값 입력/.test(body), '아직 안 끝난 줄이 계속 보임')
   //  ── 엑셀로 가져온 완료 수거도 「첫 수거 완료 입력」으로 인정 ──────────
   //   예전에는 수거 입력 이벤트만 봤습니다. 엑셀로 수천 건을 가져온 회사도
   //   이 줄이 영원히 「안 끝남」이었습니다 — 이미 다 해 본 일을 매일
   //   「아직 안 했다」고 말하는 셈입니다.
   const doneFirst = await p.evaluate(() => {
+    //  한 줄로 줄었을 때는 **남은 것만** 적습니다 — 거기 없으면 끝난 것입니다.
+    const mini = document.querySelector('[data-start-here-mini]')
+    if (mini) return !/첫 수거 완료 입력/.test(mini.textContent ?? '')
     const el = [...document.querySelectorAll('p')].find((e) => e.textContent.trim() === '첫 수거 완료 입력')
     return el ? getComputedStyle(el).textDecorationLine.includes('line-through') : null
   })

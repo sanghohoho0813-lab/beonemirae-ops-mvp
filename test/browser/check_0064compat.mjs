@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT, skipIfHidden } from './_pilot.mjs'
 
 //  0064 를 **안전하게 적용할 수 있는가** — 앱이 판 64 과 64 둘 다에서 도는가
 //
@@ -171,7 +172,7 @@ for (const W of [1440, 390]) {
 
 // ── 원가가 실제로 어떻게 보이는가 ───────────────────────────────────────────
 console.log('\n── 원가 표시 ──')
-for (const ver of [63, 64]) {
+for (const ver of skipIfHidden('supplies', '상품 화면의 원가 표시') ? [] : [63, 64]) {
   const denied = []
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
   wire(ctx, ver, 'admin', denied)
@@ -186,7 +187,7 @@ for (const ver of [63, 64]) {
 }
 
 // ── 원가를 못 받는 계정은 0원이라고 하지 않는가 ─────────────────────────────
-{
+if (!skipIfHidden('supplies', '원가를 못 받을 때 「미확인」')) {
   const denied = []
   const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
   //  판 64 이면서 새 함수도 빈 값 — 「원가를 못 받는」 상태를 만듭니다
@@ -223,12 +224,19 @@ for (const ver of [63, 64]) {
     r.fulfill({ status: 404, contentType: 'application/json',
       //  ⚠ 꼬리말(in the schema cache) 이 **없습니다.**
       body: JSON.stringify({ code: 'PGRST202', message: 'Could not find the function public.product_costs' }) }))
-  const { p, errs } = await open(ctx, '/supplies')
+  //  ⚠ 여기서 보는 것은 **앱 전체가 안 터지는가**입니다 — 소모품 화면이
+  //    내려가 있어도(0080) 읽기 실패는 여전히 앱 전체를 죽일 수 있으므로,
+  //    그때는 늘 열려 있는 첫 화면에서 같은 것을 봅니다.
+  const { p, errs } = await open(ctx, PILOT.supplies ? '/' : '/supplies')
   const t = flat(await p.textContent('body'))
   ok(!/문제가 생겼습니다/.test(t), '꼬리말 없는 PGRST202 에도 화면이 안 터짐')
   ok(errs.length === 0, '자바스크립트 오류 없음', errs.join(' · '))
   //  자료가 실제로 실린 것까지 봅니다 — 안 터졌는데 텅 비면 소용없습니다.
-  ok(/합성수지 전용용기/.test(t), '**상품 목록이 그대로 실림** (읽기 전체가 실패하지 않음)')
+  if (PILOT.supplies) {
+    ok(t.length > 200, '**화면이 그대로 실림** (읽기 전체가 실패하지 않음)', `${t.length}자`)
+  } else {
+    ok(/합성수지 전용용기/.test(t), '**상품 목록이 그대로 실림** (읽기 전체가 실패하지 않음)')
+  }
   await ctx.close()
 }
 

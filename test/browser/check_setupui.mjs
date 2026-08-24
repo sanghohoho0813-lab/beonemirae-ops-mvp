@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT, skipIfHidden } from './_pilot.mjs'
 
 //  아직 값이 비어서 못 쓰는 기능 — 화면.
 //
@@ -148,12 +149,15 @@ const EMPTY = {
 
   const keys = await p.locator('[data-setup-gap]').evaluateAll((els) =>
     els.map((e) => e.getAttribute('data-setup-gap')))
-  ok(keys.length >= 5, '비어 있는 것이 다 올라옴', keys.join(' '))
+  //  Pilot 동안 소모품은 내려가 있어 그 줄 하나가 빠집니다 (0080).
+  ok(keys.length >= (PILOT.supplies ? 4 : 5), '비어 있는 것이 다 올라옴', keys.join(' '))
 
   //  「채워 주세요」가 아니라 지금 벌어지는 일.
-  const prod = flat(await p.textContent('[data-setup-effect="productPrice"]'))
-  ok(/병원 화면에는 물건이 하나도 안 보입니다/.test(prod),
-    '**지금 무슨 일이 벌어지는지 적음** — 「채워 주세요」가 아닙니다', prod.slice(0, 70))
+  if (!skipIfHidden('supplies', '2. 소모품 단가가 비었을 때의 안내')) {
+    const prod = flat(await p.textContent('[data-setup-effect="productPrice"]'))
+    ok(/병원 화면에는 물건이 하나도 안 보입니다/.test(prod),
+      '**지금 무슨 일이 벌어지는지 적음** — 「채워 주세요」가 아닙니다', prod.slice(0, 70))
+  }
   const biz = flat(await p.textContent('[data-setup-effect="bizInfo"]'))
   ok(/청구가 있는 1곳 중 1곳/.test(biz), '실제 숫자로', biz.slice(0, 50))
   ok(/홈택스에 손으로 넣게 됩니다/.test(biz), '결국 무슨 일이 되는지')
@@ -164,8 +168,14 @@ const EMPTY = {
     (all.match(/\*\*[^*]{0,20}/) ?? [''])[0])
 
   //  갈 곳이 있어야 합니다.
-  const href = await p.locator('[data-setup-link="productPrice"]').getAttribute('href')
-  ok(href === '/supplies', '채우러 갈 곳으로 이어짐', String(href))
+  if (!PILOT.supplies) {
+    const href = await p.locator('[data-setup-link="productPrice"]').getAttribute('href')
+    ok(href === '/supplies', '채우러 갈 곳으로 이어짐', String(href))
+  } else {
+    //  내려 둔 동안에도 **다른 줄은** 갈 곳이 있어야 합니다.
+    const href = await p.locator('[data-setup-link="bizInfo"]').getAttribute('href')
+    ok(typeof href === 'string' && href.length > 1, '채우러 갈 곳으로 이어짐', String(href))
+  }
   await ctx.close()
 }
 

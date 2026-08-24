@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { skipIfHidden } from './_pilot.mjs'
 
 //  0076 — 대표님이 한 번에 주신 아홉 가지 중 화면에서 볼 수 있는 것들
 //
@@ -97,7 +98,7 @@ const mkReq = (id, over = {}) => ({
 })
 
 // ── ① 요청 내려 두기 ───────────────────────────────────────────────────────
-{
+if (!skipIfHidden('requests', '① 요청 「나중에 보기」')) {
   const requests = [mkReq('r1'), mkReq('r2')]
   const { ctx, p, state } = await open(76, { path: '/requests', requests })
   ok((await p.locator('[data-snooze="r1"]').count()) === 1, '**요청에 「나중에 보기」가 있다**')
@@ -117,7 +118,7 @@ const mkReq = (id, over = {}) => ({
   ok(sent?.[1]?.p_reason === '검증 중 — 테스트 끝나면 정리', '이유가 그대로 감')
   await ctx.close()
 }
-{
+if (!skipIfHidden('requests', '① 내려 둔 요청을 다시 꺼내기')) {
   //  이미 내려 둔 것은 「진행 중」에서 빠지고, 대시보드 배너에도 안 셉니다.
   const requests = [mkReq('r1', { snoozed_until: plus(20), snooze_reason: '검증 중' }), mkReq('r2')]
   const { ctx, p } = await open(76, { path: '/requests', requests })

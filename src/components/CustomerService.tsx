@@ -4,6 +4,7 @@ import { REQUEST_KIND_LABEL, type AppData } from '../types'
 import { serviceConversion } from '../lib/portal'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { openRequests } from '../lib/ops'
+import { hideRequests } from '../lib/pilotMode'
 import { allNextActions } from '../lib/insights'
 import { wonShort } from '../lib/format'
 
@@ -31,7 +32,8 @@ interface Node {
 
 export function CustomerServiceCard({ data, demo = false }: { data: AppData; demo?: boolean }) {
   const c = serviceConversion(data)
-  const open = openRequests(data)
+  //  Pilot 동안 병원 요청은 안 씁니다 (0080)
+  const open = hideRequests() ? [] : openRequests(data)
   // 다음 할 일이 정확히 그 화면으로 가도록, 대상 거래처를 미리 찾아 둡니다.
   // (제안 전달과 매출 입력은 모두 거래처 상세에 있습니다)
   //

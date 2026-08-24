@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT, skipIfHidden } from './_pilot.mjs'
 
 //  「아직 안 읽었다」와 「정말로 없다」는 다른 말입니다
 //
@@ -152,8 +153,11 @@ const body = async (p) => flat(await p.textContent('body'))
 const staffPages = [
   ['/today', /등록된 일정이 없어요/, '오늘 일정'],
   ['/clients', /아직 등록된 거래처가 없습니다/, '거래처'],
-  ['/requests', /요청이 없습니다/, '병원 요청'],
+  //  Pilot 동안 「병원 요청」은 내려가 있습니다 (0080) — 안 열리는 화면에서
+  //  「불러오는 중과 없음을 구분하는가」를 볼 수는 없습니다.
+  ...(PILOT.requests ? [] : [['/requests', /요청이 없습니다/, '병원 요청']]),
 ]
+if (PILOT.requests) skipIfHidden('requests', '⑨ 병원 요청 — 불러오는 중 / 없음 구분')
 for (const [path, empty, label] of staffPages) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
   ctx.__uid = SUID

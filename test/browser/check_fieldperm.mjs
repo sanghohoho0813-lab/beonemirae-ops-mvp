@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT, skipIfHidden } from './_pilot.mjs'
 
 //  현장 담당자 권한 재검증 — **돈은 안 보이고, 업무정보는 보인다**
 //
@@ -174,7 +175,9 @@ const FIELD_ROUTES = [
   ['/clients', '거래처 목록'],
   [`/clients/${C1}`, '거래처 상세 (담당)'],
   [`/clients/${C2}`, '거래처 상세 (대체)'],
-  ['/requests', '병원 요청'],
+  //  Pilot 동안 「병원 요청」은 내려가 있습니다 — 열리지 않는 화면에서
+  //  「돈이 안 보인다」를 확인해 봐야 뜻이 없습니다 (0080).
+  ...(PILOT.requests ? [] : [['/requests', '병원 요청']]),
   ['/more', '더보기'],
 ]
 
@@ -247,7 +250,7 @@ for (const [w, label] of [[390, '폰'], [1440, 'PC']]) {
 // ── 2-b. 「연결되는 매출」 줄 — 사무실에는 있고 현장에는 없다 ───────────────
 //   금액은 아니지만 **영업 정보**입니다. 이 화면은 현장도 열기 때문에
 //   화면 자체를 막는 것이 아니라 그 한 줄만 뺐습니다.
-{
+if (!skipIfHidden('requests', '2-b 요청 화면의 「연결되는 매출」 줄')) {
   for (const [role, want] of [['field', false], ['office', true]]) {
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } })
     wire(ctx, role)

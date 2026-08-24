@@ -1,4 +1,5 @@
 import { LastCollectionLine } from '../components/FieldTodayCard'
+import { hideRequests } from '../lib/pilotMode'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -180,7 +181,12 @@ export function ClientDetail() {
   const canGoDispatch = mode !== 'live' || canAccess(role, '/dispatch')
   //  거래처 등록·수정·거래종료는 사무실·관리자만 (RLS: clients_update / clients_delete)
   const canEditClient = mode !== 'live' || canSeeDashboard(role)
-  const visibleTabs = TABS.filter((t) => canSeeMoney || !t.money)
+  //  Pilot 동안 병원 요청은 안 씁니다 — 탭까지 같이 내립니다 (0080).
+  //  탭만 남겨 두면 눌렀을 때 「등록된 요청이 없습니다」만 나와서,
+  //  없는 것인지 안 쓰는 것인지 구분이 안 됩니다.
+  const visibleTabs = TABS.filter(
+    (t) => (canSeeMoney || !t.money) && !(hideRequests() && t.id === 'requests'),
+  )
   const [settleMonth, setSettleMonth] = useState<string>(() => thisMonth())
   //  어떤 청구의 명세서를 열었는지 담아 둡니다. 청구가 여러 건이면
   //  (정기 + 추가) 명세서도 건마다 다르기 때문입니다. 값이 없으면 아직

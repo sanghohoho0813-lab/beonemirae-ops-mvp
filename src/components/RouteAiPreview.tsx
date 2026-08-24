@@ -9,6 +9,10 @@ import { Modal } from './Modal'
 //  TMAP + GPT 기반 동선 최적화 진입 UI 만 먼저 추가해줘. 이번 작업에서는
 //  실제 TMAP API 나 GPT API 를 연결하지 않는다.」
 //
+//  ⚠ 화면에 보이는 이름은 **T맵 · ChatGPT** 로 적습니다 (0080). 대표님:
+//    「TMAP GPT 이렇게 표시돼있는데 T맵, ChatGPT 라고 명확히 적어줘.」
+//    영문 약자는 읽는 사람이 무엇인지 한 번 더 생각하게 만듭니다.
+//
 //  ⚠ 그래서 이 파일에는 **바깥으로 나가는 통신이 한 줄도 없습니다.**
 //    fetch · axios · supabase 호출 없음. 키도, 주소도 없습니다.
 //  ⚠ 그리고 **가짜 결과를 만들지 않습니다.** 추천 경로도, 절감률 숫자도
@@ -22,7 +26,7 @@ import { Modal } from './Modal'
 
 /** 예정 기능 — 넷만 둡니다. 늘어놓을수록 「이미 되는 것」처럼 보입니다. */
 const PLANNED = [
-  { icon: Clock, label: '실시간 교통 반영', desc: 'TMAP 실도로·교통정보' },
+  { icon: Clock, label: '실시간 교통 반영', desc: 'T맵의 실제 도로·교통 정보' },
   { icon: ListOrdered, label: '방문순서 추천', desc: '그날 갈 곳의 순서' },
   { icon: Truck, label: '기사·차량별 일정 분석', desc: '적재·인계시간까지 함께' },
   { icon: TrendingDown, label: '이동거리·운행시간 절감', desc: '실제 운행기록으로 검증' },
@@ -66,15 +70,16 @@ function RouteAiModal({ open, onClose }: { open: boolean; onClose: () => void })
               아직 켜지지 않은 기능입니다 <StageBadge />
             </p>
             <p data-routeai-notyet className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
-              지금은 <b className="text-navy-800">진입 화면만</b> 있습니다. TMAP·GPT 어디에도 연결돼 있지 않고,
-              추천 경로나 절감률을 만들어 내지도 않습니다.
+              지금은 <b className="text-navy-800">이 안내 화면까지만</b> 만들어 두었습니다.
+              T맵이나 ChatGPT 에 연결하지 않았고, 경로나 절감 효과를 계산하지도 않습니다.
             </p>
           </div>
         </div>
 
         <p className="break-keep text-[1.08rem] leading-relaxed text-navy-700">
-          TMAP 의 실도로·교통정보와 GPT 기반 업무조건 분석을 결합하여
-          <b className="text-navy-900"> 기사별 방문순서와 이동동선을 추천</b>하는 기능입니다.
+          <b className="text-navy-900">T맵</b>의 실제 도로·교통 정보와 <b className="text-navy-900">ChatGPT</b> 의
+          업무조건 분석을 함께 써서, <b className="text-navy-900">기사님별 방문 순서와 이동 동선을 추천</b>하는
+          기능입니다.
         </p>
         <p className="break-keep text-[1.05rem] leading-relaxed text-navy-600">
           실제 운행데이터와 Pilot 결과를 축적한 후 <b className="text-navy-800">2단계 AX 기능</b>으로 적용할
@@ -96,7 +101,7 @@ function RouteAiModal({ open, onClose }: { open: boolean; onClose: () => void })
           </ul>
         </div>
 
-        {/*  ⚠ 순서가 중요합니다 — 좌표가 없으면 TMAP 을 붙여도 계산할 것이
+        {/*  ⚠ 순서가 중요합니다 — 좌표가 없으면 T맵을 붙여도 계산할 것이
              없습니다. 「무엇이 먼저 필요한가」를 적어 두면 실사에서
              계획으로 읽히고, 안 적으면 그냥 희망사항으로 읽힙니다. */}
         <p className="break-keep rounded-2xl bg-navy-50 px-4 py-3 text-[0.98rem] leading-snug text-navy-500">

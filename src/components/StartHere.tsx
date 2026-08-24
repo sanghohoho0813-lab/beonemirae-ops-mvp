@@ -54,8 +54,38 @@ export function StartHere({ data }: { data: AppData }) {
   const remaining = steps.filter((s) => !s.done)
   if (remaining.length === 0) return null
 
+  //  ── 이미 굴러가고 있으면 한 줄로 줄입니다 (0080) ────────────────────────
+  //
+  //   대표님: 「"시작하기 3/4" 같은 초기 세팅 체크리스트가 실제 운영
+  //   단계에서도 큰 공간을 차지한다면 정리해줘. 대표 화면의 첫 화면은
+  //   오늘 일정 / 완료·미완료 / 최근 수거입력이 먼저 보여야 한다.」
+  //
+  //   ⚠ 없애지는 않습니다. 남은 항목이 **진짜로 남아 있기** 때문입니다 —
+  //     지워 버리면 기준값을 영영 안 넣게 됩니다.
+  //   ⚠ 기준으로 삼는 것은 「수거를 한 번이라도 해 봤는가」입니다. 그때부터는
+  //     처음 세팅하는 사람이 아니라 **매일 쓰는 사람**입니다. 첫 화면의
+  //     절반을 세팅 안내가 차지할 이유가 없습니다.
+  if (hasCollection) {
+    return (
+      <Link
+        data-start-here-mini
+        to={remaining[0].to}
+        className="card flex items-center gap-3 px-4 py-3 transition hover:bg-navy-50"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-100 text-navy-500">
+          <Circle size={11} strokeWidth={3} />
+        </span>
+        <span className="min-w-0 flex-1 break-keep text-[1.05rem] text-navy-600">
+          아직 안 하신 설정이 <b className="text-navy-800">{remaining.length}가지</b> 있습니다 —{' '}
+          <b className="text-navy-800">{remaining.map((r) => r.label).join(' · ')}</b>
+        </span>
+        <ChevronRight size={18} className="shrink-0 text-navy-300" />
+      </Link>
+    )
+  }
+
   return (
-    <section className="card overflow-hidden">
+    <section data-start-here-full className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-navy-100 px-5 py-4 sm:px-6">
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">시작하기</p>
         <p className="t-body font-bold text-navy-400">

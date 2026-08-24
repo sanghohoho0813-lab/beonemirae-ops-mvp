@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { skipIfHidden } from './_pilot.mjs'
 
 //  아직 값이 비어서 못 쓰는 기능 (setupGaps.ts).
 //
@@ -100,7 +101,7 @@ const mk = (over = {}) => ({ ...FULL, ...over })
 }
 
 // ── 3. 소모품 단가 ──────────────────────────────────────────────────────────
-{
+if (!skipIfHidden('supplies', '3. 소모품 단가가 비었다는 알림')) {
   const s = S.scanSetupGaps(mk({ products: [mkProd('a', 0), mkProd('b', 0), mkProd('c', 9000)] }), ASOF)
   const g = s.gaps.find((x) => x.key === 'productPrice')
   ok(g !== undefined && g.weight === '돈', '단가 없는 물건이 있으면 올라옴 (돈)', g?.weight)

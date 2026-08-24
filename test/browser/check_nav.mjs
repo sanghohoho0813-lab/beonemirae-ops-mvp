@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT, skipIfHidden } from './_pilot.mjs'
 
 //  폰 메뉴 — 하단 고정 메뉴와 「더보기」.
 //
@@ -126,10 +127,16 @@ async function open(role, width = 390, height = 900) {
   //  각 묶음의 항목이 PC 목록과 같은 순서인지
   const svc = await p.locator('[data-more-section="more-service"] [data-more-item]').evaluateAll(
     (els) => els.map((e) => e.getAttribute('data-more-item')))
-  ok(svc.join(',') === '/revenue,/requests,/supplies,/reports,/performance',
-    '병원 서비스 5개가 PC 와 같은 순서 (매출 현황 · 소모품 주문 포함)', svc.join(','))
+  //  Pilot 동안 내려 둔 것은 빼고 견줍니다 (0080). 순서 자체는 그대로
+  //  지켜져야 하므로 목록을 지우지 않고 **걸러서** 비교합니다.
+  const wantSvc = ['/revenue', '/requests', '/supplies', '/reports', '/performance']
+    .filter((r) => !(PILOT.requests && r === '/requests') && !(PILOT.supplies && r === '/supplies'))
+  ok(svc.join(',') === wantSvc.join(','),
+    `병원 서비스 ${wantSvc.length}개가 PC 와 같은 순서`, `${svc.join(',')} ← 기대 ${wantSvc.join(',')}`)
   //  소모품 주문(/supplies)은 폰에서도 열려야 합니다 — 사무실이 현장에서 씁니다
-  ok(svc.includes('/supplies'), '소모품 주문이 폰 더보기에도 있음')
+  if (!skipIfHidden('supplies', '폰 더보기의 「소모품 주문」')) {
+    ok(svc.includes('/supplies'), '소모품 주문이 폰 더보기에도 있음')
+  }
 
   const tools = await p.locator('[data-more-section="more-tools"] [data-more-item]').evaluateAll(
     (els) => els.map((e) => e.getAttribute('data-more-item')))
@@ -197,7 +204,9 @@ async function open(role, width = 390, height = 900) {
   await p.waitForTimeout(2600)
   const tabs = await p.locator('[data-client-tab]').evaluateAll((els) =>
     els.map((e) => ({ id: e.getAttribute('data-client-tab'), r: e.getBoundingClientRect() })))
-  ok(tabs.length === 8, '탭 8개', String(tabs.length))
+  //  Pilot 동안 「요청·알림」 탭은 내려가 있습니다 (0080).
+  const wantTabs = PILOT.requests ? 7 : 8
+  ok(tabs.length === wantTabs, `탭 ${wantTabs}개`, String(tabs.length))
   //  옆으로 밀지 않아도 전부 화면 안에 있어야 합니다
   const outside = tabs.filter((t) => t.r.right > 390 + 1 || t.r.left < -1)
   ok(outside.length === 0, '옆으로 밀지 않아도 전부 화면 안 — 예전에는 첫 탭만 보였습니다',

@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { PILOT, skipIfHidden } from './_pilot.mjs'
 
 //  폰 화면 — 「글자가 세로로 늘어지지 않는가」와 「얼마나 밀어야 하는가」.
 //
@@ -124,16 +125,19 @@ const sheetScrollLen = (p) =>
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
   wire(ctx)
   const p = await open(ctx, '/today')
-  ok((await p.locator('[data-request-banner]').count()) >= 1, '병원 요청 줄이 뜸')
+  //  세로로 늘어지는지는 요청 줄과 무관하게 화면 전체에서 봅니다.
   const bad = await findVertical(p)
   ok(bad.length === 0, '**세로로 늘어진 글자가 없음** — 예전에는 병원 이름이 한 자씩 내려갔습니다',
     bad.slice(0, 3).join(' / '))
   //  이름이 길면 세로로 늘어지는 대신 한 줄로 잘려야 합니다
-  const line = await p.locator('[data-request-banner]:visible .truncate').first().evaluate((e) => ({
-    h: Math.round(e.getBoundingClientRect().height),
-    fs: Math.round(parseFloat(getComputedStyle(e).fontSize)),
-  }))
-  ok(line.h < line.fs * 2, '거래처 이름이 한 줄 — 넘치면 … 로 자름', `${line.h}px / 글자 ${line.fs}px`)
+  if (!skipIfHidden('requests', '오늘 일정 위의 병원 요청 줄')) {
+    ok((await p.locator('[data-request-banner]').count()) >= 1, '병원 요청 줄이 뜸')
+    const line = await p.locator('[data-request-banner]:visible .truncate').first().evaluate((e) => ({
+      h: Math.round(e.getBoundingClientRect().height),
+      fs: Math.round(parseFloat(getComputedStyle(e).fontSize)),
+    }))
+    ok(line.h < line.fs * 2, '거래처 이름이 한 줄 — 넘치면 … 로 자름', `${line.h}px / 글자 ${line.fs}px`)
+  }
   await ctx.close()
 }
 
@@ -211,7 +215,11 @@ for (const path of ['/', '/clients', '/requests']) {
   const bad = await findVertical(p)
   ok(bad.length === 0, '320px 에서도 세로 글자 없음', bad.slice(0, 2).join(' / '))
   const body = flat(await p.textContent('body'))
-  ok(/병원 요청/.test(body), '좁은 화면에서도 내용은 그대로')
+  //  좁은 화면에서도 **내용이 그대로 실리는지**를 봅니다. 예전에는 병원
+  //  요청 줄로 확인했는데 Pilot 동안 그 줄이 내려가 있어(0080), 늘 있는
+  //  오늘 일정 쪽으로 봅니다 — 확인하려는 것은 같습니다.
+  ok(PILOT.requests ? /오늘|일정/.test(body) : /병원 요청/.test(body),
+    '좁은 화면에서도 내용은 그대로', body.slice(0, 40))
   await ctx.close()
 }
 
@@ -449,10 +457,19 @@ for (const [w, label] of [[390, '폰'], [1500, 'PC']]) {
     await next.click().catch(() => {})
     await p.waitForTimeout(800)
   }
-  ok(steps >= 9, `${label} 투어가 끝까지 넘어감`, `${steps}단계`)
-  ok(/소모품|전달완료/.test(seen), `${label} 투어가 소모품 판매를 다룸`)
-  ok(/전달완료를 누를 때만|요청은 아직 매출이 아닙니다/.test(seen),
-    `${label} 투어가 「요청은 매출이 아니다」를 알려 줌`)
+  //  Pilot 동안 내려 둔 화면(병원 요청 · 소모품 주문)으로 데려가는 단계는
+  //  안내에서 빠집니다 (0080) — 따라가다 「접근 권한이 없는 화면입니다」로
+  //  끝나면 처음 쓰시는 분께 제일 나쁜 경험이기 때문입니다.
+  const cut = (PILOT.requests ? 1 : 0) + (PILOT.supplies ? 1 : 0)
+  ok(steps >= 9 - cut, `${label} 투어가 끝까지 넘어감`, `${steps}단계 (내려 둔 ${cut}단계 제외)`)
+  //  ⚠ 제일 나쁜 결말은 안내를 따라갔더니 막힌 화면이 나오는 것입니다.
+  ok(!/접근 권한이 없는 화면|문제가 생겼습니다/.test(flat(await p.textContent('body'))),
+    `${label} 투어가 막힌 화면으로 데려가지 않음`)
+  if (!skipIfHidden('supplies', `${label} 투어의 소모품 판매 단계`)) {
+    ok(/소모품|전달완료/.test(seen), `${label} 투어가 소모품 판매를 다룸`)
+    ok(/전달완료를 누를 때만|요청은 아직 매출이 아닙니다/.test(seen),
+      `${label} 투어가 「요청은 매출이 아니다」를 알려 줌`)
+  }
   ok(/도입 전 실제 업무|3\.5~4\.7시간/.test(seen), `${label} 투어가 AX 성과를 다룸`)
   await ctx.close()
 }

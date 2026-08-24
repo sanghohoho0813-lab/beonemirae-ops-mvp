@@ -129,12 +129,36 @@ const isUrgentKind = (r: ClientRequest) => r.kind === '긴급수거' || r.kind =
  *  많이 급한 순으로 돌려줍니다. 근거가 모자란 곳은 아예 안 넣습니다.
  */
 export function urgentRisks(data: AppData, now = today()): UrgentRisk[] {
+  //  ⚠ Pilot 동안 이 분석을 **화면에 안 그리는** 것은 여기가 아니라
+  //    `components/UrgentRisk.tsx` 가 정합니다 (0080). 계산을 비워 버리면
+  //    「이 계산이 맞는가」를 확인할 길이 같이 없어집니다 — 다시 켤 때
+  //    아무도 봐 주지 않은 코드가 그대로 대표님 첫 화면에 올라옵니다.
   const from = addDays(now, -LOOKBACK_DAYS)
   //  그만둔 거래처는 보지 않습니다 — 이제 갈 일이 없는 곳입니다.
   //  (그만둔 곳은 data.retiredClients 에 따로 있고 여기 섞이지 않습니다.)
   const clients = new Map<string, Client>(data.clients.map((c) => [c.id, c]))
+  //  ⚠ 0080 — 여기에 **진짜 결함**이 있었습니다.
+  //
+  //    0076 에서 「잠시 내려 두기」를 만들었습니다. 대표님 지적이 있었죠 —
+  //    「더원요양병원 요청 2건이 몇 주째 떠 있다. 당분간 안 뜨게 해줘.」
+  //    그런데 그때 고친 것은 `openRequests` 한 곳뿐이었고, **이 분석은
+  //    그대로 두었습니다.** 그래서 내려 둔 요청이 대표님 첫 화면의
+  //    「급한 요청이 반복됩니다」에는 계속 떴습니다. 내려 뒀는데 또 뜨니
+  //    「처리했는데 왜 아직 남아 있지?」로 보입니다.
+  //
+  //    ⚠ 끝난 요청(처리 완료)도 뺍니다. 「이 병원이 급하게 부르는 일이
+  //      잦다」는 사실은 남지만, 그것을 **지금 손대야 할 일**처럼 첫 화면에
+  //      띄우면 실제로 남은 일과 구분이 안 됩니다. 이 배너는 「지금 손대야
+  //      하는 곳」을 말하는 자리입니다.
+  //    ⚠ 이력을 지우는 것이 아닙니다 — 요청 화면에는 그대로 다 있습니다.
+  const t = today()
   const reqs = (data.requests ?? []).filter(
-    (r) => isUrgentKind(r) && r.createdAt.slice(0, 10) >= from && clients.has(r.clientId),
+    (r) =>
+      isUrgentKind(r) &&
+      r.createdAt.slice(0, 10) >= from &&
+      clients.has(r.clientId) &&
+      r.status !== '처리 완료' &&
+      !(r.snoozedUntil && r.snoozedUntil > t),
   )
 
   const byClient = new Map<string, ClientRequest[]>()

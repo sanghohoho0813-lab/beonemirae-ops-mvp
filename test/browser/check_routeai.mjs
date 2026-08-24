@@ -84,9 +84,16 @@ async function checkPanel(p, where) {
 
   //  ⚠ 제일 먼저 「아직 아니다」가 나와야 합니다.
   ok(/아직 켜지지 않은 기능입니다/.test(t), `${where} — **아직 안 되는 기능이라고 먼저 말한다**`)
-  ok(/연결돼 있지 않고/.test(flat(await p.locator('[data-routeai-notyet]').innerText())),
-    `${where} — TMAP·GPT 에 연결 안 됐다고 적혀 있다`)
-  ok(/TMAP 의 실도로·교통정보와 GPT 기반 업무조건 분석/.test(t), `${where} — 무엇을 할 기능인지 설명한다`)
+  //  ⚠ 이름은 **T맵 · ChatGPT** 로 적습니다 (0080). 대표님: 「TMAP GPT
+  //    이렇게 표시돼있는데 T맵, ChatGPT 라고 명확히 적어줘.」
+  const notyet = flat(await p.locator('[data-routeai-notyet]').innerText())
+  ok(/T맵이나 ChatGPT 에 연결하지 않았고/.test(notyet),
+    `${where} — **T맵·ChatGPT 에 연결 안 했다고 적혀 있다**`)
+  ok(/계산하지도 않습니다/.test(notyet), `${where} — 경로·절감도 계산 안 한다고 적혀 있다`)
+  ok(!/TMAP|GPT[^-]/.test(notyet.replace(/ChatGPT/g, '')),
+    `${where} — 영문 약자(TMAP·GPT)로 적어 두지 않았다`, notyet.slice(0, 50))
+  ok(/T맵의 실제 도로·교통 정보와 ChatGPT 의 업무조건 분석/.test(t),
+    `${where} — 무엇을 할 기능인지 설명한다`)
   ok(/2단계 AX 기능으로 적용할 예정/.test(t), `${where} — 언제 붙일지 적혀 있다`)
   for (const f of ['실시간 교통 반영', '방문순서 추천', '기사·차량별 일정 분석', '이동거리·운행시간 절감']) {
     ok(t.includes(f), `${where} — 예정 기능 「${f}」`)

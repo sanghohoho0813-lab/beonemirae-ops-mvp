@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { BookVisitModal } from './BookVisit'
 import { urgentRisks, urgentActionable, type UrgentRisk } from '../lib/urgentRisk'
+import { hideRequests } from '../lib/pilotMode'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 긴급 전화가 오기 전에 (0058 다음)
@@ -76,7 +77,9 @@ function RiskLine({ r, onBook }: { r: UrgentRisk; onBook: () => void }) {
  */
 export function UrgentRiskBanner({ limit = 3 }: { limit?: number }) {
   const { data } = useData()
-  const rows = useMemo(() => urgentActionable(urgentRisks(data)), [data])
+  //  Pilot 동안 병원 요청은 안 씁니다 (0080). 이 띠는 요청만 보고 만드는
+  //  것이라, 요청을 내려 두면 이 띠도 같이 내려갑니다.
+  const rows = useMemo(() => (hideRequests() ? [] : urgentActionable(urgentRisks(data))), [data])
   const [bookFor, setBookFor] = useState<UrgentRisk | null>(null)
   if (rows.length === 0) return null
 
@@ -127,7 +130,10 @@ export function UrgentRiskBanner({ limit = 3 }: { limit?: number }) {
  */
 export function UrgentRiskCard({ clientId }: { clientId: string }) {
   const { data } = useData()
-  const risk = useMemo(() => urgentRisks(data).find((r) => r.clientId === clientId), [data, clientId])
+  const risk = useMemo(
+    () => (hideRequests() ? undefined : urgentRisks(data).find((r) => r.clientId === clientId)),
+    [data, clientId],
+  )
   const [open, setOpen] = useState(false)
   const canBook = useCanBook()
   if (!risk) return null

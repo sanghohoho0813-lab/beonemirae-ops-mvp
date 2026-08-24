@@ -34,6 +34,7 @@ import { TodayBoard } from '../components/TodayBoard'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
 import { canSeeDashboard } from '../lib/access'
+import { hideRequests } from '../lib/pilotMode'
 import { RevenueKpis } from '../components/RevenueKpis'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
@@ -332,7 +333,10 @@ export function Dashboard() {
 
         {/* PC — 병원 요청이 매출이 되기까지의 흐름과 추천을 함께 봅니다 */}
         <div className="hidden lg:block">
-          <CustomerServiceCard data={data} demo={mode !== 'live'} />
+          {/*  ⚠ 이 카드는 통째로 「병원 요청 → 처리 → 제안 → 수락 → 매출」
+              흐름입니다. Pilot 동안 요청을 안 쓰므로 전부 0 건으로 뜨고,
+              「내가 뭘 안 한 건가」로 읽힙니다 (0080). */}
+          {!hideRequests() && <CustomerServiceCard data={data} demo={mode !== 'live'} />}
           <div className="mt-4 lg:mt-5">
             <SectionTitle size="sub" action={<span className="pill bg-accent-50 text-accent-700">데이터 기반</span>}>
               데이터 기반 다음 행동 추천

@@ -1,4 +1,5 @@
 import type { UserRole } from '../context/AuthContext'
+import { isHiddenRoute } from './pilotMode'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 역할별 화면 접근 정책
@@ -107,6 +108,13 @@ export function isPortalPath(path: string): boolean {
 /** 이 역할이 해당 경로에 접근할 수 있는지 */
 export function canAccess(role: UserRole | null, path: string): boolean {
   if (!role) return false
+  //  ⚠ Pilot 동안 내려 둔 화면은 **누구에게도** 안 열립니다 (0080).
+  //    여기 한 곳에서 막아야 사이드바·더보기·주소창이 전부 같이 막힙니다.
+  //    메뉴에서만 빼면 옛 링크나 주소를 직접 칠 때 그대로 열려서
+  //    「메뉴엔 없는데 왜 열리지」가 됩니다.
+  //  ⚠ 관리자(admin) 보다 **먼저** 봅니다 — admin 은 아래에서 전부 통과라,
+  //    뒤에 두면 대표님 화면에서만 그대로 보입니다.
+  if (isHiddenRoute(path)) return false
   // 병원 계정은 포털 밖으로 나갈 수 없습니다(관리자 전체 허용보다 먼저 판단).
   if (role === 'client') return isPortalPath(path)
   if (role === 'admin') return true
