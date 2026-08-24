@@ -2098,6 +2098,8 @@ export interface StockMove {
   at: string
   kind: '입고' | '공급' | '조정' | '취소'
   item: keyof OfficeStock
+  /** 어느 규격인지 (0079). 빈 문자열이면 규격을 모르고 넣은 옛 줄입니다 */
+  itemKey: string
   qty: number
   clientName: string
   memo: string
@@ -2113,7 +2115,7 @@ export async function stockLedger(limit = 40): Promise<StockMove[]> {
   const sb = need()
   const { data, error } = await sb
     .from('material_transactions')
-    .select('id, created_at, kind, item, qty, memo, clients(name)')
+    .select('id, created_at, kind, item, item_key, qty, memo, clients(name)')
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw new Error(error.message)
@@ -2124,11 +2126,79 @@ export async function stockLedger(limit = 40): Promise<StockMove[]> {
       id: String(x.id), at: String(x.created_at),
       kind: String(x.kind) as StockMove['kind'],
       item: String(x.item) as keyof OfficeStock,
+      //  0079 — 어느 규격인지. 옛 줄은 비어 있습니다 (모르고 넣은 줄입니다).
+      itemKey: x.item_key == null ? '' : String(x.item_key),
       qty: Number(x.qty ?? 0),
       clientName: c?.name ?? '',
       memo: String(x.memo ?? ''),
     }
   })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 규격별 재고 (0079)
+//
+//  ⚠ `qty` 가 **null 이면 「아직 안 세어 봄」**입니다. 0 개가 아닙니다.
+//    화면에서 `?? 0` 으로 뭉개면 대표님은 창고에 쌓여 있는 63L 박스를 보고도
+//    「0 개네」 하고 또 발주하시게 됩니다. 이 null 은 끝까지 null 로 옵니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface StockItem {
+  /** 규격 키 (plastic2 · box63 …) */
+  item: string
+  /** 남은 수량. **null = 아직 안 세어 봄** */
+  qty: number | null
+  /** 마지막으로 센 때. null 이면 한 번도 안 셌습니다 */
+  countedAt: string | null
+}
+
+/** 규격별 재고 읽기 (0079) */
+export async function stockItems(): Promise<StockItem[]> {
+  const sb = need()
+  const { data, error } = await sb
+    .from('office_stock_items')
+    .select('item, qty, counted_at')
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => {
+    const x = r as Record<string, unknown>
+    return {
+      item: String(x.item),
+      //  ⚠ null 을 0 으로 바꾸지 않습니다.
+      qty: x.qty == null ? null : Number(x.qty),
+      countedAt: x.counted_at == null ? null : String(x.counted_at),
+    }
+  })
+}
+
+/**
+ * 규격 하나를 세어 넣기 (0079).
+ *
+ *  ⚠ 더하는 것이 아니라 **그 수로 정합니다.** 창고에 가서 센 수입니다.
+ */
+export async function countStockItem(
+  item: string,
+  qty: number,
+  reason: string,
+): Promise<{ item: string; before: number | null; after: number }> {
+  const sb = need()
+  const { data, error } = await sb.rpc('count_stock_item', {
+    p_item: item, p_qty: qty, p_reason: reason,
+  })
+  if (error) throw new Error(error.message)
+  return data as { item: string; before: number | null; after: number }
+}
+
+/** 규격별 입고 (0079). 세어 본 규격만 규격별 재고가 늘어납니다 */
+export async function receiveStockItems(
+  items: Record<string, number>,
+  memo: string,
+  requestId?: string | null,
+): Promise<void> {
+  const sb = need()
+  const { error } = await sb.rpc('receive_stock_items', {
+    p_items: items, p_memo: memo, p_request_id: requestId ?? null,
+  })
+  if (error) throw new Error(error.message)
 }
 
 /** 재고 정정 — 숫자를 덮어쓰지 않고 원장에 이유와 함께 남깁니다 (0074) */

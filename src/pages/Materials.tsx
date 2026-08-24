@@ -6,6 +6,7 @@ import { MetricCard, EmptyState, SectionTitle, QtyField } from '../components/ui
 import { LoadGate } from '../components/LoadState'
 import { MaterialRiskCard } from '../components/ops'
 import { StockCard } from '../components/StockCard'
+import { StockItems } from '../components/StockItems'
 import { StockLedger } from '../components/StockLedger'
 import { useAuth } from '../context/AuthContext'
 import { Modal } from '../components/Modal'
@@ -171,6 +172,11 @@ export function Materials() {
       {(role === 'admin' || role === 'office') && (
         <div className="mb-5">
           <StockCard />
+          {/*  ── 규격별 재고 (0079) ────────────────────────────────────────
+               대표님: 「2L 합성수지 ~ 기저귀비닐 40L 까지도 수량을 실시간으로
+               확인할 수 있게 해줘. 지금은 4개밖에 없어서 불편해.」
+               위 넉 장은 **칸 합계**이고, 아래가 그 안쪽 규격별 내역입니다. */}
+          <StockItems />
           <StockLedger />
         </div>
       )}
