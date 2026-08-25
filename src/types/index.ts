@@ -91,6 +91,40 @@ export const REQUEST_KIND_LABEL: Record<RequestKind, string> = {
 /** 요청 등록 주체 — 병원 포털 / 비원미래 대행 접수(전화·카톡) */
 export type RequestSource = 'portal' | 'staff'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 고객 문의 (0083)
+//
+//  ⚠ 수거요청(ClientRequest)과 **다른 것**입니다.
+//    수거요청은 「와 주세요」라는 **작업 지시**라 일정·배차로 이어집니다.
+//    문의는 「이건 어떻게 되나요」라는 **대화**입니다.
+//    한 표에 섞으면 요청함에 질문이 쌓여 정작 오늘 나갈 수거가 묻힙니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 문의 주제 — 병원이 고르는 말 그대로 */
+export const INQUIRY_TOPICS = ['수거 일정', '자재', '정산', '긴급수거', '계약', '기타'] as const
+export type InquiryTopic = (typeof INQUIRY_TOPICS)[number]
+
+/** 문의 상태 — 수거요청과 같은 결로 맞춥니다 */
+export const INQUIRY_STATUSES = ['접수', '확인 중', '답변 완료'] as const
+export type InquiryStatus = (typeof INQUIRY_STATUSES)[number]
+
+export interface ClientInquiry {
+  id: string
+  clientId: string
+  clientName: string
+  topic: InquiryTopic
+  subject: string
+  body: string
+  status: InquiryStatus
+  /** 비원미래 답변 — 병원 화면에 그대로 보입니다 */
+  reply: string
+  askedByName: string
+  handledBy: string | null
+  handledAt: string | null
+  createdAt: string
+  demoSessionId?: string | null
+}
+
 export interface ClientRequest {
   id: string
   clientId: string
@@ -590,6 +624,8 @@ export interface AppData {
   leads: SalesLead[]
   // ── v7: 병원 고객 서비스 — 병원이 직접 올린 요청 (없으면 빈 배열) ──
   requests: ClientRequest[]
+  //  ── 0083: 고객 문의 (판 82 이하이면 빈 배열입니다) ──
+  inquiries: ClientInquiry[]
   // ── 그만둔 거래처 ──
   //  거래처를 '삭제'하면 지우지 않고 비활성으로 둡니다. 그런데 청구·수거
   //  기록은 그대로 남기 때문에, 이름을 못 찾으면 미수금이 '알 수 없음' 으로
@@ -872,6 +908,7 @@ export const EMPTY_APP_DATA: AppData = {
   experiment: EMPTY_EXPERIMENT,
   leads: [],
   requests: [],
+  inquiries: [],
 }
 
 /** 저장 스키마 버전 (마이그레이션 판단용) */

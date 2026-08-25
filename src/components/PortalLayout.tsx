@@ -1,6 +1,7 @@
+import { useEffect, useMemo } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { CLIENT_TEL } from '../lib/brand'
-import { PackageCheck, Building2, FileBarChart, History, Headset, LogOut, type LucideIcon } from 'lucide-react'
+import { PackageCheck, Building2, FileBarChart, History, Headset, LogOut, ReceiptText, MessageSquare, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
@@ -8,6 +9,9 @@ import { LiveClock } from './LiveClock'
 import { ThemeButton } from './ThemePicker'
 import { PageMotion } from './motion'
 import { TourButton } from './TourEntry'
+import { PortalNoticeBell } from './PortalNoticeBell'
+import { portalNotices } from '../lib/portalNotices'
+import { touchPortalSeen } from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 고객 포털 레이아웃
@@ -23,13 +27,23 @@ interface Item {
   /** 모바일에서 세 메뉴가 한 줄에 들어가도록 쓰는 짧은 이름 */
   short: string
   icon: LucideIcon
+  /** 폰 아래 고정 띠에 둘 것인가 (0083) */
+  bottom: boolean
 }
 
+//  ⚠ 0083 — 두 개를 더했습니다. 병원이 **전화로 물어보던 것**이 정확히
+//    이 둘이라, 여기 있어야 전화가 줄어듭니다.
+//      정산   「이번 달 얼마 나왔나요 · 입금 됐나요」
+//      문의   「이건 어떻게 되나요」 (수거 요청과 다릅니다 — 대화입니다)
+//  ⚠ 여섯 개는 폰 아래 띠에 다 안 들어갑니다. 아래 띠에는 **자주 쓰는
+//    넷**만 두고, 나머지 둘은 위쪽 줄에 둡니다(bottom: false).
 const NAV: Item[] = [
-  { to: '/portal', label: '우리 병원 현황', short: '현황', icon: Building2 },
-  { to: '/portal/supplies', label: '필요한 물품', short: '물품', icon: PackageCheck },
-  { to: '/portal/report', label: '월간 리포트', short: '리포트', icon: FileBarChart },
-  { to: '/portal/history', label: '수거 이력', short: '이력', icon: History },
+  { to: '/portal', label: '우리 병원 현황', short: '현황', icon: Building2, bottom: true },
+  { to: '/portal/supplies', label: '필요한 물품', short: '물품', icon: PackageCheck, bottom: true },
+  { to: '/portal/report', label: '월간 리포트', short: '리포트', icon: FileBarChart, bottom: true },
+  { to: '/portal/history', label: '수거 이력', short: '이력', icon: History, bottom: true },
+  { to: '/portal/billing', label: '정산 내역', short: '정산', icon: ReceiptText, bottom: false },
+  { to: '/portal/support', label: '문의하기', short: '문의', icon: MessageSquare, bottom: false },
 ]
 
 export function PortalLayout() {
@@ -38,6 +52,21 @@ export function PortalLayout() {
   const { data } = useData()
   const navigate = useNavigate()
   const clientName = data.clients[0]?.name ?? ''
+
+  //  ⚠ 알림은 저장하지 않고 지금 자료로 만듭니다 (0083).
+  const notices = useMemo(
+    () => (data.clients[0] ? portalNotices(data, data.clients[0]) : []),
+    [data],
+  )
+
+  //  ⚠ 「이 병원이 포털을 마지막으로 언제 열었나」를 남깁니다 (0083).
+  //    거래처 상세의 「최근 접속」이 지어낸 값이 되지 않으려면 실제로
+  //    찍어 두는 수밖에 없습니다.
+  //    · 실패해도 조용히 넘어갑니다 — 이건 기록이지 업무가 아닙니다
+  //    · 직원이 확인용으로 열어 본 것은 **서버가** 안 셉니다
+  useEffect(() => {
+    void touchPortalSeen()
+  }, [])
 
   return (
     <div className="min-h-[100dvh] bg-app">
@@ -89,6 +118,10 @@ export function PortalLayout() {
                한 줄을 넘기면 소용이 없습니다. 묶음 안에서도 접히게 둡니다.
                ⚠ shrink-0 은 뗐습니다 — 안 줄고 안 접히면 넘치는 수밖에 없습니다. */}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {/*  0083 — 알림. 표를 만들지 않고 **지금 자료로** 만듭니다
+                 (lib/portalNotices.ts). 그래서 「읽음」이 없고, 처리하면
+                 저절로 사라집니다. */}
+            <PortalNoticeBell notices={notices} />
             <TourButton
               compact
               tourId="client"
@@ -172,7 +205,10 @@ export function PortalLayout() {
         className="fixed inset-x-0 bottom-0 z-30 flex bg-white/95 shadow-nav backdrop-blur-lg sm:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {NAV.map((n) => {
+        {/*  ⚠ 0083 — 여섯 개를 다 넣으면 폰에서 한 칸이 65px 이 되어 글자가
+             세로로 늘어집니다. 자주 쓰는 넷만 둡니다 — 정산·문의는 위쪽
+             줄에 그대로 있습니다(안 없앴습니다). */}
+        {NAV.filter((n) => n.bottom).map((n) => {
           const Icon = n.icon
           const active = n.to === '/portal' ? pathname === '/portal' : pathname.startsWith(n.to)
           return (

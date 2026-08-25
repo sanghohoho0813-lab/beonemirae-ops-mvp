@@ -20,6 +20,8 @@ import {
   Truck,
   X,
   Hospital,
+  History,
+  ReceiptText,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -28,6 +30,8 @@ import { LoadGate } from '../components/LoadState'
 import { Modal } from '../components/Modal'
 import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
+import { outstandingOf } from '../lib/selectors'
+import { PortalHero, PortalActionCard, type PortalAction } from '../components/PortalHero'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 import { prettyDate, weight, won } from '../lib/format'
@@ -122,6 +126,67 @@ export function PortalHome() {
   const client = data.clients[0]
   const s = useMemo(() => (client ? portalSummary(data, client) : null), [data, client])
 
+  //  ⚠ 값은 **있는 것만** 적습니다. 「0건」과 「아직 없음」은 다른 말이고,
+  //    없는 것을 0 으로 적으면 병원이 그 0 을 사실로 믿습니다.
+  const owed = useMemo(
+    () =>
+      client
+        ? data.payments
+            .filter((p) => p.clientId === client.id && p.status !== '취소' && !p.canceledAt)
+            .reduce((a, p) => a + outstandingOf(data, p), 0)
+        : 0,
+    [data, client],
+  )
+  const myInquiries = useMemo(
+    () => (data.inquiries ?? []).filter((q) => !client || q.clientId === client.id),
+    [data.inquiries, client],
+  )
+
+  const ACTIONS: PortalAction[] = useMemo(() => {
+    if (!s) return []
+    return [
+      {
+        no: '01', label: '다음 수거 일정', icon: CalendarClock, to: '/portal/history',
+        value: s.nextDate ? prettyDate(s.nextDate) : '예정 없음',
+        desc: s.nextIsEstimate ? '수거주기로 본 예상입니다' : '확정된 방문 일정입니다',
+      },
+      {
+        no: '02', label: '긴급 수거 요청', icon: Siren, accent: true,
+        onClick: () => start('긴급수거'),
+        desc: '보관기한이 임박했거나 배출량이 갑자기 늘었을 때',
+      },
+      {
+        no: '03', label: '용기 · 봉투 요청', icon: PackagePlus, to: '/portal/supplies',
+        desc: '전용 용기 · 봉투 · 바늘통이 부족할 때',
+      },
+      {
+        no: '04', label: '수거 이력', icon: History, to: '/portal/history',
+        value: s.monthVisits > 0 ? `이번 달 ${s.monthVisits}회` : undefined,
+        desc: '지난 수거 내역과 수거량을 확인하실 수 있습니다',
+      },
+      {
+        no: '05', label: '월간 배출 리포트', icon: FileBarChart, to: '/portal/report',
+        value: s.monthKg > 0 ? `${Math.round(s.monthKg).toLocaleString('ko-KR')}kg` : undefined,
+        desc: '이번 달 배출 현황과 추이를 한 장으로',
+      },
+      {
+        no: '06', label: '정산 내역', icon: ReceiptText, to: '/portal/billing',
+        value: owed > 0 ? `미납 ${won(owed)}` : undefined,
+        desc: owed > 0 ? '아직 입금되지 않은 청구가 있습니다' : '월별 청구 금액과 입금 상태',
+      },
+      {
+        no: '07', label: '문의하기', icon: MessageSquare, to: '/portal/support',
+        value: myInquiries.length > 0 ? `보낸 문의 ${myInquiries.length}건` : undefined,
+        desc: '수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주세요',
+      },
+      {
+        no: '08', label: '수거 요청', icon: Truck,
+        onClick: () => start('추가수거'),
+        desc: '정기 수거 외에 한 번 더 필요할 때',
+      },
+    ]
+  }, [s, owed, myInquiries.length, start])
+
   if (!client || !s) {
     //  ⚠ 자료가 오기 전에 「연결된 병원 정보를 찾을 수 없습니다」라고 하면
     //     연결돼 있는 병원도 전화를 겁니다 (실사용 검증에서 실제로 떴습니다).
@@ -177,22 +242,11 @@ export function PortalHome() {
 
   return (
     <PageShell>
-      {/* 로그인하면 가장 먼저 궁금한 것 — 다음에 언제 오는가. 한 줄로 끝냅니다. */}
-      <div>
-        <h1 className="t-page break-keep text-navy-900">무엇을 도와드릴까요?</h1>
-        <p className="t-body mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 break-keep font-medium text-navy-400">
-          <CalendarClock size={19} strokeWidth={2.4} className="shrink-0 text-teal-500" />
-          <span className="font-bold text-navy-700">
-            다음 수거 {s.nextDate ? prettyDate(s.nextDate) : '예정 없음'}
-            {s.nextTime && ` ${s.nextTime}`}
-          </span>
-          {s.nextIsEstimate && <span className="pill bg-navy-100 text-navy-500">수거주기 기준 예상</span>}
-          {/*  0080 — navy-300 은 1.9:1 입니다. 「다음 수거 …」와 「수거주기 …」를
-               가르는 기호라, 안 보이면 두 값이 한 문장으로 붙어 읽힙니다. */}
-          <span className="text-navy-400">·</span>
-          <span>수거주기 {client.collectionCycle || '미설정'}</span>
-        </p>
-      </div>
+      {/*  0083 — 대표님이 주신 시안의 짙은 남색 머리 칸.
+           ⚠ 시안의 「기관 코드」·「안전 무사고 1,248일째」는 저희 서버에 없는
+             값이라 **지어내지 않았습니다.** 실제로 아는 것(기관 구분·수거주기·
+             다음 수거)을 같은 자리에 넣었습니다. */}
+      <PortalHero client={client} s={s} />
 
       {sent && (
         <div data-req-sent className="flex items-start gap-3 rounded-2xl bg-emerald-50 px-5 py-4 ring-1 ring-emerald-100">
@@ -212,6 +266,19 @@ export function PortalHome() {
              겨우 걸치고 「자재·용기 요청」은 아예 보이지 않았습니다. 병원 담당자는
              폐기물이 본업이 아니라, 안 보이면 그냥 전화를 겁니다.
              소개 카드는 이 아래로 내렸습니다 — 없애지 않았습니다. */}
+      {/*  ── 번호가 붙은 큰 칸 (0083) ────────────────────────────────────────
+           시안의 01 · 02 · 03 … 배치입니다.
+           ⚠ **누르면 실제로 되는 것만** 넣었습니다. 「준비중」 칸은 없습니다.
+           ⚠ 숫자는 지금 자료에서 그대로 가져옵니다 — 없으면 안 적습니다. */}
+      <section>
+        <SectionTitle>지금 하실 수 있는 일</SectionTitle>
+        <div data-portal-actions className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {ACTIONS.map((a) => (
+            <PortalActionCard key={a.no} a={a} as={a.to ? 'link' : 'button'} />
+          ))}
+        </div>
+      </section>
+
       <section>
         <div data-tour="portal-request" className="grid gap-3 sm:grid-cols-2">
           <button

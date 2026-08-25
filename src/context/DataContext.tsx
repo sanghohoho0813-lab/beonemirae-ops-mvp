@@ -22,6 +22,8 @@ import type {
   LeadStage,
   SalesLead,
   RequestKind,
+  InquiryTopic,
+  InquiryStatus,
   RequestStatus,
   Product,
   ProductOrderStatus,
@@ -362,6 +364,21 @@ interface DataContextValue {
   shareProposal: (action: NextAction, message: string, month?: string) => void
   /** 병원 담당자의 제안 응답 (수락 / 보류) */
   respondProposal: (leadId: string, accept: boolean) => void
+  // ── 0083: 고객 문의 ──
+  /** 병원이 문의를 올립니다 */
+  addInquiry: (q: {
+    clientId: string
+    topic: InquiryTopic
+    subject: string
+    body: string
+    askedByName?: string
+  }) => Promise<{ ok: boolean; error: string | null }>
+  /** 비원미래가 문의에 답합니다 (상태 · 병원에 보이는 답변) */
+  replyInquiry: (
+    id: string,
+    status: InquiryStatus,
+    reply?: string,
+  ) => Promise<{ ok: boolean; error: string | null }>
   // ── v6: 실사용 전환 (Supabase) ──
   /** 'live' = 로그인 상태의 서버 DB, 'demo' = 이 브라우저에만 저장되는 시연 데이터 */
   mode: 'live' | 'demo'
@@ -1394,6 +1411,69 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   /** 병원 담당자의 제안 응답 — 수락/보류 (실제 고객 행동) */
+  // ── 0083: 고객 문의 ────────────────────────────────────────────────────────
+  const addInquiry = useCallback(
+    async (q: {
+      clientId: string
+      topic: InquiryTopic
+      subject: string
+      body: string
+      askedByName?: string
+    }): Promise<{ ok: boolean; error: string | null }> => {
+      const payload = {
+        clientId: q.clientId,
+        topic: q.topic,
+        subject: q.subject.trim(),
+        body: q.body.trim(),
+        askedByName: q.askedByName ?? '',
+      }
+      //  ⚠ 요청과 같은 규칙 — 서버가 받았는지 **확인한 뒤에** 돌려줍니다.
+      //    안 그러면 통신이 끊겨도 병원 화면에는 「접수되었습니다」가 뜹니다.
+      if (live) return await runLive(async () => repo.submitInquiry(payload))
+      const now = new Date().toISOString()
+      setData((d) => ({
+        ...d,
+        inquiries: [
+          {
+            ...payload,
+            id: uid('cinq'),
+            clientName: d.clients.find((c) => c.id === q.clientId)?.name ?? '',
+            status: '접수' as const,
+            reply: '',
+            handledBy: null,
+            handledAt: null,
+            createdAt: now,
+            demoSessionId: d.demoSession?.active ? d.demoSession.id : null,
+          },
+          ...d.inquiries,
+        ],
+      }))
+      return { ok: true, error: null }
+    },
+    [live, runLive],
+  )
+
+  const replyInquiry = useCallback(
+    async (
+      id: string,
+      status: InquiryStatus,
+      reply?: string,
+    ): Promise<{ ok: boolean; error: string | null }> => {
+      if (live) return await runLive(async () => repo.answerInquiry(id, status, reply))
+      const now = new Date().toISOString()
+      setData((d) => ({
+        ...d,
+        inquiries: d.inquiries.map((q) =>
+          q.id === id
+            ? { ...q, status, reply: reply ?? q.reply, handledAt: now }
+            : q,
+        ),
+      }))
+      return { ok: true, error: null }
+    },
+    [live, runLive],
+  )
+
   const respondProposal = useCallback(
     (leadId: string, accept: boolean) => {
       const stage = accept ? ('수락' as const) : ('보류' as const)
@@ -2381,6 +2461,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       handleRequest,
       shareProposal,
       respondProposal,
+      addInquiry,
+      replyInquiry,
       mode,
       sync: { loading, saving, error: syncError, lastSavedAt, ready: !live || firstLoadDone },
       reload,

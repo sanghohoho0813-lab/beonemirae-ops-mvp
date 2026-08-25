@@ -441,6 +441,7 @@ export function buildSeedData(demoCount = 0, today = new Date()): AppData {
   return {
     clients,
     vehicleReservations: [],
+    inquiries: [],
     vehicles: seedVehicles,
     schedules: buildSchedules(clients, base),
     materials: buildMaterials(clients, base),
@@ -468,6 +469,7 @@ export function rebuildForToday(clients: Client[], today = new Date()): AppData 
   return {
     clients,
     vehicleReservations: [],
+    inquiries: [],
     vehicles: seedVehicles,
     schedules: buildSchedules(clients, base),
     materials: buildMaterials(clients, base),

@@ -3,6 +3,9 @@ import type {
   AppData,
   Client,
   ClientRequest,
+  ClientInquiry,
+  InquiryTopic,
+  InquiryStatus,
   CollectionEvent,
   ScheduleFeedback,
   MaterialSupply,
@@ -351,6 +354,22 @@ const toRequest = (r: Row): ClientRequest => ({
   demoSessionId: r.demo_session_id ?? null,
 })
 
+const toInquiry = (r: Row): ClientInquiry => ({
+  id: r.id,
+  clientId: r.client_id,
+  clientName: (r as { clients?: { name?: string } }).clients?.name ?? '',
+  topic: r.topic,
+  subject: r.subject ?? '',
+  body: r.body ?? '',
+  status: r.status,
+  reply: r.reply ?? '',
+  askedByName: r.asked_by_name ?? '',
+  handledBy: r.handled_by ?? null,
+  handledAt: r.handled_at ?? null,
+  createdAt: r.created_at,
+  demoSessionId: r.demo_session_id ?? null,
+})
+
 const toLead = (r: Row): SalesLead => ({
   id: r.id,
   key: r.key,
@@ -480,6 +499,23 @@ export async function loadAppData(): Promise<AppData> {
     async () => pageAll((f, t) => sb.from('client_monthly_actuals').select('*').order('month').range(f, t)),
     [] as Row[],
     'Excel 월 실적',
+  )
+
+  //  고객 문의 (0083). 판 82 이하에는 표가 없으므로 soft 로 읽습니다 —
+  //  없으면 「문의가 아직 없다」와 같은 상태이고, 화면은 그대로 뜹니다.
+  //  ⚠ 병원 계정에는 RLS 가 **자기 병원 것만** 내려 줍니다.
+  const inquiryRows = await soft(
+    async () =>
+      pageAll((f, t) =>
+        sb
+          .from('client_inquiries')
+          .select('*, clients(name)')
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(f, t),
+      ),
+    [] as Row[],
+    '고객 문의',
   )
 
   //  현장 의견 (0062). 현장 계정에는 **자기가 낸 것만** 내려옵니다(RLS).
@@ -895,6 +931,7 @@ export async function loadAppData(): Promise<AppData> {
     ),
     notes: notes.map(toNote),
     requests: requests.map(toRequest),
+    inquiries: inquiryRows.map(toInquiry),
     baseline: baselineRow
       ? {
           adminMinutesPerCollection: baselineRow.admin_minutes_per_collection,
@@ -1919,6 +1956,68 @@ export async function insertRequest(r: {
     //  다시 눌러 같은 표가 온 것입니다. 이미 들어가 있으니 성공입니다.
     if (r.requestId && isDuplicateAttempt(e)) return
     throw e
+  }
+}
+
+// ── 고객 문의 (0083) ────────────────────────────────────────────────────────
+
+/**
+ * 병원이 문의를 올립니다.
+ *
+ *  ⚠ 상태·답변은 **보내지 않습니다.** 서버 RLS 가 「접수 · 답 없음」만
+ *    받아 주도록 막고 있어서, 보내 봐야 거절당합니다. 화면에서도 안 보냅니다 —
+ *    두 곳이 서로 다른 말을 하면 언젠가 한쪽이 틀립니다.
+ */
+export async function submitInquiry(q: {
+  clientId: string
+  topic: InquiryTopic
+  subject: string
+  body: string
+  askedByName: string
+}): Promise<void> {
+  const sb = need()
+  unwrap(
+    await sb
+      .from('client_inquiries')
+      .insert({
+        client_id: q.clientId,
+        topic: q.topic,
+        subject: q.subject,
+        body: q.body,
+        asked_by_name: q.askedByName,
+      })
+      .select(),
+  )
+}
+
+/**
+ * 비원미래가 문의에 답합니다.
+ *
+ *  ⚠ 표를 직접 고치지 않고 함수를 부릅니다 — 그래야 **누가 언제 답했는지**가
+ *    반드시 같이 남습니다(0083 의 answer_inquiry).
+ */
+export async function answerInquiry(
+  id: string,
+  status: InquiryStatus,
+  reply?: string,
+): Promise<void> {
+  const sb = need()
+  unwrap(await sb.rpc('answer_inquiry', { p_id: id, p_status: status, p_reply: reply ?? null }))
+}
+
+/**
+ * 병원이 포털을 열었다고 남깁니다 (0083).
+ *
+ *  ⚠ 실패해도 조용히 넘어갑니다. 이건 **기록**이지 업무가 아닙니다 —
+ *    판이 안 올라간 환경에서 이것 때문에 포털이 안 열리면 안 됩니다.
+ *  ⚠ 직원이 확인용으로 열어 본 것은 서버가 안 셉니다.
+ */
+export async function touchPortalSeen(): Promise<void> {
+  try {
+    const sb = need()
+    await sb.rpc('touch_portal_seen')
+  } catch {
+    /* 기록이 안 남아도 포털은 열려야 합니다 */
   }
 }
 

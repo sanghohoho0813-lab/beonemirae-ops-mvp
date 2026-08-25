@@ -38,6 +38,8 @@ import { PortalLayout } from './components/PortalLayout'
 import { PortalHome } from './pages/PortalHome'
 import { PortalReport } from './pages/PortalReport'
 import { PortalSupplies } from './pages/PortalSupplies'
+import { PortalBilling } from './pages/PortalBilling'
+import { PortalSupport } from './pages/PortalSupport'
 import { Supplies } from './pages/Supplies'
 import { PortalHistory } from './pages/PortalHistory'
 import { RequireAuth } from './components/RequireAuth'
@@ -86,6 +88,9 @@ export default function App() {
           <Route path="report" element={<PortalReport />} />
           <Route path="history" element={<PortalHistory />} />
           <Route path="supplies" element={<PortalSupplies />} />
+          {/*  0083 — 정산 확인 · 문의(티켓). 병원이 전화로 물어보던 두 가지입니다. */}
+          <Route path="billing" element={<PortalBilling />} />
+          <Route path="support" element={<PortalSupport />} />
         </Route>
 
         {/* 아래 모든 운영 화면은 로그인 + 역할 확인을 거칩니다.

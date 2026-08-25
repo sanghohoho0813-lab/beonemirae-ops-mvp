@@ -34,6 +34,7 @@ import { TodayBoard } from '../components/TodayBoard'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
 import { canSeeDashboard } from '../lib/access'
+import { PortalSwitchButton } from '../components/PortalSwitch'
 import { hideRequests } from '../lib/pilotMode'
 import { RevenueKpis } from '../components/RevenueKpis'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
@@ -130,6 +131,13 @@ export function Dashboard() {
           {prettyDate(t)} · 의료폐기물 운영관리
         </p>
       </div>
+
+      {/*  0083 — 고객 화면으로 넘어가는 자리.
+           ⚠ 「병원이 지금 무엇을 보고 있나」는 대표님이 자주 확인하시는
+             것이라 첫 화면에 둡니다. 다만 저장·배차확정 같은 **업무 단추보다
+             튀지 않게** 테두리 꼴로 둡니다 — 매일 누르는 것이 아닙니다.
+           ⚠ 실제로 열리는 사람에게만 보입니다(안에서 스스로 판단합니다). */}
+      <PortalSwitchButton />
 
       {/*  밀린 마감 — 인사 바로 아래. 오늘 할 일보다 위입니다.
            지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.
