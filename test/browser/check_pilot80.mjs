@@ -113,13 +113,26 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   const body = flat(await p.locator('body').innerText())
 
   //  ⚠ 대표님이 지적하신 그 카드입니다.
-  ok((await p.locator('[data-urgent-banner]').count()) === 0,
-    '**「급한 요청이 반복됩니다」 배너가 없다**')
-  ok(!/급한 요청이 반복/.test(body), '그 문구 자체가 화면에 없다')
-  ok(!/병원 요청/.test(body), '**「병원 요청」이라는 메뉴·글자가 없다**',
+  //  ⚠ 0083 — 병원 요청을 다시 켰습니다(포털을 드리는데 요청함이 닫혀
+  //    있으면 병원이 올린 요청을 아무도 못 봅니다). 그래서 이 검사는
+  //    **스위치를 따라갑니다** — 내려 뒀으면 「없다」, 켜 뒀으면 「있다」.
+  //    한쪽으로만 무는 검사는 되돌릴 때 아무것도 못 잡습니다.
+  if (PILOT.requests) {
+    ok((await p.locator('[data-urgent-banner]').count()) === 0,
+      '**「급한 요청이 반복됩니다」 배너가 없다**')
+    ok(!/급한 요청이 반복/.test(body), '그 문구 자체가 화면에 없다')
+  } else {
+    //  ⚠ 켜 뒀을 때 **배너가 뜨는지**는 여기서 묻지 않습니다. 그 띠는
+    //    「급한 요청이 반복 + 앞이 비었음」일 때만 뜨는 것이라, 이 시늉본은
+    //    앞 일정이 있어서 안 뜨는 것이 맞습니다. 여기서 볼 것은
+    //    **스위치가 풀렸는가**이고, 그건 ② 에서 주소로 확인합니다.
+    ok(true, '요청을 켜 두었다 — 배너 조건은 별도 검사(check_urgent)에서 봅니다')
+  }
+  ok(PILOT.requests ? !/병원 요청/.test(body) : true,
+    PILOT.requests ? '**「병원 요청」이라는 메뉴·글자가 없다**' : '요청을 켜 두어 이 항목은 건너뜁니다',
     (body.match(/.{0,20}병원 요청.{0,20}/) ?? [''])[0])
-  ok(!/처리 대기 요청/.test(body), '「처리 대기 요청」 카드가 없다')
-  ok(!/긴급 요청/.test(body), '「긴급 요청」 카드가 없다')
+  if (PILOT.requests) ok(!/처리 대기 요청/.test(body), '「처리 대기 요청」 카드가 없다')
+  if (PILOT.requests) ok(!/긴급 요청/.test(body), '「긴급 요청」 카드가 없다')
   //  ⚠ 소모품은 실사에서 보여 드릴 화면이라 다시 켰습니다 (0081).
   //    그래도 「켜져 있으면 실제로 보이는가」는 그대로 봅니다 — 스위치가
   //    한쪽으로만 무는 것이 아니라는 뜻입니다.
@@ -138,7 +151,7 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
 {
   //  ⚠ 메뉴에서만 빼면 옛 링크·즐겨찾기로 그대로 들어갑니다.
   for (const [path, label] of [
-    ['/requests', '병원 요청'],
+    ...(PILOT.requests ? [['/requests', '병원 요청']] : []),
     ...(PILOT.supplies ? [['/supplies', '소모품 주문']] : []),
   ]) {
     const { ctx, p } = await open(path, { role: 'admin' })
@@ -149,11 +162,25 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   }
 }
 
+{
+  //  ⚠ 켜 둔 화면은 **실제로 열려야** 합니다. 「메뉴엔 있는데 안 열린다」가
+  //    반대 방향의 같은 결함입니다.
+  for (const [path, label] of [
+    ...(PILOT.requests ? [] : [['/requests', '고객 요청']]),
+    ...(PILOT.supplies ? [] : [['/supplies', '소모품']]),
+  ]) {
+    const { ctx, p } = await open(path, { role: 'admin' })
+    const body = flat(await p.locator('main').innerText())
+    ok(!/권한이 없는 화면/.test(body), `**${label} 화면이 다시 열린다**`, body.slice(0, 40))
+    await ctx.close()
+  }
+}
+
 // ── ③ 이사님(office) 화면 ─────────────────────────────────────────────────
 {
   const { ctx, p } = await open('/', { role: 'office' })
   const body = flat(await p.locator('body').innerText())
-  ok(!/병원 요청/.test(body), '**이사님 화면에도 「병원 요청」이 없다**')
+  if (PILOT.requests) ok(!/병원 요청/.test(body), '**이사님 화면에도 「병원 요청」이 없다**')
   ok(PILOT.supplies ? !/소모품 주문/.test(body) : /소모품 주문/.test(body),
     PILOT.supplies ? '이사님 화면에도 「소모품 주문」이 없다' : '이사님 화면에도 「소모품 주문」이 다시 보인다')
   ok((await p.locator('[data-urgent-banner]').count()) === 0, '요청 경고 배너도 없다')
@@ -165,7 +192,7 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
 {
   const { ctx, p } = await open('/today', { role: 'field', w: 390 })
   const body = flat(await p.locator('body').innerText())
-  ok(!/병원 요청/.test(body), '**기사님 폰에도 「병원 요청」이 없다**')
+  if (PILOT.requests) ok(!/병원 요청/.test(body), '**기사님 폰에도 「병원 요청」이 없다**')
   ok((await p.locator('[data-urgent-banner]').count()) === 0, '요청 경고 배너도 없다')
 
   //  더보기까지 열어 봅니다 — 메뉴가 거기 숨어 있을 수 있습니다.
@@ -175,7 +202,7 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   })
   await p.waitForTimeout(900)
   const more = flat(await p.locator('body').innerText())
-  ok(!/병원 요청/.test(more), '**「더보기」 안에도 없다**')
+  if (PILOT.requests) ok(!/병원 요청/.test(more), '**「더보기」 안에도 없다**')
   //  ⚠ 현장은 스위치와 무관하게 원래 소모품을 못 봅니다 — 판매가·원가가
   //    붙는 화면이라 access.ts 가 admin·office 로 막아 둡니다.
   ok(!/소모품 주문/.test(more), '「더보기」 안에 소모품도 없다 (현장은 원래 권한 없음)')
@@ -186,8 +213,13 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
 {
   const { ctx, p } = await open('/today', { role: 'admin' })
   const body = flat(await p.locator('body').innerText())
-  ok(!/병원 요청/.test(body) && !/급한 요청이 반복/.test(body),
-    '**오늘 일정 화면에도 요청 경고가 없다**')
+  //  ⚠ 0083 — 요청을 다시 켰습니다. 스위치를 따라갑니다.
+  if (PILOT.requests) {
+    ok(!/병원 요청/.test(body) && !/급한 요청이 반복/.test(body),
+      '**오늘 일정 화면에도 요청 경고가 없다**')
+  } else {
+    ok(!/문제가 생겼|권한이 없는/.test(body), '요청을 켜 두어도 오늘 일정이 멀쩡하다')
+  }
   //  일정 자체는 멀쩡해야 합니다.
   ok(/더원요양병원/.test(body), '**오늘 갈 곳은 그대로 보인다**')
   await ctx.close()
@@ -281,7 +313,8 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   {
     const { ctx, p } = await open(`/clients/${C1}`, { role: 'admin' })
     const body = flat(await p.locator('body').innerText())
-    ok(!/요청·알림/.test(body), '**거래처 상세에 「요청·알림」 탭이 없다**')
+    ok(PILOT.requests ? !/요청·알림/.test(body) : /요청·알림/.test(body),
+      PILOT.requests ? '**거래처 상세에 「요청·알림」 탭이 없다**' : '**요청·알림 탭이 다시 보인다**')
     ok(/수거이력/.test(body), '나머지 탭은 그대로 있다')
     await ctx.close()
   }

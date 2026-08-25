@@ -10,6 +10,7 @@ import { ThemeButton } from './ThemePicker'
 import { PageMotion } from './motion'
 import { TourButton } from './TourEntry'
 import { PortalNoticeBell } from './PortalNoticeBell'
+import { FontSizeButton } from './FontSizeButton'
 import { portalNotices } from '../lib/portalNotices'
 import { touchPortalSeen } from '../lib/repo'
 
@@ -122,14 +123,26 @@ export function PortalLayout() {
                  (lib/portalNotices.ts). 그래서 「읽음」이 없고, 처리하면
                  저절로 사라집니다. */}
             <PortalNoticeBell notices={notices} />
+            {/*  ⚠ 0083 — 폰에서는 **감춥니다.** 단추가 여섯이 되면서 머리띠가
+                 두 줄(196px)이 되어 화면의 1/4 을 먹었습니다.
+                 「사용 방법」은 포털 첫 화면의 안내 띠(TourBanner)에 더 크게
+                 그대로 있으므로, 여기서 사라져도 못 찾게 되지 않습니다. */}
             <TourButton
               compact
               tourId="client"
-              className="flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"
+              className="hidden min-h-[2.75rem] items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 min-[430px]:flex sm:px-3.5 sm:py-2.5"
             />
+            {/*  글자 크기 (0083) — **포털에서는 못 바꾸고 있었습니다.**
+                 직원 「더보기」와 관리자 「설정」에만 있었는데, 병원 계정은
+                 그 두 화면을 못 엽니다. 요양병원 담당자분이 화면이 작아도
+                 방법이 없었습니다. */}
+            <FontSizeButton className="flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5" />
             {/*  화면 색 (0081) — 병원 담당자도 바꿀 수 있습니다.
                  어두운 머리띠 위라 흰 테두리 꼴로 둡니다. */}
-            <ThemeButton className="flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5" />
+            {/*  ⚠ 화면 색도 폰에서는 감춥니다 — 취향이고, 글자 크기만큼
+                 급하지 않습니다. 글자 크기는 **남깁니다**: 요양병원
+                 담당자분께는 그게 「쓸 수 있나 없나」의 문제입니다. */}
+            <ThemeButton className="hidden min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 min-[430px]:flex sm:px-3.5 sm:py-2.5" />
             <a
               href={`tel:${CLIENT_TEL}`}
               className="flex min-h-[2.75rem] items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5"

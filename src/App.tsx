@@ -34,6 +34,7 @@ import { Users } from './pages/Users'
 import { DevRequests } from './pages/DevRequests'
 import { ImportExcel } from './pages/ImportExcel'
 import { Requests } from './pages/Requests'
+import { CustomerInsight } from './pages/CustomerInsight'
 import { PortalLayout } from './components/PortalLayout'
 import { PortalHome } from './pages/PortalHome'
 import { PortalReport } from './pages/PortalReport'
@@ -111,6 +112,8 @@ export default function App() {
           <Route path="history" element={<CollectionHistory />} />
           <Route path="collection" element={<CollectionInput />} />
           <Route path="requests" element={<Requests />} />
+          {/*  0083 — 거래처 인사이트 (규칙 기반 건강도 · 다음 조치) */}
+          <Route path="insight" element={<CustomerInsight />} />
           <Route path="materials" element={<Materials />} />
           <Route path="receivables" element={<Receivables />} />
           <Route path="billing" element={<MonthClose />} />

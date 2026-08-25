@@ -1,4 +1,5 @@
 import {
+  Activity,
   PackageCheck,
   LayoutGrid,
   CalendarClock,
@@ -70,7 +71,9 @@ export const CORE_NAV: NavItem[] = [
 /** 병원 서비스 · 성과 — 병원에 무엇을 제공하고 무엇을 받았는지 */
 export const SERVICE_NAV: NavItem[] = [
   { to: '/revenue', label: '매출 현황', icon: TrendingUp, desc: '누적 · 월평균 · 예상 연매출', tone: 'teal' },
-  { to: '/requests', label: '병원 요청', icon: Inbox, desc: '병원이 올린 요청 처리 · 회신', tone: 'violet' },
+  { to: '/requests', label: '고객 요청', icon: Inbox, desc: '병원이 올린 요청·문의 처리 · 회신', tone: 'violet' },
+  //  0083 — 거래처를 「목록」이 아니라 「관리할 고객」으로 봅니다.
+  { to: '/insight', label: '거래처 인사이트', icon: Activity, desc: '거래처 상태 · 다음 조치 (규칙 기반)', tone: 'teal' },
   //  매출 AX — 쇼핑몰이 아니라 「병원이 쓰는 만큼 추천하고 다음 수거 때 전달」입니다.
   { to: '/supplies', label: '소모품 주문', icon: PackageCheck, desc: '사용량 추천 · 수거 때 전달 · 판매 실적', tone: 'teal' },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },

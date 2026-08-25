@@ -140,9 +140,16 @@ for (const [cid, who] of [[CA, '기록 있는 거래처'], [CNEW, '새로 등록
       ok(box.g.x > box.m.x + box.m.w - 2,
         `${who} — **추천이 지표의 오른쪽에 있음** (아래가 아니라)`,
         `지표 끝 ${Math.round(box.m.x + box.m.w)} · 추천 시작 ${Math.round(box.g.x)}`)
-      ok(Math.abs(box.g.y - box.m.y) < 400,
-        `${who} — 추천이 지표와 비슷한 높이에서 시작`,
-        `지표 y ${Math.round(box.m.y)} · 추천 y ${Math.round(box.g.y)}`)
+      //  ⚠ 0083 — 예전에는 **지표와** 견줬습니다. 그런데 지표는 왼쪽 칸의
+      //    맨 위가 아니라 중간쯤에 있는 칸이라, 그 위 내용(이름·연락처·
+      //    급한 요청 알림)이 조금만 길어져도 이 숫자가 흔들립니다.
+      //    실제로 PC 글자 바닥을 16px 로 올리자(0082) 368px → 422px 이
+      //    되면서 임의로 잡아 둔 400px 을 넘었습니다.
+      //    여기서 정말 볼 것은 「두 칸이 **나란히** 시작하는가」입니다.
+      //    그래서 **줄(row)의 맨 위**와 견줍니다 — 흔들리지 않는 기준입니다.
+      ok(Math.abs(box.g.y - box.s.y) < 120,
+        `${who} — 추천이 왼쪽 칸과 나란히 시작`,
+        `줄 맨 위 y ${Math.round(box.s.y)} · 추천 y ${Math.round(box.g.y)}`)
       //  가운데를 딱 반으로 — 두 칸이 거의 같은 너비여야 합니다.
       const half = box.s.w / 2
       ok(Math.abs(box.g.w - half) < half * 0.25,

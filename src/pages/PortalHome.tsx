@@ -68,29 +68,11 @@ const KIND_HINT: Record<RequestKind, string> = {
   기타: '그 밖의 문의',
 }
 
-/**
- * 첫 화면의 행동 버튼 — 다 같은 크기로 늘어놓지 않습니다.
- *
- *  primary   병원이 여기 들어오는 이유 두 가지. 화면을 열자마자 보입니다.
- *  secondary 덜 급하거나 덜 잦은 것. 같은 자리에 작게 둡니다.
- *  (기타 문의는 요청 창 안에서 고릅니다)
- *
- * ── 두 번째 버튼이 「소모품 주문」이었습니다 ───────────────────────────────
- *
- *  이사님 통화 기준으로 병원이 급한 것은 **용기가 모자란 것**입니다. 물건을
- *  사겠다는 뜻이 아닙니다. 「소모품 주문」이라고 적어 두면 판매 상품 목록처럼
- *  읽혀서, 정작 용기가 없어 못 버리는 병원이 이 칸을 안 누르고 전화를 겁니다.
- *  그래서 **글자만** 「자재·용기 요청」으로 바꿨습니다.
- *
- *  가는 곳은 그대로 물품 화면입니다. 자유 글 요청으로 보내면 「20L 용기
- *  10개요」가 요청 한 줄로만 남고 품목·수량·단가가 붙은 **주문**이 되지
- *  않아, 전달해도 그 달 청구에 안 실립니다. 파는 기능을 없앤 것이 아니라
- *  **파는 것처럼 부르지 않는 것**입니다.
- */
-const SECONDARY: { kind: RequestKind; label: string }[] = [
-  { kind: '긴급수거', label: '긴급 수거' },
-  { kind: '교육·자료', label: '교육·자료' },
-]
+//  ⚠ 0083 — 여기 있던 SECONDARY(긴급수거·교육자료 작은 단추 두 개)를
+//    없앴습니다. 위의 번호 카드 묶음이 같은 일을 하고, 둘 다 두었더니
+//    매일 쓰는 「수거 요청」이 폰에서 3화면 아래로 밀렸습니다.
+//    「교육·자료」는 요청 창 안에서 그대로 고르실 수 있습니다.
+
 
 const STATUS_STEPS: RequestStatus[] = ['접수', '확인 중', '일정 반영', '처리 완료']
 
@@ -142,47 +124,57 @@ export function PortalHome() {
     [data.inquiries, client],
   )
 
+  //  ── 순서 (0083) ─────────────────────────────────────────────────────────
+  //
+  //   ⚠ 「수거 요청」과 「자재·용기 요청」이 **첫 화면 안**에 있어야 합니다.
+  //     이건 이사님 통화에서 나온 기존 판단이고 검사로도 못박혀 있습니다
+  //     (check_flow390 ①②). 병원이 급한 것은 **용기가 모자란 것**인데,
+  //     안 보이면 그냥 전화를 겁니다.
+  //     그래서 이 둘을 맨 앞에 둡니다 — 폰에서 두 칸씩 놓이므로 첫 줄입니다.
+  //
+  //   ⚠ 「다음 수거 일정」은 위 머리 칸이 이미 크게 말하고 있습니다. 카드로
+  //     또 두면 같은 말을 두 번 하면서 첫 줄을 잡아먹습니다. 뒤로 보냅니다.
   const ACTIONS: PortalAction[] = useMemo(() => {
     if (!s) return []
     return [
       {
-        no: '01', label: '다음 수거 일정', icon: CalendarClock, to: '/portal/history',
-        value: s.nextDate ? prettyDate(s.nextDate) : '예정 없음',
-        desc: s.nextIsEstimate ? '수거주기로 본 예상입니다' : '확정된 방문 일정입니다',
+        no: '01', label: '수거 요청', icon: Truck, cta: 'collect',
+        onClick: () => start('추가수거'),
+        desc: '정기 수거 외에 한 번 더 필요할 때',
       },
       {
-        no: '02', label: '긴급 수거 요청', icon: Siren, accent: true,
+        no: '02', label: '자재·용기 요청', icon: PackagePlus, to: '/portal/supplies', cta: 'supplies',
+        desc: '전용 용기 · 봉투 · 바늘통이 부족할 때',
+      },
+      {
+        no: '03', label: '긴급 수거 요청', icon: Siren, accent: true,
         onClick: () => start('긴급수거'),
         desc: '보관기한이 임박했거나 배출량이 갑자기 늘었을 때',
       },
       {
-        no: '03', label: '용기 · 봉투 요청', icon: PackagePlus, to: '/portal/supplies',
-        desc: '전용 용기 · 봉투 · 바늘통이 부족할 때',
+        no: '04', label: '다음 수거 일정', icon: CalendarClock, to: '/portal/history',
+        value: s.nextDate ? prettyDate(s.nextDate) : '예정 없음',
+        desc: s.nextIsEstimate ? '수거주기로 본 예상입니다' : '확정된 방문 일정입니다',
       },
       {
-        no: '04', label: '수거 이력', icon: History, to: '/portal/history',
+        no: '05', label: '수거 이력', icon: History, to: '/portal/history',
         value: s.monthVisits > 0 ? `이번 달 ${s.monthVisits}회` : undefined,
         desc: '지난 수거 내역과 수거량을 확인하실 수 있습니다',
       },
       {
-        no: '05', label: '월간 배출 리포트', icon: FileBarChart, to: '/portal/report',
+        no: '06', label: '월간 배출 리포트', icon: FileBarChart, to: '/portal/report',
         value: s.monthKg > 0 ? `${Math.round(s.monthKg).toLocaleString('ko-KR')}kg` : undefined,
         desc: '이번 달 배출 현황과 추이를 한 장으로',
       },
       {
-        no: '06', label: '정산 내역', icon: ReceiptText, to: '/portal/billing',
+        no: '07', label: '정산 내역', icon: ReceiptText, to: '/portal/billing',
         value: owed > 0 ? `미납 ${won(owed)}` : undefined,
         desc: owed > 0 ? '아직 입금되지 않은 청구가 있습니다' : '월별 청구 금액과 입금 상태',
       },
       {
-        no: '07', label: '문의하기', icon: MessageSquare, to: '/portal/support',
+        no: '08', label: '문의하기', icon: MessageSquare, to: '/portal/support',
         value: myInquiries.length > 0 ? `보낸 문의 ${myInquiries.length}건` : undefined,
         desc: '수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주세요',
-      },
-      {
-        no: '08', label: '수거 요청', icon: Truck,
-        onClick: () => start('추가수거'),
-        desc: '정기 수거 외에 한 번 더 필요할 때',
       },
     ]
   }, [s, owed, myInquiries.length, start])
@@ -271,75 +263,19 @@ export function PortalHome() {
            ⚠ **누르면 실제로 되는 것만** 넣었습니다. 「준비중」 칸은 없습니다.
            ⚠ 숫자는 지금 자료에서 그대로 가져옵니다 — 없으면 안 적습니다. */}
       <section>
-        <SectionTitle>지금 하실 수 있는 일</SectionTitle>
-        <div data-portal-actions className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {/*  ⚠ 폰에서는 제목 줄을 접습니다. 이 75px 때문에 「수거 요청」이
+             화면 밖으로 2px 밀렸습니다 — 번호 붙은 카드는 제목 없이도
+             무엇인지 스스로 말합니다. 넓은 화면에서는 그대로 둡니다. */}
+        <div className="hidden sm:block">
+          <SectionTitle>지금 하실 수 있는 일</SectionTitle>
+        </div>
+        <div data-portal-actions data-tour="portal-request" className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {ACTIONS.map((a) => (
             <PortalActionCard key={a.no} a={a} as={a.to ? 'link' : 'button'} />
           ))}
         </div>
       </section>
 
-      <section>
-        <div data-tour="portal-request" className="grid gap-3 sm:grid-cols-2">
-          <button
-            data-portal-cta="collect"
-            onClick={() => start('추가수거')}
-            className="card pressable flex items-center gap-4 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
-          >
-            <span
-              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${TONE[REQUEST_TONE['추가수거']].tile}`}
-            >
-              <Truck size={29} strokeWidth={2.3} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="t-card block break-keep text-navy-900">수거 요청</span>
-              <span className="t-muted mt-1 block break-keep leading-snug">
-                정기 수거 외에 한 번 더 필요할 때
-              </span>
-            </span>
-            <ChevronRight size={22} className="shrink-0 text-navy-400" />
-          </button>
-
-          {/*  자유 글이 아니라 **물품 화면**으로 보냅니다 — 품목과 수량이 붙어야
-              실제로 전달되고 그 달 청구에 실립니다. 위 주석 참고. */}
-          <Link
-            to="/portal/supplies"
-            data-portal-cta="supplies"
-            className="card pressable flex items-center gap-4 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
-          >
-            <span
-              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${TONE[REQUEST_TONE['소모품']].tile}`}
-            >
-              <PackagePlus size={29} strokeWidth={2.3} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="t-card block break-keep text-navy-900">자재·용기 요청</span>
-              <span className="t-muted mt-1 block break-keep leading-snug">
-                전용 용기 · 봉투 · 바늘통이 부족할 때 — 다음 수거 때 가져다 드립니다
-              </span>
-            </span>
-            <ChevronRight size={22} className="shrink-0 text-navy-400" />
-          </Link>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {SECONDARY.map((q) => {
-            const Icon = KIND_ICON[q.kind]
-            const t = TONE[REQUEST_TONE[q.kind]]
-            return (
-              <button
-                key={q.kind}
-                onClick={() => start(q.kind)}
-                className="card pressable flex items-center gap-2.5 px-4 py-3.5 text-left transition hover:shadow-lg"
-              >
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${t.tile}`}>
-                  <Icon size={18} strokeWidth={2.3} />
-                </span>
-                <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">{q.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </section>
 
       {/*  시스템 소개·둘러보기 — 할 수 있는 일 **아래**입니다.
           처음 오신 분께는 여전히 눈에 띄지만, 매일 쓰시는 분의 첫 화면을

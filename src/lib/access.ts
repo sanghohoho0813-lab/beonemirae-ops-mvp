@@ -49,6 +49,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   //  일정 편성은 「누가 어디를 도는가」를 정하는 자리입니다 — 사무실 업무입니다.
   { prefix: '/plan', roles: ['admin', 'office'] },
   { prefix: '/requests', roles: ['admin', 'office', 'field'] },
+  //  거래처 인사이트 — 미수금·매출 신호가 함께 보입니다. 현장에는 열지 않습니다.
+  { prefix: '/insight', roles: ['admin', 'office'] },
   //  운영 도구 — 현장 담당자의 하루에 들어가지 않는 화면입니다.
   //
   //   자재 관리   재고·공급 내역 관리는 사무실 업무입니다. 현장에서 자재를

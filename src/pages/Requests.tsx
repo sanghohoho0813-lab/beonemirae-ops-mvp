@@ -25,6 +25,7 @@ import { canSeeMoney } from '../lib/access'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { PageHeader } from '../components/PageHeader'
+import { InquiryInbox } from '../components/InquiryInbox'
 import { BookVisitModal } from '../components/BookVisit'
 import { Modal } from '../components/Modal'
 import { clientRequests, type RequestItem } from '../lib/ops'
@@ -80,6 +81,8 @@ export function Requests() {
   //   그 결과로 요청이 「일정 반영」으로 넘어갑니다.
   const [bookFor, setBookFor] = useState<RequestItem | null>(null)
   const [filter, setFilter] = useState<Filter>('진행 중')
+  //  문의 표는 판 83 부터입니다 (0083).
+  const schema83 = useSchemaAtLeast(83)
   const [replyTo, setReplyTo] = useState<RequestItem | null>(null)
   const [replyText, setReplyText] = useState('')
   const [newOpen, setNewOpen] = useState(false)
@@ -174,8 +177,8 @@ export function Requests() {
   return (
     <PageShell>
       <PageHeader
-        title="병원 요청"
-        subtitle="병원이 직접 올린 요청과 전화·카톡으로 받은 요청을 한 곳에서 처리합니다"
+        title="고객 요청"
+        subtitle="병원이 포털에서 올린 요청·문의와 전화·카톡으로 받은 요청을 한 곳에서 처리합니다"
         action={
           <button onClick={() => { setNewError(null); setNewOpen(true) }} className="btn-primary">
             <PlusCircle size={19} strokeWidth={2.4} /> 전화 요청 접수
@@ -567,6 +570,13 @@ export function Requests() {
           </>
         )}
       </Modal>
+
+      {/*  0083 — 병원 문의. 수거 요청과 **같은 화면**에 두되 **다른 칸**입니다.
+           섞으면 요청함에 질문이 쌓여 정작 오늘 나갈 수거가 묻힙니다.
+           ⚠ 판 82 이하이면 아예 안 그립니다 — 표가 없는데 화면만 있으면
+             눌러도 안 되는 단추가 됩니다. */}
+      {schema83 && <InquiryInbox />}
+
     </PageShell>
   )
 }

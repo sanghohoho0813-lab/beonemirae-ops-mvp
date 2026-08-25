@@ -31,6 +31,18 @@ const tryAs = (uid, sql) => {
   try { return { ok: true, out: run(sql, uid) } } catch (e) { return { ok: false, out: String(e.stderr ?? e.message) } }
 }
 const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? ` — ${d}` : ''}`); if (!c) process.exitCode = 1 }
+
+//  ⚠ 0083 — 여기 **검사가 틀려 있었습니다.**
+//
+//    제품은 「오늘」을 한국 시각으로 봅니다
+//    (`(now() at time zone 'Asia/Seoul')::date` — 회사가 한국에서 돕니다).
+//    그런데 검사는 `${KST}` 를 썼고, 이 서버는 UTC 입니다.
+//
+//    한국이 자정을 넘긴 뒤(UTC 15:00~24:00, 한국 00:00~09:00)에는 UTC 날짜가
+//    아직 어제라, 검사가 말하는 「내일」이 실제로는 **한국의 오늘**이 됩니다.
+//    그래서 「앞날 공급을 막는가」가 하루 9시간 동안 조용히 실패했습니다.
+//    제품이 아니라 자가 틀린 것입니다.
+const KST = `(now() at time zone 'Asia/Seoul')::date`
 const err = (r) => (String(r.out).match(/ERROR:.*/) ?? [''])[0].slice(0, 130)
 
 // ── 사람과 거래처 ─────────────────────────────────────────────────────────
@@ -125,7 +137,7 @@ const bucket = (col) => Number(psql(`select ${col} from public.office_stock wher
 // ── ⑤ 공급하면 세어 본 규격만 줄어든다 ───────────────────────────────────
 {
   const before35 = qtyOf('box35')
-  const r = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, current_date,
+  const r = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, ${KST},
     '{"box63": 10, "box35": 4}'::jsonb, false, '', null)`)
   ok(r.ok, '63L 10개 · 35L 4개를 공급한다', err(r))
 
@@ -183,29 +195,29 @@ const bucket = (col) => Number(psql(`select ${col} from public.office_stock wher
 // ── ⑨ 공급 한도·중복방지는 예전 그대로 ───────────────────────────────────
 {
   //  ⚠ 0075 의 보호장치를 제가 건드리지 않았는지 확인합니다.
-  const over = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, current_date,
+  const over = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, ${KST},
     '{"box63": 99999}'::jsonb, false, '', null)`)
   ok(!over.ok && /재고\(.*\)보다 많이 공급할 수 없습니다/.test(over.out),
     '**재고보다 많이 공급하면 여전히 막는다**', err(over))
   ok(qtyOf('box63') === '130', '막힌 뒤 규격별 재고도 안 움직인다', qtyOf('box63'))
 
   const rid = '00000000-0000-0000-0000-0000000000d1'
-  const a = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, current_date,
+  const a = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, ${KST},
     '{"box63": 3}'::jsonb, false, '', '${rid}'::uuid)`)
-  const b = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, current_date,
+  const b = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, ${KST},
     '{"box63": 3}'::jsonb, false, '', '${rid}'::uuid)`)
   ok(a.ok && b.ok, '같은 표로 두 번 보낸다', err(a) + err(b))
   ok(/alreadySaved.*true/.test(b.out), '**두 번째는 「이미 저장됨」** (중복방지 그대로)', b.out.slice(0, 60))
   ok(qtyOf('box63') === '127', '**그래서 3 개만 줄었다** (두 번 안 깎임)', qtyOf('box63'))
 
-  const future = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, current_date + 1,
+  const future = tryAs(AD, `select public.supply_materials_items('${C1}'::uuid, ${KST} + 1,
     '{"box63": 1}'::jsonb, false, '', null)`)
   ok(!future.ok && /아직 오지 않은 날짜/.test(future.out), '앞날 공급 막기도 그대로', err(future))
 }
 
 // ── ⑩ 기사님도 공급은 적을 수 있다 (예전 그대로) ─────────────────────────
 {
-  const r = tryAs(FD, `select public.supply_materials_items('${C1}'::uuid, current_date,
+  const r = tryAs(FD, `select public.supply_materials_items('${C1}'::uuid, ${KST},
     '{"box63": 2}'::jsonb, false, '', null)`)
   ok(r.ok, '**기사님은 공급을 적을 수 있다** (현장에서 직접 건네줍니다)', err(r))
   ok(qtyOf('box63') === '125', '그만큼 규격별 재고가 준다', qtyOf('box63'))
