@@ -447,7 +447,14 @@ if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 4')) {
   ok(badgeText === '1', '처리할 주문 건수가 칩에 그대로 남음', badgeText)
   //  회색으로 두면 놓칩니다 — 다른 칸을 보고 있을 때는 붉게.
   const bg = await badge.evaluate((e) => getComputedStyle(e).backgroundColor).catch(() => '(배지 없음)')
-  ok(/244,\s*63,\s*94/.test(bg), '**처리할 주문이 있으면 눈에 띄게** (붉은 배지)', bg)
+  //  ⚠ 0083 — 색 **값**을 박아 두고 있었습니다(rgb(244,63,94)). 그래서
+  //    0082 에서 rose-500 을 대비 기준(4.5:1)에 맞춰 조금 어둡게 하자
+  //    「붉은가」가 아니라 「그 색인가」를 물어 실패했습니다.
+  //    여기서 정말 볼 것은 **회색이 아니라 붉은가**입니다 — 회색으로 두면
+  //    다른 칸을 보고 있을 때 놓칩니다. 색조로 봅니다.
+  const rgb = (bg.match(/(\d+),\s*(\d+),\s*(\d+)/) ?? []).slice(1).map(Number)
+  const reddish = rgb.length === 3 && rgb[0] > 150 && rgb[0] > rgb[1] * 1.8 && rgb[0] > rgb[2] * 1.8
+  ok(reddish, '**처리할 주문이 있으면 눈에 띄게** (붉은 배지)', bg)
   //  실제로 그 칸으로 갈 수 있는가.
   await p.click('button:has-text("주문")')
   await p.waitForSelector('[data-order="o1"]', { timeout: 20000 })

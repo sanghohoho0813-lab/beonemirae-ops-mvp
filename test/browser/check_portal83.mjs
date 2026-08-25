@@ -271,7 +271,37 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
   await ctx.close()
 }
 
-// ── ⑫ 기존 것이 안 깨졌나 ──────────────────────────────────────────────────
+// ── ⑫ 거래처 상세 — 고객 인사이트가 붙었나 ────────────────────────────────
+{
+  const { ctx, p } = await open(`/clients/${C1}`, { role: 'admin', inquiries: [mkInq('q1')] })
+  ok((await p.locator(`[data-client-health="${C1}"]`).count()) === 1,
+    '**거래처 상세에 「고객 인사이트」가 붙었다**')
+  const measured = flat(await p.locator('[data-client-health-measured]').innerText())
+  ok(/가지로 계산했습니다|잴 수 있는 기록이 없습니다/.test(measured), '**몇 개로 쟀는지 적는다**', measured)
+
+  //  ⚠ 고객 활동 — 실제로 남는 것만. 없으면 「아직 기록 없음」이어야 합니다.
+  const act = flat(await p.locator('[data-client-activity]').innerText())
+  ok(/보낸 요청/.test(act) && /문의/.test(act), '고객 활동이 보인다', act.slice(0, 60))
+  const last = flat(await p.locator('[data-client-lastportal]').innerText())
+  ok(last.length > 0 && !/NaN|Invalid/.test(last), '**마지막 포털 이용을 지어내지 않는다**', last)
+
+  //  ⚠ AI 라고 적으면 안 됩니다.
+  const body = flat(await p.locator('main').innerText())
+  ok(!/AI가 분석|AI 분석 결과|인공지능이/.test(body), '**AI 가 분석했다고 하지 않는다**')
+
+  //  한 장으로 모아 보기 — 눌러도 되는 단추여야 합니다.
+  await p.locator('[data-client-brief-open]').click()
+  await p.waitForTimeout(400)
+  const brief = flat(await p.locator('[data-client-brief]').innerText())
+  ok(brief.includes('남양주백병원'), '**한 장 요약이 실제로 나온다**', brief.slice(0, 40))
+  ok(/기록 없음|모름|kg|건/.test(brief), '요약에 실제 값이 들어 있다')
+  const note = flat(await p.locator('[data-client-brief-note]').innerText())
+  ok(/AI 분석은 아직\s*붙어 있지 않습니다/.test(note.replace(/\s+/g, ' ')),
+    '**AI 는 아직 안 붙었다고 그대로 말한다**', note.slice(0, 60))
+  await ctx.close()
+}
+
+// ── ⑬ 기존 것이 안 깨졌나 ──────────────────────────────────────────────────
 {
   for (const [path, must] of [
     ['/today', '오늘'], ['/collection', '수거'], ['/clients', '거래처'],

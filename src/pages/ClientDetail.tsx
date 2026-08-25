@@ -31,6 +31,7 @@ import { LoadGate } from '../components/LoadState'
 import { ClientForm } from '../components/ClientForm'
 import { BookVisitModal } from '../components/BookVisit'
 import { UrgentRiskCard } from '../components/UrgentRisk'
+import { ClientHealthCard } from '../components/ClientHealthCard'
 import {
   lastCollection,
   nextSchedule,
@@ -623,6 +624,7 @@ export function ClientDetail() {
            탭의 「긴급수거 3건」이라는 숫자만으로는 무엇을 해야 할지 모릅니다. */}
       <UrgentRiskCard clientId={client.id} />
 
+
       {canBook && (
         <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} client={client} />
       )}
@@ -937,6 +939,14 @@ export function ClientDetail() {
       )}
 
       {/* 수정 모달 */}
+      {/*  0083 — 고객 인사이트 (건강도 · 위험 신호 · 다음 조치 · 고객 활동).
+           ⚠ 기존 화면을 다시 만들지 않고 **한 칸만 더합니다.**
+           ⚠ 사무실·관리자만 봅니다 — 미수금·매출 신호가 함께 나옵니다.
+           ⚠ **탭 아래**입니다. 위에 뒀더니 폰에서 탭 줄이 y=2,480px(3화면
+             아래)까지 밀렸습니다 — 매일 누르는 것은 탭이고, 이 칸은
+             가끔 들여다보는 요약입니다. 자리를 다툴 이유가 없습니다. */}
+      {canSeeMoney && <ClientHealthCard clientId={client.id} />}
+
       <Modal
         open={editing}
         title="거래처 수정"
