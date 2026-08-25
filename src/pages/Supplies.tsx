@@ -96,7 +96,7 @@ export function Supplies() {
                 */}
                 <b
                   data-open-orders={open.length}
-                  className={`min-w-[1.4rem] rounded-full px-1.5 py-0.5 text-[0.86rem] tabular-nums ${
+                  className={`min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-[0.9rem] tabular-nums ${
                     open.length > 0 && tab !== '주문'
                       ? 'bg-rose-500 text-white'
                       : tab === '주문'

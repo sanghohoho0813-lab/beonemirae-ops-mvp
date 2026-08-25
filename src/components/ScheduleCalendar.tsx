@@ -74,7 +74,7 @@ function DayCell({
         <span className={`text-[1.15rem] font-extrabold tabular-nums ${tone}`}>{d.dayOfMonth}</span>
         {d.isToday && <span className="ml-1 text-[1rem] font-bold text-teal-700">오늘</span>}
         {d.holiday && (
-          <span className="ml-1 block truncate text-[0.88rem] font-bold text-rose-600">{d.holiday}</span>
+          <span className="ml-1 block truncate text-[0.9rem] font-bold text-rose-600">{d.holiday}</span>
         )}
 
         {/*  숫자만 놓습니다. 거래처 이름을 다 적으면 폰에서 칸이 터집니다 —

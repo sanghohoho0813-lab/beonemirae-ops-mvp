@@ -32,7 +32,7 @@ export function MobilePreview() {
           <Smartphone size={18} className="text-navy-500" />
           <div className="leading-tight">
             <p className="text-sm font-extrabold text-navy-900">모바일 미리보기</p>
-            <p className="text-[0.6875rem] font-medium text-navy-400">대표자·심사관 시연용 · ㈜비원미래</p>
+            <p className="text-[0.9rem] font-medium text-navy-400">대표자·심사관 시연용 · ㈜비원미래</p>
           </div>
         </div>
         <a

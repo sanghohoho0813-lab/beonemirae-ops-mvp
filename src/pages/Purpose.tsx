@@ -116,7 +116,7 @@ function Section({ s, children }: { s: Sec; children: React.ReactNode }) {
       <div className="flex items-start gap-3 border-b border-navy-100 px-5 py-4 sm:px-6">
         <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-navy-900 text-white">
           <s.icon size={19} strokeWidth={2.3} />
-          <span className="absolute -right-1.5 -top-1.5 flex h-[1.3rem] min-w-[1.3rem] items-center justify-center rounded-full bg-teal-500 px-1 text-[0.72rem] font-black text-white ring-2 ring-white">
+          <span className="absolute -right-1.5 -top-1.5 flex h-[1.45rem] min-w-[1.45rem] items-center justify-center rounded-full bg-teal-500 px-1 text-[0.9rem] font-black text-white ring-2 ring-white">
             {s.n}
           </span>
         </span>
@@ -397,7 +397,7 @@ export function Purpose() {
               <li key={g.t} className="relative flex gap-3.5">
                 <span className="relative flex flex-col items-center">
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.85rem] font-black ${
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.9rem] font-black ${
                       i === GROWTH.length - 1
                         ? 'bg-teal-500 text-white'
                         : 'bg-white text-teal-700 ring-1 ring-teal-200'
@@ -447,7 +447,7 @@ export function Purpose() {
             ].map((x, i) => (
               <div key={x.t} className="rounded-2xl bg-white p-4 ring-1 ring-teal-100">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-[0.85rem] font-black text-white">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-[0.9rem] font-black text-white">
                     {i + 1}
                   </span>
                   <p className="t-body font-extrabold text-navy-900">{x.t}</p>

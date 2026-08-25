@@ -268,7 +268,7 @@ function NavGroup({
             <SidebarLink key={item.to} item={item} muted />
           ))}
           {planned.length > 0 && (
-            <p className="px-4 pb-1 pt-3 text-[0.88rem] font-bold tracking-wide text-navy-500">추가 개발 예정</p>
+            <p className="px-4 pb-1 pt-3 text-[0.9rem] font-bold tracking-wide text-navy-500">추가 개발 예정</p>
           )}
           {planned.map((label) => (
             //  단추가 아니라 글자입니다 — 누를 수 없다는 것이 손끝에서

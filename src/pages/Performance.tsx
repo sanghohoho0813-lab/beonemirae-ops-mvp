@@ -425,7 +425,7 @@ export function Performance() {
               <p className="t-muted font-bold">수거 입력</p>
               <p className="t-kpi mt-1 text-navy-900">
                 {summary.collectionCount}
-                <span className="ml-0.5 text-[0.62em] font-bold text-navy-400">건</span>
+                <span className="ml-0.5 text-[max(0.9rem,0.62em)] font-bold text-navy-400">건</span>
               </p>
             </div>
             <ArrowRight size={26} className="mb-3 shrink-0 text-navy-400" strokeWidth={2.8} />
@@ -433,7 +433,7 @@ export function Performance() {
               <p className="t-muted font-bold">자동 처리된 업무</p>
               <p className="t-kpi mt-1 text-teal-600">
                 {summary.autoLink.total}
-                <span className="ml-0.5 text-[0.62em] font-bold text-teal-500/70">건</span>
+                <span className="ml-0.5 text-[max(0.9rem,0.62em)] font-bold text-teal-500/70">건</span>
               </p>
             </div>
             <div className="min-w-0 sm:ml-6">

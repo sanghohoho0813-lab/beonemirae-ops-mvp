@@ -143,7 +143,12 @@ export function StockItems() {
           {GROUPS.map((g) => (
             <div key={g.key}>
               <p className="mb-1.5 px-1 text-[1.02rem] font-extrabold text-navy-500">{g.label}</p>
-              <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {/*  ⚠ 0082 — xl 에서 3칸이었습니다. PC 기본 글자를 16px 바닥에
+                   맞추자(15.8→17.8px) 한 칸이 248px 로 좁아지면서, 오른쪽의
+                   「아직 안 세어 봄」+「세기」가 자리를 다 먹고 **라벨이 7px 로
+                   눌려** 「63L 박스」가 한 글자씩 세로로 5줄이 됐습니다.
+                   글자를 키우면 칸도 같이 넓어져야 합니다. */}
+              <ul className="grid gap-2 sm:grid-cols-2">
                 {g.items.map((it) => {
                   const r = byItem.get(it.key)
                   const unknown = !r || r.qty == null
@@ -155,7 +160,9 @@ export function StockItems() {
                         unknown ? 'bg-amber-50' : 'bg-navy-50'
                       }`}
                     >
-                      <span className="min-w-0 flex-1 break-keep text-[1.05rem] font-bold text-navy-800">
+                      {/*  ⚠ min-w-0 만 두면 0 까지 눌립니다. 「63L 박스」가
+                           한 줄로 들어갈 만큼은 반드시 남겨 둡니다. */}
+                      <span className="min-w-[5.5rem] flex-1 break-keep text-[1.05rem] font-bold text-navy-800">
                         {it.label}
                       </span>
                       {unknown ? (

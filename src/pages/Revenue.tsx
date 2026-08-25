@@ -160,7 +160,7 @@ export function Revenue() {
                     그 달이 열립니다 — 보이는 막대 모양은 그대로입니다. */
                 className="flex min-w-0 flex-1 flex-col justify-end gap-1 self-stretch rounded-t-lg transition hover:opacity-80"
               >
-                <span className="block text-center text-[0.82rem] font-bold tabular-nums text-navy-400 sm:text-[0.9rem]">
+                <span className="block text-center text-[0.9rem] font-bold tabular-nums text-navy-400 sm:text-[0.9rem]">
                   {p.total > 0 ? Math.round(p.total / 10000).toLocaleString('ko-KR') : ''}
                 </span>
                 <span
@@ -169,7 +169,7 @@ export function Revenue() {
                   }`}
                   style={{ height: Math.max(3, Math.round((p.total / max) * 118)) }}
                 />
-                <span className="block text-center text-[0.82rem] font-semibold text-navy-400 sm:text-[0.9rem]">
+                <span className="block text-center text-[0.9rem] font-semibold text-navy-400 sm:text-[0.9rem]">
                   {p.month.slice(5)}
                 </span>
               </button>

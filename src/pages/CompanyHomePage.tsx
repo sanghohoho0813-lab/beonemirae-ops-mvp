@@ -625,13 +625,13 @@ export function CompanyHomePage() {
                 <div className="mt-[clamp(18px,2vw,32px)] grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
                   <div>
                     <p className="whitespace-nowrap text-[clamp(23px,3.6vw,56px)] font-extrabold text-accent-300">
-                      50<span className="text-[0.7em]">곳+</span>
+                      50<span className="text-[max(0.9rem,0.7em)]">곳+</span>
                     </p>
                     <p className="text-[clamp(11px,1.4vw,23px)] text-white/60">관리 거래처</p>
                   </div>
                   <div>
                     <p className="whitespace-nowrap text-[clamp(23px,3.6vw,56px)] font-extrabold text-accent-300">
-                      월100<span className="text-[0.7em]">톤+</span>
+                      월100<span className="text-[max(0.9rem,0.7em)]">톤+</span>
                     </p>
                     <p className="text-[clamp(11px,1.4vw,23px)] text-white/60">수거·운반</p>
                   </div>

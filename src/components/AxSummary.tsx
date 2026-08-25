@@ -105,7 +105,7 @@ export function AxSummaryCard({ data, compact = false }: { data: AppData; compac
               <span className="mx-1.5 text-navy-400">→</span>
               {/* '측정 중' 같은 상태 문구는 숫자보다 작게 — 좁은 칸에서 줄바꿈되지 않도록 */}
               <span
-                className={`${h.measuring ? 'text-[0.6em] text-navy-400' : h.emphasis ? 'text-teal-600' : 'text-navy-900'}`}
+                className={`${h.measuring ? 'text-[max(0.9rem,0.6em)] text-navy-400' : h.emphasis ? 'text-teal-600' : 'text-navy-900'}`}
               >
                 {h.after}
               </span>
@@ -126,10 +126,10 @@ export function AxSummaryCard({ data, compact = false }: { data: AppData; compac
           </div>
           <p className="t-kpi-sm mt-1 break-keep text-navy-900">
             {auto.avg == null ? (
-              <span className="text-[0.6em] text-navy-400">측정 중</span>
+              <span className="text-[max(0.9rem,0.6em)] text-navy-400">측정 중</span>
             ) : (
               <>
-                1건 <span className="text-[0.6em] text-navy-400">입력 →</span> {auto.avg}건
+                1건 <span className="text-[max(0.9rem,0.6em)] text-navy-400">입력 →</span> {auto.avg}건
               </>
             )}
           </p>

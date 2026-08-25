@@ -134,7 +134,7 @@ export function AxStoryStrip({ data }: { data: AppData }) {
                 </span>
                 {/* 누가 하는 일인지 — 흐름 가운데의 '병원'이 눈에 띄게 */}
                 <span
-                  className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-lg px-2 py-0.5 text-[0.88rem] font-extrabold ${at.chip}`}
+                  className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-lg px-2 py-0.5 text-[0.9rem] font-extrabold ${at.chip}`}
                 >
                   {s.actor}
                 </span>

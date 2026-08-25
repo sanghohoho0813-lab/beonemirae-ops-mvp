@@ -88,7 +88,7 @@ export function AreaHeader({
         <span /*  ⚠ 0080 — 흰 글자를 teal-500 위에 올리면 3.7:1 입니다. 큰 글자면 기준(3:1)을
               넘지만 이건 12px 짜리 숫자라 4.5:1 이 필요합니다. 이 작은 알림 숫자만
               한 단계 진한 파랑으로 둡니다 — 저장 단추의 브랜드 파랑은 그대로입니다. */
-        className="absolute -right-1 -top-1 flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-teal-600 text-[0.72rem] font-black text-white ring-2 ring-app">
+        className="absolute -right-1 -top-1 flex h-[1.35rem] min-w-[1.35rem] items-center justify-center rounded-full bg-teal-600 px-1 text-[0.9rem] font-black text-white ring-2 ring-app">
           {n}
         </span>
       </span>
@@ -297,7 +297,7 @@ export function MetricCard({
       <span className={`order-2 mt-2 hyphens-none break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
-        {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-400">{unit}</span>}
+        {unit && <span className="ml-1 text-[max(0.9rem,0.7em)] font-bold text-navy-400">{unit}</span>}
       </span>
       {hint && <span className="order-3 mt-1.5 text-[0.98rem] text-navy-400 sm:text-[1.03rem]">{hint}</span>}
     </motion.div>
@@ -648,7 +648,7 @@ export function KpiCard({
       <p className="t-kpi mt-3.5 text-navy-900">
         {num}
         {(tail || unit) && (
-          <span className="ml-0.5 text-[0.52em] font-bold text-navy-400">
+          <span className="ml-0.5 text-[max(0.9rem,0.52em)] font-bold text-navy-400">
             {tail}
             {unit}
           </span>

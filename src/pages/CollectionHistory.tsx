@@ -116,7 +116,7 @@ export function CollectionHistory() {
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">전체 수거건수</p>
-          <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[0.55em] text-navy-400">건</span></p>
+          <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
         </div>
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">총 수거량</p>
@@ -124,11 +124,11 @@ export function CollectionHistory() {
         </div>
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">긴급수거</p>
-          <p className="t-stat mt-1.5 text-rose-500">{urgent}<span className="ml-0.5 text-[0.55em] text-navy-400">건</span></p>
+          <p className="t-stat mt-1.5 text-rose-500">{urgent}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
         </div>
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">인계 완료율</p>
-          <p className="t-stat mt-1.5 text-navy-900">{handoverRate}<span className="ml-0.5 text-[0.55em] text-navy-400">%</span></p>
+          <p className="t-stat mt-1.5 text-navy-900">{handoverRate}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">%</span></p>
         </div>
       </div>
 

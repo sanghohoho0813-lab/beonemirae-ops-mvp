@@ -115,7 +115,14 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
         </section>
 
         {/* 다음 수거 · 긴급 · 교육 */}
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        {/*  ⚠ 0082 — `sm:grid-cols-3` 이었습니다. 여기서 `sm:` 은 **화면 폭**을
+             봅니다. 그런데 이 리포트는 /reports 에서 오른쪽 좁은 칸(379px)
+             안에 들어갑니다. 화면은 1280px 이니 3열이 되고, 한 칸이 98px 이
+             되어 아이콘을 빼면 글자 자리가 30px — 「다음 수거 예상」이
+             한 글자씩 세로로 6줄이 됐습니다.
+             화면 폭이 아니라 **자기가 놓인 칸**을 기준으로 접히도록
+             flex-wrap 으로 바꿉니다. 라이브러리를 더하지 않습니다. */}
+        <div className="flex flex-wrap gap-2.5 [&>*]:min-w-[13rem] [&>*]:flex-1">
           <div className="flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5">
             <CalendarClock size={19} className="shrink-0 text-navy-400" />
             <div className="min-w-0">

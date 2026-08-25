@@ -128,7 +128,7 @@ export function ClientDrivers({ clientId }: { clientId: string }) {
               }`}
             >
               {s.name || s.email}
-              {s.role !== 'field' && <span className="ml-1 text-[0.85rem] font-bold opacity-70">사무</span>}
+              {s.role !== 'field' && <span className="ml-1 text-[0.9rem] font-bold opacity-70">사무</span>}
             </button>
           )
         })}
