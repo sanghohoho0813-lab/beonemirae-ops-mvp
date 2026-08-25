@@ -104,7 +104,7 @@ export function ClientDrivers({ clientId }: { clientId: string }) {
       <div className="mb-2 flex items-center gap-2">
         <UserCheck size={18} strokeWidth={2.4} className="shrink-0 text-teal-600" />
         <p className="t-body font-extrabold text-navy-900">담당 기사</p>
-        {busy && <Loader2 size={15} className="animate-spin text-navy-300" />}
+        {busy && <Loader2 size={15} className="animate-spin text-navy-400" />}
       </div>
 
       {/*  대표님 요청 — 누르는 규칙을 옆에 적어 둡니다. 안 적으면 이미 배정된

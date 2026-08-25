@@ -723,7 +723,7 @@ export function CompanyHomePage() {
               <Reveal>
                 <div className="h-full rounded-3xl border border-navy-100 bg-white/60 p-6 sm:p-9">
                   <p className="text-[15px] sm:text-[24px] font-extrabold text-navy-400">일반적인 방식</p>
-                  <p className="mt-1 text-[12px] sm:text-[18px] font-semibold text-navy-300">수작업 · 분산 관리</p>
+                  <p className="mt-1 text-[12px] sm:text-[18px] font-semibold text-navy-400">수작업 · 분산 관리</p>
                   <ul className="mt-5 space-y-3.5">
                     {[
                       '전화·문자·엑셀·종이로 따로 관리',
@@ -949,7 +949,7 @@ export function CompanyHomePage() {
                           required
                           value={form.region}
                           onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
-                          className={`${inputCls} ${form.region ? '' : 'text-navy-300'}`}
+                          className={`${inputCls} ${form.region ? '' : 'text-navy-400'}`}
                         >
                           <option value="" disabled>
                             지역을 선택해주세요.
@@ -966,7 +966,7 @@ export function CompanyHomePage() {
                           required
                           value={form.orgType}
                           onChange={(e) => setForm((f) => ({ ...f, orgType: e.target.value }))}
-                          className={`${inputCls} ${form.orgType ? '' : 'text-navy-300'}`}
+                          className={`${inputCls} ${form.orgType ? '' : 'text-navy-400'}`}
                         >
                           <option value="" disabled>
                             유형을 선택해주세요.
@@ -988,7 +988,7 @@ export function CompanyHomePage() {
                         placeholder="배출 조건, 수거 주기, 용기·자재 필요 여부 등 자세히 입력해주시면 상담에 도움이 됩니다."
                         className={`${inputCls} h-28 resize-none`}
                       />
-                      <p className="mt-1 text-right text-[12px] sm:text-[18px] text-navy-300">{form.content.length} / 500</p>
+                      <p className="mt-1 text-right text-[12px] sm:text-[18px] text-navy-400">{form.content.length} / 500</p>
                     </Field>
 
                     <label className="flex items-center justify-between rounded-xl bg-navy-50 px-4 py-3.5">

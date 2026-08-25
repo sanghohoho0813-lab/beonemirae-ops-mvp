@@ -289,7 +289,7 @@ export function Revenue() {
         <div className="card divide-y divide-navy-100" data-revenue-legend>
           {(Object.keys(SOURCE_WHY) as RevenueSource[]).map((s, i) => (
             <div key={s} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3.5">
-              <span className="w-6 shrink-0 text-[0.95rem] font-black text-navy-300">{i + 1}</span>
+              <span className="w-6 shrink-0 text-[0.95rem] font-black text-navy-400">{i + 1}</span>
               <SourceChip source={s} />
               <span className="min-w-0 flex-1 break-keep text-[1.02rem] text-navy-600">{SOURCE_WHY[s]}</span>
             </div>

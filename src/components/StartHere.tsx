@@ -79,7 +79,7 @@ export function StartHere({ data }: { data: AppData }) {
           아직 안 하신 설정이 <b className="text-navy-800">{remaining.length}가지</b> 있습니다 —{' '}
           <b className="text-navy-800">{remaining.map((r) => r.label).join(' · ')}</b>
         </span>
-        <ChevronRight size={18} className="shrink-0 text-navy-300" />
+        <ChevronRight size={18} className="shrink-0 text-navy-400" />
       </Link>
     )
   }
@@ -119,7 +119,7 @@ export function StartHere({ data }: { data: AppData }) {
               </p>
               <p className="t-muted break-keep">{s.desc}</p>
             </div>
-            {!s.done && <ChevronRight size={20} className="shrink-0 text-navy-300" />}
+            {!s.done && <ChevronRight size={20} className="shrink-0 text-navy-400" />}
           </Link>
         ))}
       </div>

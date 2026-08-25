@@ -109,7 +109,7 @@ export function DemoSummary() {
                 <p className="break-keep text-[1.07rem] font-bold text-navy-900">{f.title}</p>
                 <p className="break-keep text-[0.98rem] text-navy-400">{f.line}</p>
               </div>
-              <ChevronRight size={16} className="shrink-0 text-navy-300" />
+              <ChevronRight size={16} className="shrink-0 text-navy-400" />
             </button>
           ))}
         </div>
@@ -153,7 +153,7 @@ export function DemoSummary() {
           <SectionTitle>2. 현장 문제</SectionTitle>
           <div className="card p-5">
             <div className="flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-500" />
+              <AlertTriangle size={18} className="text-amber-700" />
               <p className="text-[1.07rem] font-bold text-navy-800">의료기관 폐기물 운영 과제</p>
             </div>
             <ul className="mt-3 space-y-1.5">
@@ -277,10 +277,10 @@ export function DemoSummary() {
           <p className="font-bold text-navy-900">향후 활용 계획 · 업무흐름도 보기</p>
           <p className="text-[0.98rem] text-navy-400">일일 업무 흐름과 단계별 고도화 로드맵을 한눈에</p>
         </div>
-        <ChevronRight size={18} className="shrink-0 text-navy-300" />
+        <ChevronRight size={18} className="shrink-0 text-navy-400" />
       </button>
 
-      <p className="pb-2 text-center text-[0.98rem] text-navy-300">데이터 기반 의료폐기물 운영관리 시스템 · ㈜비원미래</p>
+      <p className="pb-2 text-center text-[0.98rem] text-navy-400">데이터 기반 의료폐기물 운영관리 시스템 · ㈜비원미래</p>
     </PageShell>
   )
 }

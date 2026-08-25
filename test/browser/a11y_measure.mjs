@@ -35,10 +35,56 @@ export async function measure(p, SMALL = 16) {
     }
     const parse = (c) => { const m = c.match(/rgba?\((\d+), ?(\d+), ?(\d+)/); return m ? [+m[1], +m[2], +m[3]] : null }
     //  배경은 투명일 수 있습니다 — 색이 칠해진 조상을 찾아 올라갑니다.
-    const bgOf = (el) => {
+    //
+    //  ⚠ 0082 — 여기 **자가 틀려 있었습니다.**
+    //
+    //    `bg-gradient-to-br from-navy-800 to-navy-900` 같은 칸은 색을
+    //    `background-color` 가 아니라 `background-image`(linear-gradient) 로
+    //    칠합니다. 그래서 `backgroundColor` 는 투명이고, 자는 그대로 위로
+    //    올라가 **흰 배경**을 찾아냈습니다. 결과는 「진한 남색 위 흰 글자가
+    //    1.1:1 — 거의 안 보임」. 실제로는 가장 잘 보이는 글자입니다.
+    //
+    //    이 상태로 숫자를 믿으면, 멀쩡한 히어로 칸의 흰 글자를 어둡게
+    //    바꿔서 **진짜로 안 보이게** 만들게 됩니다. 자가 틀리면 고친 뒤
+    //    숫자도 못 믿습니다.
+    //
+    //    그라데이션의 색 정지점을 읽어 **가장 불리한 정지점**으로 잽니다.
+    //    (그라데이션은 자리마다 색이 다르므로, 제일 안 좋은 자리를 기준으로
+    //     삼는 것이 맞습니다 — 통과시키려고 유리한 쪽을 고르지 않습니다)
+    const stopsOf = (img) => {
+      const out = []
+      const re = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/g
+      let m
+      while ((m = re.exec(img))) {
+        //  거의 투명한 정지점은 배경 노릇을 못 합니다 — 건너뜁니다.
+        if (m[4] !== undefined && Number(m[4]) <= 0.5) continue
+        out.push([+m[1], +m[2], +m[3]])
+      }
+      return out
+    }
+    const bgOf = (el, fg) => {
       let n = el
       while (n && n !== document.documentElement) {
-        const bg = getComputedStyle(n).backgroundColor
+        const st = getComputedStyle(n)
+        //  ── 그라데이션이 먼저입니다 — 배경색보다 위에 그려집니다 ──────────
+        const img = st.backgroundImage
+        if (img && img !== 'none' && /gradient/.test(img)) {
+          const stops = stopsOf(img)
+          if (stops.length) {
+            if (!fg) return stops[0]
+            //  글자와 **가장 대비가 낮은** 정지점을 고릅니다.
+            let worst = stops[0]
+            let worstR = Infinity
+            for (const s of stops) {
+              const a = lum(...fg) + 0.05
+              const b = lum(...s) + 0.05
+              const rr = a > b ? a / b : b / a
+              if (rr < worstR) { worstR = rr; worst = s }
+            }
+            return worst
+          }
+        }
+        const bg = st.backgroundColor
         const a = bg.match(/rgba?\([^)]*?,\s*([\d.]+)\)$/)
         if (bg && bg !== 'transparent' && (!a || Number(a[1]) > 0.5)) { const p = parse(bg); if (p) return p }
         n = n.parentElement
@@ -63,7 +109,7 @@ export async function measure(p, SMALL = 16) {
       const bold = Number(st.fontWeight) >= 700
       const big = px >= 24 || (px >= 18.66 && bold)
       const need = big ? 3 : 4.5
-      const ratio = contrast(fg, bgOf(el))
+      const ratio = contrast(fg, bgOf(el, fg))
       return ratio < need ? { ...sizes[i], ratio: Math.round(ratio * 10) / 10, need } : null
     }).filter(Boolean)
 

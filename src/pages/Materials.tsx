@@ -70,6 +70,36 @@ export function Materials() {
     [data.materials],
   )
 
+  //  ── 공급 내역을 **끊어서** 보여 줍니다 (0082) ──────────────────────────
+  //
+  //   여기서 예전에는 `sorted.map(...)` 으로 **지금까지의 모든 공급**을
+  //   한 장에 그렸습니다. 실제로 재 봤습니다 —
+  //
+  //     공급 1,408건 · 화면 안 칸 21,958개 · 누를 것 1,464개
+  //     폰에서 화면 길이 **255,996px** (폰 화면 300장)
+  //
+  //   자재 관리는 대표님이 「지금 재고가 얼마인가」를 보러 여는 화면입니다.
+  //   그런데 그 아래로 300장이 딸려 나오니, 스크롤 막대가 실오라기가 되고
+  //   회사가 오래 굴러갈수록 **더 나빠집니다.**
+  //
+  //   ⚠ 지우거나 숨기는 것이 아닙니다. 「몇 건 중 몇 건을 보고 있는지」를
+  //     늘 적고, 거래처로 좁히거나 더 볼 수 있게 합니다. 조용히 자르면
+  //     「내 기록이 없어졌다」가 됩니다.
+  const PAGE = 30
+  const [supplyClient, setSupplyClient] = useState('')
+  const [shown, setShown] = useState(PAGE)
+  const filtered = useMemo(
+    () => (supplyClient ? sorted.filter((m) => m.clientId === supplyClient) : sorted),
+    [sorted, supplyClient],
+  )
+  const visible = filtered.slice(0, shown)
+  //  공급 기록이 있는 거래처만 고를 수 있게 합니다 — 고르면 0건이 나오는
+  //  이름을 목록에 두면 「고장인가?」로 읽힙니다.
+  const suppliedClients = useMemo(() => {
+    const ids = new Set(sorted.map((m) => m.clientId))
+    return data.clients.filter((c) => ids.has(c.id))
+  }, [sorted, data.clients])
+
   //  ⚠ 0075 — 이번 달 **규격별** 공급. 대표님 지적: 「지금은 4개밖에 없잖아?
   //    10개 이상 정리돼야 하고」. 아래 넉 장 카드는 재고 칸 합계라 63L 인지
   //    12L 인지가 안 보입니다 — 그 둘은 매입가가 다릅니다.
@@ -202,7 +232,7 @@ export function Materials() {
                 <span className={`break-keep text-[1.02rem] ${n > 0 ? 'font-bold text-navy-800' : 'text-navy-400'}`}>
                   {it.label}
                 </span>
-                <span className={`shrink-0 tabular-nums text-[1.12rem] font-extrabold ${n > 0 ? 'text-navy-900' : 'text-navy-300'}`}>
+                <span className={`shrink-0 tabular-nums text-[1.12rem] font-extrabold ${n > 0 ? 'text-navy-900' : 'text-navy-400'}`}>
                   {num(n)}
                 </span>
               </div>
@@ -251,7 +281,35 @@ export function Materials() {
         </div>
       </section>
 
-      <h2 className="mb-2.5 px-1 text-[1.07rem] font-bold text-navy-700">공급 내역</h2>
+      <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
+        <h2 className="text-[1.07rem] font-bold text-navy-700">공급 내역</h2>
+        {sorted.length > 0 && (
+          <p data-supply-count className="t-muted">
+            {supplyClient
+              ? `${num(filtered.length)}건 중 ${num(visible.length)}건`
+              : `전체 ${num(sorted.length)}건 중 ${num(visible.length)}건`}
+          </p>
+        )}
+        {suppliedClients.length > 1 && (
+          <select
+            data-supply-filter
+            aria-label="거래처로 좁혀 보기"
+            className="ml-auto min-h-[44px] rounded-xl border border-navy-200 bg-white px-3 text-[1.05rem] font-semibold text-navy-700"
+            value={supplyClient}
+            onChange={(e) => {
+              setSupplyClient(e.target.value)
+              //  ⚠ 거래처를 바꾸면 처음부터 봅니다. 안 그러면 3건짜리
+              //    거래처를 골랐는데 「더 보기」가 남아 있는 것처럼 보입니다.
+              setShown(PAGE)
+            }}
+          >
+            <option value="">거래처 전체</option>
+            {suppliedClients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
       {sorted.length === 0 ? (
         <LoadGate
           loadingTitle="자재공급 내역을 불러오는 중입니다"
@@ -261,7 +319,7 @@ export function Materials() {
         />
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-          {sorted.map((m) => {
+          {visible.map((m) => {
             const client = clientById(m.clientId)
             return (
               <li key={m.id} className="card p-4">
@@ -278,7 +336,7 @@ export function Materials() {
                   {/*  이제 실제로 지워지고 재고가 돌아옵니다(0023). 되돌릴 수
                        없으므로 무엇이 지워지는지 보여 주고 한 번 확인합니다. */}
                   <button
-                    className="text-[0.98rem] font-medium text-navy-300 hover:text-rose-500"
+                    className="text-[0.98rem] font-medium text-navy-400 hover:text-rose-500"
                     onClick={() => {
                       const who = client?.name ?? '알 수 없음'
                       if (
@@ -325,6 +383,27 @@ export function Materials() {
             )
           })}
         </ul>
+      )}
+      {filtered.length > visible.length && (
+        <button
+          data-supply-more
+          className="btn-ghost mt-3 min-h-[44px] w-full"
+          onClick={() => setShown((n) => n + PAGE)}
+        >
+          {num(filtered.length - visible.length)}건 더 보기
+        </button>
+      )}
+      {/*  거래처로 좁혔는데 그 거래처 기록이 없을 때 — 화면이 통째로 비면
+           「고장인가?」로 읽힙니다. 무슨 일인지 적고 되돌릴 길을 둡니다. */}
+      {sorted.length > 0 && filtered.length === 0 && (
+        <div data-supply-none className="card p-6 text-center">
+          <p className="t-body break-keep text-navy-600">
+            고르신 거래처의 공급 기록이 없습니다.
+          </p>
+          <button className="btn-ghost mt-3 min-h-[44px]" onClick={() => setSupplyClient('')}>
+            전체 보기
+          </button>
+        </div>
       )}
 
       <Modal

@@ -301,7 +301,7 @@ export function Purpose() {
             <ul className="space-y-1.5">
               {BEFORE.map((t) => (
                 <li key={t} className="t-muted flex items-start gap-1.5 break-keep">
-                  <CircleDot size={13} strokeWidth={2.4} className="mt-1 shrink-0 text-navy-300" />
+                  <CircleDot size={13} strokeWidth={2.4} className="mt-1 shrink-0 text-navy-400" />
                   <span>{t}</span>
                 </li>
               ))}
@@ -538,7 +538,7 @@ export function Purpose() {
                     <span>{l.to}</span>
                   </span>
                 </span>
-                <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                <ChevronRight size={18} className="shrink-0 text-navy-400" />
               </Link>
             </li>
           ))}

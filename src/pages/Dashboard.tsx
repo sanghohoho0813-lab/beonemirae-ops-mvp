@@ -85,7 +85,7 @@ function PhoneRow({
         <span className="t-muted block break-keep">{detail}</span>
       </span>
       <span className="t-label shrink-0 whitespace-nowrap tabular-nums text-navy-700">{value}</span>
-      <ChevronRight size={18} className="shrink-0 text-navy-300" />
+      <ChevronRight size={18} className="shrink-0 text-navy-400" />
     </Link>
   )
 }
@@ -274,7 +274,7 @@ export function Dashboard() {
                     <span className={`shrink-0 whitespace-nowrap text-[1.15rem] font-extrabold ${m.color}`}>
                       {item.count}건
                     </span>
-                    <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                    <ChevronRight size={18} className="shrink-0 text-navy-400" />
                   </Link>
                 )
               })}

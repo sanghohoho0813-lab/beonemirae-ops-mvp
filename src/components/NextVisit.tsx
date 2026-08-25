@@ -89,7 +89,7 @@ export function NextVisitCard({
 
         <div className="mt-2.5 space-y-1.5">
           <p className="t-body flex items-start gap-2 break-keep text-navy-500">
-            <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-navy-300" />
+            <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-navy-400" />
             <span className="min-w-0">{client?.address ?? '주소 없음'}</span>
           </p>
           {/*  ⚠ 0074 — 주소는 있는데 **전화는 누를 수 없었습니다.** 기사님이
@@ -109,12 +109,12 @@ export function NextVisitCard({
             </a>
           ) : (
             <p className="t-body flex items-center gap-2 break-keep text-navy-400">
-              <Phone size={17} strokeWidth={2.3} className="shrink-0 text-navy-300" />
+              <Phone size={17} strokeWidth={2.3} className="shrink-0 text-navy-400" />
               <span className="min-w-0">전화번호 미등록</span>
             </p>
           )}
           <p className="t-body flex items-center gap-2 break-keep text-navy-500">
-            <Truck size={17} strokeWidth={2.3} className="shrink-0 text-navy-300" />
+            <Truck size={17} strokeWidth={2.3} className="shrink-0 text-navy-400" />
             <span className="min-w-0">
               {/*  차가 정말 없을 때는 **무엇을 해야 하는지**까지 말합니다.
                    「미배정」만으로는 기사님이 할 수 있는 일이 없습니다. */}

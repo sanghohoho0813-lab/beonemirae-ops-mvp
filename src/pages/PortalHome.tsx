@@ -230,7 +230,7 @@ export function PortalHome() {
                 정기 수거 외에 한 번 더 필요할 때
               </span>
             </span>
-            <ChevronRight size={22} className="shrink-0 text-navy-300" />
+            <ChevronRight size={22} className="shrink-0 text-navy-400" />
           </button>
 
           {/*  자유 글이 아니라 **물품 화면**으로 보냅니다 — 품목과 수량이 붙어야
@@ -251,7 +251,7 @@ export function PortalHome() {
                 전용 용기 · 봉투 · 바늘통이 부족할 때 — 다음 수거 때 가져다 드립니다
               </span>
             </span>
-            <ChevronRight size={22} className="shrink-0 text-navy-300" />
+            <ChevronRight size={22} className="shrink-0 text-navy-400" />
           </Link>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -346,7 +346,7 @@ export function PortalHome() {
                         <span
                           key={st}
                           className={`t-tab min-w-0 flex-1 truncate ${
-                            i <= stepIdx ? 'text-navy-600' : 'text-navy-300'
+                            i <= stepIdx ? 'text-navy-600' : 'text-navy-400'
                           }`}
                         >
                           {st}
@@ -479,7 +479,7 @@ export function PortalHome() {
                 <p className="t-body break-keep font-extrabold text-navy-900">{x.title}</p>
                 <p className="t-muted mt-1 break-keep leading-snug">{x.desc}</p>
               </div>
-              <ChevronRight size={20} className="shrink-0 text-navy-300" />
+              <ChevronRight size={20} className="shrink-0 text-navy-400" />
             </Link>
           )
         })}

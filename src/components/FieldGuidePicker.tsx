@@ -39,7 +39,7 @@ export function FieldGuidePicker({ onPick }: { onPick: (id: string) => void }) {
             <span className="block break-keep text-[1.22rem] font-extrabold text-navy-900">{g.title}</span>
             <span className="mt-1 block break-keep text-[1.05rem] text-navy-500">{g.sub}</span>
           </span>
-          <ChevronRight size={22} strokeWidth={2.5} className="shrink-0 text-navy-300" />
+          <ChevronRight size={22} strokeWidth={2.5} className="shrink-0 text-navy-400" />
         </button>
       ))}
     </div>

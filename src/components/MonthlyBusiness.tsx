@@ -219,7 +219,7 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
                       )}
                       <td className="pr-3 text-right">
                         <Link to={`/clients/${s.clientId}`} aria-label={`${s.clientName} 정산`}>
-                          <ChevronRight size={16} className="text-navy-300" />
+                          <ChevronRight size={16} className="text-navy-400" />
                         </Link>
                       </td>
                     </tr>
@@ -265,7 +265,7 @@ function Cell({
   return (
     <div className={`px-4 py-3.5 ${className ?? ''}`} {...rest}>
       <p className="t-label text-navy-500">{label}</p>
-      <p className={`t-kpi-sm mt-0.5 tabular-nums ${empty ? 'text-navy-300' : tone}`}>
+      <p className={`t-kpi-sm mt-0.5 tabular-nums ${empty ? 'text-navy-400' : tone}`}>
         {empty ? '미입력' : wonShort(v)}
       </p>
       {sub && <p className="t-muted mt-0.5">{sub}</p>}

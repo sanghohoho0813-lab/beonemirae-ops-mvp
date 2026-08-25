@@ -144,7 +144,7 @@ export function Statistics() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-[0.98rem] text-navy-300">
+      <p className="pb-2 text-center text-[0.98rem] text-navy-400">
         데이터 백업·초기화는 <b className="text-navy-400">더보기</b> 메뉴에서 할 수 있습니다.
       </p>
     </div>

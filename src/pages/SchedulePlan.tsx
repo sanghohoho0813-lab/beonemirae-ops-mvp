@@ -41,7 +41,7 @@ function Stat({ label, value, unit, tone = 'navy' }: { label: string; value: num
       <p className="text-[1.03rem] font-semibold text-navy-400">{label}</p>
       <p className={`mt-1.5 text-2xl font-extrabold ${color}`}>
         {value.toLocaleString('ko-KR')}
-        <span className="ml-0.5 text-base text-navy-300">{unit}</span>
+        <span className="ml-0.5 text-base text-navy-400">{unit}</span>
       </p>
     </div>
   )
@@ -513,7 +513,7 @@ export function SchedulePlan() {
                     className="h-5 w-5 shrink-0 accent-navy-700"
                   />
                   <WasteBadge type={p.wasteType} />
-                  <span className={`min-w-0 flex-1 basis-[12rem] break-keep font-bold ${off ? 'text-navy-300 line-through' : 'text-navy-900'}`}>
+                  <span className={`min-w-0 flex-1 basis-[12rem] break-keep font-bold ${off ? 'text-navy-400 line-through' : 'text-navy-900'}`}>
                     {p.clientName}
                   </span>
                   <span className="flex shrink-0 gap-1">

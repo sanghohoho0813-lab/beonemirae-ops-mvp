@@ -36,7 +36,7 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
             <span className="break-keep text-[0.98rem] text-navy-400">· 경로 {p.stops.length}곳 · 인계 {p.handoverTime}</span>
           </div>
         </div>
-        <ChevronDown size={18} className={`shrink-0 text-navy-300 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={18} className={`shrink-0 text-navy-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* 상세 (펼침) */}
@@ -60,7 +60,7 @@ function PlanCard({ p, open, onToggle }: { p: DispatchPlan; open: boolean; onTog
                       <span className={`rounded-lg px-2.5 py-1 text-[0.98rem] font-bold ${i === p.routeLabels.length - 1 ? 'bg-navy-800 text-white' : 'bg-navy-50 text-navy-700'}`}>
                         {label}
                       </span>
-                      {i < p.routeLabels.length - 1 && <span className="text-navy-300">→</span>}
+                      {i < p.routeLabels.length - 1 && <span className="text-navy-400">→</span>}
                     </span>
                   ))}
                 </div>
@@ -194,7 +194,7 @@ export function Dispatch() {
             <b className="text-amber-700">오늘 차량이 정해지지 않은 일정 {unassignedToday}건</b>이 있습니다. 아래 배차 추천에는
             잡히지 않습니다 — 「일정 편성 → ② 차량 배정」에서 붙여 주세요.
           </span>
-          <ChevronRight size={18} className="shrink-0 text-amber-500" />
+          <ChevronRight size={18} className="shrink-0 text-amber-700" />
         </Link>
       )}
 
@@ -202,19 +202,19 @@ export function Dispatch() {
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">추천 차량</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{plans.length}<span className="ml-0.5 text-base text-navy-300">대</span></p>
+          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{plans.length}<span className="ml-0.5 text-base text-navy-400">대</span></p>
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">반영 거래처</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{stopCount}<span className="ml-0.5 text-base text-navy-300">곳</span></p>
+          <p className="mt-1.5 text-2xl font-extrabold text-navy-900">{stopCount}<span className="ml-0.5 text-base text-navy-400">곳</span></p>
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">긴급</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-rose-500">{urgentCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+          <p className="mt-1.5 text-2xl font-extrabold text-rose-500">{urgentCount}<span className="ml-0.5 text-base text-navy-400">건</span></p>
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">자재 동시공급</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-amber-700">{materialCount}<span className="ml-0.5 text-base text-navy-300">건</span></p>
+          <p className="mt-1.5 text-2xl font-extrabold text-amber-700">{materialCount}<span className="ml-0.5 text-base text-navy-400">건</span></p>
         </div>
       </div>
 

@@ -193,7 +193,7 @@ function FlowInfographic() {
             </div>
             {i < PHASES_VIS.length - 1 && (
               <div className="hidden items-center px-1 xl:flex">
-                <ArrowRight size={18} className="shrink-0 text-navy-300" strokeWidth={2.6} />
+                <ArrowRight size={18} className="shrink-0 text-navy-400" strokeWidth={2.6} />
               </div>
             )}
           </Fragment>
@@ -299,7 +299,7 @@ export function Roadmap() {
                     <p className="mt-1 font-bold text-navy-900">{s.title}</p>
                     <p className="mt-0.5 text-[1.03rem] leading-snug text-navy-500">{s.desc}</p>
                   </div>
-                  <ArrowRight size={16} className="mt-1 shrink-0 text-navy-300" />
+                  <ArrowRight size={16} className="mt-1 shrink-0 text-navy-400" />
                 </button>
               )
             })}
@@ -397,7 +397,7 @@ export function Roadmap() {
         </div>
       )}
 
-      <p className="pb-2 text-center text-[0.98rem] text-navy-300">활용 계획·업무흐름도 · ㈜비원미래 운영관리</p>
+      <p className="pb-2 text-center text-[0.98rem] text-navy-400">활용 계획·업무흐름도 · ㈜비원미래 운영관리</p>
     </PageShell>
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, ReceiptText} from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -11,7 +11,7 @@ import { DunningPanel } from '../components/DunningPanel'
 import { ageOf } from '../lib/dunning'
 import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
 import { strandedReceipts } from '../lib/moneyGuard'
-import { won, today } from '../lib/format'
+import { num, won, today } from '../lib/format'
 import type { PaymentStatus } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,6 +37,17 @@ export function Receivables() {
       .filter((p) => (month === '전체' ? true : p.billingMonth === month))
       .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth) || b.amount - a.amount)
   }, [data.payments, filter, month])
+
+  //  ── 한 번에 몇 장까지 (0082) ────────────────────────────────────────────
+  //   청구가 쌓일수록 이 화면이 길어집니다. 폰에서 재 봤더니 20,406px —
+  //   24화면이었습니다. 위쪽 「이번 달 받을 돈」을 보러 온 사람이 그 아래
+  //   24화면을 지고 다니게 됩니다.
+  //   ⚠ 자르기만 하면 안 됩니다. **몇 건 중 몇 건인지** 늘 적습니다.
+  const PAGE = 24
+  const [shown, setShown] = useState(PAGE)
+  //  조건을 바꾸면 처음부터 — 안 그러면 좁혔는데 「더 보기」가 남습니다.
+  useEffect(() => { setShown(PAGE) }, [filter, month])
+  const visible = list.slice(0, shown)
 
   //  돈 기록입니다 — 누구의 얼마를 오늘 날짜로 넣는지 한 번 보여 주고
   //  확인을 받습니다. 실제 입금일이 오늘이 아니면 거래처 화면의 「입금
@@ -177,8 +188,12 @@ export function Receivables() {
       ) : list.length === 0 ? (
         <EmptyState icon={ReceiptText} title="조건에 맞는 청구 내역이 없어요" subtitle="다른 필터를 선택해 보세요." />
       ) : (
+        <>
+        <p data-recv-count className="mb-2 px-1 t-muted">
+          {list.length > shown ? `${num(list.length)}건 중 ${num(shown)}건` : `${num(list.length)}건 전부`}
+        </p>
         <Stagger className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:items-start">
-          {list.map((p) => {
+          {visible.map((p) => {
             const client = clientById(p.clientId)
             //  얼마나 밀렸는지 — 청구월 경과(사실)와, 거래처에 결제일을 넣어
             //  둔 경우에만 계산되는 기한 초과일. 없는 기한은 만들지 않습니다.
@@ -245,6 +260,16 @@ export function Receivables() {
             )
           })}
         </Stagger>
+        {list.length > shown && (
+          <button
+            data-recv-more
+            className="btn-ghost mt-3 min-h-[44px] w-full"
+            onClick={() => setShown((n) => n + PAGE)}
+          >
+            {num(list.length - shown)}건 더 보기
+          </button>
+        )}
+        </>
       )}
     </div>
   )

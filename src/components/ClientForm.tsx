@@ -190,7 +190,7 @@ export function ClientForm({
            하지 않습니다 — 모르는 것이 사실입니다. */}
       <div>
         <label className="field-label">
-          마지막 배출자 교육일 <span className="font-normal text-navy-300">(모르면 비워 두세요)</span>
+          마지막 배출자 교육일 <span className="font-normal text-navy-400">(모르면 비워 두세요)</span>
         </label>
         <input
           type="date"

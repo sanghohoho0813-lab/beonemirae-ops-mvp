@@ -110,7 +110,7 @@ type NumberTone = 'navy' | 'teal' | 'amber' | 'rose' | 'emerald'
 const numberTone: Record<NumberTone, string> = {
   navy: 'text-navy-900',
   teal: 'text-teal-600',
-  amber: 'text-amber-500',
+  amber: 'text-amber-700',
   rose: 'text-rose-500',
   emerald: 'text-emerald-500',
 }
@@ -297,7 +297,7 @@ export function MetricCard({
       <span className={`order-2 mt-2 hyphens-none break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
-        {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-300">{unit}</span>}
+        {unit && <span className="ml-1 text-[0.7em] font-bold text-navy-400">{unit}</span>}
       </span>
       {hint && <span className="order-3 mt-1.5 text-[0.98rem] text-navy-400 sm:text-[1.03rem]">{hint}</span>}
     </motion.div>
@@ -482,7 +482,7 @@ export function EmptyState({
 }) {
   return (
     <div className="card flex flex-col items-center justify-center px-6 py-12 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-50 text-navy-300">
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-50 text-navy-400">
         <Icon size={26} strokeWidth={2.2} />
       </span>
       <p className="t-card mt-3.5 break-keep text-navy-700">{title}</p>
@@ -533,7 +533,7 @@ export function FeatureCard({
           {badge}
         </span>
       )}
-      <ChevronRight size={18} className="shrink-0 text-navy-300" />
+      <ChevronRight size={18} className="shrink-0 text-navy-400" />
     </motion.button>
   )
 }

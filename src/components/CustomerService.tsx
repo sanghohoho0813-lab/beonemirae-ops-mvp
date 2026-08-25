@@ -120,7 +120,7 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
             )}
             <p className="t-label break-keep text-navy-500">{n.label}</p>
             {/* 칸 폭에 맞춰 자동 축소 — '123만원' 같은 값이 칸 밖으로 나가지 않게 */}
-            <p className={`t-stat mt-1.5 ${n.on ? 'text-navy-900' : 'text-navy-300'}`}>{n.value}</p>
+            <p className={`t-stat mt-1.5 ${n.on ? 'text-navy-900' : 'text-navy-400'}`}>{n.value}</p>
             <p className="t-muted mt-auto break-keep pt-1.5">{n.sub}</p>
           </div>
         ))}
@@ -136,12 +136,12 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.kind]].dot}`} />
                 <span className="t-body min-w-0 flex-1 break-keep font-extrabold text-navy-900">{r.label}</span>
                 <span className="t-body shrink-0 whitespace-nowrap text-navy-500">
-                  요청 {r.requested}건 <span className="text-navy-300">→</span> 처리 {r.handled}건{' '}
-                  <span className="text-navy-300">→</span>
+                  요청 {r.requested}건 <span className="text-navy-400">→</span> 처리 {r.handled}건{' '}
+                  <span className="text-navy-400">→</span>
                 </span>
                 <span
                   className={`t-body shrink-0 whitespace-nowrap font-extrabold ${
-                    r.revenue > 0 ? 'text-emerald-600' : 'text-navy-300'
+                    r.revenue > 0 ? 'text-emerald-600' : 'text-navy-400'
                   }`}
                 >
                   {r.revenue > 0 ? wonShort(r.revenue) : r.revenuePending > 0 ? '매출 미입력' : '—'}
@@ -182,7 +182,7 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
                   {r.content.length > 40 ? r.content.slice(0, 40) + '…' : r.content}
                 </p>
               </div>
-              <ChevronRight size={17} className="shrink-0 text-navy-300" />
+              <ChevronRight size={17} className="shrink-0 text-navy-400" />
             </Link>
           ))}
         </div>

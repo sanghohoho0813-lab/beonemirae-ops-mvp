@@ -134,7 +134,7 @@ export function FieldTodayCard() {
                   {i.containerTotal != null && ` (${i.containerTotal}개)`}
                 </span>
               ) : (
-                <span data-field-nocontainer={i.clientId} className="t-caption break-keep text-navy-300">
+                <span data-field-nocontainer={i.clientId} className="t-caption break-keep text-navy-400">
                   용기 미기재
                 </span>
               )}
@@ -247,7 +247,7 @@ export function LastCollectionLine({ clientId, className = '' }: { clientId: str
   const last = lastCollectionOf(data, clientId)
   if (!last) {
     return (
-      <span data-last-collection={clientId} className={`t-caption text-navy-300 ${className}`}>
+      <span data-last-collection={clientId} className={`t-caption text-navy-400 ${className}`}>
         수거 기록 없음
       </span>
     )

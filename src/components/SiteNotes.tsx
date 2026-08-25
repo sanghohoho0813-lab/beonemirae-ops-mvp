@@ -158,7 +158,7 @@ export function SiteNotesPanel({ clientId }: { clientId: string }) {
                 <button
                   onClick={() => removeNote(n.id)}
                   title="삭제"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-navy-300 transition hover:text-rose-500"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-navy-400 transition hover:text-rose-500"
                 >
                   <X size={17} strokeWidth={2.6} />
                 </button>

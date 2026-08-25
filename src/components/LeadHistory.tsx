@@ -74,7 +74,7 @@ export function ClientLeadHistory({
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {l.history.map((h, i) => (
                 <span key={`${h.stage}-${i}`} className="inline-flex items-center gap-1.5">
-                  {i > 0 && <ArrowRight size={14} className="text-navy-300" strokeWidth={2.6} />}
+                  {i > 0 && <ArrowRight size={14} className="text-navy-400" strokeWidth={2.6} />}
                   <span className="t-muted font-bold text-navy-600">
                     {h.stage}
                     <span className="ml-1 font-medium text-navy-400">{h.at.slice(5, 10).replace('-', '/')}</span>

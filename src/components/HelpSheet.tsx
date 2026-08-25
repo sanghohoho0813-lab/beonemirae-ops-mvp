@@ -83,7 +83,7 @@ export function HelpSheet({
               화면을 짚어가며 어디에 무엇을 입력하는지 안내합니다.
             </span>
           </span>
-          <ChevronRight size={20} className="mt-2 shrink-0 text-navy-300" />
+          <ChevronRight size={20} className="mt-2 shrink-0 text-navy-400" />
         </button>
 
         {showWhy && (
@@ -104,7 +104,7 @@ export function HelpSheet({
               AX 전환 · 정책자금 · 사업고도화 · 추가 매출 · 향후 개발 방향
             </span>
           </span>
-          <ChevronRight size={20} className="mt-2 shrink-0 text-navy-300" />
+          <ChevronRight size={20} className="mt-2 shrink-0 text-navy-400" />
         </button>
         )}
 
@@ -130,7 +130,7 @@ export function HelpSheet({
                 불편한 것 · 실제와 다른 것을 알려 주세요. 고르기만 하셔도 됩니다.
               </span>
             </span>
-            <ChevronRight size={20} className="mt-2 shrink-0 text-navy-300" />
+            <ChevronRight size={20} className="mt-2 shrink-0 text-navy-400" />
           </button>
         )}
 

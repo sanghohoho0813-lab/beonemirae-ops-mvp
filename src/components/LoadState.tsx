@@ -52,7 +52,7 @@ export function LoadingState({
       data-load-state="loading"
       className="card flex flex-col items-center justify-center px-6 py-12 text-center"
     >
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-50 text-navy-300">
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-50 text-navy-400">
         <Loader2 size={26} strokeWidth={2.2} className="animate-spin" />
       </span>
       <p className="t-card mt-3.5 break-keep text-navy-700">{title}</p>

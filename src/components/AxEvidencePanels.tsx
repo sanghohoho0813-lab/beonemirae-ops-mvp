@@ -56,7 +56,7 @@ function NumberRow({ n }: { n: AxNumber }) {
       <span className="t-body min-w-[7rem] flex-1 break-keep font-bold text-navy-700">{n.label}</span>
       <b
         data-ax-value={n.key}
-        className={`t-card shrink-0 tabular-nums ${n.value == null ? 'text-navy-300' : 'text-navy-900'}`}
+        className={`t-card shrink-0 tabular-nums ${n.value == null ? 'text-navy-400' : 'text-navy-900'}`}
       >
         {fmt(n)}
       </b>
@@ -122,19 +122,19 @@ function BeforeAfter({ cmp }: { cmp: AxCompare }) {
                       <td className="t-body break-keep py-2.5 pr-3 font-bold text-navy-700">{r.label}</td>
                       <td
                         data-ax-cmp-before={r.key}
-                        className={`t-body py-2.5 pr-3 text-right tabular-nums ${r.before == null ? 'text-navy-300' : 'text-navy-600'}`}
+                        className={`t-body py-2.5 pr-3 text-right tabular-nums ${r.before == null ? 'text-navy-400' : 'text-navy-600'}`}
                       >
                         {r.before == null ? '기록 없음' : fmtV(r.before, r.unit)}
                       </td>
                       <td
                         data-ax-cmp-after={r.key}
-                        className={`t-body py-2.5 pr-3 text-right font-extrabold tabular-nums ${r.after == null ? 'text-navy-300' : 'text-navy-900'}`}
+                        className={`t-body py-2.5 pr-3 text-right font-extrabold tabular-nums ${r.after == null ? 'text-navy-400' : 'text-navy-900'}`}
                       >
                         {fmtV(r.after, r.unit)}
                       </td>
                       <td
                         data-ax-cmp-diff={r.key}
-                        className={`t-body py-2.5 text-right tabular-nums ${good === true ? 'text-teal-700' : good === false ? 'text-rose-600' : 'text-navy-300'}`}
+                        className={`t-body py-2.5 text-right tabular-nums ${good === true ? 'text-teal-700' : good === false ? 'text-rose-600' : 'text-navy-400'}`}
                       >
                         {diff == null
                           ? '견줄 수 없음'
@@ -367,7 +367,7 @@ export function AxEvidencePanels({
                             className="py-2.5 pr-2 text-center tabular-nums"
                           >
                             {w.days < 2 ? (
-                              <span className="t-muted text-navy-300">·</span>
+                              <span className="t-muted text-navy-400">·</span>
                             ) : (
                               <span className="t-body text-navy-800">
                                 {w.max}

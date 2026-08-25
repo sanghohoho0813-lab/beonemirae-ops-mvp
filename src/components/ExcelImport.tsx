@@ -458,7 +458,7 @@ function Count({ label, n, tone }: { label: string; n: number; tone: 'teal' | 'n
   return (
     <div className="kpi-box min-w-0 rounded-2xl bg-navy-50 px-3.5 py-3">
       <p className="t-muted break-keep">{label}</p>
-      <p className={`t-stat mt-1 tabular-nums ${n > 0 ? color : 'text-navy-300'}`}>{n}건</p>
+      <p className={`t-stat mt-1 tabular-nums ${n > 0 ? color : 'text-navy-400'}`}>{n}건</p>
     </div>
   )
 }

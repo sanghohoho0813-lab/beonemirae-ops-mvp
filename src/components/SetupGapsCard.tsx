@@ -131,7 +131,7 @@ export function SetupGapsLine({ className = '' }: { className?: string } = {}) {
         아직 값이 비어서 못 쓰는 기능 {scan.gaps.length}가지
         {scan.moneyCount > 0 && <span className="text-rose-600"> · 돈 관련 {scan.moneyCount}가지</span>}
       </span>
-      <ArrowRight size={15} className="shrink-0 text-navy-300" strokeWidth={2.6} />
+      <ArrowRight size={15} className="shrink-0 text-navy-400" strokeWidth={2.6} />
     </Link>
   )
 }

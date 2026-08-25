@@ -29,6 +29,51 @@ const ok = (name, cond, detail = '') => {
 
 const b = await chromium.launch({ executablePath: EXEC })
 
+// ── ⓪ 재는 자가 실제로 무는가 ───────────────────────────────────────────────
+//
+//   자가 고장 나면 화면이 멀쩡해서가 아니라 **자가 아무것도 못 잡아서**
+//   전부 통과합니다. 그게 제일 나쁩니다 — 아무도 눈치채지 못합니다.
+//
+//   ⚠ 0082 에서 실제로 틀려 있었습니다. `bg-gradient-to-br` 로 칠한 칸은
+//     색이 `background-image` 라서, 자가 그걸 못 읽고 위로 올라가 **흰
+//     배경**을 찾아냈습니다. 그래서 진한 남색 위의 흰 글자가 「1.1:1 —
+//     거의 안 보임」으로 나왔습니다. 그 숫자를 믿고 글자를 어둡게 바꿨다면
+//     정말로 안 보이게 만들 뻔했습니다.
+//
+//   그래서 **잘 보이는 것 3 · 안 보이는 것 2** 를 일부러 심어 놓고,
+//   앞의 셋은 안 잡히고 뒤의 둘은 잡히는지 먼저 봅니다.
+{
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } })
+  const p = await ctx.newPage()
+  await p.setContent(`<main style="font-family:sans-serif">
+    <div style="background:linear-gradient(to bottom right, rgb(30,41,80), rgb(15,23,50));padding:20px">
+      <p style="color:rgb(255,255,255);font-size:17px">흰 글자 · 진한 남색 그라데이션</p>
+      <p style="color:rgb(199,210,254);font-size:17px">연한 남색 글자 · 진한 바탕</p>
+      <p style="color:rgb(71,85,105);font-size:17px">어두운 회색 글자 · 진한 바탕</p>
+    </div>
+    <div style="background:rgb(255,255,255);padding:20px">
+      <p style="color:rgb(203,213,225);font-size:17px">아주 연한 회색 · 흰 바탕</p>
+      <p style="color:rgb(15,23,42);font-size:17px">진한 글자 · 흰 바탕</p>
+      <button style="height:22px;width:120px;display:block">너무 작은 단추</button>
+      <p style="font-size:12px">아주 작은 글자</p>
+    </div></main>`)
+  const z = await measure(p)
+  const hit = (t) => z.grayList.some((g) => g.includes(t))
+
+  //  ㉮ 잘 보이는 것을 **안 잡아야** 합니다 (자가 과하게 물면 멀쩡한 걸 고칩니다)
+  ok('⓪ 자 — 진한 바탕 위 흰 글자를 잡지 않음', !hit('흰 글자 · 진한 남색'),
+    z.grayList.join(' | '))
+  ok('⓪ 자 — 진한 바탕 위 연한 남색 글자를 잡지 않음', !hit('연한 남색 글자'))
+  ok('⓪ 자 — 흰 바탕 위 진한 글자를 잡지 않음', !hit('진한 글자 · 흰 바탕'))
+
+  //  ㉯ 안 보이는 것은 **반드시 잡아야** 합니다
+  ok('⓪ 자 — 진한 바탕 위 어두운 글자를 잡음', hit('어두운 회색 글자'), z.grayList.join(' | '))
+  ok('⓪ 자 — 흰 바탕 위 연한 회색 글자를 잡음', hit('아주 연한 회색'), z.grayList.join(' | '))
+  ok('⓪ 자 — 44px 미만 단추를 잡음', z.tooSmall > 0, `${z.tooSmall}건`)
+  ok('⓪ 자 — 16px 미만 글자를 잡음', z.small > 0, `${z.small}건`)
+  await ctx.close()
+}
+
 //  현장 담당자가 실제로 도는 화면 + 병원 담당자 첫 화면
 const SCREENS = [
   ['field', '오늘 일정', '/today'],

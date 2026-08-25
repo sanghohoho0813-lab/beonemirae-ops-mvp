@@ -197,7 +197,7 @@ export function PricingAudit() {
       </div>
 
       <div className="relative mb-4">
-        <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" />
+        <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-400" />
         <input
           className="field-input w-full pl-11"
           placeholder="거래처 이름으로 찾기"

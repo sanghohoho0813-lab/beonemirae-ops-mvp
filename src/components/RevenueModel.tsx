@@ -121,7 +121,7 @@ export function RevenueModelCard({ data }: { data: AppData }) {
             <div key={r.label} className="flex flex-wrap items-start gap-x-3.5 gap-y-2 px-5 py-4 sm:px-6">
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                  dim ? 'bg-navy-50 text-navy-300' : TONE[r.tone].tile
+                  dim ? 'bg-navy-50 text-navy-400' : TONE[r.tone].tile
                 }`}
               >
                 <Icon size={20} strokeWidth={2.3} />

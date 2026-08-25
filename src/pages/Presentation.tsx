@@ -332,7 +332,7 @@ export function Presentation() {
         </div>
       </details>
 
-      <p className="mt-4 text-center text-[0.98rem] text-navy-300">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
+      <p className="mt-4 text-center text-[0.98rem] text-navy-400">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
     </div>
   )
 }

@@ -169,7 +169,7 @@ export function MonthClose() {
           <p className="text-[1.03rem] font-semibold text-navy-400">확정할 거래처</p>
           <p className="mt-1.5 text-2xl font-extrabold text-navy-900">
             {picked.length}
-            <span className="ml-0.5 text-base text-navy-300">곳</span>
+            <span className="ml-0.5 text-base text-navy-400">곳</span>
           </p>
         </div>
         <div className="card p-4">
@@ -180,21 +180,21 @@ export function MonthClose() {
           <p className="text-[1.03rem] font-semibold text-navy-400">기본 단가 섞임</p>
           <p className="mt-1.5 text-2xl font-extrabold text-amber-700">
             {close.defaultPricedCount}
-            <span className="ml-0.5 text-base text-navy-300">곳</span>
+            <span className="ml-0.5 text-base text-navy-400">곳</span>
           </p>
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">평소와 다른 수량</p>
           <p className="mt-1.5 text-2xl font-extrabold text-rose-500">
             {close.oddAmountCount}
-            <span className="ml-0.5 text-base text-navy-300">곳</span>
+            <span className="ml-0.5 text-base text-navy-400">곳</span>
           </p>
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">이미 확정·대상 아님</p>
           <p className="mt-1.5 text-2xl font-extrabold text-navy-400">
             {close.skipped.length}
-            <span className="ml-0.5 text-base text-navy-300">곳</span>
+            <span className="ml-0.5 text-base text-navy-400">곳</span>
           </p>
         </div>
       </div>
@@ -327,7 +327,7 @@ export function MonthClose() {
                   />
                   <span
                     className={`min-w-0 flex-1 basis-[10rem] break-keep font-bold ${
-                      on ? 'text-navy-900' : 'text-navy-300 line-through'
+                      on ? 'text-navy-900' : 'text-navy-400 line-through'
                     }`}
                   >
                     {r.clientName}

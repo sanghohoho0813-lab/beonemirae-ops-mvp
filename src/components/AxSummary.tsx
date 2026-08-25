@@ -67,7 +67,7 @@ export function AxSummaryCard({ data, compact = false }: { data: AppData; compac
             { label: '실제 추가매출', value: revenueText, accent: true },
           ].map((s, i) => (
             <div key={s.label} className="flex min-w-0 items-end gap-2">
-              {i > 0 && <ArrowRight size={26} className="mb-3 shrink-0 text-navy-300" strokeWidth={2.8} />}
+              {i > 0 && <ArrowRight size={26} className="mb-3 shrink-0 text-navy-400" strokeWidth={2.8} />}
               <Step label={s.label} value={s.value} accent={s.accent} />
             </div>
           ))}
@@ -102,7 +102,7 @@ export function AxSummaryCard({ data, compact = false }: { data: AppData; compac
             </div>
             <p className="t-kpi-sm mt-1 break-keep text-navy-900">
               <span className="text-navy-400">{h.before}</span>
-              <span className="mx-1.5 text-navy-300">→</span>
+              <span className="mx-1.5 text-navy-400">→</span>
               {/* '측정 중' 같은 상태 문구는 숫자보다 작게 — 좁은 칸에서 줄바꿈되지 않도록 */}
               <span
                 className={`${h.measuring ? 'text-[0.6em] text-navy-400' : h.emphasis ? 'text-teal-600' : 'text-navy-900'}`}

@@ -126,10 +126,10 @@ function MetricCard({ m, onSetBaseline }: { m: MetricRow; onSetBaseline: () => v
           <p className="t-muted font-bold">도입 전</p>
           <p className="t-kpi-sm mt-0.5 text-navy-400">{fmt(m.before, m.unit)}</p>
         </div>
-        <ArrowRight size={22} className="mb-2 shrink-0 text-navy-300" strokeWidth={2.6} />
+        <ArrowRight size={22} className="mb-2 shrink-0 text-navy-400" strokeWidth={2.6} />
         <div className="min-w-0">
           <p className="t-muted font-bold">도입 후</p>
-          <p className={`t-kpi-sm mt-0.5 ${m.after == null ? 'text-navy-300' : 'text-navy-900'}`}>
+          <p className={`t-kpi-sm mt-0.5 ${m.after == null ? 'text-navy-400' : 'text-navy-900'}`}>
             {fmt(m.after, m.unit)}
           </p>
         </div>
@@ -428,7 +428,7 @@ export function Performance() {
                 <span className="ml-0.5 text-[0.62em] font-bold text-navy-400">건</span>
               </p>
             </div>
-            <ArrowRight size={26} className="mb-3 shrink-0 text-navy-300" strokeWidth={2.8} />
+            <ArrowRight size={26} className="mb-3 shrink-0 text-navy-400" strokeWidth={2.8} />
             <div className="min-w-0">
               <p className="t-muted font-bold">자동 처리된 업무</p>
               <p className="t-kpi mt-1 text-teal-600">

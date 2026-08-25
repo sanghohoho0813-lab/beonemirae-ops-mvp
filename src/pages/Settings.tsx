@@ -121,7 +121,7 @@ function SettingCard({
         <ChevronDown
           size={20}
           strokeWidth={2.4}
-          className={`mt-2 shrink-0 text-navy-300 transition-transform sm:hidden ${open ? 'rotate-180' : ''}`}
+          className={`mt-2 shrink-0 text-navy-400 transition-transform sm:hidden ${open ? 'rotate-180' : ''}`}
         />
       </button>
       <div className={open ? 'mt-4' : 'mt-4 hidden sm:block'}>{children}</div>
@@ -345,7 +345,7 @@ export function Settings() {
               <ChevronDown
                 size={20}
                 strokeWidth={2.4}
-                className={`mt-2 shrink-0 text-navy-300 transition-transform sm:hidden ${baselineOpen ? 'rotate-180' : ''}`}
+                className={`mt-2 shrink-0 text-navy-400 transition-transform sm:hidden ${baselineOpen ? 'rotate-180' : ''}`}
               />
             </button>
             <div className={baselineOpen ? '' : 'hidden sm:block'}>

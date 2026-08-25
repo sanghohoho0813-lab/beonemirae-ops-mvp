@@ -463,7 +463,7 @@ export function TodaySchedule() {
                   ) : urgent ? (
                     <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급</span>
                   ) : (
-                    <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                    <ChevronRight size={18} className="shrink-0 text-navy-400" />
                   )}
                 </button>
                 {/*  ⚠ 0077 — 줄 자체를 누르면 지금처럼 **수거 입력**으로 갑니다
@@ -522,7 +522,7 @@ export function TodaySchedule() {
                         <span className="min-w-0 text-xl font-extrabold text-navy-900 [overflow-wrap:anywhere] [word-break:keep-all]">
                           {client?.name ?? '알 수 없는 거래처'}
                         </span>
-                        <ChevronRight size={16} className="shrink-0 text-navy-300" />
+                        <ChevronRight size={16} className="shrink-0 text-navy-400" />
                       </button>
                       <p className="mt-0.5 break-keep t-caption">
                         {client?.address} · {vehicle?.name ?? '미배정'}
@@ -809,7 +809,7 @@ export function TodaySchedule() {
                 className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
                 onClick={() => navigate(`/clients/${quickResult.clientId}`)}
               >
-                거래처 상세에서 확인 <ChevronRight size={16} className="text-navy-300" />
+                거래처 상세에서 확인 <ChevronRight size={16} className="text-navy-400" />
               </button>
               {/*  현장 담당자에게는 두 화면이 막혀 있습니다(access.ts).
                    눌러도 차단 안내만 뜨는 버튼은 두지 않습니다. */}
@@ -818,7 +818,7 @@ export function TodaySchedule() {
                   className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
                   onClick={() => navigate('/materials')}
                 >
-                  자재관리에서 확인 <ChevronRight size={16} className="text-navy-300" />
+                  자재관리에서 확인 <ChevronRight size={16} className="text-navy-400" />
                 </button>
               )}
               {canGoHistory && (
@@ -826,7 +826,7 @@ export function TodaySchedule() {
                   className="flex items-center justify-between rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] font-bold text-navy-700 transition active:scale-[0.98]"
                   onClick={() => navigate('/history')}
                 >
-                  전체 수거이력에서 확인 <ChevronRight size={16} className="text-navy-300" />
+                  전체 수거이력에서 확인 <ChevronRight size={16} className="text-navy-400" />
                 </button>
               )}
             </div>
@@ -936,7 +936,7 @@ function RequestBanner({
         </span>
         {urgent && <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급 포함</span>}
       </span>
-      <ChevronRight size={18} className="row-span-2 shrink-0 text-navy-300" />
+      <ChevronRight size={18} className="row-span-2 shrink-0 text-navy-400" />
       {/*  이름이 아무리 길어도 **한 줄**입니다. 넘치면 … 로 자릅니다 —
           세로로 늘어지는 것보다 잘리는 편이 읽힙니다. */}
       <span className="t-muted col-start-2 min-w-0 truncate">

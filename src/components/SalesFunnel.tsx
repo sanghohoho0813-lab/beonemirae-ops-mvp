@@ -29,7 +29,7 @@ function FunnelRow({ f }: { f: SalesFunnel }) {
     <div className="flex flex-wrap items-end gap-x-2 gap-y-3">
       {steps.map((s, i) => (
         <div key={s.label} className="flex min-w-0 items-end gap-2">
-          {i > 0 && <ArrowRight size={20} className="mb-2 shrink-0 text-navy-300" strokeWidth={2.6} />}
+          {i > 0 && <ArrowRight size={20} className="mb-2 shrink-0 text-navy-400" strokeWidth={2.6} />}
           <div className="min-w-0">
             <p className="t-muted font-bold">{s.label}</p>
             <p className={`t-kpi-sm mt-0.5 break-keep ${s.tone}`}>{s.value}</p>

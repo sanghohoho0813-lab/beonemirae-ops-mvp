@@ -306,7 +306,7 @@ export function MoveVisitModal({
 
             <div>
               <p className="t-label mb-1 text-navy-500">
-                방문 시각 <span className="font-normal text-navy-300">(안 정해도 됩니다)</span>
+                방문 시각 <span className="font-normal text-navy-400">(안 정해도 됩니다)</span>
               </p>
               <TimeField value={time} onChange={setTime} />
             </div>

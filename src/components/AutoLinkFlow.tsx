@@ -33,8 +33,8 @@ export function AutoLinkFlow() {
           </span>
         </button>
 
-        <ArrowRight size={28} className="hidden shrink-0 text-navy-300 xl:block" strokeWidth={2.4} />
-        <ArrowDown size={24} className="mx-auto shrink-0 text-navy-300 xl:hidden" strokeWidth={2.4} />
+        <ArrowRight size={28} className="hidden shrink-0 text-navy-400 xl:block" strokeWidth={2.4} />
+        <ArrowDown size={24} className="mx-auto shrink-0 text-navy-400 xl:hidden" strokeWidth={2.4} />
 
         {/* 자동으로 이어지는 업무 */}
         <div data-tour="core1" className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">

@@ -118,7 +118,7 @@ function Row({
           <>
             <span
               data-cost-amount={category}
-              className={`shrink-0 tabular-nums ${current == null ? 'text-navy-300' : 'font-extrabold text-navy-800'}`}
+              className={`shrink-0 tabular-nums ${current == null ? 'text-navy-400' : 'font-extrabold text-navy-800'}`}
             >
               {current == null ? '미입력' : won(current)}
             </span>

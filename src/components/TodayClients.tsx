@@ -81,7 +81,7 @@ export function TodayClients({ data, limit = 4 }: { data: AppData; limit?: numbe
                 )}
               </div>
             </div>
-            <ChevronRight size={20} className="mt-1 shrink-0 text-navy-300" />
+            <ChevronRight size={20} className="mt-1 shrink-0 text-navy-400" />
           </button>
         ))}
       </div>

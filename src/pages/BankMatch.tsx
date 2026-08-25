@@ -82,7 +82,7 @@ function LineRow({ r, onPick }: { r: MatchRow; onPick?: (paymentId: string) => v
       </span>
       <span className="shrink-0 tabular-nums font-extrabold text-navy-900">{won(r.line.amount)}</span>
       <span className="min-w-0 flex-1 basis-[8rem] break-keep font-semibold text-navy-700">
-        {r.line.description || <span className="text-navy-300">적요 없음</span>}
+        {r.line.description || <span className="text-navy-400">적요 없음</span>}
       </span>
       {r.best && (
         <span className="shrink-0 break-keep font-bold text-teal-700">
@@ -311,7 +311,7 @@ export function BankMatch() {
               <p className="text-[1.03rem] font-semibold text-navy-400">확실 — 바로 기록</p>
               <p className="mt-1.5 text-2xl font-extrabold text-teal-600">
                 {sum.sure}
-                <span className="ml-0.5 text-base text-navy-300">건</span>
+                <span className="ml-0.5 text-base text-navy-400">건</span>
               </p>
               <p className="mt-0.5 text-[0.98rem] text-navy-400">{won(sum.sureAmount)}</p>
             </div>
@@ -319,21 +319,21 @@ export function BankMatch() {
               <p className="text-[1.03rem] font-semibold text-navy-400">확인 필요</p>
               <p className="mt-1.5 text-2xl font-extrabold text-amber-700">
                 {sum.check}
-                <span className="ml-0.5 text-base text-navy-300">건</span>
+                <span className="ml-0.5 text-base text-navy-400">건</span>
               </p>
             </div>
             <div className="card p-4">
               <p className="text-[1.03rem] font-semibold text-navy-400">못 찾음</p>
               <p className="mt-1.5 text-2xl font-extrabold text-navy-900">
                 {sum.none}
-                <span className="ml-0.5 text-base text-navy-300">건</span>
+                <span className="ml-0.5 text-base text-navy-400">건</span>
               </p>
             </div>
             <div className="card p-4">
               <p className="text-[1.03rem] font-semibold text-navy-400">이미 기록</p>
               <p className="mt-1.5 text-2xl font-extrabold text-navy-400">
                 {sum.already}
-                <span className="ml-0.5 text-base text-navy-300">건</span>
+                <span className="ml-0.5 text-base text-navy-400">건</span>
               </p>
             </div>
           </div>

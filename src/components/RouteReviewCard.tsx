@@ -154,7 +154,7 @@ export function RouteReviewCard({ data }: { data: AppData }) {
             <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">
               검토했지만 제안하지 않은 곳 {rv.skipped.length}곳
             </span>
-            <ChevronDown size={17} className={`shrink-0 text-navy-300 transition-transform ${openSkip ? 'rotate-180' : ''}`} />
+            <ChevronDown size={17} className={`shrink-0 text-navy-400 transition-transform ${openSkip ? 'rotate-180' : ''}`} />
           </button>
           {openSkip && (
             <ul data-route-skipped className="mt-2 flex flex-col gap-1.5">
@@ -191,7 +191,7 @@ export function RouteReviewCard({ data }: { data: AppData }) {
           차량별 요일 부하 보기
           {skewed.length > 0 && <span className="text-amber-700"> · 몰린 차량 {skewed.length}대</span>}
         </span>
-        <ChevronDown size={17} className={`shrink-0 text-navy-300 transition-transform ${openSkew ? 'rotate-180' : ''}`} />
+        <ChevronDown size={17} className={`shrink-0 text-navy-400 transition-transform ${openSkew ? 'rotate-180' : ''}`} />
       </button>
       {openSkew && (
         <div className="mt-2 grid gap-2.5 xl:grid-cols-2 xl:items-start">

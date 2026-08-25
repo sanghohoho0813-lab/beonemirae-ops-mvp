@@ -129,7 +129,7 @@ export function TodayFocus({ data }: { data: AppData }) {
                   {t.count}
                   <span className="t-label text-navy-400">{t.unit}</span>
                 </span>
-                <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                <ChevronRight size={18} className="shrink-0 text-navy-400" />
               </Link>
             )
           })}

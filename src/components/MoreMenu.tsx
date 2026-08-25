@@ -388,6 +388,9 @@ export function MoreMenu({
                 </span>
                 <span className="min-w-0">
                   <span className="block break-keep font-bold">시연용 핵심 요약</span>
+                  {/*  ⚠ 어두운 바탕입니다 — 여기서는 **밝은** 색이 맞습니다 (0082).
+                       밝은 바탕의 흐린 글자를 navy-400 으로 옮길 때 여기까지
+                       같이 딸려 와서 3:1 이 됐습니다. */}
                   <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-300">
                     발표용 숫자 — 회사 규모 · 실적
                   </span>
@@ -466,14 +469,14 @@ export function MoreMenu({
            예전에는 여기만 다른 말이 적혀 있었습니다. */}
       <div data-brand-ax-mobile className="pb-1 text-center">
         <p className="text-[0.98rem] font-semibold text-navy-400">{SYSTEM_TAGLINE}</p>
-        <p className="mt-1 select-none text-[0.92rem] font-black uppercase tracking-[0.22em] text-amber-500">
+        <p className="mt-1 select-none text-[0.92rem] font-black uppercase tracking-[0.22em] text-amber-700">
           {SYSTEM_WORDMARK}
-          <span className="text-navy-300"> · </span>
+          <span className="text-navy-400"> · </span>
           {SYSTEM_WORDMARK_TAIL}
         </p>
         {/*  「시연용 MVP」를 뗐습니다 — 실제 운영에 쓰는 지금은 맞지 않고,
             현장에서는 자기가 넣은 기록이 연습용처럼 읽혔습니다. */}
-        <p className="mt-1 text-[0.92rem] text-navy-300">{COMPANY}</p>
+        <p className="mt-1 text-[0.92rem] text-navy-400">{COMPANY}</p>
       </div>
     </div>
   )

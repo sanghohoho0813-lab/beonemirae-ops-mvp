@@ -351,7 +351,7 @@ function ProductsTab({
           {grouped.map(([cat, list]) => (
             <div key={cat} data-product-group={cat}>
               <p className="t-label mb-1.5 text-navy-500">
-                {cat} <span className="text-navy-300">· {list.length}가지</span>
+                {cat} <span className="text-navy-400">· {list.length}가지</span>
               </p>
               {/*  물건은 **사진으로 고릅니다.** 한 줄에 하나씩 작은 아이콘만
                    두면 30가지 중에서 원하는 것을 찾기가 어렵습니다.
@@ -364,7 +364,7 @@ function ProductsTab({
                         사진이 들어와도 칸이 흔들리지 않습니다. */}
                     <span
                       data-product-thumb={p.id}
-                      className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl bg-navy-50 text-navy-300 ring-1 ring-navy-100"
+                      className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl bg-navy-50 text-navy-400 ring-1 ring-navy-100"
                     >
                       {p.imageUrl ? (
                         <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
@@ -521,7 +521,7 @@ function ProductsTab({
         <label className="field-label mt-2">사진 주소</label>
         <div className="flex items-center gap-2.5">
           {/*  넣기 전에 어떻게 보일지 그 자리에서 보여 줍니다. */}
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-300 ring-1 ring-navy-100">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-400 ring-1 ring-navy-100">
             {String(form.imageUrl ?? '') ? (
               <img src={String(form.imageUrl)} alt="" className="h-full w-full object-cover" />
             ) : (

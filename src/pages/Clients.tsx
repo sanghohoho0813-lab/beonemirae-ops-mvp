@@ -255,7 +255,7 @@ export function Clients() {
                       </p>
                     )}
                   </div>
-                  <ChevronRight size={16} className="shrink-0 text-navy-300" />
+                  <ChevronRight size={16} className="shrink-0 text-navy-400" />
                 </button>
               </li>
             )
@@ -380,7 +380,7 @@ export function Clients() {
                     수거 {done}건 · 청구 {billed}건{c.address ? ` · ${c.address}` : ''}
                   </span>
                 </span>
-                <ChevronRight size={18} className="shrink-0 text-navy-300" />
+                <ChevronRight size={18} className="shrink-0 text-navy-400" />
               </button>
             )
           })}

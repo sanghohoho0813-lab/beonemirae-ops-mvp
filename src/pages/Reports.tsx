@@ -78,12 +78,12 @@ export function Reports() {
           <SectionTitle>거래처 선택</SectionTitle>
           <div className="card p-3">
             <div className="relative">
-              <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-300" />
+              <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-400" />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="병원명 검색"
-                className="w-full rounded-2xl border-0 bg-navy-50 py-3 pl-11 pr-3 text-[1.12rem] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400"
+                className="w-full rounded-2xl border-0 bg-navy-50 py-3 pl-11 pr-3 text-[1.12rem] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:text-navy-400 focus:bg-white focus:ring-2 focus:ring-teal-400"
               />
             </div>
             <div className="mt-2 max-h-[420px] space-y-1 overflow-y-auto lg:max-h-[560px]">
@@ -97,7 +97,7 @@ export function Reports() {
                       active ? 'bg-teal-500 text-white' : 'hover:bg-navy-50'
                     }`}
                   >
-                    <Building2 size={18} className={`shrink-0 ${active ? 'text-white/80' : 'text-navy-300'}`} />
+                    <Building2 size={18} className={`shrink-0 ${active ? 'text-white/80' : 'text-navy-400'}`} />
                     <span className="min-w-0 flex-1">
                       <span
                         className={`block text-[1.12rem] font-bold leading-snug [overflow-wrap:anywhere] [word-break:keep-all] ${
@@ -114,7 +114,7 @@ export function Reports() {
                         {weight(r.totalKg)} · {r.visits}회
                       </span>
                     </span>
-                    <ChevronRight size={17} className={`shrink-0 ${active ? 'text-white/70' : 'text-navy-300'}`} />
+                    <ChevronRight size={17} className={`shrink-0 ${active ? 'text-white/70' : 'text-navy-400'}`} />
                   </button>
                 )
               })}

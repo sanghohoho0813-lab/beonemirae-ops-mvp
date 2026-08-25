@@ -63,7 +63,7 @@ function StepCard({ step, order }: { step: ProgressStep; order: number }) {
       )}
 
       {/*  숫자가 어디서 온 값인지 — 추정과 실제를 섞지 않기 위해 늘 적습니다 */}
-      <p data-progress-source={step.key} className="break-keep text-[0.94rem] leading-snug text-navy-300">
+      <p data-progress-source={step.key} className="break-keep text-[0.94rem] leading-snug text-navy-400">
         출처 · {step.source}
       </p>
 
@@ -225,7 +225,7 @@ export function MonthProgressPanel({ month }: { month: string }) {
             <p className="text-[1.03rem] font-semibold text-navy-400">남은 단계 없음</p>
             <p data-progress-count className="mt-0.5 text-2xl font-extrabold tabular-nums text-navy-900">
               {p.done}
-              <span className="text-base text-navy-300"> / {p.steps.length}</span>
+              <span className="text-base text-navy-400"> / {p.steps.length}</span>
             </p>
           </div>
         </div>

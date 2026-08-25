@@ -104,7 +104,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
           {pending ? (
             <Clock size={40} className="mx-auto text-teal-500" />
           ) : (
-            <ShieldAlert size={40} className="mx-auto text-amber-500" />
+            <ShieldAlert size={40} className="mx-auto text-amber-700" />
           )}
           <p className="t-card mt-4 break-keep text-navy-900">
             {pending ? '승인을 기다리는 중입니다' : '비활성화된 계정입니다'}
@@ -140,7 +140,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return (
       <FullScreen>
         <div className="card max-w-[32rem] p-6 text-center sm:p-8">
-          <ShieldAlert size={40} className="mx-auto text-navy-300" />
+          <ShieldAlert size={40} className="mx-auto text-navy-400" />
           <p className="t-card mt-4 break-keep text-navy-900">접근 권한이 없는 화면입니다</p>
           <p className="t-body mt-2 break-keep font-medium text-navy-500">
             현재 역할({ROLE_LABEL[profile.role]})에게 허용되지 않은 메뉴입니다.

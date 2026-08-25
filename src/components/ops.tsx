@@ -274,7 +274,7 @@ export function BusinessPlanCard() {
         {BUSINESS_PLAN.map((b) => (
           <div key={b.goal} className="flex items-center gap-2 rounded-2xl bg-navy-50 px-3.5 py-2.5">
             <span className="min-w-0 flex-1 text-[1.08rem] font-semibold text-navy-700">{b.goal}</span>
-            <span className="shrink-0 text-navy-300">→</span>
+            <span className="shrink-0 text-navy-400">→</span>
             <span className="min-w-0 flex-1 text-right text-[1.08rem] font-bold text-teal-700">{b.feature}</span>
           </div>
         ))}

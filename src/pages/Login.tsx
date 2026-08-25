@@ -61,7 +61,7 @@ export function Login() {
           </span>
           <div className="min-w-0">
             <p className="t-section break-keep text-white">㈜비원미래 운영관리 시스템</p>
-            <p className="t-body mt-1 break-keep font-medium text-navy-300">{SYSTEM_TAGLINE}</p>
+            <p className="t-body mt-1 break-keep font-medium text-navy-400">{SYSTEM_TAGLINE}</p>
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export function Login() {
                   이메일
                 </label>
                 <div className="relative mt-1.5">
-                  <Mail size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-300" />
+                  <Mail size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-400" />
                   <input
                     id="login-email"
                     type="email"
@@ -133,7 +133,7 @@ export function Login() {
                   비밀번호
                 </label>
                 <div className="relative mt-1.5">
-                  <Lock size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-300" />
+                  <Lock size={19} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-400" />
                   <input
                     id="login-password"
                     type="password"
@@ -191,7 +191,7 @@ export function Login() {
               </Link>
 
               <div className="flex items-start gap-2.5 border-t border-navy-100 pt-4">
-                <ShieldCheck size={19} className="mt-0.5 shrink-0 text-navy-300" />
+                <ShieldCheck size={19} className="mt-0.5 shrink-0 text-navy-400" />
                 <p className="t-muted min-w-0 break-keep">
                   가입 신청은 관리자가 승인해야 사용할 수 있습니다. 승인 전에는 어떤 정보도 열리지 않으며,
                   비밀번호는 시스템에 저장되지 않습니다.

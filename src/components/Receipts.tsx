@@ -154,7 +154,7 @@ export function ReceiptPanel({
                 }}
                 title="입금 기록 삭제"
                 aria-label="입금 기록 삭제"
-                className="shrink-0 rounded-xl p-2 text-navy-300 transition hover:bg-rose-50 hover:text-rose-500"
+                className="shrink-0 rounded-xl p-2 text-navy-400 transition hover:bg-rose-50 hover:text-rose-500"
               >
                 <Trash2 size={15} strokeWidth={2.2} />
               </button>

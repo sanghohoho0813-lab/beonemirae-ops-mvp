@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -7,7 +7,7 @@ import { PageHeader } from '../components/PageHeader'
 import { FilterChip } from '../components/ui'
 import { CollectionRecord } from '../components/CollectionRecord'
 import { facilityByWaste } from '../data/ops'
-import { weight, today, shiftDays } from '../lib/format'
+import { num, weight, today, shiftDays } from '../lib/format'
 import type { WasteType } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,8 +37,15 @@ export function CollectionHistory() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [waste, setWaste] = useState<WasteFilter>('전체')
   const [kind, setKind] = useState<KindFilter>('전체')
+  //  한 번에 그리는 줄 수 (0082). 5,634줄을 한 장에 그리면 폰이 버벅이고,
+  //  60줄에서 말없이 자르면 위 KPI 숫자와 어긋나 보입니다.
+  const PAGE = 60
+  const [shown, setShown] = useState(PAGE)
   const [period, setPeriod] = useState<PeriodFilter>('전체')
   const [query, setQuery] = useState('')
+  //  ⚠ 조건을 바꾸면 처음부터 봅니다. 안 그러면 「이번 달」로 좁혔는데
+  //    120줄이 그려져 있고 「더 보기」가 남은 것처럼 보입니다.
+  useEffect(() => { setShown(PAGE) }, [waste, kind, period, query])
 
   const rows = useMemo(() => {
     const t = today()
@@ -109,7 +116,7 @@ export function CollectionHistory() {
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">전체 수거건수</p>
-          <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[0.55em] text-navy-300">건</span></p>
+          <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[0.55em] text-navy-400">건</span></p>
         </div>
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">총 수거량</p>
@@ -117,11 +124,11 @@ export function CollectionHistory() {
         </div>
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">긴급수거</p>
-          <p className="t-stat mt-1.5 text-rose-500">{urgent}<span className="ml-0.5 text-[0.55em] text-navy-300">건</span></p>
+          <p className="t-stat mt-1.5 text-rose-500">{urgent}<span className="ml-0.5 text-[0.55em] text-navy-400">건</span></p>
         </div>
         <div className="card kpi-box p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">인계 완료율</p>
-          <p className="t-stat mt-1.5 text-navy-900">{handoverRate}<span className="ml-0.5 text-[0.55em] text-navy-300">%</span></p>
+          <p className="t-stat mt-1.5 text-navy-900">{handoverRate}<span className="ml-0.5 text-[0.55em] text-navy-400">%</span></p>
         </div>
       </div>
 
@@ -143,6 +150,19 @@ export function CollectionHistory() {
         ))}
       </div>
 
+      {/*  ── 몇 건 중 몇 건을 보고 있는가 (0082) ──────────────────────────
+           위 KPI 는 「전체 수거건수 5,634건」이라고 하는데 표에는 60줄만
+           있었습니다. 안내는 표 **아래**, 긴 스크롤 끝에 작은 회색 글씨로
+           한 줄 있었을 뿐이고, 더 볼 방법도 없었습니다.
+           숫자 둘이 어긋나 보이면 「자료가 없어졌나」로 읽힙니다. */}
+      {rows.length > 0 && (
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+          <p data-history-count className="t-muted">
+            {rows.length > shown ? `${num(rows.length)}건 중 ${num(shown)}건` : `${num(rows.length)}건 전부`}
+          </p>
+        </div>
+      )}
+
       {/* 테이블 */}
       <div className="card overflow-x-auto p-1">
         <table className="w-full border-collapse text-left text-[0.98rem]">
@@ -154,7 +174,7 @@ export function CollectionHistory() {
             </tr>
           </thead>
           <tbody>
-            {rows.slice(0, 60).map((r) => (
+            {rows.slice(0, shown).map((r) => (
               <tr
                 key={r.id}
                 data-history-row={r.id}
@@ -195,7 +215,7 @@ export function CollectionHistory() {
                       </button>
                     ) : (
                       //  왜 못 고치는지 적습니다 — 빈 칸이면 고장으로 보입니다.
-                      <span className="text-[0.95rem] text-navy-300">
+                      <span className="text-[0.95rem] text-navy-400">
                         {r.completed ? '엑셀 기록' : '아직 미완료'}
                       </span>
                     )}
@@ -218,7 +238,15 @@ export function CollectionHistory() {
           {error}
         </p>
       )}
-      {rows.length > 60 && <p className="mt-2 px-1 text-[0.98rem] text-navy-400">최근 60건까지 표시합니다.</p>}
+      {rows.length > shown && (
+        <button
+          data-history-more
+          className="btn-ghost mt-3 min-h-[44px] w-full"
+          onClick={() => setShown((n) => n + PAGE)}
+        >
+          {num(rows.length - shown)}건 더 보기
+        </button>
+      )}
 
       <CollectionRecord eventId={openId} onClose={() => setOpenId(null)} />
     </div>

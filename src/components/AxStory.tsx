@@ -127,7 +127,7 @@ export function AxStoryStrip({ data }: { data: AppData }) {
               <div className="flex items-center gap-2">
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    s.on ? at.tile : 'bg-navy-50 text-navy-300'
+                    s.on ? at.tile : 'bg-navy-50 text-navy-400'
                   }`}
                 >
                   <Icon size={19} strokeWidth={2.3} />
@@ -140,7 +140,7 @@ export function AxStoryStrip({ data }: { data: AppData }) {
                 </span>
               </div>
               <p className="t-label mt-2 min-w-0 break-keep text-navy-500">{s.label}</p>
-              <p className={`t-stat mt-1 ${s.on ? 'text-navy-900' : 'text-navy-300'}`}>{s.value}</p>
+              <p className={`t-stat mt-1 ${s.on ? 'text-navy-900' : 'text-navy-400'}`}>{s.value}</p>
               <p className="t-muted mt-auto break-keep pt-1.5">{s.sub}</p>
             </div>
           )

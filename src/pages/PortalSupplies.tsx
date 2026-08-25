@@ -201,7 +201,7 @@ export function PortalSupplies() {
               >
                 {/*  사진 자리 — 실제 제품 사진이 정해지면 여기 들어갑니다.
                     없는 사진을 지어내지 않습니다. */}
-                <span className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-300">
+                <span className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-400">
                   {p.imageUrl ? (
                     <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
                   ) : (

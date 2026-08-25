@@ -36,7 +36,7 @@ export function ReportHighlight({ reports }: { reports: MonthlyReport[] }) {
                 이번 달 {weight(r.totalKg)} · {r.visits}회 수거
               </p>
             </div>
-            <ChevronRight size={20} className="shrink-0 text-navy-300" />
+            <ChevronRight size={20} className="shrink-0 text-navy-400" />
           </button>
         ))}
         {top.length === 0 && (

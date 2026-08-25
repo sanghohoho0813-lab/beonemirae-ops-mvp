@@ -244,7 +244,7 @@ export function BookVisitModal({
         {/* 시각 — 안 정해도 됩니다 */}
         <div>
           <p className="t-label mb-1 text-navy-500">
-            방문 시각 <span className="font-normal text-navy-300">(안 정해도 됩니다)</span>
+            방문 시각 <span className="font-normal text-navy-400">(안 정해도 됩니다)</span>
           </p>
           <TimeField value={time} onChange={setTime} />
         </div>
@@ -252,7 +252,7 @@ export function BookVisitModal({
         {/* 차량 — 미리 정해 두면 배차에 반영됩니다 */}
         <label className="block">
           <span className="t-label mb-1 block text-navy-500">
-            차량 <span className="font-normal text-navy-300">(나중에 배차에서 정해도 됩니다)</span>
+            차량 <span className="font-normal text-navy-400">(나중에 배차에서 정해도 됩니다)</span>
           </span>
           <select
             data-book-vehicle
@@ -272,7 +272,7 @@ export function BookVisitModal({
         {/* 메모 — 기사님이 보는 말 */}
         <label className="block">
           <span className="t-label mb-1 block text-navy-500">
-            메모 <span className="font-normal text-navy-300">(기사님 화면에 그대로 보입니다)</span>
+            메모 <span className="font-normal text-navy-400">(기사님 화면에 그대로 보입니다)</span>
           </span>
           <input
             data-book-memo

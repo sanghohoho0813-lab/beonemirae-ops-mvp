@@ -423,7 +423,7 @@ export function ClientDetail() {
             <button className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-navy-600" onClick={openEdit}>
               <Pencil size={14} /> 수정
             </button>
-            <button data-client-retire className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={confirmRemove}>
+            <button data-client-retire className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-rose-500" onClick={confirmRemove}>
               <Trash2 size={14} /> 거래 종료
             </button>
             {/*
@@ -432,7 +432,7 @@ export function ClientDetail() {
               뜻이 다르므로 버튼을 따로 둡니다.
             */}
             {role === 'admin' && (
-              <button data-client-purge className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-300 transition hover:text-rose-500" onClick={() => void confirmPurge()}>
+              <button data-client-purge className="-mx-1 flex min-h-[2.75rem] items-center gap-1 px-1 text-[1.08rem] font-bold text-navy-400 transition hover:text-rose-500" onClick={() => void confirmPurge()}>
                 <Trash2 size={14} /> 삭제
               </button>
             )}
@@ -557,7 +557,7 @@ export function ClientDetail() {
         {canSeeMoney && (
           <details data-lead-history className="rounded-2xl bg-navy-50 px-3.5 py-2.5">
             <summary className="t-muted cursor-pointer list-none font-extrabold text-navy-500">
-              영업 전환 이력 <span className="font-normal text-navy-300">· 담당자 기록 기준</span>
+              영업 전환 이력 <span className="font-normal text-navy-400">· 담당자 기록 기준</span>
             </summary>
             <div className="mt-2">
               <ClientLeadHistory data={data} clientId={client.id} flat />
@@ -817,7 +817,7 @@ export function ClientDetail() {
                 <p className="font-bold text-navy-900">전체 수거이력 보기</p>
                 <p className="text-[0.98rem] text-navy-400">기간·차량·폐기물 구분 필터로 전체 이력을 확인합니다</p>
               </div>
-              <ChevronRight size={18} className="shrink-0 text-navy-300" />
+              <ChevronRight size={18} className="shrink-0 text-navy-400" />
             </button>
           )}
         </div>

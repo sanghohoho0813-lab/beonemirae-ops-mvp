@@ -148,7 +148,7 @@ export function UrgentRiskCard({ clientId }: { clientId: string }) {
         <AlertTriangle
           size={17}
           strokeWidth={2.5}
-          className={`shrink-0 ${act ? 'text-amber-700' : 'text-navy-300'}`}
+          className={`shrink-0 ${act ? 'text-amber-700' : 'text-navy-400'}`}
         />
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">
           {act

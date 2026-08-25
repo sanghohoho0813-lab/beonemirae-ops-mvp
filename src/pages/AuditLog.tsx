@@ -102,7 +102,7 @@ export function AuditLog() {
 
       {mode !== 'live' ? (
         <div className="card flex flex-wrap items-center gap-3 p-5 sm:p-6">
-          <ShieldAlert size={22} className="shrink-0 text-amber-500" />
+          <ShieldAlert size={22} className="shrink-0 text-amber-700" />
           <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-500">
             감사로그는 서버(Supabase)에 로그인한 실제 운영 모드에서만 기록·조회됩니다. 현재는 시연 모드입니다.
           </p>
