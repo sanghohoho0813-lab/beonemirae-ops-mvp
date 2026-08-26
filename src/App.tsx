@@ -43,6 +43,7 @@ import { PortalBilling } from './pages/PortalBilling'
 import { PortalSupport } from './pages/PortalSupport'
 import { Supplies } from './pages/Supplies'
 import { PortalHistory } from './pages/PortalHistory'
+import { PortalSelect } from './pages/PortalSelect'
 import { RequireAuth } from './components/RequireAuth'
 import { TourOverlay } from './components/TourOverlay'
 
@@ -76,7 +77,24 @@ export default function App() {
         <Route path="signup" element={<Signup />} />
         <Route path="reset-password" element={<ResetPassword />} />
 
-        {/* 병원 고객 포털 — 내부 운영 레이아웃과 완전히 분리된 단순 화면 */}
+        {/*  ── 병원 고객 포털 ─────────────────────────────────────────────────
+             내부 운영 레이아웃과 완전히 분리된 단순 화면입니다.
+
+             ⚠ 0088 — **길이 둘입니다.**
+
+               /portal/...          병원 계정. 자기 병원 하나뿐이라 id 가
+                                    주소에 없습니다 — 고를 것이 없으니
+                                    보여 줄 이유도 없습니다.
+               /portal/c/<id>/...   직원이 그 병원 화면을 확인할 때.
+
+             ⚠ 병원 id 가 **경로 안**에 있는 것이 핵심입니다. 0085 에서는
+               `?client=<id>` 였는데, 메뉴 단추가 물음표 뒤를 안 달고 있어서
+               한 번 누르면 어느 병원인지 사라졌습니다(대표님 신고).
+               경로에 있으면 메뉴를 눌러도, 새로고침해도, 뒤로가기를 해도
+               안 지워집니다.
+
+             ⚠ `c` 한 글자가 있어야 `/portal/report` 의 `report` 를 병원 id 로
+               잘못 읽지 않습니다. */}
         <Route
           path="portal"
           element={
@@ -90,6 +108,24 @@ export default function App() {
           <Route path="history" element={<PortalHistory />} />
           <Route path="supplies" element={<PortalSupplies />} />
           {/*  0083 — 정산 확인 · 문의(티켓). 병원이 전화로 물어보던 두 가지입니다. */}
+          <Route path="billing" element={<PortalBilling />} />
+          <Route path="support" element={<PortalSupport />} />
+          {/*  직원이 병원을 고르는 화면 (0088). **일반 메뉴 이동으로는 여기
+               오지 않습니다** — 「병원 변경」을 눌렀을 때만 옵니다. */}
+          <Route path="select" element={<PortalSelect />} />
+        </Route>
+        <Route
+          path="portal/c/:clientId"
+          element={
+            <RequireAuth>
+              <PortalLayout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<PortalHome />} />
+          <Route path="report" element={<PortalReport />} />
+          <Route path="history" element={<PortalHistory />} />
+          <Route path="supplies" element={<PortalSupplies />} />
           <Route path="billing" element={<PortalBilling />} />
           <Route path="support" element={<PortalSupport />} />
         </Route>

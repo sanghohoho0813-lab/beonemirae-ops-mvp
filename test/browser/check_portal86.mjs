@@ -31,7 +31,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
 
 // ── ① 분석 칸은 **AI 라고 하지 않는다** ────────────────────────────────────
 {
-  const { ctx, p } = await open('/portal?client=c1', 'admin')
+  const { ctx, p } = await open('/portal/c/c1', 'admin')
   const panel = p.locator('[data-portal-insight]')
   ok((await panel.count()) === 1, '병원 첫 화면에 「배출 분석」 칸이 있다')
 
@@ -69,7 +69,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
     access_token: 't', token_type: 'bearer', expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u,
   })), ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }])
-  await p.goto(`${W.BASE}/portal?client=c1`, { waitUntil: 'domcontentloaded' })
+  await p.goto(`${W.BASE}/portal/c/c1`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state); await p.waitForTimeout(800)
 
   const items = await p.locator('[data-insight]').count()
@@ -81,7 +81,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
 
 // ── ③ 하단 정보 칸 — **있는 것만** ────────────────────────────────────────
 {
-  const { ctx, p } = await open('/portal?client=c1', 'admin')
+  const { ctx, p } = await open('/portal/c/c1', 'admin')
   const f = p.locator('[data-portal-footer]')
   ok((await f.count()) === 1, '화면 맨 아래에 병원 등록 정보 칸이 있다')
   const t = flat(await f.innerText())
@@ -102,7 +102,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
 
 // ── ④ 「고객 포털」 이름표 ────────────────────────────────────────────────
 {
-  const { ctx, p } = await open('/portal?client=c1', 'admin')
+  const { ctx, p } = await open('/portal/c/c1', 'admin')
   const badge = p.locator('[data-portal-badge]:visible')
   ok((await badge.count()) === 1, '머리띠에 「고객 포털」 이름표가 있다 (내부 화면과 구분)')
   ok(flat(await badge.innerText()) === '고객 포털', '이름표 글자가 「고객 포털」이다')
@@ -111,7 +111,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
 
 // ── ⑤ 수거 이력 — 기간을 고를 수 있다 ─────────────────────────────────────
 {
-  const { ctx, p } = await open('/portal/history?client=c0', 'admin')
+  const { ctx, p } = await open('/portal/c/c0/history', 'admin')
   const total = () => p.locator('[data-hist-total]').innerText().then(flat)
   const rows = () => p.locator('table tbody tr').count()
 
@@ -161,7 +161,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
 
 // ── ⑥ 폭별 — 넘치지 않고, 분석 칸이 넓은 화면에서는 옆으로 간다 ──────────
 for (const w of [1920, 1440, 768, 390, 360]) {
-  const { ctx, p } = await open('/portal?client=c1', 'admin', w)
+  const { ctx, p } = await open('/portal/c/c1', 'admin', w)
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   ok(over === 0, `${w}px — 가로로 넘치지 않는다`, `${over}px`)
 
@@ -178,7 +178,7 @@ for (const w of [1920, 1440, 768, 390, 360]) {
 // ── ⑦ 폰에서 「수거 요청」이 여전히 첫 화면 안에 있다 ──────────────────────
 //     ⚠ 새 칸을 넣을 때마다 이것이 밀립니다. 매번 다시 잽니다.
 {
-  const { ctx, p } = await open('/portal?client=c1', 'admin', 390)
+  const { ctx, p } = await open('/portal/c/c1', 'admin', 390)
   const box = await p.locator('[data-portal-cta="collect"]').boundingBox()
   ok(box.y < 844, `폰 첫 화면 안에 「수거 요청」이 있다`, `y=${Math.round(box.y)}`)
   const sup = await p.locator('[data-portal-cta="supplies"]').boundingBox()
@@ -197,7 +197,7 @@ for (const w of [1920, 1440, 768, 390, 360]) {
 //       옆으로 48px 이 잘렸고, 잘린 쪽에 있던 것이 하필 「전체」였습니다 —
 //       인증·실사에서 제일 많이 쓰는 그 단추를 병원이 못 찾습니다.
 {
-  const { ctx, p } = await open('/portal/history?client=c0', 'admin', 390)
+  const { ctx, p } = await open('/portal/c/c0/history', 'admin', 390)
   const sel = p.locator('[data-hist-period-select]')
   ok((await sel.count()) === 1, '폰에서는 기간을 고르는 칸이 있다')
 
@@ -233,7 +233,7 @@ for (const w of [1920, 1440, 768, 390, 360]) {
 //     ⚠ 배차가 요청을 받고 병원에 **다시 전화해서 묻던** 두 가지입니다.
 {
   //  판을 아직 안 올린 서버 — 물어보면 안 됩니다. 저장할 데가 없습니다.
-  const old = await open('/portal?client=c1', 'admin', 1440, 83)
+  const old = await open('/portal/c/c1', 'admin', 1440, 83)
   await old.p.locator('[data-portal-cta="collect"]').click(); await old.p.waitForTimeout(500)
   ok((await old.p.locator('[data-req-kg]').count()) === 0,
     '판이 낮으면 예상 배출량을 **묻지 않는다** (적어도 저장할 데가 없습니다)')
@@ -241,7 +241,7 @@ for (const w of [1920, 1440, 768, 390, 360]) {
   await old.ctx.close()
 
   //  판을 올린 뒤
-  const { ctx, p, state } = await open('/portal?client=c1', 'admin', 1440, 87)
+  const { ctx, p, state } = await open('/portal/c/c1', 'admin', 1440, 87)
   await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(500)
   ok((await p.locator('[data-req-kg]').count()) === 1, '판이 올라가면 예상 배출량을 묻는다')
 
@@ -280,7 +280,7 @@ for (const w of [1920, 1440, 768, 390, 360]) {
 
 // ── ⑩ 비워 두고 보내면 **저희가 채우지 않는다** ───────────────────────────
 {
-  const { ctx, p } = await open('/portal?client=c1', 'admin', 1440, 87)
+  const { ctx, p } = await open('/portal/c/c1', 'admin', 1440, 87)
   await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(500)
   await p.locator('#req-content').fill('내용만 적습니다')
   const bodies = []

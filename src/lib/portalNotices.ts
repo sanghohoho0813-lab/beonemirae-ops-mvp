@@ -1,4 +1,5 @@
 import type { AppData, Client } from '../types'
+import type { PortalPage } from './portalClient'
 import { today, prettyDate } from './format'
 import { portalSummary } from './portal'
 import { outstandingOf } from './selectors'
@@ -31,8 +32,14 @@ export interface PortalNotice {
   title: string
   /** 왜 이 알림이 떴는가 — 사실만 */
   detail: string
-  /** 눌러서 갈 곳 (없으면 그냥 알림) */
-  to?: string
+  /**
+   * 눌러서 갈 **화면 이름** (없으면 그냥 알림).
+   *
+   *  ⚠ 0088 — 예전에는 '/portal/billing' 같은 완성된 주소였습니다. 그래서
+   *    직원이 미리보기로 볼 때 알림을 누르면 병원이 지워지고 고르는 화면이
+   *    떴습니다. 주소는 지금 병원을 아는 쪽(PortalNoticeBell)에서 만듭니다.
+   */
+  to?: PortalPage
 }
 
 const DAY = 86_400_000
@@ -63,7 +70,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
         detail: s.nextIsEstimate
           ? `${prettyDate(s.nextDate)} — 수거주기로 본 **예상**입니다 (확정 일정은 아닙니다)`
           : `${prettyDate(s.nextDate)}${s.nextTime ? ` ${s.nextTime}` : ''} 방문 예정`,
-        to: '/portal',
+        to: '',
       })
     }
   }
@@ -76,7 +83,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
         tone: 'good',
         title: '요청이 일정에 반영되었습니다',
         detail: `${r.type} · ${r.content.slice(0, 40)}${r.content.length > 40 ? '…' : ''}`,
-        to: '/portal',
+        to: '',
       })
     } else if (r.status === '처리 완료' && r.reply) {
       out.push({
@@ -84,7 +91,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
         tone: 'good',
         title: '요청 처리가 끝났습니다',
         detail: `회신: ${r.reply.slice(0, 50)}${r.reply.length > 50 ? '…' : ''}`,
-        to: '/portal',
+        to: '',
       })
     }
   }
@@ -97,7 +104,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
         tone: 'good',
         title: '문의에 답변이 등록되었습니다',
         detail: `${q.topic} · ${q.subject.slice(0, 40)}`,
-        to: '/portal/support',
+        to: 'support',
       })
     }
   }
@@ -113,7 +120,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
       tone: 'warn',
       title: '납부하지 않은 청구가 있습니다',
       detail: `${owed.toLocaleString('ko-KR')}원 — 자세한 내역은 정산 화면에서 보실 수 있습니다`,
-      to: '/portal/billing',
+      to: 'billing',
     })
   }
 
@@ -126,7 +133,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
       tone: 'info',
       title: '이번 달 수거 리포트를 보실 수 있습니다',
       detail: `이번 달 ${s.monthVisits}회 · ${Math.round(s.monthKg).toLocaleString('ko-KR')}kg 수거`,
-      to: '/portal/report',
+      to: 'report',
     })
   }
 

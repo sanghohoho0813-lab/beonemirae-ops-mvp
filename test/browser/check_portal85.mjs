@@ -50,7 +50,7 @@ async function open(path, role, w = 1280) {
   //  ⚠ 첫 병원이 아니라 **두 번째** 병원을 골라 봅니다. 첫 병원을 고르면
   //    옛 결함(clients[0])과 결과가 같아서 아무것도 증명하지 못합니다.
   const target = F.clients[1] ?? F.clients[0]
-  const { ctx, p } = await open(`/portal?client=${target.id}`, 'admin')
+  const { ctx, p } = await open(`/portal/c/${target.id}`, 'admin')
   const hero = flat(await p.locator('[data-portal-hero]').innerText())
   ok(hero.includes(target.name), '**고른 병원 이름이 뜬다**', hero.slice(0, 50))
   ok(!hero.includes(F.clients[0].name) || target.id === F.clients[0].id,
@@ -61,7 +61,7 @@ async function open(path, role, w = 1280) {
 // ── ③ 직원이 보고 있다는 것을 화면이 말하는가 ──────────────────────────────
 {
   const target = F.clients[1] ?? F.clients[0]
-  const { ctx, p } = await open(`/portal?client=${target.id}`, 'admin')
+  const { ctx, p } = await open(`/portal/c/${target.id}`, 'admin')
   ok((await p.locator('[data-portal-preview]').count()) === 1, '**「고객 화면 미리보기」 띠가 있다**')
   const bar = flat(await p.locator('[data-portal-preview]').innerText())
   ok(bar.includes(target.name), '어느 병원 화면인지 적혀 있다', bar.slice(0, 60))
@@ -73,15 +73,15 @@ async function open(path, role, w = 1280) {
 // ── ④ 돌아가는 길 ──────────────────────────────────────────────────────────
 {
   const target = F.clients[1] ?? F.clients[0]
-  const { ctx, p } = await open(`/portal?client=${target.id}`, 'admin')
+  const { ctx, p } = await open(`/portal/c/${target.id}`, 'admin')
   const back = p.locator('[data-portal-back]')
   ok((await back.count()) === 1, '**「BUSINESS AX로 돌아가기」가 있다**')
   const box = await back.boundingBox()
   ok((box?.height ?? 0) >= 44, '누를 만한 크기', `${Math.round(box?.height ?? 0)}px`)
   //  ⚠ 포털 안을 몇 화면 돌아다닌 뒤에도 **한 번에** 나가야 합니다.
-  await p.goto(`${W.BASE}/portal/history?client=${target.id}`, { waitUntil: 'domcontentloaded' })
+  await p.goto(`${W.BASE}/portal/c/${target.id}/history`, { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(900)
-  await p.goto(`${W.BASE}/portal/billing?client=${target.id}`, { waitUntil: 'domcontentloaded' })
+  await p.goto(`${W.BASE}/portal/c/${target.id}/billing`, { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(900)
   await p.locator('[data-portal-back]').click()
   await p.waitForTimeout(1200)
@@ -107,7 +107,7 @@ async function open(path, role, w = 1280) {
 {
   //  ⚠ 서버(RLS)가 막지만, 화면도 주소를 안 따릅니다 — 두 겹입니다.
   const other = F.clients[1] ?? F.clients[0]
-  const { ctx, p } = await open(`/portal?client=${other.id}`, 'client')
+  const { ctx, p } = await open(`/portal/c/${other.id}`, 'client')
   ok((await p.locator('[data-portal-picker]').count()) === 0, '고르는 화면이 안 나온다')
   const hero = flat(await p.locator('[data-portal-hero]').innerText())
   ok(hero.includes(F.clients[0].name), '**자기 병원 화면 그대로다**', hero.slice(0, 50))
@@ -121,7 +121,7 @@ async function open(path, role, w = 1280) {
   const link = p.locator('[data-client-portal-link] [data-portal-switch]')
   ok((await link.count()) === 1, '**거래처 화면에 「병원 화면 보기」가 있다**')
   const href = await link.getAttribute('href')
-  ok(href === `/portal?client=${target.id}`, '**그 거래처를 달고 갑니다**', String(href))
+  ok(href === `/portal/c/${target.id}`, '**그 거래처를 달고 갑니다**', String(href))
 
   //  ⚠ 0086 — **있기만 해서는 안 됩니다.** 0085 에서는 이 화면 맨 아래에
   //    있었고 1440px 에서 y=2,705px 였습니다 — 세 화면을 내려야 나옵니다.
@@ -139,7 +139,7 @@ async function open(path, role, w = 1280) {
 // ── ⑧ 폰에서도 왕복이 되는가 ───────────────────────────────────────────────
 {
   const target = F.clients[1] ?? F.clients[0]
-  const { ctx, p } = await open(`/portal?client=${target.id}`, 'admin', 390)
+  const { ctx, p } = await open(`/portal/c/${target.id}`, 'admin', 390)
   ok((await p.locator('[data-portal-preview]').count()) === 1, '폰에도 미리보기 띠가 있다')
   const back = p.locator('[data-portal-back]')
   ok((await back.count()) === 1, '폰에도 돌아가기가 있다')

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { keepPortalClient } from '../lib/portalClient'
 import { ArrowRight, Check, ChevronLeft, Link2, X } from 'lucide-react'
 import { useTour } from '../context/TourContext'
 
@@ -102,10 +103,15 @@ export function TourOverlay() {
   //  훅은 규칙상 그보다 위에 있어야 해서 투어가 꺼져 있어도 계속 돕니다.
   //  step 만 보고 판단하면, 투어를 한 번 열었던 사용자는 그 뒤로 메뉴를 누를
   //  때마다 이 effect 가 1단계 화면(대시보드)으로 도로 끌고 갔습니다.
+  //  ⚠ 0088 — 투어 단계에는 `/portal/support` 처럼 **완성된 주소**가 적혀
+  //    있습니다. 직원이 미리보기로 보는 중이면 그대로 옮겨 가는 순간 병원이
+  //    지워지고 「어느 병원을 보시겠습니까」로 튕깁니다.
+  //    보고 있던 병원에 맞춰 고쳐서 갑니다.
+  const wantRoute = step ? keepPortalClient(step.route, pathname) : ''
   useEffect(() => {
     if (!active || !step) return
-    if (pathname !== step.route) navigate(step.route)
-  }, [active, step, pathname, navigate])
+    if (pathname !== wantRoute) navigate(wantRoute)
+  }, [active, step, pathname, wantRoute, navigate])
 
   // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {
@@ -123,7 +129,7 @@ export function TourOverlay() {
   //  "대상 + 간격 + 설명"이 화면에 들어가는 높이로 설명 박스 상한을 정합니다.
   useEffect(() => {
     if (!active || !step || anchorH !== null) return
-    if (pathname !== step.route) return
+    if (pathname !== wantRoute) return
     let cancelled = false
     void (async () => {
       if (!step.anchor) {
@@ -306,7 +312,7 @@ export function TourOverlay() {
 
   useEffect(() => {
     if (!active || !step || !card || anchorH === null) return
-    if (pathname !== step.route) return
+    if (pathname !== wantRoute) return
     // 첫 측정값(상한이 넉넉할 때 잰 자연 높이)으로 한 번만 잡습니다.
     const sig = `${active.id}:${index}:${window.innerWidth}x${window.innerHeight}`
     if (laidOutRef.current === sig) return
@@ -399,7 +405,8 @@ export function TourOverlay() {
   const finish = () => {
     const f = active.finish
     stop()
-    navigate(f.to)
+    //  ⚠ 0088 — 마무리 이동도 보고 있던 병원을 달고 갑니다.
+    navigate(keepPortalClient(f.to, pathname))
     if (f.emit) {
       const name = f.emit
       // 화면이 그려진 다음에 보내야 그 화면이 받을 수 있습니다.

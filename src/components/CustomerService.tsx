@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { portalPath } from '../lib/portalClient'
 import { ArrowRight, ChevronRight, Hospital, Send } from 'lucide-react'
 import { REQUEST_KIND_LABEL, type AppData } from '../types'
 import { serviceConversion } from '../lib/portal'
@@ -72,7 +73,10 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
       // 다음 할 일이 늘 '지금 눌러야 할 그 화면'을 가리키게 합니다.
       todo:
         c.proposed > 0
-          ? { label: '병원 화면에서 수락', to: '/portal' }
+          //  ⚠ 0088 — **어느 병원인지 달고** 갑니다. 안 달면 「어느 병원을
+          //    보시겠습니까」가 먼저 나와서, 지금 보려던 그 병원을 다시
+          //    찾아야 합니다.
+          ? { label: '병원 화면에서 수락', to: portalPath(firstLeadClient ?? null) }
           : { label: '제안 전달하기', to: firstLeadClient ? `/clients/${firstLeadClient}` : '/clients' },
     },
     {
@@ -93,7 +97,7 @@ export function CustomerServiceCard({ data, demo = false }: { data: AppData; dem
         <p className="t-card min-w-0 flex-1 break-keep text-navy-900">병원의 행동이 매출이 되는 흐름</p>
         {demo && <span className="pill shrink-0 bg-amber-50 text-amber-700">시연 데이터</span>}
         {/* 시연에서 "병원은 이 화면을 봅니다"를 한 번에 보여주기 위한 바로가기 */}
-        <Link to="/portal" className="t-btn flex shrink-0 items-center gap-1 text-navy-500 hover:underline">
+        <Link to={portalPath(firstLeadClient ?? null)} className="t-btn flex shrink-0 items-center gap-1 text-navy-500 hover:underline">
           <Hospital size={16} strokeWidth={2.4} /> 병원 화면
         </Link>
         <Link to="/requests" className="t-btn flex shrink-0 items-center gap-1 text-teal-700 hover:underline">

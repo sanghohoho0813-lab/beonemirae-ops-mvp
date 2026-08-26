@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CLIENT_TEL } from '../lib/brand'
-import { PackageCheck, Building2, FileBarChart, History, Headset, LogOut, ReceiptText, MessageSquare, type LucideIcon } from 'lucide-react'
+import { PackageCheck, Building2, ChevronRight, FileBarChart, History, Headset, LogOut, ReceiptText, MessageSquare, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
@@ -12,8 +12,8 @@ import { TourButton } from './TourEntry'
 import { PortalNoticeBell } from './PortalNoticeBell'
 import { FontSizeButton } from './FontSizeButton'
 import { portalNotices } from '../lib/portalNotices'
-import { usePortalClient } from '../lib/portalClient'
-import { PortalPreviewBar, PortalClientPicker } from './PortalPreviewBar'
+import { usePortalClient, portalPath, PORTAL_SELECT_PATH, type PortalPage } from '../lib/portalClient'
+import { PortalPreviewBar } from './PortalPreviewBar'
 import { touchPortalSeen } from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,7 +25,16 @@ import { touchPortalSeen } from '../lib/repo'
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface Item {
-  to: string
+  /**
+   * 어느 화면인가 (0088).
+   *
+   *  ⚠ 예전에는 여기에 `/portal/supplies` 같은 **완성된 주소**가 적혀
+   *    있었습니다. 그래서 메뉴를 누르는 순간 `?client=<id>` 가 떨어져 나가
+   *    「어느 병원을 보시겠습니까」가 다시 떴습니다(대표님 신고).
+   *    이제는 화면 이름만 두고, 주소는 지금 병원을 아는 쪽에서 만듭니다
+   *    (target.path). 병원을 빠뜨릴 자리가 없습니다.
+   */
+  page: PortalPage
   label: string
   /** 모바일에서 세 메뉴가 한 줄에 들어가도록 쓰는 짧은 이름 */
   short: string
@@ -41,25 +50,37 @@ interface Item {
 //  ⚠ 여섯 개는 폰 아래 띠에 다 안 들어갑니다. 아래 띠에는 **자주 쓰는
 //    넷**만 두고, 나머지 둘은 위쪽 줄에 둡니다(bottom: false).
 const NAV: Item[] = [
-  { to: '/portal', label: '우리 병원 현황', short: '현황', icon: Building2, bottom: true },
-  { to: '/portal/supplies', label: '필요한 물품', short: '물품', icon: PackageCheck, bottom: true },
-  { to: '/portal/report', label: '월간 리포트', short: '리포트', icon: FileBarChart, bottom: true },
-  { to: '/portal/history', label: '수거 이력', short: '이력', icon: History, bottom: true },
-  { to: '/portal/billing', label: '정산 내역', short: '정산', icon: ReceiptText, bottom: false },
-  { to: '/portal/support', label: '문의하기', short: '문의', icon: MessageSquare, bottom: false },
+  { page: '', label: '우리 병원 현황', short: '현황', icon: Building2, bottom: true },
+  { page: 'supplies', label: '필요한 물품', short: '물품', icon: PackageCheck, bottom: true },
+  { page: 'report', label: '월간 리포트', short: '리포트', icon: FileBarChart, bottom: true },
+  { page: 'history', label: '수거 이력', short: '이력', icon: History, bottom: true },
+  { page: 'billing', label: '정산 내역', short: '정산', icon: ReceiptText, bottom: false },
+  { page: 'support', label: '문의하기', short: '문의', icon: MessageSquare, bottom: false },
 ]
+
+/** 지금 화면 이름 — 병원명 옆에 적습니다 (0088 · 브리프 11) */
+const PAGE_LABEL: Record<PortalPage, string> = {
+  '': '우리 병원 현황',
+  supplies: '필요한 물품',
+  report: '월간 배출 리포트',
+  history: '수거 이력',
+  billing: '정산 내역',
+  support: '문의하기',
+}
 
 export function PortalLayout() {
   const { pathname } = useLocation()
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, role } = useAuth()
   const { data } = useData()
   const navigate = useNavigate()
   //  ⚠ 0085 — **어느 병원인지**를 여기서 한 번만 정합니다.
   //    예전에는 화면마다 `data.clients[0]` 였고, 그래서 직원 계정에서는
   //    목록의 첫 병원이 「우리 병원」인 것처럼 떴습니다.
   const target = usePortalClient()
+  const { clientId } = useParams()
   const client = target.client
   const clientName = client?.name ?? ''
+  const onSelectPage = pathname === PORTAL_SELECT_PATH
 
   //  ⚠ 알림은 저장하지 않고 지금 자료로 만듭니다 (0083).
   const notices = useMemo(
@@ -77,6 +98,28 @@ export function PortalLayout() {
   useEffect(() => {
     if (!target.isPreview) void touchPortalSeen()
   }, [target.isPreview])
+
+  //  ── 길 정리 (0088) ───────────────────────────────────────────────────────
+  //
+  //  ⚠ **읽는 중에는 아무 데도 안 보냅니다.** 로그인 직후 한 순간 거래처
+  //    목록이 비는데, 그때 「병원을 못 찾았으니 고르는 화면으로」를 하면
+  //    대표님이 메뉴를 누를 때마다 고르는 화면이 깜빡입니다.
+  //    (대표님 신고의 절반이 이것이었습니다)
+  if (!target.loading) {
+    //  병원 계정이 주소에 남의 병원 id 를 달고 왔습니다.
+    //  ⚠ 서버(RLS)가 이미 남의 자료를 안 줍니다. 그래도 주소를 그대로 두면
+    //    **주소창에 남의 병원 id 가 박힌 채** 자기 자료가 보입니다 —
+    //    「내 화면에 저 병원 이름이 왜 있지」가 됩니다. 자기 주소로 되돌립니다.
+    if (role === 'client' && clientId) {
+      return <Navigate to={portalPath(null, target.page)} replace />
+    }
+    //  직원이 병원 없이 들어왔습니다 → 고르는 화면.
+    //  ⚠ 「본문 자리에 목록을 끼워 넣기」가 아니라 **주소를 옮깁니다.**
+    //    그래야 고른 뒤에 보던 화면으로 돌아갈 수 있습니다.
+    if (target.needsPick && !onSelectPage) {
+      return <Navigate to={target.page ? `${PORTAL_SELECT_PATH}?back=${target.page}` : PORTAL_SELECT_PATH} replace />
+    }
+  }
 
   return (
     <div className="min-h-[100dvh] bg-app">
@@ -206,9 +249,9 @@ export function PortalLayout() {
             const Icon = n.icon
             return (
               <NavLink
-                key={n.to}
-                to={n.to}
-                end={n.to === '/portal'}
+                key={n.page}
+                to={target.path(n.page)}
+                end={n.page === ''}
                 className={({ isActive }) =>
                   `t-nav flex flex-1 shrink-0 items-center justify-center gap-2 rounded-t-xl px-3 py-3.5 transition sm:flex-none sm:justify-start sm:px-4 ${
                     isActive ? 'bg-app text-navy-900' : 'text-navy-300 hover:bg-white/10 hover:text-white'
@@ -227,22 +270,32 @@ export function PortalLayout() {
       {/*  0085 — 직원이 보고 있으면 **그렇다고 말합니다.** 이 띠가 없으면
            대표님이 병원 화면을 보시면서 「우리 미수금이 왜 이것뿐이지」로
            읽으실 수 있습니다 — 병원 화면은 그 병원 것만 보여 줍니다. */}
-      {target.isPreview && <PortalPreviewBar client={client} />}
+      {target.isPreview && <PortalPreviewBar client={client} page={target.page} />}
 
       <SyncBar />
+      {/*  ── 지금 어느 병원의 무슨 화면인가 (0088 · 브리프 11) ────────────────
+           ⚠ 첫 화면에는 안 답니다 — 바로 아래 머리 칸이 병원 이름을 크게
+             적고 있어서 같은 말이 두 번 나옵니다.
+           ⚠ 고르는 화면에도 안 답니다 — 아직 병원이 없습니다. */}
+      {client && target.page !== '' && !onSelectPage && (
+        <div className="mx-auto w-full max-w-[1240px] px-4 pt-4 lg:px-8 lg:pt-6">
+          <p data-portal-crumb className="t-muted flex flex-wrap items-center gap-1 break-keep">
+            <b className="font-extrabold text-navy-700">{client.name}</b>
+            <ChevronRight size={14} className="shrink-0 text-navy-400" strokeWidth={2.6} />
+            <span className="font-bold text-navy-500">{PAGE_LABEL[target.page]}</span>
+          </p>
+        </div>
+      )}
+
       {/* 아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로 스크롤할 수 없어
           사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-[40vh] pt-5 lg:px-8 lg:pt-8">
-        {/*  ⚠ 직원이 아직 병원을 안 골랐으면 **아무 병원도 안 보여 줍니다.**
-             첫 병원을 슬쩍 띄우면 대표님은 그것을 「지금 보려던 그 병원」으로
-             읽습니다. 묻는 편이 낫습니다. */}
-        {target.needsPick ? (
-          <PortalClientPicker clients={target.choices} />
-        ) : (
-          <PageMotion key={pathname}>
-            <Outlet />
-          </PageMotion>
-        )}
+        {/*  ⚠ 0088 — 여기에 있던 「병원 고르기」 목록을 걷어냈습니다.
+             본문 자리에 끼워 넣으면 **메뉴를 누를 때마다** 튀어나옵니다.
+             고르는 일은 자기 주소(/portal/select)를 가진 화면이 합니다. */}
+        <PageMotion key={pathname}>
+          <Outlet />
+        </PageMotion>
       </main>
 
       {/* 폰 전용 하단 탭 — 화면이 셋뿐이라 접거나 숨기지 않습니다 */}
@@ -255,12 +308,14 @@ export function PortalLayout() {
              줄에 그대로 있습니다(안 없앴습니다). */}
         {NAV.filter((n) => n.bottom).map((n) => {
           const Icon = n.icon
-          const active = n.to === '/portal' ? pathname === '/portal' : pathname.startsWith(n.to)
+          //  ⚠ 0088 — 주소로 앞자리를 견주지 않습니다. 병원 id 가 주소 가운데
+          //    들어가면서 `startsWith` 가 못 맞춥니다. 화면 이름끼리 견줍니다.
+          const active = target.page === n.page
           return (
             <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.to === '/portal'}
+              key={n.page}
+              to={target.path(n.page)}
+              end={n.page === ''}
               className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5"
             >
               {active && <span className="absolute inset-x-2 inset-y-1 rounded-2xl bg-teal-50" />}

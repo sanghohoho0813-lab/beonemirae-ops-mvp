@@ -119,7 +119,9 @@ export function PortalHome() {
 
   //  ⚠ 0085 — 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
   //    예전의 `data.clients[0]` 은 직원 계정에서 **첫 병원**을 골랐습니다.
-  const { client } = usePortalClient()
+  //  ⚠ 0088 — `path()` 로 주소를 만듭니다. 직접 '/portal/supplies' 라고
+  //    적으면 **거기서 병원이 지워집니다** — 대표님이 신고하신 그 결함입니다.
+  const { client, path } = usePortalClient()
   const s = useMemo(() => (client ? portalSummary(data, client) : null), [data, client])
 
   //  ⚠ 값은 **있는 것만** 적습니다. 「0건」과 「아직 없음」은 다른 말이고,
@@ -178,7 +180,7 @@ export function PortalHome() {
         desc: '정기 수거 외에 한 번 더 필요할 때',
       },
       {
-        no: '02', label: '자재·용기 요청', icon: PackagePlus, to: '/portal/supplies', cta: 'supplies',
+        no: '02', label: '자재·용기 요청', icon: PackagePlus, to: path('supplies'), cta: 'supplies',
         desc: '전용 용기 · 봉투 · 바늘통이 부족할 때',
       },
       {
@@ -187,32 +189,32 @@ export function PortalHome() {
         desc: '보관기한이 임박했거나 배출량이 갑자기 늘었을 때',
       },
       {
-        no: '04', label: '다음 수거 일정', icon: CalendarClock, to: '/portal/history',
+        no: '04', label: '다음 수거 일정', icon: CalendarClock, to: path('history'),
         value: s.nextDate ? prettyDate(s.nextDate) : '예정 없음',
         desc: s.nextIsEstimate ? '수거주기로 본 예상입니다' : '확정된 방문 일정입니다',
       },
       {
-        no: '05', label: '수거 이력', icon: History, to: '/portal/history',
+        no: '05', label: '수거 이력', icon: History, to: path('history'),
         value: s.monthVisits > 0 ? `이번 달 ${s.monthVisits}회` : undefined,
         desc: '지난 수거 내역과 수거량을 확인하실 수 있습니다',
       },
       {
-        no: '06', label: '월간 배출 리포트', icon: FileBarChart, to: '/portal/report',
+        no: '06', label: '월간 배출 리포트', icon: FileBarChart, to: path('report'),
         value: s.monthKg > 0 ? `${Math.round(s.monthKg).toLocaleString('ko-KR')}kg` : undefined,
         desc: '이번 달 배출 현황과 추이를 한 장으로',
       },
       {
-        no: '07', label: '정산 내역', icon: ReceiptText, to: '/portal/billing',
+        no: '07', label: '정산 내역', icon: ReceiptText, to: path('billing'),
         value: owed > 0 ? `미납 ${won(owed)}` : undefined,
         desc: owed > 0 ? '아직 입금되지 않은 청구가 있습니다' : '월별 청구 금액과 입금 상태',
       },
       {
-        no: '08', label: '문의하기', icon: MessageSquare, to: '/portal/support',
+        no: '08', label: '문의하기', icon: MessageSquare, to: path('support'),
         value: myInquiries.length > 0 ? `보낸 문의 ${myInquiries.length}건` : undefined,
         desc: '수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주세요',
       },
     ]
-  }, [s, owed, myInquiries.length, start])
+  }, [s, owed, myInquiries.length, start, path])
 
   if (!client || !s) {
     //  ⚠ 자료가 오기 전에 「연결된 병원 정보를 찾을 수 없습니다」라고 하면
@@ -515,14 +517,14 @@ export function PortalHome() {
       <div data-tour="portal-report" className="grid gap-3 sm:grid-cols-2">
         {[
           {
-            to: '/portal/report',
+            to: path('report'),
             icon: FileBarChart,
             tone: 'sky' as const,
             title: '월간 운영 리포트',
             desc: '배출량·수거 횟수·용기 공급을 매달 정리',
           },
           {
-            to: '/portal/history',
+            to: path('history'),
             icon: Clock,
             tone: 'sky' as const,
             title: '수거 이력',

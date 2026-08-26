@@ -2,6 +2,7 @@ import { ArrowUpRight, Building2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, PORTAL_PREFIX } from '../lib/access'
+import { portalPath } from '../lib/portalClient'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 내부 화면 → 고객 화면으로 넘어가는 단추 (0083)
@@ -55,7 +56,9 @@ export function PortalSwitchButton({
   //  핵심 중 하나입니다). 운영 모드에서는 실제로 열리는 사람에게만.
   const allowed = mode !== 'live' || canAccess(role, PORTAL_PREFIX)
   if (!allowed) return null
-  const to = clientId ? `${PORTAL_PREFIX}?client=${clientId}` : PORTAL_PREFIX
+  //  ⚠ 0088 — 병원 id 는 **경로 안**에 넣습니다(/portal/c/<id>).
+  //    예전의 `?client=` 는 메뉴를 한 번 누르면 떨어져 나갔습니다.
+  const to = portalPath(clientId ?? null)
 
   if (compact) {
     return (

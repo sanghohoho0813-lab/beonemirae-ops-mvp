@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Bell, ChevronRight, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { usePortalClient } from '../lib/portalClient'
 import type { PortalNotice } from '../lib/portalNotices'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,6 +23,9 @@ const TONE = {
 
 export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
   const [open, setOpen] = useState(false)
+  //  ⚠ 0088 — 지금 보고 있는 병원을 달고 갑니다. 알림을 눌렀는데 병원이
+  //    지워지면 「어느 병원을 보시겠습니까」로 튕깁니다.
+  const { path } = usePortalClient()
   const n = notices.length
   return (
     <>
@@ -78,14 +82,17 @@ export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
                         <span className="t-body block break-keep font-extrabold text-navy-900">{x.title}</span>
                         <span className="t-muted mt-1 block break-keep leading-snug">{x.detail}</span>
                       </span>
-                      {x.to && <ChevronRight size={18} className="mt-1 shrink-0 text-navy-400" />}
+                      {x.to != null && <ChevronRight size={18} className="mt-1 shrink-0 text-navy-400" />}
                     </>
                   )
                   return (
                     <li key={x.key} data-portal-notice={x.key}>
-                      {x.to ? (
+                      {/*  ⚠ 0088 — 알림은 **화면 이름**만 들고 있고, 주소는
+                           여기서 만듭니다(path). 그래야 직원이 미리보기로
+                           보는 중에 알림을 눌러도 병원이 안 지워집니다. */}
+                      {x.to != null ? (
                         <Link
-                          to={x.to}
+                          to={path(x.to)}
                           onClick={() => setOpen(false)}
                           className="flex min-h-[3.5rem] items-start gap-3 px-5 py-4 transition hover:bg-navy-50"
                         >
