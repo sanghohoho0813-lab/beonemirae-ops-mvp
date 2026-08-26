@@ -120,6 +120,14 @@ export function Dashboard() {
     <PageShell>
       {/* 인사 — 넓은 화면에서는 제목과 날짜를 한 줄에 둡니다.
           인사말이 화면 위쪽을 크게 차지하면 정작 오늘 할 일이 아래로 밀립니다. */}
+      {/*  ⚠ 0084 — 폰에서는 이 줄이 **가로**가 됩니다. 「병원 화면」 단추를
+           제목 옆에 두려고요.
+           처음에는 인사 아래 한 줄로 뒀는데, 그러면 68px 이 더 들어가
+           「오늘 처리할 업무」가 y=531px 까지 밀립니다(기준 464px).
+           위에는 밀린 마감(401px)이 이미 있어서 세로 자리가 없습니다.
+           그렇다고 오늘 할 일 아래로 내리면 y=1,458px — 2화면 아래라
+           있으나 마나입니다.
+           그래서 **줄을 늘리지 않고 옆에** 두었습니다. 세로로 0px 입니다. */}
       <div className="lg:flex lg:flex-wrap lg:items-baseline lg:gap-3">
         <h1 className="t-page break-keep text-navy-900 lg:min-w-0 lg:flex-1 lg:text-[1.9rem]">
           <span className="lg:hidden">{profile ? `${profile.name}님, 오늘 할 일` : '오늘 할 일'}</span>
@@ -127,16 +135,27 @@ export function Dashboard() {
             {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
           </span>
         </h1>
+        {/*  ⚠ 0084 — 폰에서는 이 자리에 **안 둡니다.**
+             세 자리를 다 재 봤습니다 —
+               오늘 할 일 아래 : y=1,458px (2화면 아래, 있으나 마나)
+               인사 아래 한 줄 : 오늘 처리할 업무가 y=531px (기준 464px)
+               제목·날짜 줄 옆 : y=474~501px (여전히 넘음)
+             위에는 밀린 마감(401px)이 이미 있어 폰에는 남는 세로가 없습니다.
+             이 앱에서 폰의 부차 화면은 전부 「더보기」에 있습니다 —
+             거기에 눈에 띄게 두었습니다(MoreMenu). 자리를 뺏지 않으면서
+             한 번만 누르면 닿습니다. 넓은 화면에서는 이 줄 오른쪽 그대로. */}
         <p className="t-body mt-2.5 font-medium text-navy-400 lg:mt-0 lg:shrink-0">
           {prettyDate(t)} · 의료폐기물 운영관리
         </p>
         {/*  0083 — 「병원이 보는 화면」. PC 에서는 인사 줄 **오른쪽**에 나란히
              둡니다. 아래에 한 줄을 더 두면 그만큼 오늘 할 일이 밀립니다.
              ⚠ 실제로 열리는 사람에게만 보입니다(안에서 스스로 판단합니다). */}
-        <div className="mt-3 hidden lg:mt-0 lg:block lg:shrink-0">
+        <div className="hidden lg:mt-0 lg:block lg:shrink-0">
           <PortalSwitchButton />
         </div>
       </div>
+
+
 
 
       {/*  밀린 마감 — 인사 바로 아래. 오늘 할 일보다 위입니다.
@@ -199,15 +218,6 @@ export function Dashboard() {
                사라졌습니다 — 대표님이 이 화면을 여는 이유가 그것입니다.
                채워야 할 값은 오늘 나갈 차보다 급하지 않습니다. */}
         <SetupGapsLine />
-        {/*  폰에서는 여기입니다 (0083).
-             ⚠ 인사 줄 아래에 뒀더니 「오늘 처리할 업무」가 y=548 까지 밀려
-               첫 화면에서 사라졌습니다(검사가 잡았습니다). 대표님이 이
-               화면을 여는 이유가 바로 그 칸입니다 — 확인용 단추가 그것을
-               밀어낼 수는 없습니다. 넓은 화면에서는 인사 줄 오른쪽에
-               그대로 있습니다. */}
-        <div className="mt-3 lg:hidden">
-          <PortalSwitchButton />
-        </div>
       </section>
 
       {/* 사용법 안내는 오늘 할 일 다음입니다.

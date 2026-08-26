@@ -23,12 +23,44 @@ import { canAccess, PORTAL_PREFIX } from '../lib/access'
 //    누르는 것이 아니라 확인용입니다. 그래서 채우지 않고 테두리로 둡니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function PortalSwitchButton({ className = '' }: { className?: string }) {
+export function PortalSwitchButton({
+  className = '',
+  compact = false,
+}: {
+  className?: string
+  /**
+   * 한 줄짜리 (0084).
+   *
+   *  ⚠ 폰에서 쓰려고 만들었습니다. 원래 모양은 세로 두 줄이라 74px 인데,
+   *    그만큼 오늘 할 일이 아래로 밀립니다. 한 줄로 줄이면 48px 입니다.
+   *    **없애거나 저 아래로 숨기지 않고** 크기를 줄이는 쪽을 골랐습니다 —
+   *    y=1,458px(2화면 아래)에 있는 단추는 있으나 마나입니다.
+   */
+  compact?: boolean
+}) {
   const { role, mode } = useAuth()
   //  시연 모드에는 역할이 없습니다 — 그때는 보여 줍니다(시연에서 보여 드리는
   //  핵심 중 하나입니다). 운영 모드에서는 실제로 열리는 사람에게만.
   const allowed = mode !== 'live' || canAccess(role, PORTAL_PREFIX)
   if (!allowed) return null
+
+  if (compact) {
+    return (
+      <Link
+        data-portal-switch
+        to={PORTAL_PREFIX}
+        aria-label="병원이 보는 화면 열기"
+        className={`group flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-2xl border-2 border-teal-500 bg-teal-50 px-2.5 transition active:bg-teal-500 ${className}`}
+      >
+        <Building2 size={17} strokeWidth={2.6} className="shrink-0 text-teal-700 group-active:text-white" />
+        <span className="whitespace-nowrap text-[1rem] font-extrabold text-teal-800 group-active:text-white">
+          병원 화면
+        </span>
+        <ArrowUpRight size={15} strokeWidth={2.8} className="shrink-0 text-teal-700 group-active:text-white" />
+      </Link>
+    )
+  }
+
   return (
     <Link
       data-portal-switch

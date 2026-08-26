@@ -28,8 +28,17 @@ const EXACT_ROUTE_ROLES: Record<string, UserRole[]> = {
 
 /** 경로 → 접근 가능한 역할. 목록에 없는 경로는 로그인만 하면 접근 가능합니다. */
 const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
-  // 병원 고객 포털 — 병원 담당자와 (확인용) 관리자만
-  { prefix: PORTAL_PREFIX, roles: ['client', 'admin'] },
+  //  병원 고객 포털 — 병원 담당자와, 확인용으로 여는 대표·사무실.
+  //
+  //  ⚠ 0084 — 사무실(office)을 더했습니다. 예전에는 admin 만이었는데,
+  //    실제로 병원 전화를 받는 분이 이사님입니다. 「지금 화면에 뭐가 보이
+  //    세요?」를 물으려면 같은 화면을 볼 수 있어야 합니다. 못 열면 결국
+  //    대표님께 여쭤보게 되고, 그게 지금 없애려는 그 통화입니다.
+  //
+  //  ⚠ 현장(field)은 그대로 막습니다 — 병원 화면에는 청구·정산이 있습니다.
+  //  ⚠ 서버(RLS)는 그대로입니다. 직원이 보는 값은 원래 보던 값이고,
+  //    포털은 그것을 병원 눈으로 다시 그려 줄 뿐입니다.
+  { prefix: PORTAL_PREFIX, roles: ['client', 'admin', 'office'] },
   // 경영 · 성과 · 매출
   { prefix: '/performance', roles: ['admin', 'office'] },
   //  매출 현황 — 회사 매출·예상 연매출. 현장에는 열지 않습니다.

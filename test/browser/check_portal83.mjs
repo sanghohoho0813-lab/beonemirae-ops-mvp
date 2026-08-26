@@ -264,11 +264,41 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
   await ctx.close()
 }
 {
-  const { ctx, p } = await open('/', { role: 'admin', w: 390 })
-  const shown = p.locator('[data-portal-switch]:visible')
-  ok((await shown.count()) === 1, '**폰에서도 그 단추가 보인다** (자리만 다릅니다)',
-    `보이는 것 ${await shown.count()}개`)
-  await ctx.close()
+  //  ⚠ 0084 — 대표님 보고: 「고객전용 화면으로 넘어가는 버튼이 PC나
+  //    모바일 모두에서 안 보인다」. 재 보니 두 가지가 틀렸습니다 —
+  //      ① 이사님(office) 계정에서는 **아예 안 그려졌습니다**
+  //         (/portal 이 admin·client 전용이었습니다)
+  //      ② 폰에서는 y=1,458px, 즉 2화면 아래에 있었습니다
+  //    처음 검사는 `:visible` 만 봐서 ②를 못 잡았습니다. **보이는가**가
+  //    아니라 **찾을 수 있는 자리인가**를 봐야 합니다.
+  for (const role of ['admin', 'office']) {
+    //  PC — 첫 화면 안
+    const a = await open('/', { role, w: 1440 })
+    const pc = a.p.locator('[data-portal-switch]:visible')
+    ok((await pc.count()) === 1, `PC · ${role} — 단추가 보인다`, `${await pc.count()}개`)
+    const y = await pc.first().evaluate((e) => Math.round(e.getBoundingClientRect().top + scrollY))
+    ok(y < 400, `**PC · ${role} — 첫 화면 안에 있다**`, `y=${y}px`)
+    await a.ctx.close()
+
+    //  폰 — 「더보기」 안. 대시보드에 두면 오늘 할 일이 밀립니다.
+    const m = await open('/more', { role, w: 390 })
+    const ph = m.p.locator('[data-portal-switch]:visible')
+    ok((await ph.count()) === 1, `폰 · ${role} — 「더보기」에 단추가 있다`, `${await ph.count()}개`)
+    const my = await ph.first().evaluate((e) => Math.round(e.getBoundingClientRect().top + scrollY))
+    ok(my < 844, `**폰 · ${role} — 더보기 첫 화면 안에 있다**`, `y=${my}px`)
+    const box = await ph.first().boundingBox()
+    ok((box?.height ?? 0) >= 44, `폰 · ${role} — 누를 만한 크기`, `${Math.round(box?.height ?? 0)}px`)
+    await m.ctx.close()
+  }
+
+  //  ⚠ 현장 담당자에게는 **어디에도** 없어야 합니다 — 병원 화면에는
+  //    청구·정산이 있습니다.
+  for (const path of ['/today', '/more']) {
+    const f = await open(path, { role: 'field', w: 390 })
+    ok((await f.p.locator('[data-portal-switch]').count()) === 0,
+      `**기사님 ${path} 에는 없다**`)
+    await f.ctx.close()
+  }
 }
 
 // ── ⑫ 거래처 상세 — 고객 인사이트가 붙었나 ────────────────────────────────

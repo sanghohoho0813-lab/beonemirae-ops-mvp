@@ -5,6 +5,7 @@ import { Smartphone, Monitor, ChevronDown, Sparkles, Globe, ExternalLink, Lock, 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { FontSizeControl } from './FontSizeControl'
+import { PortalSwitchButton } from './PortalSwitch'
 import { InfoBanner } from './InfoBanner'
 import { RnDCard } from './RnDCard'
 import { IconChip } from './ui'
@@ -197,6 +198,16 @@ export function MoreMenu({
       <section data-more-help>
         <h3 className="mb-2 px-1 text-[1.08rem] font-semibold text-navy-500">안내 · 요청</h3>
         <div className="grid grid-cols-2 gap-2.5">
+          {/*  0084 — 「병원이 보는 화면」. **폰에서는 여기가 자리입니다.**
+               ⚠ 대시보드 위쪽에 두면 밀린 마감(401px)이 이미 있어서
+                 「오늘 처리할 업무」가 첫 화면 밖으로 밀립니다. 세 자리를
+                 다 재 보고 옮겼습니다(Dashboard.tsx 주석에 숫자가 있습니다).
+               ⚠ 「더보기」 맨 위에 따로 두는 것도 재 봤는데, 이 목록이
+                 이미 4.2화면 한계라 4.3이 됐습니다. 그런데 이 격자는
+                 **두 칸인데 셋**이라 빈 칸이 하나 있습니다 — 거기 넣으면
+                 세로가 **0px** 늘어납니다.
+               ⚠ 열리는 사람에게만 보입니다. 현장 담당자에게는 안 나옵니다. */}
+          <PortalSwitchButton compact className="col-span-2 sm:col-span-1" />
           {/*  ── 현장 담당자에게는 이 칸이 **아예 없습니다** (0078) ──────────
                대표님: 「모바일 우측 상단 도움말이 정상 진입점으로 잘 작동하므로,
                더보기의 "사용 방법" 또는 "오른쪽 위 도움말에서 여세요" 같은
