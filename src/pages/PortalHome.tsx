@@ -33,6 +33,10 @@ import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { outstandingOf } from '../lib/selectors'
 import { PortalHero, PortalActionCard, type PortalAction } from '../components/PortalHero'
+import { PortalInsightPanel } from '../components/PortalInsightPanel'
+import { PortalFooter } from '../components/PortalFooter'
+import { portalInsights } from '../lib/portalInsight'
+import { useSchemaAtLeast } from '../lib/schemaGate'
 import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 import { prettyDate, weight, won } from '../lib/format'
@@ -85,6 +89,11 @@ export function PortalHome() {
   const [content, setContent] = useState('')
   const [urgent, setUrgent] = useState(false)
   const [desired, setDesired] = useState('')
+  //  ⚠ 0087 — 배차가 병원에 **다시 전화해서 묻던 두 가지**입니다.
+  //    「의료폐기물인가요 기저귀인가요」 · 「몇 kg 쯤 되나요」.
+  //    비워 두셔도 됩니다 — 필수로 만들면 급한 병원이 「몰라서」 못 올립니다.
+  const [wasteType, setWasteType] = useState<string>('')
+  const [expectedKg, setExpectedKg] = useState('')
   const [sent, setSent] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   //  한 번의 「보내기」에 하나. 실패해도 바뀌지 않습니다 (0055).
@@ -96,6 +105,8 @@ export function PortalHome() {
     setUrgent(k === '긴급수거')
     setContent('')
     setDesired('')
+    setWasteType('')
+    setExpectedKg('')
     setOpen(true)
   }, [])
 
@@ -126,6 +137,27 @@ export function PortalHome() {
     () => (data.inquiries ?? []).filter((q) => !client || q.clientId === client.id),
     [data.inquiries, client],
   )
+
+  //  ⚠ 0086 — 「분석」 칸. **규칙 기반입니다** (lib/portalInsight.ts).
+  //    AI 라고 부르지 않습니다 — 지금 계산은 뺄셈과 나눗셈입니다.
+  const insight = useMemo(
+    () => (client ? portalInsights(data, client) : { items: [], why: null }),
+    [data, client],
+  )
+
+  //  ⚠ 0087 — 서버에 칸이 생긴 뒤에만 묻습니다. 아직이면 이 두 줄이
+  //    화면에 나타나지 않습니다 — 적어 봐야 저장할 데가 없습니다.
+  const canDetail = useSchemaAtLeast(87) === true
+
+  //  ⚠ 고를 수 있는 유형은 **이 병원이 실제로 맡기는 것**뿐입니다.
+  //    기저귀를 안 하는 병원에 그 선택지를 띄우면 잘못 고르게 됩니다.
+  const wasteChoices = useMemo(() => {
+    if (!client) return []
+    return [
+      client.collectsMedicalWaste ? '의료폐기물' : null,
+      client.collectsDiaper ? '일회용기저귀' : null,
+    ].filter((x): x is string => x != null)
+  }, [client])
 
   //  ── 순서 (0083) ─────────────────────────────────────────────────────────
   //
@@ -213,6 +245,9 @@ export function PortalHome() {
       content: content.trim(),
       desiredDate: desired || null,
       urgent,
+      //  ⚠ 0087 — 비워 두시면 null 입니다. 저희가 짐작해 채우지 않습니다.
+      wasteType: canDetail && wasteType ? wasteType : null,
+      expectedKg: canDetail && expectedKg.trim() ? Number(expectedKg) : null,
       source: 'portal',
       requesterName: profile?.name ?? '병원 담당자',
       //  이번 시도의 표 (0055). 실패해서 다시 누르면 **같은 값**이 갑니다 —
@@ -231,6 +266,8 @@ export function PortalHome() {
     setContent('')
     setUrgent(false)
     setDesired('')
+    setWasteType('')
+    setExpectedKg('')
     setOpen(false)
     setSent(true)
   }
@@ -285,7 +322,13 @@ export function PortalHome() {
           가리지는 않습니다. 「오늘 하루 보지 않기」도 그대로입니다. */}
       <TourBanner tourId="client" />
 
-      {/* ── 2. 내 요청 진행 상태 — 내가 한 행동이 지금 어디까지 왔는가 ── */}
+      {/*  ── 2. 내 요청 진행 상태 + 배출 분석 ────────────────────────────────
+           시안에서 분석 칸은 **오른쪽 옆**입니다. 넓은 화면에서는 그렇게 둡니다.
+
+           ⚠ 폰에서는 위아래로 쌓이는데, 그때 순서가 「요청 상태 → 분석」이어야
+             합니다. 분석은 읽을거리고 요청 상태는 내가 지금 기다리는 것입니다.
+             grid 는 적힌 순서대로 쌓이므로 order 를 따로 주지 않습니다. */}
+      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <section>
         <SectionTitle
           action={
@@ -333,6 +376,20 @@ export function PortalHome() {
                   </div>
 
                   <p className="t-body mt-2.5 break-keep leading-snug text-navy-700">{r.content}</p>
+                  {/*  ⚠ 0087 — **적어 주신 것만** 다시 보여 드립니다. 안 적으신
+                       칸은 아예 안 나옵니다 — 저희가 채운 값을 병원이 자기가
+                       적은 값으로 오해하면 안 됩니다. */}
+                  {(r.desiredDate || r.wasteType || r.expectedKg != null) && (
+                    <p data-req-detail={r.id} className="t-muted mt-1.5 break-keep">
+                      {[
+                        r.desiredDate ? `희망일 ${prettyDate(r.desiredDate)}` : null,
+                        r.wasteType,
+                        r.expectedKg != null ? `예상 ${r.expectedKg}kg` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  )}
 
                   {/* 진행 단계 — 지금 어디까지 왔는지 한 줄로
                       (모바일에서는 단계 이름이 잘리므로 막대 + 한 줄 요약으로 대체) */}
@@ -378,6 +435,9 @@ export function PortalHome() {
           </div>
         )}
       </section>
+
+        <PortalInsightPanel result={insight} />
+      </div>
 
       {/* ── 3. 비원미래가 보낸 제안 ── */}
       {(s.pendingProposals.length > 0 || s.acceptedProposals.length > 0) && (
@@ -491,6 +551,11 @@ export function PortalHome() {
         })}
       </div>
 
+      {/*  ── 6. 병원 등록 정보 · 상담센터 (0086) ────────────────────────────
+           시안 아래쪽 네 칸 중 **실제 자료가 있는 것만** 답니다.
+           공지사항 표도 만족도 설문도 없으므로 그 두 칸은 없습니다. */}
+      <PortalFooter client={client} />
+
       {/* ── 요청 등록 ── */}
       <Modal
         open={open}
@@ -564,6 +629,62 @@ export function PortalHome() {
               className="field-input w-full"
             />
           </div>
+
+          {/*  ── 0087 — 배차가 다시 전화해서 묻던 두 가지 ────────────────────
+               ⚠ 서버에 칸이 생긴 뒤에만 나옵니다(canDetail). 적어 놓고
+                 저장이 안 되는 칸을 만들지 않습니다.
+               ⚠ 둘 다 **비워 두셔도 보내집니다.** 필수로 만들면 급한 병원이
+                 「몰라서」 요청을 못 올립니다. 비면 「적지 않으심」입니다 —
+                 저희가 0 이나 기본값으로 채우지 않습니다. */}
+          {canDetail && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {wasteChoices.length > 1 && (
+                <div>
+                  <label className="field-label" htmlFor="req-waste">
+                    폐기물 유형 (선택)
+                  </label>
+                  <select
+                    id="req-waste"
+                    data-req-waste
+                    value={wasteType}
+                    onChange={(e) => setWasteType(e.target.value)}
+                    className="field-input w-full"
+                  >
+                    <option value="">고르지 않음</option>
+                    {wasteChoices.map((w) => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="field-label" htmlFor="req-kg">
+                  예상 배출량 (선택)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="req-kg"
+                    data-req-kg
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    max={5000}
+                    value={expectedKg}
+                    onChange={(e) => setExpectedKg(e.target.value)}
+                    placeholder="예: 120"
+                    className="field-input w-full"
+                  />
+                  <span className="t-body shrink-0 font-bold text-navy-500">kg</span>
+                </div>
+                {/*  ⚠ 「어림」이라고 분명히 적습니다. 이 숫자는 **정산에 쓰지
+                     않습니다** — 정산은 실제로 실은 무게로만 합니다.
+                     안 적으면 병원이 적은 숫자대로 청구될까 봐 안 적습니다. */}
+                <p className="t-muted mt-1.5 break-keep leading-snug">
+                  어림잡은 값이면 됩니다. 차를 고르는 데만 씁니다 — 청구는 실제 수거량으로 합니다.
+                </p>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={() => setUrgent((v) => !v)}

@@ -107,7 +107,18 @@ export function PortalLayout() {
                  두 줄까지 허용합니다. 헤더는 한 줄(약 20px)만 길어집니다. */}
             <div className="min-w-0 leading-tight">
               <p className="t-card line-clamp-2 break-keep text-white">{clientName || '우리 병원'}</p>
-              <p className="t-muted mt-1 hidden break-keep text-navy-300 sm:block">㈜비원미래 병원 운영지원 서비스</p>
+              {/*  ⚠ 0086 — 시안의 「고객 포털」 이름표. 여기 있어야 하는 이유는
+                   꾸밈이 아닙니다 — 직원 계정은 내부 화면과 이 화면을 오가고,
+                   두 화면의 머리띠가 똑같이 남색이라 **어느 쪽에 있는지**
+                   한눈에 안 됩니다. 이름표가 그것을 가릅니다.
+                   ⚠ 폰에서는 접습니다: 병원 이름과 가로를 다투면 정작 병원
+                     이름이 잘립니다(0080 에서 이미 겪은 문제입니다). */}
+              <span className="mt-1 hidden flex-wrap items-center gap-2 sm:flex">
+                <span data-portal-badge className="rounded-md bg-teal-500 px-2 py-0.5 text-[0.9rem] font-black tracking-wide text-white">
+                  고객 포털
+                </span>
+                <span className="t-muted break-keep text-navy-300">㈜비원미래 병원 운영지원 서비스</span>
+              </span>
               {/*  ⚠ 0078 — 폰에서는 여기에 답니다. 오른쪽 단추들과 가로를
                    다투면 병원 이름이 밀려 잘립니다. 넓은 화면에서는 오른쪽
                    단추 옆(아래 lg:inline)에 따로 보입니다.

@@ -342,6 +342,13 @@ const toRequest = (r: Row): ClientRequest => ({
   content: r.content ?? '',
   desiredDate: r.desired_date ?? null,
   urgent: !!r.urgent,
+  //  ⚠ 0087 — 판이 낮으면 이 칸 자체가 없습니다. 그때는 null 입니다.
+  //    0 이 아니라 null 입니다 — 「0kg」과 「안 적으심」은 다른 말입니다.
+  wasteType: (r as { waste_type?: string | null }).waste_type ?? null,
+  expectedKg:
+    (r as { expected_kg?: number | string | null }).expected_kg == null
+      ? null
+      : Number((r as { expected_kg?: number | string }).expected_kg),
   status: r.status,
   source: r.source ?? 'portal',
   requesterName: r.requester_name ?? '',
@@ -1929,6 +1936,10 @@ export async function insertRequest(r: {
   urgent: boolean
   source: ClientRequest['source']
   requesterName: string
+  /** 0087 — 병원이 고른 폐기물 유형. 안 골랐으면 null */
+  wasteType?: string | null
+  /** 0087 — 병원이 어림한 배출량 kg. 모르면 null */
+  expectedKg?: number | null
   /** 이번 「보내기」 시도의 표. 다시 눌러도 같은 값을 보냅니다 (0055) */
   requestId?: string | null
 }): Promise<void> {
@@ -1947,6 +1958,13 @@ export async function insertRequest(r: {
             source: r.source,
             requester_name: r.requesterName,
             status: '접수',
+            //  ⚠ 0087 — **undefined 로 바꿔 보냅니다.** clean() 이 걸러 주는
+            //    것은 null 이 아니라 undefined 입니다. null 을 그대로 두면
+            //    아직 0087 을 안 올린 서버에서 「없는 칸」을 보내다가
+            //    요청 자체가 실패합니다 — 병원은 이유도 모르고 못 보냅니다.
+            //    비워 두는 것과 칸이 없는 것은 결과가 같습니다(둘 다 null).
+            waste_type: r.wasteType ?? undefined,
+            expected_kg: r.expectedKg ?? undefined,
             request_id: r.requestId ?? null,
           }),
         )

@@ -134,6 +134,17 @@ export interface ClientRequest {
   /** 희망일 (YYYY-MM-DD) — 없으면 null */
   desiredDate: string | null
   urgent: boolean
+  /**
+   * 병원이 고른 폐기물 유형 (0087). **없으면 null = 적지 않으심**입니다.
+   *  ⚠ 저희가 짐작해 채우지 않습니다 — 유형이 틀리면 차가 잘못 갑니다.
+   */
+  wasteType?: string | null
+  /**
+   * 병원이 어림한 배출량 kg (0087). null = 모름.
+   *  ⚠ **실제 수거량이 아닙니다.** 배차할 때 차를 고르는 참고값입니다.
+   *    정산에 쓰지 않습니다.
+   */
+  expectedKg?: number | null
   status: RequestStatus
   source: RequestSource
   /** 등록한 사람 이름 (병원 담당자 또는 접수한 직원) */

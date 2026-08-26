@@ -279,6 +279,11 @@ export function Requests() {
               <p className="t-muted mt-1.5 break-keep">
                 {r.requesterName || '담당자 미기재'}
                 {r.desiredDate && ` · 희망일 ${r.desiredDate}`}
+                {/*  ⚠ 0087 — 병원이 적어 준 것만 답니다. 안 적었으면 이 자리에
+                     아무것도 안 나옵니다 — 저희가 짐작해 채우면 그 값을 보고
+                     차를 고르게 되고, 틀리면 헛걸음입니다. */}
+                {r.wasteType && ` · ${r.wasteType}`}
+                {r.expectedKg != null && ` · 병원 어림 ${r.expectedKg}kg`}
               </p>
 
               {/* 이 요청이 어떤 매출로 이어지는지 — 요청 처리 = 영업 행동임을 명시.

@@ -119,9 +119,16 @@ async function open(path, role, w = 1280) {
   const target = F.clients[1] ?? F.clients[0]
   const { ctx, p } = await open(`/clients/${target.id}`, 'admin')
   const link = p.locator('[data-client-portal-link] [data-portal-switch]')
-  ok((await link.count()) === 1, '**거래처 화면에 「병원 화면 미리보기」가 있다**')
+  ok((await link.count()) === 1, '**거래처 화면에 「병원 화면 보기」가 있다**')
   const href = await link.getAttribute('href')
   ok(href === `/portal?client=${target.id}`, '**그 거래처를 달고 갑니다**', String(href))
+
+  //  ⚠ 0086 — **있기만 해서는 안 됩니다.** 0085 에서는 이 화면 맨 아래에
+  //    있었고 1440px 에서 y=2,705px 였습니다 — 세 화면을 내려야 나옵니다.
+  //    대표님이 0084 에서 「안 보인다」고 하신 것이 바로 이 상태였습니다.
+  //    자리를 잽니다.
+  const box = await link.boundingBox()
+  ok(box.y < 900, '**단추가 화면 위쪽에 있다** (내려서 찾지 않아도 됩니다)', `y=${Math.round(box.y)}`)
   await link.click()
   await p.waitForTimeout(1400)
   const hero = flat(await p.locator('[data-portal-hero]').innerText())

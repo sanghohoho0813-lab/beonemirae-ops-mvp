@@ -353,6 +353,10 @@ interface DataContextValue {
     content: string
     desiredDate?: string | null
     urgent?: boolean
+    /** 0087 — 병원이 고른 폐기물 유형. 안 골랐으면 null */
+    wasteType?: string | null
+    /** 0087 — 병원이 어림한 배출량 kg. 모르면 null */
+    expectedKg?: number | null
     source?: 'portal' | 'staff'
     requesterName?: string
     /** 이번 「보내기」 시도의 표 (0055) — 다시 눌러도 같은 값이어야 합니다 */
@@ -1243,6 +1247,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       content: string
       desiredDate?: string | null
       urgent?: boolean
+      wasteType?: string | null
+      expectedKg?: number | null
       source?: 'portal' | 'staff'
       requesterName?: string
       /**
@@ -1259,6 +1265,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         content: r.content.trim(),
         desiredDate: r.desiredDate ?? null,
         urgent: r.urgent ?? false,
+        //  ⚠ 0087 — 없으면 null 입니다. 0 으로 채우지 않습니다 —
+        //    「0kg」과 「모름」은 배차에서 완전히 다른 말입니다.
+        wasteType: r.wasteType ?? null,
+        expectedKg: r.expectedKg ?? null,
         source: r.source ?? 'portal',
         requesterName: r.requesterName ?? '',
         requestId: r.requestId ?? null,

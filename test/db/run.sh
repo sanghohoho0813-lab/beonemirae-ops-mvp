@@ -2,7 +2,7 @@
 #  DB 회귀 — 격리 PostgreSQL 에 마이그레이션을 처음부터 올리고 돌립니다.
 declare -A M=( [db_assign]=asgq [db_bank]=bankq [db_billing]=billq [db_client]=cliq [db_concurrent]=concq
   [db_costs]=pnlq [db_e2e]=xlimp [db_flat]=flatq [db_holiday]=holq [db_invariants]=inv [db_money]=moneyq
-  [db_plan]=planq [db_price]=priceq [db_receipts]=recq [db_revenue]=revq [db_tax]=taxq [db_approve]=apprq [db_retry]=retryq [db_supply]=supq [db_health]=healthq [db_flatfee]=fpolq [db_dedup]=dupq [db_errors]=errq [db_company]=coq [db_orders]=ordq [db_marks]=marksq [db_dedup2]=dup2q [db_assign2]=asg2q [db_prodbill]=prodq [db_book]=bookq [db_move]=moveq [db_edu]=eduq [db_cdate]=cdateq [db_edit]=editq [db_perm]=permq [db_roles_e2e]=e2eq [db_fieldsched]=fschedq [db_ops70]=ops70q [db_portal83]=portal83 )
+  [db_plan]=planq [db_price]=priceq [db_receipts]=recq [db_revenue]=revq [db_tax]=taxq [db_approve]=apprq [db_retry]=retryq [db_supply]=supq [db_health]=healthq [db_flatfee]=fpolq [db_dedup]=dupq [db_errors]=errq [db_company]=coq [db_orders]=ordq [db_marks]=marksq [db_dedup2]=dup2q [db_assign2]=asg2q [db_prodbill]=prodq [db_book]=bookq [db_move]=moveq [db_edu]=eduq [db_cdate]=cdateq [db_edit]=editq [db_perm]=permq [db_roles_e2e]=e2eq [db_fieldsched]=fschedq [db_ops70]=ops70q [db_portal83]=portal83 [db_request87]=req87 )
 tot=0; bad=0; sn=0; bk=0
 for f in "$(dirname "$0")"/db_*.mjs; do
   b=$(basename $f .mjs)

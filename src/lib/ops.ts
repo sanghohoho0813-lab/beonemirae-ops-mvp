@@ -417,6 +417,14 @@ export interface RequestItem {
   requesterName: string
   reply: string
   desiredDate: string | null
+  /**
+   * 병원이 고른 폐기물 유형 · 어림한 배출량 (0087).
+   *  ⚠ 없으면 null 입니다 — 「적지 않으심」입니다. 배차가 이 둘을 물으려고
+   *    병원에 다시 전화하던 것을 없애려고 둔 칸입니다.
+   *  ⚠ expectedKg 는 **정산에 쓰지 않습니다.** 청구는 실제 수거량입니다.
+   */
+  wasteType?: string | null
+  expectedKg?: number | null
   /** 수거 완료로 자동 종료된 건 */
   autoProcessed?: boolean
   processedAt?: string
@@ -448,6 +456,8 @@ export function clientRequests(data: AppData): RequestItem[] {
       requesterName: r.requesterName,
       reply: r.reply,
       desiredDate: r.desiredDate,
+      wasteType: r.wasteType ?? null,
+      expectedKg: r.expectedKg ?? null,
       autoProcessed: r.status === '처리 완료' && r.reply === '수거 완료로 처리되었습니다.',
       processedAt: r.handledAt ?? undefined,
       snoozedUntil: r.snoozedUntil ?? null,
