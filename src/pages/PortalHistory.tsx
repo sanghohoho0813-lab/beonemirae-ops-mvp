@@ -178,14 +178,18 @@ export function PortalHistory() {
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-navy-50 px-3.5 py-2.5">
+          {/*  ⚠ 높이는 **바깥 상자가 아니라 글자칸 자체**에 줍니다. 처음에는
+               label 에만 padding 을 줬는데 정작 눌리는 곳(input)은 26px 이라
+               커서를 놓치면 옆을 눌러 놓고 왜 안 써지나 하게 됩니다.
+               (check_ux390 이 「보통」과 「큰 글씨」 두 곳에서 잡았습니다) */}
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-navy-50 px-3.5">
             <Search size={18} className="shrink-0 text-navy-400" strokeWidth={2.4} />
             <input
               data-hist-search
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="날짜·구분·용기로 찾기 (예: 8월 21일)"
-              className="t-body min-w-0 flex-1 bg-transparent font-medium text-navy-900 outline-none placeholder:text-navy-400"
+              className="t-body min-h-[2.75rem] min-w-0 flex-1 bg-transparent font-medium text-navy-900 outline-none placeholder:text-navy-400"
             />
           </label>
           {/*  ⚠ 고른 기간의 **합계**. 화면에 보이는 줄만 셉니다. */}
