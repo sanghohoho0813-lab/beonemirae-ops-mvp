@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Hospital} from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { usePortalClient } from '../lib/portalClient'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { MonthlyReportView } from '../components/MonthlyReport'
@@ -24,7 +25,9 @@ function shiftMonth(month: string, delta: number): string {
 export function PortalReport() {
   const { data } = useData()
   const [month, setMonth] = useState(thisMonth())
-  const client = data.clients[0]
+  //  ⚠ 0085 — 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
+  //    예전의 `data.clients[0]` 은 직원 계정에서 **첫 병원**을 골랐습니다.
+  const { client } = usePortalClient()
   const report = useMemo(() => (client ? clientMonthlyReport(data, client, month) : null), [data, client, month])
   const current = thisMonth()
 

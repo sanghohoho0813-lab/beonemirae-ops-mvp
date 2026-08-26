@@ -26,8 +26,20 @@ import { canAccess, PORTAL_PREFIX } from '../lib/access'
 export function PortalSwitchButton({
   className = '',
   compact = false,
+  clientId,
+  label,
 }: {
   className?: string
+  /**
+   * 어느 병원 화면을 열 것인가 (0085).
+   *
+   *  ⚠ 안 주면 「어느 병원을 보시겠습니까」 고르는 화면으로 갑니다.
+   *    예전에는 목록의 **첫 병원**이 열렸습니다 — 대표님은 그것을 지금
+   *    보려던 병원으로 읽으십니다.
+   */
+  clientId?: string
+  /** 단추에 적을 말 (거래처 화면에서는 「이 병원 화면 미리보기」) */
+  label?: string
   /**
    * 한 줄짜리 (0084).
    *
@@ -43,18 +55,19 @@ export function PortalSwitchButton({
   //  핵심 중 하나입니다). 운영 모드에서는 실제로 열리는 사람에게만.
   const allowed = mode !== 'live' || canAccess(role, PORTAL_PREFIX)
   if (!allowed) return null
+  const to = clientId ? `${PORTAL_PREFIX}?client=${clientId}` : PORTAL_PREFIX
 
   if (compact) {
     return (
       <Link
         data-portal-switch
-        to={PORTAL_PREFIX}
-        aria-label="병원이 보는 화면 열기"
+        to={to}
+        aria-label={label ?? '병원이 보는 화면 열기'}
         className={`group flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-2xl border-2 border-teal-500 bg-teal-50 px-2.5 transition active:bg-teal-500 ${className}`}
       >
         <Building2 size={17} strokeWidth={2.6} className="shrink-0 text-teal-700 group-active:text-white" />
         <span className="whitespace-nowrap text-[1rem] font-extrabold text-teal-800 group-active:text-white">
-          병원 화면
+          {label ?? '병원 화면'}
         </span>
         <ArrowUpRight size={15} strokeWidth={2.8} className="shrink-0 text-teal-700 group-active:text-white" />
       </Link>
@@ -64,7 +77,7 @@ export function PortalSwitchButton({
   return (
     <Link
       data-portal-switch
-      to={PORTAL_PREFIX}
+      to={to}
       className={`group inline-flex min-h-[3rem] items-center gap-2.5 rounded-2xl border-2 border-teal-500 bg-teal-50 px-4 py-2.5 transition hover:bg-teal-500 ${className}`}
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white transition group-hover:bg-white group-hover:text-teal-700">
@@ -72,7 +85,7 @@ export function PortalSwitchButton({
       </span>
       <span className="min-w-0 leading-tight">
         <span className="t-btn block break-keep text-teal-800 transition group-hover:text-white">
-          병원이 보는 화면
+          {label ?? '병원이 보는 화면'}
         </span>
         <span className="block break-keep text-[0.95rem] font-bold text-teal-700 transition group-hover:text-white/90">
           고객 포털 열기

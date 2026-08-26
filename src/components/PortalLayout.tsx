@@ -12,6 +12,8 @@ import { TourButton } from './TourEntry'
 import { PortalNoticeBell } from './PortalNoticeBell'
 import { FontSizeButton } from './FontSizeButton'
 import { portalNotices } from '../lib/portalNotices'
+import { usePortalClient } from '../lib/portalClient'
+import { PortalPreviewBar, PortalClientPicker } from './PortalPreviewBar'
 import { touchPortalSeen } from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,12 +54,17 @@ export function PortalLayout() {
   const { profile, signOut } = useAuth()
   const { data } = useData()
   const navigate = useNavigate()
-  const clientName = data.clients[0]?.name ?? ''
+  //  ⚠ 0085 — **어느 병원인지**를 여기서 한 번만 정합니다.
+  //    예전에는 화면마다 `data.clients[0]` 였고, 그래서 직원 계정에서는
+  //    목록의 첫 병원이 「우리 병원」인 것처럼 떴습니다.
+  const target = usePortalClient()
+  const client = target.client
+  const clientName = client?.name ?? ''
 
   //  ⚠ 알림은 저장하지 않고 지금 자료로 만듭니다 (0083).
   const notices = useMemo(
-    () => (data.clients[0] ? portalNotices(data, data.clients[0]) : []),
-    [data],
+    () => (client ? portalNotices(data, client) : []),
+    [data, client],
   )
 
   //  ⚠ 「이 병원이 포털을 마지막으로 언제 열었나」를 남깁니다 (0083).
@@ -65,9 +72,11 @@ export function PortalLayout() {
   //    찍어 두는 수밖에 없습니다.
   //    · 실패해도 조용히 넘어갑니다 — 이건 기록이지 업무가 아닙니다
   //    · 직원이 확인용으로 열어 본 것은 **서버가** 안 셉니다
+  //  ⚠ 직원이 미리보기로 열어 본 것은 「병원이 들어왔다」가 아닙니다.
+  //    서버도 안 세지만(0083), 화면에서도 아예 안 부릅니다.
   useEffect(() => {
-    void touchPortalSeen()
-  }, [])
+    if (!target.isPreview) void touchPortalSeen()
+  }, [target.isPreview])
 
   return (
     <div className="min-h-[100dvh] bg-app">
@@ -204,13 +213,25 @@ export function PortalLayout() {
         </nav>
       </header>
 
+      {/*  0085 — 직원이 보고 있으면 **그렇다고 말합니다.** 이 띠가 없으면
+           대표님이 병원 화면을 보시면서 「우리 미수금이 왜 이것뿐이지」로
+           읽으실 수 있습니다 — 병원 화면은 그 병원 것만 보여 줍니다. */}
+      {target.isPreview && <PortalPreviewBar client={client} />}
+
       <SyncBar />
       {/* 아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로 스크롤할 수 없어
           사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
       <main className="mx-auto w-full max-w-[1240px] px-4 pb-[40vh] pt-5 lg:px-8 lg:pt-8">
-        <PageMotion key={pathname}>
-          <Outlet />
-        </PageMotion>
+        {/*  ⚠ 직원이 아직 병원을 안 골랐으면 **아무 병원도 안 보여 줍니다.**
+             첫 병원을 슬쩍 띄우면 대표님은 그것을 「지금 보려던 그 병원」으로
+             읽습니다. 묻는 편이 낫습니다. */}
+        {target.needsPick ? (
+          <PortalClientPicker clients={target.choices} />
+        ) : (
+          <PageMotion key={pathname}>
+            <Outlet />
+          </PageMotion>
+        )}
       </main>
 
       {/* 폰 전용 하단 탭 — 화면이 셋뿐이라 접거나 숨기지 않습니다 */}

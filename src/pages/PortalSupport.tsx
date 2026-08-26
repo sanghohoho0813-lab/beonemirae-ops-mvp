@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { HelpCircle, Send } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { usePortalClient } from '../lib/portalClient'
 import { useAuth } from '../context/AuthContext'
 import { PageShell, SectionTitle, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
@@ -30,7 +31,9 @@ const STATUS_TONE = {
 export function PortalSupport() {
   const { data, addInquiry } = useData()
   const { profile } = useAuth()
-  const client = data.clients[0]
+  //  ⚠ 0085 — 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
+  //    예전의 `data.clients[0]` 은 직원 계정에서 **첫 병원**을 골랐습니다.
+  const { client } = usePortalClient()
 
   const [topic, setTopic] = useState<InquiryTopic>('수거 일정')
   const [subject, setSubject] = useState('')
@@ -62,6 +65,9 @@ export function PortalSupport() {
   const canSend = subject.trim().length > 0 && body.trim().length > 0 && !sending
 
   async function send() {
+    //  ⚠ 위에서 client 가 없으면 이미 화면을 안 그립니다. 그래도 한 번 더
+    //    봅니다 — 없는 병원 이름으로 문의가 올라가면 서버가 거절합니다.
+    if (!client) return
     setSending(true)
     setError(null)
     const res = await addInquiry({

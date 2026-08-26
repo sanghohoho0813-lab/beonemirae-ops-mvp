@@ -24,6 +24,7 @@ import {
   ReceiptText,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { usePortalClient } from '../lib/portalClient'
 import { useAuth } from '../context/AuthContext'
 import { PageShell, SectionTitle, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
@@ -105,7 +106,9 @@ export function PortalHome() {
     return () => window.removeEventListener('beonemirae:portal-request', onAsk)
   }, [start])
 
-  const client = data.clients[0]
+  //  ⚠ 0085 — 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
+  //    예전의 `data.clients[0]` 은 직원 계정에서 **첫 병원**을 골랐습니다.
+  const { client } = usePortalClient()
   const s = useMemo(() => (client ? portalSummary(data, client) : null), [data, client])
 
   //  ⚠ 값은 **있는 것만** 적습니다. 「0건」과 「아직 없음」은 다른 말이고,

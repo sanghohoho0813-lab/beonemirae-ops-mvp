@@ -32,6 +32,7 @@ import { ClientForm } from '../components/ClientForm'
 import { BookVisitModal } from '../components/BookVisit'
 import { UrgentRiskCard } from '../components/UrgentRisk'
 import { ClientHealthCard } from '../components/ClientHealthCard'
+import { PortalSwitchButton } from '../components/PortalSwitch'
 import {
   lastCollection,
   nextSchedule,
@@ -939,6 +940,16 @@ export function ClientDetail() {
       )}
 
       {/* 수정 모달 */}
+      {/*  0085 — 이 거래처가 **실제로 보는 화면**으로 갑니다.
+           ⚠ 병원 id 를 달고 갑니다. 안 달면 「어느 병원을 보시겠습니까」로
+             가고, 예전에는 아예 목록의 첫 병원이 열렸습니다.
+           ⚠ 열리는 사람에게만 보입니다(안에서 스스로 판단합니다). */}
+      {canSeeMoney && (
+        <div data-client-portal-link>
+          <PortalSwitchButton clientId={client.id} label={`${client.name} 화면 미리보기`} />
+        </div>
+      )}
+
       {/*  0083 — 고객 인사이트 (건강도 · 위험 신호 · 다음 조치 · 고객 활동).
            ⚠ 기존 화면을 다시 만들지 않고 **한 칸만 더합니다.**
            ⚠ 사무실·관리자만 봅니다 — 미수금·매출 신호가 함께 나옵니다.

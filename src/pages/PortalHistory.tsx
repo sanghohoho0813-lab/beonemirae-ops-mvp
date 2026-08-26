@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CLIENT_TEL } from '../lib/brand'
 import { Hospital, ClipboardList } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { usePortalClient } from '../lib/portalClient'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { collectionHistory } from '../lib/ops'
@@ -17,7 +18,9 @@ import { prettyDate, weight } from '../lib/format'
 
 export function PortalHistory() {
   const { data } = useData()
-  const client = data.clients[0]
+  //  ⚠ 0085 — 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
+  //    예전의 `data.clients[0]` 은 직원 계정에서 **첫 병원**을 골랐습니다.
+  const { client } = usePortalClient()
   const rows = useMemo(() => (client ? collectionHistory(data, client.id, 40) : []), [data, client])
   const done = rows.filter((r) => r.amountKg != null)
 
