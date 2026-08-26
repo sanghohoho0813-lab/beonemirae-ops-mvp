@@ -147,4 +147,136 @@ for (const role of ['admin', 'field']) {
   ok(fresh.path === '/today', '현장 — 첫 화면은 오늘 일정', fresh.path)
 }
 
+// ═══ 0090 — 병원 화면에서도 양쪽으로 볼 수 있는가 ═══════════════════════════
+//
+//   대표님: 「병원화면도 모바일에서 pc화면 볼 수 있게, 반대 상황도 가능하게」
+//
+//   ⚠ 두 방향은 **방법이 다릅니다.**
+//     폰 → PC   meta viewport 를 1440 으로 바꿔 진짜 PC 배치를 그립니다.
+//     PC → 폰   반대는 안 됩니다(meta viewport 는 폰 브라우저만 봅니다).
+//               폰 크기 틀 안에 이 화면을 한 번 더 띄웁니다.
+//
+//   ⚠ 그림만 바뀌면 소용없습니다. **배치가 실제로 바뀌었는지**를 잽니다 —
+//     PC 로 바꾸면 위 메뉴가 나오고 아래 탭띠가 사라져야 합니다.
+
+async function openPortal(role, path, w, h = 844) {
+  const state = { reqs: 0, writes: [], profile: { ...W.profileFor(role), font_scale: 'normal' }, schemaVersion: 87 }
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: w < 700, hasTouch: w < 700 })
+  W.wire(ctx, state)
+  const p = await ctx.newPage()
+  await p.addInitScript(([k, u]) => window.localStorage.setItem(k, JSON.stringify({
+    access_token: 't', token_type: 'bearer', expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u,
+  })), ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }])
+  await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
+  await W.settle(p, state, 800, 30000)
+  await p.waitForTimeout(700)
+  return { ctx, p, state }
+}
+
+const vpOf = (p) => p.evaluate(() => document.querySelector('meta[name=viewport]')?.content ?? '')
+
+// ── 병원 계정 · 폰(390) → PC 화면 ─────────────────────────────────────────
+{
+  const { ctx, p } = await openPortal('client', '/portal', 390)
+  ok((await p.locator('[data-portal-pc-view]:visible').count()) === 1,
+    '병원 폰 — 「PC 화면으로 보기」가 있다')
+  //  ⚠ 폰에서 「모바일 화면으로 보기」는 뜻이 없습니다 — 이미 모바일입니다.
+  ok((await p.locator('[data-portal-phone-view]:visible').count()) === 0,
+    '병원 폰 — 「모바일 화면」 단추는 안 보인다 (이미 모바일입니다)')
+
+  const before = {
+    vp: await vpOf(p),
+    top: await p.locator('header nav a:visible').count(),
+    bottom: await p.locator('nav.fixed.bottom-0 a:visible').count(),
+  }
+  ok(/device-width/.test(before.vp), '처음은 모바일 폭', before.vp.slice(0, 30))
+  ok(before.bottom > 0, '처음에는 아래 탭띠가 있다', `${before.bottom}개`)
+
+  await p.locator('[data-portal-pc-view]').click()
+  await p.waitForTimeout(900)
+
+  const after = {
+    vp: await vpOf(p),
+    top: await p.locator('header nav a:visible').count(),
+    bottom: await p.locator('nav.fixed.bottom-0 a:visible').count(),
+  }
+  ok(/width=1440/.test(after.vp), '**PC 폭으로 바뀐다**', after.vp.slice(0, 34))
+  //  ⚠ 그림만 커진 것이 아니라 **배치가 바뀌어야** 합니다.
+  ok(after.top > 0, '위 메뉴가 나온다 (PC 배치가 실제로 켜졌다)', `${after.top}개`)
+  ok(after.bottom === 0, '폰 아래 탭띠가 사라진다', `${after.bottom}개`)
+
+  ok((await p.locator('[data-pc-view-bar]').count()) === 1, '돌아가는 띠가 떠 있다')
+  const exit = p.locator('[data-pc-view-exit]')
+  ok((await exit.count()) === 1, '띠에 되돌아가는 단추가 있다')
+  await exit.click()
+  await p.waitForTimeout(800)
+  ok(/device-width/.test(await vpOf(p)), '**모바일 폭으로 돌아온다**')
+  ok((await p.locator('[data-pc-view-bar]').count()) === 0, '띠가 사라진다')
+  ok((await p.locator('nav.fixed.bottom-0 a:visible').count()) > 0, '아래 탭띠가 돌아온다')
+  await ctx.close()
+}
+
+// ── 병원 계정 · 새로고침하면 모바일로 돌아온다 ────────────────────────────
+//    ⚠ 저장하지 않습니다. 잠깐 확인하는 기능이지 그 상태로 쓰시라는 것이
+//      아닙니다. PC 폭에 갇히면 병원 담당자는 빠져나올 방법을 못 찾습니다.
+{
+  const { ctx, p, state } = await openPortal('client', '/portal', 390)
+  await p.locator('[data-portal-pc-view]').click(); await p.waitForTimeout(800)
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await W.settle(p, state, 800, 30000); await p.waitForTimeout(900)
+  ok(/device-width/.test(await vpOf(p)), '**다시 들어오면 모바일로 시작**')
+  ok((await p.locator('[data-pc-view-bar]').count()) === 0, 'PC 폭에 갇혀 있지 않다')
+  await ctx.close()
+}
+
+// ── 관리자 · PC(1440) → 모바일 화면 ───────────────────────────────────────
+{
+  const T = F.clients[3]
+  const { ctx, p } = await openPortal('admin', `/portal/c/${T.id}`, 1440, 950)
+  ok((await p.locator('[data-portal-phone-view]:visible').count()) === 1,
+    'PC — 「모바일 화면으로 보기」가 있다')
+  ok((await p.locator('[data-portal-pc-view]:visible').count()) === 0,
+    'PC — 「PC 화면」 단추는 안 보인다 (이미 PC 입니다)')
+
+  await p.locator('[data-portal-phone-view]').click()
+  await p.waitForTimeout(1800)
+  ok((await p.locator('[data-portal-phone-frame]').count()) === 1, '**폰 틀이 열린다**')
+
+  const src = await p.locator('[data-portal-phone-iframe]').getAttribute('src')
+  //  ⚠ **지금 보고 있는 병원 그대로**여야 합니다. 틀 안에서 다른 병원이
+  //    나오면 대표님은 그것을 이 병원 자료로 읽으십니다.
+  ok(String(src).startsWith(`/portal/c/${T.id}`), '틀 안 주소가 지금 병원 그대로다', String(src))
+  //  ⚠ 틀 안에서 또 틀을 열 수 있으면 끝이 없습니다.
+  ok(/frame=1/.test(String(src)), '틀 안이라는 표시가 붙는다', String(src))
+
+  const fr = p.frameLocator('[data-portal-phone-iframe]')
+  await p.waitForTimeout(2600)
+  const hero = (await fr.locator('[data-portal-hero] h1').innerText().catch(() => '')).replace(/\s+/g, ' ')
+  ok(hero.includes(T.name), `**틀 안이 ${T.name} 이다**`, hero.slice(0, 40))
+  //  ⚠ 틀 안은 폭이 390px 이므로 **모바일 배치**가 켜져야 합니다.
+  ok((await fr.locator('nav.fixed.bottom-0 a').count()) > 0, '틀 안에 폰 아래 탭띠가 있다 (모바일 배치가 켜졌다)')
+  ok((await fr.locator('[data-portal-pc-view]').count()) === 0, '틀 안에는 보기 전환 단추가 없다')
+  ok((await fr.locator('[data-portal-phone-view]').count()) === 0, '틀 안에는 폰 보기 단추도 없다')
+
+  await p.locator('[data-portal-phone-exit]').click()
+  await p.waitForTimeout(700)
+  ok((await p.locator('[data-portal-phone-frame]').count()) === 0, '닫으면 틀이 사라진다')
+  ok(new URL(p.url()).pathname === `/portal/c/${T.id}`, '닫아도 보던 자리 그대로', new URL(p.url()).pathname)
+  await ctx.close()
+}
+
+// ── 화면을 옮기면 보기 모드가 꺼진다 ──────────────────────────────────────
+//    ⚠ 켜 둔 채로 다른 화면에 가면 「왜 이렇게 보이지」가 됩니다.
+{
+  const { ctx, p } = await openPortal('client', '/portal', 390)
+  await p.locator('[data-portal-pc-view]').click(); await p.waitForTimeout(800)
+  ok((await p.locator('[data-pc-view-bar]').count()) === 1, 'PC 보기 켬')
+  await p.locator('header nav a:has-text("고객지원")').first().click()
+  await p.waitForTimeout(1000)
+  ok((await p.locator('[data-pc-view-bar]').count()) === 0, '**다른 화면으로 가면 보기 모드가 꺼진다**')
+  ok(/device-width/.test(await vpOf(p)), '모바일 폭으로 돌아와 있다')
+  await ctx.close()
+}
+
 await b.close()

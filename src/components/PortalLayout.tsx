@@ -11,6 +11,7 @@ import { PageMotion } from './motion'
 import { TourButton } from './TourEntry'
 import { PortalNoticeBell } from './PortalNoticeBell'
 import { FontSizeButton } from './FontSizeButton'
+import { PortalViewSwitch } from './PortalViewSwitch'
 import { portalNotices } from '../lib/portalNotices'
 import { usePortalClient, portalPath, PORTAL_SELECT_PATH, type PortalPage } from '../lib/portalClient'
 import { PortalPreviewBar } from './PortalPreviewBar'
@@ -234,6 +235,13 @@ export function PortalLayout() {
                  그 두 화면을 못 엽니다. 요양병원 담당자분이 화면이 작아도
                  방법이 없었습니다. */}
             <FontSizeButton className="flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-[1.05rem] font-bold text-white transition hover:bg-white/20 sm:px-3.5 sm:py-2.5" />
+            {/*  ── 0090 — 폰에서 PC 화면 / PC 에서 폰 화면 ─────────────────
+                 대표님: 「병원화면도 모바일에서 pc화면 볼 수 있게, 반대
+                 상황도 가능하게」.
+                 ⚠ 두 단추는 서로 다른 폭에서만 보입니다 — 폰에서 「모바일
+                   화면으로 보기」는 뜻이 없고, PC 에서 「PC 화면으로 보기」도
+                   마찬가지입니다. 그래서 한 자리를 나눠 씁니다. */}
+            <PortalViewSwitch />
             {/*  화면 색 (0081) — 병원 담당자도 바꿀 수 있습니다.
                  어두운 머리띠 위라 흰 테두리 꼴로 둡니다. */}
             {/*  ⚠ 화면 색도 폰에서는 감춥니다 — 취향이고, 글자 크기만큼

@@ -1,5 +1,6 @@
 import { Building2, Headset, MapPin, Phone, ScrollText, User } from 'lucide-react'
 import { CLIENT_TEL, COMPANY, COMPANY_HOURS } from '../lib/brand'
+import { PortalPcViewButton } from './PortalViewSwitch'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,6 +94,14 @@ export function PortalFooter({ client }: { client: Client }) {
           </Cell>
         )}
       </div>
+
+      {/*  ── 0090 — 폰에서 PC 화면 보기 ──────────────────────────────────
+           대표님: 「병원화면도 모바일에서 pc화면 볼 수 있게」.
+           ⚠ 머리띠가 아니라 여기입니다. 머리띠에 뒀더니 단추가 다섯이 되어
+             병원 이름이 긴 곳에서 두 줄이 되고, 「수거 요청」이 첫 화면
+             밖으로 밀렸습니다(check_flow390). 가끔 한 번 쓰는 것이
+             매일 쓰는 것보다 앞설 이유가 없습니다. */}
+      <PortalPcViewButton />
 
       {/*  ⚠ 「이 화면에 없는 것」을 여기서 말해 둡니다. 화면에 없는 것을
            찾다가 전화하는 일이 실제로 있습니다. */}
