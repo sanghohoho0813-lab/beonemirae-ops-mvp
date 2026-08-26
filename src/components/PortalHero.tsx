@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, ChevronRight, Recycle } from 'lucide-react'
+import { Building2, CalendarClock, ChevronRight, Recycle, type LucideIcon } from 'lucide-react'
 import type { Client } from '../types'
 import type { PortalSummary } from '../lib/portal'
 import { prettyDate } from '../lib/format'
@@ -12,8 +12,7 @@ import { prettyDate } from '../lib/format'
 //    적혀 있습니다. **둘 다 저희 서버에 없는 값입니다.** 그럴듯하게 만들어
 //    넣으면 병원 담당자가 그 숫자를 믿게 되고, 그건 지어낸 숫자입니다.
 //    대신 **실제로 가지고 있는 사실**을 같은 자리에 넣습니다 —
-//    수거주기와 다음 수거일입니다. 둘 다 서버에 있는 값이고, 병원이 이
-//    화면에서 제일 먼저 확인하려는 것이기도 합니다.
+//    수거주기와 다음 수거일입니다.
 //
 //  ⚠ 「다음 수거」가 **확정인지 예상인지** 반드시 구분해 적습니다. 수거주기로
 //    계산한 값을 확정처럼 보이게 두면, 병원은 그날 사람을 대기시켜 놓고
@@ -94,19 +93,37 @@ export function PortalHero({ client, s }: { client: Client; s: PortalSummary }) 
 //
 //  ⚠ **누르면 실제로 되는 것만** 답니다. 대표님: 「작동하지 않는 버튼 생성
 //    금지 · 의미 없는 Coming Soon 남발 금지」.
+//
+//  ⚠ 0089 — 카드마다 **아주 옅은** 색을 다르게 둡니다. 대표님: 「카드 전체를
+//    강한 색으로 칠하지 않는다 … 아이콘 배경 / 카드 상단 라인 / 아주 약한
+//    background tint / badge / CTA arrow 정도만」.
+//    여덟 장이 전부 같은 흰 칸이면 눈이 어디에 멈출 곳을 못 찾습니다.
+//    그렇다고 여덟 가지 색을 칠하면 그건 그냥 어지러운 화면입니다.
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** 카드 색 — 아이콘 자리와 위 선에만 씁니다 */
+export type CardTone = 'teal' | 'rose' | 'cyan' | 'blue' | 'violet' | 'emerald' | 'sky' | 'aqua'
+
+const TONE: Record<CardTone, { tile: string; line: string; arrow: string }> = {
+  teal: { tile: 'bg-teal-50 text-teal-700', line: 'bg-teal-400', arrow: 'text-teal-700' },
+  rose: { tile: 'bg-rose-50 text-rose-600', line: 'bg-rose-400', arrow: 'text-rose-600' },
+  cyan: { tile: 'bg-cyan-50 text-cyan-700', line: 'bg-cyan-400', arrow: 'text-cyan-700' },
+  blue: { tile: 'bg-blue-50 text-blue-700', line: 'bg-blue-400', arrow: 'text-blue-700' },
+  violet: { tile: 'bg-violet-50 text-violet-700', line: 'bg-violet-400', arrow: 'text-violet-700' },
+  emerald: { tile: 'bg-emerald-50 text-emerald-700', line: 'bg-emerald-400', arrow: 'text-emerald-700' },
+  sky: { tile: 'bg-sky-50 text-sky-700', line: 'bg-sky-400', arrow: 'text-sky-700' },
+  aqua: { tile: 'bg-teal-100 text-teal-800', line: 'bg-teal-500', arrow: 'text-teal-800' },
+}
 
 export interface PortalAction {
   no: string
   label: string
   desc: string
-  icon: typeof Building2
+  icon: LucideIcon
+  tone: CardTone
   /** 지금 상태 — 있는 값만. 없으면 안 적습니다 */
   value?: string
-  onClick?: () => void
-  to?: string
-  /** 눈에 띄게 (긴급수거) */
-  accent?: boolean
+  onClick: () => void
   /**
    * 예전 큰 단추의 표시 (0083). 검사와 안내가 이 이름으로 이 자리를
    * 찾습니다 — 단추를 카드로 합치면서 표시도 같이 옮겼습니다.
@@ -114,20 +131,25 @@ export interface PortalAction {
   cta?: string
 }
 
-export function PortalActionCard({ a, as }: { a: PortalAction; as: 'link' | 'button' }) {
+export function PortalActionCard({ a }: { a: PortalAction }) {
   const Icon = a.icon
-  const inner = (
-    <>
+  const t = TONE[a.tone]
+  return (
+    <button
+      data-portal-action={a.label}
+      data-portal-cta={a.cta}
+      data-card-tone={a.tone}
+      onClick={a.onClick}
+      className="card pressable relative flex min-h-[9rem] w-full flex-col overflow-hidden p-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:min-h-[11.5rem] sm:p-5"
+    >
+      {/*  카드마다 다른 것은 이 **한 줄**과 아이콘 자리뿐입니다 */}
+      <span className={`absolute inset-x-0 top-0 h-1 ${t.line}`} />
       <span className="flex items-center gap-2.5">
-        <span className="text-[1.05rem] font-black tabular-nums text-teal-600">{a.no}</span>
+        <span className="text-[1.05rem] font-black tabular-nums text-navy-400">{a.no}</span>
         <span className="t-card min-w-0 break-keep text-navy-900">{a.label}</span>
       </span>
       <span className="mt-2.5 flex flex-col items-start gap-2 sm:mt-3 sm:flex-row sm:gap-3">
-        <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${
-            a.accent ? 'bg-rose-50 text-rose-500' : 'bg-teal-50 text-teal-700'
-          }`}
-        >
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${t.tile}`}>
           <Icon size={23} strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1">
@@ -142,23 +164,9 @@ export function PortalActionCard({ a, as }: { a: PortalAction; as: 'link' | 'but
         </span>
       </span>
       <span className="mt-3.5 hidden items-center justify-between border-t border-navy-100 pt-3 sm:flex">
-        <span className="t-btn break-keep text-teal-700">바로가기</span>
-        <ChevronRight size={19} className="shrink-0 text-teal-700" />
+        <span className={`t-btn break-keep ${t.arrow}`}>바로 하기</span>
+        <ChevronRight size={19} className={`shrink-0 ${t.arrow}`} />
       </span>
-    </>
-  )
-  const cls =
-    'card pressable flex min-h-[8.5rem] w-full flex-col p-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:min-h-[11rem] sm:p-5'
-  if (as === 'button') {
-    return (
-      <button data-portal-action={a.label} data-portal-cta={a.cta} onClick={a.onClick} className={cls}>
-        {inner}
-      </button>
-    )
-  }
-  return (
-    <a data-portal-action={a.label} data-portal-cta={a.cta} href={a.to} className={cls}>
-      {inner}
-    </a>
+    </button>
   )
 }

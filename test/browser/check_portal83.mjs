@@ -181,9 +181,15 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
   const { ctx, p } = await open('/portal', { w: 390 })
   const push = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   ok(push <= 0, '**폰에서 가로로 밀리지 않는다**', `${push}px`)
-  //  아래 띠는 넷 — 여섯이면 글자가 세로로 늘어집니다.
+  //  ⚠ 0089 — **넷에서 셋으로** 줄었습니다. 물품·리포트·정산은 이제 홈에서
+  //    창으로 엽니다(화면을 안 옮깁니다). 위 메뉴에 이름을 또 걸어 둘 이유가
+  //    없어졌고, 아래 띠도 같은 셋을 씁니다.
+  //    ⚠ 넷을 넘으면 안 되는 이유는 그대로입니다 — 여섯이면 한 칸이 65px 이
+  //      되어 글자가 세로로 늘어집니다.
   const tabs = await p.locator('nav.fixed.bottom-0 a').count()
-  ok(tabs === 4, '폰 아래 띠는 넷', `${tabs}개`)
+  ok(tabs === 3, '폰 아래 띠는 셋', `${tabs}개`)
+  const tabText = (await p.locator('nav.fixed.bottom-0 a').allInnerTexts()).map((x) => x.replace(/\s+/g, ''))
+  ok(tabText.some((x) => x.includes('홈')), '아래 띠에 홈이 있다', tabText.join(','))
   const tiny = await p.evaluate(() => {
     const out = []
     for (const el of document.querySelectorAll('main *')) {

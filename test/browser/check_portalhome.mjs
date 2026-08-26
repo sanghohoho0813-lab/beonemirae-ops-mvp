@@ -109,7 +109,11 @@ const box = async (p, sel) => (await p.locator(sel).first().boundingBox()) ?? { 
   ok(c2.y + c2.height <= 844, '② 자재·용기 요청이 첫 화면 안에 다 보임', `아래끝 ${Math.round(c2.y + c2.height)}px`)
 
   const t2 = flat(await p.textContent('[data-portal-cta="supplies"]'))
-  ok(/자재·용기 요청/.test(t2), '두 번째 버튼이 「자재·용기 요청」', t2.slice(0, 40))
+  //  ⚠ 0089 — 이름이 「자재·용기 요청」에서 「용기 · 봉투 주문」으로
+  //    바뀌었습니다. 지켜야 하는 것은 **이름 자체가 아니라** 두 가지입니다 —
+  //      ① 「소모품」이라고 부르지 않을 것 (판매 상품 목록처럼 읽힙니다)
+  //      ② 무엇이 부족할 때 누르는지가 적혀 있을 것
+  ok(/용기|봉투/.test(t2), '두 번째 칸이 용기·봉투를 가리킴', t2.slice(0, 40))
   ok(!/소모품/.test(t2), '**「소모품」이라고 부르지 않음** — 물건을 사라는 뜻이 아닙니다')
   ok(/용기|봉투|바늘통/.test(t2), '무엇이 부족할 때 누르는지 적혀 있음', t2.slice(0, 70))
 
@@ -123,7 +127,12 @@ const box = async (p, sel) => (await p.locator(sel).first().boundingBox()) ?? { 
   await ctx.close()
 }
 
-// ── 6. 두 번째 버튼이 실제로 물품 화면으로 간다 ─────────────────────────────
+// ── 6. 두 번째 칸이 실제로 주문할 자리를 연다 ───────────────────────────────
+//   ⚠ 0089 — 예전에는 **물품 화면으로 옮겨 갔습니다.** 이제는 있던 자리에
+//     그대로 있고 주문 창만 뜹니다. 병원 담당자가 「어디로 가야 하지」를
+//     생각하지 않게 하는 것이 이번 변경의 목적입니다.
+//   ⚠ 그래도 **주문할 자리가 실제로 열려야** 합니다 — 그게 안 되면
+//     이름만 바뀌고 하는 일이 없어진 것입니다.
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
   wire(ctx)
@@ -131,34 +140,45 @@ const box = async (p, sel) => (await p.locator(sel).first().boundingBox()) ?? { 
   await p.waitForSelector('[data-portal-cta="supplies"]', { timeout: 20000 })
   await p.locator('[data-portal-cta="supplies"]').dispatchEvent('click')
   await p.waitForTimeout(1500)
-  ok(new URL(p.url()).pathname === '/portal/supplies', '누르면 물품 화면으로 감', p.url())
+  ok((await p.locator('[data-portal-sheet="supply"]').count()) === 1, '누르면 주문 창이 열림')
+  ok(new URL(p.url()).pathname === '/portal', '**화면을 옮기지 않음**', p.url())
+  //  ⚠ 새로고침해도 창이 살아 있도록 주소 뒤에 남깁니다.
+  ok(new URL(p.url()).searchParams.get('do') === 'supply', '무슨 창인지 주소에 남음', p.url())
   await ctx.close()
 }
 
-// ── 7. 요청 창의 종류 이름 ──────────────────────────────────────────────────
+// ── 7. 수거 요청 창 — **글자를 안 적고도** 보낼 수 있는가 ──────────────────
+//   ⚠ 0089 — 예전에는 요청 창 안에서 「요청 종류」를 고르게 했습니다(자재·용기
+//     포함). 이제 자재는 **자기 창**을 가집니다(위 6번). 요청 창은 수거만
+//     다루고, 대신 적는 칸을 없앴습니다.
+//   ⚠ 지켜야 하는 것 — 병원 담당자가 **자판을 한 번도 안 쓰고** 보낼 수
+//     있어야 합니다. 빈 칸 앞에서 무엇을 적을지 몰라 전화하는 것이
+//     이 화면을 만든 이유였습니다.
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
   wire(ctx)
   const p = await open(ctx, '/portal')
   await p.waitForSelector('[data-portal-cta="collect"]', { timeout: 20000 })
   await p.locator('[data-portal-cta="collect"]').dispatchEvent('click')
-  await p.waitForTimeout(900)
+  await p.waitForTimeout(1000)
 
-  const kinds = await p.locator('label:has-text("무엇이 필요하신가요?") ~ div button').allTextContents()
-  const names = kinds.map(flat)
-  ok(names.includes('자재·용기'), '요청 종류에 「자재·용기」가 있음', names.join(','))
-  ok(!names.includes('소모품'), '「소모품」이라는 종류가 병원 화면에 없음', names.join(','))
+  ok((await p.locator('[data-portal-sheet="pickup"]').count()) === 1, '수거 요청 창이 열림')
+  ok(await p.locator('[data-req-send]').isDisabled(), '아무것도 안 고르면 못 보냄')
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+  await p.waitForTimeout(300)
+  ok(!(await p.locator('[data-req-send]').isDisabled()), '**하나만 골라도 보낼 수 있음**')
 
-  await p.getByRole('button', { name: '자재·용기', exact: true }).click()
-  await p.waitForTimeout(400)
-  const title = flat(await p.textContent('[role="dialog"] h2, [role="dialog"] h3').catch(() => ''))
-  ok(/자재·용기 요청/.test(title) || title === '', '창 제목도 같은 이름', title)
+  const sheet = flat(await p.textContent('[data-portal-sheet="pickup"]'))
+  ok(!/소모품/.test(sheet), '「소모품」이라는 말이 병원 화면에 없음')
   await ctx.close()
 }
 
-// ── 8. 글자만 바꿨고 **저장값은 그대로** ───────────────────────────────────
-//   여기가 이번 변경의 핵심입니다. `소모품` 은 DB CHECK 값이라 화면 글자를
-//   바꾸면서 같이 바꾸면 서버가 전부 거절합니다.
+// ── 8. 고른 것이 **서버가 받는 값**으로 나가는가 ───────────────────────────
+//   ⚠ `kind` 는 DB CHECK 값입니다('긴급수거','추가수거','소모품','교육·자료',
+//     '기타'). 화면 글자를 바꾸면서 저장값까지 같이 바꾸면 그날 들어온 요청이
+//     전부 서버에서 거절됩니다.
+//   ⚠ 0089 — 요청 창은 이제 수거만 다룹니다. 일반은 `추가수거`,
+//     긴급 칸은 `긴급수거` 로 나가야 합니다.
 {
   const posted = []
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
@@ -166,15 +186,17 @@ const box = async (p, sel) => (await p.locator(sel).first().boundingBox()) ?? { 
   const p = await open(ctx, '/portal')
   await p.waitForSelector('[data-portal-cta="collect"]', { timeout: 20000 })
   await p.locator('[data-portal-cta="collect"]').dispatchEvent('click')
-  await p.waitForTimeout(900)
-  await p.getByRole('button', { name: '자재·용기', exact: true }).click()
-  await p.fill('#req-content', '20L 합성수지 용기 10개 부탁드립니다')
-  await p.getByRole('button', { name: '요청 보내기' }).click()
-  await p.waitForTimeout(1600)
+  await p.waitForTimeout(1000)
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+  await p.waitForTimeout(300)
+  await p.locator('[data-req-send]').click()
+  await p.waitForTimeout(1800)
 
   ok(posted.length === 1, '요청이 한 번 갔음', `${posted.length}건`)
-  ok(posted[0]?.kind === '소모품', '**서버로 가는 값은 그대로 `소모품`** (DB CHECK 값)', String(posted[0]?.kind))
-  ok(posted[0]?.content === '20L 합성수지 용기 10개 부탁드립니다', '적은 내용이 그대로 감')
+  ok(posted[0]?.kind === '추가수거', '**서버가 받는 값으로 나감** (DB CHECK 값)', String(posted[0]?.kind))
+  //  ⚠ 고른 것이 **글로** 들어가야 합니다 — 배차가 읽는 것은 글입니다.
+  ok(/정기 일정 외 추가 수거/.test(String(posted[0]?.content)), '고른 것이 요청 글에 그대로 감',
+    String(posted[0]?.content).slice(0, 60))
   await ctx.close()
 }
 

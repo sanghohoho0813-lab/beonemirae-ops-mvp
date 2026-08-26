@@ -1,34 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { CLIENT_TEL } from '../lib/brand'
-import { Link } from 'react-router-dom'
 import {
-  AlertTriangle,
-  CalendarClock,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  FileBarChart,
-  GraduationCap,
-  MessageSquare,
-  Package,
-  PackagePlus,
-  Scale,
-  Send,
-  Siren,
-  Sparkles,
-  Truck,
-  X,
-  Hospital,
-  History,
-  ReceiptText,
+  Check, CheckCircle2, ClipboardList, FileBarChart, Hospital,
+  MessageSquare, PackagePlus, ReceiptText, ShieldCheck, Siren, Sparkles, Truck,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
-import { useAuth } from '../context/AuthContext'
+import { usePortalSheet } from '../lib/portalSheet'
 import { PageShell, SectionTitle, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
-import { Modal } from '../components/Modal'
 import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { outstandingOf } from '../lib/selectors'
@@ -36,92 +16,56 @@ import { PortalHero, PortalActionCard, type PortalAction } from '../components/P
 import { PortalInsightPanel } from '../components/PortalInsightPanel'
 import { PortalFooter } from '../components/PortalFooter'
 import { portalInsights } from '../lib/portalInsight'
-import { useSchemaAtLeast } from '../lib/schemaGate'
-import { REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
-import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
+import { recentActivity, portalTodos } from '../lib/portalActivity'
 import { prettyDate, weight, won } from '../lib/format'
+import { REQUEST_KIND_LABEL } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 병원 고객 첫 화면 — "병원이 왜 로그인하는가"에 화면으로 답합니다.
+// 병원 담당자의 **작업 화면** (0089)
 //
-//  화면 순서 자체가 답입니다. 행동 → 내 행동의 상태 → 지나간 기록 순입니다.
-//   0) 다음 수거는 언제인가 (제목 아래 한 줄)
-//   1) 지금 할 수 있는 일 — 수거 요청 / 자재·용기 요청을 크게, 나머지는 작게
-//   2) 내 요청이 지금 어디까지 왔는가 (회신까지)
-//   3) 비원미래가 우리 병원 데이터를 보고 무엇을 제안했는가 → 수락
-//   4) 우리 병원 수거 현황 (최근 기록)
-//   5) 월간 리포트 · 수거 이력 (인증·실사 자료를 직접)
+//  대표님: 「페이지 이동형 고객 포털 → 홈 화면에서 대부분의 업무가 끝나는
+//  작업형 Customer Platform 으로 전환한다」
 //
-//  색은 요청 유형·상태 구분에만 씁니다. 병원 담당자는 폐기물이 본업이 아니라
-//  겸직인 경우가 많아, 읽을 것보다 '누를 것'이 먼저 보이게 두었습니다.
+//  ── 무엇이 바뀌었나 ─────────────────────────────────────────────────────
+//   예전에는 카드를 누르면 **다른 화면으로 갔습니다.** 물품을 주문하려면
+//   화면을 옮기고, 끝나면 돌아와야 했습니다. 병원 담당자는 폐기물이 본업이
+//   아니라, 화면을 옮길 때마다 「지금 어디에 있지」를 다시 생각해야 합니다.
+//
+//   이제 카드를 누르면 **있던 자리에 그대로 있고 위에 창만 뜹니다.**
+//   창을 닫으면 하던 자리로 돌아옵니다. 옮길 화면이 없으니 길을 잃을 일도
+//   없습니다.
+//
+//  ── 화면 순서 ───────────────────────────────────────────────────────────
+//   1) 우리 병원 · 다음 수거     (머리 칸)
+//   2) 지금 확인이 필요한 것     ← 있을 때만
+//   3) 지금 하실 수 있는 일       ← 8칸, 전부 창을 엽니다
+//   4) 배출 분석 (규칙 기반)
+//   5) 최근 활동
+//   6) 병원 등록 정보 · 상담센터
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 요청 유형별 아이콘 — 무엇을 요청하는지 글자 없이도 구분되게 */
-const KIND_ICON: Record<RequestKind, typeof Siren> = {
-  긴급수거: Siren,
-  추가수거: Truck,
-  소모품: PackagePlus,
-  '교육·자료': GraduationCap,
-  기타: MessageSquare,
+const TODO_TONE = {
+  info: { chip: 'bg-sky-50 text-sky-700', dot: 'bg-sky-500' },
+  good: { chip: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
+  warn: { chip: 'bg-rose-50 text-rose-600', dot: 'bg-rose-500' },
+} as const
+
+const ACT_TONE: Record<string, string> = {
+  수거: 'bg-teal-50 text-teal-700',
+  주문: 'bg-cyan-50 text-cyan-700',
+  정산: 'bg-sky-50 text-sky-700',
+  문의: 'bg-violet-50 text-violet-700',
+  요청: 'bg-amber-50 text-amber-700',
 }
-
-const KIND_HINT: Record<RequestKind, string> = {
-  긴급수거: '보관기한이 임박했거나 배출량이 갑자기 늘었을 때',
-  추가수거: '정기 수거 외에 한 번 더 필요할 때',
-  소모품: '전용 용기 · 봉투 · 바늘통이 부족할 때',
-  '교육·자료': '배출자 교육, 수거대장·명세 등 자료가 필요할 때',
-  기타: '그 밖의 문의',
-}
-
-//  ⚠ 0083 — 여기 있던 SECONDARY(긴급수거·교육자료 작은 단추 두 개)를
-//    없앴습니다. 위의 번호 카드 묶음이 같은 일을 하고, 둘 다 두었더니
-//    매일 쓰는 「수거 요청」이 폰에서 3화면 아래로 밀렸습니다.
-//    「교육·자료」는 요청 창 안에서 그대로 고르실 수 있습니다.
-
-
-const STATUS_STEPS: RequestStatus[] = ['접수', '확인 중', '일정 반영', '처리 완료']
 
 export function PortalHome() {
-  const { data, addRequest, respondProposal } = useData()
-  const { profile } = useAuth()
-  const [open, setOpen] = useState(false)
-  const [kind, setKind] = useState<RequestKind>('추가수거')
-  const [content, setContent] = useState('')
-  const [urgent, setUrgent] = useState(false)
-  const [desired, setDesired] = useState('')
-  //  ⚠ 0087 — 배차가 병원에 **다시 전화해서 묻던 두 가지**입니다.
-  //    「의료폐기물인가요 기저귀인가요」 · 「몇 kg 쯤 되나요」.
-  //    비워 두셔도 됩니다 — 필수로 만들면 급한 병원이 「몰라서」 못 올립니다.
-  const [wasteType, setWasteType] = useState<string>('')
-  const [expectedKg, setExpectedKg] = useState('')
-  const [sent, setSent] = useState(false)
-  const [sendError, setSendError] = useState<string | null>(null)
-  //  한 번의 「보내기」에 하나. 실패해도 바뀌지 않습니다 (0055).
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const { data } = useData()
+  //  ⚠ 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
+  const { client } = usePortalClient()
+  //  ⚠ 「지금 무슨 창이 열려 있는가」는 주소 뒤(?do=)에 있습니다 —
+  //    새로고침해도 창이 살아 있습니다.
+  const { open } = usePortalSheet()
 
-  const start = useCallback((k: RequestKind) => {
-    setSendError(null)
-    setKind(k)
-    setUrgent(k === '긴급수거')
-    setContent('')
-    setDesired('')
-    setWasteType('')
-    setExpectedKg('')
-    setOpen(true)
-  }, [])
-
-  // 투어 마지막 단계의 「수거 요청해보기」가 여기로 옵니다 — 설명이 곧바로 행동이 되게.
-  useEffect(() => {
-    const onAsk = () => start('긴급수거')
-    window.addEventListener('beonemirae:portal-request', onAsk)
-    return () => window.removeEventListener('beonemirae:portal-request', onAsk)
-  }, [start])
-
-  //  ⚠ 0085 — 「어느 병원인가」는 한 곳에서 정합니다(lib/portalClient.ts).
-  //    예전의 `data.clients[0]` 은 직원 계정에서 **첫 병원**을 골랐습니다.
-  //  ⚠ 0088 — `path()` 로 주소를 만듭니다. 직접 '/portal/supplies' 라고
-  //    적으면 **거기서 병원이 지워집니다** — 대표님이 신고하신 그 결함입니다.
-  const { client, path } = usePortalClient()
   const s = useMemo(() => (client ? portalSummary(data, client) : null), [data, client])
 
   //  ⚠ 값은 **있는 것만** 적습니다. 「0건」과 「아직 없음」은 다른 말이고,
@@ -139,82 +83,89 @@ export function PortalHome() {
     () => (data.inquiries ?? []).filter((q) => !client || q.clientId === client.id),
     [data.inquiries, client],
   )
+  const openOrders = useMemo(
+    () =>
+      (data.productOrders ?? []).filter(
+        (o) => client && o.clientId === client.id && o.status !== '전달완료' && o.status !== '취소',
+      ),
+    [data.productOrders, client],
+  )
 
-  //  ⚠ 0086 — 「분석」 칸. **규칙 기반입니다** (lib/portalInsight.ts).
+  //  ⚠ 「분석」 칸. **규칙 기반입니다** (lib/portalInsight.ts).
   //    AI 라고 부르지 않습니다 — 지금 계산은 뺄셈과 나눗셈입니다.
   const insight = useMemo(
     () => (client ? portalInsights(data, client) : { items: [], why: null }),
     [data, client],
   )
 
-  //  ⚠ 0087 — 서버에 칸이 생긴 뒤에만 묻습니다. 아직이면 이 두 줄이
-  //    화면에 나타나지 않습니다 — 적어 봐야 저장할 데가 없습니다.
-  const canDetail = useSchemaAtLeast(87) === true
+  const todos = useMemo(
+    () =>
+      client && s
+        ? portalTodos(data, client, { date: s.nextDate, isEstimate: s.nextIsEstimate })
+        : [],
+    [data, client, s],
+  )
+  const activity = useMemo(() => (client ? recentActivity(data, client) : []), [data, client])
 
-  //  ⚠ 고를 수 있는 유형은 **이 병원이 실제로 맡기는 것**뿐입니다.
-  //    기저귀를 안 하는 병원에 그 선택지를 띄우면 잘못 고르게 됩니다.
-  const wasteChoices = useMemo(() => {
-    if (!client) return []
-    return [
-      client.collectsMedicalWaste ? '의료폐기물' : null,
-      client.collectsDiaper ? '일회용기저귀' : null,
-    ].filter((x): x is string => x != null)
-  }, [client])
-
-  //  ── 순서 (0083) ─────────────────────────────────────────────────────────
+  //  ── 여덟 칸 ─────────────────────────────────────────────────────────────
   //
-  //   ⚠ 「수거 요청」과 「자재·용기 요청」이 **첫 화면 안**에 있어야 합니다.
+  //   ⚠ 「수거 요청」과 「용기·봉투 주문」이 **첫 화면 안**에 있어야 합니다.
   //     이건 이사님 통화에서 나온 기존 판단이고 검사로도 못박혀 있습니다
   //     (check_flow390 ①②). 병원이 급한 것은 **용기가 모자란 것**인데,
-  //     안 보이면 그냥 전화를 겁니다.
-  //     그래서 이 둘을 맨 앞에 둡니다 — 폰에서 두 칸씩 놓이므로 첫 줄입니다.
+  //     안 보이면 그냥 전화를 겁니다. 그래서 이 둘을 맨 앞에 둡니다.
   //
   //   ⚠ 「다음 수거 일정」은 위 머리 칸이 이미 크게 말하고 있습니다. 카드로
-  //     또 두면 같은 말을 두 번 하면서 첫 줄을 잡아먹습니다. 뒤로 보냅니다.
+  //     또 두면 같은 말을 두 번 하면서 첫 줄을 잡아먹습니다.
   const ACTIONS: PortalAction[] = useMemo(() => {
     if (!s) return []
     return [
       {
-        no: '01', label: '수거 요청', icon: Truck, cta: 'collect',
-        onClick: () => start('추가수거'),
+        no: '01', label: '수거 요청', icon: Truck, tone: 'teal', cta: 'collect',
+        onClick: () => open('pickup'),
         desc: '정기 수거 외에 한 번 더 필요할 때',
       },
       {
-        no: '02', label: '자재·용기 요청', icon: PackagePlus, to: path('supplies'), cta: 'supplies',
+        no: '02', label: '용기 · 봉투 주문', icon: PackagePlus, tone: 'cyan', cta: 'supplies',
+        onClick: () => open('supply'),
+        value: openOrders.length > 0 ? `진행 중 ${openOrders.length}건` : undefined,
         desc: '전용 용기 · 봉투 · 바늘통이 부족할 때',
       },
       {
-        no: '03', label: '긴급 수거 요청', icon: Siren, accent: true,
-        onClick: () => start('긴급수거'),
+        no: '03', label: '긴급 수거 요청', icon: Siren, tone: 'rose',
+        onClick: () => open('urgent'),
         desc: '보관기한이 임박했거나 배출량이 갑자기 늘었을 때',
       },
       {
-        no: '04', label: '다음 수거 일정', icon: CalendarClock, to: path('history'),
-        value: s.nextDate ? prettyDate(s.nextDate) : '예정 없음',
-        desc: s.nextIsEstimate ? '수거주기로 본 예상입니다' : '확정된 방문 일정입니다',
+        no: '04', label: '상담 · 문의', icon: MessageSquare, tone: 'aqua',
+        onClick: () => open('ask'),
+        value: myInquiries.length > 0 ? `보낸 문의 ${myInquiries.length}건` : undefined,
+        desc: '수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주세요',
       },
       {
-        no: '05', label: '수거 이력', icon: History, to: path('history'),
+        no: '05', label: '수거 이력', icon: ClipboardList, tone: 'blue',
+        onClick: () => open('history'),
         value: s.monthVisits > 0 ? `이번 달 ${s.monthVisits}회` : undefined,
         desc: '지난 수거 내역과 수거량을 확인하실 수 있습니다',
       },
       {
-        no: '06', label: '월간 배출 리포트', icon: FileBarChart, to: path('report'),
-        value: s.monthKg > 0 ? `${Math.round(s.monthKg).toLocaleString('ko-KR')}kg` : undefined,
+        no: '06', label: '월간 배출 리포트', icon: FileBarChart, tone: 'emerald',
+        onClick: () => open('report'),
+        value: s.monthKg > 0 ? weight(s.monthKg) : undefined,
         desc: '이번 달 배출 현황과 추이를 한 장으로',
       },
       {
-        no: '07', label: '정산 내역', icon: ReceiptText, to: path('billing'),
+        no: '07', label: '정산 현황', icon: ReceiptText, tone: 'sky',
+        onClick: () => open('billing'),
         value: owed > 0 ? `미납 ${won(owed)}` : undefined,
         desc: owed > 0 ? '아직 입금되지 않은 청구가 있습니다' : '월별 청구 금액과 입금 상태',
       },
       {
-        no: '08', label: '문의하기', icon: MessageSquare, to: path('support'),
-        value: myInquiries.length > 0 ? `보낸 문의 ${myInquiries.length}건` : undefined,
-        desc: '수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주세요',
+        no: '08', label: '증빙자료', icon: ShieldCheck, tone: 'violet',
+        onClick: () => open('docs'),
+        desc: '인증·실사에 그대로 쓰실 수 있는 자료',
       },
     ]
-  }, [s, owed, myInquiries.length, start, path])
+  }, [s, owed, myInquiries.length, openOrders.length, open])
 
   if (!client || !s) {
     //  ⚠ 자료가 오기 전에 「연결된 병원 정보를 찾을 수 없습니다」라고 하면
@@ -236,151 +187,131 @@ export function PortalHome() {
     )
   }
 
-  const submit = async () => {
-    if (!content.trim()) return
-    //  서버가 실제로 받았을 때만 '접수되었습니다' 를 보여 줍니다.
-    //  예전에는 결과를 기다리지 않아서, 통신이 끊긴 채로 보내도 접수된
-    //  것처럼 보였습니다. 병원은 기다리는데 요청은 없는 상태가 됩니다.
-    const res = await addRequest({
-      clientId: client.id,
-      kind,
-      content: content.trim(),
-      desiredDate: desired || null,
-      urgent,
-      //  ⚠ 0087 — 비워 두시면 null 입니다. 저희가 짐작해 채우지 않습니다.
-      wasteType: canDetail && wasteType ? wasteType : null,
-      expectedKg: canDetail && expectedKg.trim() ? Number(expectedKg) : null,
-      source: 'portal',
-      requesterName: profile?.name ?? '병원 담당자',
-      //  이번 시도의 표 (0055). 실패해서 다시 누르면 **같은 값**이 갑니다 —
-      //  지하 주차장에서 응답이 늦어 두 번 눌러도 요청은 하나입니다.
-      requestId,
-    })
-    if (!res.ok) {
-      //  적은 내용을 지우지 않고 창을 열어 둡니다 — 다시 보내면 됩니다.
-      //  requestId 도 그대로 둡니다. 새로 만들면 두 번째가 새 요청이 됩니다.
-      setSendError(res.error ?? '요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      return
-    }
-    setSendError(null)
-    //  보내진 뒤에는 다음 요청을 위해 새 표를 만듭니다.
-    setRequestId(crypto.randomUUID())
-    setContent('')
-    setUrgent(false)
-    setDesired('')
-    setWasteType('')
-    setExpectedKg('')
-    setOpen(false)
-    setSent(true)
-  }
-
   return (
     <PageShell>
-      {/*  0083 — 대표님이 주신 시안의 짙은 남색 머리 칸.
-           ⚠ 시안의 「기관 코드」·「안전 무사고 1,248일째」는 저희 서버에 없는
-             값이라 **지어내지 않았습니다.** 실제로 아는 것(기관 구분·수거주기·
-             다음 수거)을 같은 자리에 넣었습니다. */}
       <PortalHero client={client} s={s} />
 
-      {sent && (
-        <div data-req-sent className="flex items-start gap-3 rounded-2xl bg-emerald-50 px-5 py-4 ring-1 ring-emerald-100">
-          <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-600" strokeWidth={2.4} />
-          <p className="t-body min-w-0 flex-1 break-keep font-bold text-emerald-800">
-            요청이 접수되었습니다. 비원미래 담당자가 확인하면 아래 진행 상태가 바뀌고 회신이 표시됩니다.
-          </p>
-          <button onClick={() => setSent(false)} className="shrink-0 text-emerald-600">
-            <X size={18} />
-          </button>
-        </div>
-      )}
-
-      {/* ── 1. 지금 할 수 있는 일 — 전화를 걸기 전에 여기서 먼저 ──
-           ⚠ 이 두 개가 **화면을 열자마자** 보여야 합니다. 예전에는 시스템
-             소개 카드가 첫 화면을 다 차지해서, 「수거 요청」은 화면 맨 끝에
-             겨우 걸치고 「자재·용기 요청」은 아예 보이지 않았습니다. 병원 담당자는
-             폐기물이 본업이 아니라, 안 보이면 그냥 전화를 겁니다.
-             소개 카드는 이 아래로 내렸습니다 — 없애지 않았습니다. */}
-      {/*  ── 번호가 붙은 큰 칸 (0083) ────────────────────────────────────────
-           시안의 01 · 02 · 03 … 배치입니다.
-           ⚠ **누르면 실제로 되는 것만** 넣었습니다. 「준비중」 칸은 없습니다.
-           ⚠ 숫자는 지금 자료에서 그대로 가져옵니다 — 없으면 안 적습니다. */}
+      {/*  ── 지금 하실 수 있는 일 ────────────────────────────────────────────
+           ⚠ 여덟 칸 **전부 창을 엽니다.** 화면을 옮기지 않습니다. */}
       <section>
         {/*  ⚠ 폰에서는 제목 줄을 접습니다. 이 75px 때문에 「수거 요청」이
-             화면 밖으로 2px 밀렸습니다 — 번호 붙은 카드는 제목 없이도
-             무엇인지 스스로 말합니다. 넓은 화면에서는 그대로 둡니다. */}
+             화면 밖으로 밀린 적이 있습니다 — 번호 붙은 카드는 제목 없이도
+             무엇인지 스스로 말합니다. */}
         <div className="hidden sm:block">
           <SectionTitle>지금 하실 수 있는 일</SectionTitle>
         </div>
         <div data-portal-actions data-tour="portal-request" className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {ACTIONS.map((a) => (
-            <PortalActionCard key={a.no} a={a} as={a.to ? 'link' : 'button'} />
+            <PortalActionCard key={a.no} a={a} />
           ))}
         </div>
       </section>
 
+      {/*  ── 지금 확인이 필요한 것 ──────────────────────────────────────────
+           ⚠ 없으면 **이 칸 자체가 없습니다.** 대표님: 「0건이면 영역을
+             과도하게 크게 보여주지 않는다」. 늘 떠 있는 칸은 곧 안 보게
+             됩니다.
 
-      {/*  시스템 소개·둘러보기 — 할 수 있는 일 **아래**입니다.
-          처음 오신 분께는 여전히 눈에 띄지만, 매일 쓰시는 분의 첫 화면을
-          가리지는 않습니다. 「오늘 하루 보지 않기」도 그대로입니다. */}
+           ⚠ **여덟 칸 아래**입니다. 위에 뒀더니 390px 폰에서 이 칸(138px)
+             때문에 「수거 요청」이 y=955px 로 밀려 첫 화면 밖으로 나갔습니다
+             (check_flow390 이 잡았습니다). 대표님이 주신 화면 순서도
+             「A 머리 → B 지금 하실 수 있는 일 → C 최근 상태·알림」이라
+             이쪽이 맞습니다. 매일 누르는 것이 먼저입니다. */}
+      {todos.length > 0 && (
+        <section data-portal-todos>
+          <SectionTitle>지금 확인이 필요한 항목</SectionTitle>
+          <ul className="card divide-y divide-navy-50">
+            {todos.slice(0, 4).map((t) => {
+              const tone = TODO_TONE[t.tone]
+              const Row = (
+                <>
+                  <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${tone.dot}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="t-body block break-keep font-extrabold leading-snug text-navy-900">
+                      {t.title}
+                    </span>
+                    <span className="t-muted mt-0.5 block break-keep leading-snug">{t.detail}</span>
+                  </span>
+                </>
+              )
+              return (
+                <li key={t.key} data-todo={t.key}>
+                  {t.sheet ? (
+                    <button
+                      onClick={() => open(t.sheet!)}
+                      className="flex min-h-[3.5rem] w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-navy-50"
+                    >
+                      {Row}
+                    </button>
+                  ) : (
+                    <div className="flex items-start gap-3 px-5 py-4">{Row}</div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
+
+      {/*  시스템 소개·둘러보기 — 할 수 있는 일 **아래**입니다. */}
       <TourBanner tourId="client" />
 
-      {/*  ── 2. 내 요청 진행 상태 + 배출 분석 ────────────────────────────────
+      {/*  ── 내 요청 진행 상태 + 배출 분석 ───────────────────────────────────
            시안에서 분석 칸은 **오른쪽 옆**입니다. 넓은 화면에서는 그렇게 둡니다.
-
            ⚠ 폰에서는 위아래로 쌓이는데, 그때 순서가 「요청 상태 → 분석」이어야
-             합니다. 분석은 읽을거리고 요청 상태는 내가 지금 기다리는 것입니다.
-             grid 는 적힌 순서대로 쌓이므로 order 를 따로 주지 않습니다. */}
+             합니다. 분석은 읽을거리고 요청 상태는 내가 지금 기다리는 것입니다. */}
       <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <section>
-        <SectionTitle
-          action={
-            s.allRequests.length > 0 ? (
-              <span className="t-label whitespace-nowrap text-navy-400">
-                {s.openRequests.length > 0 && (
-                  <span className="text-rose-600">진행 중 {s.openRequests.length}건</span>
-                )}
-                {s.openRequests.length > 0 && s.allRequests.length > s.openRequests.length && ' · '}
-                {s.allRequests.length > s.openRequests.length &&
-                  `완료 ${s.allRequests.length - s.openRequests.length}건`}
-              </span>
-            ) : undefined
-          }
-        >
-          내 요청 진행 상태
-        </SectionTitle>
-        {s.allRequests.length === 0 ? (
-          <div className="card px-5 py-5">
-            <p className="t-body break-keep leading-snug text-navy-500">
-              아직 올린 요청이 없습니다. 위에서 요청하시면 접수 → 확인 중 → 일정 반영 → 처리 완료까지 여기에
-              표시됩니다.
-            </p>
-          </div>
-        ) : (
-          <div className="card divide-y divide-navy-50">
-            {s.allRequests.slice(0, 8).map((r, ri) => {
-              const Icon = KIND_ICON[r.type]
-              const kt = TONE[REQUEST_TONE[r.type]]
-              const stepIdx = STATUS_STEPS.indexOf(r.status)
-              return (
-                <div key={r.id} className="px-5 py-4">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${kt.tile}`}>
-                      <Icon size={18} strokeWidth={2.3} />
+        <section data-portal-requests>
+          <SectionTitle
+            action={
+              s.openRequests.length > 0 ? (
+                <span className="t-label whitespace-nowrap text-rose-600">
+                  진행 중 {s.openRequests.length}건
+                </span>
+              ) : undefined
+            }
+          >
+            내 요청 진행 상태
+          </SectionTitle>
+          {s.allRequests.length === 0 ? (
+            <div className="card px-5 py-5">
+              <p className="t-body break-keep leading-snug text-navy-500">
+                아직 올린 요청이 없습니다. 위 「수거 요청」을 누르시면 접수 → 확인 중 → 일정 반영 → 처리
+                완료까지 여기에 표시됩니다.
+              </p>
+            </div>
+          ) : (
+            <ul className="card divide-y divide-navy-50">
+              {s.allRequests.slice(0, 5).map((r) => (
+                <li key={r.id} data-req-row={r.id} className="px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/*  ⚠ **저장값을 그대로 적지 않습니다.** `소모품` 은 DB
+                         CHECK 값이라 못 바꾸지만, 병원 화면에 그대로 적으면
+                         판매 상품 목록처럼 읽혀서 정작 용기가 없어 못 버리는
+                         병원이 이 칸을 안 누르고 전화를 겁니다.
+                         (0089 에서 이 변환을 빠뜨렸고 check_portalhome 이
+                          잡았습니다) */}
+                    <span className="pill shrink-0 bg-navy-50 text-navy-600">
+                      {REQUEST_KIND_LABEL[r.type] ?? r.type}
                     </span>
-                    <span className={`pill ${kt.chip}`}>{REQUEST_KIND_LABEL[r.type]}</span>
-                    {r.urgent && (
-                      <span className="pill bg-rose-50 text-rose-600">
-                        <AlertTriangle size={13} strokeWidth={2.6} /> 긴급
-                      </span>
-                    )}
-                    <span className={`pill ${TONE[STATUS_TONE[r.status]].chip}`}>{r.status}</span>
+                    {r.urgent && <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급</span>}
+                    <span
+                      className={`pill shrink-0 ${
+                        r.status === '처리 완료'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : r.status === '일정 반영'
+                            ? 'bg-sky-50 text-sky-700'
+                            : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {r.status}
+                    </span>
                     <span className="t-muted ml-auto shrink-0">{r.when}</span>
                   </div>
-
-                  <p className="t-body mt-2.5 break-keep leading-snug text-navy-700">{r.content}</p>
-                  {/*  ⚠ 0087 — **적어 주신 것만** 다시 보여 드립니다. 안 적으신
-                       칸은 아예 안 나옵니다 — 저희가 채운 값을 병원이 자기가
-                       적은 값으로 오해하면 안 됩니다. */}
+                  <p className="t-body mt-2 whitespace-pre-line break-keep leading-snug text-navy-700">
+                    {r.content}
+                  </p>
+                  {/*  ⚠ 적어 주신 것만 다시 보여 드립니다 (0087). */}
                   {(r.desiredDate || r.wasteType || r.expectedKg != null) && (
                     <p data-req-detail={r.id} className="t-muted mt-1.5 break-keep">
                       {[
@@ -392,321 +323,104 @@ export function PortalHome() {
                         .join(' · ')}
                     </p>
                   )}
-
-                  {/* 진행 단계 — 지금 어디까지 왔는지 한 줄로
-                      (모바일에서는 단계 이름이 잘리므로 막대 + 한 줄 요약으로 대체) */}
-                  <div className="mt-3" data-tour={ri === 0 ? 'portal-requests' : undefined}>
-                    <div className="flex items-center gap-1">
-                      {STATUS_STEPS.map((st, i) => (
-                        <span
-                          key={st}
-                          className={`h-1.5 min-w-0 flex-1 rounded-full ${
-                            i <= stepIdx ? TONE[STATUS_TONE[r.status]].dot : 'bg-navy-100'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="mt-1.5 hidden items-center gap-1 sm:flex">
-                      {STATUS_STEPS.map((st, i) => (
-                        <span
-                          key={st}
-                          className={`t-tab min-w-0 flex-1 truncate ${
-                            i <= stepIdx ? 'text-navy-600' : 'text-navy-400'
-                          }`}
-                        >
-                          {st}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="t-muted mt-1.5 break-keep sm:hidden">
-                      {STATUS_STEPS.length}단계 중 {stepIdx + 1}단계 · {r.status}
-                    </p>
-                  </div>
-
                   {r.reply && (
-                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-sky-50 px-3.5 py-3">
-                      <MessageSquare size={16} className="mt-0.5 shrink-0 text-sky-600" strokeWidth={2.3} />
-                      <p className="t-body min-w-0 break-keep leading-snug text-sky-900">
-                        <span className="font-bold">비원미래 회신</span> · {r.reply}
-                      </p>
-                    </div>
+                    <p className="t-body mt-2.5 break-keep rounded-xl bg-sky-50 px-3.5 py-3 leading-snug text-sky-900">
+                      <b className="font-extrabold">비원미래 회신</b> · {r.reply}
+                    </p>
                   )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
-
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
         <PortalInsightPanel result={insight} />
       </div>
 
-      {/* ── 3. 비원미래가 보낸 제안 ── */}
+      {/*  ── 비원미래가 보낸 제안 ── */}
       {(s.pendingProposals.length > 0 || s.acceptedProposals.length > 0) && (
-        <section>
-          <SectionTitle
-            action={<span className="pill bg-accent-50 text-accent-700">우리 병원 데이터 기준</span>}
-          >
-            비원미래가 제안드립니다
-          </SectionTitle>
-          <div className="space-y-3">
-            {s.pendingProposals.map((l) => (
-              <div key={l.id} className="card p-5">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
-                    <Sparkles size={20} strokeWidth={2.3} />
-                  </span>
-                  <p className="t-card min-w-0 flex-1 break-keep text-navy-900">{l.title}</p>
-                  {l.estValue > 0 && (
-                    <span className="pill shrink-0 bg-navy-100 text-navy-600">예상 {won(l.estValue)}</span>
-                  )}
-                </div>
-                {l.clientMessage && (
-                  <p className="t-body mt-3 break-keep leading-snug text-navy-600">{l.clientMessage}</p>
-                )}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button onClick={() => respondProposal(l.id, true)} className="btn-primary flex-1">
-                    <Check size={18} strokeWidth={2.6} /> 수락하겠습니다
-                  </button>
-                  <button onClick={() => respondProposal(l.id, false)} className="btn-ghost flex-1">
-                    나중에 검토
-                  </button>
-                </div>
-              </div>
-            ))}
-            {s.acceptedProposals.map((l) => (
-              <div key={l.id} className="card flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-4">
-                <CheckCircle2 size={19} className="shrink-0 text-emerald-600" strokeWidth={2.4} />
-                <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">{l.title}</p>
-                <span className="pill shrink-0 bg-emerald-50 text-emerald-700">수락함</span>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ProposalList s={s} />
       )}
 
-      {/* ── 4. 우리 병원 수거 현황 — 지나간 기록이라 행동 아래에 둡니다 ── */}
-      <section>
-        <SectionTitle>우리 병원 수거 현황</SectionTitle>
-        <div
-          data-tour="portal-status"
-          className="card grid grid-cols-1 gap-px overflow-hidden bg-navy-100 sm:grid-cols-3"
-        >
-          {[
-            { icon: Clock, label: '최근 수거', value: s.lastDate ? prettyDate(s.lastDate) : '기록 없음', tone: 'sky' as const },
-            { icon: Scale, label: '최근 배출량', value: s.lastKg != null ? weight(s.lastKg) : '—', tone: 'blue' as const },
-            { icon: Package, label: '이번 달', value: `${weight(s.monthKg)} · ${s.monthVisits}회`, tone: 'emerald' as const },
-          ].map((x) => {
-            const Icon = x.icon
-            return (
-              <div key={x.label} className="flex items-center gap-3 bg-white px-5 py-4">
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TONE[x.tone].tile}`}>
-                  <Icon size={19} strokeWidth={2.3} />
+      {/*  ── 최근 활동 (0089) ───────────────────────────────────────────────
+           ⚠ 표를 새로 만들지 않았습니다. 이미 있는 자료를 시각 순으로
+             세울 뿐입니다(lib/portalActivity.ts). */}
+      <section data-portal-activity>
+        <SectionTitle>최근 활동</SectionTitle>
+        {activity.length === 0 ? (
+          <div className="card px-5 py-5">
+            <p className="t-body break-keep leading-snug text-navy-500">
+              아직 기록이 없습니다. 첫 수거가 끝나면 여기에 표시됩니다.
+            </p>
+          </div>
+        ) : (
+          <ul className="card divide-y divide-navy-50">
+            {activity.map((a) => (
+              <li key={a.key} data-activity={a.kind} className="flex items-center gap-3 px-5 py-3.5">
+                <span className={`pill shrink-0 ${ACT_TONE[a.kind] ?? 'bg-navy-50 text-navy-600'}`}>
+                  {a.kind}
                 </span>
-                <div className="min-w-0">
-                  <p className="t-muted break-keep">{x.label}</p>
-                  <p className="t-body mt-0.5 break-keep font-extrabold text-navy-900">{x.value}</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                <span className="min-w-0 flex-1">
+                  <span className="t-body block break-keep font-bold leading-snug text-navy-900">
+                    {a.title}
+                  </span>
+                  {a.tail && <span className="t-muted block break-keep leading-snug">{a.tail}</span>}
+                </span>
+                <span className="t-muted shrink-0 tabular-nums">{prettyDate(a.date)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      {/* ── 5. 리포트 · 이력 바로가기 ── */}
-      <div data-tour="portal-report" className="grid gap-3 sm:grid-cols-2">
-        {[
-          {
-            to: path('report'),
-            icon: FileBarChart,
-            tone: 'sky' as const,
-            title: '월간 운영 리포트',
-            desc: '배출량·수거 횟수·용기 공급을 매달 정리',
-          },
-          {
-            to: path('history'),
-            icon: Clock,
-            tone: 'sky' as const,
-            title: '수거 이력',
-            desc: '인증·실사에 그대로 쓰는 전체 수거 기록',
-          },
-        ].map((x) => {
-          const Icon = x.icon
-          return (
-            <Link
-              key={x.to}
-              to={x.to}
-              className="card pressable flex items-center gap-3.5 p-4 transition hover:shadow-lg sm:gap-4 sm:p-5"
-            >
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${TONE[x.tone].tile}`}
-              >
-                <Icon size={23} strokeWidth={2.3} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="t-body break-keep font-extrabold text-navy-900">{x.title}</p>
-                <p className="t-muted mt-1 break-keep leading-snug">{x.desc}</p>
-              </div>
-              <ChevronRight size={20} className="shrink-0 text-navy-400" />
-            </Link>
-          )
-        })}
-      </div>
-
-      {/*  ── 6. 병원 등록 정보 · 상담센터 (0086) ────────────────────────────
-           시안 아래쪽 네 칸 중 **실제 자료가 있는 것만** 답니다.
-           공지사항 표도 만족도 설문도 없으므로 그 두 칸은 없습니다. */}
       <PortalFooter client={client} />
-
-      {/* ── 요청 등록 ── */}
-      <Modal
-        open={open}
-        title={`${REQUEST_KIND_LABEL[kind]} 요청`}
-        onClose={() => setOpen(false)}
-        footer={
-          <div className="flex gap-2">
-            <button onClick={() => setOpen(false)} className="btn-ghost flex-1">
-              취소
-            </button>
-            <button
-              onClick={() => void submit()}
-              disabled={!content.trim()}
-              className="btn-primary flex-1 disabled:opacity-50"
-            >
-              <Send size={17} strokeWidth={2.4} /> 요청 보내기
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {sendError && (
-            <div data-req-error className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
-              <p className="t-body break-keep font-bold text-rose-700">{sendError}</p>
-              <p className="t-muted mt-1 break-keep">
-                적으신 내용은 그대로 있습니다. 통신 상태를 확인한 뒤 다시 보내 주세요.
-              </p>
-            </div>
-          )}
-          <div>
-            <label className="field-label">무엇이 필요하신가요?</label>
-            <div className="flex flex-wrap gap-2">
-              {REQUEST_KINDS.map((k) => (
-                <button
-                  key={k}
-                  onClick={() => setKind(k)}
-                  className={`rounded-full px-4 py-2.5 text-[1.02rem] font-bold transition ${
-                    kind === k ? 'bg-navy-900 text-white' : `${TONE[REQUEST_TONE[k]].chip} hover:opacity-80`
-                  }`}
-                >
-                  {REQUEST_KIND_LABEL[k]}
-                </button>
-              ))}
-            </div>
-            <p className="t-muted mt-2 break-keep">{KIND_HINT[kind]}</p>
-          </div>
-
-          <div>
-            <label className="field-label" htmlFor="req-content">
-              내용
-            </label>
-            <textarea
-              id="req-content"
-              rows={3}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="예: 격리환자 발생으로 배출량이 늘었습니다. 이번 주 중 추가 수거 부탁드립니다."
-              className="field-input w-full resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="field-label" htmlFor="req-date">
-              희망일 (선택)
-            </label>
-            <input
-              id="req-date"
-              type="date"
-              value={desired}
-              onChange={(e) => setDesired(e.target.value)}
-              className="field-input w-full"
-            />
-          </div>
-
-          {/*  ── 0087 — 배차가 다시 전화해서 묻던 두 가지 ────────────────────
-               ⚠ 서버에 칸이 생긴 뒤에만 나옵니다(canDetail). 적어 놓고
-                 저장이 안 되는 칸을 만들지 않습니다.
-               ⚠ 둘 다 **비워 두셔도 보내집니다.** 필수로 만들면 급한 병원이
-                 「몰라서」 요청을 못 올립니다. 비면 「적지 않으심」입니다 —
-                 저희가 0 이나 기본값으로 채우지 않습니다. */}
-          {canDetail && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {wasteChoices.length > 1 && (
-                <div>
-                  <label className="field-label" htmlFor="req-waste">
-                    폐기물 유형 (선택)
-                  </label>
-                  <select
-                    id="req-waste"
-                    data-req-waste
-                    value={wasteType}
-                    onChange={(e) => setWasteType(e.target.value)}
-                    className="field-input w-full"
-                  >
-                    <option value="">고르지 않음</option>
-                    {wasteChoices.map((w) => (
-                      <option key={w} value={w}>{w}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="field-label" htmlFor="req-kg">
-                  예상 배출량 (선택)
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="req-kg"
-                    data-req-kg
-                    type="number"
-                    inputMode="decimal"
-                    min={1}
-                    max={5000}
-                    value={expectedKg}
-                    onChange={(e) => setExpectedKg(e.target.value)}
-                    placeholder="예: 120"
-                    className="field-input w-full"
-                  />
-                  <span className="t-body shrink-0 font-bold text-navy-500">kg</span>
-                </div>
-                {/*  ⚠ 「어림」이라고 분명히 적습니다. 이 숫자는 **정산에 쓰지
-                     않습니다** — 정산은 실제로 실은 무게로만 합니다.
-                     안 적으면 병원이 적은 숫자대로 청구될까 봐 안 적습니다. */}
-                <p className="t-muted mt-1.5 break-keep leading-snug">
-                  어림잡은 값이면 됩니다. 차를 고르는 데만 씁니다 — 청구는 실제 수거량으로 합니다.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={() => setUrgent((v) => !v)}
-            className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition ${
-              urgent ? 'bg-rose-50 ring-1 ring-rose-200' : 'bg-navy-50'
-            }`}
-          >
-            <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
-                urgent ? 'bg-rose-500 text-white' : 'bg-white text-transparent ring-1 ring-navy-200'
-              }`}
-            >
-              <Check size={15} strokeWidth={3.2} />
-            </span>
-            <span className="t-body min-w-0 break-keep font-bold text-navy-700">
-              긴급합니다 (보관기한 임박 · 격리폐기물 발생 등)
-            </span>
-          </button>
-        </div>
-      </Modal>
     </PageShell>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 비원미래가 보낸 제안 — 병원이 **누르면 수락**됩니다
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ProposalList({ s }: { s: ReturnType<typeof portalSummary> }) {
+  const { respondProposal } = useData()
+  return (
+    <section>
+      <SectionTitle action={<span className="pill bg-accent-50 text-accent-700">우리 병원 데이터 기준</span>}>
+        비원미래가 제안드립니다
+      </SectionTitle>
+      <div className="space-y-3">
+        {s.pendingProposals.map((l) => (
+          <div key={l.id} className="card p-5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600">
+                <Sparkles size={20} strokeWidth={2.3} />
+              </span>
+              <p className="t-card min-w-0 flex-1 break-keep text-navy-900">{l.title}</p>
+              {l.estValue > 0 && (
+                <span className="pill shrink-0 bg-navy-100 text-navy-600">예상 {won(l.estValue)}</span>
+              )}
+            </div>
+            {l.clientMessage && (
+              <p className="t-body mt-3 break-keep leading-snug text-navy-600">{l.clientMessage}</p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={() => respondProposal(l.id, true)} className="btn-primary flex-1">
+                <Check size={18} strokeWidth={2.6} /> 수락하겠습니다
+              </button>
+              <button onClick={() => respondProposal(l.id, false)} className="btn-ghost flex-1">
+                나중에 검토
+              </button>
+            </div>
+          </div>
+        ))}
+        {s.acceptedProposals.map((l) => (
+          <div key={l.id} className="card flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-4">
+            <CheckCircle2 size={19} className="shrink-0 text-emerald-600" strokeWidth={2.4} />
+            <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">{l.title}</p>
+            <span className="pill shrink-0 bg-emerald-50 text-emerald-700">수락함</span>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }

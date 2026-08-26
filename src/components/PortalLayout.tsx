@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CLIENT_TEL } from '../lib/brand'
-import { PackageCheck, Building2, ChevronRight, FileBarChart, History, Headset, LogOut, ReceiptText, MessageSquare, type LucideIcon } from 'lucide-react'
+import { Building2, ChevronRight, ClipboardList, Headset, LogOut, MessageSquare, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
@@ -14,6 +14,15 @@ import { FontSizeButton } from './FontSizeButton'
 import { portalNotices } from '../lib/portalNotices'
 import { usePortalClient, portalPath, PORTAL_SELECT_PATH, type PortalPage } from '../lib/portalClient'
 import { PortalPreviewBar } from './PortalPreviewBar'
+import { PortalToaster } from './PortalToast'
+import { usePortalSheet } from '../lib/portalSheet'
+import { RequestSheet } from './portal/RequestSheet'
+import { SupplySheet } from './portal/SupplySheet'
+import { InquirySheet } from './portal/InquirySheet'
+import { HistoryDrawer } from './portal/HistoryDrawer'
+import { ReportSheet } from './portal/ReportSheet'
+import { BillingDrawer } from './portal/BillingDrawer'
+import { DocsDrawer } from './portal/DocsDrawer'
 import { touchPortalSeen } from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,13 +58,23 @@ interface Item {
 //      문의   「이건 어떻게 되나요」 (수거 요청과 다릅니다 — 대화입니다)
 //  ⚠ 여섯 개는 폰 아래 띠에 다 안 들어갑니다. 아래 띠에는 **자주 쓰는
 //    넷**만 두고, 나머지 둘은 위쪽 줄에 둡니다(bottom: false).
+//  ⚠ 0089 — 여섯에서 **셋**으로 줄였습니다.
+//
+//   대표님: 「상단 메뉴 최소화 … 수거 요청 / 긴급수거 / 물품 주문 / 문의 등
+//   자주 사용하는 기능은 상단 메뉴가 아니라 홈 화면의 주요 Action Card를
+//   통해 실행한다」
+//
+//   물품·리포트·정산은 이제 홈에서 **창**으로 엽니다(화면을 안 옮깁니다).
+//   그래서 위에 이름을 또 걸어 둘 이유가 없어졌습니다 — 같은 일로 가는
+//   길이 둘이면 병원 담당자는 어느 쪽이 맞는지 고민하게 됩니다.
+//
+//   ⚠ 화면(라우트)은 **안 없앴습니다.** 주소를 아시는 분, 예전에 받으신
+//     링크, 인증 심사처럼 오래 들여다볼 때는 전체 화면이 낫습니다.
+//     위 메뉴에서만 뺐습니다.
 const NAV: Item[] = [
-  { page: '', label: '우리 병원 현황', short: '현황', icon: Building2, bottom: true },
-  { page: 'supplies', label: '필요한 물품', short: '물품', icon: PackageCheck, bottom: true },
-  { page: 'report', label: '월간 리포트', short: '리포트', icon: FileBarChart, bottom: true },
-  { page: 'history', label: '수거 이력', short: '이력', icon: History, bottom: true },
-  { page: 'billing', label: '정산 내역', short: '정산', icon: ReceiptText, bottom: false },
-  { page: 'support', label: '문의하기', short: '문의', icon: MessageSquare, bottom: false },
+  { page: '', label: '우리 병원 홈', short: '홈', icon: Building2, bottom: true },
+  { page: 'history', label: '이용 내역', short: '이용내역', icon: ClipboardList, bottom: true },
+  { page: 'support', label: '고객지원', short: '고객지원', icon: MessageSquare, bottom: true },
 ]
 
 /** 지금 화면 이름 — 병원명 옆에 적습니다 (0088 · 브리프 11) */
@@ -77,6 +96,10 @@ export function PortalLayout() {
   //    예전에는 화면마다 `data.clients[0]` 였고, 그래서 직원 계정에서는
   //    목록의 첫 병원이 「우리 병원」인 것처럼 떴습니다.
   const target = usePortalClient()
+  //  ⚠ 0089 — 창은 **레이아웃에 답니다.** 어느 화면에 계시든 카드·알림·
+  //    할 일에서 같은 창을 열 수 있어야 하고, 창이 화면마다 따로 있으면
+  //    같은 창이 여러 벌 생깁니다.
+  const sheets = usePortalSheet()
   const { clientId } = useParams()
   const client = target.client
   const clientName = client?.name ?? ''
@@ -98,6 +121,17 @@ export function PortalLayout() {
   useEffect(() => {
     if (!target.isPreview) void touchPortalSeen()
   }, [target.isPreview])
+
+  //  ⚠ 0089 — 투어 마지막의 「수거 요청해보기」가 여기로 옵니다.
+  //    예전에는 첫 화면이 이 신호를 받아 창을 열었는데, 창이 레이아웃으로
+  //    올라오면서 받는 자리도 함께 옮겼습니다. 안 옮기면 투어 마지막 단추가
+  //    조용히 아무 일도 안 하게 됩니다.
+  const openSheet = sheets.open
+  useEffect(() => {
+    const onAsk = () => openSheet('urgent')
+    window.addEventListener('beonemirae:portal-request', onAsk)
+    return () => window.removeEventListener('beonemirae:portal-request', onAsk)
+  }, [openSheet])
 
   //  ── 길 정리 (0088) ───────────────────────────────────────────────────────
   //
@@ -297,6 +331,34 @@ export function PortalLayout() {
           <Outlet />
         </PageMotion>
       </main>
+
+      {/*  ── 창 (0089) ─────────────────────────────────────────────────────
+           대표님: 「카드 클릭 → 현재 화면 유지 → Modal 중앙 등장 →
+           background dim → 작업 완료 → Modal 닫힘 → Dashboard 정보 즉시
+           업데이트」
+
+           ⚠ 병원이 정해져 있을 때만 답니다. 어느 병원인지 모르는 채로
+             요청을 받을 수는 없습니다. */}
+      {client && (
+        <>
+          <RequestSheet open={sheets.sheet === 'pickup'} urgent={false} client={client} onClose={sheets.close} />
+          <RequestSheet open={sheets.sheet === 'urgent'} urgent client={client} onClose={sheets.close} />
+          <SupplySheet open={sheets.sheet === 'supply'} client={client} onClose={sheets.close} />
+          <InquirySheet open={sheets.sheet === 'ask'} client={client} onClose={sheets.close} />
+          <HistoryDrawer open={sheets.sheet === 'history'} client={client} onClose={sheets.close} />
+          <ReportSheet open={sheets.sheet === 'report'} client={client} onClose={sheets.close} />
+          <BillingDrawer open={sheets.sheet === 'billing'} client={client} onClose={sheets.close} />
+          <DocsDrawer
+            open={sheets.sheet === 'docs'}
+            client={client}
+            onClose={sheets.close}
+            onOpen={sheets.open}
+          />
+        </>
+      )}
+
+      {/*  보내고 나면 짧게 알려 드립니다 */}
+      <PortalToaster />
 
       {/* 폰 전용 하단 탭 — 화면이 셋뿐이라 접거나 숨기지 않습니다 */}
       <nav

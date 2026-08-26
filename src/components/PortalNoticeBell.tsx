@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Bell, ChevronRight, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePortalClient } from '../lib/portalClient'
+import { usePortalSheet, type SheetName } from '../lib/portalSheet'
 import type { PortalNotice } from '../lib/portalNotices'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,11 +22,25 @@ const TONE = {
   warn: 'bg-amber-50 text-amber-700',
 } as const
 
+/**
+ * 알림이 가리키는 화면 → **여는 창**.
+ *
+ *  ⚠ 홈('')만 창이 없습니다 — 이미 그 화면입니다.
+ */
+const SHEET_OF: Partial<Record<string, SheetName>> = {
+  support: 'ask',
+  billing: 'billing',
+  report: 'report',
+}
+
 export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
   const [open, setOpen] = useState(false)
   //  ⚠ 0088 — 지금 보고 있는 병원을 달고 갑니다. 알림을 눌렀는데 병원이
   //    지워지면 「어느 병원을 보시겠습니까」로 튕깁니다.
   const { path } = usePortalClient()
+  //  ⚠ 0089 — 알림을 누르면 **화면을 옮기지 않고 창을 엽니다.** 옮겨 가면
+  //    돌아올 때 하던 자리를 잃습니다.
+  const sheets = usePortalSheet()
   const n = notices.length
   return (
     <>
@@ -91,13 +106,28 @@ export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
                            여기서 만듭니다(path). 그래야 직원이 미리보기로
                            보는 중에 알림을 눌러도 병원이 안 지워집니다. */}
                       {x.to != null ? (
-                        <Link
-                          to={path(x.to)}
-                          onClick={() => setOpen(false)}
-                          className="flex min-h-[3.5rem] items-start gap-3 px-5 py-4 transition hover:bg-navy-50"
-                        >
-                          {body}
-                        </Link>
+                        //  ⚠ x.to 는 위에서 null 이 아님이 확인됐지만, 빈
+                        //    문자열('' = 홈)일 수 있어 인덱스로 바로 못 씁니다.
+                        SHEET_OF[x.to as string] ? (
+                          <button
+                            data-notice-open={SHEET_OF[x.to as string]}
+                            onClick={() => {
+                              setOpen(false)
+                              sheets.open(SHEET_OF[x.to as string] as SheetName)
+                            }}
+                            className="flex min-h-[3.5rem] w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-navy-50"
+                          >
+                            {body}
+                          </button>
+                        ) : (
+                          <Link
+                            to={path(x.to)}
+                            onClick={() => setOpen(false)}
+                            className="flex min-h-[3.5rem] items-start gap-3 px-5 py-4 transition hover:bg-navy-50"
+                          >
+                            {body}
+                          </Link>
+                        )
                       ) : (
                         <div className="flex items-start gap-3 px-5 py-4">{body}</div>
                       )}

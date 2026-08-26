@@ -307,6 +307,18 @@ async function open(ctx, path, uid) {
   ok(!/문제가 생겼습니다/.test(t), '**서버가 단가를 안 줘도 포털이 멀쩡함**', t.slice(0, 60))
   ok(denied.length === 0, '병원 화면도 못 읽는 것을 묻지 않음', denied.join(' · '))
   const c1 = await p.locator('[data-portal-cta="collect"]').boundingBox()
+  //  ⚠ 이 검사가 깨지면 **무엇이 위에서 자리를 먹었는지**를 바로 알아야
+  //    고칠 수 있습니다. 숫자만 보면 매번 다시 재야 합니다.
+  //    (0089 에서 실제로 「지금 확인이 필요한 항목」이 138px 을 먹어
+  //     955px 로 밀렸습니다 — 그때 이 줄이 있었으면 한 번에 찾았습니다)
+  if (c1 == null || c1.y + c1.height > 844) {
+    const dump = []
+    for (const sel of ['header', '[data-portal-preview]', '[data-portal-hero]', '[data-portal-todos]', '[data-portal-actions]']) {
+      const bx = await p.locator(sel).first().boundingBox().catch(() => null)
+      dump.push(`${sel}=${bx ? `y${Math.round(bx.y)}/h${Math.round(bx.height)}` : '없음'}`)
+    }
+    console.log('     ↑ 무엇이 위에서 자리를 먹었나:', dump.join(' '))
+  }
   const c2 = await p.locator('[data-portal-cta="supplies"]').boundingBox()
   ok(c1 != null && c1.y + c1.height <= 844, '① 수거 요청이 첫 화면 안', c1 ? `${Math.round(c1.y + c1.height)}px` : '없음')
   ok(c2 != null && c2.y + c2.height <= 844, '② 자재·용기 요청이 첫 화면 안', c2 ? `${Math.round(c2.y + c2.height)}px` : '없음')

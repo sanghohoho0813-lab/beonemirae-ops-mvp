@@ -40,14 +40,18 @@ const T = F.clients[3]
 const OTHER = F.clients[5]
 
 const path = (id, page = '') => (page ? `/portal/c/${id}/${page}` : `/portal/c/${id}`)
+//  ⚠ 0089 — 위 메뉴가 여섯에서 **셋**으로 줄었습니다. 물품·리포트·정산은
+//    이제 홈에서 창으로 엽니다(화면을 안 옮깁니다). 그래도 **화면(라우트)은
+//    살아 있어야** 합니다 — 예전에 받으신 링크가 죽으면 안 됩니다.
+//    그래서 메뉴로 도는 것과 주소로 직접 여는 것을 나눠서 봅니다.
 const MENUS = [
-  ['필요한 물품', 'supplies'],
-  ['월간 리포트', 'report'],
-  ['수거 이력', 'history'],
-  ['정산 내역', 'billing'],
-  ['문의하기', 'support'],
-  ['우리 병원 현황', ''],
+  ['이용 내역', 'history'],
+  ['고객지원', 'support'],
+  ['우리 병원 홈', ''],
 ]
+
+/** 위 메뉴에서 뺐지만 주소로는 그대로 열리는 화면 */
+const DIRECT = ['supplies', 'report', 'billing']
 
 // ── ① 대표님 시나리오 그대로 — 거래처 상세에서 들어가 여섯 메뉴를 돈다 ────
 {
@@ -90,15 +94,15 @@ const MENUS = [
 // ── ③ 뒤로 / 앞으로 (브리프 6) ────────────────────────────────────────────
 {
   const { ctx, p } = await open(path(T.id), 'admin')
-  await p.locator('nav a:has-text("월간 리포트")').first().click(); await p.waitForTimeout(800)
-  await p.locator('nav a:has-text("수거 이력")').first().click(); await p.waitForTimeout(800)
+  await p.locator('nav a:has-text("이용 내역")').first().click(); await p.waitForTimeout(800)
+  await p.locator('nav a:has-text("고객지원")').first().click(); await p.waitForTimeout(800)
 
   await p.goBack(); await p.waitForTimeout(1000)
-  ok(new URL(p.url()).pathname === path(T.id, 'report'), '뒤로가기 — 리포트로', new URL(p.url()).pathname)
+  ok(new URL(p.url()).pathname === path(T.id, 'history'), '뒤로가기 — 이용 내역으로', new URL(p.url()).pathname)
   ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, '뒤로가기 — 병원 그대로')
 
   await p.goForward(); await p.waitForTimeout(1000)
-  ok(new URL(p.url()).pathname === path(T.id, 'history'), '앞으로 — 이력으로', new URL(p.url()).pathname)
+  ok(new URL(p.url()).pathname === path(T.id, 'support'), '앞으로 — 고객지원으로', new URL(p.url()).pathname)
   ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, '앞으로 — 병원 그대로')
   await ctx.close()
 }
@@ -155,7 +159,7 @@ const MENUS = [
 
 // ── ⑦ BUSINESS AX 복귀 단추가 **모든 화면**에 있다 (브리프 10) ────────────
 {
-  for (const [label, page] of MENUS) {
+  for (const [label, page] of [...MENUS, ...DIRECT.map((d) => [d, d])]) {
     const { ctx, p } = await open(path(T.id, page), 'admin')
     const back = p.locator('[data-portal-back]:visible')
     ok((await back.count()) === 1, `${label} — 「BUSINESS AX로 돌아가기」가 보인다`)
@@ -170,7 +174,7 @@ const MENUS = [
 
 // ── ⑧ 지금 어느 병원의 무슨 화면인가가 적혀 있다 (브리프 11) ──────────────
 {
-  for (const [label, page] of MENUS.filter(([, pg]) => pg)) {
+  for (const [label, page] of [...MENUS.filter(([, pg]) => pg), ...DIRECT.map((d) => [d, d])]) {
     const { ctx, p } = await open(path(T.id, page), 'admin')
     const crumb = flat(await p.locator('[data-portal-crumb]').innerText())
     ok(crumb.includes(T.name), `${label} — 화면 위에 병원 이름이 적혀 있다`, crumb)
@@ -210,7 +214,7 @@ const MENUS = [
 // ── ⑩ 폰에서도 같다 (브리프 27) ───────────────────────────────────────────
 {
   const { ctx, p } = await open(path(T.id), 'admin', 390)
-  for (const short of ['물품', '리포트', '이력']) {
+  for (const short of ['이용내역', '고객지원', '홈']) {
     await p.locator(`nav a:has-text("${short}")`).last().click(); await p.waitForTimeout(900)
     ok((await p.locator('[data-portal-picker]').count()) === 0, `폰 ${short} — 병원을 다시 안 묻는다`)
     ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, `폰 ${short} — ${T.name} 그대로`)
@@ -220,7 +224,7 @@ const MENUS = [
 
   //  ⚠ 미리보기 띠가 커지면 정작 「수거 요청」이 화면 밖으로 밀립니다.
   //    실제로 그렇게 됐던 적이 있습니다(979px).
-  await p.locator('nav a:has-text("현황")').last().click(); await p.waitForTimeout(900)
+  await p.locator('nav a:has-text("홈")').last().click(); await p.waitForTimeout(900)
   const bar = await p.locator('[data-portal-preview]').boundingBox()
   ok(bar.height < 260, '미리보기 띠가 폰에서 두 줄을 안 넘는다', `${Math.round(bar.height)}px`)
   const cta = await p.locator('[data-portal-cta="collect"]').boundingBox()
@@ -242,6 +246,57 @@ const MENUS = [
       ok((await p.locator('[data-portal-picker]').count()) === 0, '알림을 눌러도 고르는 화면이 안 뜬다')
       ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, '알림을 눌러도 병원 그대로')
     }
+  }
+  await ctx.close()
+}
+
+// ── ⑫ 메뉴에서 뺐어도 **주소로는 그대로 열린다** (0089) ────────────────────
+//     ⚠ 위 메뉴를 줄이면서 화면까지 없애면, 예전에 받으신 링크와 즐겨찾기가
+//       전부 죽습니다. 메뉴에서만 뺐습니다.
+{
+  for (const page of DIRECT) {
+    const { ctx, p } = await open(path(T.id, page), 'admin')
+    ok((await p.locator('[data-portal-picker]').count()) === 0, `${page} — 주소로 열어도 병원을 안 묻는다`)
+    ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, `${page} — ${T.name} 그대로`)
+    const body = flat(await p.locator('main').innerText())
+    ok(body.length > 40, `${page} — 화면이 비어 있지 않다`, `${body.length}자`)
+    await ctx.close()
+  }
+}
+
+// ── ⑬ 창(Modal·Drawer)을 열고 닫아도 병원이 그대로다 (0089) ────────────────
+//     ⚠ 이번 고도화로 대부분의 업무가 **창**에서 끝납니다. 창이 병원을
+//       잃으면 0088 에서 고친 것이 도로 무너집니다.
+{
+  const { ctx, p } = await open(path(T.id), 'admin')
+  for (const [label, sheet] of [
+    ['수거 요청', 'pickup'],
+    ['긴급 수거 요청', 'urgent'],
+    ['용기 · 봉투 주문', 'supply'],
+    ['상담 · 문의', 'ask'],
+    ['수거 이력', 'history'],
+    ['월간 배출 리포트', 'report'],
+    ['정산 현황', 'billing'],
+    ['증빙자료', 'docs'],
+  ]) {
+    await p.locator(`[data-portal-action="${label}"]`).click()
+    await p.waitForTimeout(600)
+    ok((await p.locator(`[data-portal-sheet="${sheet}"]`).count()) === 1, `${label} — 창이 열린다`)
+    //  ⚠ 주소의 **경로는 그대로**여야 합니다. 창은 물음표 뒤에만 적힙니다.
+    const url = new URL(p.url())
+    ok(url.pathname === path(T.id), `${label} — 화면을 옮기지 않는다`, url.pathname)
+    ok(url.searchParams.get('do') === sheet, `${label} — 무슨 창인지 주소에 남는다`, url.search)
+    //  ⚠ 창 안에도 어느 병원인지 적혀 있어야 합니다.
+    const sheetText = flat(await p.locator(`[data-portal-sheet="${sheet}"]`).innerText())
+    ok(sheetText.includes(T.name), `${label} — 창 안에 ${T.name} 이라고 적혀 있다`)
+
+    await p.locator('[data-sheet-close]').click()
+    //  ⚠ 닫히는 데 애니메이션 시간이 듭니다(실측 ~400ms). 300ms 에서 재면
+    //    아직 남아 있어서 「안 닫힌다」로 잘못 읽습니다.
+    await p.waitForTimeout(900)
+    ok((await p.locator('[data-portal-sheet]').count()) === 0, `${label} — 닫힌다`)
+    ok(new URL(p.url()).pathname === path(T.id), `${label} — 닫아도 그 자리`, new URL(p.url()).pathname)
+    ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, `${label} — 닫아도 ${T.name}`)
   }
   await ctx.close()
 }

@@ -229,70 +229,95 @@ for (const w of [1920, 1440, 768, 390, 360]) {
   await ctx.close()
 }
 
-// ── ⑨ 수거 요청에 「무엇을 · 얼마나」 (0087) ───────────────────────────────
+// ── ⑨ 수거 요청에 「무엇을 · 얼마나」 (0087 → 0089 로 고쳐 씀) ────────────
 //     ⚠ 배차가 요청을 받고 병원에 **다시 전화해서 묻던** 두 가지입니다.
+//
+//     ⚠ 0089 에서 요청 창이 **적는 칸에서 고르는 단추로** 바뀌었습니다.
+//       지켜야 하는 것은 그대로입니다 —
+//         · 고른 것이 실제로 서버까지 간다
+//         · 안 고르면 저희가 채우지 않는다
+//         · 「청구는 실제 수거량으로 한다」를 반드시 적어 둔다
 {
-  //  판을 아직 안 올린 서버 — 물어보면 안 됩니다. 저장할 데가 없습니다.
-  const old = await open('/portal/c/c1', 'admin', 1440, 83)
-  await old.p.locator('[data-portal-cta="collect"]').click(); await old.p.waitForTimeout(500)
-  ok((await old.p.locator('[data-req-kg]').count()) === 0,
-    '판이 낮으면 예상 배출량을 **묻지 않는다** (적어도 저장할 데가 없습니다)')
-  ok((await old.p.locator('[data-req-waste]').count()) === 0, '판이 낮으면 폐기물 유형도 묻지 않는다')
-  await old.ctx.close()
+  const { ctx, p } = await open('/portal/c/c1', 'admin', 1440, 87)
+  await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(600)
 
-  //  판을 올린 뒤
-  const { ctx, p, state } = await open('/portal/c/c1', 'admin', 1440, 87)
-  await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(500)
-  ok((await p.locator('[data-req-kg]').count()) === 1, '판이 올라가면 예상 배출량을 묻는다')
+  const sheet = p.locator('[data-portal-sheet="pickup"]')
+  ok((await sheet.count()) === 1, '수거 요청 창이 열린다')
 
   //  ⚠ 「청구는 실제 수거량으로 한다」를 반드시 적어 둡니다. 안 적으면
-  //    병원이 적은 숫자대로 청구될까 봐 아예 안 적습니다.
-  const modal = flat(await p.locator('[role="dialog"]').first().innerText())
-  ok(/청구는 실제 수거량/.test(modal), '적은 숫자가 청구에 쓰이지 않는다고 적어 둔다')
-  ok(/선택/.test(modal), '비워 두어도 된다고 적어 둔다')
+  //    병원이 적은 숫자대로 청구될까 봐 아예 안 고르십니다.
+  const note = flat(await p.locator('[data-amount-note]').innerText())
+  ok(/청구는 실제 수거량/.test(note), '적은 숫자가 청구에 쓰이지 않는다고 적어 둔다', note)
 
   //  ⚠ 고를 수 있는 유형은 **이 병원이 실제로 맡기는 것**뿐입니다.
-  const wasteSel = p.locator('[data-req-waste]')
-  if ((await wasteSel.count()) === 1) {
-    const opts = (await wasteSel.locator('option').allInnerTexts()).map(flat)
-    ok(!opts.includes('일반쓰레기'), '없는 유형을 고르게 하지 않는다', opts.join(','))
-  }
+  const wastes = (await p.locator('[data-choice="waste"] [data-choice-item]').allInnerTexts()).map(flat)
+  ok(!wastes.some((x) => /일반쓰레기|생활폐기물/.test(x)), '없는 유형을 고르게 하지 않는다', wastes.join(','))
 
-  //  실제로 보내면 두 값이 **같이 나가야** 합니다.
-  await p.locator('#req-content').fill('격리환자 발생으로 늘었습니다')
-  await p.locator('[data-req-kg]').fill('120')
-  if ((await wasteSel.count()) === 1) await wasteSel.selectOption('의료폐기물')
+  //  고르기만 합니다 — 자판을 한 번도 안 씁니다.
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click(); await p.waitForTimeout(150)
+  await p.locator('[data-choice="day"] [data-choice-item]').nth(1).click(); await p.waitForTimeout(150)
+  if (wastes.length > 0) {
+    await p.locator('[data-choice="waste"] [data-choice-item]').first().click(); await p.waitForTimeout(150)
+  }
+  await p.locator('[data-choice="amount"] [data-choice-item]').nth(2).click(); await p.waitForTimeout(150)
+
   const bodies = []
   p.on('request', (r) => {
     if (r.method() === 'POST' && r.url().includes('client_requests')) bodies.push(r.postData() ?? '')
   })
-  await p.getByRole('button', { name: /요청 보내기/ }).click(); await p.waitForTimeout(1200)
+  await p.locator('[data-req-send]').click(); await p.waitForTimeout(1500)
 
   ok(bodies.length === 1, '요청이 서버로 한 번 나갔다', `${bodies.length}번`)
-  const sentBody = bodies[0] ?? ''
-  ok(/"expected_kg":\s*120/.test(sentBody), '**적은 예상량이 그대로 서버로 나간다**', sentBody.slice(0, 160))
-  if ((await wasteSel.count()) === 1) {
-    ok(/의료폐기물/.test(sentBody), '고른 유형이 그대로 서버로 나간다')
-  }
-  ok((await p.locator('[data-req-sent]').count()) === 1, '접수되었다는 말이 뜬다')
+  const sent = bodies[0] ?? ''
+  //  ⚠ 「많음」은 kg 이 아닙니다. 그 병원의 실제 평균에서 환산한 숫자가
+  //    나가야 하고, **0 이나 지어낸 기본값이면 안 됩니다.**
+  const m = sent.match(/"expected_kg":\s*(\d+)/)
+  ok(m != null && Number(m[1]) > 0, '**고른 단계가 kg 으로 환산되어 나간다**', m?.[0] ?? sent.slice(0, 150))
+  //  ⚠ 고른 것이 **글로도** 남아야 합니다 — 배차가 읽는 것은 글입니다.
+  ok(/예상 배출량 많음/.test(sent), '고른 단계가 요청 글에도 그대로 적힌다', sent.slice(0, 200))
+  if (wastes.length > 0) ok(/waste_type/.test(sent), '고른 유형이 칸으로도 나간다')
+  ok((await p.locator('[data-toast]').count()) === 1, '접수되었다고 알려 준다')
   await ctx.close()
 }
 
-// ── ⑩ 비워 두고 보내면 **저희가 채우지 않는다** ───────────────────────────
+// ── ⑩ 안 고르면 **저희가 채우지 않는다** ──────────────────────────────────
 {
   const { ctx, p } = await open('/portal/c/c1', 'admin', 1440, 87)
-  await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(500)
-  await p.locator('#req-content').fill('내용만 적습니다')
+  await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(600)
+  //  사유 하나만 고르고 나머지는 그대로 둡니다.
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click(); await p.waitForTimeout(200)
+
   const bodies = []
   p.on('request', (r) => {
     if (r.method() === 'POST' && r.url().includes('client_requests')) bodies.push(r.postData() ?? '')
   })
-  await p.getByRole('button', { name: /요청 보내기/ }).click(); await p.waitForTimeout(1200)
-  const sentBody = bodies[0] ?? ''
+  await p.locator('[data-req-send]').click(); await p.waitForTimeout(1500)
+  const sent = bodies[0] ?? ''
   //  ⚠ 0 도 기본값도 보내지 않습니다. 아예 안 보냅니다 — 「0kg」과
   //    「모름」은 배차에서 완전히 다른 말입니다.
-  ok(!/expected_kg/.test(sentBody), '안 적으면 예상량을 **아예 안 보낸다** (0 으로 채우지 않는다)', sentBody.slice(0, 160))
-  ok(!/waste_type/.test(sentBody), '안 고르면 유형도 안 보낸다')
+  ok(!/expected_kg/.test(sent), '안 고르면 예상량을 **아예 안 보낸다** (0 으로 채우지 않는다)', sent.slice(0, 160))
+  ok(!/waste_type/.test(sent), '안 고르면 유형도 안 보낸다')
+  ok(!/"desired_date":"20/.test(sent), '안 고르면 날짜도 안 보낸다')
+  await ctx.close()
+}
+
+// ── ⑪ 판이 낮아도 **고른 것이 사라지지 않는다** (0089) ────────────────────
+//     ⚠ 예전에는 판이 낮으면 이 두 줄을 아예 안 물었습니다. 이제는
+//       물어보되, 칸이 없는 서버에는 **글로** 남깁니다. 병원이 고른 것이
+//       조용히 사라지는 것이 제일 나쁩니다.
+{
+  const { ctx, p } = await open('/portal/c/c1', 'admin', 1440, 83)
+  await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(600)
+  await p.locator('[data-choice="amount"] [data-choice-item]').nth(2).click(); await p.waitForTimeout(150)
+
+  const bodies = []
+  p.on('request', (r) => {
+    if (r.method() === 'POST' && r.url().includes('client_requests')) bodies.push(r.postData() ?? '')
+  })
+  await p.locator('[data-req-send]').click(); await p.waitForTimeout(1500)
+  const sent = bodies[0] ?? ''
+  ok(!/expected_kg/.test(sent), '판이 낮으면 **없는 칸을 안 보낸다** (요청 자체가 실패하면 안 됩니다)')
+  ok(/예상 배출량 많음/.test(sent), '**그래도 고르신 것은 글로 남는다**', sent.slice(0, 180))
   await ctx.close()
 }
 

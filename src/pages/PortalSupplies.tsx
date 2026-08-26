@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { usePortalClient } from '../lib/portalClient'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 import { supplyNeedsFor, type SupplyNeed } from '../lib/supplyNeeds'
@@ -37,7 +38,13 @@ const STATUS_TONE: Record<string, string> = {
 export function PortalSupplies() {
   const { data, requestProductOrder } = useData()
   const { profile } = useAuth()
-  const clientId = profile?.clientId ?? ''
+  //  ⚠ 0089 — 여기만 `profile.clientId` 로 남아 있었습니다. 그래서 직원이
+  //    미리보기로 이 화면을 열면 **아무 병원도 아닌 상태**가 됐습니다
+  //    (직원 계정에는 clientId 가 없습니다). 0088 에서 다섯 화면을 고칠 때
+  //    이 한 곳을 놓쳤습니다 — 다른 화면들은 `data.clients[0]` 이라
+  //    찾는 글자가 달랐습니다.
+  const { client: portalClient } = usePortalClient()
+  const clientId = portalClient?.id ?? profile?.clientId ?? ''
   const today = useMemo(() => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }), [])
 
   const needs = useMemo(() => supplyNeedsFor(data, clientId, today), [data, clientId, today])
