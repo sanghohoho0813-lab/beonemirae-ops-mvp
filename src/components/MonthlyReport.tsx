@@ -12,6 +12,7 @@ import {
   Repeat,
 } from 'lucide-react'
 import type { MonthlyReport } from '../lib/insights'
+import { REQUEST_KIND_LABEL, type RequestKind } from '../types'
 import { weight } from '../lib/format'
 import { PlannedBadge, ExpandableSection } from './ui'
 
@@ -185,6 +186,53 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
             ))}
           </ul>
         </section>
+
+        {/*  ── 이 달에 올리신 요청 · 문의 (0092) ────────────────────────────
+             대표님: 「월간 배출 리포트도 요청한 거랑 이런 것 다 볼 수 있게,
+             비원미래랑 해당 병원 양쪽이 다 볼 수 있게」
+
+             ⚠ 이 리포트 화면은 **병원 화면과 내부 화면이 같은 것**을 씁니다.
+               그래서 여기 넣으면 양쪽이 저절로 같은 것을 봅니다.
+             ⚠ 병원 자기 자료만 있습니다 — 내부 판단·단가는 없습니다.
+             ⚠ 없으면 **칸 자체가 없습니다.** 「0건」을 띄워 두면 자리만
+               차지하고 곧 안 보게 됩니다. */}
+        {(report.requests.length > 0 || report.inquiries.length > 0) && (
+          <section data-report-requests className="space-y-2">
+            <p className="text-[1.07rem] font-bold text-navy-500">
+              이 달에 올리신 요청 · 문의
+              <span className="ml-1.5 font-extrabold text-navy-900">
+                {report.requests.length + report.inquiries.length}건
+              </span>
+            </p>
+            <ul className="divide-y divide-navy-100 overflow-hidden rounded-2xl bg-navy-50">
+              {report.requests.map((r, i) => (
+                <li key={`r${i}`} data-report-req className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="pill shrink-0 bg-white text-navy-600">
+                      {REQUEST_KIND_LABEL[r.kind as RequestKind] ?? r.kind}
+                    </span>
+                    {r.urgent && <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급</span>}
+                    <span className="pill shrink-0 bg-white text-navy-500">{r.status}</span>
+                    <span className="ml-auto shrink-0 text-[1rem] tabular-nums text-navy-400">{r.on}</span>
+                  </div>
+                  <p className="mt-1 whitespace-pre-line break-keep text-[1.07rem] leading-snug text-navy-700">
+                    {r.content}
+                  </p>
+                </li>
+              ))}
+              {report.inquiries.map((q, i) => (
+                <li key={`q${i}`} data-report-inq className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="pill shrink-0 bg-white text-navy-600">문의 · {q.topic}</span>
+                    <span className="pill shrink-0 bg-white text-navy-500">{q.status}</span>
+                    <span className="ml-auto shrink-0 text-[1rem] tabular-nums text-navy-400">{q.on}</span>
+                  </div>
+                  <p className="mt-1 break-keep text-[1.07rem] leading-snug text-navy-700">{q.subject}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* 세부 내역 — 접기 */}
         <ExpandableSection label="세부 내역 보기" openLabel="세부 내역 접기">

@@ -173,14 +173,19 @@ async function open(path, role, w = 1440, extra = {}) {
   const sheet = flat(await p.locator('[data-portal-sheet="supply"]').innerText())
   ok(sheet.includes(T.name), `창 안에 ${T.name} 이라고 적혀 있다`)
 
-  const items = await p.locator('[data-supply-item]').count()
-  if (items > 0) {
-    ok((await p.locator('[data-qty-quick]').count()) > 0, '**빠른 수량 단추가 있다** (＋를 열 번 안 눌러도 됩니다)')
-    ok(await p.locator('[data-supply-send]').isDisabled(), '아무것도 안 고르면 못 보낸다')
-  } else {
-    //  ⚠ 팔 물건이 등록되어 있지 않으면 **왜 없는지** 적어야 합니다.
-    ok((await p.locator('[data-supply-empty]').count()) === 1, '팔 물건이 없으면 왜 없는지 적는다')
-  }
+  //  ⚠ 0092 — 예전에는 파는 상품(products)이 없으면 **고를 것이 하나도
+  //    없었습니다**(대표님 신고). 이제는 저희가 매주 갖다 드리는 13 규격이
+  //    항상 나옵니다 — 파는 상품은 등록돼 있으면 아래에 따로 붙습니다.
+  const specs = await p.locator('[data-spec-item]').count()
+  ok(specs >= 10, `**용기 규격이 항상 나온다** (${specs}개)`, '파는 상품이 없어도')
+  ok((await p.locator('[data-spec-quick]').count()) > 0,
+    '**빠른 수량 단추가 있다** (＋를 열 번 안 눌러도 됩니다)')
+  ok(await p.locator('[data-supply-send]').isDisabled(), '아무것도 안 고르면 못 보낸다')
+
+  //  고르면 보낼 수 있어야 합니다.
+  await p.locator('[data-spec-quick]').first().click()
+  await p.waitForTimeout(300)
+  ok(!(await p.locator('[data-supply-send]').isDisabled()), '수량을 고르면 보낼 수 있다')
   await ctx.close()
 }
 

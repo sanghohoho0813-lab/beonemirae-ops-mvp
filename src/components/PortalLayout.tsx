@@ -89,7 +89,7 @@ const PAGE_LABEL: Record<PortalPage, string> = {
 }
 
 export function PortalLayout() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const { profile, signOut, role } = useAuth()
   const { data } = useData()
   const navigate = useNavigate()
@@ -146,7 +146,10 @@ export function PortalLayout() {
     //    **주소창에 남의 병원 id 가 박힌 채** 자기 자료가 보입니다 —
     //    「내 화면에 저 병원 이름이 왜 있지」가 됩니다. 자기 주소로 되돌립니다.
     if (role === 'client' && clientId) {
-      return <Navigate to={portalPath(null, target.page)} replace />
+      //  ⚠ 0092 — 물음표 뒤를 **같이 들고 갑니다.** 안 그러면 열려 있던
+      //    창(?do=supply)이 되돌리는 순간 사라집니다. 병원 담당자가
+      //    링크를 받아 들어왔을 때 정작 열려야 할 창이 안 열립니다.
+      return <Navigate to={`${portalPath(null, target.page)}${search}`} replace />
     }
     //  직원이 병원 없이 들어왔습니다 → 고르는 화면.
     //  ⚠ 「본문 자리에 목록을 끼워 넣기」가 아니라 **주소를 옮깁니다.**

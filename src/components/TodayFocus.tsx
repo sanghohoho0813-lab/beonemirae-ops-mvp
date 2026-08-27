@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { AppData } from '../types'
 import { openRequests, todayProgress } from '../lib/ops'
+import { MessageSquare } from 'lucide-react'
 import { hideRequests } from '../lib/pilotMode'
 import { TONE, type Tone } from '../lib/tone'
 
@@ -45,6 +46,16 @@ export function TodayFocus({ data }: { data: AppData }) {
   const open = hideRequests() ? [] : openRequests(data)
   const urgent = open.filter((r) => r.urgent)
 
+  //  ⚠ 0092 — **문의가 어디에도 안 떴습니다.** 병원이 문의를 올려도
+  //    요청함 화면을 직접 열어야만 보였습니다. 대표님 지적: 「요청 보내면
+  //    실제로 관리자랑 대표·이사님 계정으로 알림이 잘 들어오는지 체크해줘」.
+  //    수거 요청은 아래 두 칸으로 뜨는데 문의만 빠져 있었습니다.
+  //  ⚠ **답이 아직 안 나간 것**만 셉니다. 답변까지 끝난 문의가 계속 떠
+  //    있으면 곧 안 보게 됩니다.
+  const openInquiries = hideRequests()
+    ? []
+    : (data.inquiries ?? []).filter((q) => q.status !== '답변 완료')
+
   const tasks: Task[] = [
     {
       key: 'urgent',
@@ -62,6 +73,15 @@ export function TodayFocus({ data }: { data: AppData }) {
       count: open.length - urgent.length,
       unit: '건',
       tone: 'violet' as const,
+      to: '/requests',
+    },
+    {
+      key: 'inquiry',
+      icon: MessageSquare,
+      label: '답변 대기 문의',
+      count: openInquiries.length,
+      unit: '건',
+      tone: 'sky' as const,
       to: '/requests',
     },
     {

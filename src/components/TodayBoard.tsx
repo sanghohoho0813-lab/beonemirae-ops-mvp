@@ -5,6 +5,7 @@ import {
   ClipboardEdit,
   FileWarning,
   Inbox,
+  MessageSquare,
   PlusCircle,
   Siren,
   type LucideIcon,
@@ -57,6 +58,12 @@ export function TodayBoard({ data }: { data: AppData }) {
   //  Pilot 동안 병원 요청은 안 씁니다 (0080)
   const open = hideRequests() ? [] : openRequests(data)
   const urgent = open.filter((r) => r.urgent)
+  //  ⚠ 0092 — 문의가 어디에도 안 떴습니다. 요청함 화면을 직접 열어야만
+  //    보였습니다. **답이 아직 안 나간 것**만 셉니다.
+  const openInquiries = useMemo(
+    () => (hideRequests() ? [] : (data.inquiries ?? []).filter((q) => q.status !== '답변 완료')),
+    [data.inquiries],
+  )
 
   const tasks = useMemo<Task[]>(() => {
     const all: Task[] = [
@@ -83,6 +90,17 @@ export function TodayBoard({ data }: { data: AppData }) {
         cta: '확인',
       },
       {
+        key: 'inquiry',
+        icon: MessageSquare,
+        label: '답변 대기 문의',
+        detail: '병원이 물어본 것에 아직 답이 안 나갔습니다',
+        count: openInquiries.length,
+        unit: '건',
+        tone: 'sky',
+        to: '/requests',
+        cta: '답하기',
+      },
+      {
         key: 'input',
         icon: ClipboardEdit,
         label: '수거 입력 대기',
@@ -106,7 +124,7 @@ export function TodayBoard({ data }: { data: AppData }) {
       },
     ]
     return all.filter((t) => t.count > 0)
-  }, [data, open, urgent, progress.pendingInput])
+  }, [data, open, urgent, openInquiries.length, progress.pendingInput])
 
   const left = Math.max(0, progress.planned - progress.done)
   const pct = progress.planned ? Math.round((progress.done / progress.planned) * 100) : 0

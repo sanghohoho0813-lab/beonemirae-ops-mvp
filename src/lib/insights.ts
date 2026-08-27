@@ -425,6 +425,18 @@ export interface MonthlyReport {
   supplies: { type: string; count: number }[]
   /** 긴급수거 건수 */
   urgentCount: number
+  /**
+   * 이 달에 병원이 올린 요청 (0092).
+   *
+   *  대표님: 「월간 배출 리포트도 요청한 거랑 이런 것 다 볼 수 있게,
+   *  비원미래랑 해당 병원 양쪽이 다 볼 수 있게 해 주고」
+   *
+   *  ⚠ 병원 **자기 자료**입니다. 내부 판단이나 단가는 들어가지 않습니다 —
+   *    이 리포트는 병원 화면과 내부 화면이 **같은 것**을 씁니다.
+   */
+  requests: { kind: string; content: string; status: string; on: string; urgent: boolean }[]
+  /** 이 달에 병원이 올린 문의 (0092) */
+  inquiries: { topic: string; subject: string; status: string; on: string }[]
   /** 관리 특이사항 */
   notes: string[]
   /** 배출자 교육 상태 */
@@ -479,6 +491,24 @@ export function clientMonthlyReport(data: AppData, client: Client, month = thisM
   const urgentCount = all.filter((s) => s.date.startsWith(month) && s.status === '긴급').length
 
   const signals = clientSignals(data, client, month)
+  //  ── 이 달의 요청·문의 (0092) ─────────────────────────────────────────
+  //   ⚠ 이미 있는 자료를 그 달로 걸러 낼 뿐입니다. 새로 만드는 값이
+  //     없습니다 — 양쪽이 같은 것을 봐야 합니다.
+  const monthRequests = (data.requests ?? [])
+    .filter((r) => r.clientId === client.id && r.createdAt.slice(0, 7) === month)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((r) => ({
+      kind: r.kind,
+      content: r.content,
+      status: r.status,
+      on: r.createdAt.slice(0, 10),
+      urgent: r.urgent,
+    }))
+  const monthInquiries = (data.inquiries ?? [])
+    .filter((q) => q.clientId === client.id && q.createdAt.slice(0, 7) === month)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((q) => ({ topic: q.topic, subject: q.subject, status: q.status, on: q.createdAt.slice(0, 10) }))
+
   const notes: string[] = []
   if (urgentCount > 0) notes.push(`긴급수거 ${urgentCount}건 대응 완료`)
   if (mats.some((m) => m.isAdditionalRequest)) notes.push('자재 추가요청 접수 및 공급 완료')
@@ -491,6 +521,8 @@ export function clientMonthlyReport(data: AppData, client: Client, month = thisM
   return {
     client,
     month,
+    requests: monthRequests,
+    inquiries: monthInquiries,
     totalKg,
     prevKg,
     changePct,
