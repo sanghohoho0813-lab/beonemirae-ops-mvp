@@ -35,7 +35,7 @@ export function PortalPreviewBar({ client, page }: { client: Client | null; page
            그 바람에 「수거 요청」이 y=1,442px 로 밀렸습니다.
            폰에서는 글자칸을 **한 줄 통째로** 쓰게 하고, 단추는 그 아래로
            내려보냅니다. 넓은 화면은 지금까지대로 한 줄입니다. */}
-      <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="mx-auto flex w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] flex-wrap items-center gap-x-3 gap-y-2">
         <p className="t-muted flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 break-keep font-bold text-amber-900 sm:w-auto sm:flex-1">
           <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[0.95rem] font-extrabold text-amber-800">
             <Eye size={15} strokeWidth={2.6} /> 관리자 미리보기

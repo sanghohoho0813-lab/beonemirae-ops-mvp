@@ -260,7 +260,9 @@ export function PortalHome() {
            시안에서 분석 칸은 **오른쪽 옆**입니다. 넓은 화면에서는 그렇게 둡니다.
            ⚠ 폰에서는 위아래로 쌓이는데, 그때 순서가 「요청 상태 → 분석」이어야
              합니다. 분석은 읽을거리고 요청 상태는 내가 지금 기다리는 것입니다. */}
-      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      {/*  ⚠ 0091 — 화면이 넓어지면 옆칸도 같이 넓힙니다. 1,840px 본문 옆에
+           22rem(352px) 만 붙어 있으면 한쪽만 늘어난 것처럼 보입니다. */}
+      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:grid-cols-[minmax(0,1fr)_26rem]">
         <section data-portal-requests>
           <SectionTitle
             action={

@@ -172,7 +172,7 @@ export function PortalLayout() {
                폰에서는 병원 이름 쪽이 줄어드는 것이 맞습니다(min-w-0 +
                두 줄까지 허용). 접기는 글자가 다 보이기 시작하는
                sm: 부터 필요한 것입니다. */}
-        <div className="mx-auto flex w-full max-w-[1240px] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:flex-wrap lg:gap-x-4 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:flex-wrap lg:gap-x-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white sm:h-12 sm:w-12 sm:text-[1.3rem]">
               비
@@ -286,7 +286,7 @@ export function PortalLayout() {
         </div>
 
         {/* 3개뿐인 메뉴 — 넓은 화면에서는 상단에, 폰에서는 엄지가 닿는 하단에 둡니다 */}
-        <nav className="mx-auto hidden w-full max-w-[1240px] gap-1 overflow-x-auto px-3 sm:flex lg:px-7">
+        <nav className="mx-auto hidden w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] gap-1 overflow-x-auto px-3 sm:flex lg:px-7">
           {NAV.map((n) => {
             const Icon = n.icon
             return (
@@ -320,7 +320,7 @@ export function PortalLayout() {
              적고 있어서 같은 말이 두 번 나옵니다.
            ⚠ 고르는 화면에도 안 답니다 — 아직 병원이 없습니다. */}
       {client && target.page !== '' && !onSelectPage && (
-        <div className="mx-auto w-full max-w-[1240px] px-4 pt-4 lg:px-8 lg:pt-6">
+        <div className="mx-auto w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] px-4 pt-4 lg:px-8 lg:pt-6">
           <p data-portal-crumb className="t-muted flex flex-wrap items-center gap-1 break-keep">
             <b className="font-extrabold text-navy-700">{client.name}</b>
             <ChevronRight size={14} className="shrink-0 text-navy-400" strokeWidth={2.6} />
@@ -329,9 +329,23 @@ export function PortalLayout() {
         </div>
       )}
 
-      {/* 아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로 스크롤할 수 없어
-          사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
-      <main className="mx-auto w-full max-w-[1240px] px-4 pb-[40vh] pt-5 lg:px-8 lg:pt-8">
+      {/*  ── 화면 폭 (0091) ─────────────────────────────────────────────────
+           대표님: 「PC에서 주로 볼 확률이 훨씬 높으니까 … 좌우에 여백이 좀
+           많이 남아, 너무 많이 남기진 않았으면 좋겠어」
+
+           1,240px 로 묶여 있었습니다. 1920px 화면에서 **양쪽 340px 씩**이
+           비었습니다 — 화면의 1/3 이 빈 자리였습니다.
+
+           ⚠ **폰·태블릿은 안 건드립니다.** xl(1280px)부터만 넓힙니다.
+             1240 아래에서는 어차피 화면 폭이 먼저라 값이 바뀌어도 결과가
+             같습니다.
+           ⚠ 무한정 늘리지는 않습니다. 다 늘리면 2560px 화면에서 카드 한 장이
+             600px 이 되고, 요청 글 한 줄이 화면을 가로질러 눈이 줄을 잃습니다.
+             카드 넉 장이 편한 폭(장당 약 420px)에서 멈춥니다.
+
+           아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로
+           스크롤할 수 없어 사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
+      <main className="mx-auto w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] px-4 pb-[40vh] pt-5 lg:px-8 lg:pt-8">
         {/*  ⚠ 0088 — 여기에 있던 「병원 고르기」 목록을 걷어냈습니다.
              본문 자리에 끼워 넣으면 **메뉴를 누를 때마다** 튀어나옵니다.
              고르는 일은 자기 주소(/portal/select)를 가진 화면이 합니다. */}

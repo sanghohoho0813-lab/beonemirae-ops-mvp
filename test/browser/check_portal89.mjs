@@ -293,4 +293,62 @@ for (const w of [1920, 1440, 768, 390, 360]) {
   await ctx.close()
 }
 
+// ── ⑮ PC 에서 좌우 여백이 너무 넓지 않다 (0091) ───────────────────────────
+//
+//   대표님: 「PC에서 주로 볼 확률이 훨씬 높으니까 … 좌우에 여백이 좀 많이
+//   남아, 너무 많이 남기진 않았으면 좋겠어」
+//
+//   ⚠ 1,240px 로 묶여 있었습니다. 1920px 화면에서 **양쪽 340px 씩** —
+//     화면의 1/3 이 빈 자리였습니다.
+//   ⚠ 그렇다고 무한정 늘리지 않습니다. 다 늘리면 2560px 에서 카드 한 장이
+//     600px 이 되고 요청 글 한 줄이 화면을 가로질러 눈이 줄을 잃습니다.
+//     그래서 **위아래 양쪽**을 잽니다 — 너무 좁지도, 너무 넓지도 않게.
+for (const [w, maxPad, minCard, maxCard] of [
+  [1920, 120, 380, 520],
+  [1680, 60, 350, 480],
+  [1440, 40, 300, 430],
+]) {
+  const { ctx, p } = await open(HOME, 'admin', w)
+  const main = await p.locator('main').boundingBox()
+  //  ⚠ 한쪽 여백 = 본문 상자가 왼쪽에서 떨어진 만큼.
+  ok(main.x <= maxPad, `${w}px — 좌우 여백이 ${maxPad}px 이하다`, `${Math.round(main.x)}px`)
+  //  ⚠ 가운데 있어야 합니다. 한쪽으로 쏠리면 눈이 어색합니다.
+  const right = w - (main.x + main.width)
+  ok(Math.abs(right - main.x) <= 20, `${w}px — 가운데에 놓여 있다`, `왼 ${Math.round(main.x)} · 오른 ${Math.round(right)}`)
+
+  //  ⚠ 카드가 너무 커지지 않았는지 — 넉 장이 한 줄에 편한 폭인지.
+  const card = await p.locator('[data-portal-action]').first().boundingBox()
+  ok(card.width >= minCard && card.width <= maxCard,
+    `${w}px — 카드 한 장이 ${minCard}~${maxCard}px 사이다`, `${Math.round(card.width)}px`)
+
+  const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  ok(over === 0, `${w}px — 넓혀도 가로로 안 넘친다`, `${over}px`)
+  await ctx.close()
+}
+
+// ── ⑯ 넓히면서 **폰은 안 건드렸다** ───────────────────────────────────────
+//     ⚠ 대표님: 「모바일 그 화면은 건드리지 말고」.
+//       xl(1280px)부터만 넓혔으므로 아래쪽은 그대로여야 합니다.
+for (const w of [390, 360, 768]) {
+  const { ctx, p } = await open(HOME, 'admin', w)
+  const main = await p.locator('main').boundingBox()
+  //  ⚠ 폰·태블릿에서는 본문이 화면 폭을 그대로 씁니다(여백 0).
+  ok(Math.round(main.x) === 0 && Math.round(main.width) === w,
+    `${w}px — 본문이 화면 폭 그대로다 (안 건드렸다)`, `x=${Math.round(main.x)} w=${Math.round(main.width)}`)
+  await ctx.close()
+}
+
+// ── ⑰ 머리띠 · 미리보기 띠 · 본문이 **같은 선**에 놓인다 ──────────────────
+//     ⚠ 넓히는 값을 한 군데라도 빠뜨리면 머리띠만 좁게 남아 어긋납니다.
+for (const w of [1920, 1440]) {
+  const { ctx, p } = await open(HOME, 'admin', w)
+  const main = await p.locator('main').boundingBox()
+  const head = await p.locator('header > div').first().boundingBox()
+  const bar = await p.locator('[data-portal-preview] > div').boundingBox()
+  ok(Math.abs(head.width - main.width) <= 2, `${w}px — 머리띠가 본문과 같은 폭`, `${Math.round(head.width)} vs ${Math.round(main.width)}`)
+  //  미리보기 띠는 바깥 여백을 스스로 가지므로 **글자 시작점**을 견줍니다.
+  ok(Math.abs(bar.x - (main.x + 32)) <= 40, `${w}px — 미리보기 띠도 같은 선에서 시작`, `${Math.round(bar.x)} vs ${Math.round(main.x + 32)}`)
+  await ctx.close()
+}
+
 await b.close()
