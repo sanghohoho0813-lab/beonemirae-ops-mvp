@@ -86,20 +86,26 @@ async function open(ctx, path) {
   return p
 }
 
-/** 병원 포털에서 요청 한 건 보내기 */
-async function sendRequest(p, text) {
-  //  「요청하기」를 열고 내용을 적습니다.
-  const openBtn = p.getByRole('button', { name: /요청/ }).first()
-  await openBtn.click()
-  await p.waitForTimeout(700)
-  const box = p.locator('textarea').first()
-  if (await box.count()) {
-    await box.fill(text)
+/**
+ * 병원 포털에서 수거 요청 한 건 보내기.
+ *
+ *  ⚠ 0089 부터 이 창에는 **적는 칸이 없습니다.** 고르기만 합니다.
+ *    예전 판은 textarea 를 채우고 「보내기」를 눌렀는데, 그 단추가 사라진
+ *    뒤로 이 스위트는 창을 못 찾고 **매번 터졌습니다.** 그런데 터진 스위트는
+ *    검사를 한 건도 못 하고 끝나서 「검사 0 · 실패 0」으로 조용히 지나갔습니다.
+ *    지금 화면에 맞춰 다시 씁니다 — 지키려던 것(같은 표 / 새 표)은 그대로입니다.
+ */
+async function sendRequest(p) {
+  //  창이 닫혀 있으면 첫 화면의 「수거 요청」 칸을 눌러 엽니다.
+  if ((await p.locator('[data-req-send]').count()) === 0) {
+    await p.locator('[data-portal-action="수거 요청"]').first().click()
+    await p.waitForSelector('[data-req-send]', { timeout: 15000 })
   }
-  await p.waitForTimeout(300)
-  const send = p.getByRole('button', { name: /보내기|요청 보내기|접수/ }).last()
-  await send.click()
-  await p.waitForTimeout(1500)
+  //  하나라도 골라야 보낼 수 있습니다.
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+  await p.waitForTimeout(200)
+  await p.locator('[data-req-send]').click()
+  await p.waitForTimeout(1600)
 }
 
 // ── 1. 화면이 표를 실어 보낸다 ──────────────────────────────────────────────
@@ -108,7 +114,7 @@ async function sendRequest(p, text) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx, { posts })
   const p = await open(ctx, '/portal')
-  await sendRequest(p, '3층 창고가 찼습니다')
+  await sendRequest(p)
   ok(posts.length === 1, '요청이 서버로 감', `${posts.length}건`)
   const body = Array.isArray(posts[0]) ? posts[0][0] : posts[0]
   ok(typeof body?.request_id === 'string' && body.request_id.length >= 32,
@@ -124,7 +130,7 @@ async function sendRequest(p, text) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx, { posts, fail: 1 }) // 첫 번째는 실패
   const p = await open(ctx, '/portal')
-  await sendRequest(p, '3층 창고가 찼습니다')
+  await sendRequest(p)
   ok(posts.length === 1, '첫 시도가 서버로 감')
   const body0 = Array.isArray(posts[0]) ? posts[0][0] : posts[0]
 
@@ -133,11 +139,11 @@ async function sendRequest(p, text) {
   const afterFail = flat(await p.textContent('[data-req-error]'))
   ok(/보내지 못했습니다|접수하지 못했습니다|연결하지 못했습니다/.test(afterFail),
     '실패했다고 그 칸에 적음', afterFail.slice(0, 60))
-  ok(/적으신 내용은 그대로 있습니다/.test(afterFail), '적은 내용이 남아 있다고 알려 줌')
-  ok((await p.locator('[data-req-sent]').count()) === 0, '**실패했는데 「접수되었습니다」를 띄우지 않음**')
+  ok(/고르신 것은 그대로 있습니다/.test(afterFail), '고른 것이 남아 있다고 알려 줌')
+  ok((await p.locator('[data-toast]').count()) === 0, '**실패했는데 「접수되었습니다」를 띄우지 않음**')
 
   //  다시 보내기
-  const send = p.getByRole('button', { name: /보내기|요청 보내기|접수/ }).last()
+  const send = p.locator('[data-req-send]')
   await send.click()
   await p.waitForTimeout(1600)
   ok(posts.length === 2, '다시 눌러 두 번째 시도가 감', `${posts.length}건`)
@@ -155,9 +161,11 @@ async function sendRequest(p, text) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx, { posts })
   const p = await open(ctx, '/portal')
-  await sendRequest(p, '3층 창고가 찼습니다')
-  await p.waitForTimeout(600)
-  await sendRequest(p, '바늘통도 필요합니다')
+  await sendRequest(p)
+  //  ⚠ 창이 **완전히 닫힌 뒤에** 다시 엽니다. 닫히는 동안(0.3~0.7초)에
+  //    누르면 사라지는 창을 누르게 됩니다 — 시간 재기로 맞추면 가끔 틀립니다.
+  await p.locator('[data-req-send]').waitFor({ state: 'detached', timeout: 8000 })
+  await sendRequest(p)
   ok(posts.length === 2, '두 번 보냄', `${posts.length}건`)
   const a = Array.isArray(posts[0]) ? posts[0][0] : posts[0]
   const c = Array.isArray(posts[1]) ? posts[1][0] : posts[1]
@@ -175,12 +183,12 @@ async function sendRequest(p, text) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx, { posts, dupAfter: 1 }) // 첫 시도부터 「이미 있음」
   const p = await open(ctx, '/portal')
-  await sendRequest(p, '3층 창고가 찼습니다')
+  await sendRequest(p)
   ok((await p.locator('[data-req-error]').count()) === 0,
     '**「이미 저장됨」을 실패라고 하지 않음** — 이미 들어간 것을 또 보내게 만들면 안 됩니다')
-  ok(await seen(p, '[data-req-sent]', 4000), '접수된 것으로 보여 줌')
-  const okBox = flat(await p.textContent('[data-req-sent]'))
-  ok(/요청이 접수되었습니다/.test(okBox), '접수 안내 문구가 그 칸에 있음', okBox.slice(0, 50))
+  ok(await seen(p, '[data-toast]', 4000), '접수되었다고 알려 줌')
+  const okBox = flat(await p.textContent('[data-toast]'))
+  ok(/접수되었습니다/.test(okBox), '접수 안내 문구가 띠에 있음', okBox.slice(0, 50))
   await ctx.close()
 }
 

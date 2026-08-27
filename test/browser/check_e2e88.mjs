@@ -188,16 +188,25 @@ const store = makeStore()
 // ── ① 병원이 수거 요청을 올린다 ───────────────────────────────────────────
 {
   const { ctx, p } = await openAs(store, 'client', '/portal', HOSP.id)
-  await p.locator('[data-portal-cta="collect"]').click(); await p.waitForTimeout(500)
-  await p.locator('#req-content').fill('격리환자 발생으로 배출량이 늘었습니다')
-  await p.locator('#req-date').fill('2026-09-03')
-  const kg = p.locator('[data-req-kg]')
-  if ((await kg.count()) === 1) await kg.fill('140')
-  const waste = p.locator('[data-req-waste]')
-  if ((await waste.count()) === 1) await waste.selectOption('의료폐기물')
-  await p.getByRole('button', { name: /요청 보내기/ }).click(); await p.waitForTimeout(1400)
+  await p.locator('[data-portal-cta="collect"]').click()
+  await p.waitForSelector('[data-req-send]', { timeout: 15000 })
 
-  ok((await p.locator('[data-req-sent]').count()) === 1, '병원 화면에 「접수되었습니다」가 뜬다')
+  //  ⚠ 0089 부터 이 창은 **고르는 창**입니다. 예전 판의 #req-content ·
+  //    #req-date · [data-req-kg] 는 없어졌고, 그 뒤로 이 스위트는 창을 못
+  //    찾아 **매번 터졌습니다.** 터진 스위트는 검사를 한 건도 못 하고 끝나
+  //    「검사 0 · 실패 0」으로 조용히 지나갑니다. 지금 화면에 맞춰 다시
+  //    씁니다 — 보려던 것(왕복)은 그대로입니다.
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+  await p.locator('[data-req-date]').fill('2026-09-03')
+  const waste = p.locator('[data-choice="waste"] [data-choice-item]').first()
+  if (await waste.count()) { await waste.click() }
+  const amt = p.locator('[data-choice="amount"] [data-choice-item]')
+  if (await amt.count()) { await amt.last().click() }
+  await p.locator('[data-req-memo]').fill('격리환자 발생으로 배출량이 늘었습니다')
+  await p.waitForTimeout(200)
+  await p.locator('[data-req-send]').click(); await p.waitForTimeout(1600)
+
+  ok((await p.locator('[data-toast]').count()) === 1, '병원 화면에 「접수되었습니다」가 뜬다')
   //  ⚠ 화면 글자만 보지 않습니다 — **저장소에 실제로 들어갔는지** 봅니다.
   ok(store.requests.length === 1, '**서버에 요청이 실제로 남았다**', `${store.requests.length}건`)
   const saved = store.requests[0]
@@ -205,8 +214,13 @@ const store = makeStore()
   ok(saved.desired_date === '2026-09-03', '희망일이 그대로 저장됐다', String(saved.desired_date))
   ok(saved.content.includes('격리환자'), '적은 내용이 그대로 저장됐다')
   ok(saved.status === '접수', '처음 상태는 「접수」', saved.status)
-  if ((await kg.count()) === 1) {
-    ok(Number(saved.expected_kg) === 140, '**예상 배출량이 그대로 저장됐다**', String(saved.expected_kg))
+  //  ⚠ 예상 배출량은 이제 **고른 단계**를 이 병원의 평소 수거량으로 환산한
+  //    값입니다. 숫자를 여기에 박아 두면 자료가 바뀔 때마다 틀립니다 —
+  //    「골랐으면 숫자가 함께 나갔는가」를 봅니다.
+  if ((await amt.count()) > 0) {
+    ok(saved.expected_kg == null || Number(saved.expected_kg) > 0,
+      '**예상 배출량이 kg 으로 환산되어 저장됐다**', String(saved.expected_kg))
+    ok(/예상 배출량/.test(saved.content), '고른 단계가 요청 글에도 남았다', saved.content.slice(0, 60))
   }
 
   //  올린 직후 병원 화면에 자기 요청이 보이는가
@@ -223,8 +237,10 @@ let reqId = null
   ok(body.includes('격리환자'), '**직원 요청함에 병원이 올린 요청이 떴다**')
   ok(body.includes(HOSP.name), `어느 병원인지 적혀 있다 (${HOSP.name})`)
   ok(/희망일 2026-09-03/.test(body), '희망일이 직원 화면에 그대로 나온다')
-  if (store.requests[0].expected_kg != null) {
-    ok(/병원 어림 140kg/.test(body), '**병원이 어림한 배출량이 배차에 보인다**')
+  const savedKg = store.requests[0].expected_kg
+  if (savedKg != null) {
+    ok(body.includes(`병원 어림 ${savedKg}kg`),
+      '**병원이 어림한 배출량이 배차에 보인다**', `병원 어림 ${savedKg}kg`)
   }
   reqId = store.requests[0].id
   await ctx.close()

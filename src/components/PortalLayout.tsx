@@ -11,7 +11,7 @@ import { PageMotion } from './motion'
 import { TourButton } from './TourEntry'
 import { PortalNoticeBell } from './PortalNoticeBell'
 import { FontSizeButton } from './FontSizeButton'
-import { PortalViewSwitch } from './PortalViewSwitch'
+import { PortalViewSwitch, PortalPcViewButton } from './PortalViewSwitch'
 import { portalNotices } from '../lib/portalNotices'
 import { usePortalClient, portalPath, PORTAL_SELECT_PATH, type PortalPage } from '../lib/portalClient'
 import { PortalPreviewBar } from './PortalPreviewBar'
@@ -355,6 +355,18 @@ export function PortalLayout() {
         <PageMotion key={pathname}>
           <Outlet />
         </PageMotion>
+
+        {/*  ── 0093 — 「PC 화면으로 보기」를 **모든 병원 화면**에 ────────────
+             0090 에서는 이 단추를 화면 맨 아래 칸(PortalFooter)에 뒀는데,
+             그 칸은 **첫 화면에만** 있습니다. 그래서 「이용 내역」이나
+             「고객지원」에서는 PC 화면으로 넘어갈 방법이 없었습니다.
+             레이아웃으로 올려 어느 화면에서든 쓸 수 있게 합니다.
+             ⚠ 머리띠가 아니라 여기입니다 — 머리띠에 두면 단추가 다섯이 되어
+               병원 이름이 긴 곳에서 두 줄이 되고 「수거 요청」이 첫 화면
+               밖으로 밀립니다(0090 에서 실측). */}
+        <div className="mt-8 lg:hidden">
+          <PortalPcViewButton />
+        </div>
       </main>
 
       {/*  ── 창 (0089) ─────────────────────────────────────────────────────

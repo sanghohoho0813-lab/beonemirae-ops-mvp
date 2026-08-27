@@ -354,10 +354,16 @@ async function open(ctx, path, uid) {
   ok(v1.length === 0, '첫 화면에 세로로 늘어진 글자가 없음', v1.join(' · '))
 
   console.log('── 6. 수거 요청을 보낸다 ──')
+  //  ⚠ 0089 부터 이 창은 **고르는 창**입니다. 예전 판의 #req-content 를
+  //    채우던 이 자리에서 스위트가 매번 터졌는데, 앞의 35건은 이미 찍힌
+  //    뒤라 「실패 0」으로 보였습니다. 나란히 돌리는 겉껍질이 **끝난
+  //    코드**를 안 봤기 때문입니다(0093 에서 고쳤습니다).
   await p.locator('[data-portal-cta="collect"]').dispatchEvent('click')
-  await p.waitForTimeout(900)
-  await p.fill('#req-content', '격리환자 발생으로 배출량이 늘었습니다')
-  await p.getByRole('button', { name: '요청 보내기' }).click()
+  await p.waitForSelector('[data-req-send]', { timeout: 15000 })
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+  await p.locator('[data-req-memo]').fill('격리환자 발생으로 배출량이 늘었습니다')
+  await p.waitForTimeout(200)
+  await p.locator('[data-req-send]').click()
   await p.waitForTimeout(1600)
   const req = calls.find((c) => c.table === 'client_requests')
   ok(req != null, '**요청이 서버로 감**')
@@ -369,9 +375,17 @@ async function open(ctx, path, uid) {
 
   console.log('── 7. 자재·용기를 주문한다 ──')
   const q = await open(ctx, '/portal', HOSP)
+  //  ⚠ 0089 부터 이 칸은 **창을 엽니다** — 화면을 옮기지 않습니다.
+  //    주문 화면 자체는 그대로 남아 있어(실사 때 보여 드립니다) 아래에서
+  //    그 화면을 따로 엽니다.
   await q.locator('[data-portal-cta="supplies"]').dispatchEvent('click')
   await q.waitForTimeout(1600)
-  ok(new URL(q.url()).pathname === '/portal/supplies', '자재·용기 요청이 물품 화면으로 감', q.url())
+  ok(/do=supply/.test(q.url()), '자재·용기 칸이 창을 엶', q.url())
+  await q.keyboard.press('Escape')
+  await q.waitForTimeout(700)
+  await q.goto(`${BASE}/portal/supplies`, { waitUntil: 'domcontentloaded' })
+  await q.waitForTimeout(2600)
+  ok(new URL(q.url()).pathname === '/portal/supplies', '물품 화면이 열림', q.url())
   const plus = q.locator(`[data-qty-plus="${PROD}"]`)
   ok((await plus.count()) > 0, '주문할 물품이 보임 (0063 이 병원은 안 막았음)')
   const pb = await plus.first().boundingBox()

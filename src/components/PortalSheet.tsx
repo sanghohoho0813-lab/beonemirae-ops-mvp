@@ -23,6 +23,24 @@ import { AnimatePresence, motion } from 'framer-motion'
 //    못 찾습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── 뒤 화면 스크롤 잠금 — **세어서** 풉니다 (0093) ──────────────────────────
+//
+//  창이 몇 개 열려 있는지 세고, 0 이 될 때만 되돌립니다.
+//  겹쳐 열려도 마지막 하나가 닫힐 때 정확히 한 번 풀립니다.
+let lockCount = 0
+let lockPrev = ''
+
+function lockScroll() {
+  if (lockCount === 0) lockPrev = document.body.style.overflow
+  lockCount += 1
+  document.body.style.overflow = 'hidden'
+}
+
+function unlockScroll() {
+  lockCount = Math.max(0, lockCount - 1)
+  if (lockCount === 0) document.body.style.overflow = lockPrev
+}
+
 type SheetKind = 'form' | 'wide' | 'drawer'
 
 const BOX: Record<SheetKind, string> = {
@@ -58,13 +76,18 @@ export function PortalSheet({
 
   //  ⚠ 창이 열려 있는 동안 뒤 화면이 같이 스크롤되면, 창을 닫았을 때
   //    엉뚱한 자리에 와 있습니다.
+  //
+  //  ⚠ 0093 — 「열기 전 값을 기억했다 되돌리기」로 하지 않습니다.
+  //    창 하나에서 다른 창으로 바로 넘어가는 길이 있습니다(증빙 → 이력).
+  //    그때 두 창이 잠깐 겹치면, 나중 창이 **앞 창이 걸어 둔 hidden 을
+  //    「원래 값」으로 기억**했다가 닫을 때 되돌려 놓습니다. 그러면 화면이
+  //    영영 안 굴러갑니다 — 병원 담당자에게는 그냥 「먹통」입니다.
+  //    지금 구조에서는 안 겹치는 것을 확인했지만, 창이 하나 더 늘면
+  //    언제든 겹칩니다. **세어서** 마지막 창이 닫힐 때만 풉니다.
   useEffect(() => {
     if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    lockScroll()
+    return unlockScroll
   }, [open])
 
   //  ⚠ Esc 로 닫힙니다. PC 에서 제일 빠른 닫기입니다.

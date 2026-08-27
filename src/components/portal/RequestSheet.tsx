@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Send, Siren, Truck } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
@@ -60,7 +60,15 @@ export function RequestSheet({
 
   const anchor = useMemo(() => amountAnchor(data, client), [data, client])
   const wasteOpts = useMemo(() => wasteChoicesFor(client), [client])
-  const days = useMemo(() => dayChoices(), [])
+
+  //  ⚠ 0093 — 날짜를 **창이 열릴 때마다** 다시 계산합니다.
+  //
+  //   이 창은 레이아웃에 붙어 있어서 **닫아도 사라지지 않습니다.** 그래서
+  //   `useMemo(..., [])` 로 한 번만 계산해 두면, 자정을 넘긴 뒤에도 어제
+  //   날짜를 「오늘」이라고 보여 줍니다. 병원이 그걸 보고 고르면 **지난
+  //   날짜**가 희망일로 저장됩니다.
+  //   요양병원 데스크는 화면을 켜 둔 채로 쓰는 곳이라 실제로 넘어갑니다.
+  const [days, setDays] = useState(() => dayChoices())
 
   const reasonItems: ChoiceItem[] = (urgent ? URGENT_REASONS : PICKUP_REASONS).map((r) => ({
     value: r.value, label: r.label,
@@ -73,6 +81,17 @@ export function RequestSheet({
   const amountItems: ChoiceItem[] = AMOUNT_LEVELS.map((l) => ({
     value: l, label: l, note: amountHint(l, anchor),
   }))
+
+  //  ⚠ 창을 열 때마다 날짜를 새로 잡고, **지나간 날짜를 골라 둔 상태면
+  //    지웁니다.** 고른 것 자체는 남겨 둡니다 — 실수로 닫으셨을 때 처음부터
+  //    다시 고르게 하지 않으려는 것입니다. 다만 지난 날짜만은 남기면 안
+  //    됩니다.
+  useEffect(() => {
+    if (!open) return
+    const fresh = dayChoices()
+    setDays(fresh)
+    setDay((d) => (d && d !== 'asap' && d < fresh[0].value ? '' : d))
+  }, [open])
 
   const toggle = (arr: string[], v: string) =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]

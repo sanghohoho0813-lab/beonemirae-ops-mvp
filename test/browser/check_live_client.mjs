@@ -61,22 +61,25 @@ const over = await p.evaluate(() => Math.max(0, document.documentElement.scrollW
 ok(over === 0, '가로로 밀리지 않음', `${over}px`)
 
 console.log('── 3. 수거 요청 ──')
+//  ⚠ 0089 부터 이 창은 **고르는 창**입니다. 예전 판의 #req-content 는
+//    없어졌습니다. 적는 칸은 「더 알려 주실 것」 하나만 남았습니다.
 await p.locator('[data-portal-cta="collect"]').dispatchEvent('click')
-await p.waitForTimeout(1200)
+await p.waitForSelector('[data-req-send]', { timeout: 20000 })
 const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
 const CONTENT = `[실증검증] 실계정 E2E 확인 ${stamp} — 확인 뒤 지우셔도 됩니다`
-await p.fill('#req-content', CONTENT)
-ok(true, '요청 창이 열리고 내용을 적을 수 있음')
+await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+await p.locator('[data-req-memo]').fill(CONTENT)
+ok(true, '요청 창이 열리고 고를 수 있음')
 if (!WRITE) {
   console.log('   ⚠ WRITE=1 이 아니어서 **보내지 않았습니다**')
   await p.keyboard.press('Escape')
 } else {
-  await p.getByRole('button', { name: '요청 보내기' }).click()
+  await p.locator('[data-req-send]').click()
   //  ⚠ 실서버는 중계를 거쳐 느립니다. 정해진 시간만 기다렸다가 글자를
-  //    훑으면 **아직 안 뜬 것을 「안 뜬다」로** 적게 됩니다. 배너가 뜰
+  //    훑으면 **아직 안 뜬 것을 「안 뜬다」로** 적게 됩니다. 띠가 뜰
   //    때까지 기다립니다 — 안 뜨면 그때 실패입니다.
-  const shown = await p.waitForSelector('[data-req-sent]', { timeout: 30000 }).then(() => true, () => false)
-  ok(shown, '**접수되었다고 화면이 말해 줌**', shown ? flat(await p.textContent('[data-req-sent]')).slice(0, 60) : '안 뜸')
+  const shown = await p.waitForSelector('[data-toast]', { timeout: 30000 }).then(() => true, () => false)
+  ok(shown, '**접수되었다고 화면이 말해 줌**', shown ? flat(await p.textContent('[data-toast]')).slice(0, 60) : '안 뜸')
 
   console.log('── 4. 요청 상태 확인 ──')
   await p.goto(`${BASE}/portal`, { waitUntil: 'domcontentloaded' })
@@ -91,9 +94,17 @@ if (!WRITE) {
 console.log('── 5. 자재·용기 요청 ──')
 await p.goto(`${BASE}/portal`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2500)
+//  ⚠ 0089 부터 이 칸은 **창을 엽니다** — 화면을 옮기지 않습니다.
 await p.locator('[data-portal-cta="supplies"]').dispatchEvent('click')
 await p.waitForTimeout(3000)
-ok(new URL(p.url()).pathname === '/portal/supplies', '물품 화면으로 감', p.url())
+ok(/do=supply/.test(p.url()), '용기·봉투 창이 열림', p.url())
+await p.keyboard.press('Escape')
+await p.waitForTimeout(800)
+
+//  주문 화면은 그대로 남아 있습니다 (실사 때 보여 드리는 화면입니다).
+await p.goto(`${BASE}/portal/supplies`, { waitUntil: 'domcontentloaded' })
+await p.waitForTimeout(3000)
+ok(new URL(p.url()).pathname === '/portal/supplies', '물품 화면이 열림', p.url())
 await p.waitForTimeout(2500)
 const t4 = flat(await p.textContent('main'))
 const prods = await p.locator('[data-product]').count()
