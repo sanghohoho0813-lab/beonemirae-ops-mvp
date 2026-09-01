@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { requireFont } from './_font.mjs'
 import * as W from './walk_lib.mjs'
 import { measure } from './a11y_measure.mjs'
 
@@ -28,6 +29,17 @@ const ok = (name, cond, detail = '') => {
 }
 
 const b = await chromium.launch({ executablePath: EXEC })
+
+//  ⚠ 자로 재기 전에 **글꼴이 실렸는지** 먼저 봅니다. 안 실린 곳에서는
+//    글자 폭이 달라 간격·넘침·대비가 전부 다르게 나옵니다 (_font.mjs 참고).
+{
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
+  const p = await ctx.newPage()
+  await p.goto(`${W.BASE}/login`, { waitUntil: 'domcontentloaded' })
+  await p.waitForTimeout(2500)
+  await requireFont(p, b)
+  await ctx.close()
+}
 
 // ── ⓪ 재는 자가 실제로 무는가 ───────────────────────────────────────────────
 //
