@@ -13,6 +13,7 @@ import {
   type RevenueSource,
 } from '../lib/revenue'
 import { thisMonth, won } from '../lib/format'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 매출 현황
@@ -122,7 +123,7 @@ export function Revenue() {
 
   return (
     <PageShell>
-      <PageHeader title="매출 현황" subtitle="한 달에 하나의 값만 집계합니다 — 어느 것을 썼는지 함께 표시합니다" />
+      <PageHeader title="매출 현황" subtitle="한 달에 하나의 값만 집계합니다 — 어느 것을 썼는지 함께 표시합니다" action={<AiButton id="forecast" />} />
 
       <RevenueKpis />
 

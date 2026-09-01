@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { UPLOAD_DIR, requireUploads } from './_uploads.mjs'
 
 //  "엑셀 올리고 → 이상 없으면 그대로 거래처로 옮기기" 흐름을 확인합니다.
 //   1) 등록 안 된 거래처: 파일 내용으로 바로 거래처를 만들 수 있는가
@@ -7,7 +8,8 @@ import { chromium, EXEC } from './_pw.mjs'
 
 const BASE = 'http://localhost:4173'
 const SHOT = (process.env.TEST_OUT ?? '/tmp')
-const UP = '/root/.claude/uploads/1c636c94-52d3-5813-b2a8-7537162d97f7'
+const UP = UPLOAD_DIR
+requireUploads()
 const UID = '00000000-0000-0000-0000-0000000000ad'
 
 const out = []

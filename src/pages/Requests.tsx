@@ -35,6 +35,7 @@ import { snoozeRequest } from '../lib/repo'
 import { prettyDate, shiftDays, today } from '../lib/format'
 import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 요청 (비원미래 담당자 화면)
@@ -180,9 +181,15 @@ export function Requests() {
         title="고객 요청"
         subtitle="병원이 포털에서 올린 요청·문의와 전화·카톡으로 받은 요청을 한 곳에서 처리합니다"
         action={
-          <button onClick={() => { setNewError(null); setNewOpen(true) }} className="btn-primary">
-            <PlusCircle size={19} strokeWidth={2.4} /> 전화 요청 접수
-          </button>
+          //  ⚠ 실제 업무 단추(전화 요청 접수)가 **먼저**입니다. AI 자리는
+          //    그 옆에 섭니다 — 아직 안 되는 것이 되는 것보다 앞에 오면 안 됩니다.
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => { setNewError(null); setNewOpen(true) }} className="btn-primary">
+              <PlusCircle size={19} strokeWidth={2.4} /> 전화 요청 접수
+            </button>
+            <AiButton id="requestTriage" />
+            <AiButton id="portalAsk" />
+          </div>
         }
       />
 

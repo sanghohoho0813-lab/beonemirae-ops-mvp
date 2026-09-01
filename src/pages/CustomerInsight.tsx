@@ -6,6 +6,7 @@ import { PageShell, SectionTitle, EmptyState, FilterChip } from '../components/u
 import { PageHeader } from '../components/PageHeader'
 import { LoadGate } from '../components/LoadState'
 import { allCustomerHealth, opsSuggestions, type HealthGrade } from '../lib/customerHealth'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 인사이트 (0083)
@@ -63,6 +64,7 @@ export function CustomerInsight() {
       <PageHeader
         title="거래처 인사이트"
         subtitle="수거·정산·요청 기록을 정해 둔 규칙으로 정리했습니다 — 근거를 그대로 볼 수 있습니다"
+        action={<AiButton id="churn" />}
       />
 
       {/*  ⚠ 「AI 가 분석했다」고 적지 않습니다. 규칙입니다. */}

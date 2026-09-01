@@ -8,6 +8,7 @@ import { MonthlyReportView } from '../components/MonthlyReport'
 import { clientMonthlyReport } from '../lib/insights'
 import { thisMonth } from '../lib/format'
 import { weight } from '../lib/format'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 운영 리포트 (/reports)
@@ -55,9 +56,12 @@ export function Reports() {
         title="운영 리포트"
         subtitle={`${month.replace('-', '년 ')}월 · 병원별 월간 운영 리포트`}
         action={
-          <button onClick={() => navigate('/performance')} className="btn-ghost shrink-0">
-            <Gauge size={17} strokeWidth={2.4} /> AX 도입 성과
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => navigate('/performance')} className="btn-ghost shrink-0">
+              <Gauge size={17} strokeWidth={2.4} /> AX 도입 성과
+            </button>
+            <AiButton id="reportWrite" />
+          </div>
         }
       />
 

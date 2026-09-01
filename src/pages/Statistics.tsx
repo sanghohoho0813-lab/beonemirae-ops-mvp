@@ -7,6 +7,7 @@ import { WasteBadge } from '../components/Badge'
 import { additionalMaterialCount, monthlyCollected } from '../lib/selectors'
 import { num, weight } from '../lib/format'
 import type { ClientType } from '../types'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 통계 — 월별 수거량 / 폐기물 비중 / 거래처 유형별 / 차량별 수거 건수 / 자재 추가공급
@@ -51,7 +52,7 @@ export function Statistics() {
 
   return (
     <div>
-      <PageHeader title="통계" subtitle="이번 달 운영 지표 · 경영 요약" />
+      <PageHeader title="통계" subtitle="이번 달 운영 지표 · 경영 요약" action={<AiButton id="forecast" />} />
 
       {/* 경영 요약 — 거래처별 정산 합계 (엑셀 전체 거래처 파일에 해당) */}
       <MonthlyBusiness data={data} />

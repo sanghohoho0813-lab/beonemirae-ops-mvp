@@ -10,6 +10,7 @@ import { productSales, type ProductSales } from '../lib/repo'
 import { prettyDate, won } from '../lib/format'
 import { monthRevenue } from '../lib/revenue'
 import type { Product, ProductOrder, ProductOrderStatus } from '../types'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 소모품 주문 — 사무실
@@ -81,6 +82,7 @@ export function Supplies() {
       <PageHeader
         title="소모품 주문"
         subtitle="병원이 쓰는 만큼 추천하고, 다음 수거 때 함께 전달합니다 — 배송비 없는 추가매출"
+        action={<AiButton id="supplyForecast" />}
       />
 
       <div className="mb-3 flex flex-wrap items-center gap-2">

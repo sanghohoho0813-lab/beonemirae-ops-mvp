@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CalendarPlus, CalendarX2, CheckCircle2, Info, Truck, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { RouteAiButton } from '../components/RouteAiPreview'
+import { AiButton } from '../components/AiAction'
 import { PageShell, SectionTitle, ExpandableSection, PrimaryButton, SecondaryButton, EmptyState } from '../components/ui'
 import { WasteBadge } from '../components/Badge'
 import { today, prettyDate } from '../lib/format'
@@ -360,7 +360,12 @@ export function SchedulePlan() {
         <PageHeader
           title="수거 일정 편성"
           subtitle="① 실제 기록의 요일로 예정을 만들고 → ② 차를 붙입니다"
-          action={<RouteAiButton />}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              <AiButton id="route" />
+              <AiButton id="plan" />
+            </div>
+          }
         />
       </div>
 

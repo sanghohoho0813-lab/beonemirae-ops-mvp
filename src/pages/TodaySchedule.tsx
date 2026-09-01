@@ -24,7 +24,7 @@ import { AddVisitSheet } from '../components/AddVisitSheet'
 import { SharedTruck } from '../components/SharedTruck'
 import { CollectionRecord } from '../components/CollectionRecord'
 import { ScheduleSheet } from '../components/ScheduleSheet'
-import { RouteAiChip } from '../components/RouteAiPreview'
+import { AiButton } from '../components/AiAction'
 import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
@@ -322,7 +322,7 @@ export function TodaySchedule() {
                  오늘 갈 곳이므로, 새 줄을 만들지 않고 **이미 있는 날짜 줄
                  오른쪽**에 얹습니다. 자리를 거의 안 뺏으면서 일정 목록
                  바로 위에 있어 눈에는 걸립니다. */}
-          <RouteAiChip className="ml-auto" />
+          <AiButton id="route" variant="chip" className="ml-auto" />
           {date !== today() && (
             <button
               data-go-today

@@ -14,6 +14,7 @@ import {
 } from '../lib/bankImport'
 import { won, prettyDate } from '../lib/format'
 import { friendlyError } from '../lib/supabase'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 통장 입금 대사
@@ -214,7 +215,7 @@ export function BankMatch() {
   return (
     <PageShell>
       <div data-bank-page>
-        <PageHeader title="통장 입금 대사" subtitle="통장 입금내역 파일을 올려 미수 청구와 맞춰 붙입니다" />
+        <PageHeader title="통장 입금 대사" subtitle="통장 입금내역 파일을 올려 미수 청구와 맞춰 붙입니다" action={<AiButton id="bankMatch" />} />
       </div>
 
       <div className="card flex gap-3 p-4 sm:p-5">

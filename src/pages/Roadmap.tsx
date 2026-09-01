@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle } from '../components/ui'
+import { AiSpecList } from '../components/AiSpecList'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 활용 계획·업무흐름도 (/roadmap)
@@ -350,6 +351,14 @@ export function Roadmap() {
       </section>
 
       {/* 기대 효과 — 검증 예정 지표 */}
+      {/*  ── AI 자리 목록 (0094) ────────────────────────────────────────────
+           대표님: 「각 파트마다 api 두면 좋을 그런부분들에 버튼이랑 같이
+           올려두는거지」. 화면마다 세운 단추를 여기에 한 장으로 모읍니다. */}
+      <section className="mb-8">
+        <SectionTitle>AI 를 붙일 자리 — 어디에 · 무엇을 위해 · 어떻게</SectionTitle>
+        <AiSpecList />
+      </section>
+
       <section>
         <SectionTitle>기대 효과 (실증지표로 검증 예정)</SectionTitle>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">

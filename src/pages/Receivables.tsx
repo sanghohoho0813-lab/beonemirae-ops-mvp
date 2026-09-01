@@ -13,6 +13,7 @@ import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
 import { strandedReceipts } from '../lib/moneyGuard'
 import { num, won, today } from '../lib/format'
 import type { PaymentStatus } from '../types'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 미수금 관리 — 거래처별 청구금액 / 입금상태 / 미수금 합계 / 입금완료 처리
@@ -86,7 +87,7 @@ export function Receivables() {
 
   return (
     <div>
-      <PageHeader title="미수금 관리" subtitle="거래처별 청구 · 입금 현황" />
+      <PageHeader title="미수금 관리" subtitle="거래처별 청구 · 입금 현황" action={<AiButton id="dunning" />} />
 
       {error && (
         <div data-pay-error className="card mb-4 border-rose-200 bg-rose-50 p-4 text-[1.05rem] font-semibold text-rose-600">

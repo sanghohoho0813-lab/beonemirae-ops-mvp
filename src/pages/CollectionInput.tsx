@@ -42,6 +42,7 @@ import {
 } from '../lib/collection'
 import type { ContainerBreakdown, HandoverStatus, WasteType } from '../types'
 import { isPending } from '../lib/scheduleLive'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 수거 입력 (3단계) — 현장 담당자가 한 번 입력하면 일정·이력·자재·통계로 자동 연결
@@ -716,6 +717,7 @@ export function CollectionInput() {
       <PageHeader
         title="수거 입력"
         subtitle={role === 'field' ? undefined : '한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다'}
+        action={<AiButton id="photo" />}
       />
 
       {/*  이미 저장돼 있는 경우 — 빨강이 아니라 청록입니다.

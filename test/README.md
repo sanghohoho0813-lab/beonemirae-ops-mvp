@@ -23,10 +23,24 @@
 ## 돌리는 법
 
 ```bash
+#  ⚠ 먼저 .env.local 이 있어야 합니다. 없으면 앱이 「서버 연결이 설정되지
+#    않았습니다」 화면에서 멈추고 **화면 검사가 전부 로그인 화면을 봅니다.**
+#    검사는 서버를 흉내 내므로 **진짜 값이 아니어도 됩니다.**
+#    (0094 에서 작업공간이 회수된 뒤 이것 때문에 한참 헤맸습니다.)
+cat > .env.local <<'ENV'
+VITE_SUPABASE_URL=https://test-not-real.supabase.co
+VITE_SUPABASE_ANON_KEY=test-anon-key-not-a-real-secret
+ENV
+
+npm ci                                            # node_modules 가 없으면
 npm run build && npx vite preview --port 4173 &   # 화면 검사는 만들어진 판을 봅니다
-bash test/browser/run.sh                          # 화면 96
-bash test/db/run.sh                               # DB 40 (로컬 PostgreSQL 16 필요)
+PW_MODULE=/경로/node_modules/playwright \
+  bash test/browser/run.sh                        # 화면 검사
+bash test/db/run.sh                               # DB 검사 (로컬 PostgreSQL 16 필요)
 ```
+
+> `.env.local` 은 `.gitignore` 에 걸려 있어 저장소로 올라가지 않습니다.
+> **실제 운영 키를 여기에 넣지 마세요.** 검사에는 필요 없습니다.
 
 `「검사 0」은 통과가 아니라 실패입니다.` 검사가 도중에 터지면 한 건도 못 하고
 끝나는데, 그것을 0/0 으로 세면 **깨진 검사가 조용히 통과한 것처럼 보입니다.**

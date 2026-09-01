@@ -587,6 +587,7 @@ export function TourOverlay() {
               </button>
             )}
             <button
+              data-tour-next
               onClick={last ? finish : next}
               className={`inline-flex items-center justify-center gap-1.5 rounded-2xl bg-teal-500 px-5 py-3 text-[1.26rem] font-extrabold text-white shadow-sm transition hover:bg-teal-600 ${
                 last ? 'min-w-0 flex-1 sm:flex-none' : ''

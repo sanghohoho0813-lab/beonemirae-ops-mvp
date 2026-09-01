@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { UPLOAD_DIR, requireUploads } from './_uploads.mjs'
 
 //  대표님이 겪은 그대로 재현합니다.
 //   오남한양병원 = 명세서에 날짜가 하나도 없는 파일.
@@ -7,7 +8,8 @@ import { chromium, EXEC } from './_pw.mjs'
 
 const BASE = 'http://localhost:4173'
 const SHOT = (process.env.TEST_OUT ?? '/tmp')
-const UP = '/root/.claude/uploads/1c636c94-52d3-5813-b2a8-7537162d97f7'
+const UP = UPLOAD_DIR
+requireUploads()
 const UID = '00000000-0000-0000-0000-0000000000ad'
 const C1 = '00000000-0000-0000-0000-0000000000c1'
 

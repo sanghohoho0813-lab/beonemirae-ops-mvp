@@ -1,5 +1,6 @@
 import { PageHeader } from '../components/PageHeader'
 import { ExcelImport } from '../components/ExcelImport'
+import { AiButton } from '../components/AiAction'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 기존 거래처 엑셀 가져오기 (관리자 전용)
@@ -14,6 +15,7 @@ export function ImportExcel() {
       <PageHeader
         title="엑셀 가져오기"
         subtitle="업체별 거래처관리 엑셀 → 거래처 · 수거 · 자재 기록"
+        action={<AiButton id="excelRead" />}
       />
       <ExcelImport />
     </div>

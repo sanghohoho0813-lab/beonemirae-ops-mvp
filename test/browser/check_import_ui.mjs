@@ -1,11 +1,13 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { UPLOAD_DIR, requireUploads } from './_uploads.mjs'
 
 //  실제 더원요양병원 파일을 관리자 화면에 올려, 「확인 필요」가 접혀서
 //  보이는지 확인합니다. 내용이 줄어들면 안 됩니다 — 접히기만 해야 합니다.
 
 const BASE = 'http://localhost:4173'
 const SHOT = (process.env.TEST_OUT ?? '/tmp')
-const XLSX = '/root/.claude/uploads/1c636c94-52d3-5813-b2a8-7537162d97f7/1a85e0e1-202602_____________.xlsx'
+const XLSX = `${UPLOAD_DIR}/1a85e0e1-202602_____________.xlsx`
+requireUploads([XLSX])
 const UID = '00000000-0000-0000-0000-0000000000ad'
 const C1 = '00000000-0000-0000-0000-0000000000c1'
 

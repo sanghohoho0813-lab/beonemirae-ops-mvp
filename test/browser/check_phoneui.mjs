@@ -452,7 +452,13 @@ for (const [w, label] of [[390, '폰'], [1500, 'PC']]) {
     if ((await p.locator('[data-tour-card]').count()) === 0) break
     seen += ' ' + flat(await p.textContent('[data-tour-card]'))
     steps += 1
-    const next = p.getByRole('button', { name: '다음' })
+    //  ⚠ 0094 — 글자로 찾지 않고 **표로** 찾습니다.
+    //    화면에 「다음」이 들어간 단추가 하나만 더 있어도(예: 통계 화면의
+    //    「AI 다음 달 예측」) 이 자리가 두 개를 잡고, 클릭이 조용히 실패해
+    //    안내가 같은 단계를 열여섯 번 반복했습니다. 그런데 카드 수는
+    //    계속 세어져서 「끝까지 넘어감」은 통과했습니다 — 겉으로는 멀쩡해 보이는
+    //    고장이었습니다.
+    const next = p.locator('[data-tour-card] [data-tour-next]')
     if ((await next.count()) === 0) break
     await next.click().catch(() => {})
     await p.waitForTimeout(800)

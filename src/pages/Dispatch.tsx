@@ -4,7 +4,7 @@ import { Route, Siren, Package, Target, FlaskConical, ChevronDown, ChevronRight,
 import { Link } from 'react-router-dom'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
-import { RouteAiButton } from '../components/RouteAiPreview'
+import { AiButton } from '../components/AiAction'
 import { WasteBadge } from '../components/Badge'
 import { PageShell, SectionTitle, ExpandableSection } from '../components/ui'
 import { SeparationNotice, VehicleFleetCard, FacilityCard, IsolationCard } from '../components/ops'
@@ -155,7 +155,7 @@ export function Dispatch() {
       <PageHeader
         title="배차·경로 추천"
         subtitle="차량 적재율·긴급수거·처리장 인계 고려"
-        action={<RouteAiButton />}
+        action={<AiButton id="route" />}
       />
 
       {/* 히어로 */}

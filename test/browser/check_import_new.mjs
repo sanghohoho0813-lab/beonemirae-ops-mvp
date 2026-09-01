@@ -1,4 +1,5 @@
 import { chromium, EXEC } from './_pw.mjs'
+import { UPLOAD_DIR, requireUploads } from './_uploads.mjs'
 
 //  새로 받은 실제 파일 3종을 관리자 화면에 실제로 올려 봅니다.
 //   · 해올요양병원  월정액 2건 — 정산 규칙이 미리보기에 보여야 함
@@ -7,7 +8,8 @@ import { chromium, EXEC } from './_pw.mjs'
 
 const BASE = 'http://localhost:4173'
 const SHOT = (process.env.TEST_OUT ?? '/tmp')
-const UP = '/root/.claude/uploads/1c636c94-52d3-5813-b2a8-7537162d97f7'
+const UP = UPLOAD_DIR
+requireUploads()
 const UID = '00000000-0000-0000-0000-0000000000ad'
 
 const out = []

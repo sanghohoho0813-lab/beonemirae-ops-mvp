@@ -1,5 +1,11 @@
 import { chromium, EXEC } from './_pw.mjs'
 
+//  ⚠ 0094 — 재는 자리만 옮겼습니다. 「AI 동선 추천」은 이제 화면마다 서는
+//    공통 단추(AiButton)의 한 갈래입니다. 그래서 표시가
+//    data-routeai-* → data-ai-* 로 바뀌었습니다.
+//    **보장은 하나도 안 줄였습니다** — 아직 안 켜졌다고 먼저 말하는지,
+//    가짜 숫자가 없는지, 아무 데도 통신을 안 하는지 그대로 봅니다.
+
 //  AI 동선 추천 — **2단계 예정 기능의 입구만** 있는지 확인합니다
 //
 //   대표님: 「실제 TMAP API 나 GPT API 를 연결하지 않는다. 가짜 추천경로 ·
@@ -77,16 +83,16 @@ async function open(path, { role = 'admin', w = 1280 } = {}) {
 
 //  모달 내용 검사는 두 화면에서 똑같으므로 함수로 묶습니다.
 async function checkPanel(p, where) {
-  await p.locator('[data-routeai-open]').first().click()
+  await p.locator('[data-ai-open="route"]').first().click()
   await p.waitForTimeout(700)
-  ok((await p.locator('[data-routeai-panel]').count()) === 1, `${where} — 누르면 안내가 열린다 (빈 화면·오류 아님)`)
-  const t = flat(await p.locator('[data-routeai-panel]').innerText())
+  ok((await p.locator('[data-ai-panel][data-ai-spec="route"]').count()) === 1, `${where} — 누르면 안내가 열린다 (빈 화면·오류 아님)`)
+  const t = flat(await p.locator('[data-ai-panel][data-ai-spec="route"]').innerText())
 
   //  ⚠ 제일 먼저 「아직 아니다」가 나와야 합니다.
   ok(/아직 켜지지 않은 기능입니다/.test(t), `${where} — **아직 안 되는 기능이라고 먼저 말한다**`)
   //  ⚠ 이름은 **T맵 · ChatGPT** 로 적습니다 (0080). 대표님: 「TMAP GPT
   //    이렇게 표시돼있는데 T맵, ChatGPT 라고 명확히 적어줘.」
-  const notyet = flat(await p.locator('[data-routeai-notyet]').innerText())
+  const notyet = flat(await p.locator('[data-ai-notyet]').innerText())
   ok(/T맵이나 ChatGPT 에 연결하지 않았고/.test(notyet),
     `${where} — **T맵·ChatGPT 에 연결 안 했다고 적혀 있다**`)
   ok(/계산하지도 않습니다/.test(notyet), `${where} — 경로·절감도 계산 안 한다고 적혀 있다`)
@@ -106,13 +112,13 @@ async function checkPanel(p, where) {
   //  ⚠ 「지금 최적화하고 있다」로 읽힐 문구가 없어야 합니다.
   ok(!/최적화하고 있습니다|최적화 중|AI가 추천했|추천된 경로입니다/.test(t),
     `${where} — 「지금 AI 가 하고 있다」로 읽힐 문구가 없다`)
-  ok((await p.locator('[data-routeai-badge]').count()) >= 1, `${where} — 「2단계」 딱지가 붙어 있다`)
+  ok((await p.locator('[data-ai-badge]').count()) >= 1, `${where} — 「2단계」 딱지가 붙어 있다`)
 }
 
 // ── ① PC · 일정 편성 ──────────────────────────────────────────────────────
 {
   const { ctx, p, outbound } = await open('/plan')
-  const btn = p.locator('[data-routeai-open]')
+  const btn = p.locator('[data-ai-open="route"]')
   ok((await btn.count()) === 1, 'PC 일정 편성 — 「AI 동선 추천」이 있다')
   ok(/AI 동선 추천/.test(flat(await btn.innerText())), '버튼 이름', flat(await btn.innerText()))
   ok(/2단계/.test(flat(await btn.innerText())), '버튼에 「2단계」가 같이 붙어 있다')
@@ -135,7 +141,7 @@ async function checkPanel(p, where) {
 // ── ② PC · 배차·경로 ──────────────────────────────────────────────────────
 {
   const { ctx, p, outbound } = await open('/dispatch')
-  const btn = p.locator('[data-routeai-open]')
+  const btn = p.locator('[data-ai-open="route"]')
   ok((await btn.count()) === 1, 'PC 배차·경로 — 「AI 동선 추천」이 있다')
   const box = await btn.boundingBox()
   ok((box?.x ?? 0) > p.viewportSize().width / 2, '여기서도 우측', `x=${Math.round(box?.x ?? 0)}`)
@@ -149,7 +155,7 @@ async function checkPanel(p, where) {
 // ── ③ 폰 · 오늘 일정 ──────────────────────────────────────────────────────
 {
   const { ctx, p, outbound } = await open('/today', { role: 'field', w: 390 })
-  const chip = p.locator('[data-routeai-open]')
+  const chip = p.locator('[data-ai-open="route"]')
   ok((await chip.count()) === 1, '폰 오늘 일정 — 「추천 동선」이 있다')
   ok(/추천 동선/.test(flat(await chip.innerText())), '이름', flat(await chip.innerText()))
 
