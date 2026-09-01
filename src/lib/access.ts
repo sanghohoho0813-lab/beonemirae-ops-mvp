@@ -95,6 +95,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   // 관리자 전용
   { prefix: '/settings', roles: ['admin'] },
   { prefix: '/audit', roles: ['admin'] },
+  //  심사 준비도 — 정책자금 준비 상태 점검. 대표님·관리자 자리입니다.
+  { prefix: '/readiness', roles: ['admin'] },
   { prefix: '/users', roles: ['admin'] },
   //  요청함은 관리자만 봅니다. 보내는 것은 누구나 하되(0022 RLS),
   //  모아 보는 화면은 대표님 자리입니다.

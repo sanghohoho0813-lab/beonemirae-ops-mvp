@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Info,
   SlidersHorizontal,
+  ClipboardCheck,
   Zap,
   ChevronDown,
   type LucideIcon,
@@ -258,9 +259,15 @@ export function Performance() {
         title="AX 도입 성과"
         subtitle="업무 자동화 → 데이터 축적 → 추천 → 제안 → 수락 → 추가 매출"
         action={
+          <div className="flex flex-wrap items-center gap-2">
+          {/*  0096 — 심사 전 점검은 이 화면과 붙어 다닙니다 */}
+          <button onClick={() => navigate('/readiness')} className="btn-ghost shrink-0">
+            <ClipboardCheck size={17} strokeWidth={2.4} /> 심사 준비도
+          </button>
           <button onClick={goSettings} className="btn-ghost shrink-0">
             <SlidersHorizontal size={17} strokeWidth={2.4} /> 기준값 설정
           </button>
+          </div>
         }
       />
 

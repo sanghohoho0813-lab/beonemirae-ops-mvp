@@ -359,6 +359,47 @@ export function Roadmap() {
         <AiSpecList />
       </section>
 
+      {/*  ── SaaS(플랫폼) 전환 계획 (0096) ──────────────────────────────────
+           「플랫폼으로 확장 가능합니까」에 「가능합니다」 대신 **단계**로
+           답합니다. 지금 구조가 단일 회사 전용이라는 사실부터 적습니다 —
+           감추면 기술 심사 첫 질문에서 무너집니다. */}
+      <section data-saas-plan className="mb-8">
+        <SectionTitle>플랫폼(SaaS) 전환 — 계획 수립됨 · 착수 전</SectionTitle>
+        <div className="card p-5 sm:p-6">
+          <p className="t-body break-keep leading-relaxed text-navy-700">
+            현재 시스템은 <b className="text-navy-900">㈜비원미래 전용 단일 회사 구조</b>입니다.
+            자사 실운영으로 업무 모델을 먼저 검증한 뒤, 아래 5단계로 다른 수거·운반
+            회사도 쓰는 서비스로 전환합니다. 표 35개 · 함수 32개 · 화면 43개가
+            대상이며, 이미 갖춰진 <b className="text-navy-900">자동 검증 약 6,000건</b>이
+            이 대규모 전환의 안전망입니다.
+          </p>
+          <ol className="mt-3.5 grid gap-2 sm:grid-cols-2">
+            {[
+              ['회사 구분 칸 추가', '전 표에 회사 식별자 — 기존 자료는 비원미래 소속으로'],
+              ['접근 제어 재작성', '병원 격리에 더해 회사 격리 — 격리 검사 신설'],
+              ['서버 함수 32개 보강', '모든 함수에 회사 검증 추가'],
+              ['화면 컨텍스트 주입', '계정 소속으로 회사가 정해지는 구조'],
+              ['회사 온보딩', '가입 → 승인 → 초기 설정'],
+            ].map(([t, d], i) => (
+              <li key={t} className="flex items-start gap-2.5 rounded-2xl bg-navy-50 px-3.5 py-2.5">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[0.9rem] font-black text-white">
+                  {i + 1}
+                </span>
+                <span className="min-w-0">
+                  <span className="block break-keep text-[1.02rem] font-bold text-navy-800">{t}</span>
+                  <span className="block break-keep text-[0.96rem] leading-snug text-navy-500">{d}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="t-muted mt-3 break-keep leading-snug">
+            전제 — 단일 회사 실증 완료가 먼저이고, 첫 외부 고객은 동일 업종이어야
+            합니다. 기간·비용은 투입 구성이 정해진 뒤에 적습니다(추정을 적어 두면
+            심사에서 근거를 물었을 때 무너집니다).
+          </p>
+        </div>
+      </section>
+
       <section>
         <SectionTitle>기대 효과 (실증지표로 검증 예정)</SectionTitle>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">

@@ -105,6 +105,7 @@ export const ADMIN_NAV: NavItem[] = [
   { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '거래처별 정산 엑셀 옮기기', tone: 'navy' },
   { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '글자 크기 · 데이터 백업 · 초기화', tone: 'navy' },
   { to: '/audit', label: '감사로그', icon: ScrollText, desc: '누가 무엇을 언제 바꿨는지', tone: 'navy' },
+  { to: '/readiness', label: '심사 준비도', icon: Gauge, desc: '정책자금 심사 전 준비 점검 · 브리핑 인쇄', tone: 'navy' },
 ]
 
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 */

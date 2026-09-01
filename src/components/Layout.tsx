@@ -67,7 +67,7 @@ import { PlannedPreview } from './PlannedPreview'
 const MORE_PATHS = [
   '/more', '/plan', '/billing', '/bank', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
   '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
-  '/audit', '/requests', '/insight', '/pricing', '/users', '/dev-requests', '/import', '/revenue',
+  '/audit', '/readiness', '/requests', '/insight', '/pricing', '/users', '/dev-requests', '/import', '/revenue',
 ]
 
 /**

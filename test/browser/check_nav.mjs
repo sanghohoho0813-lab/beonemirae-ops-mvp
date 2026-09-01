@@ -164,7 +164,9 @@ async function open(role, width = 390, height = 900) {
 
   const admin = await p.locator('[data-more-section="more-admin"] [data-more-item]').evaluateAll(
     (els) => els.map((e) => e.getAttribute('data-more-item')))
-  ok(admin.join(',') === '/users,/dev-requests,/import,/settings,/audit', '관리 5개가 PC 와 같은 순서',
+  //  0096 — 「심사 준비도」가 관리 묶음에 추가됐습니다. 보장은 그대로입니다:
+  //  폰과 PC 의 관리 메뉴가 같은 항목·같은 순서.
+  ok(admin.join(',') === '/users,/dev-requests,/import,/settings,/audit,/readiness', '관리 6개가 PC 와 같은 순서',
     admin.join(','))
 
   //  두 칸 격자인지 — 같은 줄에 두 개가 나란히 서야 합니다

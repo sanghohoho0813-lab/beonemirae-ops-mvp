@@ -20,6 +20,7 @@ import { Reports } from './pages/Reports'
 import { More } from './pages/More'
 import { Settings } from './pages/Settings'
 import { Purpose } from './pages/Purpose'
+import { Readiness } from './pages/Readiness'
 import { Performance } from './pages/Performance'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
@@ -167,6 +168,7 @@ export default function App() {
           <Route path="why" element={<Purpose />} />
           <Route path="performance" element={<Performance />} />
           <Route path="audit" element={<AuditLog />} />
+          <Route path="readiness" element={<Readiness />} />
           <Route path="users" element={<Users />} />
           <Route path="dev-requests" element={<DevRequests />} />
           <Route path="import" element={<ImportExcel />} />
