@@ -19,6 +19,7 @@ import { portalInsights } from '../lib/portalInsight'
 import { recentActivity, portalTodos } from '../lib/portalActivity'
 import { prettyDate, weight, won } from '../lib/format'
 import { REQUEST_KIND_LABEL } from '../types'
+import { BRAND_IMG } from '../lib/brandAssets'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 담당자의 **작업 화면** (0089)
@@ -372,6 +373,36 @@ export function PortalHome() {
             ))}
           </ul>
         )}
+      </section>
+
+      {/*  ── 신뢰 띠 (0095) — 맨 아래, 업무를 밀지 않는 자리 ────────────────
+           ⚠ 적힌 세 가지는 전부 **이 포털에 실제로 있는 기능**입니다.
+             「무사고 1,248일」처럼 서버에 없는 숫자는 넣지 않습니다. */}
+      <section data-portal-trust className="relative overflow-hidden rounded-3xl shadow-lg">
+        <img
+          src={BRAND_IMG.trustBanner}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div aria-hidden="true" className="absolute inset-0 bg-navy-950/72" />
+        <div className="relative px-5 py-6 text-white sm:px-8 sm:py-8">
+          <p className="break-keep text-[1.2rem] font-extrabold leading-snug sm:text-[1.5rem]">
+            병원 폐기물, 기록으로 관리합니다
+          </p>
+          <p className="t-body mt-1.5 break-keep leading-snug text-navy-100">
+            수거 한 건 한 건이 이 화면에서 확인하시는 기록으로 남습니다.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {['수거 이력 · 무게 확인', '처리장 인계 확인', '월간 배출 리포트'].map((t) => (
+              <span key={t} className="rounded-full bg-white/15 px-3.5 py-1.5 text-[1rem] font-bold backdrop-blur-sm">
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       <PortalFooter client={client} />

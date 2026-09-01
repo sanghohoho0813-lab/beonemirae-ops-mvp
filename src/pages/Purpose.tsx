@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { PageShell } from '../components/ui'
 import { TourButton } from '../components/TourEntry'
+import { BRAND_IMG } from '../lib/brandAssets'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 이 시스템을 만든 이유
@@ -182,6 +183,16 @@ export function Purpose() {
           수거·정산 기록은 병원도 같은 숫자로 봅니다. 그렇게 쌓인 자료를 바탕으로 한 운영·고객관리 자동화가
           다음 단계입니다.
         </p>
+        {/*  0095 — 현장 사진 한 장 (준비 자산 ax_cover_main).
+             ⚠ 내부 화면은 사진보다 KPI·업무가 먼저입니다. 그래서 대시보드가
+               아니라 **이 이야기 화면에만**, 그것도 글 사이 한 장씩만 둡니다. */}
+        <img
+          src={BRAND_IMG.axCover}
+          alt="병원 앞에서 수거 기록을 확인하는 비원미래 현장"
+          loading="lazy"
+          decoding="async"
+          className="mt-5 h-44 w-full rounded-3xl object-cover shadow-sm sm:h-60"
+        />
         <p className="t-body mt-3 break-keep text-navy-400">
           화면 사용법이 아니라, 왜 이 일을 시작했고 회사가 어디로 가려는지에 대한 설명입니다. AX 라는 말을 처음
           들으셔도 순서대로 읽으시면 이해되도록 썼습니다. 읽는 데 5분쯤 걸립니다.
@@ -349,6 +360,14 @@ export function Purpose() {
       </Section>
 
       <Section s={SECTIONS[6]}>
+        {/*  0095 — 실제 수거 운영 장면 (준비 자산 ax_signature_operation) */}
+        <img
+          src={BRAND_IMG.axOperation}
+          alt="용기를 싣고 기록을 확인하는 수거 현장"
+          loading="lazy"
+          decoding="async"
+          className="mb-4 h-40 w-full rounded-3xl object-cover shadow-sm sm:h-52"
+        />
         <P>
           여기까지만 보면 내부 업무 프로그램입니다. 하지만 이 시스템을 만든 이유의 절반은 그 다음에
           있습니다.

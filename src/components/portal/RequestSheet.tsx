@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid, type ChoiceItem } from '../PortalSheet'
 import { toast } from '../PortalToast'
+import { BRAND_IMG } from '../../lib/brandAssets'
 import { useSchemaAtLeast } from '../../lib/schemaGate'
 import {
   AMOUNT_LEVELS, PICKUP_REASONS, URGENT_REASONS,
@@ -151,6 +152,7 @@ export function RequestSheet({
   return (
     <PortalSheet
       name={urgent ? 'urgent' : 'pickup'}
+      hero={urgent ? BRAND_IMG.serviceUrgent : BRAND_IMG.servicePickup}
       open={open}
       onClose={onClose}
       title={urgent ? '긴급 수거 요청' : '수거 요청'}

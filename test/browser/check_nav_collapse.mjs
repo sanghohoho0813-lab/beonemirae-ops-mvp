@@ -142,19 +142,23 @@ await p.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2000)
 ok(!(await asideText()).includes('올바로 API 연동'), '접으면 예정 항목도 같이 숨음')
 
-// 7) 예정 항목은 **눌러도 아무 일이 없어야** 합니다
+// 7) 예정 항목 — 화면으로 데려가지 않고, 정직한 미리보기만 엽니다 (0095)
+//    ⚠ 재는 자리를 옮겼습니다. 예전 보장은 「눌러도 아무 일이 없다」였는데,
+//      대표님 지시로 누르면 「계획 중」 미리보기가 열립니다. 지키는 것은
+//      그대로입니다 — 링크가 아니고, 화면을 옮기지 않고, 되는 척하지 않습니다.
 await p.locator('[data-nav-group-header="운영 도구"]').click()
 await p.waitForTimeout(350)
 const lock = p.locator('[data-nav-planned]').first()
 const label = (await lock.textContent()) ?? ''
 ok((await lock.evaluate((e) => e.tagName)) !== 'A', '예정 항목은 링크가 아님', label.replace(/\s+/g, ' '))
-ok((await lock.getAttribute('aria-disabled')) === 'true', '누를 수 없다고 표시됨')
+ok(/계획중/.test(label), '「계획중」 딱지가 붙어 있음')
 const before = p.url()
-//  Playwright 는 aria-disabled 를 눌러 주지 않습니다 — 그러면 「안 눌린다」를
-//  확인한 것이 아니라 검사를 건너뛴 것이 됩니다. 실제 클릭을 쏴 봅니다.
 await lock.dispatchEvent('click')
 await p.waitForTimeout(600)
-ok(p.url() === before, '**눌러도 화면이 안 바뀜**', `${before} → ${p.url()}`)
+ok(p.url() === before, '**눌러도 화면이 안 바뀜** (미리보기만 열림)', `${before} → ${p.url()}`)
+ok((await p.locator('[data-planned-preview]').count()) === 1, '「계획 중」 미리보기가 열림')
+ok(/아직 없는 기능입니다/.test((await p.textContent('[data-planned-preview]')) ?? ''),
+  '되는 척하지 않음 — 첫 줄이 「계획 중」')
 
 console.log('')
 console.log(`총 ${out.length}건 · 실패 ${out.filter((v) => !v).length}건`)

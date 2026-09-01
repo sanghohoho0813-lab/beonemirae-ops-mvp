@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid, type ChoiceItem } from '../PortalSheet'
 import { toast } from '../PortalToast'
+import { BRAND_IMG } from '../../lib/brandAssets'
 import { INQUIRY_TOPICS, type InquiryTopic } from '../../types'
 import { prettyDate } from '../../lib/format'
 import type { Client } from '../../types'
@@ -99,6 +100,7 @@ export function InquirySheet({
   return (
     <PortalSheet
       name="ask"
+      hero={BRAND_IMG.heroSecondary}
       open={open}
       onClose={onClose}
       title="상담 · 문의"

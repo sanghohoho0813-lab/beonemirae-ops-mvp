@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
 import { ScrollToTop } from './components/ScrollToTop'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
@@ -49,7 +50,9 @@ import { TourOverlay } from './components/TourOverlay'
 
 export default function App() {
   return (
-    <>
+    //  0095 — 기기의 「움직임 줄이기」 설정을 framer-motion 전체가 따릅니다.
+    //  장식 움직임은 빠지고, 상태 변화는 그대로 보입니다.
+    <MotionConfig reducedMotion="user">
       <ScrollToTop />
       {/* 제품 투어 — 어느 화면에서든 실행되고, 단계마다 필요한 화면으로 이동합니다 */}
       <TourOverlay />
@@ -184,6 +187,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </>
+    </MotionConfig>
   )
 }

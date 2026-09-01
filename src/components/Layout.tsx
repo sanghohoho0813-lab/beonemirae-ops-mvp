@@ -62,6 +62,7 @@ import {
   BOTTOM_NAV_FIELD,
   type NavItem,
 } from '../lib/nav'
+import { PlannedPreview } from './PlannedPreview'
 
 const MORE_PATHS = [
   '/more', '/plan', '/billing', '/bank', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
@@ -233,11 +234,13 @@ function NavGroup({
   title,
   items,
   planned = [],
+  onPlanned,
 }: {
   id: string
   title: string
   items: NavItem[]
   planned?: string[]
+  onPlanned?: (label: string) => void
 }) {
   const { pathname } = useLocation()
   const hasActive = items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))
@@ -271,21 +274,24 @@ function NavGroup({
             <p className="px-4 pb-1 pt-3 text-[0.9rem] font-bold tracking-wide text-navy-500">추가 개발 예정</p>
           )}
           {planned.map((label) => (
-            //  단추가 아니라 글자입니다 — 누를 수 없다는 것이 손끝에서
-            //  먼저 느껴져야 합니다.
-            <div
+            //  0095 — 예전에는 잠긴 회색 글이었습니다. 눌러도 아무 일이
+            //  없으니 회사가 어디로 가려는지 읽을 길이 없었습니다.
+            //  이제 누르면 「계획 중 · 지금은 이렇게」 미리보기가 열립니다.
+            //  ⚠ 여전히 **메뉴가 아닙니다** — 화면으로 데려가지 않습니다.
+            //    되는 척은 미리보기 첫 줄의 「계획 중」 딱지가 막습니다.
+            <button
               key={label}
               data-nav-planned={label}
-              aria-disabled="true"
-              title="아직 개발 전입니다 — 「활용 계획」에서 단계별 로드맵을 볼 수 있습니다"
-              className="flex w-full cursor-default select-none items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-500"
+              onClick={() => onPlanned?.(label)}
+              title="계획 중인 기능입니다 — 누르면 무엇을 검토 중인지 나옵니다"
+              className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
             >
               <Lock size={14} className="shrink-0" />
               <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
-              <span className="shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-500">
-                예정
+              <span className="shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-400">
+                계획중
               </span>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -301,6 +307,8 @@ function NavGroup({
 function Sidebar() {
   const navigate = useNavigate()
   const { configured, profile, signOut } = useAuth()
+  //  0095 — 「추가 개발 예정」 미리보기. 열려 있는 항목 이름 하나만 기억합니다.
+  const [plannedOpen, setPlannedOpen] = useState<string | null>(null)
   const coreNav = useVisibleNav(CORE_NAV)
   const serviceNav = useVisibleNav(SERVICE_NAV)
   const toolNav = useVisibleNav(TOOL_NAV)
@@ -373,7 +381,13 @@ function Sidebar() {
              길어졌습니다. 자물쇠로 구분하고 아직 못 쓰는 것은 누를 수 없게
              둡니다. */}
         {toolNav.length > 0 && (
-          <NavGroup id="tools" title="운영 도구" items={toolNav} planned={showPlanned ? PLANNED : []} />
+          <NavGroup
+            id="tools"
+            title="운영 도구"
+            items={toolNav}
+            planned={showPlanned ? PLANNED : []}
+            onPlanned={setPlannedOpen}
+          />
         )}
 
         {/*  관리 — 관리자 전용. 아직 만들지 않은 「추가 개발 예정」보다 아래에
@@ -473,6 +487,8 @@ function Sidebar() {
           </a>
         </div>
       </div>
+    
+      <PlannedPreview label={plannedOpen} onClose={() => setPlannedOpen(null)} />
     </aside>
   )
 }

@@ -321,19 +321,22 @@ for (const w of [320, 360, 390, 430]) {
   //    개수를 못 박기보다 **비어 있지 않은지**를 봅니다.
   ok(real >= 6, '쓸 수 있는 것들이 같은 묶음 안에', String(real))
 
-  //  자물쇠 항목을 눌러도 화면이 안 바뀌어야 합니다
+  //  ⚠ 0095 — 재는 자리를 옮겼습니다. 예전에는 「눌러도 아무 일이 없다」가
+  //    보장이었는데, 대표님 지시로 이제 누르면 **정직한 미리보기**가 열립니다.
+  //    지키는 것은 그대로입니다: 화면을 옮기지 않고, 되는 척하지 않습니다.
   const before = p.url()
-  //  ⚠ `.click()` 을 쓰면 안 됩니다. Playwright 는 aria-disabled 인 것을
-  //    아예 안 누르고 기다리다 시간만 보냅니다 — 앱이 무엇을 하는지는
-  //    **한 번도 확인하지 않은 채** 검사가 통과합니다(실제로 그랬습니다).
-  //    그래서 진짜 클릭 사건을 직접 쏴서 앱의 반응을 봅니다.
   await p.locator('[data-more-planned-item]').first().dispatchEvent('click')
   await p.waitForTimeout(900)
-  ok(p.url() === before, '**아직 못 쓰는 것은 눌러도 아무 일이 없음**', `${before} → ${p.url()}`)
-  //  시트가 그대로 열려 있어야 합니다 — 닫혔다면 무언가로 넘어간 것입니다
+  ok(p.url() === before, '**눌러도 화면을 옮기지 않음** (미리보기만 열림)', `${before} → ${p.url()}`)
+  ok((await p.locator('[data-planned-preview]').count()) === 1, '「계획 중」 미리보기가 열림')
+  const pv = flat(await p.textContent('[data-planned-preview]'))
+  ok(/계획 중 · 아직 없는 기능입니다/.test(pv), '**아직 없는 기능이라고 먼저 말함**', pv.slice(0, 50))
+  ok(/지금은/.test(pv), '지금은 어떻게 하는지도 적혀 있음')
+  //  닫으면 더보기 시트가 그대로 남아 있어야 합니다
+  await p.getByRole('button', { name: '확인' }).last().click()
+  await p.waitForTimeout(700)
+  ok((await p.locator('[data-planned-preview]').count()) === 0, '미리보기가 닫힘')
   ok((await p.locator('[data-more-toggle="more-tools"]').count()) === 1, '시트가 그대로 열려 있음')
-  ok((await p.locator('[data-more-planned-item]').first().getAttribute('aria-disabled')) === 'true',
-    '읽어 주는 기기에도 「못 씁니다」로 전달')
 
   //  쓸 수 있는 것은 그대로 열려야 합니다
   await p.locator('[data-more-item="/pricing"]').click()
@@ -358,7 +361,13 @@ for (const w of [320, 360, 390, 430]) {
   const before = p.url()
   await p.locator('[data-nav-planned]').first().dispatchEvent('click')
   await p.waitForTimeout(900)
-  ok(p.url() === before, 'PC 에서도 눌러도 아무 일이 없음', `${before} → ${p.url()}`)
+  ok(p.url() === before, 'PC 에서도 눌러도 화면을 옮기지 않음 (미리보기만 열림)', `${before} → ${p.url()}`)
+  ok((await p.locator('[data-planned-preview]').count()) === 1, 'PC 도 「계획 중」 미리보기가 열림')
+  ok(/계획 중 · 아직 없는 기능입니다/.test(flat(await p.textContent('[data-planned-preview]'))),
+    'PC 도 아직 없는 기능이라고 먼저 말함')
+  await p.getByRole('button', { name: '확인' }).last().click()
+  await p.waitForTimeout(700)
+  ok((await p.locator('[data-planned-preview]').count()) === 0, 'PC 미리보기도 닫힘')
   await ctx.close()
 }
 

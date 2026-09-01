@@ -7,6 +7,7 @@ import { PageShell, SectionTitle, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { INQUIRY_TOPICS, type InquiryTopic } from '../types'
 import { prettyDate } from '../lib/format'
+import { BRAND_IMG } from '../lib/brandAssets'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 문의 (0083)
@@ -90,7 +91,17 @@ export function PortalSupport() {
 
   return (
     <PageShell>
+      {/*  0095 — 머리 사진 띠. 글자는 사진 밖(아래)에 둡니다 — 사진 위
+           글자는 대비 관리가 하나 더 늘어나는 일입니다. */}
       <div>
+        <img
+          src={BRAND_IMG.customerExperience}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="mb-4 h-32 w-full rounded-3xl object-cover shadow-sm sm:h-44"
+        />
         <h1 className="t-page break-keep text-navy-900">문의하기</h1>
         <p className="t-body mt-2 break-keep text-navy-500">
           수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주시면 담당자가 확인하고 답변드립니다.

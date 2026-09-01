@@ -1,4 +1,5 @@
 import { Building2, CalendarClock, ChevronRight, Recycle, type LucideIcon } from 'lucide-react'
+import { BRAND_IMG } from '../lib/brandAssets'
 import type { Client } from '../types'
 import type { PortalSummary } from '../lib/portal'
 import { prettyDate } from '../lib/format'
@@ -23,8 +24,27 @@ export function PortalHero({ client, s }: { client: Client; s: PortalSummary }) 
   return (
     <section
       data-portal-hero
-      className="overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-950 px-5 py-5 text-white shadow-lg sm:px-7 sm:py-8"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-800 to-navy-950 px-5 py-5 text-white shadow-lg sm:px-7 sm:py-8"
     >
+      {/*  ── 0095 — 머리 배경 사진 (대표님 준비 자산 hero_main) ──────────────
+           수거차가 병원 앞에 서 있는 사진입니다. 글자는 왼쪽에 있으므로
+           왼쪽을 남색으로 충분히 덮어 글자 대비를 지킵니다.
+           ⚠ **폰에서는 안 그립니다.** 폰 머리는 지금도 꽉 차 있고, 사진이
+             비치면 글자 대비가 떨어집니다. 첫 화면에서 「수거 요청」이
+             밀리면 안 된다는 실측 회귀(check_flow390)가 이 화면을 지킵니다.
+           ⚠ 사진은 저장소 안(/brand)에 있습니다 — 바깥이 막힌 병원망에서도
+             나옵니다. alt 는 비웁니다: 장식이지 정보가 아닙니다. */}
+      <img
+        src={BRAND_IMG.heroMain}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 hidden h-full w-full object-cover object-right sm:block"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 hidden bg-gradient-to-r from-navy-950 via-navy-950/88 to-navy-900/45 sm:block"
+      />
+      <div className="relative">
       {/*  ⚠ 폰에서는 접습니다 — 머리띠에 이미 「고객 포털」이라고 적혀
            있습니다. 병원 이름이 긴 곳(「의료법인 한마음의료재단 …」)에서는
            이 한 줄 때문에 정작 「수거 요청」이 화면 밖으로 밀립니다. */}
@@ -83,6 +103,7 @@ export function PortalHero({ client, s }: { client: Client; s: PortalSummary }) 
             일정 확정
           </span>
         )}
+      </div>
       </div>
     </section>
   )

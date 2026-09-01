@@ -14,6 +14,7 @@ import { Tappable } from './motion'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, canSeeShowcase } from '../lib/access'
 import { SERVICE_NAV, TOOL_NAV, ADMIN_NAV, PLANNED, type NavItem } from '../lib/nav'
+import { PlannedPreview } from './PlannedPreview'
 import type { Tone } from '../lib/tone'
 import { canSendDevRequest } from '../lib/devRequests'
 import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
@@ -65,9 +66,11 @@ function NavSection({
   /** 접었다 폈다 할 수 있는가 (운영 도구처럼 길고 매일 안 쓰는 묶음) */
   collapsible?: boolean
   defaultOpen?: boolean
-  /** 아직 못 쓰는 것 — 자물쇠를 달고 **누를 수 없게** 둡니다 */
+  /** 아직 못 쓰는 것 — 자물쇠 + 「계획 중」 미리보기 (0095) */
   planned?: string[]
 }) {
+  //  0095 — 「계획 중」 미리보기. 열려 있는 항목 이름 하나만 기억합니다.
+  const [plannedOpen, setPlannedOpen] = useState<string | null>(null)
   const [open, setOpen] = useState(defaultOpen)
   const shown = !collapsible || open
   return (
@@ -122,19 +125,22 @@ function NavSection({
           <p className="mb-1.5 mt-3 px-1 text-[0.98rem] font-bold text-navy-400">추가 개발 예정</p>
           <div className="flex flex-wrap gap-1.5">
             {planned.map((label) => (
-              <span
+              //  0095 — 누르면 「계획 중 · 지금은 이렇게」 미리보기가 열립니다.
+              //  ⚠ 폰 손가락 기준 44px 을 지킵니다.
+              <button
                 key={label}
                 data-more-planned-item={label}
-                aria-disabled="true"
-                className="inline-flex cursor-default select-none items-center gap-1 rounded-lg bg-navy-50 px-2.5 py-1.5 text-[0.98rem] font-semibold text-navy-400"
+                onClick={() => setPlannedOpen(label)}
+                className="inline-flex min-h-[2.75rem] items-center gap-1 rounded-lg bg-navy-50 px-3 py-1.5 text-[0.98rem] font-semibold text-navy-500 transition active:scale-[0.98]"
               >
                 <Lock size={12} /> {label}
-              </span>
+              </button>
             ))}
           </div>
           <p className="t-muted mt-2 break-keep px-1">
-            위 기능은 아직 개발 전이라 눌러도 열리지 않습니다. 단계별 계획은 「활용 계획」에 있습니다.
+            위 기능은 아직 개발 전입니다. 누르면 무엇을 검토 중인지 나오고, 단계별 계획은 「활용 계획」에 있습니다.
           </p>
+          <PlannedPreview label={plannedOpen} onClose={() => setPlannedOpen(null)} />
         </>
       )}
     </section>

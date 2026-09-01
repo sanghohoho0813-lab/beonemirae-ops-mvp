@@ -9,7 +9,10 @@ import { UPLOAD_DIR, requireUploads } from './_uploads.mjs'
 const BASE = 'http://localhost:4173'
 const SHOT = (process.env.TEST_OUT ?? '/tmp')
 const UP = UPLOAD_DIR
-requireUploads()
+//  ⚠ 폴더만 보면 안 됩니다 — 다른 파일이 올라와 폴더가 다시 생기면
+//    폴더는 있는데 엑셀은 없어서 도중에 터집니다 (0095 에서 실제로 그랬습니다).
+//    이 스위트가 쓰는 파일을 **하나씩** 확인합니다.
+requireUploads([`${UP}/28270947-202601_____________.xlsx`, `${UP}/2cb0894a-202404______________.xlsx`, `${UP}/4d162046-202512_______________________.xlsx`])
 const UID = '00000000-0000-0000-0000-0000000000ad'
 
 const out = []

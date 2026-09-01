@@ -61,6 +61,7 @@ export function PortalSheet({
   children,
   footer,
   name,
+  hero,
 }: {
   open: boolean
   title: string
@@ -71,6 +72,12 @@ export function PortalSheet({
   footer?: ReactNode
   /** 검사와 안내가 이 창을 찾는 이름 */
   name: string
+  /**
+   *  머리 사진 (0095) — 창이 무엇에 대한 것인지 한눈에 보이는 얇은 띠.
+   *  ⚠ 장식입니다. 정보는 전부 글자로 있으므로 alt 를 비웁니다.
+   *  ⚠ 얇게(7rem) 고정합니다 — 사진이 크면 정작 고를 것이 밀립니다.
+   */
+  hero?: string
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
 
@@ -158,7 +165,20 @@ export function PortalSheet({
             </div>
 
             {/*  본문 — 여기만 스크롤됩니다 */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+              {hero && (
+                <img
+                  data-sheet-hero
+                  src={hero}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                  className="mb-5 h-28 w-full rounded-2xl object-cover sm:h-32"
+                />
+              )}
+              {children}
+            </div>
 
             {/*  아래 CTA — 고정. 다 골라 놓고 보낼 방법을 못 찾으면 안 됩니다. */}
             {footer && (

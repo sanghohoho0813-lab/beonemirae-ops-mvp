@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid } from '../PortalSheet'
 import { toast } from '../PortalToast'
+import { BRAND_IMG, productImageOf } from '../../lib/brandAssets'
 import { won, prettyDate } from '../../lib/format'
 import { supplyChoicesFor, buildSupplyContent } from '../../lib/portalSupply'
 import { requestsForClient } from '../../lib/ops'
@@ -200,6 +201,7 @@ export function SupplySheet({
   return (
     <PortalSheet
       name="supply"
+      hero={BRAND_IMG.serviceSupply}
       open={open}
       onClose={onClose}
       title="용기 · 봉투 주문"
@@ -371,11 +373,15 @@ export function SupplySheet({
                 >
                   <div className="flex items-center gap-3">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-400">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <Package size={24} strokeWidth={2} />
-                      )}
+                      {(() => {
+                        //  DB 사진 → 같은 규격의 대표 사진 → 아이콘 (0095)
+                        const img = p.imageUrl || productImageOf(p.name, p.spec)
+                        return img ? (
+                          <img src={img} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                        ) : (
+                          <Package size={24} strokeWidth={2} />
+                        )
+                      })()}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="t-body break-keep font-extrabold leading-snug text-navy-900">{p.name}</p>

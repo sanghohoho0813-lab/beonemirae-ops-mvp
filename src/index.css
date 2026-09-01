@@ -345,3 +345,23 @@
     appearance: textfield;
   }
 }
+
+/*  ── 0095 — 표 줄 따라 읽기 도움 ──────────────────────────────────────────
+    넓은 표에서 줄을 눈으로 따라가다 놓치는 일이 있습니다. 아주 옅은 띠만
+    깝니다 — 누를 수 있다는 뜻이 아니라서, 누를 수 있는 줄의 진한 hover
+    (클래스)가 이것을 덮습니다. */
+@media (hover: hover) {
+  tbody tr:hover { background-color: rgba(15, 39, 71, 0.03); }
+}
+
+/*  ── 0095 — 움직임을 줄여 달라는 설정을 존중합니다 ────────────────────────
+    장식 움직임만 끕니다. 상태 변화(눌림·선택·로딩)는 색과 모양으로
+    그대로 보입니다. framer-motion 쪽은 App 의 MotionConfig 가 맡습니다. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

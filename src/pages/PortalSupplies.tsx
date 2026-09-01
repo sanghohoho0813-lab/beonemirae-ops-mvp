@@ -8,6 +8,7 @@ import { supplyNeedsFor, type SupplyNeed } from '../lib/supplyNeeds'
 import { prettyDate, won } from '../lib/format'
 import type { Product, ProductOrder } from '../types'
 import { LoadFailedState, LoadingState, useLoadState } from '../components/LoadState'
+import { productImageOf } from '../lib/brandAssets'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 포털 — 필요한 물품 요청
@@ -206,14 +207,20 @@ export function PortalSupplies() {
                 data-product={p.id}
                 className="flex flex-col rounded-2xl bg-white p-3 ring-1 ring-navy-50"
               >
-                {/*  사진 자리 — 실제 제품 사진이 정해지면 여기 들어갑니다.
-                    없는 사진을 지어내지 않습니다. */}
+                {/*  사진 — DB 에 실제 제품 사진이 있으면 그것을, 없으면
+                    같은 규격의 대표 사진(0095 준비 자산)을 씁니다.
+                    ⚠ 규격이 사진과 안 맞는 품목은 **사진 없이** 둡니다 —
+                      병원은 사진을 보고 고릅니다. 다른 용기 사진을 걸면
+                      다른 물건이 주문됩니다. */}
                 <span className="mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-navy-50 text-navy-400">
-                  {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <Package size={34} strokeWidth={1.8} />
-                  )}
+                  {(() => {
+                    const img = p.imageUrl || productImageOf(p.name, p.spec)
+                    return img ? (
+                      <img src={img} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    ) : (
+                      <Package size={34} strokeWidth={1.8} />
+                    )
+                  })()}
                 </span>
                 <b className="t-body break-keep leading-snug text-navy-900">{p.name}</b>
                 <span className="t-cell mt-0.5 break-keep text-navy-500">{p.spec}</span>

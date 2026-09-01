@@ -1,5 +1,6 @@
 import { Building2, Headset, MapPin, Phone, ScrollText, User } from 'lucide-react'
 import { CLIENT_TEL, COMPANY, COMPANY_HOURS } from '../lib/brand'
+import { BRAND_IMG } from '../lib/brandAssets'
 import type { Client } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,6 +54,24 @@ export function PortalFooter({ client }: { client: Client }) {
 
   return (
     <footer data-portal-footer className="space-y-3">
+      {/*  0095 — 회사 소개 한 장 (준비 자산 brand_story_space).
+           연락처 표 위에서 「누구와 거래하고 있는지」가 눈에 남게 합니다. */}
+      <div className="card flex items-center gap-4 overflow-hidden p-0">
+        <img
+          src={BRAND_IMG.brandStory}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="h-24 w-32 shrink-0 object-cover sm:h-28 sm:w-48"
+        />
+        <div className="min-w-0 py-3 pr-4">
+          <p className="t-body break-keep font-extrabold text-navy-900">{COMPANY}</p>
+          <p className="t-muted mt-0.5 break-keep leading-snug">
+            의료폐기물 수거·운반 전문 — 수거부터 인계까지 기록으로 남겨 관리합니다.
+          </p>
+        </div>
+      </div>
       <div className="card grid grid-cols-1 gap-px overflow-hidden bg-navy-100 sm:grid-cols-2 xl:grid-cols-3">
         <Cell icon={Headset} label="비원미래 고객상담">
           {/*  ⚠ 누를 수 있는 것은 **44px 이상**이어야 합니다. 처음에는 그냥
