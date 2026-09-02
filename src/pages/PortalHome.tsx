@@ -20,6 +20,7 @@ import { recentActivity, portalTodos } from '../lib/portalActivity'
 import { prettyDate, weight, won } from '../lib/format'
 import { REQUEST_KIND_LABEL } from '../types'
 import { BRAND_IMG } from '../lib/brandAssets'
+import { BrandImg } from '../components/BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 담당자의 **작업 화면** (0089)
@@ -378,17 +379,22 @@ export function PortalHome() {
       {/*  ── 신뢰 띠 (0095) — 맨 아래, 업무를 밀지 않는 자리 ────────────────
            ⚠ 적힌 세 가지는 전부 **이 포털에 실제로 있는 기능**입니다.
              「무사고 1,248일」처럼 서버에 없는 숫자는 넣지 않습니다. */}
-      <section data-portal-trust className="relative overflow-hidden rounded-3xl shadow-lg">
-        <img
-          src={BRAND_IMG.trustBanner}
-          alt=""
+      {/*  ⚠ 0098 — 글자 높이만큼만 띠가 생겨서 넓은 화면에서 9:1 이 됐고,
+           원본(2.33:1)의 세로를 네 배 가까이 잘라 **직원들 얼굴이
+           잘렸습니다.** 최소 높이를 줘서 덜 자르고, 남길 자리도 정합니다. */}
+      <section
+        data-portal-trust
+        className="relative flex min-h-[15rem] items-center overflow-hidden rounded-3xl shadow-lg sm:min-h-[19rem]"
+      >
+        <BrandImg src={BRAND_IMG.trustBanner} className="absolute inset-0 h-full w-full" />
+        {/*  ⚠ 0098 — 띠를 키워 사람이 다 보이게 했더니 사진이 밝아져
+             글자 대비가 아슬해졌습니다. 글이 있는 왼쪽을 더 덮고,
+             글줄 폭도 어두운 자리 안으로 묶습니다. */}
+        <div
           aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 bg-gradient-to-r from-navy-950/92 via-navy-950/80 to-navy-950/55"
         />
-        <div aria-hidden="true" className="absolute inset-0 bg-navy-950/72" />
-        <div className="relative px-5 py-6 text-white sm:px-8 sm:py-8">
+        <div className="relative max-w-[34rem] px-5 py-6 text-white sm:px-8 sm:py-8">
           <p className="break-keep text-[1.2rem] font-extrabold leading-snug sm:text-[1.5rem]">
             병원 폐기물, 기록으로 관리합니다
           </p>

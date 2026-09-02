@@ -123,7 +123,18 @@ await p.goto(`${BASE}/plan`, { waitUntil: 'domcontentloaded' })
 //  고정 대기 대신 화면이 그려질 때까지 기다립니다 — 여러 스위트를 연달아
 //  돌리면 브라우저가 느려져 고정 대기로는 들쭉날쭉합니다.
 await p.waitForSelector('[data-plan-summary]', { timeout: 20000 })
-await p.waitForTimeout(500)
+//  ⚠ 0098 — 요약 칸이 뜬 뒤 **0.5초를 더 기다리는 것**으로는 모자랐습니다.
+//    편성 목록은 12주치 기록을 훑어 요일을 찾은 뒤에 그려지는데, 나란히
+//    세 개를 돌리면 그 계산이 0.5초를 넘습니다. 그러면 아직 안 그려진
+//    목록을 「없다」로 적습니다(전체 회귀에서 세 줄이 그렇게 빨갛게 떴고,
+//    단독으로 돌리면 멀쩡했습니다).
+//    시간이 아니라 **목록이 그려질 때까지** 기다립니다. 끝내 안 그려지면
+//    아래 검사가 그대로 실패하므로 눈감아 주는 것이 아닙니다.
+await p.waitForFunction(
+  () => document.querySelectorAll('[data-plan-pattern]').length > 0,
+  null, { timeout: 20000 },
+).catch(() => {})
+await p.waitForTimeout(300)
 
 // ── 1. 화면이 열리고 근거를 먼저 밝히는가 ─────────────────────────────────
 let t = await body()

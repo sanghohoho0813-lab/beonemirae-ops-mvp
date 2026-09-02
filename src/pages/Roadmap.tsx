@@ -27,6 +27,7 @@ import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle } from '../components/ui'
 import { AiSpecList } from '../components/AiSpecList'
 import { BRAND_IMG } from '../lib/brandAssets'
+import { BrandImg } from '../components/BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 활용 계획·업무흐름도 (/roadmap)
@@ -270,13 +271,13 @@ export function Roadmap() {
       </div>
 
       {/*  0097 — 머리 넓은 띠 (ax_workspace_bg). 글자는 왼쪽 어두운 덮개 위. */}
-      <section data-roadmap-hero className="relative mb-8 overflow-hidden rounded-3xl shadow-lg">
-        <img
-          src={BRAND_IMG.axWorkspace}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+      {/*  ⚠ 0098 — 글자 높이만큼만 띠가 생겨 5:1 이 됐고, 왼쪽 사람의
+           머리가 잘렸습니다. 최소 높이를 주고 남길 자리를 위로 잡습니다. */}
+      <section
+        data-roadmap-hero
+        className="relative mb-8 flex min-h-[13rem] items-center overflow-hidden rounded-3xl shadow-lg sm:min-h-[16rem]"
+      >
+        <BrandImg src={BRAND_IMG.axWorkspace} eager className="absolute inset-0 h-full w-full" />
         {/*  ⚠ Red Team(0097) — 글자가 사진 밝은 자리(책상·트럭)까지 걸치면
              대비가 무너집니다. 덮개를 더 깊게 + 글줄 폭을 왼쪽 어두운
              자리 안으로 제한합니다. */}

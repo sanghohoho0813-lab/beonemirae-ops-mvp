@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Check, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { BrandImg } from './BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 화면의 창 — 모달과 서랍 (0089)
@@ -167,15 +168,14 @@ export function PortalSheet({
             {/*  본문 — 여기만 스크롤됩니다 */}
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
               {hero && (
-                <img
-                  data-sheet-hero
-                  src={hero}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  decoding="async"
-                  className="mb-5 h-28 w-full rounded-2xl object-cover sm:h-32"
-                />
+                //  ⚠ 0098 — 높이를 고정(h-28)했더니 넓은 창에서 띠가 5:1 이
+                //    되어 **원본 4:3 의 세로를 네 배로 잘랐습니다.** 얼굴이
+                //    통째로 밖으로 나가 뒤통수와 천장만 보였습니다.
+                //    비율로 잡아 어느 폭에서도 2.5:1 을 넘지 않게 하고,
+                //    남길 자리는 사진마다 정합니다(BrandImg).
+                <div data-sheet-hero className="mb-5 aspect-[5/2] w-full overflow-hidden rounded-2xl">
+                  <BrandImg src={hero} className="h-full w-full" />
+                </div>
               )}
               {children}
             </div>

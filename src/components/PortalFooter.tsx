@@ -2,6 +2,7 @@ import { Building2, Headset, MapPin, Phone, ScrollText, User } from 'lucide-reac
 import { CLIENT_TEL, COMPANY, COMPANY_HOURS } from '../lib/brand'
 import { BRAND_IMG } from '../lib/brandAssets'
 import type { Client } from '../types'
+import { BrandImg } from './BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 화면 맨 아래 칸 (0086)
@@ -57,14 +58,7 @@ export function PortalFooter({ client }: { client: Client }) {
       {/*  0095 — 회사 소개 한 장 (준비 자산 brand_story_space).
            연락처 표 위에서 「누구와 거래하고 있는지」가 눈에 남게 합니다. */}
       <div className="card flex items-center gap-4 overflow-hidden p-0">
-        <img
-          src={BRAND_IMG.brandStory}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          className="h-24 w-32 shrink-0 object-cover sm:h-28 sm:w-48"
-        />
+        <BrandImg src={BRAND_IMG.brandStory} className="h-24 w-32 shrink-0 sm:h-28 sm:w-48" />
         <div className="min-w-0 py-3 pr-4">
           <p className="t-body break-keep font-extrabold text-navy-900">{COMPANY}</p>
           <p className="t-muted mt-0.5 break-keep leading-snug">

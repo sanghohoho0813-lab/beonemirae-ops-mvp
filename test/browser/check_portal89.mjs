@@ -131,7 +131,11 @@ async function open(path, role, w = 1440, extra = {}) {
   p.on('request', (r) => {
     if (r.method() === 'POST' && r.url().includes('client_requests')) bodies.push(r.postData() ?? '')
   })
-  await p.locator('[data-req-send]').click(); await p.waitForTimeout(1500)
+  await p.locator('[data-req-send]').click()
+  //  ⚠ 0098 — 1.5초를 세어 기다렸는데, 나란히 돌리면 창이 닫히는 데 그보다
+  //    오래 걸려 「아직 닫히는 중」을 「안 닫혔다」로 적었습니다.
+  //    **닫힐 때까지** 기다립니다 — 보장(보내면 닫힌다)은 그대로입니다.
+  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 12000 }).catch(() => {})
 
   ok(bodies.length === 1, '요청이 서버로 한 번 나갔다', `${bodies.length}번`)
   const body = bodies[0] ?? ''

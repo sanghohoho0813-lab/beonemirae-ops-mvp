@@ -20,6 +20,7 @@ import {
 import { PageShell } from '../components/ui'
 import { TourButton } from '../components/TourEntry'
 import { BRAND_IMG } from '../lib/brandAssets'
+import { BrandImg } from '../components/BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 이 시스템을 만든 이유
@@ -186,13 +187,10 @@ export function Purpose() {
         {/*  0095 — 현장 사진 한 장 (준비 자산 ax_cover_main).
              ⚠ 내부 화면은 사진보다 KPI·업무가 먼저입니다. 그래서 대시보드가
                아니라 **이 이야기 화면에만**, 그것도 글 사이 한 장씩만 둡니다. */}
-        <img
-          src={BRAND_IMG.axCover}
-          alt="병원 앞에서 수거 기록을 확인하는 비원미래 현장"
-          loading="lazy"
-          decoding="async"
-          className="mt-5 h-44 w-full rounded-3xl object-cover shadow-sm sm:h-60"
-        />
+        {/*  0098 — 사람이 넓게 퍼져 있어 원본 비율 그대로 둡니다 */}
+        <div className="mt-5 aspect-[16/9] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.axCover} alt="병원 앞에서 수거 기록을 확인하는 비원미래 현장" className="h-full w-full" />
+        </div>
         <p className="t-body mt-3 break-keep text-navy-400">
           화면 사용법이 아니라, 왜 이 일을 시작했고 회사가 어디로 가려는지에 대한 설명입니다. AX 라는 말을 처음
           들으셔도 순서대로 읽으시면 이해되도록 썼습니다. 읽는 데 5분쯤 걸립니다.
@@ -283,13 +281,10 @@ export function Purpose() {
       <Section s={SECTIONS[3]}>
         {/*  0097 — 3부작 ① 지금 업무. 전화기 붙잡고 종이에 옮겨 적는
              바로 그 장면입니다. 아래 글이 말하는 것을 눈이 먼저 봅니다. */}
-        <img
-          src={BRAND_IMG.whyCurrent}
-          alt="전화와 종이, 엑셀로 나뉘어 있는 지금의 업무"
-          loading="lazy"
-          decoding="async"
-          className="h-44 sm:h-60 w-full rounded-3xl object-cover shadow-sm"
-        />
+        {/*  0098 — 3부작은 **자르지 않습니다.** 원본 16:9 그대로 둡니다 — 이야기를 읽는 그림이라 잘리면 뜻이 깨집니다. */}
+        <div className="aspect-[16/9] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.whyCurrent} alt="전화와 종이, 엑셀로 나뉘어 있는 지금의 업무" className="h-full w-full" />
+        </div>
         <P>
           의료폐기물 업무는 하나로 이어져 있습니다. 병원 요청이 들어오고, 수거 일정을 잡고, 현장에서 수거하고,
           용기와 자재를 공급하고, 거래처를 관리하고, 월말에 정산해서 거래명세서를 만듭니다.
@@ -328,13 +323,10 @@ export function Purpose() {
       <Section s={SECTIONS[5]}>
         {/*  0097 — 3부작 ② 달라진 업무. 같은 사람들이 같은 용기를 다루는데
              화면 하나로 이어져 있는 장면 — 아래 지금까지/이제부터 표의 그림판입니다. */}
-        <img
-          src={BRAND_IMG.whyImproved}
-          alt="한 번 입력한 기록이 화면으로 이어진 뒤의 업무"
-          loading="lazy"
-          decoding="async"
-          className="h-44 sm:h-60 w-full rounded-3xl object-cover shadow-sm"
-        />
+        {/*  0098 — 3부작 ② 원본 비율 그대로 */}
+        <div className="aspect-[16/9] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.whyImproved} alt="한 번 입력한 기록이 화면으로 이어진 뒤의 업무" className="h-full w-full" />
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl bg-navy-50 p-4">
             <p className="t-label mb-2 text-navy-500">지금까지</p>
@@ -371,13 +363,10 @@ export function Purpose() {
             </li>
           ))}
         </ul>
-        <img
-          src={BRAND_IMG.axReportEvidence}
-          alt="수거 기록과 리포트가 근거 자료로 정리된 모습"
-          loading="lazy"
-          decoding="async"
-          className="h-40 sm:h-52 w-full rounded-3xl object-cover shadow-sm"
-        />
+        {/*  0098 — 피사체(태블릿·바인더)가 가운데라 2:1 로 가볍게만 자릅니다 */}
+        <div className="aspect-[2/1] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.axReportEvidence} alt="수거 기록과 리포트가 근거 자료로 정리된 모습" className="h-full w-full" />
+        </div>
         <Note>
           몇 퍼센트가 줄어든다는 숫자는 아직 적지 않습니다. 실제로 쓰면서 재고 나서 그 값을 넣는 것이
           맞습니다.
@@ -386,13 +375,10 @@ export function Purpose() {
 
       <Section s={SECTIONS[6]}>
         {/*  0095 — 실제 수거 운영 장면 (준비 자산 ax_signature_operation) */}
-        <img
-          src={BRAND_IMG.axOperation}
-          alt="용기를 싣고 기록을 확인하는 수거 현장"
-          loading="lazy"
-          decoding="async"
-          className="mb-4 h-40 w-full rounded-3xl object-cover shadow-sm sm:h-52"
-        />
+        {/*  0098 — 2:1 로 가볍게만 자르고 남길 자리는 사진에 맞춥니다 */}
+        <div className="aspect-[2/1] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.axOperation} alt="용기를 싣고 기록을 확인하는 수거 현장" className="h-full w-full" />
+        </div>
         <P>
           여기까지만 보면 내부 업무 프로그램입니다. 하지만 이 시스템을 만든 이유의 절반은 그 다음에
           있습니다.
@@ -442,13 +428,10 @@ export function Purpose() {
         <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
           {/*  0097 — 3부작 ③ 그 다음. 데이터가 자산이 되어 고객·운영이
                넓어지는 장면 — 이 절이 말하는 「결론」의 그림입니다. */}
-        <img
-          src={BRAND_IMG.whyGrowth}
-          alt="쌓인 데이터로 고객과 운영을 넓혀 가는 다음 단계"
-          loading="lazy"
-          decoding="async"
-          className="h-44 sm:h-60 w-full rounded-3xl object-cover shadow-sm"
-        />
+        {/*  0098 — 이 장은 네 장면이 한 장에 붙어 있어 자르면 이야기가 깨집니다 */}
+        <div className="aspect-[16/9] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.whyGrowth} alt="쌓인 데이터로 고객과 운영을 넓혀 가는 다음 단계" className="h-full w-full" />
+        </div>
           <p className="t-body break-keep leading-relaxed text-navy-700">
             한 줄로 답하면, 프로그램을 도입해 일이 편해지는 것이 목적이 아닙니다. 의료폐기물을 수거하면서
             어차피 생기는 <B>현장 데이터</B>를 <B>병원 운영지원</B> 서비스와 <B>추가 매출</B>로 이어 붙이는
@@ -535,13 +518,10 @@ export function Purpose() {
       <Section s={SECTIONS[8]}>
         {/*  0097 — 대표가 실적 화면을 직접 확인하는 장면. 정책자금 절의
              요지(주장이 아니라 기록으로 설명한다)와 같은 말입니다. */}
-        <img
-          src={BRAND_IMG.axManagerTablet}
-          alt="운영 실적 화면을 확인하는 대표"
-          loading="lazy"
-          decoding="async"
-          className="h-40 sm:h-52 w-full rounded-3xl object-cover shadow-sm"
-        />
+        {/*  0098 — 대표 얼굴이 위쪽 25% 라 남길 자리를 위로 잡습니다 */}
+        <div className="aspect-[2/1] w-full overflow-hidden rounded-3xl shadow-sm">
+          <BrandImg src={BRAND_IMG.axManagerTablet} alt="운영 실적 화면을 확인하는 대표" className="h-full w-full" />
+        </div>
         <P>
           이 프로젝트는 앞으로 1억원 이상의 정책자금 · 보증 등 사업고도화 자금 조달도 함께 생각하고
           있습니다. 다만 순서가 중요합니다.

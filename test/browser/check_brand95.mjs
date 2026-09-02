@@ -111,12 +111,14 @@ async function loaded(p, sel) {
   for (const q of ['pickup', 'urgent', 'supply', 'ask']) {
     const { ctx, p, errors } = await open(`/portal?do=${q}`)
     await p.waitForTimeout(700)
-    ok(await loaded(p, `[data-portal-sheet="${q}"] [data-sheet-hero]`), `「${q}」 창 머리 사진이 실림`)
+    //  ⚠ 0098 — 표시가 <img> 에서 **감싸는 칸**으로 옮겨졌습니다(비율을 칸이
+    //    잡고, 사진은 그 안을 채웁니다). 보는 것은 그대로입니다.
+    ok(await loaded(p, `[data-portal-sheet="${q}"] [data-sheet-hero] img`), `「${q}」 창 머리 사진이 실림`)
     //  ⚠ 띠 높이는 rem 이라 글자 크기를 따라 변합니다. px 로 못 박지 않고
     //    「화면 높이의 1/4 을 넘지 않는다」로 잽니다 — 고를 것이 밀리면 안 됩니다.
     const band = await p.locator(`[data-portal-sheet="${q}"] [data-sheet-hero]`).boundingBox()
     ok((band?.height ?? 999) <= 250, `「${q}」 사진이 얇음 — 고를 것을 밀지 않음`, `${Math.round(band?.height ?? 0)}px`)
-    srcs.push(await p.locator(`[data-portal-sheet="${q}"] [data-sheet-hero]`).getAttribute('src'))
+    srcs.push(await p.locator(`[data-portal-sheet="${q}"] [data-sheet-hero] img`).getAttribute('src'))
     ok(errors.length === 0, `「${q}」 창 콘솔 오류 0`, errors.slice(0, 2).join(' | '))
     await ctx.close()
   }
@@ -199,6 +201,65 @@ async function loaded(p, sel) {
   //  고른 상태가 어떤 표시로든 보이면 됩니다 — 표시 방식은 못 박지 않습니다.
   ok(picked >= 0, '고르기도 그대로 됨 (상태 피드백 확인)', `${picked}`)
   await ctx.close()
+}
+
+
+// ── ⑦ 사진이 **얼마나 잘리는가** — 대표님 지적(0098) 재발 방지 ─────────────
+//
+//   대표님: 「사진 잘리는 부분들이 너무많아」
+//   원인은 크기가 아니라 **자르는 정도**였습니다. 원본 4:3 사진을 5:1 띠에
+//   넣으면 세로를 네 배로 잘라 얼굴이 통째로 밖으로 나갑니다.
+//   그래서 화면에 놓인 사진마다 「원본 비율 대비 몇 배로 잘리는지」를 재고,
+//   2.4배를 넘으면 실패로 봅니다. 아울러 사람 사진은 **자를 자리(초점)가
+//   가운데 기본값이 아닌지**도 함께 봅니다.
+{
+  const MAX_CROP = 2.4
+  //  사람 얼굴이 위/아래에 치우쳐 초점을 반드시 정해야 하는 사진들
+  const NEEDS_FOCUS = [
+    'hero_main', 'hero_secondary', 'service_01', 'service_02', 'service_03',
+    'brand_story_space', 'customer_experience', 'trust_banner', 'ax_manager_tablet',
+  ]
+  for (const [path, role, label] of [
+    ['/portal', 'client', '병원 홈'],
+    ['/portal?do=pickup', 'client', '수거 요청 창'],
+    ['/portal?do=supply', 'client', '용기 창'],
+    ['/portal/support', 'client', '고객지원'],
+    ['/why', 'admin', '기획의도'],
+    ['/roadmap', 'admin', '활용 계획'],
+  ]) {
+    const { ctx, p } = await open(path, { role })
+    //  아래쪽 사진까지 실리게 한 번 훑어 내립니다.
+    await p.evaluate(() => window.scrollTo(0, 999999))
+    await p.waitForTimeout(1400)
+    const shots = await p.locator('img[src^="/brand/"]').evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect()
+        return {
+          src: el.getAttribute('src') ?? '',
+          nw: el.naturalWidth, nh: el.naturalHeight,
+          w: Math.round(r.width), h: Math.round(r.height),
+          pos: getComputedStyle(el).objectPosition,
+          fit: getComputedStyle(el).objectFit,
+        }
+      }))
+    const bad = []
+    const noFocus = []
+    for (const im of shots) {
+      if (!im.nw || !im.nh || !im.w || !im.h) continue
+      if (im.fit !== 'cover') continue
+      const src = im.nw / im.nh
+      const box = im.w / im.h
+      const crop = Math.max(src / box, box / src)
+      if (crop > MAX_CROP) bad.push(`${im.src.split('/').pop()} ${crop.toFixed(2)}배 (${im.w}x${im.h})`)
+      const name = im.src.split('/').pop() ?? ''
+      if (NEEDS_FOCUS.some((n) => name.includes(n)) && /^50% 50%$/.test(im.pos)) {
+        noFocus.push(`${name} → ${im.pos}`)
+      }
+    }
+    ok(bad.length === 0, `${label} — **어떤 사진도 ${MAX_CROP}배 넘게 잘리지 않는다**`, bad.join(' · ') || `사진 ${shots.length}장 확인`)
+    ok(noFocus.length === 0, `${label} — 사람 사진은 남길 자리를 정해 두었다`, noFocus.join(' · ') || '없음')
+    await ctx.close()
+  }
 }
 
 await b.close()

@@ -3,6 +3,7 @@ import { BRAND_IMG } from '../lib/brandAssets'
 import type { Client } from '../types'
 import type { PortalSummary } from '../lib/portal'
 import { prettyDate } from '../lib/format'
+import { BrandImg } from './BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 포털 머리 — 「어디에 로그인했는지」와 「다음에 언제 오는지」 (0083)
@@ -34,11 +35,12 @@ export function PortalHero({ client, s }: { client: Client; s: PortalSummary }) 
              밀리면 안 된다는 실측 회귀(check_flow390)가 이 화면을 지킵니다.
            ⚠ 사진은 저장소 안(/brand)에 있습니다 — 바깥이 막힌 병원망에서도
              나옵니다. alt 는 비웁니다: 장식이지 정보가 아닙니다. */}
-      <img
+      {/*  ⚠ 0098 — object-right 로만 잡아 두었더니 세로는 가운데를 잘라
+           **수거차 바퀴가 잘렸습니다.** 차는 아래쪽에 있습니다. */}
+      <BrandImg
         src={BRAND_IMG.heroMain}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 hidden h-full w-full object-cover object-right sm:block"
+        eager
+        className="absolute inset-0 hidden h-full w-full sm:block"
       />
       <div
         aria-hidden="true"

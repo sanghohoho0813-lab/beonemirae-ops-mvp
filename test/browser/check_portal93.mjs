@@ -147,7 +147,9 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
   await p.locator('[data-choice="amount"] [data-choice-item]').nth(1).click()
   await p.waitForTimeout(150)
   await p.locator('[data-req-send]').click()
-  await p.waitForTimeout(1600)
+  //  ⚠ 0098 — 시간이 아니라 **오류 칸이 뜰 때까지** 기다립니다. 부하가 걸리면
+  //    1.6초 안에 못 그려서 「안 적혀 있다」로 잘못 적습니다.
+  await p.locator('[data-req-error]').waitFor({ state: 'visible', timeout: 12000 }).catch(() => {})
 
   ok(srv.requests.length === 0, '실패했으니 서버에 아무것도 안 남았다', `${srv.requests.length}건`)
   //  ⚠ 창이 닫히면 안 됩니다 — 닫히면 「보내진 줄」 압니다.
@@ -162,7 +164,8 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
 
   //  ── ③ 다시 누르면 — **같은 표**로 가서 한 건만 남는다 ─────────────────
   await p.locator('[data-req-send]').click()
-  await p.waitForTimeout(1600)
+  //  ⚠ 0098 — 닫힐 때까지 기다립니다 (시간 재기 금지).
+  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 12000 }).catch(() => {})
   ok(srv.requests.length === 1, '**다시 눌렀을 때 한 건만 들어간다**', `${srv.requests.length}건`)
   ok((await p.locator('[data-portal-sheet]').count()) === 0, '이번에는 창이 닫힌다')
   ok((await p.locator('[data-toast]').count()) === 1, '접수되었다고 알려 준다')
@@ -177,7 +180,11 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
   await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
   await p.waitForTimeout(200)
   await p.locator('[data-req-send]').click()
-  await p.waitForTimeout(1500)
+  //  ⚠ 0098 — 시간을 재서 기다리지 않습니다. 나란히 세 개를 돌리면 창이
+  //    닫히는 데 1.5초를 넘길 때가 있어, 「아직 닫히는 중」을 「안 닫혔다」로
+  //    적었습니다(전체 회귀에서 한 번 그렇게 빨갛게 떴습니다).
+  //    **닫힐 때까지** 기다립니다 — 보장은 그대로고 재는 방법만 바꿉니다.
+  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {})
   ok(srv.requests.length === 1, '긴급 요청이 한 건 들어갔다')
 
   //  같은 창을 다시 열어 같은 것을 또 보내면 — **새 표**라 새 요청입니다.
