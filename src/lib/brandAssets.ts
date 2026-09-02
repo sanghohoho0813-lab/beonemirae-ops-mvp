@@ -30,9 +30,19 @@ export const BRAND_IMG = {
   customerExperience: `${B}/customer_experience.jpg`, // 고객지원 머리
   trustBanner: `${B}/trust_banner.jpg`,         // 병원 홈 하단 신뢰 띠
 
-  //  BUSINESS AX (폴더에 있는 2장 — 내부는 사진보다 KPI·업무가 먼저입니다)
+  //  BUSINESS AX — 내부는 사진보다 KPI·업무가 먼저입니다. 그래서 전부
+  //  이야기 화면(기획의도·활용 계획)에만 두고 대시보드에는 안 둡니다.
   axCover: `${B}/ax_cover_main.jpg`,            // 기획의도(Why AX) 머리
   axOperation: `${B}/ax_signature_operation.jpg`, // 기획의도 운영 설명
+  //  0097 — 대표님이 Drive 에 추가하신 6장 (v3.0 신규)
+  axWorkspace: `${B}/ax_workspace_bg.jpg`,      // 활용 계획 머리 넓은 띠
+  axManagerTablet: `${B}/ax_manager_tablet.jpg`, // 기획의도 — 대표 판단·정책자금 문맥
+  axReportEvidence: `${B}/ax_report_evidence.jpg`, // 기획의도 — 근거·실증 문맥
+  whyCurrent: `${B}/why_ax_01_current.jpg`,     // 기획의도 — 지금 업무(전화·수기·엑셀)
+  whyImproved: `${B}/why_ax_02_improved.jpg`,   // 기획의도 — 한 번 입력으로 이어진 뒤
+  whyGrowth: `${B}/why_ax_03_growth.jpg`,       // 기획의도 — 데이터가 자산이 된 다음
+  //  mobile_card_vertical.jpg 은 /brand 에 있으나 아직 자리가 없습니다 —
+  //  세로형 카드 화면이 실제로 없어서입니다 (RECOMMENDATIONS.md P2).
 } as const
 
 /**

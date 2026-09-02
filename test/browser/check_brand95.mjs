@@ -126,8 +126,19 @@ async function loaded(p, sel) {
 // ── ④ 기획의도(Why AX) — 내부는 절제해서 두 장 ─────────────────────────────
 {
   const { ctx, p, errors } = await open('/why', { role: 'admin' })
+  //  0097 — 대표님이 Drive 에 6장을 추가하셔서 기획의도가 7장이 됐습니다
+  //  (긴 이야기 화면 한 곳에 모으고, 대시보드에는 여전히 0장).
   const imgs = await p.locator('main img[src^="/brand/"]').count()
-  ok(imgs === 2, '기획의도에 준비 자산 두 장 (내부는 사진보다 업무가 먼저)', `${imgs}장`)
+  ok(imgs === 7, '기획의도에 준비 자산 일곱 장 (이야기 화면에만 — 대시보드는 0장)', `${imgs}장`)
+
+  //  ⚠ 3부작 순서 — 지금(01) → 달라진 뒤(02) → 그 다음(03)이 **화면 순서로**
+  //    읽혀야 합니다 (v3.0 §16). 파일이 있어도 순서가 섞이면 이야기가 아닙니다.
+  const srcs = await p.locator('main img[src^="/brand/"]').evaluateAll(
+    (els) => els.map((e) => e.getAttribute('src') ?? ''))
+  const at = (name) => srcs.findIndex((v) => v.includes(name))
+  ok(at('why_ax_01') >= 0 && at('why_ax_02') > at('why_ax_01') && at('why_ax_03') > at('why_ax_02'),
+    '**3부작이 지금 → 달라진 뒤 → 그 다음 순서로 읽힘**',
+    `01@${at('why_ax_01')} 02@${at('why_ax_02')} 03@${at('why_ax_03')}`)
   for (let i = 0; i < imgs; i += 1) {
     //  ⚠ 아래쪽 사진은 lazy 라 **보여야** 실립니다. 사람처럼 굴러가서 봅니다.
     const im = p.locator('main img[src^="/brand/"]').nth(i)
@@ -136,6 +147,32 @@ async function loaded(p, sel) {
     ok(await im.evaluate((el) => el.complete && el.naturalWidth > 0), `기획의도 사진 ${i + 1} 이 실제로 실림`)
   }
   ok(errors.length === 0, '기획의도 콘솔 오류 0', errors.slice(0, 2).join(' | '))
+  await ctx.close()
+}
+
+// ── ④-2 활용 계획 머리 띠 + 자산 20장 전수 접근 (0097) ─────────────────────
+{
+  const { ctx, p, errors } = await open('/roadmap', { role: 'admin' })
+  ok(await loaded(p, '[data-roadmap-hero] img'), '활용 계획 머리 띠 사진이 실림 (ax_workspace_bg)')
+  ok((await p.locator('[data-roadmap-hero] div[aria-hidden="true"]').count()) >= 1,
+    '띠 글자 밑에 어두운 덮개가 있음')
+  ok(errors.length === 0, '활용 계획 콘솔 오류 0', errors.slice(0, 2).join(' | '))
+
+  //  Drive 20장 전부 서버에서 열리는가 — 파일이 있다고 믿지 않고 받아 봅니다.
+  const ALL = [
+    'hero_main', 'hero_secondary', 'service_01_pickup_request', 'service_02_emergency_pickup',
+    'service_03_supply_order', 'offer_01_container_20l', 'offer_02_container_30l',
+    'offer_03_bags_boxes', 'brand_story_space', 'customer_experience', 'trust_banner',
+    'mobile_card_vertical', 'ax_cover_main', 'ax_signature_operation', 'ax_manager_tablet',
+    'ax_report_evidence', 'ax_workspace_bg', 'why_ax_01_current', 'why_ax_02_improved',
+    'why_ax_03_growth',
+  ]
+  const broken = []
+  for (const n of ALL) {
+    const st = await p.evaluate(async (u) => (await fetch(u)).status, `/brand/${n}.jpg`)
+    if (st !== 200) broken.push(`${n}:${st}`)
+  }
+  ok(broken.length === 0, `**Drive 자산 20장 전부 접근 가능** (${ALL.length}장 수신 확인)`, broken.join(',') || '없음')
   await ctx.close()
 }
 

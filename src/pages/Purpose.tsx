@@ -281,6 +281,15 @@ export function Purpose() {
       </Section>
 
       <Section s={SECTIONS[3]}>
+        {/*  0097 — 3부작 ① 지금 업무. 전화기 붙잡고 종이에 옮겨 적는
+             바로 그 장면입니다. 아래 글이 말하는 것을 눈이 먼저 봅니다. */}
+        <img
+          src={BRAND_IMG.whyCurrent}
+          alt="전화와 종이, 엑셀로 나뉘어 있는 지금의 업무"
+          loading="lazy"
+          decoding="async"
+          className="h-44 sm:h-60 w-full rounded-3xl object-cover shadow-sm"
+        />
         <P>
           의료폐기물 업무는 하나로 이어져 있습니다. 병원 요청이 들어오고, 수거 일정을 잡고, 현장에서 수거하고,
           용기와 자재를 공급하고, 거래처를 관리하고, 월말에 정산해서 거래명세서를 만듭니다.
@@ -317,6 +326,15 @@ export function Purpose() {
       </Section>
 
       <Section s={SECTIONS[5]}>
+        {/*  0097 — 3부작 ② 달라진 업무. 같은 사람들이 같은 용기를 다루는데
+             화면 하나로 이어져 있는 장면 — 아래 지금까지/이제부터 표의 그림판입니다. */}
+        <img
+          src={BRAND_IMG.whyImproved}
+          alt="한 번 입력한 기록이 화면으로 이어진 뒤의 업무"
+          loading="lazy"
+          decoding="async"
+          className="h-44 sm:h-60 w-full rounded-3xl object-cover shadow-sm"
+        />
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl bg-navy-50 p-4">
             <p className="t-label mb-2 text-navy-500">지금까지</p>
@@ -353,6 +371,13 @@ export function Purpose() {
             </li>
           ))}
         </ul>
+        <img
+          src={BRAND_IMG.axReportEvidence}
+          alt="수거 기록과 리포트가 근거 자료로 정리된 모습"
+          loading="lazy"
+          decoding="async"
+          className="h-40 sm:h-52 w-full rounded-3xl object-cover shadow-sm"
+        />
         <Note>
           몇 퍼센트가 줄어든다는 숫자는 아직 적지 않습니다. 실제로 쓰면서 재고 나서 그 값을 넣는 것이
           맞습니다.
@@ -415,6 +440,15 @@ export function Purpose() {
         </div>
 
         <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+          {/*  0097 — 3부작 ③ 그 다음. 데이터가 자산이 되어 고객·운영이
+               넓어지는 장면 — 이 절이 말하는 「결론」의 그림입니다. */}
+        <img
+          src={BRAND_IMG.whyGrowth}
+          alt="쌓인 데이터로 고객과 운영을 넓혀 가는 다음 단계"
+          loading="lazy"
+          decoding="async"
+          className="h-44 sm:h-60 w-full rounded-3xl object-cover shadow-sm"
+        />
           <p className="t-body break-keep leading-relaxed text-navy-700">
             한 줄로 답하면, 프로그램을 도입해 일이 편해지는 것이 목적이 아닙니다. 의료폐기물을 수거하면서
             어차피 생기는 <B>현장 데이터</B>를 <B>병원 운영지원</B> 서비스와 <B>추가 매출</B>로 이어 붙이는
@@ -499,6 +533,15 @@ export function Purpose() {
       </section>
 
       <Section s={SECTIONS[8]}>
+        {/*  0097 — 대표가 실적 화면을 직접 확인하는 장면. 정책자금 절의
+             요지(주장이 아니라 기록으로 설명한다)와 같은 말입니다. */}
+        <img
+          src={BRAND_IMG.axManagerTablet}
+          alt="운영 실적 화면을 확인하는 대표"
+          loading="lazy"
+          decoding="async"
+          className="h-40 sm:h-52 w-full rounded-3xl object-cover shadow-sm"
+        />
         <P>
           이 프로젝트는 앞으로 1억원 이상의 정책자금 · 보증 등 사업고도화 자금 조달도 함께 생각하고
           있습니다. 다만 순서가 중요합니다.

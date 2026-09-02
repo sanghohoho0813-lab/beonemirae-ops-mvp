@@ -26,6 +26,7 @@ import {
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle } from '../components/ui'
 import { AiSpecList } from '../components/AiSpecList'
+import { BRAND_IMG } from '../lib/brandAssets'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 활용 계획·업무흐름도 (/roadmap)
@@ -267,6 +268,28 @@ export function Roadmap() {
           <span className="rounded-full bg-teal-500/90 px-3 py-1.5">③ 경로 최적화·수거대장 자동화</span>
         </div>
       </div>
+
+      {/*  0097 — 머리 넓은 띠 (ax_workspace_bg). 글자는 왼쪽 어두운 덮개 위. */}
+      <section data-roadmap-hero className="relative mb-8 overflow-hidden rounded-3xl shadow-lg">
+        <img
+          src={BRAND_IMG.axWorkspace}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/*  ⚠ Red Team(0097) — 글자가 사진 밝은 자리(책상·트럭)까지 걸치면
+             대비가 무너집니다. 덮개를 더 깊게 + 글줄 폭을 왼쪽 어두운
+             자리 안으로 제한합니다. */}
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-navy-950/95 via-navy-950/85 to-navy-900/55" />
+        <div className="relative px-5 py-7 text-white sm:px-8 sm:py-9">
+          <p className="max-w-[30rem] break-keep text-[1.35rem] font-extrabold leading-snug sm:text-[1.7rem]">
+            수거 현장에서 시작해, 데이터가 회사의 다음 일을 만드는 구조
+          </p>
+          <p className="t-body mt-1.5 max-w-[36rem] break-keep leading-snug text-navy-100">
+            아래 흐름도의 각 단계는 실제 화면으로 바로 이동합니다 — 계획서가 아니라 지금 도는 시스템입니다.
+          </p>
+        </div>
+      </section>
 
       {/* 한눈에 보는 활용 구조 — 인포그래픽 */}
       <section>
