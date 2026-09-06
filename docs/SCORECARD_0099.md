@@ -87,10 +87,22 @@
 - `check_theme` 등장 애니메이션 완료 대기 · `a11y_measure` 가로 겹침 조건 · `check_scale` 360·430 · `_font` 계산된 글꼴로 판정
 - **신규** `check_hover`(§21·§22 pressed) · **신규** `check_tourclean`(§28)
 
-## 3. 회귀 (최종 빌드 1회)
+## 3. 회귀 (최종 빌드 1회) — 있는 그대로
 
-(최종 빌드에서 130 suites 회귀 진행 중 — 결과는 다음 커밋에서 이 자리에 적습니다.
-개별 결과: check_scale 316/0 · check_theme 173/0 · check_hover 14/0 · check_tourclean 66/0 · tsc 0 오류)
+| 단계 | 결과 |
+|---|---|
+| 130 suites · 3개 나란히(-P3) | 26개 돈 시점에 5 suites 실패, 부하 평균 5.7(4코어) → **중단** (같은 자리를 혼자 돌리면 통과 → 부하 탓) |
+| 130 suites · 2개 나란히(-P2) | **5,002 OK · 24 FAIL** (9 suites) |
+| 실패 9 suites 를 **혼자** 다시 | 6 suites 통과(materials82 · prodbillui · pricing · supplies · tourclean · theme = 부하 타이밍) · 3 suites 는 혼자서도 실패 |
+| 혼자서도 실패한 3건 분류 | **전부 TEST HARNESS DEFECT** — ① check_truck: 호차 안내가 **날짜로**(2026-09-04) 끝나는 설계인데 자가 「보인다」만 기대 ② check_ready96: 표 7개를 다 읽기 전(고정 2.6초)에 읽어 「전부 missing」 ③ check_prodpnlui: 경영 요약 상자가 그려지기 전(고정 2.6초)에 읽어 「10만원 그대로」 실패 — 세 자 모두 **조건 대기**로 고침, 다시 돌려 26 · 30 · 33 전부 통과 |
+| PRODUCT DEFECT | **0건** — 실패 24건 중 제품 쪽 원인은 하나도 없었습니다 |
+| 개별 최종 | check_scale 316/0 · check_theme 173/0 · check_hover 14/0 · check_tourclean 66/0 · tsc 0 오류 |
+
+새로 안 것: 글꼴을 자체 호스팅하면 검사 브라우저도 **진짜 글꼴을 받아 그리므로**
+예전(글꼴 CDN 이 끊겨 대체 글꼴로 빨리 그려지던 때)보다 화면마다 무거워집니다.
+이 작업공간(4코어)에서는 **2개 나란히**가 상한입니다 — test/README.md 에 적었습니다.
+고정 대기(waitForTimeout)에 기대는 자가 아직 많아, 부하가 높으면 헛 실패가 납니다.
+이번에 고친 세 자처럼 「실제로 그려졌는지」를 묻는 대기로 하나씩 바꿔 가는 것이 P2 입니다.
 
 ## 4. 대표님이 하실 것 (변화 없음)
 - `PROPOSAL_ADDR_pilot.sql` 실행 · 품목 단가 · 운영비 3개월 · 현장 30건 · Edge Function 배포

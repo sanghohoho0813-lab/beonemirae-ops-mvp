@@ -136,7 +136,17 @@ async function open(ver, { role = 'field', uid = ME, holds = [] } = {}) {
 }
 
 // ── ⑥ 호차 안내 — 2주만, 닫으면 다시 안 뜸 ─────────────────────────────────
-{
+//   ⚠ 0099 — 이 안내는 **날짜로** 끝납니다(CarNotice.tsx UNTIL = 2026-09-04).
+//     그날이 지나면 「안 뜨는 것」이 맞는 동작이라, 그때는 안 뜨는지를 재고
+//     나머지(글씨 크기·닫기)는 잴 대상이 없어 건너뜁니다 — 사유를 적고.
+const NOTICE_UNTIL = '2026-09-04'
+const todayKST = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+if (todayKST > NOTICE_UNTIL) {
+  const { ctx, p } = await open(70)
+  ok((await p.locator('[data-car-notice]').count()) === 0,
+    `호차 안내는 ${NOTICE_UNTIL} 이후 안 뜸 (오늘 ${todayKST}) — 글씨·닫기 검사는 대상 없음`)
+  await ctx.close()
+} else {
   const { ctx, p } = await open(70)
   const n = p.locator('[data-car-notice]')
   ok((await n.count()) === 1, '호차 안내가 보임')

@@ -112,8 +112,20 @@ async function open(path, { world = null, role = 'admin' } = {}) {
     access_token: 't', token_type: 'bearer', expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u,
   })), ['beonemirae-ops:auth', { id: AD, aud: 'authenticated', email: 'a@b.c', app_metadata: {}, user_metadata: {} }])
+  //  ⚠ 0099 — 고정 2600ms 였습니다. 이 화면은 표 7개를 다 읽고 나서야 상태를
+  //    매기는데, 글꼴·조각 파일까지 받는 날은 그 안에 못 끝나 「전부 missing」으로
+  //    읽혔습니다(자료는 멀쩡). 읽기 요청이 **실제로 잠잠해질 때까지** 기다립니다.
+  let reqs = 0
+  p.on('request', (r) => { if (r.url().includes('/rest/v1/')) reqs += 1 })
   await p.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' })
-  await p.waitForTimeout(2600)
+  const t0 = Date.now(); let last = -1; let quietSince = Date.now()
+  for (;;) {
+    await p.waitForTimeout(100)
+    if (reqs !== last) { last = reqs; quietSince = Date.now() }
+    else if (reqs > 0 && Date.now() - quietSince >= 900) break
+    if (Date.now() - t0 > 15000) break
+  }
+  await p.waitForTimeout(400)
   return { ctx, p, errors }
 }
 

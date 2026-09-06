@@ -97,6 +97,11 @@ async function open(ctx, path, wait = 2600) {
   })), ['beonemirae-ops:auth', { id: UID, aud: 'authenticated', email: 'a@b.c', app_metadata: {}, user_metadata: {} }])
   await p.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(wait)
+  //  ⚠ 0099 — 고정 대기만으로는 경영 요약 상자가 아직 안 그려진 채 읽혀
+  //    「10만원 그대로」가 헛 실패했습니다(자료는 맞음). 상자에 금액이 실제로
+  //    찍힐 때까지(최대 10초) 더 기다립니다 — 어떤 값인지는 안 봅니다.
+  await p.waitForFunction(() => /매출\s*[\d,.]+\s*(만)?원/.test(
+    document.querySelector('[data-tour="business-summary"]')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => {})
   return p
 }
 
