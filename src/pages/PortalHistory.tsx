@@ -150,6 +150,7 @@ export function PortalHistory() {
               key={o.v}
               data-hist-period={o.v}
               onClick={() => setPeriod(o.v)}
+              aria-pressed={period === o.v}
               className={`min-h-[2.75rem] shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[1.02rem] font-bold transition ${
                 period === o.v ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
               }`}
@@ -167,6 +168,7 @@ export function PortalHistory() {
                 key={o.v}
                 data-hist-type={o.v}
                 onClick={() => setType(o.v)}
+                aria-pressed={type === o.v}
                 className={`min-h-[2.75rem] shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[1.02rem] font-bold transition ${
                   type === o.v ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
                 }`}

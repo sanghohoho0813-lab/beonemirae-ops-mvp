@@ -275,7 +275,7 @@ export function Roadmap() {
            머리가 잘렸습니다. 최소 높이를 주고 남길 자리를 위로 잡습니다. */}
       <section
         data-roadmap-hero
-        className="relative mb-8 flex min-h-[13rem] items-center overflow-hidden rounded-3xl shadow-lg sm:min-h-[16rem]"
+        className="relative mb-8 flex min-h-[13rem] items-center overflow-hidden rounded-3xl bg-navy-950 shadow-lg sm:min-h-[16rem]"
       >
         <BrandImg src={BRAND_IMG.axWorkspace} eager className="absolute inset-0 h-full w-full" />
         {/*  ⚠ Red Team(0097) — 글자가 사진 밝은 자리(책상·트럭)까지 걸치면

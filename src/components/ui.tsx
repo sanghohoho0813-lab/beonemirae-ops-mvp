@@ -344,12 +344,15 @@ export function FilterChip({
   return (
     <motion.button
       onClick={onClick}
+      aria-pressed={active}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.15, ease: EASE }}
       className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[1.03rem] font-bold transition-colors ${
         //  ⚠ 0069 — 켜진 칩의 흰 글자가 teal-500 위에서 대비 3.7:1 이었습니다
         //    (18px 굵게는 큰 글자 기준을 못 넘습니다). 바탕을 한 단계 내립니다.
-        active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
+        //  ⚠ 0099 — 꺼진 칩은 마우스를 올려도 아무 티가 안 났습니다(check_hover).
+        //    흰 바탕을 한 단계만 내리고 글자를 조금 진하게 — 「누를 수 있다」만 알립니다.
+        active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card hover:bg-navy-50 hover:text-navy-700'
       }`}
     >
       {children}

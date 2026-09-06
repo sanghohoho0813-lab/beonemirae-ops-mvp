@@ -61,8 +61,28 @@ async function open(role, width, theme, path) {
   }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }, theme])
   await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)
-  await p.waitForTimeout(350)
+  await animationsDone(p)
   return { ctx, p, state }
+}
+
+//  ⚠ 0099 — 자를 대기 **전에 등장 애니메이션이 끝났는지** 봅니다.
+//    화면은 250ms 동안 opacity 0→1 로 떠오르는데, 검사 셋을 나란히 돌리면
+//    그 250ms 가 늘어져서 「부모 opacity 로 흐려진 글자 171개」「대비 1.0:1」
+//    같은 헛 실패가 났습니다. 고정 대기(350ms) 대신 **실제로 끝났는지**를
+//    묻습니다 — 남은 애니메이션이 없고, 인라인 opacity 가 1 미만인 상자가 없을 때.
+async function animationsDone(p) {
+  await p.waitForFunction(() => {
+    if (document.getAnimations().some((a) => a.playState === 'running')) return false
+    //  framer-motion 은 인라인 style 로 opacity 를 씁니다. 아직 0 인 것(등장 전)도
+    //  「덜 끝남」입니다 — 0 을 빼면 stagger 가 시작도 안 한 화면을 통과시킵니다.
+    for (const el of document.body.querySelectorAll('[style*="opacity"]')) {
+      if (el.hidden || el.closest('[hidden]')) continue
+      const o = Number(getComputedStyle(el).opacity)
+      if (o < 1) return false
+    }
+    return true
+  }, null, { timeout: 8000 }).catch(() => {})
+  await p.waitForTimeout(120)
 }
 
 /** 지금 화면에서 실제로 칠해진 색 몇 군데 */

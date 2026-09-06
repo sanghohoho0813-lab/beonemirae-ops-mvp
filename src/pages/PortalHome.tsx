@@ -384,7 +384,7 @@ export function PortalHome() {
            잘렸습니다.** 최소 높이를 줘서 덜 자르고, 남길 자리도 정합니다. */}
       <section
         data-portal-trust
-        className="relative flex min-h-[15rem] items-center overflow-hidden rounded-3xl shadow-lg sm:min-h-[19rem]"
+        className="relative flex min-h-[15rem] items-center overflow-hidden rounded-3xl bg-navy-950 shadow-lg sm:min-h-[19rem]"
       >
         <BrandImg src={BRAND_IMG.trustBanner} className="absolute inset-0 h-full w-full" />
         {/*  ⚠ 0098 — 띠를 키워 사람이 다 보이게 했더니 사진이 밝아져

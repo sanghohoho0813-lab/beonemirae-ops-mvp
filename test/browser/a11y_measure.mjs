@@ -132,14 +132,26 @@ export async function measure(p, SMALL = 16) {
       const pos = getComputedStyle(el).position
       return pos !== 'fixed' && pos !== 'sticky'
     })
+    //  ⚠ 0099 — **가로로 겹치는 것끼리만** 견줍니다. 전에는 세로 순서만
+    //    보고 「바로 다음 것」과 간격을 쟀는데, 달력에서 한 칸의 오른쪽
+    //    아래 표식(x≈604)과 **다음 줄 왼쪽 끝** 날짜(x≈26)가 7px 로 잡혔습니다.
+    //    가로로 578px 떨어진 두 단추는 손가락이 굵어도 함께 누를 수 없습니다.
+    //    자가 틀린 것이지 화면이 틀린 것이 아닙니다.
     let tight = 0
-    const sorted = flow.map((el) => {
+    const boxes2 = flow.map((el) => {
       const r = el.getBoundingClientRect()
-      return { y: Math.round(r.top + window.scrollY), h: Math.round(r.height) }
+      return { y: Math.round(r.top + window.scrollY), h: Math.round(r.height),
+        x: Math.round(r.left), w: Math.round(r.width) }
     }).sort((a, b) => a.y - b.y)
-    for (let i = 1; i < sorted.length; i += 1) {
-      const gap = sorted[i].y - (sorted[i - 1].y + sorted[i - 1].h)
-      if (gap >= 0 && gap < 8) tight += 1
+    for (let i = 1; i < boxes2.length; i += 1) {
+      const b = boxes2[i]
+      //  위쪽에 있는 것들 중 가로로 겹치면서 세로 간격이 8px 미만인 것을 찾습니다
+      for (let j = i - 1; j >= 0 && boxes2[j].y + boxes2[j].h > b.y - 8; j -= 1) {
+        const a = boxes2[j]
+        const gap = b.y - (a.y + a.h)
+        const xOverlap = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0
+        if (gap >= 0 && gap < 8 && xOverlap) { tight += 1; break }
+      }
     }
 
     return {

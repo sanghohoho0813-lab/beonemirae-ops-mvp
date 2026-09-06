@@ -22,25 +22,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="비원미래" />
     <!--
-      Pretendard 웹폰트 — 비차단(non-blocking) 로드.
-      media="print" 로 먼저 받아 렌더링을 막지 않고, 로드되면 media='all' 로 승격.
-      CDN 실패 시에도 시스템 폰트 fallback 으로 렌더링이 멈추지 않는다.
+      Pretendard 웹폰트 — 저장소 안(/fonts) 에서 받습니다 (0099).
+      가변 서브셋이라 쓰는 글자 범위 파일만 받고, font-display: swap 이라
+      받는 동안에도 시스템 글꼴로 먼저 그려 렌더링이 멈추지 않습니다.
     -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link
-      rel="stylesheet"
-      crossorigin
-      media="print"
-      onload="this.media='all'"
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        crossorigin
-        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
-      />
-    </noscript>
+    <!--  0099 — 글꼴을 저장소 안(/fonts)에 둡니다.
+          바깥 CDN 에서 받으면 병원 내부망·지하처럼 바깥이 막힌 곳에서
+          대체 글꼴로 그려져 간격·넘침이 달라집니다(0094 에서 실측).
+          가변(variable) 서브셋이라 쓰는 글자 범위 파일만 받습니다. -->
+    <link rel="stylesheet" href="/fonts/pretendard.css" />
     <title>주식회사 비원미래 | 서울·경기 의료폐기물 수거·운반</title>
 
     <!--

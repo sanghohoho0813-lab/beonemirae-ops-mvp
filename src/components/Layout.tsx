@@ -605,6 +605,7 @@ function NavTab({ active, icon: Icon, label, onClick, guideAt }: { active: boole
       onClick={onClick}
       data-guide={guideAt}
       data-nav-tab={label}
+      aria-current={active ? 'page' : undefined}
       /*  0080 — 가로로 든 폰에서는 58px 을 48px 로 줄입니다. 손가락 기준
           44px 은 그대로 지킵니다 — 줄이는 것은 여유분이지 기준이 아닙니다. */
       className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5 [@media(max-height:480px)]:min-h-[48px] [@media(max-height:480px)]:py-0.5"

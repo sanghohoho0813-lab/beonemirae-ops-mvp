@@ -32,7 +32,10 @@ export async function fontApplied(p) {
       s.remove()
       return x
     }
-    return w('Pretendard') !== w('"확실히-없는-글꼴-XYZ"')
+    //  0099 — 이름을 박아 두지 않고 **페이지가 실제로 쓰는 첫 글꼴**로 잽니다.
+    //  가변 글꼴로 바꾸면서 이름이 'Pretendard Variable' 이 됐습니다.
+    const first = (getComputedStyle(document.body).fontFamily.split(',')[0] || '').trim()
+    return w(first) !== w('"확실히-없는-글꼴-XYZ"')
   })
 }
 

@@ -113,8 +113,13 @@ function DayCell({
                 1~4px 모자란 단추가 15개 잡혔습니다. 칸이 넓어지는 지점(sm:)
                 부터는 44px 로 키웁니다 — 폰의 36px 은 그대로 둡니다.
                 min-* 을 함께 두는 이유는 rem 이라 노트북(root 15.8px)에서
-                2.75rem 이 43.45px 로 **1px 모자라게** 떨어지기 때문입니다. */
-          className="absolute bottom-0 right-0 flex h-9 w-9 items-end justify-end rounded-lg p-1.5 text-navy-400 transition hover:bg-navy-800 hover:text-white sm:h-11 sm:w-11 sm:min-h-[44px] sm:min-w-[44px] sm:items-center sm:justify-center"
+                2.75rem 이 43.45px 로 **1px 모자라게** 떨어지기 때문입니다.
+
+              ⚠ 0099 — bottom-0 이면 이 ＋ 와 **다음 줄** 날짜 단추 사이가
+                칸 테두리 1px + 안쪽 여백뿐이라 673·768px 에서 7px 로 잡혔습니다
+                (같은 열에서 세로로 붙은 두 단추 — 손가락이 굵으면 함께 눌립니다).
+                4px 만 띄웁니다 — 폰 9px · 넓은 화면 11px. */
+          className="absolute bottom-1 right-0 flex h-9 w-9 items-end justify-end rounded-lg p-1.5 text-navy-400 transition hover:bg-navy-800 hover:text-white sm:h-11 sm:w-11 sm:min-h-[44px] sm:min-w-[44px] sm:items-center sm:justify-center"
         >
           <Plus className="h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]" strokeWidth={3} />
         </button>
