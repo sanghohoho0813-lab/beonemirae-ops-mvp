@@ -2,15 +2,55 @@
 --  로그인이 안 될 때 — 무엇이 막고 있는지 한 번에 보는 조회 (0102)
 --
 --  ⚠ 읽기만 합니다. 이 파일은 아무것도 바꾸지 않습니다.
---     Supabase → SQL Editor 에 붙여넣고 실행하시면 됩니다.
+--  ⚠ 아래 【1】 은 **고칠 것이 없습니다.** Supabase → SQL Editor 에 그대로
+--     붙여넣고 실행하시면 계정 전부가 나옵니다. 이메일을 적을 필요 없습니다.
 --
 --  ⚠ 비밀번호는 여기서 확인할 수 없습니다. 서버에도 원문이 없습니다(해시만).
---     그래서 「비밀번호가 맞는지」는 이 조회로 알 수 없고, 아래 ③ 처럼
+--     그래서 「비밀번호가 맞는지」는 이 조회로 알 수 없고, 아래 【3】 처럼
 --     **다시 정해 주는** 것으로 해결합니다.
---
---  ── 사용법 ──────────────────────────────────────────────────────────────
---   아래 첫 줄의 이메일 목록만 실제 계정으로 바꿔서 실행하세요.
 -- ─────────────────────────────────────────────────────────────────────────────
+
+
+-- ═════════════════════════════════════════════════════════════════════════
+--  【1】 계정 전부 한눈에  — 그대로 실행하세요 (고칠 것 없음)
+-- ═════════════════════════════════════════════════════════════════════════
+
+select
+  u.email                                        as "이메일",
+  coalesce(p.name, '')                           as "이름",
+  p.role::text                                   as "역할",
+  (u.email_confirmed_at is not null)             as "승인됨",
+  p.active                                       as "사용중",
+  (p.id is not null)                             as "사용자정보있음",
+  u.last_sign_in_at                              as "마지막 로그인",
+  u.created_at                                   as "계정 만든 날",
+  u.updated_at                                   as "계정 마지막 변경",
+  --  ── 무엇이 문제인지 한 줄로 ────────────────────────────────────────────
+  case
+    --  ⚠ banned_until · deleted_at 은 서버 판에 따라 없을 수 있어
+    --    통째로(jsonb) 꺼내 읽습니다. 없는 칸을 직접 적으면 조회 자체가 안 됩니다.
+    when (to_jsonb(u)->>'deleted_at') is not null then '삭제된 계정'
+    when (to_jsonb(u)->>'banned_until') is not null
+     and (to_jsonb(u)->>'banned_until')::timestamptz > now() then '차단된 계정'
+    when p.id is null                            then '② 사용자정보 없음 — 로그인해도 화면이 안 열립니다'
+    when u.email_confirmed_at is null            then '③ 승인 전 — 「관리자 승인 전입니다」에서 막힙니다'
+    when p.active is not true                    then '④ 중지된 계정'
+    when p.role = 'client' and p.client_id is null then '⑤ 병원 계정인데 소속 병원이 비어 있음'
+    when u.last_sign_in_at is null               then '⑥ 계정은 멀쩡한데 **한 번도 로그인한 적이 없음** — 비밀번호가 다를 수 있습니다'
+    else '✅ 계정 쪽 문제 없음 — 안 되면 비밀번호 문제입니다'
+  end                                            as "진단"
+from auth.users u
+left join public.profiles p on p.id = u.id
+order by
+  --  문제 있는 것부터 위로
+  (p.id is not null and u.email_confirmed_at is not null and p.active is true),
+  u.email;
+
+
+-- ═════════════════════════════════════════════════════════════════════════
+--  【2】 특정 계정만 자세히 보고 싶을 때 (선택)
+--       ↓ 이메일을 실제 계정으로 바꿔서 실행하세요
+-- ═════════════════════════════════════════════════════════════════════════
 
 with ask(email) as (
   --  ↓↓↓ 여기만 바꾸시면 됩니다 (소문자로, 쉼표로 여러 개) ↓↓↓
@@ -72,7 +112,7 @@ order by asked;
 
 
 -- ═════════════════════════════════════════════════════════════════════════
---  고치기 — 위 「진단」에 나온 번호에 해당하는 것만 골라서 실행하세요.
+--  【3】 고치기 — 위 「진단」에 나온 번호에 해당하는 것만 골라서 실행하세요.
 --  ⚠ 실행 전에 어느 계정인지 이메일을 꼭 확인하세요.
 -- ═════════════════════════════════════════════════════════════════════════
 
@@ -145,8 +185,33 @@ order by asked;
 --  where p.id = pw.id
 --  returning p.email, p.name, p.role, p.active, p.approved_at;
 --
---   실행한 뒤 이 파일 맨 위의 조회를 다시 돌려서 네 줄 모두
---   「✅ 계정 쪽은 문제가 없습니다」로 바뀌었는지 확인하세요.
+--   실행한 뒤 이 파일 맨 위 【1】 을 다시 돌려서 네 줄 모두
+--   「✅ 계정 쪽 문제 없음」으로 바뀌었는지 확인하세요.
+--
+-- ── (같은 일을 이메일 대신 「현장직원 전부」로) ────────────────────────────
+--
+--   ⚠ 현장 역할 계정이 **전부** 같은 비밀번호가 됩니다. 네 분 말고 다른
+--      현장 계정이 있으면 그 사람 것도 바뀝니다. 【1】 로 먼저 확인하세요.
+--
+-- with target as (
+--   select u.id from auth.users u
+--     join public.profiles p on p.id = u.id
+--    where p.role = 'field'
+-- ),
+-- pw as (
+--   update auth.users u
+--      set encrypted_password = extensions.crypt('여기에새비밀번호', extensions.gen_salt('bf')),
+--          email_confirmed_at = coalesce(u.email_confirmed_at, now()),
+--          updated_at = now()
+--     from target t
+--    where u.id = t.id
+--    returning u.id, u.email
+-- )
+-- update public.profiles p
+--    set active = true, approved_at = coalesce(p.approved_at, now())
+--   from pw
+--  where p.id = pw.id
+--  returning p.email, p.name, p.role, p.active;
 --
 -- ── 참고: 「유출된 비밀번호 차단」과 이 시스템의 관계 ──────────────────────
 --
