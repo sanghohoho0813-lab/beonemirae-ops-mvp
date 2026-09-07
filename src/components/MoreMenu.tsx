@@ -23,7 +23,7 @@ import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '
 // 더보기 메뉴 — 폰에서는 이곳이 목차 전부입니다
 //
 //  차례
-//   도움말 (사용 방법 · 만든 이유) → 개발자에게 요청하기 → PC 화면으로 보기
+//   도움말 (사용 방법 · 만든 이유) → 사용 후기 남기기 → PC 화면으로 보기
 //   → 시연용 핵심 요약 → 병원 서비스 · 성과 → 운영 도구 · 추가 고도화 예정
 //   → 추가 개발 예정 → 관리 → 바로가기 → 기술개발 현황 → 계정
 //
@@ -153,7 +153,7 @@ export function MoreMenu({
   /** 폰에서만 넘어옵니다 — PC 화면 보기 모드로 전환 */
   onPcView,
   /**
-   * 개발자에게 요청하기.
+   * 사용 후기 남기기.
    *
    *  이 시트 안에서 모달을 직접 띄우면 안 됩니다. 버튼을 누르면 시트가 닫히고,
    *  닫히면 이 컴포넌트가 통째로 언마운트되면서 모달도 함께 사라집니다.
@@ -247,7 +247,7 @@ export function MoreMenu({
               </span>
             </TourWhyButton>
           )}
-          {/*  개발자에게 요청하기 — 폰에서 이 자리가 유일한 통로입니다.
+          {/*  사용 후기 남기기 — 폰에서 이 자리가 유일한 통로입니다.
                현장 담당자는 사이드바가 없어 더보기밖에 열 곳이 없습니다(0022). */}
           {onDevRequest && canSendDevRequest(role) && (
             <Tappable
@@ -262,9 +262,9 @@ export function MoreMenu({
               {/*  Tappable 은 정해진 속성만 넘깁니다 — 표시는 안쪽에 답니다
                   (목차 칸과 같은 이유). */}
               <span data-dev-request-more className="min-w-0">
-                <span className="block break-keep font-bold text-navy-900">개발자에게 요청하기</span>
+                <span className="block break-keep font-bold text-navy-900">사용 후기 남기기</span>
                 <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
-                  불편한 것·실제와 다른 것
+                  눌러서 1~2분이면 끝납니다
                 </span>
               </span>
             </Tappable>

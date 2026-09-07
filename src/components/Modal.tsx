@@ -21,9 +21,21 @@ interface ModalProps {
    * (수거대장 미리보기처럼 표가 길어도 여러 장으로 이어집니다)
    */
   printable?: boolean
+  /**
+   *  'sticky' — 아래 버튼을 **화면 아래에 붙여** 둡니다 (0100 설문).
+   *
+   *   기본값 'scroll' 은 지금까지의 모습 그대로입니다: 머리말·내용·버튼이
+   *   통째로 스크롤됩니다. 대부분의 창은 내용이 짧아 그것으로 충분합니다.
+   *
+   *   설문처럼 내용이 긴 창에서는 「다음」이 저 아래에 있어, 답을 다 고르고도
+   *   한참 내려야 다음으로 넘어갑니다. 그때만 이 모양을 씁니다 — 버튼은
+   *   자리를 차지한 채로 붙어 있어서(자리를 비워 두는 sticky) 마지막 질문이나
+   *   글 쓰는 칸을 **가리지 않습니다.**
+   */
+  layout?: 'scroll' | 'sticky'
 }
 
-export function Modal({ open, title, onClose, children, footer, printable = false }: ModalProps) {
+export function Modal({ open, title, onClose, children, footer, printable = false, layout = 'scroll' }: ModalProps) {
   // 뒤로 가기(기기/브라우저)로 모달이 닫힙니다.
   useHistoryDismiss(open, onClose)
   const boxRef = useRef<HTMLDivElement>(null)
@@ -57,7 +69,9 @@ export function Modal({ open, title, onClose, children, footer, printable = fals
             onClick={onClose}
           />
           <motion.div
-            className={`relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-lg sm:rounded-3xl sm:pb-5${
+            className={`relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl${
+              layout === 'sticky' ? '' : ' overflow-y-auto'
+            } p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5${
               printable
                 ? ' print:max-h-none print:max-w-none print:overflow-visible print:rounded-none print:p-0 print:shadow-none'
                 : ''
@@ -67,18 +81,34 @@ export function Modal({ open, title, onClose, children, footer, printable = fals
             exit={{ y: '100%', opacity: 0.6 }}
             transition={{ type: 'spring', stiffness: 320, damping: 34 }}
           >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex shrink-0 items-center justify-between">
               <h2 className="text-lg font-bold text-navy-900">{title}</h2>
               <button
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-navy-400 hover:bg-navy-50"
+                /*  ⚠ 0100 — 36~40px 이었습니다. 손가락 기준(44px)에 못 미쳐서,
+                    폰에서 닫으려다 뒤 화면이 눌리는 일이 있었습니다.
+                    보이는 동그라미 크기는 그대로 두고 누르는 자리만 넓힙니다. */
+                className="-mr-1.5 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-navy-400 hover:bg-navy-50"
                 aria-label="닫기"
               >
                 <X size={19} strokeWidth={2.4} />
               </button>
             </div>
-            <div className="space-y-4">{children}</div>
-            {footer && <div className="mt-6 flex gap-2 print:hidden">{footer}</div>}
+            <div className={`space-y-4${layout === 'sticky' ? ' min-h-0 flex-1 overflow-y-auto' : ''}`}>
+              {children}
+            </div>
+            {footer && (
+              <div
+                data-modal-footer
+                className={`mt-6 flex shrink-0 gap-2 print:hidden${
+                  //  붙은 버튼은 내용과 사이를 갈라 줘야 「가려진 것이 아니라
+                  //  놓인 것」으로 읽힙니다.
+                  layout === 'sticky' ? ' -mx-5 -mb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-navy-100 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:-mb-5 sm:pb-5' : ''
+                }`}
+              >
+                {footer}
+              </div>
+            )}
           </motion.div>
         </div>
       )}

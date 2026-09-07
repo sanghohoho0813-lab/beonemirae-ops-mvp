@@ -31,7 +31,7 @@ export function HelpSheet({
 }: {
   open: boolean
   onClose: () => void
-  /** 개발자에게 요청하기 — 시트를 닫고 Layout 이 모달을 엽니다 */
+  /** 사용 후기 남기기 — 시트를 닫고 Layout 이 설문 창을 엽니다 */
   onDevRequest?: () => void
 }) {
   const { start } = useTour()
@@ -108,7 +108,7 @@ export function HelpSheet({
         </button>
         )}
 
-        {/*  개발자에게 요청하기 — 여기 있어야 하는 이유.
+        {/*  사용 후기 남기기 — 여기 있어야 하는 이유.
              이 시트는 「막혔을 때 여는 곳」입니다. 사용법을 봐도 안 되면 다음
              걸음은 사람에게 묻는 것인데, 그 통로가 더보기 안에만 있어서
              한참 뒤져야 나왔습니다. 막힌 자리에서 바로 보내야 합니다. */}
@@ -125,9 +125,9 @@ export function HelpSheet({
               <MessageSquarePlus size={22} strokeWidth={2.2} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="t-card block break-keep text-navy-900">개발자에게 요청하기</span>
+              <span className="t-card block break-keep text-navy-900">사용 후기 남기기</span>
               <span className="t-muted mt-1 block break-keep">
-                불편한 것 · 실제와 다른 것을 알려 주세요. 고르기만 하셔도 됩니다.
+                쓰면서 느끼신 점을 눌러서 알려 주세요. 1~2분이면 끝납니다.
               </span>
             </span>
             <ChevronRight size={20} className="mt-2 shrink-0 text-navy-400" />

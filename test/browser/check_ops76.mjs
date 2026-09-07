@@ -9,7 +9,7 @@ import { skipIfHidden } from './_pilot.mjs'
 //   ④ 거래처 검색칸이 눈에 띈다 · PC 에서는 커서가 들어가 있다
 //   ⑤ 운영 모드 거래처 목록에 「시연용」 칩이 없다
 //   ⑥ 저장 직후에 **방금 넣은 것을 지울** 수 있다
-//   ⑦ 개발 요청 주제가 지금 화면 기준이다 · 여러 개 고를 수 있다
+//   ⑦ 피드백이 지금 화면 기준으로 묻는다 · 관점이 나뉘어 있다
 
 const BASE = 'http://localhost:4173'
 const ME = '00000000-0000-0000-0000-0000000000a9'
@@ -234,7 +234,7 @@ for (const w of [1280, 390]) {
   await ctx.close()
 }
 
-// ── ⑦ 개발 요청 주제 ───────────────────────────────────────────────────────
+// ── ⑦ 사용자 피드백이 묻는 것 ──────────────────────────────────────────────
 {
   const { ctx, p } = await open(76, { role: 'field', path: '/today', w: 390 })
   await p.evaluate(() => {
@@ -247,39 +247,58 @@ for (const w of [1280, 390]) {
   //    (화면 연결은 기존 check_devreq 가 봅니다.)
 }
 {
-  //  ── ⑦ 개발 요청 주제가 **지금 화면 기준**인가 ──────────────────────────
+  //  ── ⑦ 물어보는 것이 **지금 화면 기준**인가 ────────────────────────────
   //
-  //   대표님: 「개발자에게 요청하기 목록 보면 예전 버전으로 있는 것 같거든?
-  //   그 이후에 기능 추가 보완 수정 이런 거 거쳤으니까 현재에 맞게 바꿔 주고,
-  //   특히 앞으로도 계속 개선해 나가야 될 부분만 주제로 정해서.」
+  //   대표님(0076): 「개발자에게 요청하기 목록 보면 예전 버전으로 있는 것
+  //   같거든? 그 이후에 기능 추가 보완 수정 이런 거 거쳤으니까 현재에 맞게
+  //   바꿔 주고, 특히 앞으로도 계속 개선해 나가야 될 부분만 주제로 정해서.」
   //
-  //   ⚠ 이미 해결한 것을 계속 물으면 답이 쌓여도 쓸 데가 없습니다.
-  const { DEV_REQUEST_TOPICS } = await import('../../src/lib/devRequests.ts')
-  const flatOf = (role) =>
-    DEV_REQUEST_TOPICS[role].flatMap((g) => [g.subject, ...g.options]).join(' | ')
-  const f = flatOf('field')
-  const o = flatOf('office')
-  const a = flatOf('admin')
+  //   ⚠ 0100 — 그 목록(DEV_REQUEST_TOPICS)은 사용자 피드백 v2 로 바뀌었습니다.
+  //     「무엇이 불편한가」만 서른 줄 묻던 것을, 관점을 나눠 눌러서 끝내는
+  //     설문으로 다시 만들었습니다. 여기서 지키는 것은 그 취지 그대로입니다 —
+  //     **지금 화면에 있는 일**을 묻는가, 그리고 **답이 나중에 비교되는가**.
+  const F = await import('../../src/lib/feedbackV2.ts')
 
-  //  그 뒤에 만든 기능이 고를 자리에 있는가
-  ok(/오늘 업무 마감/.test(f), '**「오늘 업무 마감」이 주제에 생겼다** (0073 에서 만든 것)')
-  ok(/잘못 넣은 것 고치기/.test(f), '**「잘못 넣은 것 고치기」가 생겼다** (0074)')
-  ok(/공용차/.test(f), '**「차량 · 공용차」가 생겼다** (0070)')
-  ok(/가져온 용기.*주고 온 자재|주고 온 자재/.test(f), '규격·용기 구분이 주제에 있다 (0075)')
-  ok(/재고 숫자가 실제 창고와/.test(o), '사무실에 「재고가 어긋난다」가 생겼다')
-  ok(/현장 입력이 늦게 올라옵니다/.test(a), '대표님에게 「오늘 현장을 아는 것」이 생겼다')
+  const mg = F.MANAGEMENT_STEPS.flatMap((g) => g.questions)
+  const stField = F.stepsFor('staff', 'field').flatMap((g) => g.questions)
+  const stOffice = F.stepsFor('staff', 'office').flatMap((g) => g.questions)
+  const textOf = (list) => list.map((q) => q.text).join(' | ')
 
-  //  이미 해결한 것을 계속 묻지 않는가
-  ok(!/잘못 넣은 것을 고치기가 어렵습니다/.test(f), '이미 해결한 문항을 뺐다')
-
-  //  한 사람이 고를 수 있는 폭
-  for (const [role, list] of [['field', f], ['office', o], ['admin', a]]) {
-    const n = DEV_REQUEST_TOPICS[role].length
-    ok(n >= 6, `${role} — 주제가 ${n}개`, `${n}개`)
-    ok(list.length > 0, `${role} — 선택지가 있다`)
+  //  관점이 나뉘어 있는가 — 대표님 질문과 기사님 질문이 섞이면 둘 다 못 씁니다
+  ok(F.MANAGEMENT_STEPS.length === 4, '운영·관리는 4단계', `${F.MANAGEMENT_STEPS.length}단계`)
+  ok(F.stepsFor('staff', 'field').length === 3, '현장·실무는 3단계 (더 짧게)',
+    `${F.stepsFor('staff', 'field').length}단계`)
+  ok(stField.length <= mg.length, '직원 문항이 관리자보다 많지 않음', `${stField.length} vs ${mg.length}`)
+  for (const [name, steps] of [['management', F.MANAGEMENT_STEPS], ['staff', F.stepsFor('staff', 'field')]]) {
+    ok(steps.every((g) => g.questions.length >= 4 && g.questions.length <= 6),
+      `${name} — 한 단계에 4~6문항`, steps.map((g) => g.questions.length).join('·'))
   }
-  //  ⚠ 병원 계정은 포털의 「요청」으로 보냅니다 — 여기가 열리지 않습니다.
-  ok(DEV_REQUEST_TOPICS.client.length === 0, '병원 계정에는 이 목록이 없다')
+
+  //  지금 화면에 있는 일을 묻는가
+  ok(/전화나 카톡으로 다시 묻는 일/.test(textOf(mg)), '**전화·카톡 재확인**을 묻는다')
+  ok(/엑셀/.test(textOf(mg)), '**엑셀 다시 열어보는 일**을 묻는다')
+  ok(/미수금|정산/.test(textOf(mg)), '정산·미수를 묻는다')
+  ok(/수거내용을 입력하는 과정/.test(textOf(stField)), '현장에는 수거 입력을 묻는다')
+  ok(/자재·재고/.test(textOf(stOffice)), '사무실에는 자재·재고를 묻는다')
+  ok(!/보고 싶은 지표가 빠져 있습니다/.test(textOf(mg)), '예전 v1 문구를 그대로 쓰지 않는다')
+
+  //  ⚠ 번호가 있어야 문구를 다듬어도 같은 항목끼리 비교됩니다
+  //    (현장·사무실 묶음은 앞뒤 단계를 함께 쓰므로 번호로 한 번 걸러 셉니다)
+  const all = [...new Map([...mg, ...stField, ...stOffice].map((q) => [q.id, q])).values()]
+  const NUM = /^(MG|ST)_[A-Z]+_[A-Z]?[0-9]{2}$/
+  ok(all.every((q) => NUM.test(q.id)), '모든 문항에 번호가 있다',
+    all.filter((q) => !NUM.test(q.id)).map((q) => q.id).join(','))
+  ok(all.length === mg.length + stField.length + stOffice.length - 10,
+    '현장·사무실은 앞뒤 단계를 함께 쓴다 (번호가 겹치지 않게)', `${all.length}개`)
+  ok(all.every((q) => F.CATEGORY_LABEL[q.category]), '모든 문항에 안쪽 분류가 있다')
+  //  ⚠ 안쪽 분류 이름은 답하는 분 화면에 나오면 안 됩니다 — 이건 화면 검사에서 봅니다.
+
+  //  ⚠ 실제로 얼마나 써 봤는지를 함께 받는가. 이것이 없으면 점수를 읽을 수 없습니다
+  ok(F.USAGE_OPTIONS.length === 5 && F.USAGE_OPTIONS.some((o) => /아직 충분히/.test(o.label)),
+    '사용 정도를 함께 묻고, 「아직 충분히 못 써봤어요」가 있다')
+  //  ⚠ 병원 계정은 포털의 「요청」으로 보냅니다 — 이 화면이 열리지 않습니다.
+  const { canSendDevRequest } = await import('../../src/lib/devRequests.ts')
+  ok(!canSendDevRequest('client'), '병원 계정에는 이 화면이 없다')
 }
 
 await b.close()

@@ -40,7 +40,7 @@ import {
 } from '../lib/brand'
 import { TourButton, TourWhyButton } from './TourEntry'
 import { HelpSheet } from './HelpSheet'
-import { DevRequestButton, DevRequestSheet } from './DevRequestSheet'
+import { FeedbackButton, FeedbackSheet } from './FeedbackSheet'
 import { PcViewBar, usePcViewport } from './PcViewBar'
 import { PageMotion } from './motion'
 
@@ -430,7 +430,7 @@ function Sidebar() {
             </button>
           )}
         </div>
-        {/*  「사용 방법」과 「개발자에게 요청하기」는 오른쪽 위로 옮겼습니다.
+        {/*  「사용 방법」과 「사용 후기 남기기」는 오른쪽 위로 옮겼습니다.
              한 화면에 같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈리고,
              왼쪽 목차는 목차만 남는 편이 읽힙니다. */}
         {/*  회사 연락처 — **우리 직원**이 보는 값입니다.
@@ -731,11 +731,11 @@ export function Layout() {
                 className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
                 label="사용 방법"
               />
-              {/*  개발자에게 요청하기 — 왼쪽 목차에서 여기로 올렸습니다.
+              {/*  사용 후기 남기기 — 왼쪽 목차에서 여기로 올렸습니다.
                    같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈립니다.
                    **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고
                    이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
-              <DevRequestButton className="flex items-center gap-1.5 rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800" />
+              <FeedbackButton className="flex items-center gap-1.5 rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800" />
             </div>
             {/*
               안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어
@@ -783,8 +783,8 @@ export function Layout() {
       {/* 도움말 — 사용 방법 / 만든 이유 두 갈래 (폰) */}
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} onDevRequest={() => setDevOpen(true)} />
 
-      {/* 개발자에게 요청하기 — 더보기 시트 바깥에 두어야 시트가 닫혀도 남습니다 */}
-      <DevRequestSheet open={devOpen} onClose={() => setDevOpen(false)} />
+      {/* 사용 후기 남기기 — 더보기 시트 바깥에 두어야 시트가 닫혀도 남습니다 */}
+      <FeedbackSheet open={devOpen} onClose={() => setDevOpen(false)} />
 
       {/*
         사용 안내 (0069) — **화면 위에** 뜹니다. 안내가 화면을 옮겨도 살아

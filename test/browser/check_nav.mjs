@@ -104,7 +104,7 @@ async function open(role, width = 390, height = 900) {
   const sheet = ((await p.textContent('body')) ?? '').replace(/\s+/g, ' ')
   ok(/사용 방법/.test(sheet), '맨 위에 사용 방법')
   ok(/이 시스템을 만든 이유/.test(sheet), '맨 위에 이 시스템을 만든 이유')
-  ok((await p.locator('[data-dev-request-more]').count()) === 1, '개발자에게 요청하기도 그대로')
+  ok((await p.locator('[data-dev-request-more]').count()) === 1, '사용 후기 남기기도 그대로')
 
   //  묶음 제목이 PC 와 같아야 합니다.
   //  「운영 도구」와 「추가 개발 예정」은 한 묶음으로 합쳤습니다 — 둘 다

@@ -426,11 +426,11 @@ for (const w of [320, 360, 390, 430]) {
   const inSheet = (sel) => p.locator(`[data-help-sheet] ${sel}`).count()
   ok((await inSheet('[data-tour-start]')) === 1, '사용 방법')
   ok((await inSheet('[data-tour-why]')) === 1, '이 시스템을 만든 이유')
-  ok((await inSheet('[data-help-dev-request]')) === 1, '**개발자에게 요청하기도 함께**')
+  ok((await inSheet('[data-help-dev-request]')) === 1, '**사용 후기 남기기도 함께**')
   //  눌러서 실제로 요청 모달이 열리는지
   await p.click('[data-help-dev-request]')
   await p.waitForTimeout(900)
-  ok(/개발자에게 요청|어떤 점이/.test(flat(await p.textContent('body'))), '누르면 요청 화면이 열림')
+  ok(/어떤 관점에서 사용해 보셨나요/.test(flat(await p.textContent('body'))), '누르면 피드백 화면이 열림')
   await ctx.close()
 }
 
@@ -507,9 +507,9 @@ for (const [w, label] of [[390, '폰'], [1500, 'PC']]) {
 
   //  왼쪽 목차에서 사용 방법·개발자 요청이 빠지고 오른쪽 위로 갔는가
   ok(!/사용 방법/.test(side), '왼쪽 목차에 「사용 방법」이 없음 — 오른쪽 위에 있습니다')
-  ok(!/개발자에게 요청/.test(side), '왼쪽 목차에 「개발자에게 요청하기」도 없음')
+  ok(!/사용 후기 남기기/.test(side), '왼쪽 목차에 「사용 후기 남기기」도 없음')
   const top = flat(await p.textContent('main'))
-  ok(/사용 방법/.test(top) && /개발자에게 요청/.test(top), '둘 다 오른쪽 위에 있음')
+  ok(/사용 방법/.test(top) && /사용 후기 남기기/.test(top), '둘 다 오른쪽 위에 있음')
 
   //  바깥으로 나가는 길 — 이름이 함께 붙었는가
   ok(/홈페이지/.test(side) && /모바일 화면/.test(side) && /올바로/.test(side),

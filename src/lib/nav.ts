@@ -101,7 +101,7 @@ export const TOOL_NAV: NavItem[] = [
 /** 관리 — 관리자만 보이는 영역 */
 export const ADMIN_NAV: NavItem[] = [
   { to: '/users', label: '사용자 관리', icon: UserCog, desc: '계정 승인 · 역할 · 사용 중지', tone: 'navy' },
-  { to: '/dev-requests', label: '개발 요청함', icon: MessageSquarePlus, desc: '직원이 보낸 요청 확인', tone: 'navy' },
+  { to: '/dev-requests', label: '사용자 피드백', icon: MessageSquarePlus, desc: '직원·관리자가 남긴 후기', tone: 'navy' },
   { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '거래처별 정산 엑셀 옮기기', tone: 'navy' },
   { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '글자 크기 · 데이터 백업 · 초기화', tone: 'navy' },
   { to: '/audit', label: '감사로그', icon: ScrollText, desc: '누가 무엇을 언제 바꿨는지', tone: 'navy' },
