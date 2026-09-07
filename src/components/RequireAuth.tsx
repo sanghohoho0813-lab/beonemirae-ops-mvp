@@ -20,7 +20,7 @@ function FullScreen({ children }: { children: ReactNode }) {
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { configured, loading, session, profile, unreachable, role, signOut, refreshProfile } = useAuth()
+  const { configured, loading, session, profile, unreachable, checking, role, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -42,6 +42,19 @@ export function RequireAuth({ children }: { children: ReactNode }) {
       <FullScreen>
         <p className="t-body flex items-center gap-2.5 font-bold text-navy-400">
           <Loader2 size={20} className="animate-spin" /> 로그인 상태를 확인하는 중…
+        </p>
+      </FullScreen>
+    )
+  }
+
+  //  ⚠ 0102 — 프로필을 아직 읽는 중이면 기다립니다. 예전에는 여기서 곧바로
+  //    로그인 화면으로 보냈습니다. 통신이 느린 곳에서 supabase 가 다시 시도하는
+  //    몇 초 동안 화면이 로그인으로 튕겼다가 돌아왔습니다.
+  if (session && !profile && checking) {
+    return (
+      <FullScreen>
+        <p data-auth-checking className="t-body flex items-center gap-2.5 font-bold text-navy-400">
+          <Loader2 size={20} className="animate-spin" /> 계정 정보를 확인하는 중…
         </p>
       </FullScreen>
     )

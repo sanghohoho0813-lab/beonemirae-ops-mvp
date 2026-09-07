@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { COMPANY_HOURS, COMPANY_TEL, SYSTEM_TAGLINE } from '../lib/brand'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, Loader2, LogIn, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { AlertCircle, CloudOff, Loader2, LogIn, Lock, LogOut, Mail, RotateCw, ShieldCheck, UserX } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
@@ -14,7 +14,7 @@ import { isDemoMode } from '../lib/supabase'
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Login() {
-  const { signIn, session, profile, loading, configured, role, sendPasswordReset } = useAuth()
+  const { signIn, session, profile, loading, configured, role, sendPasswordReset, unreachable, checking, signOut, refreshProfile } = useAuth()
   const navigate = useNavigate()   // 시연 모드 안내 버튼에서 사용
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -33,6 +33,69 @@ export function Login() {
     const from = (location.state as { from?: string } | null)?.from
     const back = from && from !== '/login' && canAccess(role, from) ? from : landingPath(role)
     return <Navigate to={back} replace />
+  }
+
+  //  ── 로그인은 됐는데 사용자 정보를 못 받은 경우 (0102) ───────────────────
+  //
+  //   ⚠ 여태 이 자리에서 **아무 말도 하지 않았습니다.** 비밀번호가 맞아
+  //     로그인은 성공했는데 profiles 한 줄이 없으면, 위의 Navigate 가 안 되고
+  //     화면 보호(RequireAuth)가 다시 로그인으로 돌려보냅니다. 쓰는 사람 눈에는
+  //     **「로그인」을 눌렀는데 잠깐 돌다가 그대로 로그인 화면** 입니다.
+  //     오류도 없고 안내도 없어서, 비밀번호를 몇 번이고 다시 칩니다.
+  //
+  //   서버에 못 닿은 것(통신)과 정보가 없는 것(계정)을 나눠서 말합니다.
+  //   무엇을 해야 하는지까지 적습니다 — 고칠 수 없는 안내는 없는 것과 같습니다.
+  //  ⚠ 아직 읽는 중이면 아무 판정도 하지 않습니다. supabase 는 통신이
+  //    끊기면 몇 초에 걸쳐 다시 시도하는데, 그 사이에 「계정 정보가 없습니다」를
+  //    띄우면 멀쩡한 계정을 고장 났다고 말하는 셈입니다.
+  if (!loading && session && !profile && checking) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-navy-950 px-4">
+        <p data-login-checking className="t-body flex items-center gap-2.5 font-bold text-navy-300">
+          <Loader2 size={20} className="animate-spin" /> 계정 정보를 확인하는 중…
+        </p>
+      </div>
+    )
+  }
+
+  if (!loading && session && !profile) {
+    const who = session.user?.email ?? ''
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-navy-950 px-4 py-10">
+        <div data-login-stuck={unreachable ? 'offline' : 'no-profile'} className="w-full max-w-[30rem] rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
+          {unreachable ? (
+            <CloudOff size={40} className="mx-auto text-navy-400" strokeWidth={1.9} />
+          ) : (
+            <UserX size={40} className="mx-auto text-amber-600" strokeWidth={1.9} />
+          )}
+          <p className="t-card mt-4 break-keep text-navy-900">
+            {unreachable ? '지금 통신이 안 됩니다' : '로그인은 됐지만 계정 정보를 찾지 못했습니다'}
+          </p>
+          <p className="t-body mt-2.5 break-keep font-medium text-navy-600">
+            {unreachable ? (
+              <>
+                <b className="text-navy-900">비밀번호 문제가 아닙니다.</b> 신호가 약한 곳에서는 자료를 못
+                불러옵니다. 잠시 뒤 아래를 눌러 주세요.
+              </>
+            ) : (
+              <>
+                <b className="text-navy-900">비밀번호는 맞습니다.</b> 그런데 이 계정({who})의 사용자 정보가
+                서버에 없어서 업무 화면을 열 수 없습니다. 관리자에게 이 문장을 그대로 알려 주세요 —
+                「사용자 관리에서 계정을 다시 만들어야 합니다」.
+              </>
+            )}
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <button data-login-retry onClick={() => void refreshProfile()} className="btn-primary">
+              <RotateCw size={17} strokeWidth={2.4} /> 다시 시도
+            </button>
+            <button onClick={() => void signOut()} className="btn-ghost">
+              <LogOut size={17} strokeWidth={2.4} /> 로그아웃
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const onSubmit = async (e: FormEvent) => {

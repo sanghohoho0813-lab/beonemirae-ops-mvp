@@ -83,6 +83,14 @@ interface AuthContextValue {
   /** 이름 / 글자크기 등 본인 프로필 수정 */
   updateProfile: (patch: Partial<Pick<Profile, 'name' | 'fontScale'>>) => Promise<void>
   refreshProfile: () => Promise<void>
+  /**
+   *  프로필을 지금 읽고 있는 중인가 (0102).
+   *
+   *   ⚠ 「아직 안 돌아온 것」과 「없는 것」을 가르는 값입니다. 통신이 끊기면
+   *     supabase 가 몇 초에 걸쳐 다시 시도하는데, 그 사이에 화면이
+   *     「계정 정보가 없습니다」를 띄우면 멀쩡한 계정을 고장 났다고 말합니다.
+   */
+  checking: boolean
   /** 비밀번호 재설정 메일 발송 (로그인 화면에서 사용) */
   sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>
   /** 로그인 상태에서 본인 비밀번호 변경 */
@@ -121,6 +129,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   //  세션은 살아 있는데 **서버에 닿지 못해** 프로필을 못 읽은 상태 (0079).
   //  「로그아웃됨」과 절대 섞지 않습니다 — 아래 RequireAuth 참고.
   const [unreachable, setUnreachable] = useState(false)
+  //  ⚠ 0102 — 프로필을 **지금 읽고 있는 중**인지. 이것이 없으면 「아직 안
+  //    돌아온 것」과 「없는 것」이 같아 보입니다. supabase 는 통신이 끊기면
+  //    몇 초에 걸쳐 다시 시도하는데, 그 사이에 화면이 「계정 정보가 없습니다」를
+  //    띄우면 멀쩡한 계정을 고장 났다고 말하는 셈입니다.
+  const [checking, setChecking] = useState(false)
   // Supabase 미설정이면 확인할 세션이 없으므로 곧바로 로딩 완료 상태입니다.
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
@@ -176,15 +189,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!alive) return
       setSession(data.session)
-      if (data.session?.user) apply(await loadProfile(data.session.user.id))
+      if (data.session?.user) {
+        setChecking(true)
+        const r = await loadProfile(data.session.user.id)
+        if (!alive) return
+        apply(r)
+        setChecking(false)
+      }
       if (alive) setLoading(false)
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
       if (!alive) return
       setSession(s)
-      if (s?.user) apply(await loadProfile(s.user.id))
-      else { setProfile(null); setUnreachable(false) }
+      if (s?.user) {
+        setChecking(true)
+        const r = await loadProfile(s.user.id)
+        if (!alive) return
+        apply(r)
+        setChecking(false)
+      } else { setProfile(null); setUnreachable(false); setChecking(false) }
       setLoading(false)
     })
 
@@ -196,7 +220,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return { ok: false, error: 'Supabase 연결이 설정되지 않았습니다.' }
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    //  ⚠ 0102 — 소문자로 맞춰 보냅니다. 가입(signUp)·계정 만들기는 소문자로
+    //    저장하는데 여기만 적힌 그대로 보내고 있었습니다. 폰 자판이 첫 글자를
+    //    대문자로 올려 주는 일이 흔해서(Beonemirae@…), 본인은 맞게 쳤다고
+    //    생각하는데 「이메일 또는 비밀번호가 올바르지 않습니다」만 봅니다.
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    })
     if (error) return { ok: false, error: friendlyError(error) }
     return { ok: true }
   }, [])
@@ -293,10 +324,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (!session?.user) return
+    setChecking(true)
     const r = await loadProfile(session.user.id)
     if (r.kind === 'ok') { setProfile(r.profile); setUnreachable(false) }
     else if (r.kind === 'unreachable') setUnreachable(true)
     else { setProfile(null); setUnreachable(false) }
+    setChecking(false)
   }, [session, loadProfile])
 
   const value = useMemo<AuthContextValue>(
@@ -306,6 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       unreachable,
+      checking,
       role: profile?.role ?? null,
       // 로그인된 상태에서만 실제 운영 모드입니다.
       mode: isSupabaseConfigured && !!session && !!profile ? 'live' : 'demo',
@@ -322,6 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       unreachable,
+      checking,
       signIn,
       signUp,
       signOut,
