@@ -264,7 +264,7 @@ export function MoreMenu({
               <span data-dev-request-more className="min-w-0">
                 <span className="block break-keep font-bold text-navy-900">사용 후기 남기기</span>
                 <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">
-                  눌러서 1~2분이면 끝납니다
+                  (개발자에게 요청)
                 </span>
               </span>
             </Tappable>

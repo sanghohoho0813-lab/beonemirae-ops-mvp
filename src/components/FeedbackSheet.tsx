@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, MessageSquarePlus, Send } from 'lucide-react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { CheckCircle2, Loader2, MessageSquarePlus, Send } from 'lucide-react'
 import { Modal } from './Modal'
 import { useAuth } from '../context/AuthContext'
 import { createDevRequest } from '../lib/repo'
@@ -13,34 +13,40 @@ import {
 import { friendlyError } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 사용자 피드백 — 눌러서 끝내는 설문 (0100)
+// 사용자 피드백 — 스크롤하며 눌러 내려가는 설문 (0100)
 //
 //  ── 예전 화면의 문제 ────────────────────────────────────────────────────
 //
-//  한 장에 서른 줄이 늘어서 있었습니다. 열자마자 「이걸 다 봐야 하나」가
-//  되고, 대부분은 그대로 닫습니다. 게다가 물어보는 것이 전부 「무엇이
-//  불편합니까」라, 좋아진 것은 답할 자리가 없었습니다.
+//  v1 은 한 장에 서른 줄이 늘어서 있었고, 물어보는 것이 전부 「무엇이
+//  불편합니까」였습니다. 열자마자 닫게 되고, 좋아진 것은 답할 자리가
+//  없었습니다.
 //
-//  ── 이번 모양 ───────────────────────────────────────────────────────────
+//  ── 왜 단계(다음 → 다음)를 걷어냈는가 ───────────────────────────────────
 //
-//   ① 관점 고르기 (큰 카드 두 장)
+//  처음에는 네 단계로 나눠 「다음」으로 넘기게 만들었습니다. 대표님이
+//  써 보시고 바로 말씀하셨습니다 — 「그냥 계속 스크롤 내리면서 뚝 쭉쭉쭉
+//  이렇게 할 수 있게.」 맞는 말씀입니다. 폰에서 답하다가 다음 단추를 찾아
+//  내려가고, 화면이 갈리고, 다시 위로 올라가는 것이 답하는 것보다 오래
+//  걸립니다. 손가락은 이미 스크롤 중인데 흐름을 끊는 셈입니다.
+//
+//  그래서 **한 화면에 전부** 둡니다. 다만 통으로 늘어놓지는 않습니다 —
+//  묶음(1/4, 2/4…)마다 제목을 달아 어디쯤인지 보이게 하고, 아래에 붙은
+//  띠에 「몇 문항 답했는지」와 제출 단추를 늘 띄워 둡니다.
+//
+//   ① 관점 고르기 (큰 카드 두 장) — 고르면 아래가 이어서 열립니다
 //   ② 얼마나 써 보셨는지 — 직원은 무슨 일을 하시는지 함께
-//   ③ 질문 단계 (한 단계에 다섯 문항, 관리 4단계 · 직원 3단계)
+//   ③ 묶음별 질문 — 관리 4묶음 20문항 · 현장 3묶음 15문항
 //   ④ 마무리 — 체감된 변화 · 불편한 곳 · 하고 싶은 말(선택)
 //
 //  ⚠ 답을 강요하지 않습니다. 안 고른 문항이 있어도 낼 수 있습니다. 억지로
 //    채우게 하면 「아무거나」가 들어오는데, 그건 없는 것보다 나쁩니다.
-//  ⚠ 고르면 자동으로 다음으로 넘기지 않습니다. 잘못 눌렀을 때 되돌릴 틈이
-//    없고, 화면이 저 혼자 움직이면 나이 드신 분들이 특히 당황하십니다.
+//  ⚠ 고르면 화면이 저 혼자 움직이지 않습니다. 스크롤은 손이 합니다.
 //  ⚠ 심사·평가 이야기는 화면 어디에도 쓰지 않습니다. 그 말이 보이는 순간
 //    답이 「잘 보이려는 답」으로 바뀝니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Stage = 'group' | 'start' | 'questions' | 'wrapup' | 'sent'
-
 export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { mode } = useAuth()
-  const [stage, setStage] = useState<Stage>('group')
   const [group, setGroup] = useState<RespondentGroup | null>(null)
   const [work, setWork] = useState<StaffWorkType | null>(null)
   const [usage, setUsage] = useState<UsageDuration | null>(null)
@@ -48,27 +54,29 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
   const [benefits, setBenefits] = useState<string[]>([])
   const [pains, setPains] = useState<string[]>([])
   const [comment, setComment] = useState('')
-  const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const topRef = useRef<HTMLDivElement>(null)
+  const usageRef = useRef<HTMLDivElement>(null)
   //  ⚠ 두 번 보내기 막기 — 단추를 잠그는 것만으로는 모자랍니다. 통신이 느린
-  //    현장에서 두 번 눌리면 같은 답이 두 건 쌓이고, 그러면 「두 사람이
-  //    답했다」로 세어집니다.
+  //    현장에서 두 번 눌리면 같은 답이 두 건 쌓이고, 「두 사람이 답했다」로
+  //    세어집니다.
   const sending = useRef(false)
 
-  const steps = useMemo(() => (group ? stepsFor(group, work) : []), [group, work])
-
-  //  단계가 바뀌면 맨 위부터 보여 드립니다 — 안 그러면 새 질문이 화면
-  //  중간부터 시작해 첫 문항을 못 보고 지나칩니다.
-  useEffect(() => {
-    topRef.current?.scrollIntoView({ block: 'start' })
-  }, [stage, step])
+  const groups = useMemo(() => (group ? stepsFor(group, work) : []), [group, work])
+  const shownQuestions = useMemo(() => groups.flatMap((g) => g.questions), [groups])
+  //  ⚠ 지금 화면에 보이는 문항의 답만 셉니다. 관점을 바꾸면 예전 관점의 답이
+  //    state 에는 남지만(되돌아오면 그대로 있게), 세지도 보내지도 않습니다.
+  const mine = useMemo(
+    () => Object.fromEntries(shownQuestions.filter((q) => answers[q.id] !== undefined).map((q) => [q.id, answers[q.id]!])),
+    [shownQuestions, answers],
+  )
+  const done = Object.keys(mine).length
 
   const reset = () => {
-    setStage('group'); setGroup(null); setWork(null); setUsage(null)
+    setGroup(null); setWork(null); setUsage(null)
     setAnswers({}); setBenefits([]); setPains([]); setComment('')
-    setStep(0); setError(null); setBusy(false)
+    setError(null); setBusy(false); setSent(false)
     sending.current = false
   }
 
@@ -89,10 +97,10 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
     setError(null)
     try {
       await createDevRequest({
-        topics: encodeResponse({ group, workType: work, usage, answers, benefits, pains }),
+        topics: encodeResponse({ group, workType: work, usage, answers: mine, benefits, pains }),
         message: comment,
       })
-      setStage('sent')
+      setSent(true)
     } catch (e) {
       sending.current = false
       const raw = e instanceof Error ? e.message : String(e ?? '')
@@ -107,244 +115,196 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
     }
   }
 
-  const cur = steps[step]
-  const lastStep = step >= steps.length - 1
-  const answeredHere = cur ? cur.questions.filter((x) => answers[x.id] !== undefined).length : 0
+  const ready = usage !== null && (group !== 'staff' || work !== null)
 
   return (
     <Modal
       open={open}
       title="사용해 보신 느낌"
       onClose={close}
-      layout={stage === 'questions' || stage === 'wrapup' ? 'sticky' : 'scroll'}
+      layout={group && !sent ? 'sticky' : 'scroll'}
       footer={<Footer />}
     >
-      <div ref={topRef} />
       {mode !== 'live' ? (
         <p className="t-body break-keep font-bold text-navy-400">
           피드백 보내기는 실제 운영 모드에서만 쓸 수 있습니다. 시연 모드에는 보낼 서버가 없습니다.
         </p>
-      ) : stage === 'group' ? (
-        <GroupPick />
-      ) : stage === 'start' ? (
-        <StartPick />
-      ) : stage === 'questions' && cur ? (
-        <QuestionStep />
-      ) : stage === 'wrapup' ? (
-        <WrapUp />
+      ) : sent ? (
+        <div className="py-2 text-center">
+          <CheckCircle2 size={44} className="mx-auto text-accent-500" />
+          <p className="t-card mt-4 break-keep text-navy-900">피드백이 등록되었습니다</p>
+          <p className="t-body mt-2 break-keep font-medium text-navy-500">
+            체크해 주신 내용은 다음 사용성 개선과 실제 업무효과 확인에 활용됩니다.
+          </p>
+        </div>
       ) : (
-        <Done />
-      )}
-      {error && stage !== 'sent' && (
-        <p className="t-body break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-600">{error}</p>
+        <div className="space-y-6">
+          {/* ── ① 관점 ─────────────────────────────────────────────────── */}
+          <section>
+            <p className="t-card break-keep text-navy-900">어떤 관점에서 사용해 보셨나요?</p>
+            <p className="t-body mt-1.5 break-keep font-medium text-navy-500">
+              긴 글을 쓰실 필요 없습니다. 지금 느끼시는 대로 버튼만 눌러 주시면 됩니다.
+              1~2분이면 끝납니다.
+            </p>
+            <div className="mt-3 space-y-2.5">
+              {(['management', 'staff'] as RespondentGroup[]).map((g) => (
+                <button
+                  key={g}
+                  data-fb-group={g}
+                  aria-pressed={group === g}
+                  onClick={() => setGroup(g)}
+                  className={`w-full rounded-2xl border-2 p-4 text-left transition ${
+                    group === g ? 'border-teal-500 bg-teal-50' : 'border-navy-100 bg-white hover:border-navy-200 hover:bg-navy-50'
+                  }`}
+                >
+                  <span className={`t-card block break-keep ${group === g ? 'text-teal-900' : 'text-navy-900'}`}>
+                    {GROUP_LABEL[g]}
+                  </span>
+                  <span className="t-body mt-1 block break-keep font-medium text-navy-500">{GROUP_DESC[g]}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {group && (
+            <>
+              {/* ── ② 얼마나 써 보셨는지 ─────────────────────────────────── */}
+              <section ref={usageRef} data-fb-usage-block>
+                <SectionTitle>이 시스템을 어느 정도 사용해 보셨나요?</SectionTitle>
+                {/*  ⚠ 이 답이 없으면 뒤의 점수를 어떻게 읽어야 할지 알 수 없습니다.
+                     사흘 써 보고 매긴 4점과 한 달 써 보고 매긴 4점은 다릅니다. */}
+                <div className="mt-2.5 space-y-2">
+                  {USAGE_OPTIONS.map((o) => (
+                    <Choice key={o.value} attr={{ 'data-fb-usage': o.value }} on={usage === o.value} onClick={() => setUsage(o.value)}>
+                      {o.label}
+                    </Choice>
+                  ))}
+                </div>
+
+                {group === 'staff' && (
+                  <div className="mt-5">
+                    <SectionTitle>주로 어떤 업무를 하시나요?</SectionTitle>
+                    <div className="mt-2.5 space-y-2">
+                      {(['field', 'office', 'both'] as StaffWorkType[]).map((w) => (
+                        <Choice key={w} attr={{ 'data-fb-work': w }} on={work === w} onClick={() => setWork(w)}>
+                          {WORK_LABEL[w]}
+                        </Choice>
+                      ))}
+                    </div>
+                    {work === 'both' && (
+                      <p className="t-muted mt-2 break-keep text-navy-500">
+                        두 가지를 다 하시는 분께는 현장 쪽 질문을 보여 드립니다. 짧게 끝내시라고요.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              {/* ── ③ 질문 묶음 — 전부 한 화면에, 제목으로만 나눕니다 ────── */}
+              {groups.map((g, i) => (
+                <section key={g.key} data-fb-section={g.key}>
+                  <div className="flex items-baseline justify-between gap-2 border-t-2 border-navy-100 pt-4">
+                    <p className="t-card min-w-0 break-keep text-navy-900">{g.title}</p>
+                    <span className="t-muted shrink-0 font-bold tabular-nums text-navy-400">
+                      {i + 1} / {groups.length}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {g.questions.map((x) => (
+                      <QuestionCard key={x.id} q={x} value={answers[x.id]} onPick={(v) => pick(x.id, v)} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+
+              {/* ── ④ 마무리 ──────────────────────────────────────────────── */}
+              <section className="space-y-5 border-t-2 border-navy-100 pt-4">
+                <div className="rounded-2xl bg-teal-50 px-4 py-3.5">
+                  <p className="t-body break-keep font-extrabold text-teal-900">거의 다 됐습니다.</p>
+                  <p className="t-body mt-1 break-keep font-medium text-teal-800">
+                    정답은 없습니다. 지금 느끼시는 그대로 골라 주시면 다음 개선에 반영하겠습니다.
+                  </p>
+                </div>
+
+                {group === 'management' && (
+                  <PickList
+                    label="가장 체감되는 변화가 있다면 골라 주세요"
+                    attr="data-fb-benefit"
+                    options={MANAGEMENT_BENEFITS}
+                    picked={benefits}
+                    onChange={setBenefits}
+                  />
+                )}
+
+                <PickList
+                  label={group === 'management' ? '아직 불편한 부분이 있다면 골라 주세요' : '사용하면서 불편했던 부분이 있다면 골라 주세요'}
+                  attr="data-fb-pain"
+                  options={group === 'management' ? MANAGEMENT_PAINS : STAFF_PAINS}
+                  picked={pains}
+                  onChange={setPains}
+                />
+
+                <div>
+                  <label htmlFor="feedback-comment" className="t-label mb-2 block text-navy-600">
+                    따로 알려 주실 내용이 있으면 적어 주세요 (선택)
+                  </label>
+                  <textarea
+                    id="feedback-comment"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    rows={3}
+                    placeholder="없으면 작성하지 않고 바로 제출하셔도 됩니다."
+                    className="field-input w-full resize-none"
+                  />
+                </div>
+              </section>
+            </>
+          )}
+
+          {error && (
+            <p className="t-body break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-600">{error}</p>
+          )}
+        </div>
       )}
     </Modal>
   )
 
-  // ── 화면들 ───────────────────────────────────────────────────────────────
-
-  function GroupPick() {
-    return (
-      <div className="space-y-3">
-        <div>
-          <p className="t-card break-keep text-navy-900">어떤 관점에서 사용해 보셨나요?</p>
-          <p className="t-body mt-1.5 break-keep font-medium text-navy-500">
-            긴 글을 쓰실 필요 없습니다. 지금 느끼시는 대로 버튼만 눌러 주시면 됩니다.
-            1~2분이면 끝납니다.
-          </p>
-        </div>
-        {(['management', 'staff'] as RespondentGroup[]).map((g) => (
-          <button
-            key={g}
-            data-fb-group={g}
-            onClick={() => { setGroup(g); setStage('start') }}
-            className="card pressable w-full p-4 text-left transition sm:p-5"
-          >
-            <span className="t-card block break-keep text-navy-900">{GROUP_LABEL[g]}</span>
-            <span className="t-body mt-1.5 block break-keep font-medium text-navy-500">{GROUP_DESC[g]}</span>
-          </button>
-        ))}
-      </div>
-    )
-  }
-
-  function StartPick() {
-    return (
-      <div className="space-y-5">
-        <div>
-          <p className="t-card break-keep text-navy-900">이 시스템을 어느 정도 사용해 보셨나요?</p>
-          {/*  ⚠ 이 답이 없으면 뒤의 점수를 어떻게 읽어야 할지 알 수 없습니다.
-               사흘 써 보고 매긴 4점과 한 달 써 보고 매긴 4점은 다릅니다. */}
-          <div className="mt-2.5 space-y-2">
-            {USAGE_OPTIONS.map((o) => (
-              <Choice
-                key={o.value}
-                attr={{ 'data-fb-usage': o.value }}
-                on={usage === o.value}
-                onClick={() => setUsage(o.value)}
-              >
-                {o.label}
-              </Choice>
-            ))}
-          </div>
-        </div>
-
-        {group === 'staff' && (
-          <div>
-            <p className="t-card break-keep text-navy-900">주로 어떤 업무를 하시나요?</p>
-            <div className="mt-2.5 space-y-2">
-              {(['field', 'office', 'both'] as StaffWorkType[]).map((w) => (
-                <Choice
-                  key={w}
-                  attr={{ 'data-fb-work': w }}
-                  on={work === w}
-                  onClick={() => setWork(w)}
-                >
-                  {WORK_LABEL[w]}
-                </Choice>
-              ))}
-            </div>
-            {work === 'both' && (
-              <p className="t-muted mt-2 break-keep text-navy-500">
-                두 가지를 다 하시는 분께는 현장 쪽 질문을 보여 드립니다. 짧게 끝내시라고요.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  function QuestionStep() {
-    if (!cur) return null
-    return (
-      <div className="space-y-3">
-        <div>
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="t-card min-w-0 break-keep text-navy-900">{cur.title}</p>
-            <span data-fb-progress className="t-muted shrink-0 font-bold text-navy-500">
-              {step + 1} / {steps.length}
-            </span>
-          </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-navy-100">
-            <div
-              className="h-full rounded-full bg-teal-500 transition-[width] duration-300"
-              style={{ width: `${((step + 1) / steps.length) * 100}%` }}
-            />
-          </div>
-          <p className="t-muted mt-2 break-keep text-navy-500">
-            {answeredHere} / {cur.questions.length} 답하셨습니다. 잘 모르겠는 것은 「{NA_LABEL}」를 눌러 주세요.
-          </p>
-        </div>
-
-        {cur.questions.map((x) => (
-          <QuestionCard key={x.id} q={x} value={answers[x.id]} onPick={(v) => pick(x.id, v)} />
-        ))}
-      </div>
-    )
-  }
-
-  function WrapUp() {
-    return (
-      <div className="space-y-5">
-        <div className="rounded-2xl bg-teal-50 px-4 py-3.5">
-          <p className="t-body break-keep font-extrabold text-teal-900">거의 다 됐습니다.</p>
-          <p className="t-body mt-1 break-keep font-medium text-teal-800">
-            정답은 없습니다. 지금 느끼시는 그대로 골라 주시면 다음 개선에 반영하겠습니다.
-          </p>
-        </div>
-
-        {group === 'management' && (
-          <PickList
-            label="가장 체감되는 변화가 있다면 골라 주세요"
-            attr="data-fb-benefit"
-            options={MANAGEMENT_BENEFITS}
-            picked={benefits}
-            onChange={setBenefits}
-          />
-        )}
-
-        <PickList
-          label={group === 'management' ? '아직 불편한 부분이 있다면 골라 주세요' : '사용하면서 불편했던 부분이 있다면 골라 주세요'}
-          attr="data-fb-pain"
-          options={group === 'management' ? MANAGEMENT_PAINS : STAFF_PAINS}
-          picked={pains}
-          onChange={setPains}
-        />
-
-        <div>
-          <label htmlFor="feedback-comment" className="t-label mb-2 block text-navy-600">
-            따로 알려 주실 내용이 있으면 적어 주세요 (선택)
-          </label>
-          <textarea
-            id="feedback-comment"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-            placeholder="없으면 작성하지 않고 바로 제출하셔도 됩니다."
-            className="field-input w-full resize-none"
-          />
-        </div>
-      </div>
-    )
-  }
-
-  function Done() {
-    return (
-      <div className="py-2 text-center">
-        <CheckCircle2 size={44} className="mx-auto text-accent-500" />
-        <p className="t-card mt-4 break-keep text-navy-900">피드백이 등록되었습니다</p>
-        <p className="t-body mt-2 break-keep font-medium text-navy-500">
-          체크해 주신 내용은 다음 사용성 개선과 실제 업무효과 확인에 활용됩니다.
-        </p>
-      </div>
-    )
-  }
-
-  // ── 아래 단추 ────────────────────────────────────────────────────────────
-
+  /**
+   * 아래에 붙는 띠.
+   *
+   *  ⚠ 답한 개수를 늘 보여 드립니다. 한 화면에 스무 문항이 이어지면 「얼마나
+   *    남았지」가 안 보이는데, 그게 안 보이면 중간에 그만두게 됩니다.
+   */
   function Footer() {
-    if (mode !== 'live') {
-      return <button className="btn-primary flex-1" onClick={close}>닫기</button>
+    if (mode !== 'live' || sent) {
+      return (
+        <button data-fb-done className="btn-primary flex-1" onClick={close}>
+          {sent ? '확인' : '닫기'}
+        </button>
+      )
     }
-    if (stage === 'sent') {
-      return <button data-fb-done className="btn-primary flex-1" onClick={close}>확인</button>
-    }
-    if (stage === 'group') {
+    if (!group) {
       return <button className="btn-ghost flex-1" onClick={close}>나중에 하기</button>
     }
 
-    const back = () => {
-      setError(null)
-      if (stage === 'start') { setStage('group'); return }
-      if (stage === 'questions') {
-        if (step === 0) { setStage('start'); return }
-        setStep(step - 1); return
-      }
-      //  마무리 → 마지막 질문 단계
-      setStage('questions'); setStep(Math.max(0, steps.length - 1))
-    }
-
-    const next = () => {
-      setError(null)
-      if (stage === 'start') { setStage('questions'); setStep(0); return }
-      if (!lastStep) { setStep(step + 1); return }
-      setStage('wrapup')
-    }
-
-    //  시작 화면에서만 막습니다 — 사용 정도(와 직원의 업무)는 뒤의 답을
-    //  읽는 기준이라, 이것이 비면 답 전체를 어떻게 봐야 할지 알 수 없습니다.
-    const startReady = usage !== null && (group !== 'staff' || work !== null)
-
+    const total = shownQuestions.length
     return (
-      <>
-        <button data-fb-back className="btn-ghost flex-1" onClick={back} disabled={busy}>
-          <ChevronLeft size={17} strokeWidth={2.4} /> 이전
-        </button>
-        {stage === 'wrapup' ? (
+      <div className="w-full">
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <span data-fb-progress className="t-muted shrink-0 font-bold tabular-nums text-navy-600">
+            {done} / {total} 답변
+          </span>
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-navy-100">
+            <div
+              className="h-full rounded-full bg-teal-500 transition-[width] duration-300"
+              style={{ width: `${total > 0 ? (done / total) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+        {ready ? (
           <button
             data-fb-submit
-            className="btn-primary flex-[1.4] disabled:opacity-40"
+            className="btn-primary w-full disabled:opacity-40"
             disabled={busy}
             onClick={() => void submit()}
           >
@@ -352,16 +312,17 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
             피드백 제출하기
           </button>
         ) : (
+          //  ⚠ 잠긴 단추만 두면 「왜 안 눌리지」가 됩니다. 무엇이 남았는지
+          //    적고, 누르면 그 자리로 데려다 줍니다.
           <button
-            data-fb-next
-            className="btn-primary flex-[1.4] disabled:opacity-40"
-            disabled={stage === 'start' && !startReady}
-            onClick={next}
+            data-fb-need-usage
+            className="btn-ghost w-full"
+            onClick={() => usageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
           >
-            다음 <ChevronRight size={17} strokeWidth={2.4} />
+            {usage === null ? '먼저 「어느 정도 사용해 보셨는지」를 골라 주세요' : '먼저 「어떤 업무를 하시는지」를 골라 주세요'}
           </button>
         )}
-      </>
+      </div>
     )
   }
 }
@@ -369,6 +330,10 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
 const omit = (o: Record<string, AnswerValue>, k: string) => {
   const { [k]: _drop, ...rest } = o
   return rest
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <p className="t-card break-keep text-navy-900">{children}</p>
 }
 
 /** 한 줄짜리 고르기 단추 (사용 정도·업무 종류) */
@@ -466,7 +431,9 @@ function QuestionCard({
           value === 'na' ? 'border-navy-700 bg-navy-700 text-white' : 'border-navy-100 bg-navy-50 text-navy-500 hover:border-navy-200'
         }`}
       >
-        <span className="t-muted break-keep font-bold">{NA_LABEL}</span>
+        {/*  ⚠ t-muted 에 색(navy-500)이 들어 있어 부모의 text-white 를 덮습니다.
+             고른 상태에서 어두운 바탕에 회색 글자가 되어 안 읽혔습니다. */}
+        <span className={`t-muted break-keep font-bold ${value === 'na' ? '!text-white' : ''}`}>{NA_LABEL}</span>
       </button>
     </div>
   )
@@ -511,7 +478,7 @@ function PickList({
                 on ? 'border-teal-500 bg-teal-50 text-teal-900' : 'border-navy-100 bg-white text-navy-600 hover:border-navy-200'
               }`}
             >
-              <span className="t-muted break-keep font-bold">{o.label}</span>
+              <span className={`t-muted break-keep font-bold ${on ? '!text-teal-900' : ''}`}>{o.label}</span>
             </button>
           )
         })}

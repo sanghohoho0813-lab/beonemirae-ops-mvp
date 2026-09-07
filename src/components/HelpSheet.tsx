@@ -127,7 +127,7 @@ export function HelpSheet({
             <span className="min-w-0 flex-1">
               <span className="t-card block break-keep text-navy-900">사용 후기 남기기</span>
               <span className="t-muted mt-1 block break-keep">
-                쓰면서 느끼신 점을 눌러서 알려 주세요. 1~2분이면 끝납니다.
+                (개발자에게 요청) · 눌러서 1~2분이면 끝납니다
               </span>
             </span>
             <ChevronRight size={20} className="mt-2 shrink-0 text-navy-400" />

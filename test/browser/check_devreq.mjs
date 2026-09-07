@@ -3,6 +3,11 @@ import { chromium, EXEC } from './_pw.mjs'
 // ─────────────────────────────────────────────────────────────────────────────
 //  사용자 피드백 v2 — 눌러서 끝내는 설문 (0100)
 //
+//  ⚠ 0100 — 대표님 지시로 「다음 → 다음」 단계를 걷어내고 **한 화면 연속
+//    스크롤**로 바꿨습니다. 묶음 제목은 그대로 두되, 답하다가 화면이 갈리지
+//    않습니다. 그래서 이 검사도 「단계 넘기기」가 아니라 「한 화면에 다 있고,
+//    스크롤하며 눌러 내려갈 수 있는가」를 봅니다.
+//
 //  지키는 것:
 //   ① 관점(운영·관리 / 현장·실무)이 갈리고, 각자 다른 것을 묻는다
 //   ② 실제로 얼마나 써 봤는지를 **함께** 받는다 — 없으면 다음으로 못 간다
@@ -101,15 +106,30 @@ async function openSheet(p, mobile) {
   await p.locator('[data-fb-group="management"]').waitFor({ state: 'visible', timeout: 8000 })
 }
 
-/** 지금 단계의 문항을 전부 고릅니다 — value 는 1~5 또는 'na' */
-async function answerAll(p, value) {
-  const ids = await p.locator('[data-fb-question]').evaluateAll((els) =>
+/** 화면에 있는 문항 번호 전부 */
+async function questionIds(p) {
+  return await p.locator('[data-fb-question]').evaluateAll((els) =>
     els.map((e) => e.getAttribute('data-fb-question')))
-  for (const id of ids) await p.locator(`[data-fb-choice="${id}:${value}"]`).click()
+}
+
+/**
+ * 스크롤하며 눌러 내려갑니다 — 실제 사용과 같은 순서로.
+ *
+ *  ⚠ 각 문항으로 스크롤한 뒤 누릅니다. 「다음」을 찾아 오르내리지 않고
+ *    한 방향으로만 내려가는지가 이번 UI 의 핵심입니다.
+ */
+async function scrollAndAnswer(p, valueOf) {
+  const ids = await questionIds(p)
+  for (const id of ids) {
+    const el = p.locator(`[data-fb-question="${id}"]`)
+    await el.scrollIntoViewIfNeeded()
+    await p.locator(`[data-fb-choice="${id}:${valueOf(id)}"]`).click()
+  }
   return ids
 }
 
-// ── 1. 운영·관리 관점 — 4단계, 자유 의견 비우고 제출 ────────────────────────
+
+// ── 1. 운영·관리 관점 — 한 화면에서 스크롤하며 20문항 ───────────────────────
 {
   const { ctx, p } = await open('admin', '00000000-0000-0000-0000-0000000000ad', '송대표')
   await openSheet(p, false)
@@ -120,95 +140,84 @@ async function answerAll(p, value) {
   ok(/1~2분/.test(first), '얼마나 걸리는지 알려 줌')
   ok(!/심사|보증|정책자금|평가기관|설문조사서/.test(first), '심사·평가 이야기가 없음', first.slice(0, 80))
   ok((await p.locator('[data-fb-group]').count()) === 2, '관점이 두 가지')
+  ok((await p.locator('[data-fb-question]').count()) === 0, '관점을 고르기 전에는 문항이 안 열림')
 
   await p.locator('[data-fb-group="management"]').click()
-  await p.waitForTimeout(400)
+  await p.waitForTimeout(500)
 
-  //  ② 사용 정도 — 고르기 전에는 다음으로 못 갑니다
-  ok(await p.locator('[data-fb-next]').isDisabled(), '사용 정도를 고르기 전에는 「다음」이 잠김')
+  //  ② 고르는 순간 **한 화면에 전부** 열립니다 — 「다음」 단추가 없어야 합니다
+  ok((await p.locator('[data-fb-next]').count()) === 0, '「다음」 단추가 없음 (단계 넘기기를 걷어냄)')
+  ok((await p.locator('[data-fb-back]').count()) === 0, '「이전」 단추도 없음')
+  ok((await p.locator('[data-fb-question]').count()) === 20, '20문항이 한 화면에 다 있음',
+    `${await p.locator('[data-fb-question]').count()}개`)
+  ok((await p.locator('[data-fb-section]').count()) === 4, '묶음 제목 네 개로 나뉘어 있음',
+    `${await p.locator('[data-fb-section]').count()}개`)
+  ok((await p.locator('[data-fb-benefit]').count()) > 0, '마무리(체감 변화)까지 같은 화면에 있음')
+  ok((await p.locator('#feedback-comment').count()) === 1, '자유 의견 칸도 같은 화면에 있음')
+
+  //  ③ 사용 정도를 고르기 전에는 제출이 없고, 무엇이 남았는지 알려 줍니다
+  ok((await p.locator('[data-fb-submit]').count()) === 0, '사용 정도를 고르기 전에는 제출 단추가 없음')
+  ok(/어느 정도 사용해 보셨는지/.test(flat(await p.textContent('[data-fb-need-usage]'))),
+    '무엇이 남았는지 아래 띠에 알려 줌')
   ok((await p.locator('[data-fb-usage]').count()) === 5, '사용 정도가 다섯 가지')
-  ok(/아직 충분히 못 써봤어요/.test(flat(await p.textContent('[role="dialog"]'))),
+  ok(/아직 충분히 못 써봤어요/.test(flat(await p.textContent('[data-fb-usage-block]'))),
     '「아직 충분히 못 써봤어요」를 고를 수 있음')
   ok((await p.locator('[data-fb-work]').count()) === 0, '관리자에게는 업무 종류를 묻지 않음')
   await p.locator('[data-fb-usage="d3_7"]').click()
-  ok(!(await p.locator('[data-fb-next]').isDisabled()), '고르면 「다음」이 열림')
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
+  await p.waitForTimeout(300)
+  ok((await p.locator('[data-fb-submit]').count()) === 1, '고르면 제출 단추가 나옴')
 
-  //  ③ 질문 단계 — 4단계, 각 5문항
-  const steps = []
-  const firstIds = []
-  for (let i = 0; i < 6; i += 1) {
-    const prog = flat(await p.textContent('[data-fb-progress]'))
-    steps.push(prog)
-    const n = await p.locator('[data-fb-question]').count()
-    ok(n >= 4 && n <= 6, `${prog} — 한 화면에 4~6문항`, `${n}개`)
-    //  ⚠ 안쪽 분류가 화면에 새어 나오면 답이 달라집니다
-    const txt = flat(await p.textContent('[role="dialog"]'))
-    ok(!/USABILITY|EFFICIENCY|ADOPTION|DECISION|ERROR_REDUCTION/.test(txt),
-      `${prog} — 안쪽 분류가 화면에 안 보임`)
-    ok((await p.locator('[data-fb-choice$=":na"]').count()) === n,
-      `${prog} — 문항마다 「아직 판단하기 어려워요」가 있음`)
+  //  ④ 안쪽 분류가 화면에 새어 나오면 답이 달라집니다
+  const all = flat(await p.textContent('[role="dialog"]'))
+  ok(!/USABILITY|EFFICIENCY|ADOPTION|DECISION|ERROR_REDUCTION/.test(all), '안쪽 분류가 화면에 안 보임')
+  ok((await p.locator('[data-fb-choice$=":na"]').count()) === 20,
+    '문항마다 「아직 판단하기 어려워요」가 있음')
+  ok(flat(await p.textContent('[data-fb-progress]')) === '0 / 20 답변', '답한 개수가 아래에 보임',
+    flat(await p.textContent('[data-fb-progress]')))
 
-    if (i === 0) {
-      firstIds.push(...await answerAll(p, 4))
-      await p.screenshot({ path: `${SHOT}/fb-step1.png`, fullPage: true })
-    } else if (i === 1) {
-      await answerAll(p, 'na')
-    } else {
-      await answerAll(p, 5)
-    }
-    if (prog === '4 / 4') break
-    await p.locator('[data-fb-next]').click()
-    await p.waitForTimeout(450)
-  }
-  ok(steps.length === 4 && steps[0] === '1 / 4' && steps[3] === '4 / 4',
-    '운영·관리는 네 단계', steps.join(' → '))
+  //  ⑤ 스크롤하며 눌러 내려갑니다 — 한 방향으로만
+  const scrolls = []
+  await p.evaluate(() => { window.__y = []; })
+  const ids = await scrollAndAnswer(p, (id) => (id.startsWith('MG_EFF') ? 'na' : id === 'MG_STATUS_01' ? 4 : 5))
+  ok(ids.length === 20, '스무 문항을 순서대로 눌러 내려감', `${ids.length}개`)
+  ok(flat(await p.textContent('[data-fb-progress]')) === '20 / 20 답변', '누른 만큼 개수가 올라감',
+    flat(await p.textContent('[data-fb-progress]')))
+  scrolls.push(await p.evaluate(() => {
+    const box = document.querySelector('[role="dialog"] [data-modal-footer]')?.previousElementSibling
+    return box ? box.scrollTop : -1
+  }))
+  ok(scrolls[0] > 0, '실제로 아래로 스크롤되었음', `${scrolls[0]}px`)
 
-  //  ④ 이전으로 갔다 와도 답이 남아 있는가
-  await p.locator('[data-fb-back]').click()
-  await p.waitForTimeout(450)
-  await p.locator('[data-fb-back]').click()
-  await p.waitForTimeout(450)
-  await p.locator('[data-fb-back]').click()
-  await p.waitForTimeout(450)
-  ok(flat(await p.textContent('[data-fb-progress]')) === '1 / 4', '이전을 세 번 누르면 첫 단계')
-  const kept = await p.locator(`[data-fb-choice="${firstIds[0]}:4"]`).getAttribute('aria-pressed')
-  ok(kept === 'true', '이전으로 와도 고른 답이 남아 있음', String(kept))
-  ok(/고르신 답/.test(flat(await p.textContent(`[data-fb-question="${firstIds[0]}"]`))),
-    '고른 답의 뜻이 글로 보임 (숫자만 두지 않음)')
+  //  ⑥ 고른 답의 뜻이 글로 보이는가 (숫자만 두지 않음)
+  ok(/고르신 답/.test(flat(await p.textContent('[data-fb-question="MG_STATUS_01"]'))),
+    '고른 답의 뜻이 글로 보임')
+  //  같은 것을 다시 누르면 지워집니다 — 되돌릴 길
+  await p.locator('[data-fb-question="MG_STATUS_01"]').scrollIntoViewIfNeeded()
+  await p.locator('[data-fb-choice="MG_STATUS_01:4"]').click()
+  ok(flat(await p.textContent('[data-fb-progress]')) === '19 / 20 답변', '같은 것을 다시 누르면 답이 지워짐')
+  await p.locator('[data-fb-choice="MG_STATUS_01:4"]').click()
+  await p.screenshot({ path: `${SHOT}/fb-scroll.png`, fullPage: true })
 
-  //  다시 끝까지
-  for (let i = 0; i < 3; i += 1) { await p.locator('[data-fb-next]').click(); await p.waitForTimeout(400) }
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
-
-  //  ⑤ 마무리 — 체감 변화 · 불편한 곳 · 자유 의견(선택)
-  const wrap = flat(await p.textContent('[role="dialog"]'))
-  ok(/거의 다 됐습니다/.test(wrap) && /정답은 없습니다/.test(wrap), '제출 직전 안내가 나옴')
-  ok((await p.locator('[data-fb-benefit]').count()) > 0, '체감 변화를 고를 수 있음 (운영·관리)')
-  ok((await p.locator('[data-fb-pain]').count()) > 0, '불편한 곳을 고를 수 있음')
-  ok(!(await p.locator('[data-fb-submit]').isDisabled()), '아무것도 더 고르지 않아도 제출할 수 있음')
-
+  //  ⑦ 마무리 — 「없음」류는 나머지를 풀어 줍니다
+  await p.locator('[data-fb-benefit="전화·카톡 확인 감소"]').scrollIntoViewIfNeeded()
   await p.locator('[data-fb-benefit="전화·카톡 확인 감소"]').click()
   await p.locator('[data-fb-benefit="일정관리 편해짐"]').click()
   await p.locator('[data-fb-pain="속도가 느림"]').click()
-  //  ⚠ 「없음」을 고르면 나머지가 풀립니다 — 둘 다 켜져 있으면 뜻이 어긋납니다
   await p.locator('[data-fb-benefit="아직 크게 체감되는 변화 없음"]').click()
   ok((await p.locator('[data-fb-benefit="전화·카톡 확인 감소"]').getAttribute('aria-pressed')) === 'false',
     '「변화 없음」을 고르면 앞서 고른 것이 풀림')
   await p.locator('[data-fb-benefit="전화·카톡 확인 감소"]').click()
   ok((await p.locator('[data-fb-benefit="아직 크게 체감되는 변화 없음"]').getAttribute('aria-pressed')) === 'false',
     '다른 것을 고르면 「변화 없음」이 풀림')
-  await p.screenshot({ path: `${SHOT}/fb-wrapup.png`, fullPage: true })
 
-  //  ⑥ 자유 의견은 비운 채로 제출
+  //  ⑧ 자유 의견은 비운 채로 제출
   ok(flat(await p.inputValue('#feedback-comment')) === '', '자유 의견은 비어 있음')
+  ok(!(await p.locator('[data-fb-submit]').isDisabled()), '더 고르지 않아도 제출할 수 있음')
   await p.locator('[data-fb-submit]').click()
   await p.locator('[data-fb-done]').waitFor({ state: 'visible', timeout: 8000 })
   ok(/피드백이 등록되었습니다/.test(flat(await p.textContent('[role="dialog"]'))), '제출하면 완료 화면')
 
-  //  ⑦ 저장된 줄 — 번호가 들어 있고, 사람이 읽을 말도 함께 있는가
+  //  ⑨ 저장된 줄 — 번호가 들어 있고, 사람이 읽을 말도 함께 있는가
   const sent = server.posts[server.posts.length - 1]
   const topics = sent?.topics ?? []
   ok(topics.every((t) => t.startsWith('v2:')), 'v2 형식으로 저장됨', topics[0])
@@ -232,37 +241,30 @@ async function answerAll(p, value) {
   ok((await p.locator('[data-dev-request-more]').count()) === 0, '폰 첫 화면에는 더보기 안 입구가 아직 안 열려 있음')
   await openSheet(p, true)
   await p.locator('[data-fb-group="staff"]').click()
-  await p.waitForTimeout(400)
+  await p.waitForTimeout(500)
 
   //  직원에게는 업무 종류를 함께 묻습니다
   ok((await p.locator('[data-fb-work]').count()) === 3, '직원에게는 업무 종류를 묻는다')
   await p.locator('[data-fb-usage="d1_2"]').click()
-  ok(await p.locator('[data-fb-next]').isDisabled(), '업무 종류를 고르기 전에는 다음이 잠김')
+  ok((await p.locator('[data-fb-submit]').count()) === 0, '업무 종류를 고르기 전에는 제출이 없음')
+  ok(/어떤 업무를 하시는지/.test(flat(await p.textContent('[data-fb-need-usage]'))),
+    '무엇이 남았는지 알려 줌')
   await p.locator('[data-fb-work="field"]').click()
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
+  await p.waitForTimeout(400)
 
-  const seen = []
-  for (let i = 0; i < 4; i += 1) {
-    const prog = flat(await p.textContent('[data-fb-progress]'))
-    seen.push(prog)
-    seen.push(...await answerAll(p, 3))
-    if (prog === '3 / 3') break
-    await p.locator('[data-fb-next]').click()
-    await p.waitForTimeout(450)
-  }
-  const ids = seen.filter((x) => /^ST_/.test(x))
-  ok(seen.filter((x) => / \/ /.test(x)).length === 3, '현장·실무는 세 단계 (더 짧게)',
-    seen.filter((x) => / \/ /.test(x)).join(' → '))
-  ok(ids.length === 15, '모두 15문항', `${ids.length}개`)
+  const ids = await questionIds(p)
+  ok(ids.length === 15, '직원은 15문항 (관리자보다 짧게)', `${ids.length}개`)
+  ok((await p.locator('[data-fb-section]').count()) === 3, '묶음 제목 세 개')
   ok(ids.some((x) => x.startsWith('ST_WORK_F')), '현장 문항이 나옴')
   ok(!ids.some((x) => x.startsWith('ST_WORK_O')), '사무실 문항은 섞이지 않음')
-  await p.screenshot({ path: `${SHOT}/fb-field.png`, fullPage: true })
-
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
   ok((await p.locator('[data-fb-benefit]').count()) === 0, '직원에게는 체감 변화 목록을 묻지 않음 (더 짧게)')
   ok((await p.locator('[data-fb-pain]').count()) > 0, '직원도 불편한 곳은 고를 수 있음')
+
+  await scrollAndAnswer(p, () => 3)
+  ok(flat(await p.textContent('[data-fb-progress]')) === '15 / 15 답변', '폰에서도 스크롤하며 다 누름')
+  await p.screenshot({ path: `${SHOT}/fb-field.png`, fullPage: true })
+
+  await p.locator('[data-fb-pain="수거 입력"]').scrollIntoViewIfNeeded()
   await p.locator('[data-fb-pain="수거 입력"]').click()
   await p.fill('#feedback-comment', '지하 주차장에서 저장이 안 될 때가 있습니다')
 
@@ -280,7 +282,7 @@ async function answerAll(p, value) {
   await ctx.close()
 }
 
-// ── 3. 사무실 담당자 — 사무실 문항 · 「둘 다」는 현장 문항 ───────────────────
+// ── 3. 사무실 — 문항이 바뀐다 · 「둘 다」는 현장 문항 · 서버 실패 ────────────
 {
   const { ctx, p } = await open('office', '00000000-0000-0000-0000-0000000000o1', '홍이사')
   await openSheet(p, false)
@@ -288,36 +290,33 @@ async function answerAll(p, value) {
   await p.waitForTimeout(400)
   await p.locator('[data-fb-usage="w1plus"]').click()
   await p.locator('[data-fb-work="office"]').click()
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
-  const officeIds = await p.locator('[data-fb-question]').evaluateAll((els) =>
-    els.map((e) => e.getAttribute('data-fb-question')))
+  await p.waitForTimeout(400)
+  const officeIds = (await questionIds(p)).filter((x) => x.startsWith('ST_WORK'))
   ok(officeIds.every((x) => x.startsWith('ST_WORK_O')), '사무실을 고르면 사무실 문항', officeIds.join(','))
   ok(/자재·재고/.test(flat(await p.textContent('[role="dialog"]'))), '사무실용 문구가 나옴')
 
-  //  「둘 다」 — 스무 문항이 되지 않도록 현장 문항으로 갑니다(짧게). 저장에는 both 가 남습니다.
-  await p.locator('[data-fb-back]').click()
-  await p.waitForTimeout(450)
-  await p.locator('[data-fb-back]').click()
-  await p.waitForTimeout(450)
+  //  ⚠ 관점·업무를 바꾸면 화면의 문항이 그 자리에서 바뀝니다 (화면 이동 없이)
   await p.locator('[data-fb-work="both"]').click()
+  await p.waitForTimeout(400)
   ok(/현장 쪽 질문을 보여 드립니다/.test(flat(await p.textContent('[role="dialog"]'))),
     '「둘 다」를 고르면 어느 쪽 질문이 나오는지 알려 줌')
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(450)
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(450)
-  const bothIds = await p.locator('[data-fb-question]').evaluateAll((els) =>
-    els.map((e) => e.getAttribute('data-fb-question')))
+  const bothIds = (await questionIds(p)).filter((x) => x.startsWith('ST_WORK'))
   ok(bothIds.every((x) => x.startsWith('ST_WORK_F')), '「둘 다」는 현장 문항 (스무 문항이 되지 않게)')
 
+  //  ⚠ 관점을 바꿔도 답이 섞이지 않아야 합니다 — 보이는 문항의 답만 셉니다
+  await p.locator('[data-fb-question="ST_USE_01"]').scrollIntoViewIfNeeded()
+  await p.locator('[data-fb-choice="ST_USE_01:5"]').click()
+  ok(flat(await p.textContent('[data-fb-progress]')) === '1 / 15 답변', '직원 관점에서 1문항 답함')
+  await p.locator('[data-fb-group="management"]').scrollIntoViewIfNeeded()
+  await p.locator('[data-fb-group="management"]').click()
+  await p.waitForTimeout(400)
+  ok(flat(await p.textContent('[data-fb-progress]')) === '0 / 20 답변',
+    '관점을 바꾸면 그 관점의 답만 셈 (섞이지 않음)', flat(await p.textContent('[data-fb-progress]')))
+  await p.locator('[data-fb-group="staff"]').click()
+  await p.waitForTimeout(400)
+  ok(flat(await p.textContent('[data-fb-progress]')) === '1 / 15 답변', '돌아오면 아까 고른 답이 그대로 있음')
+
   //  ⚠ 서버가 실패하면 알려 주고, 다시 낼 수 있어야 합니다
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(450)
-  await p.locator('[data-fb-next]').click()
-  await p.waitForTimeout(500)
   server.failNext = true
   await p.locator('[data-fb-submit]').click()
   await p.waitForTimeout(1800)
@@ -330,6 +329,7 @@ async function answerAll(p, value) {
   ok(server.posts.length === before + 1, '실패 뒤 다시 누르면 보내진다')
   const sent = server.posts[server.posts.length - 1]
   ok((sent?.topics ?? []).some((t) => /^v2:_work=both/.test(t)), '저장에는 「둘 다」가 그대로 남음')
+  ok(!(sent?.topics ?? []).some((t) => /^v2:MG_/.test(t)), '고르지 않은 관점의 답은 보내지 않음')
   await ctx.close()
 }
 
@@ -341,7 +341,6 @@ for (const w of [360, 390, 430]) {
   await p.waitForTimeout(400)
   await p.locator('[data-fb-usage="d3_7"]').click()
   await p.locator('[data-fb-work="field"]').click()
-  await p.locator('[data-fb-next]').click()
   await p.waitForTimeout(600)
 
   const m = await p.evaluate(() => {
@@ -354,9 +353,9 @@ for (const w of [360, 390, 430]) {
       .map((el) => `${Math.round(el.getBoundingClientRect().height)}px "${(el.textContent ?? '').trim().slice(0, 12) || el.getAttribute('aria-label') || el.tagName}"`)
     //  나란히 놓인 것끼리 8px 이상 떨어져 있는가 (손가락이 굵어도 옆 것을 안 누르게)
     //
-    //   ⚠ 아래에 **붙어 있는 띠**([이전][다음])는 빼고 셉니다. 그 띠는 내용
-    //     위에 얹혀 있는 것이지 내용과 나란히 놓인 것이 아닙니다. 스크롤을
-    //     조금만 움직이면 어떤 단추든 그 띠 바로 위에 올 수 있어서, 같이 세면
+    //   ⚠ 아래에 **붙어 있는 띠**(제출)는 빼고 셉니다. 그 띠는 내용 위에 얹혀
+    //     있는 것이지 내용과 나란히 놓인 것이 아닙니다. 스크롤을 조금만
+    //     움직이면 어떤 단추든 그 띠 바로 위에 올 수 있어서, 같이 세면
     //     「7.7px 붙었다」가 스크롤 위치에 따라 생겼다 없어졌다 합니다.
     //     (a11y_measure 가 떠 있는 ＋ 단추를 빼는 것과 같은 이유입니다.)
     const inFlow = taps.filter((el) => !el.closest('[data-modal-footer]'))
@@ -383,7 +382,7 @@ for (const w of [360, 390, 430]) {
     return {
       push: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       small, tight, tiny,
-      //  아래 단추가 마지막 문항을 가리지 않는가 — 자리를 차지한 채 붙어 있어야 합니다
+      //  아래 띠가 마지막 문항을 가리지 않는가 — 자리를 차지한 채 붙어 있어야 합니다
       footerOverlaps: (() => {
         const f = dlg.querySelector('[data-modal-footer]')
         const last = [...dlg.querySelectorAll('[data-fb-question]')].pop()
@@ -397,7 +396,54 @@ for (const w of [360, 390, 430]) {
   ok(m.small.length === 0, `${w}px — 44px 미만 누를 것 없음`, m.small.slice(0, 3).join(' | '))
   ok(m.tight === 0, `${w}px — 누를 것끼리 8px 이상 떨어져 있음`, `붙은 쌍 ${m.tight}개`)
   ok(m.tiny.length === 0, `${w}px — 16px 미만 글자 없음`, m.tiny.slice(0, 3).join(' | '))
-  ok(!m.footerOverlaps, `${w}px — 아래 단추가 마지막 문항을 가리지 않음`)
+
+  //  ⚠ 고른 것과 안 고른 것 **양쪽 다** 읽히는가. 처음에 「아직 판단하기
+  //    어려워요」를 고르면 어두운 바탕에 회색 글자가 되어 안 읽혔습니다 —
+  //    글자 크기만 재고 색을 안 재서 못 잡았습니다.
+  await p.locator('[data-fb-choice$=":na"]').first().click()
+  await p.locator('[data-fb-pain]').first().scrollIntoViewIfNeeded()
+  await p.locator('[data-fb-pain]').first().click()
+  await p.waitForTimeout(250)
+  const dim = await p.evaluate(() => {
+    const srgb = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }
+    const lum = ([r, g, b]) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
+    const parse = (c) => { const m = c.match(/rgba?\((\d+), ?(\d+), ?(\d+)(?:, ?([\d.]+))?/)
+      return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : null }
+    const bgOf = (el) => { let n = el
+      while (n && n !== document.documentElement) { const q = parse(getComputedStyle(n).backgroundColor)
+        if (q && q[3] > 0.55) return q.slice(0, 3); n = n.parentElement }
+      return [255, 255, 255] }
+    const ratio = (f, g) => { const a = lum(f) + 0.05, c = lum(g) + 0.05; return a > c ? a / c : c / a }
+    const bad = []
+    for (const el of document.querySelectorAll('[role="dialog"] *')) {
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && (n.textContent ?? '').trim())) continue
+      const r = el.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) continue
+      const st = getComputedStyle(el)
+      const fg = parse(st.color); if (!fg) continue
+      const px = parseFloat(st.fontSize), bold = Number(st.fontWeight) >= 700
+      const need = (px >= 24 || (px >= 18.66 && bold)) ? 3 : 4.5
+      const v = ratio(fg.slice(0, 3), bgOf(el))
+      if (v < need) bad.push(`${v.toFixed(1)}:1 "${(el.textContent ?? '').trim().slice(0, 14)}"`)
+    }
+    return bad
+  })
+  ok(dim.length === 0, `${w}px — 글자가 다 읽힘 (고른 것 포함)`, dim.slice(0, 3).join(' | '))
+  ok(!m.footerOverlaps, `${w}px — 아래 띠가 마지막 문항을 가리지 않음`)
+
+  //  ⚠ 스크롤 한 방향으로 끝까지 갈 수 있는가 — 이번 UI 의 핵심
+  const reach = await p.evaluate(async () => {
+    const dlg = document.querySelector('[role="dialog"]')
+    const box = dlg.querySelector('[data-modal-footer]')?.previousElementSibling
+    if (!box) return null
+    box.scrollTo(0, box.scrollHeight)
+    await new Promise((r) => setTimeout(r, 250))
+    const cmt = dlg.querySelector('#feedback-comment')?.getBoundingClientRect()
+    const f = dlg.querySelector('[data-modal-footer]')?.getBoundingClientRect()
+    return { atEnd: box.scrollTop + box.clientHeight >= box.scrollHeight - 2, commentVisible: cmt && f ? cmt.bottom <= f.top + 1 : false }
+  })
+  ok(reach?.atEnd === true, `${w}px — 아래로 계속 스크롤하면 끝까지 감`)
+  ok(reach?.commentVisible === true, `${w}px — 맨 아래 자유 의견 칸이 띠에 안 가림`)
   if (w === 390) await p.screenshot({ path: `${SHOT}/fb-phone.png`, fullPage: true })
   await ctx.close()
 }
@@ -454,7 +500,7 @@ for (const w of [360, 390, 430]) {
   await ctx.close()
 }
 
-// ── 6. 사무실 담당자는 남의 피드백을 못 봅니다 (기존 권한 그대로) ───────────
+// ── 6. 들어가는 문 · 권한 (기존 그대로) ─────────────────────────────────────
 {
   const { ctx, p } = await open('office', '00000000-0000-0000-0000-0000000000o1', '홍이사', { path: '/dev-requests' })
   ok(/접근 권한이 없는 화면입니다/.test(flat(await p.textContent('body'))),
@@ -462,9 +508,24 @@ for (const w of [360, 390, 430]) {
   await p.goto(`${BASE}/today`, { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(2000)
   const nav = flat(await p.textContent('aside'))
+  const top = flat(await p.textContent('main'))
   ok(!/사용 후기 남기기/.test(nav), 'PC 왼쪽 목차에는 입구를 두지 않음')
   ok((await p.locator('main [data-dev-request-open]').count()) === 1, 'PC 오른쪽 위에 입구가 하나')
+  //  ⚠ 대표님 지시 — 이름 옆(폰은 아래)에 무엇을 하는 곳인지 괄호로 답니다
+  ok(/사용 후기 남기기 \(개발자에게 요청\)/.test(top), 'PC 입구에 「(개발자에게 요청)」이 붙어 있음',
+    top.slice(0, 80))
   ok(!/사용자 피드백/.test(nav), '피드백 화면 메뉴는 사무실 담당자에게 안 보임')
+  await ctx.close()
+}
+
+// ── 7. 폰 더보기·도움말에도 「(개발자에게 요청)」이 아래 줄에 ────────────────
+{
+  const { ctx, p } = await open('field', '00000000-0000-0000-0000-0000000000f1', '김기사', { w: 390 })
+  await p.getByRole('button', { name: '더보기' }).first().click()
+  await p.waitForTimeout(800)
+  const more = flat(await p.textContent('body'))
+  ok(/사용 후기 남기기 \(개발자에게 요청\)/.test(more),
+    '폰 더보기 — 제목 아래에 「(개발자에게 요청)」', more.slice(more.indexOf('사용 후기') - 10, more.indexOf('사용 후기') + 40))
   await ctx.close()
 }
 
