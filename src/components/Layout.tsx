@@ -94,7 +94,7 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
       to={item.to}
       end={item.to === '/'}
       className={({ isActive }) =>
-        `t-nav flex items-center gap-3 rounded-2xl px-3 transition ${
+        `t-nav relative flex items-center gap-3 rounded-2xl px-3 transition ${
           muted ? 'min-h-[52px] font-semibold' : 'min-h-[64px]'
         } ${
           isActive
@@ -116,6 +116,20 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
         }`
       }
     >
+      {({ isActive }) => (
+        <>
+      {/*  0103 — 지금 보는 메뉴 왼쪽의 짧은 청록 막대. 다른 메뉴를 누르면
+           **그 줄로 미끄러져** 갑니다(layoutId). 배경(bg-white/14)은 줄 자체에
+           두어 글자 대비는 그대로입니다. */}
+      {isActive && (
+        <motion.span
+          layoutId="sidebar-accent"
+          data-sidebar-accent
+          aria-hidden="true"
+          className="absolute bottom-3 left-0 top-3 w-1 rounded-full bg-teal-400"
+          transition={{ type: 'spring', stiffness: 520, damping: 42 }}
+        />
+      )}
       {/*  아이콘 타일은 **메뉴별 색(TONE)** 을 그대로 씁니다.
            ⚠ 0083 에서 이것을 테마 강조색 하나로 통일해 봤는데, 대표님이
              처음 색이 낫다고 하셔서 되돌렸습니다. 「덧칠된 느낌」의 원인은
@@ -145,6 +159,8 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
           </span>
         )}
       </span>
+        </>
+      )}
     </NavLink>
   )
 }

@@ -1,7 +1,8 @@
 import { AnimatePresence, motion, useDragControls } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useEffect, type ReactNode, useRef } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useHistoryDismiss } from '../lib/useHistoryDismiss'
+import { useEscapeClose } from '../lib/useEscapeClose'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 바텀시트 — 모바일에서 아래에서 부드럽게 올라오는 시트
@@ -19,22 +20,15 @@ interface BottomSheetProps {
 
 export function BottomSheet({ open, title, onClose, children }: BottomSheetProps) {
   const dragControls = useDragControls()
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
 
   // 뒤로 가기와 연동 (열릴 때 history push, 뒤로 가기 시 닫기)
   useHistoryDismiss(open, onClose)
 
   // ESC 로도 닫습니다. 닫는 방법이 ✕·배경 탭·스와이프뿐이면
   // 시트가 열린 줄 모르고 다른 곳을 누르다 막히는 일이 생깁니다.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  //  ⚠ 0103 — 공용 쌓기(useEscapeClose)로 옮겼습니다. 이 시트 위에 창이
+  //    떠 있을 때 Esc 가 둘 다 닫던 것을 막습니다 — 맨 위 것만 닫힙니다.
+  useEscapeClose(open, onClose)
 
   // 열려 있을 때 배경 스크롤 잠금
   useEffect(() => {

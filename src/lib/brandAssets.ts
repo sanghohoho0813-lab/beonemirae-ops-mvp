@@ -16,8 +16,8 @@
 const B = '/brand'
 
 export const BRAND_IMG = {
-  //  병원 Customer Platform (12장 중 11장 사용 — mobile_card_vertical 은
-  //  세로형 카드 자리가 실제로 없어 배치하지 않았습니다)
+  //  병원 Customer Platform 12장 — 0103 부터 12장 전부 자리가 있습니다
+  //  (mobile_card_vertical 은 로그인 화면 옆 세로 패널로).
   heroMain: `${B}/hero_main.jpg`,               // 병원 홈 머리 배경 (수거차 + 병원)
   heroSecondary: `${B}/hero_secondary.jpg`,     // 문의 창 머리 (직원 2명 + 태블릿)
   servicePickup: `${B}/service_01_pickup_request.jpg`,   // 수거 요청 창 머리
@@ -41,8 +41,10 @@ export const BRAND_IMG = {
   whyCurrent: `${B}/why_ax_01_current.jpg`,     // 기획의도 — 지금 업무(전화·수기·엑셀)
   whyImproved: `${B}/why_ax_02_improved.jpg`,   // 기획의도 — 한 번 입력으로 이어진 뒤
   whyGrowth: `${B}/why_ax_03_growth.jpg`,       // 기획의도 — 데이터가 자산이 된 다음
-  //  mobile_card_vertical.jpg 은 /brand 에 있으나 아직 자리가 없습니다 —
-  //  세로형 카드 화면이 실제로 없어서입니다 (RECOMMENDATIONS.md P2).
+  //  0103 — 세로(9:16) 한 장. 가로 화면들에는 자리가 없었는데, **로그인 화면의
+  //  PC 옆 패널**이 딱 세로입니다. 직원·병원 모두 처음 보는 화면이라
+  //  브랜드 사진이 있을 자리로도 맞습니다. 폰에서는 안 그립니다(폭이 없음).
+  mobileCard: `${B}/mobile_card_vertical.jpg`,  // 로그인 옆 세로 패널 (PC)
 } as const
 
 /**
@@ -110,6 +112,9 @@ const FOCUS: Record<string, string> = {
   //  ⚠ 이 장은 **한 장에 네 장면이 붙은 그림**입니다(관제실·병원·상차·차량).
   //    자르면 이야기가 깨지므로 배치할 때 원본 비율(16:9)을 씁니다.
   [`${B}/why_ax_03_growth.jpg`]: 'object-[50%_35%]',
+  //  세로 사진 — 얼굴 38% · 태블릿 65%. 세로 패널이라 자를 것이 거의 없지만,
+  //  조금이라도 자르면 아래(용기)를 버리고 얼굴·태블릿을 남깁니다.
+  [`${B}/mobile_card_vertical.jpg`]: 'object-[50%_40%]',
 }
 
 /**

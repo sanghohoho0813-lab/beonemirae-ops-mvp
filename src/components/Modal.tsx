@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useHistoryDismiss } from '../lib/useHistoryDismiss'
+import { useEscapeClose } from '../lib/useEscapeClose'
 import { usePrintIsolate } from '../lib/usePrintIsolate'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -38,6 +39,9 @@ interface ModalProps {
 export function Modal({ open, title, onClose, children, footer, printable = false, layout = 'scroll' }: ModalProps) {
   // 뒤로 가기(기기/브라우저)로 모달이 닫힙니다.
   useHistoryDismiss(open, onClose)
+  //  ⚠ 0103 — 병원 화면의 창은 Esc 로 닫히는데 내부 창은 안 닫혔습니다.
+  //    PC 에서 제일 빠른 닫기입니다. 맨 위 창 하나만 닫습니다.
+  useEscapeClose(open, onClose)
   const boxRef = useRef<HTMLDivElement>(null)
   usePrintIsolate(boxRef, open && printable)
 

@@ -375,4 +375,21 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .img-drift { animation: none !important; }
+}
+
+/*  ── 0103 — 큰 사진이 아주 천천히 다가옵니다 ──────────────────────────────
+    병원 포털 머리·로그인 옆 사진에만 씁니다. 28초에 6% — 눈에 「움직인다」가
+    아니라 「살아 있다」 정도로만 느껴지는 속도입니다. 빠르게 하면 멀미를
+    부르고, 글자 위에 얹힌 사진이라 흔들리면 안 읽힙니다.
+    움직임을 줄여 달라는 설정에서는 위 블록이 완전히 끕니다(animation: none —
+    0.01ms 로 줄이기만 하면 무한 반복이 깜빡임이 됩니다). */
+@keyframes brand-drift {
+  from { transform: scale(1); }
+  to   { transform: scale(1.06); }
+}
+.img-drift {
+  animation: brand-drift 28s ease-in-out infinite alternate;
+  transform-origin: 60% 60%;
+  will-change: transform;
 }

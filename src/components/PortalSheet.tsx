@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { useEscapeClose } from '../lib/useEscapeClose'
 import { Check, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BrandImg } from './BrandImg'
@@ -99,14 +100,8 @@ export function PortalSheet({
   }, [open])
 
   //  ⚠ Esc 로 닫힙니다. PC 에서 제일 빠른 닫기입니다.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  //    0103 — 공용 쌓기로 옮겼습니다(맨 위 창 하나만).
+  useEscapeClose(open, onClose)
 
   const isDrawer = kind === 'drawer'
 

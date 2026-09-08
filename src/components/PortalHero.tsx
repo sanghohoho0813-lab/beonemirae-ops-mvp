@@ -37,10 +37,12 @@ export function PortalHero({ client, s }: { client: Client; s: PortalSummary }) 
              나옵니다. alt 는 비웁니다: 장식이지 정보가 아닙니다. */}
       {/*  ⚠ 0098 — object-right 로만 잡아 두었더니 세로는 가운데를 잘라
            **수거차 바퀴가 잘렸습니다.** 차는 아래쪽에 있습니다. */}
+      {/*  0103 — 아주 천천히 다가오는 사진(img-drift). 폰에서는 사진 자체가
+           없으니 걸리지 않고, 움직임 줄이기 설정에서는 꺼집니다. */}
       <BrandImg
         src={BRAND_IMG.heroMain}
         eager
-        className="absolute inset-0 hidden h-full w-full sm:block"
+        className="img-drift absolute inset-0 hidden h-full w-full sm:block"
       />
       <div
         aria-hidden="true"
@@ -163,16 +165,23 @@ export function PortalActionCard({ a }: { a: PortalAction }) {
       data-portal-cta={a.cta}
       data-card-tone={a.tone}
       onClick={a.onClick}
-      className="card pressable relative flex min-h-[9rem] w-full flex-col overflow-hidden p-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:min-h-[11.5rem] sm:p-5"
+      /*  0103 — 마우스를 올리면 카드가 1~2px 뜨고(있던 것), 위 선이 조금
+          두꺼워지고, 아이콘이 살짝 커지고, 화살표가 오른쪽으로 한 걸음
+          갑니다. 전부 200ms 안, 전부 미세하게 — 「누를 수 있다」만 알립니다.
+          h-full 은 Stagger 로 감싸면서(0103) 한 줄의 카드 높이를 맞추려고. */
+      className="card pressable group relative flex h-full min-h-[9rem] w-full flex-col overflow-hidden p-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-lg sm:min-h-[11.5rem] sm:p-5"
     >
       {/*  카드마다 다른 것은 이 **한 줄**과 아이콘 자리뿐입니다 */}
-      <span className={`absolute inset-x-0 top-0 h-1 ${t.line}`} />
+      <span className={`absolute inset-x-0 top-0 h-1 transition-[height] duration-200 group-hover:h-1.5 ${t.line}`} />
       <span className="flex items-center gap-2.5">
         <span className="text-[1.05rem] font-black tabular-nums text-navy-400">{a.no}</span>
         <span className="t-card min-w-0 break-keep text-navy-900">{a.label}</span>
       </span>
       <span className="mt-2.5 flex flex-col items-start gap-2 sm:mt-3 sm:flex-row sm:gap-3">
-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12 ${t.tile}`}>
+        <span
+          data-action-icon
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105 sm:h-12 sm:w-12 ${t.tile}`}
+        >
           <Icon size={23} strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1">
@@ -188,7 +197,11 @@ export function PortalActionCard({ a }: { a: PortalAction }) {
       </span>
       <span className="mt-3.5 hidden items-center justify-between border-t border-navy-100 pt-3 sm:flex">
         <span className={`t-btn break-keep ${t.arrow}`}>바로 하기</span>
-        <ChevronRight size={19} className={`shrink-0 ${t.arrow}`} />
+        <ChevronRight
+          size={19}
+          data-action-arrow
+          className={`shrink-0 transition-transform duration-200 group-hover:translate-x-1 ${t.arrow}`}
+        />
       </span>
     </button>
   )

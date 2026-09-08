@@ -21,6 +21,7 @@ import { prettyDate, weight, won } from '../lib/format'
 import { REQUEST_KIND_LABEL } from '../types'
 import { BRAND_IMG } from '../lib/brandAssets'
 import { BrandImg } from '../components/BrandImg'
+import { Stagger, StaggerItem } from '../components/motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 담당자의 **작업 화면** (0089)
@@ -202,11 +203,17 @@ export function PortalHome() {
         <div className="hidden sm:block">
           <SectionTitle>지금 하실 수 있는 일</SectionTitle>
         </div>
-        <div data-portal-actions data-tour="portal-request" className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        {/*  0103 — 여덟 장이 한꺼번에 툭 나타나지 않고 0.05초씩 차례로 떠오릅니다.
+             다 떠오르는 데 0.6초 — 첫 화면에서 「수거 요청」 자리는 그대로라
+             폰 실측(check_flow390)이 재는 위치는 안 바뀝니다. 움직임 줄이기
+             설정에서는 framer 가 알아서 끕니다(App 의 MotionConfig). */}
+        <Stagger data-portal-actions data-tour="portal-request" className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {ACTIONS.map((a) => (
-            <PortalActionCard key={a.no} a={a} />
+            <StaggerItem key={a.no} className="h-full">
+              <PortalActionCard a={a} />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/*  ── 지금 확인이 필요한 것 ──────────────────────────────────────────
@@ -287,7 +294,7 @@ export function PortalHome() {
           ) : (
             <ul className="card divide-y divide-navy-50">
               {s.allRequests.slice(0, 5).map((r) => (
-                <li key={r.id} data-req-row={r.id} className="px-5 py-4">
+                <li key={r.id} data-req-row={r.id} className="px-5 py-4 transition hover:bg-navy-50/70">
                   <div className="flex flex-wrap items-center gap-2">
                     {/*  ⚠ **저장값을 그대로 적지 않습니다.** `소모품` 은 DB
                          CHECK 값이라 못 바꾸지만, 병원 화면에 그대로 적으면
@@ -359,7 +366,7 @@ export function PortalHome() {
         ) : (
           <ul className="card divide-y divide-navy-50">
             {activity.map((a) => (
-              <li key={a.key} data-activity={a.kind} className="flex items-center gap-3 px-5 py-3.5">
+              <li key={a.key} data-activity={a.kind} className="flex items-center gap-3 px-5 py-3.5 transition hover:bg-navy-50/70">
                 <span className={`pill shrink-0 ${ACT_TONE[a.kind] ?? 'bg-navy-50 text-navy-600'}`}>
                   {a.kind}
                 </span>

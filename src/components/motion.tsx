@@ -34,9 +34,18 @@ const itemVariants: Variants = {
 }
 
 /** 리스트/그리드 컨테이너 — 자식 요소를 순차 등장(stagger) */
-export function Stagger({ children, className }: { children: ReactNode; className?: string }) {
+export function Stagger({
+  children,
+  className,
+  ...rest
+}: {
+  children: ReactNode
+  className?: string
+  /** 검사·투어가 붙잡는 표시(data-*) — 그대로 DOM 으로 전달 (0103) */
+  [key: `data-${string}`]: string | undefined
+}) {
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className={className}>
+    <motion.div {...rest} variants={containerVariants} initial="hidden" animate="show" className={className}>
       {children}
     </motion.div>
   )

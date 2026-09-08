@@ -102,6 +102,8 @@ async function snap(p, i) {
 const PC_SCREENS = [
   ['admin', '/', '대시보드'], ['admin', '/clients', '거래처'], ['admin', '/settings', '설정'],
   ['client', '/portal', '병원 첫 화면'], ['client', '/portal/history', '병원 이력'],
+  //  0103 — 상품·고객지원 화면도 잽니다 (v3.0 §21 Customer Desktop: Product · Report Item)
+  ['client', '/portal/supplies', '병원 소모품'], ['client', '/portal/support', '병원 고객지원'],
 ]
 for (const [role, path, label] of PC_SCREENS) {
   const { ctx, p } = await open(role, 1440, path)

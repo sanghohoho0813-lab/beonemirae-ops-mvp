@@ -205,7 +205,10 @@ export function PortalSupplies() {
               <li
                 key={p.id}
                 data-product={p.id}
-                className="flex flex-col rounded-2xl bg-white p-3 ring-1 ring-navy-50"
+                /*  0103 — 마우스를 올리면 카드가 살짝 뜨고 사진이 4% 다가옵니다.
+                    병원 담당자는 사진을 보고 고릅니다 — 「이게 그 용기 맞나」를
+                    확인하는 순간을 도와주는 정도입니다. 300ms, 과하지 않게. */
+                className="group flex flex-col rounded-2xl bg-white p-3 ring-1 ring-navy-50 transition hover:-translate-y-0.5 hover:shadow-card"
               >
                 {/*  사진 — DB 에 실제 제품 사진이 있으면 그것을, 없으면
                     같은 규격의 대표 사진(0095 준비 자산)을 씁니다.
@@ -216,7 +219,14 @@ export function PortalSupplies() {
                   {(() => {
                     const img = p.imageUrl || productImageOf(p.name, p.spec)
                     return img ? (
-                      <img src={img} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      <img
+                        src={img}
+                        alt={p.name}
+                        loading="lazy"
+                        decoding="async"
+                        data-product-img
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                      />
                     ) : (
                       <Package size={34} strokeWidth={1.8} />
                     )

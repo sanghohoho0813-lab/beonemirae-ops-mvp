@@ -5,6 +5,8 @@ import { AlertCircle, CloudOff, Loader2, LogIn, Lock, LogOut, Mail, RotateCw, Sh
 import { useAuth } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
+import { BRAND_IMG } from '../lib/brandAssets'
+import { BrandImg } from '../components/BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 로그인 — 비원미래 운영관리 시스템
@@ -116,7 +118,28 @@ export function Login() {
 
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-navy-950 px-4 py-10">
-      <div className="w-full max-w-[30rem]">
+      {/*  0103 — PC 에서는 왼쪽에 세로 브랜드 사진(mobile_card_vertical)을
+           둡니다. 직원도 병원도 제일 먼저 보는 화면인데 검은 바탕에 칸 하나뿐
+           이었습니다. 폰(lg 미만)에서는 그리지 않습니다 — 폭이 없고, 로그인
+           칸이 첫 화면 아래로 밀리면 안 됩니다. 로그인 칸 자체는 그대로입니다. */}
+      <div className="w-full max-w-[30rem] lg:max-w-[62rem]">
+      <div className="lg:flex lg:items-stretch lg:gap-8">
+        <aside
+          data-login-brand
+          className="relative hidden overflow-hidden rounded-3xl bg-navy-900 shadow-2xl lg:block lg:w-[22rem] lg:shrink-0"
+        >
+          <BrandImg src={BRAND_IMG.mobileCard} eager className="img-drift absolute inset-0 h-full w-full" />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-navy-950/30 to-navy-950/10"
+          />
+          <div className="relative flex h-full flex-col justify-end p-7 text-white">
+            <p className="t-body font-bold text-teal-300">㈜비원미래 · BUSINESS AX</p>
+            <p className="mt-1.5 break-keep text-[1.35rem] font-extrabold leading-tight">{SYSTEM_TAGLINE}</p>
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1">
         {/* 브랜드 */}
         <div className="mb-8 flex items-center gap-3.5">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.62rem] font-extrabold text-white">
@@ -264,10 +287,14 @@ export function Login() {
           )}
         </div>
 
+        </div>
+      </div>
+        {/*  로그인 화면은 직원·병원이 함께 씁니다. 병원 상담번호가 아니라
+            **회사 대표번호**를 둡니다 — 직원이 자기 회사 상담센터로
+            전화할 일은 없습니다.
+            0103 — 두 칸(사진·로그인) **아래**에 둡니다. 로그인 칸 안에 두면
+            왼쪽 사진 패널이 그만큼 더 길어져 둘의 아래 선이 안 맞습니다. */}
         <p className="t-muted mt-6 text-center text-navy-400">
-          {/*  로그인 화면은 직원·병원이 함께 씁니다. 병원 상담번호가 아니라
-              **회사 대표번호**를 둡니다 — 직원이 자기 회사 상담센터로
-              전화할 일은 없습니다. */}
           ㈜비원미래 · {COMPANY_TEL} · {COMPANY_HOURS}
         </p>
       </div>

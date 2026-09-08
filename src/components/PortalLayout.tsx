@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { CLIENT_TEL } from '../lib/brand'
 import { Building2, ChevronRight, ClipboardList, Headset, LogOut, MessageSquare, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -298,14 +299,31 @@ export function PortalLayout() {
                 to={target.path(n.page)}
                 end={n.page === ''}
                 className={({ isActive }) =>
-                  `t-nav flex flex-1 shrink-0 items-center justify-center gap-2 rounded-t-xl px-3 py-3.5 transition sm:flex-none sm:justify-start sm:px-4 ${
+                  `t-nav relative flex flex-1 shrink-0 items-center justify-center gap-2 rounded-t-xl px-3 py-3.5 transition sm:flex-none sm:justify-start sm:px-4 ${
                     isActive ? 'bg-app text-navy-900' : 'text-navy-300 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >
-                <Icon size={20} className="shrink-0" strokeWidth={2.2} />
-                <span className="whitespace-nowrap sm:hidden">{n.short}</span>
-                <span className="hidden whitespace-nowrap sm:inline">{n.label}</span>
+                {({ isActive }) => (
+                  <>
+                    {/*  0103 — 지금 보는 탭 위의 짧은 청록 선. 다른 탭을 누르면
+                         이 선이 **그 탭으로 미끄러져** 갑니다(layoutId). 어느
+                         탭에서 어느 탭으로 갔는지 눈이 따라갈 수 있습니다.
+                         바탕색(bg-app)은 탭 자체에 두어 대비는 그대로입니다. */}
+                    {isActive && (
+                      <motion.span
+                        layoutId="portal-nav-accent"
+                        data-nav-accent
+                        aria-hidden="true"
+                        className="absolute inset-x-4 top-0 h-[3px] rounded-b-full bg-teal-400"
+                        transition={{ type: 'spring', stiffness: 520, damping: 42 }}
+                      />
+                    )}
+                    <Icon size={20} className="shrink-0" strokeWidth={2.2} />
+                    <span className="whitespace-nowrap sm:hidden">{n.short}</span>
+                    <span className="hidden whitespace-nowrap sm:inline">{n.label}</span>
+                  </>
+                )}
               </NavLink>
             )
           })}
