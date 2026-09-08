@@ -772,10 +772,12 @@ export async function loadAppData(): Promise<AppData> {
   const baselineRow = await soft(
     async () => unwrapOne(await sb.from('performance_baselines').select('*').eq('id', 1).maybeSingle()),
     null as Row | null,
+    '도입 전 기준값',
   )
   const experimentRow = await soft(
     async () => unwrapOne(await sb.from('experiment_settings').select('*').eq('id', 1).maybeSingle()),
     null as Row | null,
+    '실증 시작일',
   )
 
   return {

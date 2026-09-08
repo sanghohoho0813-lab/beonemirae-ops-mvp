@@ -30,12 +30,14 @@ export * as A from '${ROOT}/src/lib/axEvidence.ts'
 export * as R from '${ROOT}/src/lib/readiness.ts'
 export * as C from '${ROOT}/src/lib/opsChanges.ts'
 export * as X from '${ROOT}/src/lib/excelCheck.ts'
+export * as S from '${ROOT}/src/lib/perfSummary.ts'
+export * as T from '${ROOT}/src/lib/trials.ts'
 `)
 const bundle = join(dir, 'ev.mjs')
 execFileSync(join(ROOT, 'node_modules/.bin/esbuild'), [
   entry, '--bundle', '--format=esm', '--platform=neutral', `--outfile=${bundle}`,
 ], { stdio: 'pipe' })
-const { E, P, A, R, C, X } = await import(bundle)
+const { E, P, A, R, C, X, S, T } = await import(bundle)
 
 //  오늘 기준으로 날짜를 만듭니다 — 「실증 전체」가 오늘까지라서.
 const pad = (n) => String(n).padStart(2, '0')
@@ -342,6 +344,89 @@ console.log('── ⑫ 이번 달 시스템 안에서 끝난 거래처 (수거 
   ok('⑫ 이번 달 완료 수거가 없으면 비어 있음', none.state === 'missing')
   const all = R.readinessOf(base({ schedules: schedules.slice(0, 2), events: events.slice(0, 2), payments, clients })).find((i) => i.key === 'systemClosed')
   ok('⑫ 한 곳뿐이고 그 곳이 끝났으면 준비됨', all.state === 'ok', all.value)
+}
+
+console.log('── ⑬ 요약 카드(0107): 잰 값은 표본이 작아도 보이고 · 추정은 실측 비교에서 빠지고 · 나빠진 값도 감추지 않는다 ──')
+{
+  const events = Array.from({ length: 5 }, (_, i) => ev(i, { ago: i + 1, inputDurationMs: 120000 }))
+  const schedules = events.map((_, i) => sched(i, { ago: i + 1 }))
+  const d = base({ events, schedules })
+  const perf = P.performanceSummary(d, 'all')
+  const ax = A.axEvidence(d, { from: perf.period.from, to: perf.period.to })
+  const cards = S.summaryCards(perf, ax)
+  ok('⑬ 카드는 최대 3장', cards.length <= 3, String(cards.length))
+  ok('⑬ 표본 5건이어도 입력 시간 2분은 「초기 측정」으로 보인다', cards.some((c) => c.key === 'inputTime' && c.value === '2분' && c.kind === '초기 측정'), JSON.stringify(cards.map((c) => [c.key, c.value])))
+  ok('⑬ 입력 시간 카드는 개선율을 만들지 않는다 (범위가 다름)', !/%/.test(cards.find((c) => c.key === 'inputTime')?.desc ?? '%'))
+  ok('⑬ 같은 범위 조사가 없으면 사무시간 카드가 없다', !cards.some((c) => c.key === 'adminTime'))
+  ok('⑬ 카드 출처는 짧다 (「시스템 측정 · 표본 5건」)', cards.find((c) => c.key === 'inputTime')?.source === '시스템 측정 · 표본 5건', cards.find((c) => c.key === 'inputTime')?.source)
+  //  추정으로 넣은 도입 후 값은 보존하되 실측 비교에서 뺀다
+  const est = P.performanceSummary(d, 'all', undefined, { afterSurvey: { adminMinutesPerCollection: 11.7, monthlyDocHours: 91, surveyedOn: TODAY, source: 'estimate', note: '거의 그대로' } })
+  const adEst = est.metrics.find((m) => m.key === 'adminTime')
+  ok('⑬ 추정 출처의 도입 후 값은 비교에 안 들어간다 (measuring · after null)', adEst.status === 'measuring' && adEst.after == null, `${adEst.status} ${adEst.after}`)
+  ok('⑬ 대신 값 11.7 을 메모에 보존한다', /11\.7분.*추정/.test(adEst.note), adEst.note)
+  ok('⑬ 추정값으로 0% 개선을 만들지 않는다', adEst.changePct == null)
+  const cardsEst = S.summaryCards(est, ax)
+  ok('⑬ 추정 상태에서도 사무시간 카드는 없다', !cardsEst.some((c) => c.key === 'adminTime'))
+  const um = S.unmeasured(est, ax, cardsEst)
+  ok('⑬ 「아직 측정하지 않은 항목」에 추정 제외 이유가 적힌다', /11\.7분은 추정/.test(um.find((u) => u.key === 'adminTime')?.reason ?? ''), um.find((u) => u.key === 'adminTime')?.reason)
+  ok('⑬ 이미 카드로 보인 항목은 미측정 목록에 없다', !um.some((u) => cardsEst.some((c) => c.key === u.key)))
+  //  같은 범위 조사가 있으면 사무시간이 첫 카드 · 나빠져도 감추지 않는다
+  const good = P.performanceSummary(d, 'all', undefined, { afterSurvey: { adminMinutesPerCollection: 1.7, monthlyDocHours: 40, surveyedOn: TODAY, source: 'survey', note: '' } })
+  const c2 = S.summaryCards(good, ax)
+  ok('⑬ 같은 범위 조사가 오면 사무시간 3.4 → 1.7 (50% 단축) 이 첫 카드', c2[0]?.key === 'adminTime' && /50% 단축/.test(c2[0].desc) && c2[0].worse !== true, JSON.stringify(c2[0]))
+  const bad = P.performanceSummary(d, 'all', undefined, { afterSurvey: { adminMinutesPerCollection: 5.1, monthlyDocHours: 100, surveyedOn: TODAY, source: 'survey', note: '' } })
+  const c3 = S.summaryCards(bad, ax)
+  ok('⑬ 나빠진 값(3.4 → 5.1)도 카드로 보이고 worse 표시', c3[0]?.key === 'adminTime' && c3[0].worse === true && /늘어남/.test(c3[0].desc), JSON.stringify(c3[0]))
+  //  현장 0건이면 카드가 없다 — 임의 건수 기준이 아니라 값이 없어서
+  const empty = P.performanceSummary(base({}), 'all')
+  ok('⑬ 현장 0건이면 카드 0장', S.summaryCards(empty, A.axEvidence(base({}), { from: empty.period.from, to: empty.period.to })).length === 0)
+}
+
+console.log('── ⑭ 다음 할 일 · 자료 진단 · 재현시험 기록 (0107) ──')
+{
+  const empty = base({})
+  const perf0 = P.performanceSummary(empty, 'all')
+  const nx = S.nextActions(empty, perf0, { trials: [], excel: null, isAdmin: true, unreadable: [] })
+  ok('⑭ 최대 3개', nx.length === 3, String(nx.length))
+  ok('⑭ 현장 0건이면 첫 일은 「수거 입력 시작」', nx[0]?.key === 'field', nx[0]?.key)
+  ok('⑭ 기준값이 이미 있으면 「기준값 채우기」는 없다', !nx.some((a) => a.key === 'baseline'))
+  const nxU = S.nextActions(empty, perf0, { trials: [], excel: null, isAdmin: true, unreadable: ['도입 전 기준값 (performance_baselines)'] })
+  ok('⑭ 못 읽은 자료가 있으면 그것이 첫 일', nxU[0]?.key === 'unreadable' && /못 읽은 것/.test(nxU[0].why), nxU[0]?.key)
+  const noBase = base({ baseline: { adminMinutesPerCollection: null, repeatEntriesPerCollection: null, monthlyDocHours: null, monthlyReworkCount: null, dailyCapacity: null, source: 'user', updatedAt: null } })
+  const nxO = S.nextActions(noBase, P.performanceSummary(noBase, 'all'), { trials: [], excel: null, isAdmin: false, unreadable: [] })
+  ok('⑭ 사무실 계정에는 관리자 전용 일(기준값·이사님 조사)이 없다', !nxO.some((a) => a.key === 'baseline' || a.key === 'afterSurvey'), nxO.map((a) => a.key).join(','))
+  const trial = T.parseTrial({ id: 'd1', topics: ['업무 재현시험'], message: 'trial:2026-09-10|invoice|old=25,1|new=9,0 › 8월 명세서', requesterName: '이사', createdAt: '2026-09-10T01:00:00Z' })
+  const nxT = S.nextActions(empty, perf0, { trials: [trial], excel: null, isAdmin: true, unreadable: [] })
+  ok('⑭ 재현시험이 1건이라도 있으면 「재현시험 1건」 일은 사라진다', !nxT.some((a) => a.key === 'trial'))
+
+  //  진단 — 자료 미확인 / 실제 사용 없음 / 연습만
+  const dg0 = S.diagnoseData(empty, perf0, [])
+  ok('⑭ 기록이 하나도 없으면 「실제 사용 없음 — 수거 입력 기록이 하나도 없습니다」', /실제 사용 없음.*하나도 없습니다/.test(dg0.headline), dg0.headline)
+  const dgU = S.diagnoseData(empty, perf0, ['도입 전 기준값 (performance_baselines)'])
+  ok('⑭ 못 읽은 자료가 있으면 「자료 미확인」이 앞선다', /^자료 미확인/.test(dgU.headline) && dgU.lines.some((l) => /못 읽은 것/.test(l)), dgU.headline)
+  const practice = Array.from({ length: 6 }, (_, i) => ev(i, { ago: 50 + i }))
+  const dP = base({ events: practice, schedules: practice.map((_, i) => sched(i, { ago: 50 + i })) })
+  const perfP = P.performanceSummary(dP, 'all')
+  const dgP = S.diagnoseData(dP, perfP, [])
+  ok('⑭ 시작일 전 6건뿐이면 「실제 사용 없음 — 시작일 이후 현장 입력 0건」', new RegExp(`실제 사용 없음 — 실증 시작일 ${START} 이후 현장 입력 0건`).test(dgP.headline), dgP.headline)
+  ok('⑭ 전체 6 = 현장 0 · 연습 6 · 시연 0 · 취소 0 으로 센다', dgP.lines.some((l) => /전체 6건 = 현장 0 · 연습\(시작일 전\) 6 · 시연 0 · 취소 0/.test(l)), dgP.lines.join(' | '))
+  ok('⑭ 연습을 실제로 바꾸는 것은 대표님이 설정에서 정한다고 적는다 (시스템이 임의로 안 바꿈)', dgP.lines.some((l) => /시스템이 임의로 바꾸지 않고, 대표님이 설정에서/.test(l)))
+  ok('⑭ 기준값 미입력은 「못 읽은 것이 아니라 아직 안 넣은 것」', S.diagnoseData(noBase, P.performanceSummary(noBase, 'all'), []).lines.some((l) => /아직 안 넣은 것/.test(l)))
+  const dgE = S.diagnoseData(empty, P.performanceSummary(empty, 'all', undefined, { afterSurvey: { adminMinutesPerCollection: 11.7, monthlyDocHours: 91, surveyedOn: TODAY, source: 'estimate', note: '' } }), [])
+  ok('⑭ 추정 도입 후 값은 「보존 · 실측 비교 제외」로 적는다', dgE.lines.some((l) => /추정\(직접 입력\).*제외.*보존/.test(l)), dgE.lines.join(' | '))
+
+  //  재현시험 — 줄 형식 왕복 · 중앙값 · 단축률 · 나빠진 값
+  ok('⑭ 재현시험 줄 왕복 (25,1 → 9,0 · 메모)', trial && trial.oldMin === 25 && trial.oldErrors === 1 && trial.newMin === 9 && trial.newErrors === 0 && trial.note === '8월 명세서', JSON.stringify(trial))
+  ok('⑭ formatTrial 이 같은 줄을 만든다', T.formatTrial({ date: '2026-09-10', task: 'invoice', oldMin: 25, oldErrors: 1, newMin: 9, newErrors: 0, note: '8월 명세서' }) === 'trial:2026-09-10|invoice|old=25,1|new=9,0 › 8월 명세서')
+  ok('⑭ 주제가 다르거나 형식이 다른 줄은 재현시험이 아니다', T.parseTrial({ id: 'x', topics: ['기타'], message: 'trial:2026-09-10|invoice|old=25,1|new=9,0', requesterName: '', createdAt: '' }) === null && T.parseTrial({ id: 'y', topics: ['업무 재현시험'], message: '명세서 25분 → 9분', requesterName: '', createdAt: '' }) === null)
+  const t2 = { ...trial, id: 'd2', oldMin: 31, newMin: 11 }
+  const t3 = { ...trial, id: 'd3', task: 'collection', oldMin: 4, newMin: 6, oldErrors: 0, newErrors: 1 }
+  const sums = T.summarizeTrials([trial, t2, t3])
+  const inv = sums.find((s) => s.task === 'invoice')
+  ok('⑭ 명세서 2회 — 중앙값 (25,31)=28 · (9,11)=10 · 64% 단축', inv && inv.n === 2 && inv.oldMedianMin === 28 && inv.newMedianMin === 10 && inv.savedPct === 64, JSON.stringify(inv))
+  const col = sums.find((s) => s.task === 'collection')
+  ok('⑭ 수거 입력 1회 — 4 → 6 은 −50% 로 그대로 (감추지 않음) · 오류 0→1', col && col.savedPct === -50 && col.newErrors === 1, JSON.stringify(col))
+  ok('⑭ 한 번도 안 한 과제(request)는 나오지 않는다', !sums.some((s) => s.task === 'request'))
 }
 
 console.log(`\ncheck_evidence0106 OK=${pass} FAIL=${fail}`)

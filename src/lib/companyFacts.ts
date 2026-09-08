@@ -44,6 +44,8 @@ export interface CompanyFact {
   label: string
   value: string
   status: FactStatus
+  /** 숫자로 셀 수 있는 값이면 원 단위 (매출) 또는 개수 — 화면이 계산에 씁니다 */
+  amount?: number
   /** 어디서 온 값인가 — 한 줄 */
   source: string
   /** 심사 자리에서 미리 알아야 할 것 */
@@ -55,22 +57,27 @@ export interface CompanyFact {
 export const COMPANY_FACTS: CompanyFact[] = [
   // ── 매출 ─────────────────────────────────────────────────────────────────
   {
-    key: 'rev2023', group: 'sales', label: '2023년 매출', value: '1.19억원',
+    key: 'rev2023', group: 'sales', label: '2023년 매출', value: '1.19억원', amount: 119_000_000,
     status: 'plan_doc', source: '기존 사업계획서 실적 기재',
   },
   {
-    key: 'rev2024', group: 'sales', label: '2024년 매출', value: '3.62억원',
+    key: 'rev2024', group: 'sales', label: '2024년 매출', value: '3.62억원', amount: 362_000_000,
     status: 'plan_doc', source: '기존 사업계획서 실적 기재',
   },
   {
-    key: 'rev2025', group: 'sales', label: '2025년 매출', value: '5.8억원',
+    key: 'rev2025', group: 'sales', label: '2025년 매출', value: '5.8억원', amount: 580_000_000,
     status: 'plan_doc', source: '기존 사업계획서 실적 기재',
   },
   {
-    key: 'rev2026h1', group: 'sales', label: '2026년 상반기 매출 (1기 부가세 신고 기준)', value: '4억 5,300만원',
+    key: 'rev2026h1', group: 'sales', label: '2026년 상반기 매출 (1기 부가세 신고 기준)', value: '4억 5,300만원', amount: 453_000_000,
     status: 'user_reported', source: '대표 전달 (2026-09)',
     note: '이번 작업에서 신고서 원본까지 확인한 수치가 아닙니다.',
     toConfirm: '2026년 1기 부가가치세 신고서(과세표준) 사본',
+  },
+  {
+    key: 'rev2026ann', group: 'sales', label: '2026년 연환산 매출', value: '9.06억원', amount: 906_000_000,
+    status: 'forecast', source: '상반기 4.53억원 × 2 (단순 연환산)',
+    note: '전망입니다. 하반기 실적이 아니라 상반기를 두 배 한 값이라 확정 실적과 같은 줄에 적지 않습니다.',
   },
   {
     key: 'rev2026f', group: 'sales', label: '2026년 연말 매출', value: '9억원 초과 예상',
@@ -79,7 +86,7 @@ export const COMPANY_FACTS: CompanyFact[] = [
   },
   // ── 규모 ─────────────────────────────────────────────────────────────────
   {
-    key: 'clients', group: 'scale', label: '거래처 수', value: '약 53곳',
+    key: 'clients', group: 'scale', label: '거래처 수', value: '약 53곳', amount: 53,
     status: 'user_reported', source: '대표 전달 (2026-09)',
     note: '시스템에 등록된 거래처 수와는 별도로 둡니다. 맞추려고 거래처를 만들어 넣지 않습니다.',
     toConfirm: '거래처 계약 목록 (엑셀) — 시스템 등록과 대조',
@@ -144,3 +151,26 @@ export function factsOf(group: FactGroup): CompanyFact[] {
 export function factsToConfirm(): CompanyFact[] {
   return COMPANY_FACTS.filter((f) => !!f.toConfirm)
 }
+
+
+/** 억 단위 표기 — 5.8억원 · 4.53억원 */
+export function eok(amount: number): string {
+  const v = amount / 100_000_000
+  return `${Number.isInteger(v) ? v : Math.round(v * 100) / 100}억원`
+}
+
+/** 요약 화면의 「기업 성장 현황」 — 값·전년 대비·연환산을 출처와 함께 */
+export function growthSummary() {
+  const f = (k: string) => COMPANY_FACTS.find((x) => x.key === k)
+  const r24 = f('rev2024')?.amount ?? null
+  const r25 = f('rev2025')?.amount ?? null
+  const yoyPct = r24 && r25 ? Math.round(((r25 - r24) / r24) * 100) : null
+  return {
+    rev2025: f('rev2025') ?? null,
+    yoyPct,
+    rev2026h1: f('rev2026h1') ?? null,
+    annualized: f('rev2026ann') ?? null,
+    clients: f('clients') ?? null,
+  }
+}
+

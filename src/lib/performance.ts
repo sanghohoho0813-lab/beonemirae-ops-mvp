@@ -299,8 +299,12 @@ function improvement(before: number, after: number, betterWhen: 'lower' | 'highe
   return Math.round(raw * 10) / 10
 }
 
-/** 표본이 이 수 이상일 때만 측정값을 냅니다 (한두 건으로 숫자를 만들지 않음). */
-export const MIN_SAMPLES = 3
+/**
+ * 표본이 이 수 이상일 때 측정값을 냅니다.
+ *  0107 — 3 이었던 것을 1 로. 실제로 잰 값은 표본이 작아도 「초기 측정」으로 보여 주고,
+ *  표본 수를 옆에 적습니다. 임의의 건수 기준으로 숫자를 감추지 않습니다.
+ */
+export const MIN_SAMPLES = 1
 /** 취소 후 재입력 건수는 단기 표본에서 '0건' 이 과장되기 쉬워 더 많은 표본을 요구합니다. */
 export const MIN_REWORK_EVENTS = 10
 /** 하루 처리 건수를 회사 값으로 보려면 완료 일정의 이만큼이 시스템 입력이어야 합니다 */
@@ -464,7 +468,10 @@ function buildMetrics(i: BuildInput): MetricRow[] {
   })
 
   // 2) 수거 1건 사무업무 시간 — 같은 범위(배차·일정·엑셀 정리)로 도입 후에 다시 조사한 값과만 견줍니다.
-  const afterAdmin = afterSurvey?.adminMinutesPerCollection ?? null
+  //    ⚠ 0107 — 출처가 추정(직접 입력)이면 값은 보존하되 **실측 비교에서 뺍니다.** 추정끼리 견준
+  //      0% 는 측정이 아닙니다.
+  const afterIsEstimate = afterSurvey?.source === 'estimate'
+  const afterAdmin = afterIsEstimate ? null : afterSurvey?.adminMinutesPerCollection ?? null
   push({
     key: 'adminTime',
     label: '수거 1건 사무업무 시간 (같은 범위)',
@@ -473,15 +480,17 @@ function buildMetrics(i: BuildInput): MetricRow[] {
     after: afterAdmin,
     betterWhen: 'lower',
     beforeSource: bSrc,
-    afterSource: afterAdmin == null ? null : afterSurvey?.source === 'survey' ? 'survey' : 'estimate',
+    afterSource: afterAdmin == null ? null : 'survey',
     fieldSamples: fieldCount,
     basis:
       '도입 전: 하루 사무시간(배차 일정관리 · 수거 일정관리 · 수거내역·거래명세서 엑셀 정리) ÷ 하루 방문 수. ' +
       '도입 후: **같은 세 가지 일**을 같은 방법으로 다시 조사한 값. 입력 화면 시간으로 대신하지 않습니다.',
     note:
       afterAdmin == null
-        ? '도입 후 같은 범위 조사가 아직 없습니다 — 설정 → 「도입 후 같은 범위 조사값」에 넣으면 여기서 견줍니다.'
-        : `도입 후 조사 ${afterSurvey?.surveyedOn ?? '(날짜 미기재)'} · 출처 ${afterSurvey?.source === 'survey' ? '업무 조사 응답' : '직접 입력(추정)'}`,
+        ? afterIsEstimate && afterSurvey?.adminMinutesPerCollection != null
+          ? `도입 후 값 ${afterSurvey.adminMinutesPerCollection}분은 추정(직접 입력)이라 실측 비교에서 제외했습니다 — 이사님 같은 범위 조사가 들어오면 견줍니다.`
+          : '도입 후 같은 범위 조사가 아직 없습니다 — 설정 → 「도입 후 같은 범위 조사값」에 넣으면 여기서 견줍니다.'
+        : `도입 후 조사 ${afterSurvey?.surveyedOn ?? '(날짜 미기재)'} · 출처 업무 조사 응답`,
   })
 
   // 3) 같은 정보를 다시 적는 횟수 — 시스템 안 1회는 구조값. 엑셀·카톡 재입력은 확인 응답으로만 셉니다.
@@ -508,7 +517,7 @@ function buildMetrics(i: BuildInput): MetricRow[] {
   })
 
   // 4) 월간 문서·정산 정리 시간 — 자동 측정 항목이 없습니다. 같은 범위 조사값이 있을 때만 견줍니다.
-  const afterDoc = afterSurvey?.monthlyDocHours ?? null
+  const afterDoc = afterIsEstimate ? null : afterSurvey?.monthlyDocHours ?? null
   push({
     key: 'docHours',
     label: '월간 문서·정산 정리 시간 (같은 범위)',
@@ -517,7 +526,7 @@ function buildMetrics(i: BuildInput): MetricRow[] {
     after: afterDoc,
     betterWhen: 'lower',
     beforeSource: bSrc,
-    afterSource: afterDoc == null ? null : afterSurvey?.source === 'survey' ? 'survey' : 'estimate',
+    afterSource: afterDoc == null ? null : 'survey',
     status: afterDoc == null && baseline.monthlyDocHours != null ? 'not-measured' : undefined,
     fieldSamples: fieldCount,
     basis: '수거대장·명세·정산 정리 시간은 자동 측정 항목이 없습니다. 도입 후 같은 범위 조사값이 들어오면 견줍니다. 문서 초안 자동 생성 건수는 참고값입니다.',

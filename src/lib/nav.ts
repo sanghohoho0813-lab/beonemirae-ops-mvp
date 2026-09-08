@@ -77,7 +77,7 @@ export const SERVICE_NAV: NavItem[] = [
   //  매출 AX — 쇼핑몰이 아니라 「병원이 쓰는 만큼 추천하고 다음 수거 때 전달」입니다.
   { to: '/supplies', label: '소모품 주문', icon: PackageCheck, desc: '사용량 추천 · 수거 때 전달 · 판매 실적', tone: 'teal' },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
-  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: 'AX(업무 전환) 측정값 · 자동 연결 · 매출 — 근거가 없으면 숫자를 만들지 않음', tone: 'teal' },
+  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · AX 로 확인된 변화 · 다음 할 일', tone: 'teal' },
 ]
 
 /**

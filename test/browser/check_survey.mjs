@@ -88,7 +88,7 @@ async function open(ctx, path) {
 {
   const ctx = await b.newContext({ viewport: { width: 1500, height: 1600 } })
   wire(ctx)
-  const p = await open(ctx, '/performance')
+  const p = await open(ctx, '/performance?tab=basis')
   await p.waitForSelector('[data-ops-survey]', { timeout: 20000 })
 
   for (const [no, days] of Object.entries(SRC)) {
@@ -112,7 +112,7 @@ async function open(ctx, path) {
 {
   const ctx = await b.newContext({ viewport: { width: 1500, height: 1600 } })
   wire(ctx)
-  const p = await open(ctx, '/performance')
+  const p = await open(ctx, '/performance?tab=basis')
   await p.waitForSelector('[data-ops-survey]', { timeout: 20000 })
   const kpi = flat(await p.textContent('[data-ops-survey]'))
   ok(kpi.includes(`${WEEK_VISITS}곳`), `한 주 방문 ${WEEK_VISITS}곳 — 손으로 더한 값과 같음`)

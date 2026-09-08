@@ -175,7 +175,7 @@ async function open(ctx, path) {
 {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } })
   wire(ctx)
-  const p = await open(ctx, '/performance')
+  const p = await open(ctx, '/performance?tab=basis')
 
   ok((await p.locator('#ax-work').count()) > 0, '⓪ 업무 AX(당일 입력) 자리가 화면에 있음')
   ok((await p.locator('#ax-sales').count()) > 0, '① 매출 AX 자리가 화면에 있음')
@@ -256,7 +256,7 @@ async function open(ctx, path) {
 {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } })
   wire(ctx, { experimentStart: back(14) })
-  const p = await open(ctx, '/performance')
+  const p = await open(ctx, '/performance?tab=basis')
 
   const state = await p.locator('[data-ax-cmp]').getAttribute('data-ax-cmp')
   ok(state === 'no-before' || state === 'ok', '⑫ 도입일을 정하면 실제로 견줌', String(state))
@@ -287,7 +287,7 @@ async function open(ctx, path) {
 {
   const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } })
   wire(ctx, { role: 'office' })
-  const p = await open(ctx, '/performance')
+  const p = await open(ctx, '/performance?tab=basis')
   const val = flat(await p.locator('[data-ax-value="accounts"]').innerText())
   const st = flat(await p.locator('[data-ax-state="accounts"]').innerText())
   ok(val === '—', '⑫ **사무실 계정에서는 0 이 아니라 「—」**', val)
@@ -410,7 +410,7 @@ async function open(ctx, path) {
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx)
-  const p = await open(ctx, '/performance')
+  const p = await open(ctx, '/performance?tab=basis')
   const over = await p.evaluate(() =>
     Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))
   ok(over === 0, '㉒ 폰에서 가로로 밀리지 않음', `${over}px`)

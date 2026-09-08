@@ -59,7 +59,7 @@ async function open(role, path, { schema = 87, width = 1440, schedules = null, m
       if (r.request().method() !== 'GET') { state.writes.push({ url: t, method: r.request().method(), body: r.request().postData() }); return json(r, {}) }
       const single = (r.request().headers()['accept'] ?? '').includes('vnd.pgrst.object')
       const id = (r.request().url().match(/id=eq\.([^&]+)/) ?? [])[1]
-      const list = id ? rows.filter((x) => x.id === id) : rows
+      const list = id ? rows.filter((x) => String(x.id) === id) : rows
       return json(r, single ? (list[0] ?? null) : list)
     })
   }
@@ -178,32 +178,135 @@ console.log('── ③ 첫 화면 엑셀 한 줄 ──')
   await ctx.close()
 }
 
-console.log('── ④ 성과 화면 ──')
+console.log('── ④ 성과 화면 — 요약이 기본 · 근거는 두 번째 칸 (0107) ──')
+const YDAY = (() => { const d = new Date(`${TODAY}T12:00:00`); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
+const BASE_ROW = { id: 1, admin_minutes_per_collection: 11.7, repeat_entries_per_collection: 4, monthly_doc_hours: 91, monthly_rework_count: 4, daily_capacity: 18, source: 'survey', updated_at: `${TODAY}T00:00:00Z`,
+  after_admin_minutes_per_collection: null, after_monthly_doc_hours: null, after_surveyed_on: null, after_source: null, after_note: '' }
 {
+  //  기본 화면 = 요약. 성장 현황 → 확인된 변화 → 다음 할 일. 근거 문단은 여기 없다.
   const { ctx, p, errors } = await open('admin', '/performance', { routes: { collection_events: EVENTS, dev_requests: [] }, missing: ['ops_changes'] })
-  await p.locator('[data-perf-breadth]').waitFor({ state: 'visible', timeout: 8000 })
-  const breadth = flat(await p.textContent('[data-perf-breadth]'))
-  ok('④ 홍보 문장 대신 표본의 폭 한 줄', /현장 12건/.test(breadth) && /입력 커버리지/.test(breadth), breadth)
-  ok('④ 변화 기록 표가 없으면 「모름」', (await p.locator('[data-perf-confounding="unknown"]').count()) === 1)
-  ok('④ 입력 소요시간은 「측정값만 (비교 기준 없음)」', (await p.locator('[data-metric="inputTime"][data-metric-status="no-comparable"]').count()) === 1)
-  ok('④ 입력 소요시간 값 1.5분이 보인다', /1\.5분/.test(flat(await p.textContent('[data-metric-after="inputTime"]'))), flat(await p.textContent('[data-metric-after="inputTime"]')))
-  ok('④ 사무업무 시간(같은 범위)은 측정 중', (await p.locator('[data-metric="adminTime"][data-metric-status="measuring"]').count()) === 1)
-  ok('④ 취소 후 재입력도 측정값만', (await p.locator('[data-metric="rework"][data-metric-status="no-comparable"]').count()) === 1)
+  await p.locator('[data-perf-summary]').waitFor({ state: 'visible', timeout: 8000 })
+  ok('④ 기본 칸은 「요약」', (await p.locator('[data-perf-tab="summary"][aria-selected="true"]').count()) === 1)
+  ok('④ 요약에는 측정 근거 본문이 없다 (기본 펼침 아님)', (await p.locator('[data-perf-basis]').count()) === 0 && (await p.locator('[data-perf-breadth]').count()) === 0)
   const body = flat(await p.textContent('main'))
-  ok('④ 「같은 범위」와 「내부 표시 기준」이 적혀 있다', /같은 범위/.test(body) && /내부 표시 기준/.test(body))
-  ok('④ 성장 → 병목 → AX → 측정 → 투자 → 목표 사슬이 있다', (await p.locator('[data-growth-step]').count()) === 6)
-  ok('④ 사슬에 「원본 미확인」·「전망」 배지가 붙는다', /원본 미확인/.test(body) && /전망 \(확정 아님\)/.test(body))
-  ok('④ 관리자에게는 「실증 준비 상태」 단추가 있다', /실증 준비 상태/.test(body))
+  ok('④ 요약에 내부 표시 기준·계산 조건 문장이 없다', !/내부 표시 기준/.test(body) && !/근거가 없으면 숫자를 만들지 않습니다/.test(body) && !/커버리지/.test(body), body.slice(0, 120))
+  const g = async (k) => flat(await p.textContent(`[data-growth-tile="${k}"]`))
+  ok('④ 성장 현황 4칸 — 2025 매출 5.8억 · 전년 대비 약 60%', /5\.8억/.test(await g('rev2025')) && /약 60% 증가/.test(await g('rev2025')), await g('rev2025'))
+  ok('④ 2026 상반기 4.53억 은 「실적」· 원본 미확인 표시', /4\.53억/.test(await g('rev2026h1')) && /원본 미확인/.test(await g('rev2026h1')) && (await p.locator('[data-growth-tile="rev2026h1"] [data-kind="실적"]').count()) === 1)
+  ok('④ 거래처 약 53곳 과 시스템 등록 수를 구분', /53곳/.test(await g('clients')) && /시스템 등록 \d+곳 \(별도\)/.test(await g('clients')), await g('clients'))
+  ok('④ 연환산 9.06억 은 「예상·목표」로 따로', /9\.06억/.test(await g('annualized')) && (await p.locator('[data-growth-tile="annualized"] [data-kind="예상·목표"]').count()) === 1, await g('annualized'))
+  ok('④ 성장 현황에 「AX 도입 효과가 아닙니다」', /AX 도입 효과가 아닙니다/.test(flat(await p.textContent('[data-perf-growth]'))))
+  //  확인된 변화 — 현장 12건이면 입력 시간·자동 반영이 카드로. 사무시간은 같은 범위 조사가 없어 없음.
+  const cards = await p.locator('[data-perf-change]').count()
+  ok('④ 변화 카드는 1~3장', cards >= 1 && cards <= 3, String(cards))
+  ok('④ 입력 시간 1.5분이 「초기 측정」 카드로 보인다', /1\.5분/.test(flat(await p.textContent('[data-perf-change-value="inputTime"]'))) && (await p.locator('[data-perf-change="inputTime"] [data-kind="초기 측정"]').count()) === 1)
+  ok('④ 입력 시간 카드에 개선율(%)이 없다 — 범위가 다름', !/%/.test(flat(await p.textContent('[data-perf-change="inputTime"]'))))
+  ok('④ 사무시간 카드는 없다 (같은 범위 도입 후 조사 없음)', (await p.locator('[data-perf-change="adminTime"]').count()) === 0)
+  //  미측정은 묶음 — 펼치기 전엔 항목이 안 보인다
+  ok('④ 「아직 측정하지 않은 항목 N개」로 묶여 있다', /아직 측정하지 않은 항목 \d+개/.test(flat(await p.textContent('[data-perf-unmeasured-toggle]'))))
+  ok('④ 펼치기 전에는 항목이 없다', (await p.locator('[data-perf-unmeasured-item]').count()) === 0)
+  await p.locator('[data-perf-unmeasured-toggle]').click()
+  ok('④ 펼치면 항목이 보인다', (await p.locator('[data-perf-unmeasured-item]').count()) > 0)
+  ok('④ 미측정 목록에 이미 카드로 보인 항목은 없다', (await p.locator('[data-perf-unmeasured-item="inputTime"]').count()) === 0)
+  //  다음 할 일 — 최대 3개 · 관리자는 기준값 채우기가 첫째
+  const nextN = await p.locator('[data-perf-next-item]').count()
+  ok('④ 다음 할 일은 최대 3개', nextN >= 1 && nextN <= 3, String(nextN))
+  ok('④ 기준값이 비어 있으면 첫 일은 「도입 전 기준값 채우기」', (await p.locator('[data-perf-next-item]').first().getAttribute('data-perf-next-item')) === 'baseline')
+  ok('④ 다음 할 일에 「재현시험 1건」이 있다', (await p.locator('[data-perf-next-item="trial"]').count()) === 1)
+  //  카드를 누르면 근거 칸으로
+  await p.locator('[data-perf-change="inputTime"]').click()
+  await p.waitForTimeout(400)
+  ok('④ 카드를 누르면 「측정 근거」 칸이 열린다 (?tab=basis)', /tab=basis/.test(p.url()) && (await p.locator('[data-perf-basis]').count()) === 1, p.url())
   ok('④ 화면이 터지지 않음', errors.length === 0, errors.slice(0, 2).join(' | '))
   await ctx.close()
 }
 {
-  const { ctx, p } = await open('office', '/performance', { routes: { collection_events: EVENTS, ops_changes: [] } })
+  //  측정 근거 칸 — 0106 의 내용이 그대로 있다
+  const { ctx, p } = await open('admin', '/performance?tab=basis', { routes: { collection_events: EVENTS, dev_requests: [] }, missing: ['ops_changes'] })
   await p.locator('[data-perf-breadth]').waitFor({ state: 'visible', timeout: 8000 })
-  ok('④ 변화 기록이 비어 있으면 「없음」 (모름과 다름)', (await p.locator('[data-perf-confounding="no"]').count()) === 1)
+  const breadth = flat(await p.textContent('[data-perf-breadth]'))
+  ok('④ 근거: 표본의 폭 한 줄', /현장 12건/.test(breadth) && /입력 커버리지/.test(breadth), breadth)
+  ok('④ 근거: 진단 첫 줄 「현장 입력 12건이 집계에 들어 있습니다」', /현장 입력 12건이 집계에/.test(flat(await p.textContent('[data-perf-diagnosis-head]'))), flat(await p.textContent('[data-perf-diagnosis-head]')))
+  ok('④ 근거: 변화 기록 표가 없으면 「모름」', (await p.locator('[data-perf-confounding="unknown"]').count()) === 1)
+  ok('④ 근거: 입력 소요시간은 「측정값만 (비교 기준 없음)」', (await p.locator('[data-metric="inputTime"][data-metric-status="no-comparable"]').count()) === 1)
+  ok('④ 근거: 입력 소요시간 값 1.5분', /1\.5분/.test(flat(await p.textContent('[data-metric-after="inputTime"]'))))
+  ok('④ 근거: 사무업무 시간(같은 범위)은 측정 중', (await p.locator('[data-metric="adminTime"][data-metric-status="measuring"]').count()) === 1)
+  ok('④ 근거: 취소 후 재입력도 측정값만', (await p.locator('[data-metric="rework"][data-metric-status="no-comparable"]').count()) === 1)
   const body = flat(await p.textContent('main'))
-  ok('④ 사무실 계정에는 관리자 전용 화면 단추가 없다 (막다른 길 제거)', !/기준값 설정/.test(body) && !/실증 준비 상태/.test(body))
-  ok('④ 엑셀 응답은 관리자만 읽는다고 말한다', /관리자 계정에서만/.test(flat(await p.textContent('[data-perf-excel]'))))
+  ok('④ 근거: 「같은 범위」와 「내부 표시 기준」은 여기에만', /같은 범위/.test(body) && /내부 표시 기준/.test(body))
+  ok('④ 근거: 성장 → 병목 → AX → 측정 → 투자 → 목표 사슬', (await p.locator('[data-growth-step]').count()) === 6)
+  ok('④ 근거: 사슬에 「원본 미확인」·「전망」 배지', /원본 미확인/.test(body) && /전망 \(확정 아님\)/.test(body))
+  await ctx.close()
+}
+{
+  //  연습만 있는 경우 — 시작일이 오늘이고 기록은 어제. 「실제 사용 없음」이라 적고 연습 건수를 센다. 시작일을 옮기지 않는다.
+  const practice = EVENTS.map((e) => ({ ...e, at: e.at.replace(TODAY, YDAY) }))
+  const { ctx, p, state } = await open('admin', '/performance', { routes: { collection_events: practice, dev_requests: [], experiment_settings: [{ id: 1, start_date: TODAY }], performance_baselines: [BASE_ROW] }, missing: ['ops_changes'] })
+  await p.locator('[data-perf-summary]').waitFor({ state: 'visible', timeout: 8000 })
+  ok('④ 연습만: 카드 대신 「아직 측정된 값이 없습니다」', (await p.locator('[data-perf-nochange]').count()) === 1 && (await p.locator('[data-perf-change]').count()) === 0)
+  const nc = flat(await p.textContent('[data-perf-nochange]'))
+  ok('④ 연습만: 「실제 사용 없음 — 시작일 이후 현장 입력 0건」으로 진단 (자료 미확인이 아님)', new RegExp(`실제 사용 없음 — 실증 시작일 ${TODAY} 이후 현장 입력 0건`).test(nc) && !/자료 미확인/.test(nc), nc)
+  ok('④ 연습만: 전체 12 = 현장 0 · 연습 12', /전체 12건 = 현장 0 · 연습\(시작일 전\) 12/.test(nc), nc)
+  ok('④ 연습만: 첫 할 일은 「기사님이 수거 입력을 시작」', (await p.locator('[data-perf-next-item]').first().getAttribute('data-perf-next-item')) === 'field')
+  ok('④ 연습만: 시작일·기록을 시스템이 고쳐 쓰지 않는다 (쓰기 0건)', state.writes.filter((w) => /experiment_settings|collection_events|performance_baselines/.test(w.url ?? '')).length === 0, JSON.stringify(state.writes))
+  await ctx.close()
+}
+{
+  //  도입 후 값을 「추정」으로 넣어 둔 경우 — 보존하되 실측 비교에서 뺀다. 0% 를 만들지 않는다.
+  const est = { ...BASE_ROW, after_admin_minutes_per_collection: 11.7, after_monthly_doc_hours: 91, after_surveyed_on: TODAY, after_source: 'estimate', after_note: '거의 그대로' }
+  const { ctx, p } = await open('admin', '/performance', { routes: { collection_events: EVENTS, dev_requests: [], performance_baselines: [est] }, missing: ['ops_changes'] })
+  await p.locator('[data-perf-summary]').waitFor({ state: 'visible', timeout: 8000 })
+  ok('④ 추정: 사무시간 카드가 없다 (0% 를 만들지 않음)', (await p.locator('[data-perf-change="adminTime"]').count()) === 0)
+  ok('④ 추정: 요약 어디에도 「0% 단축」이 없다', !/0% 단축|0% 감소/.test(flat(await p.textContent('[data-perf-summary]'))))
+  await p.locator('[data-perf-unmeasured-toggle]').click()
+  ok('④ 추정: 미측정 목록에 「11.7분은 추정 … 실측 비교에서 제외」', /11\.7분은 추정.*제외/.test(flat(await p.textContent('[data-perf-unmeasured-item="adminTime"]'))), flat(await p.textContent('[data-perf-unmeasured-item="adminTime"]')))
+  ok('④ 추정: 기준값이 채워져 있으니 「기준값 채우기」는 없다', (await p.locator('[data-perf-next-item="baseline"]').count()) === 0)
+  ok('④ 추정: 「이사님께 같은 세 가지 시간 다시 여쭙기」는 남는다', (await p.locator('[data-perf-next-item="afterSurvey"]').count()) === 1)
+  await p.locator('[data-perf-tab="basis"]').click()
+  await p.locator('[data-metric="adminTime"]').waitFor({ state: 'visible', timeout: 8000 })
+  await p.locator('[data-metric="adminTime"] button').first().click()
+  ok('④ 추정: 근거 칸에서도 사무시간은 측정 중 · 값 11.7 은 메모에 보존', (await p.locator('[data-metric="adminTime"][data-metric-status="measuring"]').count()) === 1 && /11\.7분은 추정/.test(flat(await p.textContent('[data-metric="adminTime"]'))))
+  await ctx.close()
+}
+{
+  //  재현시험이 있으면 요약에 「업무 재현시험」으로 따로 — 현장 카드와 섞이지 않는다
+  const mine = W.profileFor('admin')
+  const rows = [{ id: 'd9', requester_id: mine.id, requester_name: mine.name, requester_role: 'admin', topics: ['업무 재현시험'], message: 'trial:2026-09-10|invoice|old=25,1|new=9,0 › 8월 명세서',
+    status: '접수', admin_note: '', handled_at: null, created_at: `${TODAY}T01:00:00Z`, updated_at: `${TODAY}T01:00:00Z` }]
+  const { ctx, p } = await open('admin', '/performance', { routes: { collection_events: [], dev_requests: rows }, missing: ['ops_changes'] })
+  await p.locator('[data-perf-summary]').waitFor({ state: 'visible', timeout: 8000 })
+  await p.locator('[data-perf-trials]').waitFor({ state: 'visible', timeout: 8000 })
+  const tr = flat(await p.textContent('[data-perf-trial="invoice"]'))
+  ok('④ 재현시험: 거래명세서 25분 → 9분 · 64% 단축 · 1회 · 오류 1→0', /25분 → 9분/.test(tr) && /64% 단축/.test(tr) && /1회/.test(tr) && /오류 1→0/.test(tr), tr)
+  ok('④ 재현시험: 「업무 재현시험」 표시가 붙고 현장 카드는 없다', (await p.locator('[data-perf-trials] [data-kind="업무 재현시험"]').count()) === 1 && (await p.locator('[data-perf-change]').count()) === 0)
+  ok('④ 재현시험: 회사 전체로 확대하지 않는다고 적는다', /회사 전체 절감으로 확대하지 않습니다/.test(flat(await p.textContent('[data-perf-trials]'))))
+  ok('④ 재현시험: 다음 할 일에서 「재현시험 1건」이 빠진다', (await p.locator('[data-perf-next-item="trial"]').count()) === 0)
+  //  설정 칸에서 기록 가능
+  await p.locator('[data-perf-tab="settings"]').click()
+  await p.locator('[data-trial-card]').waitFor({ state: 'visible', timeout: 8000 })
+  await p.locator('[data-trial-save]').click()
+  ok('④ 재현시험: 시간 없이 기록하면 막는다 (0·빈칸 금지)', /실제로 재서/.test(flat(await p.textContent('[data-trial-msg]'))))
+  await ctx.close()
+}
+{
+  //  사무실 계정 — 관리자 전용 일은 없다 · 근거의 엑셀 응답은 관리자만
+  const { ctx, p } = await open('office', '/performance', { routes: { collection_events: EVENTS, ops_changes: [] } })
+  await p.locator('[data-perf-summary]').waitFor({ state: 'visible', timeout: 8000 })
+  ok('④ 사무실: 다음 할 일에 기준값·이사님 조사(관리자 전용)가 없다', (await p.locator('[data-perf-next-item="baseline"]').count()) === 0 && (await p.locator('[data-perf-next-item="afterSurvey"]').count()) === 0)
+  ok('④ 사무실: 관리자 전용 화면 단추가 없다', !/기준값 설정/.test(flat(await p.textContent('main'))) && !/실증 준비 상태/.test(flat(await p.textContent('main'))))
+  await p.locator('[data-perf-tab="basis"]').click()
+  await p.locator('[data-perf-breadth]').waitFor({ state: 'visible', timeout: 8000 })
+  ok('④ 사무실: 변화 기록이 비어 있으면 「없음」 (모름과 다름)', (await p.locator('[data-perf-confounding="no"]').count()) === 1)
+  ok('④ 사무실: 엑셀 응답은 관리자만 읽는다고 말한다', /관리자 계정에서만/.test(flat(await p.textContent('[data-perf-excel]'))))
+  await ctx.close()
+}
+{
+  //  폰 390 — 요약이 가로로 안 밀리고 성장·변화·다음 할 일이 다 있다
+  const { ctx, p } = await open('admin', '/performance', { routes: { collection_events: EVENTS, dev_requests: [] }, missing: ['ops_changes'], width: 390 })
+  await p.locator('[data-perf-summary]').waitFor({ state: 'visible', timeout: 8000 })
+  const over = await p.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))
+  ok('④ 폰: 가로로 밀리지 않음', over === 0, `${over}px`)
+  ok('④ 폰: 성장 4칸 · 변화 카드 · 다음 할 일이 모두 있다', (await p.locator('[data-growth-tile]').count()) === 4 && (await p.locator('[data-perf-change]').count()) >= 1 && (await p.locator('[data-perf-next-item]').count()) >= 1)
   await ctx.close()
 }
 

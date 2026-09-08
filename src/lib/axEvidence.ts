@@ -1,6 +1,7 @@
 import type { AppData, Schedule } from '../types'
 import { supplyNeedsFor } from './supplyNeeds'
 import { confoundingIn, type Confounding, type OpsChange } from './opsChanges'
+import { isFieldSchedule } from './evidenceBase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AX 증거 — 네 문장을 숫자로 만들 수 있는가
@@ -707,8 +708,11 @@ export interface WorkAx {
 }
 
 export function workAx(data: AppData, period: AxPeriod): WorkAx {
+  //  ⚠ 이관(migrated)·시연·시드 일정은 뺍니다 — 성과·준비 상태와 같은 제외 기준(0106 A).
+  //    이관 자료는 입력 시각이 옮긴 날이라 「당일 입력」이 아닙니다.
   const done = (data.schedules ?? []).filter(
     (s) =>
+      isFieldSchedule(s) &&
       s.status === '완료' &&
       !s.canceledAt &&
       s.date >= period.from &&
