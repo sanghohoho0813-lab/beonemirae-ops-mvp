@@ -303,6 +303,8 @@ async function scrollAndAnswer(p, valueOf) {
   const bothIds = (await questionIds(p)).filter((x) => x.startsWith('ST_WORK'))
   ok(bothIds.every((x) => x.startsWith('ST_WORK_F')), '「둘 다」는 현장 문항 (스무 문항이 되지 않게)')
 
+  //  ⚠ 0104 — 관점을 바꾸면 **업무 종류도 딸려 가지 않아야** 합니다.
+  //    「운영·관리 관점 · 현장 수거」라는 앞뒤 안 맞는 기록이 실제로 저장됐습니다.
   //  ⚠ 관점을 바꿔도 답이 섞이지 않아야 합니다 — 보이는 문항의 답만 셉니다
   await p.locator('[data-fb-question="ST_USE_01"]').scrollIntoViewIfNeeded()
   await p.locator('[data-fb-choice="ST_USE_01:5"]').click()
@@ -330,6 +332,32 @@ async function scrollAndAnswer(p, valueOf) {
   const sent = server.posts[server.posts.length - 1]
   ok((sent?.topics ?? []).some((t) => /^v2:_work=both/.test(t)), '저장에는 「둘 다」가 그대로 남음')
   ok(!(sent?.topics ?? []).some((t) => /^v2:MG_/.test(t)), '고르지 않은 관점의 답은 보내지 않음')
+  await ctx.close()
+}
+
+// ── 3b. 운영·관리로 바꾸면 업무 종류는 딸려 가지 않는다 (0104) ──────────────
+{
+  const { ctx, p } = await open('office', '00000000-0000-0000-0000-0000000000o1', '홍이사')
+  await openSheet(p, false)
+  //  직원 → 현장 수거까지 고른 뒤
+  await p.locator('[data-fb-group="staff"]').click()
+  await p.waitForTimeout(400)
+  await p.locator('[data-fb-usage="d1_2"]').click()
+  await p.locator('[data-fb-work="field"]').click()
+  await p.waitForTimeout(400)
+  //  관점을 운영·관리로 바꿉니다
+  await p.locator('[data-fb-group="management"]').click()
+  await p.waitForTimeout(500)
+  ok((await p.locator('[data-fb-work]').count()) === 0, '관리자 관점에는 업무 종류를 묻지 않는다')
+  await p.locator('[data-fb-question="MG_STATUS_01"]').scrollIntoViewIfNeeded()
+  await p.locator('[data-fb-choice="MG_STATUS_01:4"]').click()
+  await p.locator('[data-fb-submit]').click()
+  await p.locator('[data-fb-done]').waitFor({ state: 'visible', timeout: 8000 })
+  const t = server.posts[server.posts.length - 1]?.topics ?? []
+  ok(t.some((x) => /^v2:_group=management/.test(x)), '관점은 운영·관리로 저장됨')
+  ok(!t.some((x) => /^v2:_work=/.test(x)),
+    '**「운영·관리 관점 · 현장 수거」 같은 앞뒤 안 맞는 기록이 저장되지 않음**',
+    t.filter((x) => /_work/.test(x)).join(','))
   await ctx.close()
 }
 
@@ -468,7 +496,8 @@ for (const w of [360, 390, 430]) {
 
   const mg = flat(await p.textContent('[data-fb-summary="management"]'))
   const st = flat(await p.textContent('[data-fb-summary="staff"]'))
-  ok(/1명 답변/.test(mg), '운영·관리 응답 수가 보임', mg.slice(0, 60))
+  //  운영·관리 2명(①번 · 3b번) · 현장·실무 2명(②번 · ③번)
+  ok(/2명 답변/.test(mg), '운영·관리 응답 수가 보임', mg.slice(0, 60))
   ok(/2명 답변/.test(st), '현장·실무 응답 수가 보임', st.slice(0, 60))
   //  ⚠ 몇 명 중 몇 명인지 — 한 사람이 고른 것이 전체 의견처럼 보이면 안 됩니다
   ok(/\d명 \/ \d명/.test(st), '「n명 / 전체 m명」으로 함께 보임')

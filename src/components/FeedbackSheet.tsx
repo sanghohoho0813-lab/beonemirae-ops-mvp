@@ -97,7 +97,13 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
     setError(null)
     try {
       await createDevRequest({
-        topics: encodeResponse({ group, workType: work, usage, answers: mine, benefits, pains }),
+        //  ⚠ 0104 — 업무 종류는 **직원 관점일 때만** 보냅니다. 관점을 「현장·실무」로
+        //    골라 업무까지 고른 뒤 「운영·관리」로 바꾸면, 그 값이 state 에 남아
+        //    「운영·관리 관점 · 현장 수거」라는 앞뒤 안 맞는 기록이 저장됐습니다.
+        //    (관리자 관점에는 업무 종류를 묻지도 않습니다.)
+        topics: encodeResponse({
+          group, workType: group === 'staff' ? work : null, usage, answers: mine, benefits, pains,
+        }),
         message: comment,
       })
       setSent(true)
