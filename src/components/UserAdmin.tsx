@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, Clock, KeyRound, Loader2, RefreshCw, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, Check, Clock, KeyRound, Loader2, RefreshCw, UserPlus, X } from 'lucide-react'
 import { useAuth, ROLE_LABEL, type UserRole } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import {
@@ -83,6 +83,22 @@ export function UserAdmin() {
     [rows],
   )
   const approvedRows = useMemo(() => rows.filter((r) => !isPending(r)), [rows])
+
+  //  ── 같은 이름으로 사용 중인 계정 (0105) ──────────────────────────────────
+  //  실제로 있었던 일(0102): 한 분이 회사 메일과 개인 메일로 계정을 둘 갖고
+  //  계셨고, 다른 쪽으로 로그인하니 「비밀번호가 막혔다」로 보였습니다. 어느
+  //  쪽이 진짜인지 시스템은 모릅니다 — 둘이라는 **사실만** 알리고, 중지는
+  //  사람이 고릅니다. 이름이 비었거나 이미 중지된 계정은 세지 않습니다.
+  const sameName = useMemo(() => {
+    const groups = new Map<string, ProfileRow[]>()
+    for (const r of approvedRows) {
+      const k = (r.name ?? '').replace(/\s+/g, '')
+      if (!r.active || !k) continue
+      groups.set(k, [...(groups.get(k) ?? []), r])
+    }
+    return [...groups.values()].filter((g) => g.length > 1)
+  }, [approvedRows])
+  const dupIds = useMemo(() => new Set(sameName.flat().map((r) => r.id)), [sameName])
 
   const load = useCallback(async () => {
     if (mode !== 'live') return
@@ -197,6 +213,25 @@ export function UserAdmin() {
       {error && <p className="t-body break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-600">{error}</p>}
       {done && <p className="t-body break-keep rounded-2xl bg-emerald-50 px-4 py-3 font-bold text-emerald-700">{done}</p>}
 
+      {sameName.length > 0 && (
+        <div data-user-samename className="rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-100">
+          <p className="t-body flex items-start gap-2 break-keep font-bold text-amber-800">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" strokeWidth={2.4} />
+            <span>같은 이름으로 사용 중인 계정이 있습니다 — 한 분이라면 하나만 남기고 나머지는 「중지」해 주세요.</span>
+          </p>
+          <ul className="mt-1.5 flex flex-col gap-0.5 pl-7">
+            {sameName.map((g) => (
+              <li key={g[0].id} data-user-samename-group={g[0].name} className="t-muted break-keep !text-amber-800">
+                <b>{g[0].name}</b> · {g.map((r) => r.email).join(' · ')}
+              </li>
+            ))}
+          </ul>
+          <p className="t-caption mt-1.5 break-keep pl-7 text-amber-700">
+            어느 쪽이 진짜인지는 시스템이 고르지 않습니다. 다른 쪽 계정으로 로그인하면 비밀번호가 「막힌 것」처럼 보일 수 있습니다.
+          </p>
+        </div>
+      )}
+
       <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50">
         {approvedRows.map((r) => {
           const self = r.id === profile?.id
@@ -204,12 +239,13 @@ export function UserAdmin() {
             /*  줄 전체를 집을 수 있는 표시를 답니다. 없으면 검사가 "이메일이
                 적힌 곳에서 div 를 두 번 올라간 자리" 같은 식으로 집게 되는데,
                 줄 안에 무엇이 하나 늘어나는 순간 엉뚱한 데를 잡습니다. */
-            <div key={r.id} data-user-row={r.id} className="bg-white px-4 py-3.5">
+            <div key={r.id} data-user-row={r.id} data-user-dup={dupIds.has(r.id) ? '1' : undefined} className="bg-white px-4 py-3.5">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <div className="min-w-0 flex-1">
                   <p className="t-body break-keep font-extrabold text-navy-900">
                     {r.name || r.email}
                     {self && <span className="ml-2 font-bold text-teal-600">본인</span>}
+                    {dupIds.has(r.id) && <span className="ml-2 pill bg-amber-100 text-amber-800">같은 이름</span>}
                     {/*  호칭만 바꿉니다 — 권한은 하나도 안 건드립니다.
                         지금 대표님 계정 이름과 예비 계정 이름이 서로 바뀌어
                         있는데, 화면에 고칠 곳이 없어 SQL 을 써야 했습니다. */}

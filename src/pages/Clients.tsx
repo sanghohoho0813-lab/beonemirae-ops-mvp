@@ -9,6 +9,7 @@ import { Modal } from '../components/Modal'
 import { FilterChip, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { ClientForm, emptyClientForm } from '../components/ClientForm'
+import { ClientTidyCard } from '../components/ClientTidyCard'
 import { clientOutstanding } from '../lib/ops'
 import { nextActionsFor } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
@@ -170,6 +171,10 @@ export function Clients() {
         </p>
       </div>
       )}
+
+      {/*  0105 — 정리 도우미. 사무실·관리자에게만 (거래처를 고칠 수 있는 사람).
+           시연 모드에서는 시연 거래처가 「정리할 것」으로 잡혀 헷갈리므로 안 띄웁니다. */}
+      {live && canAddClient && <ClientTidyCard clients={data.clients} />}
 
       {/*  ⚠ 0076 — 대표님: 「거래처명, 주소검색 할 수 있는 칸 처음부터 커서
            깜빡이게. 입력할 수 있는 공간이라는 게 보여야 해」.

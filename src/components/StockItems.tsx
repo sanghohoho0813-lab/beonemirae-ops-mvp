@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Boxes, Check, Loader2, RefreshCw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useData } from '../context/DataContext'
 import { useSchemaAtLeast } from '../lib/schemaGate'
 import { countStockItem, receiveStockItems, stockItems, type StockItem } from '../lib/repo'
-import { SUPPLY_ITEMS } from '../lib/billing'
+import { SUPPLY_ITEMS, itemsOf } from '../lib/billing'
 import { STOCK_KEYS } from '../lib/collection'
 import { QtyField } from './ui'
 import { Modal } from './Modal'
@@ -28,8 +29,38 @@ const GROUPS = STOCK_KEYS.map((b) => ({
   items: SUPPLY_ITEMS.filter((i) => i.bucket === b.key),
 })).filter((g) => g.items.length > 0)
 
+/** 「쓰는 것만 보기」를 껐는지 — 이 브라우저에 기억합니다 */
+const SHOW_ALL_KEY = 'beonemirae-ops:stock-show-all'
+/** 최근 이만큼 안에 한 번이라도 나간 규격을 「쓰는 것」으로 봅니다 */
+const RECENT_DAYS = 90
+
 export function StockItems() {
   const { role, mode } = useAuth()
+  const { data } = useData()
+  //  ⚠ 0105 — 이사님: 「골판지 6종·합성수지 6종을 재고에도 다 따로 보여 주면
+  //    화면이 너무 복잡해질 것 같아 걱정」. 규격을 **없애지 않고 접습니다** —
+  //    최근 90일에 한 번이라도 나간 규격과 세어 둔 규격만 펼치고, 나머지는
+  //    「접힘 n개」로 둡니다. 「전부 보기」로 언제든 폅니다.
+  //  ⚠ 나간 기록이 하나도 없으면 접지 않습니다 — 무엇을 쓰는지 알 근거가
+  //    없는데 접으면 그냥 숨긴 것입니다.
+  const recentKeys = (() => {
+    const cut = new Date(Date.now() - RECENT_DAYS * 86400_000).toISOString().slice(0, 10)
+    const keys = new Set<string>()
+    for (const m of data.materials ?? []) {
+      if (m.date < cut) continue
+      for (const [k, n] of Object.entries(itemsOf(m))) if ((n ?? 0) > 0) keys.add(k)
+    }
+    return keys
+  })()
+  const hasUsage = recentKeys.size > 0
+  const [showAll, setShowAll] = useState<boolean>(() => {
+    try { return window.localStorage.getItem(SHOW_ALL_KEY) === '1' } catch { return false }
+  })
+  const fold = hasUsage && !showAll
+  const toggleShowAll = () => setShowAll((v) => {
+    try { window.localStorage.setItem(SHOW_ALL_KEY, v ? '0' : '1') } catch { /* 사생활 모드 */ }
+    return !v
+  })
   const ready = useSchemaAtLeast(79) === true
   const staff = role === 'admin' || role === 'office'
 
@@ -111,6 +142,18 @@ export function StockItems() {
           <Boxes size={18} strokeWidth={2.2} />
         </span>
         <h3 className="t-card min-w-0 flex-1 break-keep text-navy-900">규격별 재고</h3>
+        {hasUsage && (
+          <button
+            data-spec-showall
+            aria-pressed={showAll}
+            onClick={toggleShowAll}
+            className={`flex min-h-[2.5rem] items-center gap-1.5 rounded-xl px-3 text-[1rem] font-bold transition active:scale-95 ${
+              showAll ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
+            }`}
+          >
+            {showAll ? '쓰는 것만' : '전부 보기'}
+          </button>
+        )}
         <button
           data-spec-reload
           onClick={() => void load()}
@@ -140,9 +183,30 @@ export function StockItems() {
         <p className="t-body text-navy-400">규격별 재고를 불러오는 중입니다…</p>
       ) : (
         <div className="space-y-4">
-          {GROUPS.map((g) => (
-            <div key={g.key}>
-              <p className="mb-1.5 px-1 text-[1.02rem] font-extrabold text-navy-500">{g.label}</p>
+          {GROUPS.map((g) => {
+            //  접을 줄: 최근에 안 나갔고 세어 둔 적도 없는 규격
+            const hiddenOf = (key: string) => {
+              const r = byItem.get(key)
+              return fold && !recentKeys.has(key) && (!r || r.qty == null)
+            }
+            const hiddenN = g.items.filter((it) => hiddenOf(it.key)).length
+            //  묶음 합계 — 센 것만 더합니다. 하나라도 안 센 규격이 있으면 「일부 미집계」.
+            const known = g.items.map((it) => byItem.get(it.key)?.qty).filter((q): q is number => q != null)
+            const total = known.reduce((s, q) => s + q, 0)
+            const unknownN = g.items.length - known.length
+            return (
+            <div key={g.key} data-spec-group={g.key}>
+              <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 px-1">
+                <p className="text-[1.02rem] font-extrabold text-navy-500">{g.label}</p>
+                <span data-spec-total={g.key} className="text-[1rem] font-bold tabular-nums text-navy-700">
+                  {known.length > 0 ? `합계 ${total.toLocaleString('ko-KR')}${g.items[0]?.unit ?? ''}` : ''}
+                  {unknownN > 0 && (
+                    <span className="ml-1 font-medium text-amber-700">
+                      {known.length > 0 ? `· ${unknownN}개 규격 미집계` : '아직 안 세어 봄'}
+                    </span>
+                  )}
+                </span>
+              </div>
               {/*  ⚠ 0082 — xl 에서 3칸이었습니다. PC 기본 글자를 16px 바닥에
                    맞추자(15.8→17.8px) 한 칸이 248px 로 좁아지면서, 오른쪽의
                    「아직 안 세어 봄」+「세기」가 자리를 다 먹고 **라벨이 7px 로
@@ -156,9 +220,10 @@ export function StockItems() {
                     <li
                       key={it.key}
                       data-spec-stock={it.key}
+                      data-spec-folded={hiddenOf(it.key) ? '1' : undefined}
                       className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 ${
                         unknown ? 'bg-amber-50' : 'bg-navy-50'
-                      }`}
+                      }${hiddenOf(it.key) ? ' hidden' : ''}`}
                     >
                       {/*  ⚠ min-w-0 만 두면 0 까지 눌립니다. 「63L 박스」가
                            한 줄로 들어갈 만큼은 반드시 남겨 둡니다. */}
@@ -189,8 +254,14 @@ export function StockItems() {
                   )
                 })}
               </ul>
+              {hiddenN > 0 && (
+                <p data-spec-hidden={g.key} className="mt-1.5 px-1 text-[0.98rem] font-bold text-navy-400">
+                  최근 {RECENT_DAYS}일에 안 나간 규격 {hiddenN}개 접힘 — 위 「전부 보기」로 폅니다
+                </p>
+              )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

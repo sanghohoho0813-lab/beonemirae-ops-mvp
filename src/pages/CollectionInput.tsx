@@ -376,9 +376,15 @@ export function CollectionInput() {
   //  폰에서 자재 목록을 접습니다 — 지난번에 준 규격과 값이 들어간 줄만
   //  펼쳐 둡니다. 한 번 펼치면 그 입력이 끝날 때까지 그대로 둡니다.
   const [showAllItems, setShowAllItems] = useState(false)
-  const hiddenItemCount = showAllItems
-    ? 0
-    : SUPPLY_ITEMS.filter((it) => (lastSupply[it.key] ?? 0) === 0 && (suppliedItems[it.key] ?? 0) === 0).length
+  //  ⚠ 0105 — 폰에서만 접던 것을 **PC 에서도** 접습니다. 이사님: 「골판지 6종·
+  //    합성수지 6종을 다 따로 보여 주면 화면이 너무 복잡해질 것 같아 걱정」.
+  //    실제로 한 거래처가 쓰는 규격은 두세 개입니다 — 지난번에 준 것과 값이
+  //    들어간 줄만 펼치고, 첫 줄 하나는 늘 보여 「규격마다 한 줄, ± 로 센다」를
+  //    알립니다(안내 투어의 표적이기도 합니다). 줄을 없애지 않습니다 —
+  //    「다른 규격 n개 보기」로 언제든 펼칩니다. 규격이 몇 종이든 같은 규칙입니다.
+  const rowShown = (key: ItemKey, index: number) =>
+    showAllItems || index === 0 || (lastSupply[key] ?? 0) > 0 || (suppliedItems[key] ?? 0) > 0
+  const hiddenItemCount = SUPPLY_ITEMS.filter((it, si) => !rowShown(it.key as ItemKey, si)).length
 
   const stock = data.officeStock
   // 규격별 입력 → 재고 4칸 차감량
@@ -1212,7 +1218,6 @@ export function CollectionInput() {
           */}
           <div data-tour="collect-supply" className="divide-y divide-navy-50">
             {SUPPLY_ITEMS.map((it, si) => {
-              const used = (lastSupply[it.key] ?? 0) > 0 || (suppliedItems[it.key] ?? 0) > 0
               const bucket = it.bucket!
               const over = supplied[bucket] > stock[bucket]
               const last = lastSupply[it.key] ?? 0
@@ -1243,8 +1248,8 @@ export function CollectionInput() {
               // 폰에서는 이 목록 전체(10줄, 1000px 남짓)가 화면에 들어가지 않아
               // 투어가 강조할 수 없습니다. 첫 줄만 따로 대상으로 둡니다 —
               // 어차피 설명해야 할 것은 "규격마다 한 줄, ± 로 센다" 하나입니다.
-              //  폰에서 접는 줄 — 값이 들어 있거나 지난번에 준 규격은 늘 보입니다
-              const cls = used || showAllItems ? '' : 'hidden sm:block'
+              //  접는 줄 — 값이 들어 있거나 지난번에 준 규격, 그리고 첫 줄은 늘 보입니다
+              const cls = rowShown(it.key as ItemKey, si) ? '' : 'hidden'
               return si === 0 ? (
                 <div key={it.key} data-tour="collect-supply-row" className={cls}>
                   {field}
@@ -1261,7 +1266,7 @@ export function CollectionInput() {
               type="button"
               data-supply-more
               onClick={() => setShowAllItems(true)}
-              className="mt-2 w-full rounded-2xl bg-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-600 transition active:scale-[0.99] sm:hidden"
+              className="mt-2 w-full rounded-2xl bg-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-600 transition hover:bg-navy-100 active:scale-[0.99]"
             >
               다른 규격 {hiddenItemCount}개 보기
             </button>

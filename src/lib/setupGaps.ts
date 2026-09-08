@@ -1,4 +1,5 @@
 import type { AppData, Client, Payment } from '../types'
+import { tidyClients } from './clientTidy'
 import { today } from './format'
 import { addDays } from './performance'
 import { shiftMonth } from './deadlines'
@@ -31,6 +32,7 @@ import { hideSupplies } from './pilotMode'
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type GapKey =
+  | 'clientTidy'
   | 'holidays'
   | 'productPrice'
   | 'bizInfo'
@@ -70,6 +72,23 @@ const COST_MONTHS = 3
 export function scanSetupGaps(data: AppData, asOf: string = today()): SetupScan {
   const gaps: SetupGap[] = []
   const clients = data.clients ?? []
+
+  // ── 거래처 정리 (0105) ────────────────────────────────────────────────────
+  //  빈칸·겹침을 거래처 화면의 정리 도우미가 모아 둡니다. 대시보드에는 한 줄만 —
+  //  「첫 화면이 복잡함」이 첫 피드백이었습니다. 여기서 항목을 하나씩 늘어놓으면
+  //  그 불편을 되풀이합니다.
+  {
+    const t = tidyClients(clients)
+    if (t.issues.length > 0) {
+      gaps.push({
+        key: 'clientTidy', label: '거래처 정리', weight: '운영',
+        effect:
+          `거래처 ${t.clients}곳 중 ${t.clients - t.clean}곳에 빈칸이나 겹치는 이름이 있습니다 (${t.issues.length}건). ` +
+          '주소가 비면 현장에서 못 찾고, 단가가 비면 기본값으로 청구되고, 이름이 겹치면 정산이 둘로 갈립니다.',
+        to: '/clients', linkLabel: '거래처 정리하기', count: t.issues.length,
+      })
+    }
+  }
 
   // ── 휴무일 ────────────────────────────────────────────────────────────────
   //  앞으로 편성돼 있는 예정이 있는데 그 구간에 휴무일이 하나도 없으면,

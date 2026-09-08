@@ -13,7 +13,7 @@
 
 | 자리 | 내용 |
 |---|---|
-| `test/browser/check_*.mjs` | 화면 검사 96개 — 시늉본 서버 위에서 실제 브라우저로 돕니다 |
+| `test/browser/check_*.mjs` | 화면 검사 133개 — 시늉본 서버 위에서 실제 브라우저로 돕니다 |
 | `test/db/db_*.mjs` | DB 검사 40개 — 격리 PostgreSQL 에 마이그레이션을 처음부터 올리고 돕니다 |
 | `test/browser/walk_all.mjs` | **눌러서 도는 전수 점검** (아래 참고) |
 | `test/browser/a11y_*.mjs` | 글자 크기 · 색 대비 · 손가락 크기 재기 |

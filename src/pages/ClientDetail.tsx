@@ -1,7 +1,7 @@
 import { LastCollectionLine } from '../components/FieldTodayCard'
 import { hideRequests } from '../lib/pilotMode'
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Phone,
@@ -158,6 +158,20 @@ export function ClientDetail() {
     setForm(rest)
     setEditing(true)
   }
+  //  0105 — 정리 도우미에서 「채우기 →」로 오면 수정 창을 **바로 연 채로**
+  //  도착합니다. 화면을 찾아 들어와서 다시 「수정」을 누르게 하면 한 곳 고칠
+  //  때마다 두 번씩 누릅니다. 한 번 연 뒤에는 주소에서 표시를 지웁니다 —
+  //  안 그러면 닫고 새로고침할 때마다 다시 열립니다.
+  const [params, setParams] = useSearchParams()
+  const wantEdit = params.get('edit') === '1'
+  useEffect(() => {
+    if (!wantEdit || !client) return
+    const { id: _id, ...rest } = client
+    setForm(rest)
+    setEditing(true)
+    setParams((p) => { p.delete('edit'); return p }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantEdit, client?.id])
   const [logOpen, setLogOpen] = useState(false)
   //  폰에서 추천을 **한 건만** 펼칩니다.
   //   PC 는 오른쪽 절반이라 세 건이 다 들어가지만, 폰에서는 이 추천 묶음
