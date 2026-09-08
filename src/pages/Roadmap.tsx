@@ -56,7 +56,7 @@ interface FlowStep {
 const WORKFLOW: FlowStep[] = [
   { n: 1, icon: Building2, title: '거래처·수거조건 등록', desc: '병원별 주소·폐기물 종류·수거주기·요청사항을 등록합니다.', status: '운영 중', to: '/clients' },
   { n: 2, icon: CalendarClock, title: '오늘 일정·보관기한 확인', desc: '수거주기와 보관기한 기준으로 오늘 방문할 곳을 확인합니다.', status: '운영 중', to: '/today' },
-  { n: 3, icon: Route, title: '배차·경로 추천', desc: '차량 적재율·긴급수거·처리장 인계시간을 반영해 추천합니다.', status: '개발 중', to: '/dispatch' },
+  { n: 3, icon: Route, title: '배차·경로 추천', desc: '차량 적재율·긴급수거·처리장 인계시간을 규칙으로 반영합니다. 거리·경로 순서는 계산하지 않습니다(좌표 없음).', status: '운영 중', to: '/dispatch' },
   { n: 4, icon: PlusCircle, title: '현장 수거 입력', desc: '현장에서 수거량·용기 수를 바로 입력해 이력으로 남깁니다.', status: '운영 중', to: '/collection' },
   { n: 5, icon: Boxes, title: '자재공급 관리', desc: '전용 용기·봉투·박스 요청과 공급 이력을 함께 관리합니다.', status: '운영 중', to: '/materials' },
   { n: 6, icon: FileText, title: '수거대장·이력 정리', desc: '수거이력과 자재공급을 합쳐 월간 수거대장으로 출력(예정)합니다.', status: '고도화 예정', to: '/clients' },
@@ -105,7 +105,7 @@ const PHASES: Phase[] = [
   },
   {
     tag: '3단계',
-    period: '중기',
+    period: '완료',
     title: '서버 전환 및 권한 분리',
     purpose: '기기에만 남던 기록을 서버로 옮기고, 누가 무엇까지 볼 수 있는지를 역할별로 나눕니다.',
     points: ['PC·모바일 동일 데이터 연동', '관리자·사무실·현장·병원 열람 범위 분리', '감사로그·수정이력'],
@@ -113,7 +113,7 @@ const PHASES: Phase[] = [
   },
   {
     tag: '4단계',
-    period: '중장기',
+    period: '현재',
     title: '병원 고객 서비스',
     purpose: '병원이 직접 현황을 확인하고 요청하며, 데이터 기반 제안을 받아 수락합니다.',
     points: [

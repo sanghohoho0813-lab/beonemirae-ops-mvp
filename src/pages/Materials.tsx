@@ -213,7 +213,7 @@ export function Materials() {
 
       {/* 이번 달 통계 */}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="이번 달 추가공급" value={addCount} unit="건" tone="amber" hint="월평균 4~5회" />
+        <MetricCard label="이번 달 추가공급" value={addCount} unit="건" tone="amber" />
         <MetricCard label="박스 공급" value={num(totals.box)} unit="개" tone="navy" />
         <MetricCard label="비닐 공급" value={num(totals.vinyl)} unit="개" tone="navy" />
         <MetricCard label="바늘통 공급" value={num(totals.needle)} unit="개" tone="navy" />

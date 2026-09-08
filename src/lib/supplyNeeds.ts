@@ -30,6 +30,12 @@ export type StockKey = 'corrugated_box' | 'plastic_container' | 'bag' | 'needle_
 
 /** 최근 며칠을 「지금 사용량」으로 볼 것인가 */
 export const NEEDS_WINDOW_DAYS = 90
+/**
+ * 추천 규칙의 판 (0106). 노출 기록에 함께 남깁니다 — 규칙이나 상품 정보가
+ * 나중에 바뀌어도 「그때 어떤 규칙으로 떴는지」가 남아, 과거 성과가 달라지지 않습니다.
+ * 규칙(창 길이 · 최소 공급 횟수 · 키 만드는 법)을 바꾸면 이 값을 올립니다.
+ */
+export const NEEDS_RULE_VERSION = 'needs-2026.09-90d-min2'
 /** 몇 번은 가져다 드린 적이 있어야 「주기」라고 부를 수 있는가 */
 export const MIN_SUPPLIES_FOR_NEED = 2
 

@@ -39,6 +39,7 @@ import type { CollectionCompletionInput } from './collection'
 import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
 import { clientNameKey } from './clientName'
 import type { TaxFiling } from './taxBase'
+import { toAfterSurvey, toAiCall, toDayCloseRecord, toDispatchDecision, toOpsChange, toRecoView } from './evidenceRepo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase 레포지토리
@@ -525,6 +526,46 @@ export async function loadAppData(): Promise<AppData> {
     '고객 문의',
   )
 
+  //  ── 0106 실증 기록 표 — 판 106 이전이면 표가 없으므로 undefined 로 둡니다 ──
+  //   ⚠ [] 와 undefined 를 가릅니다. [] 는 「읽어 봤는데 없다」, undefined 는
+  //     「표가 없어 모른다」입니다. 성과 화면이 이 둘을 다르게 말합니다.
+  const NO_TABLE = Symbol('no-table')
+  const softTable = async (fn: () => Promise<Row[]>, what: string): Promise<Row[] | undefined> => {
+    const r = await soft<Row[] | typeof NO_TABLE>(fn, NO_TABLE, what)
+    return r === NO_TABLE ? undefined : r
+  }
+  const [opsChangeRows, recoViewRows, dispatchRows, dayCloseRows, aiCallRows] = await Promise.all([
+    softTable(
+      () => pageAll((f, t) => sb.from('ops_changes').select('*').order('effective_on', { ascending: false, nullsFirst: true }).range(f, t)),
+      '운영 변화 기록',
+    ),
+    softTable(
+      () => pageAll((f, t) => sb.from('recommendation_views').select('*').order('shown_at', { ascending: false }).range(f, t)),
+      '추천 노출 기록',
+    ),
+    softTable(
+      () => pageAll((f, t) => sb.from('dispatch_decisions').select('*').order('date', { ascending: false }).range(f, t)),
+      '배차 결정 기록',
+    ),
+    //  마감 기록은 최근 180일만 — 계기판·대기시간 지표에 쓰는 만큼만 읽습니다.
+    softTable(
+      () =>
+        pageAll((f, t) =>
+          sb
+            .from('day_closes')
+            .select('profile_id, profile_name, date, note, closed_at, summary, odometer_start, odometer_end, facility_wait_min, facility_trips')
+            .gte('date', new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10))
+            .order('date', { ascending: false })
+            .range(f, t),
+        ),
+      '마감 기록',
+    ),
+    softTable(
+      () => pageAll((f, t) => sb.from('ai_calls').select('id, kind, request_id, ok, error, ms, model, actor_name, edited, created_at').order('created_at', { ascending: false }).range(f, t)),
+      'AI 호출 기록',
+    ),
+  ])
+
   //  현장 의견 (0062). 현장 계정에는 **자기가 낸 것만** 내려옵니다(RLS).
   //  마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다.
   const feedbackRows = await soft(
@@ -939,6 +980,13 @@ export async function loadAppData(): Promise<AppData> {
     notes: notes.map(toNote),
     requests: requests.map(toRequest),
     inquiries: inquiryRows.map(toInquiry),
+    // ── 0106 — 표가 없으면 undefined 그대로 (「모름」) ──
+    opsChanges: opsChangeRows?.map(toOpsChange),
+    recommendationViews: recoViewRows?.map(toRecoView),
+    dispatchDecisions: dispatchRows?.map(toDispatchDecision),
+    dayCloses: dayCloseRows?.map(toDayCloseRecord),
+    aiCalls: aiCallRows?.map(toAiCall),
+    afterSurvey: baselineRow ? toAfterSurvey(baselineRow as Row) : undefined,
     baseline: baselineRow
       ? {
           adminMinutesPerCollection: baselineRow.admin_minutes_per_collection,
@@ -2791,9 +2839,35 @@ export interface DayCloseSummary {
  *    그건 마감이 아니라 두 번째 보고입니다 — 없애려던 바로 그것입니다.
  *  ⚠ 두 번 눌러도 한 번입니다(`already: true`).
  */
-export async function closeDay(date: string, note = ''): Promise<{ already: boolean; summary: DayCloseSummary }> {
+export interface DayCloseExtras {
+  /** 출발 계기판 (km). 안 적으면 null — 0 으로 채우지 않습니다 */
+  odometerStart?: number | null
+  odometerEnd?: number | null
+  /** 처리시설 이동·인계 대기 (분) */
+  facilityWaitMin?: number | null
+  /** 처리시설 방문 횟수 */
+  facilityTrips?: number | null
+}
+
+export async function closeDay(
+  date: string,
+  note = '',
+  extras: DayCloseExtras = {},
+): Promise<{ already: boolean; summary: DayCloseSummary }> {
   const sb = need()
-  const { data, error } = await sb.rpc('close_day', { p_date: date, p_note: note })
+  //  ⚠ 판 106 이전 서버의 close_day 는 인자가 둘뿐입니다. 계기판·대기시간 값이
+  //    하나라도 있을 때만 넷을 더 보냅니다 — 없으면 예전 서명 그대로 부릅니다.
+  const hasExtra = [extras.odometerStart, extras.odometerEnd, extras.facilityWaitMin, extras.facilityTrips].some(
+    (v) => v != null,
+  )
+  const args: Record<string, unknown> = { p_date: date, p_note: note }
+  if (hasExtra) {
+    args.p_odometer_start = extras.odometerStart ?? null
+    args.p_odometer_end = extras.odometerEnd ?? null
+    args.p_wait_min = extras.facilityWaitMin ?? null
+    args.p_trips = extras.facilityTrips ?? null
+  }
+  const { data, error } = await sb.rpc('close_day', args)
   if (error) throw new Error(error.message)
   const d = (data ?? {}) as { already?: boolean; summary?: Partial<DayCloseSummary> }
   const s = d.summary ?? {}

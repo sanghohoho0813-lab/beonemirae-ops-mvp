@@ -165,7 +165,7 @@ const PLACES = [
   ['/requests', '고객 요청', ['requestTriage', 'portalAsk']],
   ['/reports', '운영 리포트', ['reportWrite']],
   ['/import', '엑셀 가져오기', ['excelRead']],
-  ['/bank', '통장 대사', ['bankMatch']],
+  ['/bank', '통장 입금 대사', ['bankMatch']],
   ['/insight', '거래처 인사이트', ['churn']],
   ['/supplies', '소모품 주문', ['supplyForecast']],
   ['/receivables', '미수금 관리', ['dunning']],

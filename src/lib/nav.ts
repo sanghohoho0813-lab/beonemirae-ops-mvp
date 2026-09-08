@@ -77,7 +77,7 @@ export const SERVICE_NAV: NavItem[] = [
   //  매출 AX — 쇼핑몰이 아니라 「병원이 쓰는 만큼 추천하고 다음 수거 때 전달」입니다.
   { to: '/supplies', label: '소모품 주문', icon: PackageCheck, desc: '사용량 추천 · 수거 때 전달 · 판매 실적', tone: 'teal' },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
-  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '효율 · 자동화 · 매출 확장', tone: 'teal' },
+  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: 'AX(업무 전환) 측정값 · 자동 연결 · 매출 — 근거가 없으면 숫자를 만들지 않음', tone: 'teal' },
 ]
 
 /**
@@ -91,9 +91,9 @@ export const TOOL_NAV: NavItem[] = [
   { to: '/plan', label: '일정 편성', icon: CalendarPlus, desc: '실제 기록의 요일로 예정 만들기', tone: 'navy' },
   { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '차량별 배차 · 경로 추천', tone: 'navy' },
   { to: '/billing', label: '월말 청구', icon: ReceiptText, desc: '그 달 전체를 한 번에 청구 확정', tone: 'navy' },
-  { to: '/pricing', label: '거래처 점검', icon: Tags, desc: '단가 · 사업자정보 빠진 곳 찾기', tone: 'navy' },
+  { to: '/pricing', label: '거래처 점검', icon: Tags, desc: '청구·세금계산서에 빠진 값이 있는 곳 (단가 · 사업자정보)', tone: 'navy' },
   { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구 · 입금 현황과 미수금', tone: 'navy' },
-  { to: '/bank', label: '통장 대사', icon: Landmark, desc: '통장 입금내역을 청구에 붙이기', tone: 'navy' },
+  { to: '/bank', label: '통장 입금 대사', icon: Landmark, desc: '통장 입금내역을 청구에 붙이기', tone: 'navy' },
   { to: '/stats', label: '통계', icon: PieChart, desc: '수거량 · 거래처 · 차량 실적', tone: 'navy' },
   { to: '/roadmap', label: '활용 계획', icon: Workflow, desc: '어떤 기능을 언제 쓰는지', tone: 'navy' },
 ]
@@ -105,7 +105,7 @@ export const ADMIN_NAV: NavItem[] = [
   { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '거래처별 정산 엑셀 옮기기', tone: 'navy' },
   { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '글자 크기 · 데이터 백업 · 초기화', tone: 'navy' },
   { to: '/audit', label: '감사로그', icon: ScrollText, desc: '누가 무엇을 언제 바꿨는지', tone: 'navy' },
-  { to: '/readiness', label: '심사 준비도', icon: Gauge, desc: '정책자금 심사 전 준비 점검 · 브리핑 인쇄', tone: 'navy' },
+  { to: '/readiness', label: '실증 준비 상태', icon: Gauge, desc: '시스템이 확인하는 준비 · 사람이 확인하는 증빙 · 브리핑 인쇄', tone: 'navy' },
 ]
 
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 */

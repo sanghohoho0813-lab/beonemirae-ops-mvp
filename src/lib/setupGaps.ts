@@ -78,7 +78,7 @@ export function scanSetupGaps(data: AppData, asOf: string = today()): SetupScan 
   //  「첫 화면이 복잡함」이 첫 피드백이었습니다. 여기서 항목을 하나씩 늘어놓으면
   //  그 불편을 되풀이합니다.
   {
-    const t = tidyClients(clients)
+    const t = tidyClients(clients, { assignments: data.clientAssignments })
     if (t.issues.length > 0) {
       gaps.push({
         key: 'clientTidy', label: '거래처 정리', weight: '운영',

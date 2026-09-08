@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Package, Truck } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/PageHeader'
-import { supplyNeedsFor, type SupplyNeed } from '../lib/supplyNeeds'
+import { supplyNeedsFor, NEEDS_RULE_VERSION, type SupplyNeed } from '../lib/supplyNeeds'
+import { useSchemaAtLeast } from '../lib/schemaGate'
+import { logRecommendationView } from '../lib/evidenceRepo'
 import { prettyDate, won } from '../lib/format'
 import type { Product, ProductOrder } from '../types'
 import { LoadFailedState, LoadingState, useLoadState } from '../components/LoadState'
@@ -49,6 +51,30 @@ export function PortalSupplies() {
   const today = useMemo(() => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }), [])
 
   const needs = useMemo(() => supplyNeedsFor(data, clientId, today), [data, clientId, today])
+
+  //  ── 0106 추천 노출 기록 ──────────────────────────────────────────────────
+  //   「이 병원 화면에 이 추천이 실제로 떠 있었다」를 그 순간에 남깁니다.
+  //   되짚어 계산한 추천은 병원이 봤다는 증거가 아닙니다 — 이것만 증거입니다.
+  //   같은 병원·같은 날·같은 규칙 판은 하루 한 번만 (이 브라우저 기준).
+  //   판 106 이전이면 표가 없어 남기지 않고, 과거 노출을 소급해 만들지 않습니다.
+  const ready106 = useSchemaAtLeast(106) === true
+  const { role: viewerRole, mode } = useAuth()
+  useEffect(() => {
+    if (!ready106 || mode !== 'live' || !clientId || needs.needs.length === 0) return
+    const key = `beonemirae-ops:reco-shown:${clientId}:${today}:${NEEDS_RULE_VERSION}`
+    try {
+      if (window.localStorage.getItem(key)) return
+    } catch { /* 사생활 모드 — 그래도 남깁니다 */ }
+    logRecommendationView({
+      clientId,
+      shownOn: today,
+      viewerRole: viewerRole ?? '',
+      items: needs.needs.map((n) => ({ key: n.key, label: n.label, suggestQty: n.suggestQty })),
+      ruleVersion: NEEDS_RULE_VERSION,
+    })
+      .then(() => { try { window.localStorage.setItem(key, '1') } catch { /* 무시 */ } })
+      .catch(() => { /* 기록 실패는 주문을 막지 않습니다 */ })
+  }, [ready106, mode, clientId, today, needs, viewerRole])
   //  단가가 0 인 물건은 병원에 보이지 않습니다.
   //
   //   서버(0050)도 「판매가 0원이면 공급 가능으로 못 켠다」로 막지만, 그
@@ -119,6 +145,18 @@ export function PortalSupplies() {
     })
     setBusy(false)
     if (r.ok) {
+      //  0106 — 주문에 담긴 것 중 그때 추천에 있던 것을 「채택」으로 남깁니다 (판 106).
+      if (ready106 && mode === 'live' && r.id && needs.needs.length > 0) {
+        const pickedIds = new Set(picked.map(([id]) => id))
+        const adopted = needs.needs.filter((n) => { const pr = productFor(n); return pr && pickedIds.has(pr.id) })
+        if (adopted.length > 0) {
+          logRecommendationView({
+            clientId, shownOn: today, viewerRole: viewerRole ?? '',
+            items: adopted.map((n) => ({ key: n.key, label: n.label, suggestQty: n.suggestQty })),
+            ruleVersion: NEEDS_RULE_VERSION, action: 'ordered', orderId: r.id,
+          }).catch(() => { /* 기록 실패는 주문 결과를 바꾸지 않습니다 */ })
+        }
+      }
       setQty({})
       setNote('')
       setRequestId(crypto.randomUUID())

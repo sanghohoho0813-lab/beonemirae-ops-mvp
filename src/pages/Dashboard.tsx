@@ -17,6 +17,7 @@ import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } f
 import { DeadlineBanner } from '../components/DeadlineBanner'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { SetupGapsLine } from '../components/SetupGapsCard'
+import { ExcelCheckLine } from '../components/ExcelCheckLine'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { FieldTodayCard } from '../components/FieldTodayCard'
 import { OpportunityPanel } from '../components/Opportunities'
@@ -114,7 +115,6 @@ export function Dashboard() {
   const reports = useMemo(() => data.clients.map((c) => clientMonthlyReport(data, c, month)), [data, month])
   const progress = todayProgress(data)
 
-  const vehiclePct = data.vehicles.length ? Math.round((activePlans / data.vehicles.length) * 100) : 0
 
   return (
     <PageShell>
@@ -218,6 +218,9 @@ export function Dashboard() {
                사라졌습니다 — 대표님이 이 화면을 여는 이유가 그것입니다.
                채워야 할 값은 오늘 나갈 차보다 급하지 않습니다. */}
         <SetupGapsLine />
+        {/*  0106 — 하루 한 줄: 「오늘 엑셀·카톡에 다시 적은 것이 있었나」.
+             답하지 않아도 아무것도 막지 않고, 답하면 그날은 사라집니다. */}
+        <ExcelCheckLine />
       </section>
 
       {/* 사용법 안내는 오늘 할 일 다음입니다.
@@ -309,7 +312,7 @@ export function Dashboard() {
                 to="/dispatch"
                 className="mt-auto flex items-center justify-center gap-1.5 border-t border-navy-50 py-4 text-[1.08rem] font-bold text-navy-600 transition hover:bg-navy-50"
               >
-                차량 가동 {vehiclePct}%
+                오늘 운행 차량 {activePlans}/{data.vehicles.length}대 · 배차·경로 보기
               </Link>
             </div>
           </div>

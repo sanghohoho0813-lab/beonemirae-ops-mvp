@@ -121,7 +121,8 @@ async function checkPanel(p, where) {
   const btn = p.locator('[data-ai-open="route"]')
   ok((await btn.count()) === 1, 'PC 일정 편성 — 「AI 동선 추천」이 있다')
   ok(/AI 동선 추천/.test(flat(await btn.innerText())), '버튼 이름', flat(await btn.innerText()))
-  ok(/2단계/.test(flat(await btn.innerText())), '버튼에 「2단계」가 같이 붙어 있다')
+  //  0106 — 단추 위 딱지는 「준비 중」(짧게). 단계 번호와 「아직 안 켜짐」은 창 안에 그대로 있습니다.
+  ok(/준비 중/.test(flat(await btn.innerText())), '버튼에 「준비 중」이 같이 붙어 있다 (되는 기능처럼 보이지 않게)')
 
   //  ⚠ 우측 상단인지 — 화면 오른쪽 절반, 그리고 위쪽에 있어야 합니다.
   const box = await btn.boundingBox()

@@ -98,6 +98,17 @@ function BeforeAfter({ cmp }: { cmp: AxCompare }) {
             도입 전 {cmp.before.from} ~ {cmp.before.to} · 도입 후 {cmp.after.from} ~ {cmp.after.to}
           </p>
         )}
+        {/*  차량·인력·거점 변화가 겹치면 아래 표는 AX 단독 효과가 아닙니다 */}
+        {cmp.state !== 'no-start' && (
+          <p
+            data-ax-cmp-confounding={cmp.confounding.known ? (cmp.confounding.overlapping.length > 0 ? 'yes' : 'no') : 'unknown'}
+            className={`t-muted mt-2 break-keep rounded-xl px-3 py-2 font-bold ${
+              cmp.confounding.overlapping.length > 0 ? 'bg-amber-50 text-amber-800' : 'bg-navy-50 text-navy-500'
+            }`}
+          >
+            {cmp.confounding.note}
+          </p>
+        )}
 
         {cmp.rows.length > 0 && (
           <div className="mt-3 overflow-x-auto">

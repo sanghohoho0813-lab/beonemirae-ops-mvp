@@ -11,6 +11,7 @@ import {
   MANAGEMENT_STEPS, stepsFor, type FeedbackQuestion, type ParsedFeedback, type RespondentGroup,
 } from '../lib/feedbackV2'
 import { friendlyError } from '../lib/supabase'
+import { EXCEL_TOPIC, parseExcelChecks } from '../lib/excelCheck'
 import { prettyDate } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,12 +81,16 @@ export function DevRequests() {
     }
   }
 
+  //  엑셀 병행 확인(하루 한 줄)은 피드백이 아니라 측정 응답입니다 — 따로 묶습니다.
+  const excel = useMemo(() => parseExcelChecks(rows), [rows])
   const items: Item[] = useMemo(
     () =>
-      rows.map((row) => {
-        const v2 = isFeedbackV2(row.topics) ? parseResponse(row.topics) : null
-        return { row, v2, picks: v2 ? [...v2.benefits, ...v2.pains] : row.topics }
-      }),
+      rows
+        .filter((row) => !row.topics.includes(EXCEL_TOPIC))
+        .map((row) => {
+          const v2 = isFeedbackV2(row.topics) ? parseResponse(row.topics) : null
+          return { row, v2, picks: v2 ? [...v2.benefits, ...v2.pains] : row.topics }
+        }),
     [rows],
   )
 
@@ -180,6 +185,25 @@ export function DevRequests() {
         />
       ) : (
         <ul className="space-y-2.5">
+          {excel.length > 0 && tab !== '남은 것' && (
+            <li data-excel-checks className="card p-4 sm:p-5">
+              <p className="t-body font-extrabold text-navy-900">엑셀·카톡 병행 확인 — 하루 한 줄 응답 {excel.length}건</p>
+              <p className="t-muted mt-1 break-keep">
+                다시 적은 날 {excel.filter((c) => c.reentries > 0).length}일 · 없었던 날 {excel.filter((c) => c.reentries === 0).length}일.
+                성과 화면 「같은 정보를 다시 적는 횟수」의 근거입니다.
+              </p>
+              <ul className="mt-2 flex flex-col gap-1">
+                {excel.slice(0, 10).map((c) => (
+                  <li key={c.id} className="t-caption flex flex-wrap gap-x-2 text-navy-600">
+                    <span className="tabular-nums text-navy-500">{c.date}</span>
+                    <span className="font-bold text-navy-800">{c.who}</span>
+                    <span>{c.reentries === 0 ? '없음' : `${c.reentries}건 — ${c.items || '이유 미기재'}`}</span>
+                  </li>
+                ))}
+                {excel.length > 10 && <li className="t-caption text-navy-400">… 외 {excel.length - 10}건</li>}
+              </ul>
+            </li>
+          )}
           {shown.map((i) => (
             <li key={i.row.id} data-dev-request={i.row.id} className="card p-4 sm:p-5">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">

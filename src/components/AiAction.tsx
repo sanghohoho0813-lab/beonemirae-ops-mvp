@@ -20,7 +20,7 @@ import { aiSpec, type AiSpecId, type AiSpec } from '../lib/aiSpecs'
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 「2단계」 딱지 — 단추와 창에서 같은 모양을 씁니다 */
-export function StageBadge({ stage, className = '' }: { stage: string; className?: string }) {
+export function StageBadge({ stage, className = '', suffix = true }: { stage: string; className?: string; suffix?: boolean }) {
   return (
     <span
       data-ai-badge
@@ -28,7 +28,7 @@ export function StageBadge({ stage, className = '' }: { stage: string; className
       //    검사(check_scale)가 잡았습니다. 딱지라고 작게 두면 결국 못 읽습니다.
       className={`shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[1rem] font-extrabold leading-tight tracking-tight text-violet-700 ${className}`}
     >
-      {stage}
+      {stage}{suffix ? ' · 아직 안 켜짐' : ''}
     </span>
   )
 }
@@ -195,7 +195,9 @@ export function AiButton({
         ) : (
           spec.label
         )}
-        <StageBadge stage={spec.stage} className="bg-white/80" />
+        {/*  단추 위 딱지는 짧게 — 「준비 중」. 320px 폰 헤더에서 긴 딱지가 날짜 칸을 세로로 짓눌렀습니다.
+             단계 번호와 「아직 안 켜짐」은 창 안에서 그대로 보입니다. */}
+        <StageBadge stage="준비 중" suffix={false} className="bg-white/80" />
       </button>
       <AiSpecModal id={id} open={open} onClose={() => setOpen(false)} />
     </>

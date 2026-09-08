@@ -65,7 +65,7 @@ export function Statistics() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <MetricCard label="의료폐기물" value={weight(monthly.의료폐기물)} tone="rose" />
           <MetricCard label="일회용기저귀" value={weight(monthly.일회용기저귀)} tone="teal" />
-          <MetricCard label="총 수거량" value={weight(total)} tone="navy" hint="월평균 목표 105톤" />
+          <MetricCard label="총 수거량" value={weight(total)} tone="navy" />
         </div>
       </section>
 
@@ -140,7 +140,7 @@ export function Statistics() {
       <section className="mb-5">
         <h2 className="mb-2 text-[1.08rem] font-semibold text-navy-500">자재 추가공급</h2>
         <div className="grid grid-cols-2 gap-3">
-          <MetricCard label="이번 달 추가공급" value={addMaterials} unit="건" tone="amber" hint="월평균 4~5회" />
+          <MetricCard label="이번 달 추가공급" value={addMaterials} unit="건" tone="amber" />
           <MetricCard label="전체 공급 내역" value={num(data.materials.length)} unit="건" tone="navy" />
         </div>
       </section>

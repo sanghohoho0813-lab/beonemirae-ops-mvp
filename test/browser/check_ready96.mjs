@@ -133,7 +133,8 @@ async function open(path, { world = null, role = 'admin' } = {}) {
 {
   const { ctx, p, errors } = await open('/readiness')
   const items = await p.locator('[data-ready-item]').count()
-  ok(items === 9, '준비 항목 9개가 다 나온다', `${items}개`)
+  //  0106 — 시스템 확인 8개 + 기업 증빙(매출·거래처·특허·벤처·전담부서·이전·자금) 7개 + 저작권 1개
+  ok(items === 17, '준비 항목 17개가 다 나온다 (시스템 9 · 기업 증빙 8)', `${items}개`)
   for (const key of ['fieldSamples', 'baseline', 'address', 'productPrice', 'costs', 'newRevenue', 'portalUse']) {
     const st = await p.locator(`[data-ready-item="${key}"]`).getAttribute('data-ready-state')
     ok(st === 'missing', `빈 DB 에서 「${key}」는 비어 있음으로 나온다`, st ?? '없음')
@@ -141,13 +142,16 @@ async function open(path, { world = null, role = 'admin' } = {}) {
   ok((await p.locator('[data-ready-item="ai"]').getAttribute('data-ready-state')) === 'missing',
     'AI 는 연결 0곳 — 미연결로 정직하게')
   ok((await p.locator('[data-ready-item="ip"]').getAttribute('data-ready-state')) === 'manual',
-    '저작권은 「시스템 확인 불가」 — 자동 점검인 척하지 않는다')
+    '저작권은 「사람이 확인」 — 자동 점검인 척하지 않는다')
   const body = flat(await p.textContent('main'))
   ok(/점수는 내지 않습니다/.test(body), '**합성 점수를 만들지 않는다고 적어 둔다**')
   //  브리핑 — 조사 실측 숫자가 그대로
   ok(/주간 방문 94곳/.test(body), '브리핑에 조사 실측(주간 방문 94곳)이 나온다')
   ok(/3,694km/.test(body), '브리핑에 주간 이동 3,694km 이 나온다')
-  ok(/실증 중.*0\/30건/.test(body) || /현장 0\/30건/.test(body), '브리핑도 표본 부족을 감추지 않는다')
+  ok(/현장 표본 0\/30건/.test(body), '브리핑도 표본 부족을 감추지 않는다 (현장 표본 0/30건)')
+  ok((await p.locator('[data-ready-group="company"]').count()) === 1, '기업 증빙 묶음이 따로 있다')
+  ok(/원본 미확인/.test(body), '기업 증빙에 「원본 미확인」이 그대로 적힌다')
+  ok(!/합격/.test(body) && !/자동 검증 6,000/.test(body), '합격 점검표·자동검사 수 자랑이 없다')
   ok(errors.length === 0, '빈 세계 콘솔 오류 0', errors.slice(0, 2).join(' | '))
   await ctx.close()
 }
@@ -155,8 +159,10 @@ async function open(path, { world = null, role = 'admin' } = {}) {
 // ── ② 채운 세계 — 상태가 실제로 바뀐다 (화면이 데이터를 진짜 읽는 증거) ────
 {
   const { ctx, p, errors } = await open('/readiness', { world: filledWorld() })
+  //  0106 — 32건이 한 병원·한 사람·기사 이름 없이 들어왔습니다. 건수는 넘었지만
+  //  기간·병원·기사·커버리지가 모자라 「채우는 중」입니다. 30건만으로 준비됨이 되지 않습니다.
   const expect = {
-    fieldSamples: 'ok', baseline: 'ok', address: 'ok', productPrice: 'ok',
+    fieldSamples: 'partial', baseline: 'ok', address: 'ok', productPrice: 'ok',
     costs: 'ok', newRevenue: 'ok', portalUse: 'ok', ai: 'missing', ip: 'manual',
   }
   for (const [key, want] of Object.entries(expect)) {
@@ -164,7 +170,10 @@ async function open(path, { world = null, role = 'admin' } = {}) {
     ok(st === want, `채운 DB 에서 「${key}」 → ${want}`, st ?? '없음')
   }
   const v = flat(await p.locator('[data-ready-item="fieldSamples"] [data-ready-value]').innerText())
-  ok(/32 \/ 30건/.test(v), '표본 수가 실제 데이터 수와 같다', v)
+  ok(/현장 32건/.test(v), '표본 수가 실제 데이터 수와 같다', v)
+  ok(/병원 1곳/.test(v), '병원 수(1곳)가 같이 적힌다', v)
+  const note = flat(await p.locator('[data-ready-item="fieldSamples"]').innerText())
+  ok(/병원 1\/5곳/.test(note) && /내부 표시 기준/.test(note), '왜 아직 준비됨이 아닌지(병원 1/5곳)와 내부 기준임을 적는다', note.slice(0, 160))
   ok(errors.length === 0, '채운 세계 콘솔 오류 0', errors.slice(0, 2).join(' | '))
 
   //  바로가기 — 수거 입력으로 실제 이동
@@ -189,7 +198,7 @@ async function open(path, { world = null, role = 'admin' } = {}) {
 {
   const { ctx, p } = await open('/readiness', { role: 'field' })
   const body = flat(await p.textContent('body'))
-  ok(!/심사 준비도.*지금 데이터로 점검/.test(body), '현장 담당자에게는 안 열린다')
+  ok(!/실증 준비 상태/.test(body) || /접근 권한/.test(body), '현장 담당자에게는 안 열린다')
   await ctx.close()
 }
 

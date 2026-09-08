@@ -74,8 +74,17 @@ const blank = (v: string | null | undefined) => (v ?? '').trim() === ''
  *  ⚠ 겹침은 실제 거래처끼리만 봅니다. 시연용과 겹치는 것은 시연용을 지우면
  *    끝나는 일이라 따로 세지 않습니다.
  */
-export function tidyClients(all: Client[]): TidyReport {
+export interface TidyContext {
+  /** 담당 기사 배정 (0056). 한 곳이라도 배정돼 있을 때만 「배정 없음」을 셉니다 */
+  assignments?: { clientId: string }[]
+}
+
+export function tidyClients(all: Client[], ctx: TidyContext = {}): TidyReport {
   const real = all.filter((c) => !c.isDemoGenerated)
+  //  담당 기사를 아무도 배정하지 않으면 모든 기사에게 보입니다 — 정한 규칙이지 결함이
+  //  아닙니다. 그래서 회사가 배정을 **쓰기 시작한 뒤**에만 빠진 곳을 셉니다.
+  const assigned = new Set((ctx.assignments ?? []).map((a) => a.clientId))
+  const usesAssignment = assigned.size > 0
   const issues: TidyIssue[] = []
   const dirty = new Set<string>()
   const push = (c: Client, group: TidyGroup, what: string, label: string, edit = true) => {
@@ -86,19 +95,22 @@ export function tidyClients(all: Client[]): TidyReport {
     dirty.add(c.id)
   }
 
+  //  라벨은 「무엇이 비었나 → 어떤 업무가 막히나」입니다. 빈칸 이름만 적으면
+  //  왜 채워야 하는지 모르고, 그러면 엑셀을 계속 씁니다.
   for (const c of real) {
     //  돈 — 단가를 한 번도 정하지 않은 곳 (기본값으로 청구되는 중)
     const priced = c.pricing && Object.values(c.pricing).some((p) => p != null)
-    if (!priced) push(c, '돈', 'price', '단가 없음 — 기본 단가로 청구 중')
+    if (!priced) push(c, '돈', 'price', '단가 없음 → 기본 단가로 청구됨 · 엑셀과 금액이 달라짐')
 
     //  매일 — 현장·사무실이 매일 보는 칸
-    if (blank(c.address)) push(c, '매일', 'address', '주소 없음')
-    if (blank(c.phone)) push(c, '매일', 'phone', '연락처 없음')
-    if (blank(c.manager)) push(c, '매일', 'manager', '담당자 없음')
-    if (blank(c.collectionCycle)) push(c, '매일', 'cycle', '수거주기 없음')
+    if (blank(c.address)) push(c, '매일', 'address', '주소 없음 → 현장에서 못 찾음 · 동선·거리 계산 불가')
+    if (blank(c.phone)) push(c, '매일', 'phone', '연락처 없음 → 현장에서 전화 못 걺')
+    if (blank(c.manager)) push(c, '매일', 'manager', '담당자 없음 → 누구에게 연락할지 모름')
+    if (blank(c.collectionCycle)) push(c, '매일', 'cycle', '수거주기 없음 → 다음 수거 예상·자동 편성 안 됨')
+    if (usesAssignment && !assigned.has(c.id)) push(c, '매일', 'driver', '담당 기사 없음 → 모든 기사에게 보임 · 「내 일정」이 안 됨', false)
 
     //  나중 — 알림·계약에 쓰는 칸
-    if (blank(c.contractStart)) push(c, '나중', 'contract', '계약 시작일 없음')
+    if (blank(c.contractStart)) push(c, '나중', 'contract', '계약 시작일 없음 → 만료 알림이 안 옴')
   }
 
   //  겹침 — 같은 열쇠(법인격·띄어쓰기 무시)거나 한쪽이 다른 쪽으로 시작하는 이름.

@@ -27,7 +27,6 @@ import {
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { ImportLocalCard } from '../components/AdminPanels'
-import { UserAdmin } from '../components/UserAdmin'
 import { VehicleManager } from '../components/VehicleManager'
 import { PasswordCard } from '../components/PasswordCard'
 import { DEMO_BASELINE, EMPTY_BASELINE, type BaselineMetrics } from '../types'
@@ -45,6 +44,8 @@ import { rawSnapshot } from '../lib/repo'
 import { HealthCard } from '../components/HealthCard'
 import { ErrorLogCard } from '../components/ErrorLogCard'
 import { StaffCard } from '../components/StaffCard'
+import { OpsChangesCard } from '../components/OpsChangesCard'
+import { AfterSurveyCard } from '../components/AfterSurveyCard'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { prettyDate, today } from '../lib/format'
 
@@ -454,11 +455,21 @@ export function Settings() {
               「시연용 예시값」을 쓰면 출처가 <b>시연 기준값</b>으로 표시됩니다. 심사 제출 시에는 실제 업무 값을 쓰세요.
             </p>
 
+            {/*  0106 — 도입 후 「같은 범위」 조사값. 입력 화면 시간으로 대신하지 않습니다. */}
+            {live && <AfterSurveyCard />}
+
             <button className="btn-primary mt-4 w-full" onClick={() => navigate('/performance')}>
               AX 도입 성과 보기 <ArrowRight size={17} strokeWidth={2.4} />
             </button>
             </div>
           </section>
+
+          {/*  0106 — 운영 변화 기록. 차량·인력·거점·계약 변화의 적용일 — 성과와 분리하는 근거. */}
+          {live && (
+            <div id="ops-changes">
+              <OpsChangesCard />
+            </div>
+          )}
 
           {/*  화면 색 (0081) — 글자 크기 바로 위에 둡니다. 둘 다 「보이는 것」을
                맞추는 설정이라 한자리에 모여 있어야 찾습니다. */}
@@ -523,7 +534,7 @@ export function Settings() {
           <SettingCard
             icon={Database}
             title="시스템 정보"
-            desc="이 기기 브라우저에 저장된 운영 데이터 현황입니다. (Supabase 연동은 개발 예정)"
+            desc="이 기기 브라우저에 저장된 시연 데이터 현황입니다. 실제 운영 데이터는 서버(Supabase)에 있습니다."
           >
             <div className="grid grid-cols-2 gap-2.5">
               {counts.map((c) => (
@@ -720,13 +731,17 @@ export function Settings() {
           {/* ── 실사용 전환: 사용자 계정 / 데이터 가져오기 ── */}
           {live && (
             <>
+              {/*  0106 — 같은 화면(UserAdmin)이 「사용자 관리」 메뉴에도 있어 둘로 갈라져 있었습니다.
+                   여기서는 가는 길만 둡니다 — 어느 쪽이 진짜인지 헷갈리지 않게. */}
               <SettingCard
                 icon={Users}
                 title="사용자 계정"
-                desc="계정 만들기 · 역할 · 사용/중지 · 비밀번호 초기화."
+                desc="계정 만들기 · 역할 · 사용/중지 · 비밀번호 초기화는 「사용자 관리」 화면 한 곳에서 합니다."
                 tone="navy"
               >
-                <UserAdmin />
+                <button data-settings-users onClick={() => navigate('/users')} className="btn-navy">
+                  사용자 관리 열기 <ArrowRight size={17} strokeWidth={2.4} />
+                </button>
               </SettingCard>
 
               <SettingCard

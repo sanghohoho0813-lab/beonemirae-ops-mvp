@@ -42,9 +42,9 @@ const M = (d) => {
 
 const mkClient = (id, over = {}) => ({
   id, name: `병원${id}`, type: '병원', address: '경기도 남양주시 오남읍 1',
-  manager: '', phone: '', collectionCycle: '주 1회',
+  manager: '원무과', phone: '031-000-0000', collectionCycle: '주 1회',
   collectsMedicalWaste: true, collectsDiaper: false, storageSize: '보통', note: '',
-  isDemoGenerated: false, active: true,
+  isDemoGenerated: false, active: true, contractStart: '2025-01-01',
   bizNo: '2568802759', vatMode: 'exclusive',
   pricing: { plastic20: { sale: 9000, cost: 5200 } },
   ...over,

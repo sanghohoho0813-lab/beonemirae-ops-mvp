@@ -96,7 +96,7 @@ interface DataContextValue {
     deliverScheduleId?: string | null
     deliverOn?: string | null
     requestId?: string | null
-  }) => Promise<{ ok: boolean; error: string | null }>
+  }) => Promise<{ ok: boolean; error: string | null; id?: string }>
   /** 주문 상태 옮기기. 재고는 서버가 전달완료에서 한 번만 뺍니다 */
   setProductOrderStatus: (
     orderId: string,
@@ -363,7 +363,7 @@ interface DataContextValue {
     requestId?: string | null
   }) => Promise<{ ok: boolean; error: string | null }>
   /** 비원미래 담당자의 요청 처리 (상태 변경 · 병원에 보이는 회신) */
-  handleRequest: (id: string, patch: { status?: RequestStatus; reply?: string }) => void
+  handleRequest: (id: string, patch: { status?: RequestStatus; reply?: string }) => Promise<{ ok: boolean; error: string | null }>
   /** 추천을 병원 포털로 전달 — 이후 수락은 병원이 직접 누릅니다 */
   shareProposal: (action: NextAction, message: string, month?: string) => void
   /** 병원 담당자의 제안 응답 (수락 / 보류) */
@@ -729,10 +729,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       requestId?: string | null
     }) => {
       if (!live) return { ok: false, error: '서버에 연결되어 있지 않습니다.' }
+      //  주문 id 를 돌려줍니다 (0106) — 추천 채택 기록이 그 주문을 가리키게.
+      let id: string | undefined
       const r = await runLive(async () => {
-        await repo.requestProductOrder(input)
+        const made = await repo.requestProductOrder(input)
+        id = made.id
       })
-      return { ok: r.ok, error: r.error ?? null }
+      return { ok: r.ok, error: r.error ?? null, id }
     },
     [live, runLive],
   )
@@ -1304,11 +1307,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
 
   /** 비원미래 담당자의 요청 처리 — 상태 변경 + 병원에 보이는 회신 */
+  //  0106 — 결과를 돌려줍니다. 예전에는 void 라 화면이 저장됐는지 실패했는지
+  //  알 길이 없었고, 회신 창은 저장 전에 닫혔습니다.
   const handleRequest = useCallback(
-    (id: string, patch: { status?: RequestStatus; reply?: string }) => {
+    async (id: string, patch: { status?: RequestStatus; reply?: string }): Promise<{ ok: boolean; error: string | null }> => {
       if (live) {
         const before = (data.requests ?? []).find((r) => r.id === id)
-        void runLive(async () => {
+        return runLive(async () => {
           await repo.updateRequest(id, patch)
           await repo.writeAudit({
             action: 'request.handle',
@@ -1322,7 +1327,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
             summary: `병원 요청 처리 — ${before?.clientName ?? ''} ${before?.kind ?? ''} → ${patch.status ?? '회신'}`,
           })
         })
-        return
       }
       const at = new Date().toISOString()
       setData((d) => ({
@@ -1331,6 +1335,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           r.id === id ? { ...r, ...patch, handledAt: patch.status ? at : r.handledAt } : r,
         ),
       }))
+      return { ok: true, error: null }
     },
     [live, runLive, data.requests],
   )

@@ -2,6 +2,64 @@
 //  정의된 타입을 그대로 씁니다 (타입만 가져오므로 순환 참조가 남지 않습니다).
 import type { BillingSnapshot } from '../lib/billing'
 import type { TaxFiling } from '../lib/taxBase'
+import type { OpsChange } from '../lib/opsChanges'
+import type { AfterSurvey } from '../lib/performance'
+
+// ── 0106: 실증 기록 표 ────────────────────────────────────────────────────────
+
+/** 추천이 병원 화면에 실제로 떠 있던 순간 · 그 뒤 주문에 담긴 것 */
+export interface RecommendationView {
+  id: string
+  clientId: string
+  shownOn: string
+  shownAt: string
+  viewerRole: string
+  items: { key: string; label: string; suggestQty: number }[]
+  ruleVersion: string
+  action: 'shown' | 'ordered' | 'dismissed'
+  orderId: string | null
+}
+
+/** 규칙 기반 배차 제안을 담당자가 어떻게 했는가 */
+export interface DispatchDecision {
+  id: string
+  date: string
+  vehicleId: string
+  vehicleName: string
+  proposal: { stops: string[]; loadRate: number; urgentCount: number; materialCount: number; rule: string }
+  decision: 'applied' | 'modified' | 'rejected'
+  reason: string
+  decidedName: string
+  createdAt: string
+}
+
+/** 오늘 업무 마감 한 줄 — 계기판·처리시설 대기 포함 */
+export interface DayCloseRecord {
+  profileId: string
+  who: string
+  date: string
+  note: string
+  closedAt: string
+  summary: { planned?: number; done?: number; left?: number; kg?: number; openVehicles?: number }
+  odometerStart: number | null
+  odometerEnd: number | null
+  facilityWaitMin: number | null
+  facilityTrips: number | null
+}
+
+/** AI 호출 한 건 — 입력·결과·성공/실패·처리시간·담당자 수정 */
+export interface AiCallRecord {
+  id: string
+  kind: string
+  requestId: string | null
+  ok: boolean
+  error: string
+  ms: number | null
+  model: string
+  actorName: string
+  edited: boolean
+  createdAt: string
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 도메인 타입 정의
@@ -642,6 +700,19 @@ export interface AppData {
   //  기록은 그대로 남기 때문에, 이름을 못 찾으면 미수금이 '알 수 없음' 으로
   //  보입니다. 목록 화면에는 넣지 않고 이름을 되찾는 용도로만 씁니다.
   retiredClients?: Client[]
+  // ── 0106: 실증이 일하면서 쌓이는 표들 (판 106 이전이면 undefined = 「표 없음」) ──
+  /** 운영 변화 기록 — 차량·인력·거점·계약 변화의 적용일. undefined 는 모름, [] 는 기록 없음 */
+  opsChanges?: OpsChange[]
+  /** 추천 노출·채택 기록 (병원 계정은 자기 병원 것만) */
+  recommendationViews?: RecommendationView[]
+  /** 배차 제안 결정 (사무실·관리자만) */
+  dispatchDecisions?: DispatchDecision[]
+  /** 최근 마감 기록 — 계기판·대기시간 포함 (사무실·관리자는 전원, 현장은 본인) */
+  dayCloses?: DayCloseRecord[]
+  /** AI 호출 기록 (사무실·관리자만) */
+  aiCalls?: AiCallRecord[]
+  /** 도입 후 같은 범위 조사값 (performance_baselines.after_*). 칸이 없으면 undefined */
+  afterSurvey?: AfterSurvey | null
   /**
    * 엑셀에서 가져온 월 실적 (0025).
    *

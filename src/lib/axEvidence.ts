@@ -1,5 +1,6 @@
 import type { AppData, Schedule } from '../types'
 import { supplyNeedsFor } from './supplyNeeds'
+import { confoundingIn, type Confounding, type OpsChange } from './opsChanges'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AX 증거 — 네 문장을 숫자로 만들 수 있는가
@@ -261,6 +262,49 @@ export function needConversion(data: AppData, period: AxPeriod): NeedConversion 
   return { recommended: seen.size, converted, checkpoints }
 }
 
+export interface RecoAdoption {
+  /** 노출 기록 표를 읽을 수 있었는가 (판 106) */
+  available: boolean
+  shown: number
+  adopted: number
+  ruleVersions: string[]
+}
+
+/**
+ * 노출 → 채택. 병원 화면에 추천이 떠 있던 기록(recommendation_views)과, 그 뒤
+ * 같은 병원의 주문에 그 품목이 담겼는지를 봅니다.
+ *
+ *  ⚠ 노출 이전의 주문은 채택이 아닙니다. 「보고 나서」 주문한 것만 셉니다.
+ */
+export function recommendationAdoption(data: AppData, period: AxPeriod): RecoAdoption {
+  const views = data.recommendationViews
+  if (views === undefined) return { available: false, shown: 0, adopted: 0, ruleVersions: [] }
+  const firstShown = new Map<string, string>()
+  const versions = new Set<string>()
+  for (const v of views) {
+    if (v.action !== 'shown' || !inPeriod(v.shownOn, period)) continue
+    if (v.ruleVersion) versions.add(v.ruleVersion)
+    for (const it of v.items) {
+      const k = `${v.clientId}|${it.key}`
+      const cur = firstShown.get(k)
+      if (!cur || v.shownAt < cur) firstShown.set(k, v.shownAt)
+    }
+  }
+  const adopted = new Set<string>()
+  for (const o of data.productOrders ?? []) {
+    if (o.status === '취소' || o.canceledAt) continue
+    if (!inPeriod(o.requestedAt, period)) continue
+    for (const it of o.items) {
+      const key = needKeyOfItem(it)
+      if (!key) continue
+      const k = `${o.clientId}|${key}`
+      const at = firstShown.get(k)
+      if (at && o.requestedAt >= at) adopted.add(k)
+    }
+  }
+  return { available: true, shown: firstShown.size, adopted: adopted.size, ruleVersions: [...versions].sort() }
+}
+
 export function salesAx(data: AppData, period: AxPeriod): SalesAx {
   const stages = orderStages(data, period)
   const delivered = stages.filter((s) => s.delivered)
@@ -301,6 +345,14 @@ export function salesAx(data: AppData, period: AxPeriod): SalesAx {
   const itemsCounted = stages.reduce((s, x) => s + x.itemStockKeys.length, 0)
   const itemsMatched = stages.reduce((s, x) => s + x.matchedNeeds.length, 0)
 
+  //  ── 실제 노출 기록 (판 106) — 「병원이 실제로 봤다」는 이것뿐입니다 ────
+  //   되짚어 계산한 일치(needHit)와 다릅니다. 노출 기록이 없으면 채택률을
+  //   내지 않고 「표 없음」이라고 말합니다. 과거 노출을 소급해 만들지 않습니다.
+  const reco = recommendationAdoption(data, period)
+
+  //  청구 확정 · 입금 — 전달 완료 매출과 **따로** 둡니다.
+  const billedRevenue = billed.reduce((s, x) => s + x.revenue, 0)
+
   const numbers: AxNumber[] = [
     num('orders', '주문 건수', '건', stages.length, stages.length, '취소하지 않은 소모품 주문 (요청일 기준)'),
     num('deliveredOrders', '전달 완료 주문', '건', delivered.length, stages.length,
@@ -309,10 +361,12 @@ export function salesAx(data: AppData, period: AxPeriod): SalesAx {
       '전달 완료 주문의 주문시점 판매단가 × 수량. 주문만 들어온 건은 넣지 않습니다'),
     num('cost', '판매 원가', '원', delivered.length ? cost : 0, delivered.length,
       '같은 주문의 주문시점 매입단가 × 수량'),
-    num('profit', '실제 판매이익', '원', delivered.length ? revenue - cost : 0, delivered.length,
-      '판매매출 − 판매원가 (전달 완료 기준)'),
+    num('profit', '판매 매출총이익 (매출 − 원가)', '원', delivered.length ? revenue - cost : 0, delivered.length,
+      '판매매출 − 판매원가 (전달 완료 기준). ⚠ 운영비(인건비·유류비 등)를 뺀 이익이 아닙니다 — 그것은 통계 → 경영 요약에 있습니다'),
+    num('billedRevenue', '청구 확정에 담긴 금액', '원', billed.length ? billedRevenue : 0, billed.length,
+      '전달 완료 주문 중 확정 청구(월말 청구)에 실제로 들어간 것의 판매액. 매출 ≠ 청구입니다'),
     num('paidRevenue', '입금까지 끝난 금액', '원', paid.length ? paidRevenue : 0, paid.length,
-      '⚠ 전달 ≠ 입금입니다. 그 주문이 담긴 청구가 실제로 입금 완료된 것만'),
+      '⚠ 청구 ≠ 입금입니다. 그 주문이 담긴 청구가 실제로 입금 완료된 것만'),
     num('buyers', '구매 병원 수', '곳', buyers.size, delivered.length, '전달 완료 주문이 있는 서로 다른 거래처'),
     num('repeatBuyers', '재구매 병원 수', '곳', repeatBuyers.size, delivered.length,
       '그 거래처의 첫 주문이 아닌 주문을 받은 병원 — 한 번은 호의, 두 번째부터가 매출'),
@@ -322,15 +376,25 @@ export function salesAx(data: AppData, period: AxPeriod): SalesAx {
       collectRevenue > 0 ? Math.round((revenue / collectRevenue) * 1000) / 10 : null,
       delivered.length,
       '소모품 판매매출 ÷ 같은 기간 확정 수거 청구액. 두 매출을 한 칸에 더하지 않고 비중만 냅니다'),
-    num('needHit', '주문 품목 중 추천에 있던 비율', '%',
+    num('needHit', '주문 품목과 추천 규칙의 일치 비율', '%',
       itemsCounted > 0 ? Math.round((itemsMatched / itemsCounted) * 1000) / 10 : null,
       itemsCounted,
-      '주문 하나하나를 **그 주문일 시점으로 되돌려** 추천을 다시 계산해, 그때 추천에 있던 품목의 비율'),
-    num('needConversion', '추천 → 주문 전환율', '%',
+      '주문 하나하나를 그 주문일 시점 규칙으로 되짚어 계산한 「일치」입니다. ⚠ 병원이 추천을 실제로 봤다는 증거가 아닙니다 — 그것은 아래 「노출 뒤 채택」입니다'),
+    num('needConversion', '추천 규칙 일치 → 주문 (되짚어 계산)', '%',
       conv.recommended > 0 ? Math.round((conv.converted / conv.recommended) * 1000) / 10 : null,
       conv.recommended,
-      `기간 안을 ${RECALL_STEP_DAYS}일 간격(${conv.checkpoints}개 시점)으로 되짚어 한 번이라도 추천이 떠 있던 `
-        + `병원×품목 ${conv.recommended}쌍 중 실제 주문으로 이어진 ${conv.converted}쌍`),
+      `기간 안을 ${RECALL_STEP_DAYS}일 간격(${conv.checkpoints}개 시점)으로 되짚어 규칙상 추천됐을 `
+        + `병원×품목 ${conv.recommended}쌍 중 주문으로 이어진 ${conv.converted}쌍. 노출 기록이 아니라 규칙 재계산입니다`),
+    num('recoShown', '실제로 화면에 뜬 추천 (병원×품목)', '쌍', reco.available ? reco.shown : null, reco.shown,
+      reco.available
+        ? `추천이 병원 화면에 실제로 떠 있던 순간의 기록 (규칙 판 ${reco.ruleVersions.join(', ') || '—'})`
+        : '노출 기록 표가 아직 없습니다 (PROPOSAL_0106 실행 후 쌓입니다). 과거 노출은 소급해 만들지 않습니다'),
+    num('recoAdopted', '노출 뒤 주문에 담긴 추천', '쌍', reco.available ? reco.adopted : null, reco.shown,
+      '노출 기록이 남은 병원×품목 중, 그 뒤에 취소되지 않은 주문에 담긴 것'),
+    num('recoAdoptRate', '추천 노출 → 채택률', '%',
+      reco.available && reco.shown > 0 ? Math.round((reco.adopted / reco.shown) * 1000) / 10 : null,
+      reco.shown,
+      '노출 뒤 채택 ÷ 노출. 이것이 「고객이 추천을 보고 주문했다」에 가장 가까운 숫자입니다'),
   ]
 
   return {
@@ -370,6 +434,33 @@ export function customerAx(
   for (const r of portalReqs) uses.set(r.clientId, (uses.get(r.clientId) ?? 0) + 1)
   for (const o of portalOrders) uses.set(o.clientId, (uses.get(o.clientId) ?? 0) + 1)
   const repeat = [...uses.values()].filter((n) => n >= 2).length
+  //  ── 여러 주에 걸친 사용 — 같은 날 두 번은 「정착」이 아닙니다 ───────────
+  //   병원마다 사용한 ISO 주(월요일 시작)를 모아, 2주 이상이면 정착으로 봅니다.
+  const weeksOf = new Map<string, Set<string>>()
+  const addWeek = (cid: string, iso: string) => {
+    const w = isoWeekOf(iso)
+    if (!w) return
+    const cur = weeksOf.get(cid) ?? new Set<string>()
+    cur.add(w)
+    weeksOf.set(cid, cur)
+  }
+  for (const r of portalReqs) addWeek(r.clientId, r.createdAt)
+  for (const o of portalOrders) addWeek(o.clientId, o.requestedAt)
+  const multiWeek = [...weeksOf.values()].filter((s) => s.size >= 2).length
+  //  전화·카톡으로 온 요청을 직원이 접수해 둔 것 — 이것이 없으면 「포털 비율」은
+  //  분모가 빠진 숫자입니다. 100% 는 대개 「나머지를 기록하지 않았다」입니다.
+  const staffReqs = reqs.length - portalReqs.length
+  //  ── 접수 → 처리 시각 ───────────────────────────────────────────────────
+  //   handled_at 은 처음 처리(회신·상태 변경)한 시각이고 덮어쓰지 않습니다.
+  //   ⚠ 「첫 응답」과 「완료」를 따로 적는 칸은 없습니다 — 있는 것만 셉니다.
+  const lagsH = reqs
+    .filter((r) => r.handledAt)
+    .map((r) => (new Date(r.handledAt as string).getTime() - new Date(r.createdAt).getTime()) / 3600000)
+    .filter((h) => Number.isFinite(h) && h >= 0)
+    .sort((a, b) => a - b)
+  const medianH = lagsH.length
+    ? Math.round((lagsH.length % 2 ? lagsH[(lagsH.length - 1) / 2] : (lagsH[lagsH.length / 2 - 1] + lagsH[lagsH.length / 2]) / 2) * 10) / 10
+    : null
 
   const buyers = new Set(orders.filter((o) => o.status === '전달완료').map((o) => o.clientId))
 
@@ -391,14 +482,22 @@ export function customerAx(
       '병원 담당자가 포털에서 직접 올린 요청 (전화·카톡 대행 접수 제외)'),
     num('portalOrders', '포털 물품 요청 건수', '건', portalOrders.length, orders.length,
       '병원이 포털에서 직접 담아 보낸 소모품 주문'),
+    num('staffRequests', '직원이 대신 접수한 요청 (전화·카톡)', '건', staffReqs, reqs.length,
+      '전화·카톡으로 온 요청을 직원이 시스템에 적어 둔 것. 이것이 있어야 아래 비율의 분모가 됩니다'),
     num('portalShare', '전체 요청 중 포털 비율', '%',
-      reqs.length > 0 ? Math.round((portalReqs.length / reqs.length) * 1000) / 10 : null,
+      reqs.length > 0 && staffReqs > 0 ? Math.round((portalReqs.length / reqs.length) * 1000) / 10 : null,
       reqs.length,
-      '포털 요청 ÷ 전체 요청. 이 값이 오르는 것이 「전화·카톡 대신 쓰기 시작했다」입니다'),
+      staffReqs === 0 && reqs.length > 0
+        ? '⚠ 전화·카톡 접수가 한 건도 기록되지 않아 비율을 내지 않습니다 — 포털만 세면 100% 로 보이지만 그건 나머지를 안 적은 것입니다'
+        : '포털 요청 ÷ (포털 + 직원 접수). 전화·카톡 접수를 같이 적어야 뜻이 있는 숫자입니다'),
     num('portalClients', '포털을 실제로 쓴 병원 수', '곳', uses.size, portalReqs.length + portalOrders.length,
       '포털에서 요청이나 주문을 한 번이라도 올린 서로 다른 거래처'),
     num('repeatPortalClients', '두 번 이상 쓴 병원 수', '곳', repeat, uses.size,
       '한 번은 시켜서 해 본 것일 수 있습니다 — 두 번째부터가 습관입니다'),
+    num('multiWeekPortalClients', '2주 이상에 걸쳐 쓴 병원 수', '곳', multiWeek, uses.size,
+      '서로 다른 주(월요일 시작)에 포털을 쓴 병원. 같은 날 두 번은 정착이 아닙니다'),
+    num('responseHours', '요청 접수 → 처리 (중앙값)', '시간', medianH, lagsH.length,
+      '요청 올린 시각 → 담당자가 처음 처리(회신·상태 변경)한 시각. ⚠ 첫 응답과 완료를 따로 적는 칸은 없습니다 — 처리 시각 하나로만 셉니다'),
     num('buyerClients', '주문한 병원 수', '곳', buyers.size, orders.length, '전달 완료된 주문이 있는 거래처'),
     num('repeatBuyerClients', '두 번 이상 산 병원 수', '곳', repeatBuyerSet.size, buyers.size,
       '그 거래처의 첫 주문이 아닌 주문을 받은 병원'),
@@ -494,6 +593,43 @@ export function capacityAx(data: AppData, period: AxPeriod): CapacityAx {
     (m) => m.isAdditionalRequest && m.date >= period.from && m.date <= period.to,
   ).length
 
+  //  ── 차량 운행일당 수거량 — 차량×날짜 한 칸이 「운행일」입니다 ────────────
+  const vehicleDays = new Set(done.filter((s) => s.vehicleId).map((s) => `${s.vehicleId}|${s.date}`))
+  const kgDone = done.reduce((s, x) => s + (x.actualAmount ?? 0), 0)
+  const kgKnown = done.filter((x) => x.actualAmount != null).length
+  const kgPerVehicleDay = vehicleDays.size > 0 && kgKnown > 0 ? Math.round(kgDone / vehicleDays.size) : null
+
+  //  ── 방문 1건당 운영비 — 운영비를 넣은 달만 셉니다 ─────────────────────
+  //   운영비는 달 단위이고 방문은 날 단위입니다. 운영비가 있는 달의 완료 방문만
+  //   분모로 씁니다. 없는 달을 0 원으로 치지 않습니다.
+  const costByMonth = new Map<string, number>()
+  for (const c of data.operatingCosts ?? []) costByMonth.set(c.month, (costByMonth.get(c.month) ?? 0) + c.amount)
+  let costSum = 0
+  let costVisits = 0
+  let costMonths = 0
+  for (const [month, amount] of costByMonth) {
+    if (month < period.from.slice(0, 7) || month > period.to.slice(0, 7)) continue
+    const visits = done.filter((s) => s.date.slice(0, 7) === month).length
+    if (visits === 0) continue
+    costSum += amount
+    costVisits += visits
+    costMonths += 1
+  }
+  const costPerVisit = costVisits > 0 ? Math.round(costSum / costVisits) : null
+
+  //  ── 계기판 · 처리시설 대기 (판 106 마감 기록) ─────────────────────────
+  //   좌표가 없어 거리를 계산하지 못하던 것을 **계기판**으로 시작합니다.
+  const closes = data.dayCloses
+  const closesIn = (closes ?? []).filter((c) => c.date >= period.from && c.date <= period.to)
+  const kmRows = closesIn.filter((c) => c.odometerStart != null && c.odometerEnd != null && (c.odometerEnd as number) >= (c.odometerStart as number))
+  const kmTotal = kmRows.reduce((s, c) => s + ((c.odometerEnd as number) - (c.odometerStart as number)), 0)
+  const kmPerDay = kmRows.length > 0 ? Math.round(kmTotal / kmRows.length) : null
+  const waits = closesIn.map((c) => c.facilityWaitMin).filter((v): v is number => v != null).sort((a, b) => a - b)
+  const waitMedian = waits.length
+    ? (waits.length % 2 ? waits[(waits.length - 1) / 2] : Math.round((waits[waits.length / 2 - 1] + waits[waits.length / 2]) / 2))
+    : null
+  const noCloseTable = closes === undefined
+
   //  ── 수용여력 ──
   //   같은 차·같은 요일에 **실제로 해낸 최대치**와 최근 평균의 차이입니다.
   //   「몇 곳 더 받을 수 있다」고 단정하지 않습니다 — 관측된 최대치일 뿐,
@@ -524,6 +660,20 @@ export function capacityAx(data: AppData, period: AxPeriod): CapacityAx {
       headroomSamples > 0 ? Math.round(headroom * 10) / 10 : null, headroomSamples,
       '차량×요일마다 (그 요일 최대 정차 수 − 평균). ⚠ 거리·시간은 계산하지 않습니다 — '
         + '거래처 좌표가 없습니다. 「몇 곳 더 받을 수 있다」가 아니라 「예전에 이만큼은 해냈다」입니다'),
+    num('kgPerVehicleDay', '차량 운행일당 수거량', 'kg', kgPerVehicleDay, vehicleDays.size,
+      `완료 방문의 실제 수거량 합 ÷ 차량×날짜(운행일) 수. 수거량이 적힌 건 ${kgKnown}/${done.length}건 — 비어 있는 건은 0 으로 치지 않고 뺐습니다`),
+    num('costPerVisit', '방문 1건당 운영비', '원', costPerVisit, costVisits,
+      costMonths > 0
+        ? `운영비를 넣은 ${costMonths}개월의 월 운영비 합 ÷ 그 달들의 완료 방문 수. 운영비가 없는 달은 넣지 않습니다`
+        : '이 기간에 운영비가 입력된 달이 없습니다 — 통계 → 경영 요약에서 월 운영비를 넣으면 계산됩니다'),
+    num('kmPerDay', '운행거리 (계기판, 마감 1건당)', 'km', noCloseTable ? null : kmPerDay, kmRows.length,
+      noCloseTable
+        ? '마감 기록에 계기판 칸이 아직 없습니다 (PROPOSAL_0106 실행 후 기사님 마감에서 쌓입니다). 지도 API 전까지는 계기판으로 잽니다'
+        : '기사님이 오늘 업무 마감에 적은 도착 계기판 − 출발 계기판의 평균. 적지 않은 날은 세지 않습니다'),
+    num('facilityWaitMin', '처리시설 대기 (중앙값)', '분', noCloseTable ? null : waitMedian, waits.length,
+      noCloseTable
+        ? '마감 기록에 대기시간 칸이 아직 없습니다 (PROPOSAL_0106 실행 후). 「3~4시간」은 아직 전언이며 실측이 아닙니다'
+        : '기사님이 마감에 적은 처리시설 이동·인계 대기시간의 중앙값. 전언(3~4시간)과 견주는 실측입니다'),
   ]
 
   return { period, numbers, vehicles, byDriver }
@@ -660,22 +810,45 @@ export interface AxCompare {
   before: AxPeriod | null
   after: AxPeriod | null
   rows: CompareRow[]
+  /** 도입 후 구간에 차량·인력·거점·계약·단가 변화가 겹쳤는가 */
+  confounding: Confounding
 }
 
-/** 견줄 지표 — 네 갈래에서 하나씩, 「이게 달라졌다」를 대표하는 것만 */
+/** 견줄 지표 — 좋아진 것만 고르지 않습니다. 나빠질 수 있는 것(당일 입력 전 입력 · 실패 기록)도 같은 기준으로 올립니다 */
 const COMPARE_KEYS: { area: 'work' | 'sales' | 'customer' | 'capacity'; key: string; betterWhen: 'higher' | 'lower' }[] = [
   { area: 'work', key: 'sameDayRate', betterWhen: 'higher' },
+  { area: 'work', key: 'oddLag', betterWhen: 'lower' },
   { area: 'sales', key: 'revenue', betterWhen: 'higher' },
   { area: 'sales', key: 'deliveredOrders', betterWhen: 'higher' },
   { area: 'customer', key: 'portalShare', betterWhen: 'higher' },
   { area: 'customer', key: 'portalClients', betterWhen: 'higher' },
+  { area: 'customer', key: 'responseHours', betterWhen: 'lower' },
   { area: 'capacity', key: 'avgPerDay', betterWhen: 'higher' },
+  { area: 'capacity', key: 'kgPerVehicleDay', betterWhen: 'higher' },
+  { area: 'capacity', key: 'costPerVisit', betterWhen: 'lower' },
 ]
+
+/** ISO 시각 → ISO 주 (YYYY-Www, 월요일 시작). 못 읽으면 빈 문자열 */
+export function isoWeekOf(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+  const day = t.getUTCDay() || 7
+  t.setUTCDate(t.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1))
+  const week = Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}
 
 const daysBetweenIso = (a: string, b: string) =>
   Math.round((new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime()) / 86400000) + 1
 
-export function axCompare(data: AppData, experimentStart: string | null, today: string): AxCompare {
+export function axCompare(
+  data: AppData,
+  experimentStart: string | null,
+  today: string,
+  changes: OpsChange[] | undefined = data.opsChanges,
+): AxCompare {
   if (!experimentStart) {
     return {
       state: 'no-start',
@@ -683,11 +856,15 @@ export function axCompare(data: AppData, experimentStart: string | null, today: 
       before: null,
       after: null,
       rows: [],
+      confounding: confoundingIn(changes, today, today),
     }
   }
   const after: AxPeriod = { from: experimentStart, to: today }
   const span = Math.max(daysBetweenIso(after.from, after.to), 1)
   const before: AxPeriod = { from: shift(experimentStart, -span), to: shift(experimentStart, -1) }
+  //  ⚠ 도입 후 구간에 차량·거점·인력 변화가 겹치면 아래 표는 「복합 개선」입니다.
+  //    AX 효과라고 단독으로 말하지 않습니다.
+  const confounding = confoundingIn(changes, after.from, after.to)
 
   const b = axEvidence(data, before)
   const a = axEvidence(data, after)
@@ -739,7 +916,7 @@ export function axCompare(data: AppData, experimentStart: string | null, today: 
           + '그 기간은 엑셀·카톡으로 일하던 때라 시스템에 남은 것이 없습니다 — 0 이라고 적지 않습니다.'
         : `도입 전 ${span}일과 도입 후 ${span}일을 같은 계산으로 견줍니다.`
 
-  return { state, reason, before, after, rows }
+  return { state, reason, before, after, rows, confounding }
 }
 
 /** 화면이 「지금 가장 약한 증거」를 한 줄로 말할 수 있게 */

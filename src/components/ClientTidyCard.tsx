@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ChevronDown, ChevronUp, ListChecks } from 'lucide-react'
 import type { Client } from '../types'
+import { useData } from '../context/DataContext'
 import { TIDY_GROUP_LABEL, TIDY_GROUP_ORDER, TIDY_GROUP_WHY, tidyClients, type TidyGroup } from '../lib/clientTidy'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,7 +22,8 @@ const SHOW_EACH = 5
 
 export function ClientTidyCard({ clients }: { clients: Client[] }) {
   const navigate = useNavigate()
-  const report = useMemo(() => tidyClients(clients), [clients])
+  const { data } = useData()
+  const report = useMemo(() => tidyClients(clients, { assignments: data.clientAssignments }), [clients, data.clientAssignments])
   const [folded, setFolded] = useState<boolean>(() => {
     try { return window.localStorage.getItem(FOLD_KEY) === '1' } catch { return false }
   })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Loader2, Moon } from 'lucide-react'
+import { CheckCircle2, Loader2, Moon, Gauge, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { schedulesOn } from '../lib/selectors'
@@ -32,11 +32,22 @@ export function DayClose({ date = today() }: { date?: string }) {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [closedAt, setClosedAt] = useState<string | null>(null)
+  //  0106 — 운행 기록 (선택). 계기판·처리시설 대기시간. 판 106 이후에만 칸이 있습니다.
+  const ready106 = useSchemaAtLeast(106) === true
+  const [tripOpen, setTripOpen] = useState(false)
+  const [odoStart, setOdoStart] = useState('')
+  const [odoEnd, setOdoEnd] = useState('')
+  const [waitMin, setWaitMin] = useState('')
+  const [trips, setTrips] = useState('')
+  //  마감 여부 조회 실패는 삼키지 않습니다 — 「아직 안 했다」로 보이면 두 번 누르게 됩니다.
+  const [lookup, setLookup] = useState<'ok' | 'failed'>('ok')
+  const [lookupTick, setLookupTick] = useState(0)
 
   //  이미 마감했는지 먼저 봅니다 — 새로고침해도 「끝냈다」가 남아야 합니다.
   useEffect(() => {
     let alive = true
     if (!ready || mode !== 'live' || !profile) return
+    setLookup('ok')
     dayCloses(date)
       .then((rows) => {
         if (!alive) return
@@ -51,9 +62,9 @@ export function DayClose({ date = today() }: { date?: string }) {
           })
         }
       })
-      .catch(() => { /* 못 읽어도 화면은 그대로 — 눌러 보면 서버가 알려 줍니다 */ })
+      .catch(() => { if (alive) setLookup('failed') })
     return () => { alive = false }
-  }, [ready, mode, profile, date])
+  }, [ready, mode, profile, date, lookupTick])
 
   //  ── 눌러야 할 것을 **누르기 전에** 보여 줍니다 ────────────────────────
   //
@@ -89,8 +100,16 @@ export function DayClose({ date = today() }: { date?: string }) {
   async function go() {
     setState('busy')
     setError(null)
+    const num = (v: string) => (v.trim() === '' ? null : Number(v))
+    const os = num(odoStart), oe = num(odoEnd), wm = num(waitMin), tp = num(trips)
+    if ([os, oe, wm, tp].some((v) => v != null && !(Number.isFinite(v) && v >= 0))) {
+      setError('운행 기록은 0 이상의 숫자만 넣어 주세요.'); setState('idle'); return
+    }
+    if (os != null && oe != null && oe < os) {
+      setError('도착 계기판이 출발보다 작습니다.'); setState('idle'); return
+    }
     try {
-      const r = await closeDay(date, note.trim())
+      const r = await closeDay(date, note.trim(), ready106 ? { odometerStart: os, odometerEnd: oe, facilityWaitMin: wm, facilityTrips: tp } : {})
       setSummary(r.summary)
       setState('done')
       setClosedAt(new Date().toISOString())
@@ -174,6 +193,47 @@ export function DayClose({ date = today() }: { date?: string }) {
           </p>
         )}
       </div>
+
+      {/*  0106 — 운행 기록 (선택). 지도 API 전까지 계기판과 시계로 시작합니다.
+           안 적으셔도 마감됩니다. 적은 값만 셉니다 — 0 으로 채우지 않습니다. */}
+      {ready106 && (
+        <div data-day-close-trip className="mt-3 rounded-2xl bg-navy-50 px-4 py-3">
+          <button
+            type="button"
+            data-day-close-trip-toggle
+            onClick={() => setTripOpen((v) => !v)}
+            className="flex min-h-[2.75rem] w-full items-center gap-2 text-left"
+          >
+            <Gauge size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" />
+            <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-800">운행 기록 적기 (선택 · 계기판 · 처리시설 대기)</span>
+            <ChevronDown size={18} className={`shrink-0 text-navy-400 transition-transform ${tripOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {tripOpen && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <label className="t-caption font-bold text-navy-600">출발 계기판 (km)
+                <input data-day-close-odo-start inputMode="numeric" value={odoStart} onChange={(e) => setOdoStart(e.target.value)} className="input mt-1" placeholder="예: 84210" />
+              </label>
+              <label className="t-caption font-bold text-navy-600">도착 계기판 (km)
+                <input data-day-close-odo-end inputMode="numeric" value={odoEnd} onChange={(e) => setOdoEnd(e.target.value)} className="input mt-1" placeholder="예: 84395" />
+              </label>
+              <label className="t-caption font-bold text-navy-600">처리시설 대기 (분)
+                <input data-day-close-wait inputMode="numeric" value={waitMin} onChange={(e) => setWaitMin(e.target.value)} className="input mt-1" placeholder="기다린 시간" />
+              </label>
+              <label className="t-caption font-bold text-navy-600">처리시설 간 횟수
+                <input data-day-close-trips inputMode="numeric" value={trips} onChange={(e) => setTrips(e.target.value)} className="input mt-1" placeholder="예: 1" />
+              </label>
+              <p className="t-caption col-span-2 break-keep text-navy-500">모르는 칸은 비워 두세요. 적은 것만 셉니다.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {lookup === 'failed' && (
+        <p data-day-close-lookup-failed className="t-caption mt-3 break-keep font-bold text-amber-800">
+          오늘 이미 마감했는지 확인하지 못했습니다(통신). 마감을 누르면 서버가 다시 확인합니다 — 두 번 눌러도 한 번만 남습니다.{' '}
+          <button type="button" onClick={() => setLookupTick((n) => n + 1)} className="underline underline-offset-2">다시 확인</button>
+        </p>
+      )}
 
       {/*  한 줄만. 없으면 비워 두셔도 됩니다. */}
       <input

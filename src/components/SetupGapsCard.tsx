@@ -44,7 +44,7 @@ export function SetupGapsCard() {
               넣어야 할 값이 다 채워져 있습니다
             </p>
             <p className="t-caption mt-1 break-keep text-navy-500">
-              휴무일 · 소모품 단가 · 사업자정보 · 부가세 처리 · 거래처 단가 · 월 운영비 · 직원 명부
+              거래처 정리 · 휴무일 · 소모품 단가 · 사업자정보 · 부가세 처리 · 거래처 단가 · 월 운영비 · 직원 명부
             </p>
           </div>
         </div>

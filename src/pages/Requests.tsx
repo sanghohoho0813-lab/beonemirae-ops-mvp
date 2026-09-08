@@ -36,6 +36,8 @@ import { prettyDate, shiftDays, today } from '../lib/format'
 import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 import { AiButton } from '../components/AiAction'
+import { aiTriageRequest, markAiCallEdited } from '../lib/evidenceRepo'
+import { Sparkles, Loader2 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 요청 (비원미래 담당자 화면)
@@ -86,6 +88,18 @@ export function Requests() {
   const schema83 = useSchemaAtLeast(83)
   const [replyTo, setReplyTo] = useState<RequestItem | null>(null)
   const [replyText, setReplyText] = useState('')
+  //  0106 — 저장 결과를 그 자리에 적습니다. 예전에는 저장 전에 창이 닫혔고 실패해도 표시가 없었습니다.
+  const [saveMsg, setSaveMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
+  const [replyBusy, setReplyBusy] = useState(false)
+  const [replyErr, setReplyErr] = useState<string | null>(null)
+  //  0106 — AI 요청 정리 (서버 함수 ai-triage). 판 106 + 사무실·관리자 + 실운영에서만 단추가 있습니다.
+  //  키·배포가 없으면 서버가 503 을 돌려주고, 그 실패도 그대로 적습니다 — 가짜 초안을 만들지 않습니다.
+  const ready106 = useSchemaAtLeast(106) === true
+  const [ai, setAi] = useState<{ busy: boolean; callId: string | null; draft: string; kind: string; urgency: string; basis: string; ms: number | null; error: string | null }>({
+    busy: false, callId: null, draft: '', kind: '', urgency: '', basis: '', ms: null, error: null,
+  })
+  const { profile } = useAuth()
+  const canAi = ready106 && mode === 'live' && (role === 'admin' || role === 'office')
   const [newOpen, setNewOpen] = useState(false)
   //  ── 요청 잠시 내려 두기 (0076) ────────────────────────────────────────
   const canSnooze = useSchemaAtLeast(76) === true && (role === 'admin' || role === 'office') && mode === 'live'
@@ -145,11 +159,43 @@ export function Requests() {
     }
   }
 
-  const submitReply = () => {
+  const submitReply = async () => {
     if (!replyTo) return
-    handleRequest(replyTo.id, { reply: replyText.trim() })
+    setReplyBusy(true); setReplyErr(null)
+    const text = replyText.trim()
+    const res = await handleRequest(replyTo.id, { reply: text })
+    setReplyBusy(false)
+    if (!res.ok) {
+      //  창을 닫지 않습니다 — 적은 글이 사라지면 그 통화 내용은 어디에도 없습니다.
+      setReplyErr(res.error ?? '회신을 저장하지 못했습니다. 다시 시도해 주세요.')
+      return
+    }
+    //  AI 초안을 고쳐 썼으면 그 사실을 남깁니다 — 「AI 결과가 그대로 쓰였나」의 근거.
+    if (ai.callId && ai.draft && ai.draft.trim() !== text) {
+      markAiCallEdited(ai.callId, text.slice(0, 300)).catch(() => { /* 기록 실패는 회신을 되돌리지 않습니다 */ })
+    }
+    setSaveMsg((m) => ({ ...m, [replyTo.id]: { ok: true, text: '회신 저장됨 — 병원 화면에 보입니다' } }))
     setReplyTo(null)
     setReplyText('')
+    setAi({ busy: false, callId: null, draft: '', kind: '', urgency: '', basis: '', ms: null, error: null })
+  }
+
+  const setStatus = async (r: RequestItem, st: RequestStatus) => {
+    setSaveMsg((m) => ({ ...m, [r.id]: { ok: true, text: '저장 중…' } }))
+    const res = await handleRequest(r.id, { status: st })
+    setSaveMsg((m) => ({ ...m, [r.id]: res.ok ? { ok: true, text: `「${st}」 저장됨` } : { ok: false, text: res.error ?? '저장 실패 — 다시 눌러 주세요' } }))
+  }
+
+  const runAi = async () => {
+    if (!replyTo || !canAi) return
+    setAi((a) => ({ ...a, busy: true, error: null }))
+    const res = await aiTriageRequest({ requestId: replyTo.id, content: replyTo.content, actorName: profile?.name ?? '' })
+    if (res.ok) {
+      setAi({ busy: false, callId: res.callId, draft: res.result.draft, kind: res.result.kind, urgency: res.result.urgency, basis: res.result.basis, ms: res.ms, error: null })
+      if (!replyText.trim()) setReplyText(res.result.draft)
+    } else {
+      setAi({ busy: false, callId: res.callId, draft: '', kind: '', urgency: '', basis: '', ms: res.ms, error: res.error })
+    }
   }
 
   const submitNew = async () => {
@@ -317,7 +363,8 @@ export function Requests() {
                 {FLOW.map((st) => (
                   <button
                     key={st}
-                    onClick={() => handleRequest(r.id, { status: st })}
+                    data-req-status={st}
+                    onClick={() => void setStatus(r, st)}
                     className={`rounded-full px-3.5 py-2 text-[1rem] font-extrabold transition ${
                       r.status === st ? TONE[STATUS_TONE[st]].chip : 'bg-navy-50 text-navy-400 hover:text-navy-700'
                     }`}
@@ -368,6 +415,11 @@ export function Requests() {
                   회신 남기기 <ChevronRight size={16} />
                 </button>
               </div>
+              {saveMsg[r.id] && (
+                <p data-req-save={saveMsg[r.id].ok ? 'ok' : 'fail'} className={`t-caption mt-2 break-keep font-bold ${saveMsg[r.id].ok ? 'text-teal-700' : 'text-rose-600'}`}>
+                  {saveMsg[r.id].text}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -399,15 +451,18 @@ export function Requests() {
       <Modal
         open={!!replyTo}
         title="병원에 회신"
-        onClose={() => setReplyTo(null)}
+        onClose={() => { if (!replyBusy) { setReplyTo(null); setReplyErr(null) } }}
         footer={
-          <div className="flex gap-2">
-            <button onClick={() => setReplyTo(null)} className="btn-ghost flex-1">
-              취소
-            </button>
-            <button onClick={submitReply} className="btn-primary flex-1">
-              <Send size={17} strokeWidth={2.4} /> 회신 저장
-            </button>
+          <div className="flex flex-col gap-2">
+            {replyErr && <p data-reply-error className="t-caption break-keep font-bold text-rose-600">{replyErr}</p>}
+            <div className="flex gap-2">
+              <button onClick={() => { setReplyTo(null); setReplyErr(null) }} disabled={replyBusy} className="btn-ghost flex-1">
+                취소
+              </button>
+              <button data-reply-save onClick={() => void submitReply()} disabled={replyBusy} className="btn-primary flex-1">
+                {replyBusy ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} strokeWidth={2.4} />} 회신 저장
+              </button>
+            </div>
           </div>
         }
       >
@@ -415,6 +470,32 @@ export function Requests() {
           {replyTo?.clientName} · {replyTo ? REQUEST_KIND_LABEL[replyTo.type] : ''} — 아래 내용이 병원 화면에 그대로
           표시됩니다.
         </p>
+        {replyTo?.content && (
+          <p className="t-caption mb-3 whitespace-pre-wrap break-keep rounded-xl bg-navy-50 px-3 py-2 text-navy-600">{replyTo.content}</p>
+        )}
+        {canAi && (
+          <div data-ai-triage className="mb-3 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Sparkles size={17} strokeWidth={2.4} className="shrink-0 text-violet-600" />
+              <p className="t-body min-w-0 flex-1 break-keep font-bold text-violet-900">AI 로 요청 정리 · 회신 초안</p>
+              <button data-ai-triage-run onClick={() => void runAi()} disabled={ai.busy} className="btn-ghost min-h-[2.5rem] border-violet-200 px-3 text-[0.98rem]">
+                {ai.busy ? <Loader2 size={16} className="animate-spin" /> : '초안 만들기'}
+              </button>
+            </div>
+            {ai.error && (
+              <p data-ai-triage-error className="t-caption mt-2 break-keep font-bold text-rose-700">
+                AI 를 부르지 못했습니다 — {ai.error}. (호출 기록에 실패로 남았습니다. 회신은 직접 적어 주세요.)
+              </p>
+            )}
+            {ai.draft && (
+              <p data-ai-triage-result className="t-caption mt-2 break-keep text-violet-900">
+                분류 <b>{ai.kind}</b> · 급함 <b>{ai.urgency}</b>{ai.ms != null && ` · ${(ai.ms / 1000).toFixed(1)}초`} — 초안을 아래에 넣었습니다. 고쳐 쓰시면 「수정됨」으로 남습니다.
+                {ai.basis && <span className="block text-violet-700">근거: {ai.basis}</span>}
+              </p>
+            )}
+            <p className="t-caption mt-1.5 break-keep text-violet-700">보내지 않습니다 · 상태를 바꾸지 않습니다 · 날짜·금액을 약속하지 않습니다.</p>
+          </div>
+        )}
         <textarea
           id="reply-text"
           rows={4}

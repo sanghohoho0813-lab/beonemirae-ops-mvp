@@ -37,7 +37,7 @@ const fwd = (n) => {
 const CA = '00000000-0000-0000-0000-0000000000c1'
 const mkClient = (over = {}) => ({
   id: CA, name: '가나요양병원', type: '병원', address: '경기도 남양주시 오남읍 1',
-  manager: '', phone: '', collection_cycle: '주 1회', collects_medical_waste: true, collects_diaper: false,
+  manager: '원무과', phone: '031-000-0000', collection_cycle: '주 1회', collects_medical_waste: true, collects_diaper: false,
   storage_size: '보통', note: '', is_demo_generated: false, demo_session_id: null, active: true,
   contract_start: '2025-01-01', contract_end: null, payment_terms: '', payment_due_day: 20,
   biz_no: '2568802759', vat_mode: 'exclusive',

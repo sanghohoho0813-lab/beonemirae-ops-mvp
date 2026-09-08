@@ -721,7 +721,7 @@ export function TodaySchedule() {
         footer={
           quickResult ? (
             <button className="btn-ghost w-full" onClick={closeQuick}>
-              시연 계속하기
+              닫기
             </button>
           ) : (
             <>

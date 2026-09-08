@@ -9,7 +9,7 @@ import { clientMonthlyReport } from '../lib/insights'
 import { thisMonth } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 병원 월간 운영 리포트
+// 병원 월간 배출 리포트
 //
 //  내부에서 이미 쓰던 clientMonthlyReport 를 그대로 병원에게 보여줍니다.
 //  병원이 따로 정리하던 배출량·수거횟수·용기 공급 내역을 매달 직접 확인할 수
@@ -53,7 +53,7 @@ export function PortalReport() {
              폰에서는 제목이 한 줄을 통째로 쓰고(basis-full), 넓은 화면은
              지금까지처럼 나눠 씁니다. */}
         <div className="min-w-0 flex-1 basis-full sm:basis-0">
-          <h1 className="t-page break-keep text-navy-900">월간 운영 리포트</h1>
+          <h1 className="t-page break-keep text-navy-900">월간 배출 리포트</h1>
           <p className="t-body mt-2.5 break-keep font-medium text-navy-400">
             {client.name} · 수거·배출량·용기 공급 내역
           </p>
