@@ -471,11 +471,16 @@ export function TodaySchedule() {
                      「이 일정 누가 넣었지 · 안 가게 됐다」는 ⋯ 하나로 엽니다.
                      같은 줄에 목적지를 둘 두면 어느 쪽이 눌릴지 예상이 안 되므로
                      ⋯ 는 줄 **밖**에 따로 놓습니다. */}
+                {/*  ⚠ 0103 — 이 단추가 위의 줄(수거 입력으로 가는 큰 단추)에 **딱
+                     붙어** 있었습니다(사이 0~1px, 선 하나). 둘 다 44px 넘는 누를
+                     자리인데 사이가 없으면 장갑 낀 손가락이 줄을 누르려다 ⋯를
+                     누릅니다. 주말에는 방문이 없어 자(check_scale)가 못 잡다가
+                     화요일에 18쌍으로 잡혔습니다. 10px 띄웁니다. */}
                 <button
                   data-sched-more={s.id}
                   onClick={() => setSchedId(s.id)}
                   aria-label={`${client?.name ?? '이 일정'} 자세히`}
-                  className="flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-500 transition active:bg-navy-50 lg:hidden"
+                  className="mt-2.5 flex min-h-[44px] w-full items-center justify-center gap-1.5 border-t border-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-500 transition active:bg-navy-50 lg:hidden"
                 >
                   <MoreHorizontal size={17} strokeWidth={2.5} />
                   {s.createdVia ? `${s.createdVia} · 자세히` : '자세히'}
