@@ -130,7 +130,9 @@ async function open(role, width = 390, height = 900) {
   //  Pilot 동안 내려 둔 것은 빼고 견줍니다 (0080). 순서 자체는 그대로
   //  지켜져야 하므로 목록을 지우지 않고 **걸러서** 비교합니다.
   //  0083 — 「거래처 인사이트」가 병원 서비스 묶음에 들어왔습니다.
-  const wantSvc = ['/revenue', '/requests', '/insight', '/supplies', '/reports', '/performance']
+  //  0108 — 「AX 코치」가 성과 **앞**에 들어왔습니다. 오늘 할 일이 먼저이고
+  //         결과는 그다음입니다 (lib/nav.ts 의 SERVICE_NAV 와 같은 차례).
+  const wantSvc = ['/revenue', '/requests', '/insight', '/supplies', '/reports', '/ax-coach', '/performance']
     .filter((r) => !(PILOT.requests && r === '/requests') && !(PILOT.supplies && r === '/supplies'))
   ok(svc.join(',') === wantSvc.join(','),
     `병원 서비스 ${wantSvc.length}개가 PC 와 같은 순서`, `${svc.join(',')} ← 기대 ${wantSvc.join(',')}`)

@@ -20,6 +20,7 @@ import {
   ScrollText,
   MessageSquarePlus,
   Gauge,
+  Compass,
   Inbox,
   UserCog,
   FileSpreadsheet,
@@ -77,7 +78,10 @@ export const SERVICE_NAV: NavItem[] = [
   //  매출 AX — 쇼핑몰이 아니라 「병원이 쓰는 만큼 추천하고 다음 수거 때 전달」입니다.
   { to: '/supplies', label: '소모품 주문', icon: PackageCheck, desc: '사용량 추천 · 수거 때 전달 · 판매 실적', tone: 'teal' },
   { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
-  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · AX 로 확인된 변화 · 다음 할 일', tone: 'teal' },
+  //  0108 — 성과(결과를 보는 곳) 바로 앞에 둡니다. 오늘 할 일이 먼저이고,
+  //  결과는 그다음입니다. 기사님 폰에서도 열립니다 (access.ts).
+  { to: '/ax-coach', label: 'AX 코치', icon: Compass, desc: '오늘 할 일 · 실증 자료 준비도', tone: 'emerald' },
+  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · 확인된 변화 · 다음 할 일', tone: 'teal' },
 ]
 
 /**
@@ -105,7 +109,7 @@ export const ADMIN_NAV: NavItem[] = [
   { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '거래처별 정산 엑셀 옮기기', tone: 'navy' },
   { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '글자 크기 · 데이터 백업 · 초기화', tone: 'navy' },
   { to: '/audit', label: '감사로그', icon: ScrollText, desc: '누가 무엇을 언제 바꿨는지', tone: 'navy' },
-  { to: '/readiness', label: '실증 준비 상태', icon: Gauge, desc: '시스템이 확인하는 준비 · 사람이 확인하는 증빙 · 브리핑 인쇄', tone: 'navy' },
+  { to: '/readiness', label: '실증 준비 상태', icon: Gauge, desc: '준비 상태 · 증빙 · 브리핑 인쇄', tone: 'navy' },
 ]
 
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 */

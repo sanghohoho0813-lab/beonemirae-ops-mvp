@@ -41,6 +41,11 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: PORTAL_PREFIX, roles: ['client', 'admin', 'office'] },
   // 경영 · 성과 · 매출
   { prefix: '/performance', roles: ['admin', 'office'] },
+  //  AX 코치 (0108) — **현장 담당자도 엽니다.** 금액이 하나도 없는 화면이고
+  //  (건수·일수만), 기사님이 할 일(오늘 수거 입력·마감)이 여기서 나옵니다.
+  //  기사님에게는 주문·입금처럼 열리지 않는 화면의 일이 아예 뜨지 않습니다
+  //  — 막다른 길을 만들지 않기 위해서입니다 (lib/axCoach.ts 의 roles).
+  { prefix: '/ax-coach', roles: ['admin', 'office', 'field'] },
   //  매출 현황 — 회사 매출·예상 연매출. 현장에는 열지 않습니다.
   { prefix: '/revenue', roles: ['admin', 'office'] },
   { prefix: '/receivables', roles: ['admin', 'office'] },

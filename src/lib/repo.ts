@@ -39,7 +39,7 @@ import type { CollectionCompletionInput } from './collection'
 import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
 import { clientNameKey } from './clientName'
 import type { TaxFiling } from './taxBase'
-import { toAfterSurvey, toAiCall, toDayCloseRecord, toDispatchDecision, toOpsChange, toRecoView } from './evidenceRepo'
+import { toAfterSurvey, toAiCall, toCoachMission, toDayCloseRecord, toDispatchDecision, toOpsChange, toRecoView } from './evidenceRepo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase 레포지토리
@@ -534,7 +534,7 @@ export async function loadAppData(): Promise<AppData> {
     const r = await soft<Row[] | typeof NO_TABLE>(fn, NO_TABLE, what)
     return r === NO_TABLE ? undefined : r
   }
-  const [opsChangeRows, recoViewRows, dispatchRows, dayCloseRows, aiCallRows] = await Promise.all([
+  const [opsChangeRows, recoViewRows, dispatchRows, dayCloseRows, aiCallRows, coachRows] = await Promise.all([
     softTable(
       () => pageAll((f, t) => sb.from('ops_changes').select('*').order('effective_on', { ascending: false, nullsFirst: true }).range(f, t)),
       '운영 변화 기록',
@@ -563,6 +563,20 @@ export async function loadAppData(): Promise<AppData> {
     softTable(
       () => pageAll((f, t) => sb.from('ai_calls').select('id, kind, request_id, ok, error, ms, model, actor_name, edited, created_at').order('created_at', { ascending: false }).range(f, t)),
       'AI 호출 기록',
+    ),
+    //  AX Coach 발행 이력 (0108) — 최근 30일만. 7·14일 리포트와 「며칠째
+    //  같은 일만 발행됐나」를 보는 데 쓰는 만큼만 읽습니다.
+    softTable(
+      () =>
+        pageAll((f, t) =>
+          sb
+            .from('ax_coach_missions')
+            .select('id, mission_key, evidence_area, issued_on, issued_at, issued_name, issued_role, target_id, verified_at, verified_what')
+            .gte('issued_on', new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10))
+            .order('issued_at', { ascending: false })
+            .range(f, t),
+        ),
+      'AX Coach 발행 이력',
     ),
   ])
 
@@ -988,6 +1002,7 @@ export async function loadAppData(): Promise<AppData> {
     dispatchDecisions: dispatchRows?.map(toDispatchDecision),
     dayCloses: dayCloseRows?.map(toDayCloseRecord),
     aiCalls: aiCallRows?.map(toAiCall),
+    coachMissions: coachRows?.map(toCoachMission),
     afterSurvey: baselineRow ? toAfterSurvey(baselineRow as Row) : undefined,
     baseline: baselineRow
       ? {

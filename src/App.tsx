@@ -22,6 +22,7 @@ import { Settings } from './pages/Settings'
 import { Purpose } from './pages/Purpose'
 import { Readiness } from './pages/Readiness'
 import { Performance } from './pages/Performance'
+import { AxCoach } from './pages/AxCoach'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
 import { CollectionHistory } from './pages/CollectionHistory'
@@ -167,6 +168,8 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="why" element={<Purpose />} />
           <Route path="performance" element={<Performance />} />
+          {/*  0108 — AX Coach. 성과 화면이 「결과」라면 이곳은 「지금 무엇을 할지」입니다. */}
+          <Route path="ax-coach" element={<AxCoach />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="readiness" element={<Readiness />} />
           <Route path="users" element={<Users />} />

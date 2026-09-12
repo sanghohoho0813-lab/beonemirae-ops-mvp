@@ -18,6 +18,7 @@ import { DeadlineBanner } from '../components/DeadlineBanner'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { SetupGapsLine } from '../components/SetupGapsCard'
 import { ExcelCheckLine } from '../components/ExcelCheckLine'
+import { CoachLine } from '../components/axCoach/CoachLine'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { FieldTodayCard } from '../components/FieldTodayCard'
 import { OpportunityPanel } from '../components/Opportunities'
@@ -221,6 +222,9 @@ export function Dashboard() {
         {/*  0106 — 하루 한 줄: 「오늘 엑셀·카톡에 다시 적은 것이 있었나」.
              답하지 않아도 아무것도 막지 않고, 답하면 그날은 사라집니다. */}
         <ExcelCheckLine />
+        {/*  0108 — AX 코치 한 줄. 오늘 할 일이 없으면 이 줄도 없습니다.
+             자세한 것은 /ax-coach 에 있고, 여기서는 「몇 개인지」만 알립니다. */}
+        <CoachLine className="mt-2" />
       </section>
 
       {/* 사용법 안내는 오늘 할 일 다음입니다.

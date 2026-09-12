@@ -40,6 +40,7 @@ npm run preview    # 빌드 미리보기 (검사가 이 주소를 씁니다)
 | [`docs/PILOT_TODO.md`](./docs/PILOT_TODO.md) | 아직 끝나지 않은 것만 (SQL 실행 대기 · 대표 확인 대기) |
 | [`docs/AX_EVIDENCE_0106.md`](./docs/AX_EVIDENCE_0106.md) | **성과 계산 원칙과 바로잡은 것** — 무엇을 세고 무엇을 세지 않는가 |
 | [`docs/AX_SUMMARY_0107.md`](./docs/AX_SUMMARY_0107.md) | 성과 화면 세 칸(요약·측정 근거·설정) · 숫자 성격 넉 자 · 업무 재현시험 · 숫자가 안 보인 이유 |
+| [`docs/AX_COACH_0108.md`](./docs/AX_COACH_0108.md) | **AX 코치** — 실증 자료 준비도 · 오늘 할 일 3개 · 실제 업무기록으로만 확인 · 7·14일 리포트 |
 | [`docs/FEEDBACK_ANALYSIS_0104.md`](./docs/FEEDBACK_ANALYSIS_0104.md) · [`FEEDBACK_FOLLOWUP_0105.md`](./docs/FEEDBACK_FOLLOWUP_0105.md) | 첫 실사용 피드백 분석과 후속 |
 | [`docs/PENGUIN_ASSESSMENT_0105.md`](./docs/PENGUIN_ASSESSMENT_0105.md) | 신보 펭귄 심사 가능성 평가 (사실 기반) |
 | [`supabase/proposals/`](./supabase/proposals) | 대표가 실행할 SQL 제안 (판 번호 순서대로) |
@@ -56,6 +57,11 @@ npm run preview    # 빌드 미리보기 (검사가 이 주소를 씁니다)
 | 병원 | 수거·자재 요청 → 처리 상태 → 내역·정산 | 포털 홈 → 용기·봉투 주문(추천은 실제 공급 기록 2회 이상일 때만) → 이용 내역 · 정산 |
 
 ## AX 성과 — 무엇을 세고 무엇을 세지 않는가 (요약)
+
+오늘 할 일은 **AX 코치**(`/ax-coach`)가 알려 줍니다 — 네 갈래 증거 중 비어 있는 곳을 찾아
+그것을 채울 **실제 업무** 최대 3개를 띄우고, 「완료」 단추 없이 **실제 업무 기록**(수거 입력 ·
+병원이 올린 포털 요청 · 주문 전달 · 입금 · 마감)이 생겼는지로만 확인합니다.
+자세한 것은 [`docs/AX_COACH_0108.md`](./docs/AX_COACH_0108.md).
 
 성과 화면은 세 칸입니다 — **요약**(기본: 기업 성장 현황 → AX 로 확인된 변화 최대 3장 → 다음 할 일 최대 3개) ·
 **측정 근거**(계산식·원천자료·표본·제외·상세 비교) · **설정**(기준값·실증 시작일·운영 변화·업무 재현시험 기록).

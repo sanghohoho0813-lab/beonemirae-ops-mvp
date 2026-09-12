@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { AiCallRecord, DayCloseRecord, DispatchDecision, RecommendationView } from '../types'
+import type { AiCallRecord, CoachMissionRow, DayCloseRecord, DispatchDecision, RecommendationView } from '../types'
 import type { OpsChange, OpsChangeKind, OpsChangeStatus } from './opsChanges'
 import type { AfterSurvey } from './performance'
 
@@ -286,5 +286,78 @@ export async function aiTriageRequest(input: {
 export async function markAiCallEdited(callId: string, note: string): Promise<void> {
   const sb = need()
   const { error } = await sb.from('ai_calls').update({ edited: true, edited_note: note.slice(0, 500) }).eq('id', callId)
+  if (error) throw new Error(error.message)
+}
+
+// ── AX Coach 발행 이력 (0108) ───────────────────────────────────────────────
+//
+//  ⚠ 여기 남는 것은 **발행했다는 사실**뿐입니다. 수거·주문·입금 기록은
+//    원래 자리에 그대로 있고, 이 표는 그것을 가리키기만 합니다(target_id).
+//    같은 값을 두 곳에 저장하면 언젠가 두 숫자가 갈라집니다.
+
+export function toCoachMission(r: Row): CoachMissionRow {
+  return {
+    id: s(r.id),
+    missionKey: s(r.mission_key),
+    area: s(r.evidence_area),
+    issuedOn: s(r.issued_on).slice(0, 10),
+    issuedAt: s(r.issued_at),
+    issuedName: s(r.issued_name),
+    issuedRole: s(r.issued_role),
+    targetId: r.target_id == null ? null : s(r.target_id),
+    verifiedAt: r.verified_at == null ? null : s(r.verified_at),
+    verifiedWhat: s(r.verified_what),
+  }
+}
+
+/**
+ * 「업무하러 가기」를 눌렀을 때 — 오늘 이 일을 받았다는 기록.
+ *
+ *  ⚠ 이것은 **완료가 아닙니다.** 확인은 실제 업무 기록으로만 합니다.
+ *    하루 한 번만 남습니다 (issued_on × mission_key × issued_by 유일).
+ */
+export async function issueCoachMission(input: {
+  missionKey: string
+  area: string
+  issuedOn: string
+  issuedName: string
+  issuedRole: string
+  targetId: string | null
+}): Promise<CoachMissionRow | null> {
+  const sb = need()
+  const { data, error } = await sb
+    .from('ax_coach_missions')
+    .insert({
+      mission_key: input.missionKey,
+      evidence_area: input.area,
+      issued_on: input.issuedOn,
+      issued_name: input.issuedName,
+      issued_role: input.issuedRole,
+      target_id: input.targetId,
+    })
+    .select('*')
+    .maybeSingle()
+  //  오늘 이미 받은 일이면 유일 색인이 막습니다 — 오류가 아니라 「이미 있음」입니다.
+  if (error) {
+    if (error.code === '23505') return null
+    throw new Error(error.message)
+  }
+  return data ? toCoachMission(data as Row) : null
+}
+
+/**
+ * 실제 업무 기록이 확인됐다고 적어 둡니다.
+ *
+ *  ⚠ 화면은 이 값을 **믿고 보여 주지 않습니다.** 볼 때마다 기존 업무
+ *    기록으로 다시 확인합니다 — 이 칸은 나중에 「그때 무엇으로 확인했나」를
+ *    되짚기 위한 기록입니다. 지워져도 화면은 그대로 확인합니다.
+ */
+export async function markCoachMissionVerified(id: string, what: string): Promise<void> {
+  const sb = need()
+  const { error } = await sb
+    .from('ax_coach_missions')
+    .update({ verified_at: new Date().toISOString(), verified_what: what.slice(0, 300) })
+    .eq('id', id)
+    .is('verified_at', null)
   if (error) throw new Error(error.message)
 }

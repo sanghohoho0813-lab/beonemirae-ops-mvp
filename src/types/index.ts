@@ -33,6 +33,31 @@ export interface DispatchDecision {
   createdAt: string
 }
 
+/**
+ * AX Coach 가 오늘 할 일을 **발행한 사실** (0108).
+ *
+ *  ⚠ 업무 데이터를 복사해 담지 않습니다. 여기 남는 것은 「언제 · 누구에게 ·
+ *    어떤 일이 발행됐고 · 무엇으로 확인됐는가」뿐이고, 확인의 근거가 되는
+ *    수거·주문·입금 기록은 원래 자리에 그대로 있습니다.
+ *  ⚠ verifiedAt 은 사람이 누른 결과가 아닙니다. 실제 업무 기록이 생긴 것을
+ *    화면이 확인한 뒤 적어 두는 값이라, 지워도 다시 확인됩니다.
+ */
+export interface CoachMissionRow {
+  id: string
+  missionKey: string
+  area: string
+  /** 발행한 날 (YYYY-MM-DD) — 하루 한 번만 발행됩니다 */
+  issuedOn: string
+  issuedAt: string
+  issuedName: string
+  issuedRole: string
+  /** 대상이 정해진 일이면 그 기록 id (수거 일정 · 주문 · 청구 · 거래처) */
+  targetId: string | null
+  verifiedAt: string | null
+  /** 무엇을 보고 확인했는가 — 사람 말 한 줄 */
+  verifiedWhat: string
+}
+
 /** 오늘 업무 마감 한 줄 — 계기판·처리시설 대기 포함 */
 export interface DayCloseRecord {
   profileId: string
@@ -711,6 +736,11 @@ export interface AppData {
   dayCloses?: DayCloseRecord[]
   /** AI 호출 기록 (사무실·관리자만) */
   aiCalls?: AiCallRecord[]
+  /**
+   * AX Coach 발행 이력 (0108). undefined = 표 없음(판 108 이전), [] = 아직 발행 안 함.
+   *  없어도 화면은 그대로 돌아갑니다 — 그때는 「오늘 0시부터」를 기준으로 확인합니다.
+   */
+  coachMissions?: CoachMissionRow[]
   /** 도입 후 같은 범위 조사값 (performance_baselines.after_*). 칸이 없으면 undefined */
   afterSurvey?: AfterSurvey | null
   /**
