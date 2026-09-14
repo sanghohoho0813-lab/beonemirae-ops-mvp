@@ -177,8 +177,8 @@ export function Presentation() {
       <div data-demo-tour className="mb-5 rounded-2xl bg-navy-900 p-4 text-white">
         <p className="text-[1.07rem] font-extrabold">60초 심사 시연 — 화면이 순서대로 안내합니다</p>
         <p className="mt-1 text-[1rem] leading-snug text-white/75">
-          대시보드 → AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치.
-          <b className="text-white"> ③④단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
+          AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치. 다섯 단계입니다.
+          <b className="text-white"> ②③단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
         </p>
         <TourButton
           tourId="demo"

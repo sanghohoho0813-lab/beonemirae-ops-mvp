@@ -3,15 +3,18 @@ import * as W from './walk_lib.mjs'
 import * as F from './perf_fixtures.mjs'
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  0109 — 심사 시연 투어 (60초 · 6단계)
+//  0110 — 심사 시연 투어 (60초 · **다섯 단계**)
 //
-//   ⓐ 여섯 단계가 정해진 화면 순서대로 간다
+//   ⓐ 다섯 단계가 정해진 화면 순서대로 간다
 //   ⓑ **직접 누르는 단계와 읽기만 하는 단계가 확실히 갈린다**
 //   ⓒ 직접 누르는 단계에서는 그 자리가 **실제로 눌린다** (덮개에 구멍)
 //   ⓓ 읽기만 하는 단계에서는 화면이 **안 눌린다** (예전 그대로)
 //   ⓔ 누르면 투어가 따라온다 — 되돌려 끌고 오지 않는다
-//   ⓕ 저장이 끝나면 ⑤단계로 저절로 넘어간다
+//   ⓕ 저장이 끝나면 ④단계로 저절로 넘어간다
 //   ⓖ 기존 세 투어는 한 글자도 안 바뀐다
+//   ⓗ **뒤로가기 · 앞으로가기 · 새로고침에도 단계가 유지된다**
+//   ⓘ 단계 전환이 기다리지 않는다
+//   ⓙ **설명 상자가 작고, 화면의 군더더기가 감춰진다** (0110)
 //
 //   ⚠ 전부 흉내 낸 서버로 돕니다. 실제 운영 데이터는 만들지도 바꾸지도
 //     않습니다 — 저장 RPC 도 흉내만 냅니다.
@@ -78,108 +81,169 @@ async function open(path, { width = 1440, schedules = PENDING, routes = {} } = {
 const stepInfo = async (p) => ({
   no: flat(await p.textContent('[data-tour-step]')),
   title: flat(await p.textContent('[data-tour-title]')),
+  body: flat(await p.textContent('[data-tour-action]')) + ' ' + flat(await p.textContent('[data-tour-result]')),
   hands: (await p.locator('[data-tour-hands]').count()) === 1
     ? flat(await p.textContent('[data-tour-hands]'))
     : null,
   path: new URL(p.url()).pathname,
 })
 
+/** 시연 투어를 켜고 ①단계가 뜰 때까지 */
+async function startDemo(p) {
+  await p.locator('[data-demo-tour] [data-tour-start]').click()
+  await p.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 10000 })
+  await p.waitForTimeout(400)
+}
+
 console.log('── ⓐ 시연 화면에서 시작 ──')
 {
   const { ctx, p, errors } = await open('/presentation', { routes: { ax_coach_missions: [] } })
   ok('ⓐ 심사 시연 화면에 60초 투어 안내가 있다', (await p.locator('[data-demo-tour]').count()) === 1)
   const box = flat(await p.textContent('[data-demo-tour]'))
-  ok('ⓐ **저장되는 수거 1건이 실제 기록이라고 미리 알린다**', /실제 기록입니다/.test(box), box.slice(0, 120))
-  ok('ⓐ 직접 눌러야 하는 단계를 미리 알린다', /③④단계는 직접 누르/.test(box))
+  ok('ⓐ **저장되는 수거 1건이 실제 기록이라고 미리 알린다**', /실제 기록입니다/.test(box), box.slice(0, 140))
+  ok('ⓐ 직접 눌러야 하는 단계를 미리 알린다', /②③단계는 직접 누르/.test(box), box.slice(0, 140))
+  ok('ⓐ 안내도 다섯 단계라고 말한다', /다섯 단계/.test(box), box.slice(0, 140))
 
-  await p.locator('[data-demo-tour] [data-tour-start]').click()
-  await p.waitForTimeout(1800)
+  await startDemo(p)
   const s1 = await stepInfo(p)
-  ok('ⓐ ①단계는 대시보드', s1.path === '/' && /오늘 확인할 업무/.test(s1.title), `${s1.path} ${s1.title}`)
-  ok('ⓐ 전체 6단계', /1 \/ 6/.test(s1.no), s1.no)
+  ok('ⓐ ①단계는 AX 코치', s1.path === '/ax-coach' && /무엇이 비어 있는가/.test(s1.title), `${s1.path} ${s1.title}`)
+  ok('ⓐ **전체 5단계**', /1 \/ 5/.test(s1.no), s1.no)
   ok('ⓐ ①단계는 읽기만 하는 단계 (직접 누르라는 띠 없음)', s1.hands === null, String(s1.hands))
+  ok('ⓐ ①단계가 준비도 칸을 짚는다', (await p.locator('[data-tour="coach-total"]').count()) === 1)
   //  읽기만 하는 단계에서는 예전처럼 화면이 안 눌립니다.
   ok('ⓐ 읽기 단계에서는 화면 덮개가 통째로 있다', (await p.locator('[data-tour-card] ~ div, [role="dialog"] > div.absolute.inset-0').count()) >= 1)
   ok('ⓐ 화면이 터지지 않음', errors.length === 0, errors.slice(0, 2).join(' | '))
   await ctx.close()
 }
 
-console.log('── ⓑⓒⓔ ②③단계 — 직접 누르기 ──')
+console.log('── ⓙ 작은 설명 상자 · 군더더기 감추기 ──')
 {
-  const { ctx, p, state } = await open('/presentation', { routes: { ax_coach_missions: [] } })
-  await p.locator('[data-demo-tour] [data-tour-start]').click()
-  await p.waitForTimeout(1800)
+  const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
+  //  투어 전 — 오른쪽 위 도구 줄이 보입니다.
+  const helpBefore = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
+  ok('ⓙ 투어 전에는 오른쪽 위 도구 줄이 보인다', helpBefore)
 
-  await p.locator('[data-tour-next]').click()
-  await p.waitForTimeout(1800)
-  const s2 = await stepInfo(p)
-  ok('ⓑ ②단계는 AX 코치 준비도', s2.path === '/ax-coach' && /무엇이 비어 있는가/.test(s2.title), `${s2.path} ${s2.title}`)
-  ok('ⓑ ②단계도 읽기만 하는 단계', s2.hands === null)
-  ok('ⓑ ②단계가 준비도 칸을 짚는다', (await p.locator('[data-tour="coach-total"]').count()) === 1)
-  //  ⚠ 준비도가 성과가 아니라는 말이 단계 설명에도 있어야 합니다.
-  ok('ⓑ 준비도가 성과가 아니라고 단계에서도 말한다', /성과가 그만큼 좋아졌다는 뜻이 아닙니다/.test(flat(await p.textContent('[data-tour-why]'))))
+  await startDemo(p)
+  const size = await p.evaluate(() => {
+    const c = document.querySelector('[data-tour-card]')
+    const r = c.getBoundingClientRect()
+    return {
+      w: Math.round(r.width),
+      h: Math.round(r.height),
+      vh: window.innerHeight,
+      vw: window.innerWidth,
+      //  글자 크기 설정에 따라 1rem 이 달라집니다 — px 로 못 박으면 안 됩니다.
+      rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
+    }
+  })
+  //  일반 투어는 30rem 입니다. 심사 시연은 21rem — 그 이상이면 줄인 것이 아닙니다.
+  ok('ⓙ **설명 상자가 좁다** (≤ 22rem)', size.w <= size.rem * 22, `${size.w}px (1rem=${size.rem}px)`)
+  ok('ⓙ 설명 상자가 화면 가로의 1/3을 넘지 않는다', size.w < size.vw / 3, `${size.w} / ${size.vw}`)
+  ok('ⓙ **설명 상자가 화면 절반을 넘지 않는다**', size.h <= size.vh * 0.5 + 2, `${size.h} / ${size.vh}`)
 
-  await p.locator('[data-tour-next]').click()
-  await p.waitForTimeout(1800)
-  const s3 = await stepInfo(p)
-  ok('ⓑ ③단계는 「수거 입력으로」', /수거 입력으로/.test(s3.title), s3.title)
-  ok('ⓑ **③단계는 직접 누르는 단계라고 띠로 알린다**', !!s3.hands && /직접 눌러 보세요/.test(s3.hands), String(s3.hands))
-  ok('ⓑ 무엇을 누르면 되는지 적혀 있다', /「수거 입력으로」 단추를 눌러 주세요/.test(s3.hands ?? ''), String(s3.hands))
-  ok('ⓑ ③단계가 실제 미션 단추를 짚는다', (await p.locator('[data-coach-go="collect-today"][data-tour="coach-go"]').count()) === 1)
+  //  상자가 강조한 자리를 덮지 않아야 합니다.
+  const overlap = await p.evaluate(() => {
+    const c = document.querySelector('[data-tour-card]')?.getBoundingClientRect()
+    const s = document.querySelector('[data-tour-spot]')?.getBoundingClientRect()
+    if (!c || !s) return null
+    const w = Math.min(c.right, s.right) - Math.max(c.left, s.left)
+    const h = Math.min(c.bottom, s.bottom) - Math.max(c.top, s.top)
+    return w > 0 && h > 0 ? Math.round(w * h) : 0
+  })
+  ok('ⓙ 설명 상자가 강조한 자리를 덮지 않는다', overlap === 0, `${overlap}px²`)
 
-  //  ⚠⚠ 이 검사가 이번 작업의 핵심 — 투어가 떠 있어도 그 단추가 **진짜 눌립니다.**
-  await p.locator('[data-coach-go="collect-today"]').click()
-  await p.waitForTimeout(2200)
-  const s4 = await stepInfo(p)
-  ok('ⓒ **투어 중에도 그 단추가 실제로 눌린다**', s4.path === '/collection', s4.path)
-  ok('ⓔ 누르면 ④단계로 따라온다 (되돌려 끌고 오지 않음)', /4 \/ 6/.test(s4.no) && /수거 1건 입력/.test(s4.title), `${s4.no} ${s4.title}`)
-  ok('ⓔ 받은 일이 발행 기록으로 남는다', state.writes.some((w) => /ax_coach_missions/.test(w.url ?? '')), JSON.stringify(state.writes.slice(0, 3)))
-  ok('ⓑ ④단계도 직접 누르는 단계', !!s4.hands && /저장을 눌러 주세요/.test(s4.hands), String(s4.hands))
-  ok('ⓑ ④단계에서 이것이 실제 기록이라고 말한다', /오늘의 실제 기록/.test(flat(await p.textContent('[data-tour-linked]'))))
+  //  시연 중에는 도구 줄이 사라집니다.
+  const helpDuring = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
+  ok('ⓙ **시연 중에는 오른쪽 위 도구 줄이 감춰진다**', !helpDuring)
+  const feedback = await p.locator('button:has-text("사용 후기")').first().isVisible().catch(() => false)
+  ok('ⓙ 시연 중에는 「사용 후기」 단추도 감춰진다', !feedback)
+
+  //  ⚠ 저장 상태(SyncBar)·서버 경고(SchemaBar)는 감추지 않습니다 — 여기서는
+  //    띄울 조건이 아니라 셀 것이 없습니다. 감추지 '않는다'는 것은 Layout 의
+  //    코드가 그 둘을 minimal 분기 밖에 두는 것으로 지킵니다.
+
+  //  끝내면 도구 줄이 돌아옵니다.
+  await p.locator('[data-tour-card] button[title="종료"]').click()
+  await p.waitForTimeout(700)
+  const helpAfter = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
+  ok('ⓙ 투어를 끝내면 도구 줄이 돌아온다', helpAfter)
   await ctx.close()
 }
 
-console.log('── ⓕ ④→⑤ 저장하면 결과 단계로 ──')
+console.log('── ⓑⓒⓔ ②단계 — 직접 누르기 ──')
+{
+  const { ctx, p, state } = await open('/presentation', { routes: { ax_coach_missions: [] } })
+  await startDemo(p)
+  const s1 = await stepInfo(p)
+  //  ⚠ 한 화면에 핵심 문장 둘. 길면 60초 안에 안 들어갑니다.
+  //  ⚠ 상자 **안**만 셉니다 — 화면 어딘가의 「만든 이유」 단추까지 세면 안 됩니다.
+  ok('ⓑ ①단계 설명은 두 문장뿐이다',
+    (await p.locator('[data-tour-card] [data-tour-linked]').count()) === 0
+    && (await p.locator('[data-tour-card] [data-tour-why]').count()) === 0)
+  ok('ⓑ ①단계 설명이 짧다 (≤ 80자)', s1.body.length <= 80, `${s1.body.length}자`)
+
+  await p.locator('[data-tour-next]').click()
+  await p.waitForTimeout(1200)
+  const s2 = await stepInfo(p)
+  ok('ⓑ ②단계는 「수거 입력으로」', /2 \/ 5/.test(s2.no) && /바로 업무로/.test(s2.title), `${s2.no} ${s2.title}`)
+  ok('ⓑ **②단계는 직접 누르는 단계라고 띠로 알린다**', !!s2.hands && /직접 눌러 보세요/.test(s2.hands), String(s2.hands))
+  ok('ⓑ 무엇을 누르면 되는지 적혀 있다', /「수거 입력으로」를 눌러 주세요/.test(s2.hands ?? ''), String(s2.hands))
+  ok('ⓑ ②단계가 실제 미션 단추를 짚는다', (await p.locator('[data-coach-go="collect-today"][data-tour="coach-go"]').count()) === 1)
+  ok('ⓑ 「완료」 단추가 없다는 말이 남아 있다', /완료/.test(s2.body), s2.body)
+
+  //  ⚠⚠ 이 검사가 핵심 — 투어가 떠 있어도 그 단추가 **진짜 눌립니다.**
+  await p.locator('[data-coach-go="collect-today"]').click()
+  await p.waitForTimeout(2200)
+  const s3 = await stepInfo(p)
+  ok('ⓒ **투어 중에도 그 단추가 실제로 눌린다**', s3.path === '/collection', s3.path)
+  ok('ⓔ 누르면 ③단계로 따라온다 (되돌려 끌고 오지 않음)', /3 \/ 5/.test(s3.no) && /수거 1건 입력/.test(s3.title), `${s3.no} ${s3.title}`)
+  ok('ⓔ 받은 일이 발행 기록으로 남는다', state.writes.some((w) => /ax_coach_missions/.test(w.url ?? '')), JSON.stringify(state.writes.slice(0, 3)))
+  ok('ⓑ ③단계도 직접 누르는 단계', !!s3.hands && /저장을 눌러 주세요/.test(s3.hands), String(s3.hands))
+  ok('ⓑ ③단계에서 이것이 실제 기록이라고 말한다', /실제 기록/.test(s3.body), s3.body)
+  await ctx.close()
+}
+
+console.log('── ⓕ ③→④ 저장하면 결과 단계로 ──')
 {
   //  ⚠ 저장은 흉내 낸 RPC 입니다 — 실제 자료는 건드리지 않습니다.
   const { ctx, p, state } = await open('/collection', { routes: { ax_coach_missions: [] } })
-  //  투어를 ④단계 자리에서 시작한 것과 같은 상태로 만들기 위해 시연 화면에서 켭니다.
+  //  투어를 ③단계 자리에서 시작한 것과 같은 상태로 만들기 위해 시연 화면에서 켭니다.
   await p.goto(`${W.BASE}/presentation`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)
-  await p.locator('[data-demo-tour] [data-tour-start]').click()
-  await p.waitForTimeout(1600)
-  for (let i = 0; i < 2; i += 1) { await p.locator('[data-tour-next]').click(); await p.waitForTimeout(1500) }
+  await startDemo(p)
+  await p.locator('[data-tour-next]').click()
+  await p.waitForTimeout(1200)
   await p.locator('[data-coach-go="collect-today"]').click()
   await p.waitForTimeout(2200)
-  ok('ⓕ ④단계 (수거 입력)', /4 \/ 6/.test(flat(await p.textContent('[data-tour-step]'))))
+  ok('ⓕ ③단계 (수거 입력)', /3 \/ 5/.test(flat(await p.textContent('[data-tour-step]'))))
 
   //  실제 저장 — 오늘 예정이 하나라 화면이 그 건을 이미 골라 둡니다.
   //  ⚠ 수거량이 있어야 저장 단추가 켜집니다 (canSubmit).
   const save = p.locator('[data-collect-save]')
   await save.waitFor({ state: 'visible', timeout: 8000 })
   //  거래처·차량·수거량 — 대표님이 시연에서 실제로 채우시는 세 칸입니다.
-  //  ⚠ 투어 덮개가 떠 있는 상태에서 채워집니다 (④단계는 뚫려 있어야 합니다).
+  //  ⚠ 투어 덮개가 떠 있는 상태에서 채워집니다 (③단계는 뚫려 있어야 합니다).
   await p.locator('select').first().selectOption(C0)
   await p.waitForTimeout(500)
   await p.locator('select').nth(1).selectOption('v1')
   await p.locator('[data-actual-amount]').fill('70')
   await p.waitForTimeout(600)
   ok('ⓕ 수거량을 넣으면 저장 단추가 켜진다', await save.isEnabled())
-  //  ⚠⚠ 투어 ④단계가 떠 있는 상태에서 **실제로** 저장 단추가 눌립니다.
+  //  ⚠⚠ 투어 ③단계가 떠 있는 상태에서 **실제로** 저장 단추가 눌립니다.
   await save.click()
   await p.waitForTimeout(2600)
-  const s5 = await stepInfo(p)
+  const s4 = await stepInfo(p)
   ok('ⓕ 저장 RPC 가 한 번 불렸다', state.rpcCalls.filter((x) => x === 'complete_collection').length === 1, state.rpcCalls.join(','))
-  ok('ⓕ **저장이 끝나면 ⑤단계로 저절로 넘어간다**', /5 \/ 6/.test(s5.no), `${s5.no} ${s5.title}`)
-  ok('ⓕ ⑤단계는 저장 결과를 짚는다', (await p.locator('[data-tour="collect-done"]').count()) === 1)
-  ok('ⓕ ⑤단계는 읽기만 하는 단계', s5.hands === null)
-  ok('ⓕ 한 번 입력이 어디까지 갔는지 말한다', /수거이력 · 거래처 최근활동 · 자재 재고/.test(flat(await p.textContent('[data-tour-linked]'))))
+  ok('ⓕ **저장이 끝나면 ④단계로 저절로 넘어간다**', /4 \/ 5/.test(s4.no), `${s4.no} ${s4.title}`)
+  ok('ⓕ ④단계는 저장 결과를 짚는다', (await p.locator('[data-tour="collect-done"]').count()) === 1)
+  ok('ⓕ ④단계는 읽기만 하는 단계', s4.hands === null)
+  ok('ⓕ 한 번 입력이 어디까지 갔는지 말한다', /수거이력/.test(s4.body) && /재고/.test(s4.body), s4.body)
 
   await p.locator('[data-tour-next]').click()
   await p.waitForTimeout(2000)
-  const s6 = await stepInfo(p)
-  ok('ⓕ ⑥단계는 AX 코치로 돌아온다', s6.path === '/ax-coach' && /실제 기록을 확인/.test(s6.title), `${s6.path} ${s6.title}`)
-  ok('ⓕ ⑥단계는 「단추를 눌러서가 아니다」라고 말한다', /단추를 눌러서가 아니라/.test(flat(await p.textContent('[data-tour-linked]'))))
+  const s5 = await stepInfo(p)
+  ok('ⓕ ⑤단계는 AX 코치로 돌아온다', s5.path === '/ax-coach' && /실제 기록을 확인/.test(s5.title), `${s5.path} ${s5.title}`)
+  ok('ⓕ ⑤단계는 「단추를 눌러서가 아니다」라고 말한다', /단추를 눌러서가 아니라/.test(s5.body), s5.body)
   const last = flat(await p.textContent('[data-tour-next]'))
   ok('ⓕ 마지막은 성과 화면으로 이어진다', /AX 도입 성과 보기/.test(last), last)
   await ctx.close()
@@ -188,11 +252,8 @@ console.log('── ⓕ ④→⑤ 저장하면 결과 단계로 ──')
 console.log('── ⓓ 읽기 단계에서는 화면이 안 눌린다 ──')
 {
   const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
-  await p.locator('[data-demo-tour] [data-tour-start]').click()
-  await p.waitForTimeout(1800)
-  await p.locator('[data-tour-next]').click()
-  await p.waitForTimeout(1800)
-  //  ②단계(읽기 전용)에서 아래 화면의 단추를 눌러도 아무 일이 없어야 합니다.
+  await startDemo(p)
+  //  ①단계(읽기 전용)에서 아래 화면의 단추를 눌러도 아무 일이 없어야 합니다.
   const before = new URL(p.url()).pathname
   await p.locator('[data-coach-go="collect-today"]').click({ force: true, timeout: 3000 }).catch(() => undefined)
   await p.waitForTimeout(1200)
@@ -203,38 +264,43 @@ console.log('── ⓓ 읽기 단계에서는 화면이 안 눌린다 ──')
 console.log('── ⓗ 뒤로가기 · 앞으로가기 · 새로고침 ──')
 {
   const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
-  await p.locator('[data-demo-tour] [data-tour-start]').click()
-  await p.waitForTimeout(1400)
+  await startDemo(p)
   await p.locator('[data-tour-next]').click()
   await p.waitForTimeout(1400)
-  await p.locator('[data-tour-next]').click()
-  await p.waitForTimeout(1400)
-  ok('ⓗ ③단계에서 시작', /3 \/ 6/.test(flat(await p.textContent('[data-tour-step]'))))
+  ok('ⓗ ②단계에서 시작', /2 \/ 5/.test(flat(await p.textContent('[data-tour-step]'))))
 
   await p.locator('[data-coach-go="collect-today"]').click()
   await p.waitForTimeout(2000)
-  ok('ⓗ 눌러서 ④단계', /4 \/ 6/.test(flat(await p.textContent('[data-tour-step]'))))
+  ok('ⓗ 눌러서 ③단계', /3 \/ 5/.test(flat(await p.textContent('[data-tour-step]'))))
 
   //  ⚠⚠ 뒤로가기 — 예전에는 투어가 곧바로 되돌려 놓거나 1단계로 튀었습니다.
   await p.goBack()
   await p.waitForTimeout(1600)
   const back = await stepInfo(p)
-  ok('ⓗ **뒤로가기를 누르면 그 화면을 맡는 단계(③)로 돌아간다**', /3 \/ 6/.test(back.no) && back.path === '/ax-coach', `${back.no} ${back.path}`)
-  ok('ⓗ 1단계로 튀지 않는다', !/1 \/ 6/.test(back.no), back.no)
-  //  그리고 되돌려 끌고 가지 않아야 합니다 — 그대로 ③단계에 머뭅니다.
+  ok('ⓗ **뒤로가기를 누르면 그 화면을 맡는 단계(②)로 돌아간다**', /2 \/ 5/.test(back.no) && back.path === '/ax-coach', `${back.no} ${back.path}`)
+  ok('ⓗ 1단계로 튀지 않는다', !/1 \/ 5/.test(back.no), back.no)
+  //  그리고 되돌려 끌고 가지 않아야 합니다 — 그대로 ②단계에 머뭅니다.
   await p.waitForTimeout(1200)
   ok('ⓗ 뒤로 간 자리에 그대로 머문다 (끌고 가지 않음)', new URL(p.url()).pathname === '/ax-coach', p.url())
 
   await p.goForward()
   await p.waitForTimeout(1600)
   const fwd = await stepInfo(p)
-  ok('ⓗ **앞으로가기를 누르면 다시 ④단계**', /4 \/ 6/.test(fwd.no) && fwd.path === '/collection', `${fwd.no} ${fwd.path}`)
+  ok('ⓗ **앞으로가기를 누르면 다시 ③단계**', /3 \/ 5/.test(fwd.no) && fwd.path === '/collection', `${fwd.no} ${fwd.path}`)
+
+  //  한 번 더 — 뒤로·앞으로를 연달아 눌러도 같은 자리여야 합니다.
+  await p.goBack()
+  await p.waitForTimeout(1400)
+  await p.goForward()
+  await p.waitForTimeout(1600)
+  const fwd2 = await stepInfo(p)
+  ok('ⓗ 뒤로·앞으로를 반복해도 같은 단계', /3 \/ 5/.test(fwd2.no) && fwd2.path === '/collection', `${fwd2.no} ${fwd2.path}`)
 
   //  ⚠ 새로고침 — 심사 자리에서 F5 한 번에 1단계로 돌아가면 시연이 끝납니다.
   await p.reload({ waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(2400)
   const after = await stepInfo(p)
-  ok('ⓗ **새로고침해도 같은 단계에서 이어진다**', /4 \/ 6/.test(after.no), `${after.no} ${after.title}`)
+  ok('ⓗ **새로고침해도 같은 단계에서 이어진다**', /3 \/ 5/.test(after.no), `${after.no} ${after.title}`)
 
   //  끝내면 기억도 지웁니다 — 다음에 열 때 되살아나면 안 됩니다.
   await p.locator('[data-tour-card] button[title="종료"]').click()
@@ -248,23 +314,20 @@ console.log('── ⓗ 뒤로가기 · 앞으로가기 · 새로고침 ──')
 console.log('── ⓘ 단계 전환이 기다리지 않는다 ──')
 {
   const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
-  await p.locator('[data-demo-tour] [data-tour-start]').click()
-  await p.locator('[data-tour-card]').waitFor({ state: 'visible', timeout: 8000 })
-  await p.waitForTimeout(1200)
-
-  //  ①→② 는 화면까지 바뀝니다. 그래도 「기다리는 느낌」이 없어야 합니다.
+  //  ① 은 화면까지 바뀝니다 (/presentation → /ax-coach). 그래도 기다리는 느낌이 없어야 합니다.
   const t0 = Date.now()
-  await p.locator('[data-tour-next]').click()
+  await p.locator('[data-demo-tour] [data-tour-start]').click()
   await p.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 8000 })
   const moved = Date.now() - t0
   //  ⚠ 예전에는 앵커를 50ms 씩 두 곳에서 두들겨 단계마다 그만큼 쌓였습니다.
   //    자료 읽기까지 포함한 값이라 넉넉히 잡되, 「기다리는 느낌」은 잡아냅니다.
-  ok('ⓘ 화면이 바뀌는 단계도 2초 안에 넘어간다', moved < 2000, `${moved}ms`)
+  ok('ⓘ 화면이 바뀌는 단계도 2.5초 안에 넘어간다', moved < 2500, `${moved}ms`)
+  await p.waitForTimeout(800)
 
-  //  ②→③ 은 같은 화면이라 사실상 즉시여야 합니다.
+  //  ①→② 는 같은 화면이라 사실상 즉시여야 합니다.
   const t1 = Date.now()
   await p.locator('[data-tour-next]').click()
-  await p.locator('[data-tour-title]:has-text("수거 입력으로")').waitFor({ state: 'visible', timeout: 8000 })
+  await p.locator('[data-tour-title]:has-text("바로 업무로")').waitFor({ state: 'visible', timeout: 8000 })
   const same = Date.now() - t1
   ok('ⓘ **같은 화면 안에서는 거의 즉시 넘어간다**', same < 700, `${same}ms`)
   await ctx.close()
@@ -277,6 +340,9 @@ console.log('── ⓖ 기존 투어는 그대로 ──')
   await p.waitForTimeout(1800)
   ok('ⓖ 대표·사무실 투어는 10단계 그대로', /1 \/ 10/.test(flat(await p.textContent('[data-tour-step]'))), flat(await p.textContent('[data-tour-step]')))
   ok('ⓖ **기존 투어에는 직접 누르라는 띠가 없다**', (await p.locator('[data-tour-hands]').count()) === 0)
+  //  ⚠ 기존 투어의 설명 상자는 **줄이지 않았습니다** — 가르치는 자리입니다.
+  const w = await p.evaluate(() => Math.round(document.querySelector('[data-tour-card]').getBoundingClientRect().width))
+  ok('ⓖ 기존 투어의 설명 상자는 예전 크기 그대로 (> 400px)', w > 400, `${w}px`)
   //  덮개가 통째로 있어야 예전과 같습니다.
   const blocked = await p.evaluate(() => {
     const dlg = document.querySelector('[role="dialog"]')
@@ -287,6 +353,9 @@ console.log('── ⓖ 기존 투어는 그대로 ──')
     })
   })
   ok('ⓖ 기존 투어는 화면 전체를 덮는다 (예전 그대로)', blocked)
+  //  ⚠ 기존 투어에서는 오른쪽 위 도구 줄을 **감추지 않습니다**.
+  const help = await p.locator('button:has-text("사용 후기")').first().isVisible().catch(() => false)
+  ok('ⓖ 기존 투어에서는 도구 줄이 그대로 있다', help)
   //  끝내면 아무것도 남지 않아야 합니다 (check_tourclean 과 같은 기준).
   await p.locator('[data-tour-card] button[title="종료"]').click()
   await p.waitForTimeout(800)

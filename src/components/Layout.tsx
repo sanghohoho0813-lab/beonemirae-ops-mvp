@@ -23,6 +23,7 @@ import { TONE } from '../lib/tone'
 import { LiveClock } from './LiveClock'
 import { ThemeButton } from './ThemePicker'
 import { SyncBar } from './SyncBar'
+import { useTour } from '../context/TourContext'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
 import { FieldGuide } from './FieldGuide'
@@ -701,6 +702,19 @@ function BottomNav({
 export function Layout() {
   const { pathname } = useLocation()
   const { configured, role } = useAuth()
+  /**
+   *  심사 시연 중에는 **화면만 남깁니다** (0110).
+   *
+   *   오른쪽 위 도구 줄(색 바꾸기 · 만든 이유 · 사용 방법 · 후기)과 폰 하단 탭,
+   *   「PC 화면으로 보는 중」 띠는 시연의 이야기와 아무 상관이 없습니다.
+   *   보는 사람의 눈이 거기로 한 번 가면 그 순간을 잃습니다.
+   *
+   *   ⚠ 감추는 것은 **도구**뿐입니다. 저장 상태(SyncBar)나 서버 경고(SchemaBar)는
+   *     그대로 둡니다 — 시연 중에 문제를 가리는 것은 다른 이야기입니다.
+   *   ⚠ 일반 사용법 투어에는 compact 표시가 없으므로 예전 그대로입니다.
+   */
+  const { active: runningTour } = useTour()
+  const minimal = !!runningTour?.compact
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const showWhy = !configured || canAccess(role, '/why')
   const [moreOpen, setMoreOpen] = useState(false)
@@ -732,7 +746,7 @@ export function Layout() {
             {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
                 사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
                 안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
-            <div className="mb-3 hidden items-center justify-end gap-2 lg:flex">
+            <div className={`mb-3 items-center justify-end gap-2 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
               {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
                    설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
                    설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
@@ -778,6 +792,7 @@ export function Layout() {
       </div>
 
       {/* 모바일 하단 탭 + 더보기 바텀시트 */}
+      {!minimal && (
       <BottomNav
         onMore={() => setMoreOpen(true)}
         moreOpen={moreOpen}
@@ -786,6 +801,7 @@ export function Layout() {
           setHelpOpen(false)
         }}
       />
+      )}
       <BottomSheet open={moreOpen} title="더보기" onClose={() => setMoreOpen(false)}>
         <MoreMenu
           variant="mobile"
@@ -816,7 +832,7 @@ export function Layout() {
       {role === 'field' && <FieldGuide guideId={guideOn} onClose={() => openGuide(null)} />}
 
       {/* PC 화면으로 보기 중일 때만 — 돌아가는 길을 항상 띄워 둡니다 */}
-      {pcView && <PcViewBar onExit={() => setPcView(false)} />}
+      {pcView && !minimal && <PcViewBar onExit={() => setPcView(false)} />}
     </div>
   )
 }

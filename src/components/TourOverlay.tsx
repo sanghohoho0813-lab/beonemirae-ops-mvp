@@ -40,7 +40,14 @@ const EDGE = 12
  * 가려지므로 아래쪽 여백만 따로 크게 잡습니다.
  */
 const NAV_H = 78
-const bottomInset = (vw: number) => (vw <= 1023 ? NAV_H : EDGE)
+/**
+ * 아래쪽 여백.
+ *
+ *  ⚠ 심사 시연(compact)에서는 하단 탭을 감추므로(Layout) 그 자리를 비워 둘
+ *    이유가 없습니다. 예전 값을 그대로 쓰면 폰에서 78px 를 없는 막대에
+ *    양보하느라 설명 상자가 괜히 눌립니다.
+ */
+const bottomInset = (vw: number, compact = false) => (vw <= 1023 && !compact ? NAV_H : EDGE)
 
 type Placement = 'below' | 'above' | 'right' | 'left' | 'center'
 
@@ -290,7 +297,7 @@ export function TourOverlay() {
 
   // ── 3) 배치 계산 + 스크롤 ────────────────────────────────────────────────
   const layout = useCallback(
-    async (anchor: string | undefined, ch: number, cw: number, doScroll: boolean, run: number) => {
+    async (anchor: string | undefined, ch: number, cw: number, doScroll: boolean, run: number, compact: boolean) => {
       const vw = window.innerWidth
       const vh = window.innerHeight
       /** 계산 도중 단계가 넘어갔는가 — 그러면 이 계산의 결과는 버립니다 */
@@ -317,7 +324,7 @@ export function TourOverlay() {
 
       const r0 = el.getBoundingClientRect()
       const eh = r0.height + PAD * 2
-      const BOT = bottomInset(vw)
+      const BOT = bottomInset(vw, compact)
 
       // 세로로 대상 + 설명을 함께 담을 수 있는가?
       const stackFits = eh + GAP + ch + EDGE + BOT <= vh
@@ -333,8 +340,11 @@ export function TourOverlay() {
       // 대상이 화면 높이의 절반 가까이 되면, 위아래로 나눠 넣어봐야 설명이 눌립니다.
       // 옆에 세울 자리가 있으면 그쪽이 항상 더 읽기 좋습니다.
       const tallTarget = eh > vh * 0.45
+      //  심사 시연에서는 자리가 있으면 **언제나 옆**입니다. 아래에 두면 상자가
+      //  작아도 그 아래 내용을 덮고, 화면을 보러 온 사람에게는 그게 전부입니다.
+      const preferSide = compact && sideFits
 
-      if (stackFits && !(tallTarget && sideFits)) {
+      if (stackFits && !preferSide && !(tallTarget && sideFits)) {
         want = 'below'
         const groupH = eh + GAP + ch
         wantTop = Math.max(EDGE, (vh - BOT - groupH) / 2)
@@ -423,7 +433,7 @@ export function TourOverlay() {
     if (laidOutRef.current === sig) return
     laidOutRef.current = sig
     const run = (runRef.current += 1)
-    void layout(step.anchor, card.natural, card.w, true, run)
+    void layout(step.anchor, card.natural, card.w, true, run, !!active.compact)
   }, [active, index, step, pathname, card, anchorH, layout])
 
   // 사용자가 스크롤·리사이즈하면 강조 위치만 따라갑니다 (다시 스크롤하지 않음).
@@ -467,7 +477,9 @@ export function TourOverlay() {
 
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const BOT = bottomInset(vw)
+  //  심사 시연 전용 — 작은 상자 (0110)
+  const compact = !!active.compact
+  const BOT = bottomInset(vw, compact)
   const cw = card?.w ?? 360
   const ch = card?.h ?? 300
 
@@ -522,7 +534,7 @@ export function TourOverlay() {
   // 설명 박스 높이 상한 — "대상 전체 + 설명"이 세로로 함께 들어가는 높이.
   // 글자를 키운 만큼 박스가 커졌기 때문에, 대상이 큰 화면에서는 이 상한이
   // 있어야 설명이 대상을 덮지 않습니다. (넘치는 본문만 박스 안에서 스크롤됩니다)
-  const MIN_CARD = 300
+  const MIN_CARD = compact ? 200 : 300
   /**
    * 남는 자리가 이보다도 좁으면 상자를 더 줄입니다.
    *
@@ -531,9 +543,10 @@ export function TourOverlay() {
    * 상자가 조금 작아지는 것보다 설명이 대상을 가리는 쪽이 훨씬 나쁩니다 —
    * 넘치는 본문은 상자 안에서 스크롤되지만, 가려진 대상은 볼 방법이 없습니다.
    */
-  const FLOOR_CARD = 170
+  const FLOOR_CARD = compact ? 140 : 170
   const cardMaxH = (() => {
-    const hard = vh * (vw < 640 ? 0.84 : 0.9)
+    //  심사 시연은 화면을 보여 주는 자리입니다 — 설명이 화면의 절반을 넘지 않습니다.
+    const hard = compact ? vh * 0.5 : vh * (vw < 640 ? 0.84 : 0.9)
     // 옆에 세우는 배치에서는 대상과 세로로 겹칠 일이 없으므로 줄이지 않습니다.
     if (placement === 'right' || placement === 'left') return hard
     // 2px 여유 — 딱 맞게 두면 반올림 한 픽셀 때문에 "아래에 못 넣는다"고 판단해
@@ -612,17 +625,27 @@ export function TourOverlay() {
         data-tour-card
         // 모바일에서는 설명이 길어져도 화면 절반을 넘지 않게 합니다.
         // 헤더와 버튼은 고정하고 본문만 스크롤되게 해, 좁은 화면에서도 '다음'이 항상 보입니다.
-        className="pointer-events-auto absolute flex w-[min(30rem,calc(100vw-1rem))] flex-col rounded-3xl bg-white p-4 shadow-2xl sm:p-6"
+        className={`pointer-events-auto absolute flex flex-col rounded-3xl bg-white shadow-2xl ${
+          compact
+            ? 'w-[min(21rem,calc(100vw-1.5rem))] p-3.5'
+            : 'w-[min(30rem,calc(100vw-1rem))] p-4 sm:p-6'
+        }`}
         style={{ top: cardTop, left: cardLeft, maxHeight: cardMaxH, opacity: ready ? 1 : 0 }}
       >
         <div className="flex shrink-0 items-center gap-2">
           <span
             data-tour-step
-            className="inline-flex shrink-0 items-center rounded-full bg-teal-500 px-3.5 py-1.5 text-[1.2rem] font-extrabold text-white"
+            className={`inline-flex shrink-0 items-center rounded-full bg-teal-500 font-extrabold text-white ${
+              compact ? 'px-2.5 py-1 text-[1rem]' : 'px-3.5 py-1.5 text-[1.2rem]'
+            }`}
           >
             {index + 1} / {steps.length}
           </span>
-          <span className="min-w-0 truncate text-[1.14rem] font-bold text-navy-400">{active.label}</span>
+          <span
+            className={`min-w-0 truncate font-bold text-navy-400 ${compact ? 'text-[1rem]' : 'text-[1.14rem]'}`}
+          >
+            {active.label}
+          </span>
           <button
             onClick={stop}
             title="종료"
@@ -637,7 +660,9 @@ export function TourOverlay() {
         {step.hands && (
           <p
             data-tour-hands
-            className="mt-2 flex shrink-0 items-center gap-2 break-keep rounded-xl bg-amber-100 px-3 py-2 text-[1.06rem] font-extrabold leading-snug text-amber-900 sm:text-[1.18rem]"
+            className={`mt-2 flex shrink-0 items-center gap-2 break-keep rounded-xl bg-amber-100 px-3 py-2 font-extrabold leading-snug text-amber-900 ${
+              compact ? 'text-[1.02rem]' : 'text-[1.06rem] sm:text-[1.18rem]'
+            }`}
           >
             <MousePointerClick size={19} strokeWidth={2.5} className="shrink-0" />
             <span className="min-w-0">직접 눌러 보세요 — {step.hands}</span>
@@ -647,7 +672,9 @@ export function TourOverlay() {
         {/* 이 단계에서 무엇을 하는 곳인지 — 실제 화면의 섹션·버튼 이름과 같습니다 */}
         <p
           data-tour-title
-          className="mt-2 shrink-0 truncate text-[1.18rem] font-extrabold text-teal-600 sm:text-[1.26rem]"
+          className={`mt-2 shrink-0 truncate font-extrabold text-teal-600 ${
+            compact ? 'text-[1.06rem]' : 'text-[1.18rem] sm:text-[1.26rem]'
+          }`}
         >
           {step.title}
         </p>
@@ -667,7 +694,9 @@ export function TourOverlay() {
             data-tour-action
             // 폰은 카드 폭이 370px 뿐이라 같은 rem 이라도 줄 수가 훨씬 많아집니다.
             // PC 크기 그대로 두면 본문이 상자를 넘겨 스크롤해야 읽힙니다.
-            className="break-keep text-[1.5rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[2.1rem]"
+            className={`break-keep font-extrabold leading-tight tracking-tight text-navy-900 ${
+              compact ? 'text-[1.3rem] sm:text-[1.5rem]' : 'text-[1.5rem] sm:text-[2.1rem]'
+            }`}
           >
             {step.action}
           </h2>
@@ -686,7 +715,9 @@ export function TourOverlay() {
           {/* 그래서 무엇이 좋아지는가 */}
           <p
             data-tour-result
-            className="mt-2 flex items-start gap-2 break-keep text-[1.16rem] leading-snug text-navy-500 sm:mt-2.5 sm:text-[1.42rem]"
+            className={`mt-2 flex items-start gap-2 break-keep leading-snug text-navy-500 ${
+              compact ? 'text-[1.08rem] sm:text-[1.16rem]' : 'text-[1.16rem] sm:mt-2.5 sm:text-[1.42rem]'
+            }`}
           >
             <ArrowRight size={20} strokeWidth={2.6} className="mt-1 shrink-0 text-teal-500" />
             <span className="min-w-0">{step.result}</span>
@@ -706,7 +737,7 @@ export function TourOverlay() {
           <div className="pointer-events-none relative z-10 -mt-7 h-7 shrink-0 bg-gradient-to-t from-white to-transparent" />
         )}
 
-        <div className="mt-3 flex shrink-0 gap-1.5">
+        <div className={`flex shrink-0 gap-1.5 ${compact ? 'mt-2.5' : 'mt-3'}`}>
           {steps.map((_, i) => (
             <span key={i} className={`h-2 flex-1 rounded-full ${i <= index ? 'bg-teal-500' : 'bg-navy-100'}`} />
           ))}
@@ -719,7 +750,9 @@ export function TourOverlay() {
           {!last && (
             <button
               onClick={stop}
-              className="shrink-0 rounded-xl px-2 py-2.5 text-[1.2rem] font-bold text-navy-400 transition hover:text-navy-700"
+              className={`shrink-0 rounded-xl px-2 font-bold text-navy-400 transition hover:text-navy-700 ${
+                compact ? 'py-2 text-[1rem]' : 'py-2.5 text-[1.2rem]'
+              }`}
             >
               건너뛰기
             </button>
@@ -728,7 +761,9 @@ export function TourOverlay() {
             {index > 0 && (
               <button
                 onClick={prev}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-navy-50 px-4 py-3 text-[1.26rem] font-extrabold text-navy-600 transition hover:bg-navy-100"
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-navy-50 font-extrabold text-navy-600 transition hover:bg-navy-100 ${
+                  compact ? 'px-3 py-2 text-[1.04rem]' : 'px-4 py-3 text-[1.26rem]'
+                }`}
               >
                 <ChevronLeft size={19} strokeWidth={2.5} /> 이전
               </button>
@@ -736,9 +771,9 @@ export function TourOverlay() {
             <button
               data-tour-next
               onClick={last ? finish : next}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-2xl bg-teal-500 px-5 py-3 text-[1.26rem] font-extrabold text-white shadow-sm transition hover:bg-teal-600 ${
-                last ? 'min-w-0 flex-1 sm:flex-none' : ''
-              }`}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-2xl bg-teal-500 font-extrabold text-white shadow-sm transition hover:bg-teal-600 ${
+                compact ? 'px-4 py-2.5 text-[1.08rem]' : 'px-5 py-3 text-[1.26rem]'
+              } ${last ? 'min-w-0 flex-1 sm:flex-none' : ''}`}
             >
               {last ? (
                 <>
