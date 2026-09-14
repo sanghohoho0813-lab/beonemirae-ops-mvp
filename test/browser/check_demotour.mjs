@@ -200,6 +200,76 @@ console.log('── ⓓ 읽기 단계에서는 화면이 안 눌린다 ──')
   await ctx.close()
 }
 
+console.log('── ⓗ 뒤로가기 · 앞으로가기 · 새로고침 ──')
+{
+  const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
+  await p.locator('[data-demo-tour] [data-tour-start]').click()
+  await p.waitForTimeout(1400)
+  await p.locator('[data-tour-next]').click()
+  await p.waitForTimeout(1400)
+  await p.locator('[data-tour-next]').click()
+  await p.waitForTimeout(1400)
+  ok('ⓗ ③단계에서 시작', /3 \/ 6/.test(flat(await p.textContent('[data-tour-step]'))))
+
+  await p.locator('[data-coach-go="collect-today"]').click()
+  await p.waitForTimeout(2000)
+  ok('ⓗ 눌러서 ④단계', /4 \/ 6/.test(flat(await p.textContent('[data-tour-step]'))))
+
+  //  ⚠⚠ 뒤로가기 — 예전에는 투어가 곧바로 되돌려 놓거나 1단계로 튀었습니다.
+  await p.goBack()
+  await p.waitForTimeout(1600)
+  const back = await stepInfo(p)
+  ok('ⓗ **뒤로가기를 누르면 그 화면을 맡는 단계(③)로 돌아간다**', /3 \/ 6/.test(back.no) && back.path === '/ax-coach', `${back.no} ${back.path}`)
+  ok('ⓗ 1단계로 튀지 않는다', !/1 \/ 6/.test(back.no), back.no)
+  //  그리고 되돌려 끌고 가지 않아야 합니다 — 그대로 ③단계에 머뭅니다.
+  await p.waitForTimeout(1200)
+  ok('ⓗ 뒤로 간 자리에 그대로 머문다 (끌고 가지 않음)', new URL(p.url()).pathname === '/ax-coach', p.url())
+
+  await p.goForward()
+  await p.waitForTimeout(1600)
+  const fwd = await stepInfo(p)
+  ok('ⓗ **앞으로가기를 누르면 다시 ④단계**', /4 \/ 6/.test(fwd.no) && fwd.path === '/collection', `${fwd.no} ${fwd.path}`)
+
+  //  ⚠ 새로고침 — 심사 자리에서 F5 한 번에 1단계로 돌아가면 시연이 끝납니다.
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await p.waitForTimeout(2400)
+  const after = await stepInfo(p)
+  ok('ⓗ **새로고침해도 같은 단계에서 이어진다**', /4 \/ 6/.test(after.no), `${after.no} ${after.title}`)
+
+  //  끝내면 기억도 지웁니다 — 다음에 열 때 되살아나면 안 됩니다.
+  await p.locator('[data-tour-card] button[title="종료"]').click()
+  await p.waitForTimeout(600)
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await p.waitForTimeout(1800)
+  ok('ⓗ 끝낸 뒤 새로고침하면 되살아나지 않는다', (await p.locator('[data-tour-card]').count()) === 0)
+  await ctx.close()
+}
+
+console.log('── ⓘ 단계 전환이 기다리지 않는다 ──')
+{
+  const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
+  await p.locator('[data-demo-tour] [data-tour-start]').click()
+  await p.locator('[data-tour-card]').waitFor({ state: 'visible', timeout: 8000 })
+  await p.waitForTimeout(1200)
+
+  //  ①→② 는 화면까지 바뀝니다. 그래도 「기다리는 느낌」이 없어야 합니다.
+  const t0 = Date.now()
+  await p.locator('[data-tour-next]').click()
+  await p.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 8000 })
+  const moved = Date.now() - t0
+  //  ⚠ 예전에는 앵커를 50ms 씩 두 곳에서 두들겨 단계마다 그만큼 쌓였습니다.
+  //    자료 읽기까지 포함한 값이라 넉넉히 잡되, 「기다리는 느낌」은 잡아냅니다.
+  ok('ⓘ 화면이 바뀌는 단계도 2초 안에 넘어간다', moved < 2000, `${moved}ms`)
+
+  //  ②→③ 은 같은 화면이라 사실상 즉시여야 합니다.
+  const t1 = Date.now()
+  await p.locator('[data-tour-next]').click()
+  await p.locator('[data-tour-title]:has-text("수거 입력으로")').waitFor({ state: 'visible', timeout: 8000 })
+  const same = Date.now() - t1
+  ok('ⓘ **같은 화면 안에서는 거의 즉시 넘어간다**', same < 700, `${same}ms`)
+  await ctx.close()
+}
+
 console.log('── ⓖ 기존 투어는 그대로 ──')
 {
   const { ctx, p } = await open('/settings', { routes: { ax_coach_missions: [] } })

@@ -45,10 +45,56 @@ const bottomInset = (vw: number) => (vw <= 1023 ? NAV_H : EDGE)
 type Placement = 'below' | 'above' | 'right' | 'left' | 'center'
 
 const raf = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+/** 그려진 대상 — 붙어만 있고 크기가 0 이면 아직 아닙니다 */
+function findAnchor(anchor: string): HTMLElement | null {
+  const el = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`)
+  return el && el.getBoundingClientRect().height > 0 ? el : null
+}
+
+/**
+ * 대상이 그려질 때까지 기다립니다 — **나타나는 그 프레임에** 돌려줍니다 (0110).
+ *
+ *  ⚠ 예전에는 50ms 마다 40번 두들겼습니다. 게다가 그 폴링이 **두 곳**에 있어서
+ *    (대상 높이 재기 → 배치 계산) 단계마다 최소 두 번 기다렸습니다.
+ *    화면은 이미 준비됐는데 투어만 멈춰 있는 것처럼 보이던 원인입니다.
+ *
+ *  ⚠ 화면에 붙는 것은 MutationObserver 가, 크기가 잡히는 것은 프레임마다
+ *    확인합니다 (글꼴·이미지·펼침 애니메이션 때문에 붙자마자 0 인 경우가 있습니다).
+ *  ⚠ 그래도 안 나타나면 cap 뒤에 null 로 끝냅니다 — 영영 기다리지 않습니다.
+ */
+function whenAnchorReady(anchor: string, cap = 2500): Promise<HTMLElement | null> {
+  const now = findAnchor(anchor)
+  if (now) return Promise.resolve(now)
+  return new Promise((resolve) => {
+    let done = false
+    let frame = 0
+    let timer = 0
+    const mo = new MutationObserver(() => check())
+    const finish = (el: HTMLElement | null) => {
+      if (done) return
+      done = true
+      mo.disconnect()
+      cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+      resolve(el)
+    }
+    const check = () => {
+      const el = findAnchor(anchor)
+      if (el) finish(el)
+    }
+    const tick = () => {
+      check()
+      if (!done) frame = requestAnimationFrame(tick)
+    }
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true })
+    frame = requestAnimationFrame(tick)
+    timer = window.setTimeout(() => finish(null), cap)
+  })
+}
 
 export function TourOverlay() {
-  const { active, steps, index, next, prev, stop } = useTour()
+  const { active, steps, index, next, prev, stop, goToStep } = useTour()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const cardRef = useRef<HTMLDivElement>(null)
@@ -108,43 +154,83 @@ export function TourOverlay() {
   //    지워지고 「어느 병원을 보시겠습니까」로 튕깁니다.
   //    보고 있던 병원에 맞춰 고쳐서 갑니다.
   const wantRoute = step ? keepPortalClient(step.route, pathname) : ''
-  /**
-   * 직접 누르는 단계에서 **한 번 도착한 뒤에는** 다시 끌고 오지 않습니다 (0109).
-   *
-   *  ⚠ 없으면 이렇게 됩니다 — 「수거 입력으로」를 누르면 /collection 으로
-   *    갔다가, 이 effect 가 곧바로 /ax-coach 로 되돌립니다. 직접 누르라고
-   *    해 놓고 누르면 못 가게 막는 셈입니다.
-   */
-  const arrivedRef = useRef(-1)
-  useEffect(() => {
-    if (!active || !step) return
-    if (pathname === wantRoute) {
-      arrivedRef.current = index
-      return
-    }
-    if (step.hands && arrivedRef.current === index) return
-    navigate(wantRoute)
-  }, [active, step, index, pathname, wantRoute, navigate])
 
   /**
-   * 직접 누르는 단계는 **실제로 그 일이 일어나면** 저절로 넘어갑니다.
+   * 화면과 단계를 맞추는 **한 곳** (0110).
    *
-   *  다음 단계가 짚는 자리가 화면에 나타났다는 것은 그 일이 실제로
-   *  벌어졌다는 뜻입니다 — 수거 입력 화면으로 옮겨 갔거나(collect-save),
-   *  저장이 끝나 결과가 떴거나(collect-done). 「다음」을 눌러 달라고 하지
-   *  않아도 시연이 끊기지 않습니다.
+   *  예전에는 「지금 화면이 이 단계의 화면이 아니면 무조건 그 화면으로 보낸다」
+   *  하나뿐이었습니다. 그래서 뒤로가기를 누르면 투어가 곧바로 되돌려 놓았고,
+   *  직접 누르는 단계에서는 아예 못 가게 막혔습니다.
    *
-   *  ⚠ hands 단계에만 겁니다. 읽기만 하는 단계는 예전 그대로 「다음」입니다.
+   *  이제 규칙은 셋입니다.
+   *
+   *   ① 이미 이 단계의 화면에 있다            → 아무것도 안 합니다 (도착)
+   *   ② 사용자가 화면을 옮겼는데 그 화면을 맡는 단계가 있다
+   *                                            → **그 단계로 따라갑니다**
+   *                                              (뒤로가기·앞으로가기·직접 클릭이
+   *                                               전부 여기서 해결됩니다)
+   *   ③ 아직 이 단계에 한 번도 도착한 적이 없다 → 그 화면으로 데려갑니다
+   *   그 밖에는 그대로 둡니다 — 억지로 끌고 오지 않습니다.
+   */
+  const arrivedRef = useRef<Set<number>>(new Set())
+  const prevPathRef = useRef(pathname)
+  useEffect(() => {
+    const pathChanged = prevPathRef.current !== pathname
+    prevPathRef.current = pathname
+    if (!active || !step) return
+
+    if (pathname === wantRoute) {
+      arrivedRef.current.add(index)
+      return
+    }
+
+    //  ② 사용자가 옮긴 화면을 맡는 단계 — 지금 단계에서 **가장 가까운** 것.
+    //     한 화면을 두 단계가 맡을 수 있어서(수거 입력·저장 결과) 가까운 쪽을 고릅니다.
+    if (pathChanged) {
+      let best = -1
+      for (let i = 0; i < steps.length; i += 1) {
+        if (keepPortalClient(steps[i].route, pathname) !== pathname) continue
+        if (best < 0 || Math.abs(i - index) < Math.abs(best - index)) best = i
+      }
+      if (best >= 0) {
+        goToStep(best)
+        return
+      }
+    }
+
+    //  ③ 첫 도착 — 단계가 요구하는 화면으로 한 번 데려갑니다.
+    if (!arrivedRef.current.has(index)) navigate(wantRoute)
+  }, [active, step, steps, index, pathname, wantRoute, navigate, goToStep])
+
+  /**
+   * 같은 화면 안에서 다음 단계로 — **그 일이 실제로 벌어지는 순간** (0110).
+   *
+   *  수거 입력(④) → 저장 결과(⑤) 처럼 화면이 안 바뀌는 이음매는 위 라우트
+   *  규칙이 잡아 주지 못합니다. 다음 단계가 짚을 자리가 화면에 나타나는 것이
+   *  곧 「저장이 끝났다」는 뜻이므로, 그것을 신호로 씁니다.
+   *
+   *  ⚠ 화면이 바뀌는 이음매(③ → ④)는 위 라우트 규칙이 맡습니다. 여기서 같이
+   *    처리하면 둘이 동시에 넘겨 한 단계를 건너뜁니다.
+   *    → **아직 이 단계의 화면에 있을 때만** 겁니다. 화면이 이미 다음 단계
+   *      쪽으로 넘어간 뒤에 걸면, 라우트 규칙이 「④로 따라가기」를 하는 사이에
+   *      여기서도 「한 칸 더」를 눌러 ⑤로 건너뜁니다.
+   *      (앞으로가기를 누르면 ④가 아니라 ⑤가 나오던 원인입니다 — 0110)
+   *  ⚠ 직접 누르는 단계에만 겁니다 — 읽는 단계는 예전 그대로 「다음」입니다.
    */
   useEffect(() => {
     if (!active || !step?.hands) return
-    const nextAnchor = steps[index + 1]?.anchor
-    if (!nextAnchor) return
-    const t = window.setInterval(() => {
-      if (document.querySelector(`[data-tour="${nextAnchor}"]`)) next()
-    }, 350)
-    return () => window.clearInterval(t)
-  }, [active, step, steps, index, next])
+    if (keepPortalClient(step.route, pathname) !== pathname) return
+    const nx = steps[index + 1]
+    if (!nx?.anchor) return
+    if (keepPortalClient(nx.route, pathname) !== pathname) return
+    let alive = true
+    void whenAnchorReady(nx.anchor, 10 * 60 * 1000).then((el) => {
+      if (alive && el) next()
+    })
+    return () => {
+      alive = false
+    }
+  }, [active, step, steps, index, pathname, next])
 
   // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {
@@ -171,13 +257,8 @@ export function TourOverlay() {
       }
       // 존재만 확인하고 재면 아직 그려지기 전이라 0 이 나옵니다.
       // 그 0 이 설명 박스 상한과 배치 계산에 그대로 흘러들어갑니다.
-      let h = 0
-      for (let i = 0; i < 40 && h <= 0; i++) {
-        const el = document.querySelector<HTMLElement>(`[data-tour="${step.anchor}"]`)
-        h = el ? el.getBoundingClientRect().height : 0
-        if (h <= 0) await wait(50)
-      }
-      if (!cancelled) setAnchorH(h)
+      const el = await whenAnchorReady(step.anchor)
+      if (!cancelled) setAnchorH(el ? el.getBoundingClientRect().height : 0)
     })()
     return () => {
       cancelled = true
@@ -225,16 +306,7 @@ export function TourOverlay() {
       // 라우트 전환 직후에는 대상이 아직 없거나, 있어도 아직 그려지지 않았습니다.
       // 높이가 0인 상태로 재면 강조 테두리가 한 줄로 찌그러지므로
       // "존재하고 + 크기가 잡힐 때까지" 기다립니다.
-      let el: HTMLElement | null = null
-      for (let i = 0; i < 40; i++) {
-        if (stale()) return
-        const found = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`)
-        if (found && found.getBoundingClientRect().height > 0) {
-          el = found
-          break
-        }
-        await wait(50)
-      }
+      const el = await whenAnchorReady(anchor)
       if (stale()) return
       if (!el) {
         setRect(null)
@@ -280,9 +352,10 @@ export function TourOverlay() {
         const cur = el!.getBoundingClientRect().top - PAD
         const delta = cur - targetTop
         if (Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior: 'auto' })
+        //  behavior:'auto' 는 그 자리에서 끝나므로 두 프레임이면 자리가 잡힙니다.
+        //  (예전에는 여기에 40ms 를 더 기다렸습니다 — 단계마다 쌓였습니다)
         await raf()
         await raf()
-        await wait(40)
       }
 
       /** 지금 위치가 "대상 전체가 보이고 + 설명이 들어갈 자리가 있는" 상태인가 */
@@ -322,10 +395,9 @@ export function TourOverlay() {
       // 찌그러진 채 굳습니다 — 스크롤이 없으면 다시 잴 기회도 없습니다.
       // 그래서 크기가 잡힐 때까지 잠깐 더 기다렸다가 잽니다.
       let r = el.getBoundingClientRect()
-      for (let i = 0; i < 12 && r.height <= 0; i++) {
-        await wait(50)
+      if (r.height <= 0) {
+        const again = await whenAnchorReady(anchor, 600)
         if (stale()) return
-        const again = document.querySelector<HTMLElement>(`[data-tour="${anchor}"]`)
         if (again) r = again.getBoundingClientRect()
       }
       // 끝까지 크기가 잡히지 않으면 0 을 쓰지 않고 강조 없이 둡니다.
