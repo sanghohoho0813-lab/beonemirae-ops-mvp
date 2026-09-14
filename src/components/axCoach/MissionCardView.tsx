@@ -15,11 +15,14 @@ export function MissionCardView({
   no,
   busy,
   onGo,
+  tourAnchor,
 }: {
   m: MissionCard
   no: number
   busy: boolean
   onGo: (m: MissionCard) => void
+  /** 심사 시연 투어가 짚는 단추일 때만 (0109) — 평소에는 붙지 않습니다 */
+  tourAnchor?: string
 }) {
   const done = m.status === 'verified'
   return (
@@ -55,6 +58,7 @@ export function MissionCardView({
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               data-coach-go={m.key}
+              data-tour={tourAnchor}
               onClick={() => onGo(m)}
               disabled={busy}
               className="btn-navy min-h-[3rem] px-6"

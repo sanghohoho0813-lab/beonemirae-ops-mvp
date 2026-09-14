@@ -131,6 +131,18 @@ export function AxCoach() {
   //  오늘 확인된 일은 화면의 판정을 리포트에도 그대로 씁니다 — 확인 메모가
   //  적히기 전에 「위는 ✓ 인데 아래는 0건」이 되지 않도록.
   const verifiedTodayKeys = useMemo(() => missions.done.map((m) => m.key), [missions.done])
+  /**
+   * 심사 시연 투어(0109)가 짚는 단추 하나.
+   *
+   *  ⚠ 시연 흐름이 「수거 입력 → 저장 → 확인」이라 **오늘 수거 입력** 일에
+   *    답니다. 그 일이 없는 날(오늘 예정 방문이 없을 때)은 첫 번째 일에 답니다 —
+   *    없는 자리를 짚으면 투어가 빈 화면을 가리킵니다.
+   */
+  const tourGoKey = useMemo(
+    () => missions.todo.find((m) => m.key === 'collect-today')?.key ?? missions.todo[0]?.key ?? null,
+    [missions.todo],
+  )
+
   const report = useMemo(
     () => coachReport(data, days, { today: t, issued, verifiedTodayKeys }),
     [data, days, t, issued, verifiedTodayKeys],
@@ -207,7 +219,7 @@ export function AxCoach() {
       <PageHeader title="AX 코치" subtitle="오늘 무엇을 하면 실증 자료가 쌓이는지 알려 드립니다" />
 
       {/* ── 실증 자료 준비도 ─────────────────────────────────────────────── */}
-      <section data-coach-total className="card p-5 sm:p-7">
+      <section data-coach-total data-tour="coach-total" className="card p-5 sm:p-7">
         <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
           <Gauge size={26} className="mb-1 shrink-0 text-teal-600" strokeWidth={2.3} />
           <p className="t-card text-navy-900">실증 자료 준비도</p>
@@ -251,13 +263,20 @@ export function AxCoach() {
         ) : (
           <ol className="grid gap-3">
             {missions.todo.map((m, i) => (
-              <MissionCardView key={m.key} m={m} no={i + 1} busy={busy === m.key} onGo={(x) => void go(x)} />
+              <MissionCardView
+                key={m.key}
+                m={m}
+                no={i + 1}
+                busy={busy === m.key}
+                onGo={(x) => void go(x)}
+                tourAnchor={m.key === tourGoKey ? 'coach-go' : undefined}
+              />
             ))}
           </ol>
         )}
 
         {missions.done.length > 0 && (
-          <div data-coach-done className="mt-4">
+          <div data-coach-done data-tour="coach-done" className="mt-4">
             <p className="t-label mb-2 text-navy-900">오늘 확인된 것</p>
             <ol className="grid gap-3">
               {missions.done.map((m, i) => (

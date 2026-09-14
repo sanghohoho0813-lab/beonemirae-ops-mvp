@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { keepPortalClient } from '../lib/portalClient'
-import { ArrowRight, Check, ChevronLeft, Link2, X } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft, Link2, MousePointerClick, X } from 'lucide-react'
 import { useTour } from '../context/TourContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,10 +108,43 @@ export function TourOverlay() {
   //    지워지고 「어느 병원을 보시겠습니까」로 튕깁니다.
   //    보고 있던 병원에 맞춰 고쳐서 갑니다.
   const wantRoute = step ? keepPortalClient(step.route, pathname) : ''
+  /**
+   * 직접 누르는 단계에서 **한 번 도착한 뒤에는** 다시 끌고 오지 않습니다 (0109).
+   *
+   *  ⚠ 없으면 이렇게 됩니다 — 「수거 입력으로」를 누르면 /collection 으로
+   *    갔다가, 이 effect 가 곧바로 /ax-coach 로 되돌립니다. 직접 누르라고
+   *    해 놓고 누르면 못 가게 막는 셈입니다.
+   */
+  const arrivedRef = useRef(-1)
   useEffect(() => {
     if (!active || !step) return
-    if (pathname !== wantRoute) navigate(wantRoute)
-  }, [active, step, pathname, wantRoute, navigate])
+    if (pathname === wantRoute) {
+      arrivedRef.current = index
+      return
+    }
+    if (step.hands && arrivedRef.current === index) return
+    navigate(wantRoute)
+  }, [active, step, index, pathname, wantRoute, navigate])
+
+  /**
+   * 직접 누르는 단계는 **실제로 그 일이 일어나면** 저절로 넘어갑니다.
+   *
+   *  다음 단계가 짚는 자리가 화면에 나타났다는 것은 그 일이 실제로
+   *  벌어졌다는 뜻입니다 — 수거 입력 화면으로 옮겨 갔거나(collect-save),
+   *  저장이 끝나 결과가 떴거나(collect-done). 「다음」을 눌러 달라고 하지
+   *  않아도 시연이 끊기지 않습니다.
+   *
+   *  ⚠ hands 단계에만 겁니다. 읽기만 하는 단계는 예전 그대로 「다음」입니다.
+   */
+  useEffect(() => {
+    if (!active || !step?.hands) return
+    const nextAnchor = steps[index + 1]?.anchor
+    if (!nextAnchor) return
+    const t = window.setInterval(() => {
+      if (document.querySelector(`[data-tour="${nextAnchor}"]`)) next()
+    }, 350)
+    return () => window.clearInterval(t)
+  }, [active, step, steps, index, next])
 
   // 단계가 바뀌면 다시 계산합니다 (대상 높이 → 설명 박스 상한 → 설명 박스 크기 순서)
   useEffect(() => {
@@ -447,7 +480,16 @@ export function TourOverlay() {
   })()
 
   return (
-    <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="사용 방법 안내">
+    //  ⚠ 0109 — 직접 누르는 단계에서는 **이 바깥 상자부터** 통과시킵니다.
+    //    네 조각으로 구멍을 내도 이 상자가 화면 전체를 덮고 있으면 클릭이
+    //    여기서 먼저 잡힙니다 (실제로 그래서 단추가 안 눌렸습니다).
+    //    대신 덮개 조각과 설명 상자에만 다시 클릭을 켭니다.
+    <div
+      className={`fixed inset-0 z-[100] ${step.hands ? 'pointer-events-none' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="사용 방법 안내"
+    >
       {/* 배경 dim + 강조 — 큰 box-shadow 로 대상만 밝게 남깁니다 */}
       {rect ? (
         <div
@@ -468,8 +510,29 @@ export function TourOverlay() {
         <div className="absolute inset-0 bg-navy-950/70" />
       )}
 
-      {/* 투어 중 실수로 화면이 조작되지 않게 막습니다 (설명 박스는 이 위에 있습니다) */}
-      <div className="absolute inset-0" />
+      {/*  투어 중 실수로 화면이 조작되지 않게 막습니다 (설명 박스는 이 위에 있습니다).
+
+           ⚠ 0109 — **직접 누르는 단계(step.hands)** 에서는 강조한 자리만
+             뚫어 둡니다. 덮개를 통째로 걷으면 시연 중에 엉뚱한 곳을 눌러
+             흐름이 끊기고, 통째로 덮으면 「직접 눌러 보세요」라고 해 놓고
+             못 누르게 막는 꼴이 됩니다. 그래서 위·아래·좌·우 네 조각으로
+             나누고 가운데만 비웁니다. */}
+      {step.hands && rect ? (
+        <>
+          <div className="pointer-events-auto absolute left-0 right-0 top-0" style={{ height: Math.max(0, rect.top - PAD) }} />
+          <div className="pointer-events-auto absolute bottom-0 left-0 right-0" style={{ top: rect.top + rect.height + PAD }} />
+          <div
+            className="pointer-events-auto absolute left-0"
+            style={{ top: rect.top - PAD, height: rect.height + PAD * 2, width: Math.max(0, rect.left - PAD) }}
+          />
+          <div
+            className="pointer-events-auto absolute right-0"
+            style={{ top: rect.top - PAD, height: rect.height + PAD * 2, left: rect.left + rect.width + PAD }}
+          />
+        </>
+      ) : (
+        !step.hands && <div className="absolute inset-0" />
+      )}
 
       {/* 설명 박스 */}
       <div
@@ -477,7 +540,7 @@ export function TourOverlay() {
         data-tour-card
         // 모바일에서는 설명이 길어져도 화면 절반을 넘지 않게 합니다.
         // 헤더와 버튼은 고정하고 본문만 스크롤되게 해, 좁은 화면에서도 '다음'이 항상 보입니다.
-        className="absolute flex w-[min(30rem,calc(100vw-1rem))] flex-col rounded-3xl bg-white p-4 shadow-2xl sm:p-6"
+        className="pointer-events-auto absolute flex w-[min(30rem,calc(100vw-1rem))] flex-col rounded-3xl bg-white p-4 shadow-2xl sm:p-6"
         style={{ top: cardTop, left: cardLeft, maxHeight: cardMaxH, opacity: ready ? 1 : 0 }}
       >
         <div className="flex shrink-0 items-center gap-2">
@@ -496,6 +559,18 @@ export function TourOverlay() {
             <X size={22} strokeWidth={2.4} />
           </button>
         </div>
+
+        {/*  직접 눌러야 넘어가는 단계 — 읽기만 하는 단계와 한눈에 갈리게 (0109).
+             이 띠가 있으면 「지금 제가 누르는 겁니까」를 묻지 않습니다. */}
+        {step.hands && (
+          <p
+            data-tour-hands
+            className="mt-2 flex shrink-0 items-center gap-2 break-keep rounded-xl bg-amber-100 px-3 py-2 text-[1.06rem] font-extrabold leading-snug text-amber-900 sm:text-[1.18rem]"
+          >
+            <MousePointerClick size={19} strokeWidth={2.5} className="shrink-0" />
+            <span className="min-w-0">직접 눌러 보세요 — {step.hands}</span>
+          </p>
+        )}
 
         {/* 이 단계에서 무엇을 하는 곳인지 — 실제 화면의 섹션·버튼 이름과 같습니다 */}
         <p

@@ -21,6 +21,7 @@ import { autoPerInput } from '../lib/performance'
 import { customerServiceStats } from '../lib/portal'
 import { weight } from '../lib/format'
 import { DemoResetButton } from '../components/DemoControls'
+import { TourButton } from '../components/TourEntry'
 
 // 심사 시연 동선 (약 5분) — "무엇을 하는 회사인가 → 어떻게 돈을 버는가" 순서
 const DEMO_STEPS = [
@@ -164,6 +165,26 @@ export function Presentation() {
         >
           <X size={18} />
         </button>
+      </div>
+
+      {/*  60초 시연 투어 (0109) — 화면이 직접 데려갑니다.
+
+           ⚠ 아래 「대표자 시연 가이드」의 5분 순서는 **읽는 대본**이고,
+             이것은 **실행되는 안내**입니다. ③④단계에서 대표님이 직접 누르고,
+             저장한 기록을 ⑥단계에서 AX 코치가 확인합니다. 그래서 저장은
+             **실제 기록**입니다 — 시연용 가짜 데이터를 만들지 않습니다.
+           ⚠ 접힌 칸 안에 두지 않습니다. 심사 자리에서 못 찾으면 없는 기능입니다. */}
+      <div data-demo-tour className="mb-5 rounded-2xl bg-navy-900 p-4 text-white">
+        <p className="text-[1.07rem] font-extrabold">60초 심사 시연 — 화면이 순서대로 안내합니다</p>
+        <p className="mt-1 text-[1rem] leading-snug text-white/75">
+          대시보드 → AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치.
+          <b className="text-white"> ③④단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
+        </p>
+        <TourButton
+          tourId="demo"
+          className="btn-primary mt-3 w-full justify-center sm:w-auto"
+          label="60초 시연 투어 시작"
+        />
       </div>
 
       {/* 진행 도트 */}

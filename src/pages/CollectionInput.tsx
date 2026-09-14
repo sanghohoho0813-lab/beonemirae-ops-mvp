@@ -611,7 +611,11 @@ export function CollectionInput() {
   if (success) {
     return (
       <div className="mx-auto max-w-lg">
+        {/*  ⚠ 0109 — 심사 시연 투어 ⑤단계가 짚는 자리입니다. 저장이 **실제로
+             끝났을 때만** 생기는 요소라, 투어는 이것이 나타나는 것을 보고
+             다음 단계로 넘어갑니다. 화면에는 아무 변화도 주지 않습니다. */}
         <motion.div
+          data-tour="collect-done"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="card mt-6 p-7 text-center"
