@@ -50,9 +50,14 @@ const SUB = CFG.subtitle ?? {}
 //  0117 — 화면 크기가 바뀌면 얹는 것들도 같이 커져야 합니다. 값은 전부
 //  config 의 stage 에 있습니다 (1920×1080 기준으로 적어 두었습니다).
 const ST = CFG.stage ?? {}
+//  0119 — 무엇을 어떤 순서로 누르고 짚을지는 **흐름 파일**에 있습니다.
+//  이 파일(엔진)은 무대·커서·강조·자막·흉내 서버까지만 맡습니다.
+const FLOW = CFG.flow ?? 'video/flows/short-demo.mjs'
+const { flow: runFlow, start: FLOW_START } = await import(new URL('../' + FLOW, import.meta.url).href)
 
 //  음성 — 먼저 video/say.mjs 를 돌려 두어야 합니다.
-const voicePath = join(OUT, 'voice/timing.json')
+const VOICE_DIR = CFG.out.voice ?? 'voice'
+const voicePath = join(OUT, VOICE_DIR, 'timing.json')
 if (!existsSync(voicePath)) {
   throw new Error(`음성이 아직 없습니다: ${voicePath}\n  먼저 node video/say.mjs 를 돌려 주세요.`)
 }
@@ -141,6 +146,46 @@ const OVERLAY = (watermark, sub, st) => `
       'opacity:0','transition:opacity .16s linear',
     ].join(';')
 
+    //  ── 0119 · Evidence Guide 에서 쓰는 셋 ────────────────────────────
+    //   ① 강조 틀  — 제품 투어를 켜지 않고도 「여기를 보세요」를 그립니다.
+    //      모양은 투어가 그리던 것과 **똑같은 값**을 씁니다(덮개 D · 테두리 B ·
+    //      빛 G). 한 화면 안에서 자리를 옮길 때는 미끄러지듯 움직입니다.
+    const box = document.createElement('div')
+    box.id = 'vid-spot'
+    box.style.cssText = [
+      'position:fixed', 'left:0', 'top:0', 'width:0', 'height:0',
+      'border-radius:14px', 'opacity:0',
+      'box-shadow:0 0 0 9999px rgba(8,15,28,' + D + '),'
+        + '0 0 0 2px rgba(49,130,246,' + B + '),'
+        + '0 0 16px 4px rgba(49,130,246,' + G + ')',
+      'transition:opacity .2s linear,transform .28s cubic-bezier(.22,1,.36,1),'
+        + 'width .28s cubic-bezier(.22,1,.36,1),height .28s cubic-bezier(.22,1,.36,1)',
+    ].join(';')
+
+    //   ② 글자 화면 — 여는 말·닫는 말. 앱 화면이 아니라 이 레이어가 그립니다.
+    const cardEl = document.createElement('div')
+    cardEl.id = 'vid-card'
+    cardEl.style.cssText = [
+      'position:fixed', 'inset:0', 'display:flex', 'flex-direction:column',
+      'align-items:center', 'justify-content:center', 'gap:26px',
+      'padding:0 12%', 'background:#0b1220', 'color:#fff',
+      'text-align:center', 'word-break:keep-all',
+      'opacity:0', 'transition:opacity .25s linear',
+    ].join(';')
+
+    //   ③ 얇은 덮개 + 가운데 글 — 실제 화면을 배경으로 남기고 한마디만.
+    const veilEl = document.createElement('div')
+    veilEl.id = 'vid-veil'
+    veilEl.style.cssText = [
+      'position:fixed', 'inset:0', 'display:flex', 'flex-direction:column',
+      'align-items:center', 'justify-content:center', 'gap:18px',
+      //  ⚠ 0119 — .55 로는 흰 카드 위에서 흰 글씨가 씻겨 안 읽혔습니다.
+      //    성과 화면은 배경으로 남기되, 글이 먼저 읽히는 정도까지 내립니다.
+      'padding:0 16%', 'background:rgba(8,15,28,.74)', 'color:#fff',
+      'text-align:center', 'word-break:keep-all',
+      'opacity:0', 'transition:opacity .3s linear',
+    ].join(';')
+
     //  왼쪽 아래 아주 작은 단계 표시 — 「1/5 · AX 코치」. 큰 설명 박스 대신입니다.
     const chip = document.createElement('div')
     chip.id = 'vid-chip'
@@ -199,8 +244,27 @@ const OVERLAY = (watermark, sub, st) => `
     ].join('')
     document.head.appendChild(css)
 
-    layer.append(mark, chip, cap, ring, cur)
+    //  ⚠ 쌓는 순서가 곧 위아래입니다. 강조 틀이 가장 아래, 그 위에 구석
+    //    표시·자막·커서, 맨 위가 덮개와 글자 화면입니다.
+    layer.append(box, mark, chip, cap, ring, cur, veilEl, cardEl)
     document.body.appendChild(layer)
+
+    //  강조 틀은 **화면을 굴려도 따라다녀야** 합니다. 굴리는 동안 자리가
+    //  어긋나면 엉뚱한 곳을 가리키게 됩니다.
+    let spotSel = null
+    let spotPad = 8
+    const followSpot = () => {
+      if (!spotSel) return
+      const el = document.querySelector(spotSel)
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      box.style.transform = 'translate(' + Math.round(r.left - spotPad) + 'px,' + Math.round(r.top - spotPad) + 'px)'
+      box.style.width = Math.round(r.width + spotPad * 2) + 'px'
+      box.style.height = Math.round(r.height + spotPad * 2) + 'px'
+    }
+    window.addEventListener('scroll', followSpot, true)
+    window.addEventListener('resize', followSpot)
+    setInterval(followSpot, 100)
 
     window.__vid = {
       move(x, y, ms) {
@@ -244,10 +308,97 @@ const OVERLAY = (watermark, sub, st) => `
 
       say(lines) { cap.textContent = lines.join(String.fromCharCode(10)); cap.style.opacity = '1' },
       sayOff() { cap.style.opacity = '0' },
+
+      /** 잰 자리를 그대로 강조합니다 (부르는 쪽이 Playwright 로 잽니다). */
+      spotRect(r, pad) {
+        if (!r) return
+        const p = pad == null ? 10 : pad
+        const first = box.style.opacity !== '1'
+        if (first) box.style.transition = 'opacity .2s linear'
+        spotSel = null
+        box.style.transform = 'translate(' + Math.round(r.x - p) + 'px,' + Math.round(r.y - p) + 'px)'
+        box.style.width = Math.round(r.width + p * 2) + 'px'
+        box.style.height = Math.round(r.height + p * 2) + 'px'
+        if (first) {
+          void box.offsetWidth
+          box.style.transition = 'opacity .2s linear,transform .28s cubic-bezier(.22,1,.36,1),'
+            + 'width .28s cubic-bezier(.22,1,.36,1),height .28s cubic-bezier(.22,1,.36,1)'
+        }
+        box.style.opacity = '1'
+      },
+
+      /** 선택자로 강조 — 화면을 굴려도 따라다닙니다 */
+      spot(sel, pad) {
+        spotPad = pad == null ? 8 : pad
+        const first = !spotSel
+        spotSel = sel
+        //  처음 켤 때는 미끄러지지 않게 — 화면 밖에서 날아오면 산만합니다.
+        if (first) box.style.transition = 'opacity .2s linear'
+        followSpot()
+        if (first) {
+          void box.offsetWidth
+          box.style.transition = 'opacity .2s linear,transform .28s cubic-bezier(.22,1,.36,1),'
+            + 'width .28s cubic-bezier(.22,1,.36,1),height .28s cubic-bezier(.22,1,.36,1)'
+        }
+        box.style.opacity = '1'
+      },
+      spotOff() { box.style.opacity = '0'; spotSel = null },
+
+      /** 글자 화면 (여는 말·닫는 말) */
+      card(lines, foot) {
+        cardEl.textContent = ''
+        for (const l of lines) {
+          const el = document.createElement('p')
+          el.textContent = l.text
+          el.style.cssText = 'margin:0;font:' + (l.weight || 800) + ' ' + l.size + 'px/1.5 system-ui,sans-serif;'
+            + 'white-space:pre-line;word-break:keep-all;'
+            + 'color:' + (l.dim ? 'rgba(255,255,255,.62)' : '#fff') + ';max-width:' + (l.narrow ? '70%' : '100%')
+          cardEl.appendChild(el)
+        }
+        if (foot) {
+          const f = document.createElement('p')
+          f.textContent = foot
+          f.style.cssText = 'margin:18px 0 0;font:700 21px/1.4 system-ui,sans-serif;'
+            + 'color:rgba(255,255,255,.55);letter-spacing:.04em'
+          cardEl.appendChild(f)
+        }
+        cardEl.style.opacity = '1'
+      },
+      cardOff(ms) {
+        cardEl.style.transition = 'opacity ' + (ms || 250) + 'ms linear'
+        cardEl.style.opacity = '0'
+      },
+
+      /** 실제 화면을 배경으로 남기고 한마디만 — 성과 화면 위에 씁니다. */
+      veil(lines) {
+        veilEl.textContent = ''
+        for (const l of lines) {
+          const el = document.createElement('p')
+          el.textContent = l.text
+          el.style.cssText = 'margin:0;font:' + (l.weight || 800) + ' ' + l.size + 'px/1.5 system-ui,sans-serif;'
+            + 'white-space:pre-line;word-break:keep-all;'
+            + 'text-shadow:0 2px 12px rgba(0,0,0,.45);'
+            + 'color:' + (l.dim ? 'rgba(255,255,255,.82)' : '#fff')
+          veilEl.appendChild(el)
+        }
+        veilEl.style.opacity = '1'
+      },
+      veilOff() { veilEl.style.opacity = '0' },
     }
   }
   if (document.body) put()
   else document.addEventListener('DOMContentLoaded', put)
+  //  ⚠ Evidence Guide 는 **글자 화면으로 시작**합니다. 그래야 앱이 뜨는
+  //    동안의 빈 화면과 깜빡임이 보이지 않습니다 (앞부분은 어차피 잘라
+  //    내지만, 자르는 자리가 조금 어긋나도 안전합니다).
+  if (${st.coverAtStart ? 'true' : 'false'}) {
+    const cover = () => {
+      const el = document.getElementById('vid-card')
+      if (el) { el.style.transition = 'none'; el.style.opacity = '1' }
+      else setTimeout(cover, 30)
+    }
+    cover()
+  }
 })()
 `
 
@@ -343,6 +494,21 @@ await ctx.route('**/rest/v1/ax_coach_missions*', (r) => {
   return json(issued)
 })
 
+//  사무실 자재 재고 — 흉내 서버는 빈 값(0)만 돌려줍니다. 창고가 비어 있으면
+//  병원에 용기를 드릴 수 없어(저장이 막힙니다) 「재고 차감」 줄이 영영 안
+//  나옵니다. 촬영용 최소 수량으로 덮어씁니다 (video/fixture.mjs 참고).
+await ctx.route('**/rest/v1/office_stock*', (r) => {
+  if (r.request().method() !== 'GET') {
+    state.writes.push({ url: 'office_stock', method: r.request().method() })
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  }
+  const one = (r.request().headers()['accept'] ?? '').includes('vnd.pgrst.object')
+  return r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify(one ? FIX.officeStock : [FIX.officeStock]),
+  })
+})
+
 //  실증 시작일 · 수거 완료 기록 — 둘 다 흉내 서버가 돌려줍니다.
 await ctx.route('**/rest/v1/experiment_settings*', (r) => r.fulfill({
   status: 200, contentType: 'application/json',
@@ -387,6 +553,10 @@ const page = await ctx.newPage()
 const tVideo = Date.now()
 const errors = []
 page.on('pageerror', (e) => errors.push(String(e)))
+//  ⚠ 확인 물음은 브라우저가 그리는 것이라 **영상에는 찍히지 않습니다.**
+//    손대지 않으면 Playwright 가 취소를 눌러 저장이 조용히 없던 일이 됩니다.
+const dialogs = []
+page.on('dialog', (d) => { dialogs.push(d.message().split('\n')[0]); void d.accept() })
 
 await page.addInitScript(([k, u]) => {
   window.localStorage.setItem(k, JSON.stringify({
@@ -427,11 +597,11 @@ async function measureStage() {
 }
 
 const tPage = Date.now()
-await page.goto(`${CFG.baseUrl}/presentation`, { waitUntil: 'domcontentloaded' })
+await page.goto(`${CFG.baseUrl}${FLOW_START.url}`, { waitUntil: 'domcontentloaded' })
 await W.settle(page, state)
-await page.locator('[data-demo-tour] [data-tour-start]').waitFor({ state: 'visible', timeout: 15000 })
+await page.locator(FLOW_START.ready).waitFor({ state: 'visible', timeout: 15000 })
 await measureStage()
-await page.waitForTimeout(300)
+await page.waitForTimeout(FLOW_START.settle ?? 300)
 
 // ── 여기서부터가 영상 본문 ───────────────────────────────────────────────────
 const tReady = Date.now()
@@ -549,7 +719,7 @@ const STEP_NO = { s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 }
 const lags = []
 /** 첫 장면이 영상 몇 초에 시작했는가 — 뒤 장면은 전부 여기에 더해 맞춥니다 */
 let voBase = null
-async function scene(id, { during = [], pad = H.padAfterVoice } = {}) {
+async function scene(id, { during = [], pad = H.padAfterVoice, spread = false, caption = true } = {}) {
   const sc = VOICE.scenes.find((x) => x.id === id)
   if (!sc) throw new Error(`대사가 없습니다: ${id}`)
 
@@ -579,17 +749,37 @@ async function scene(id, { during = [], pad = H.padAfterVoice } = {}) {
   mark(`${sc.label} — 음성 ${sc.sec.toFixed(1)}초`)
 
   const t0 = Date.now()
-  let acc = 0
-  let ai = 0
-  for (const cue of sc.cues) {
-    await page.evaluate((l) => window.__vid?.say(l), cue.lines)
-    acc += cue.ms
-    if (during[ai]) { await during[ai](); ai += 1 }
-    const left = t0 + acc - Date.now()
+  if (spread) {
+    //  ── 짚을 곳이 자막 조각보다 많을 때 (0119) ───────────────────────────
+    //   자막은 제 시각에 바뀌고, 짚는 동작은 **장면 길이에 고르게** 나눠
+    //   놓습니다. 둘을 시각순으로 섞어 차례로 실행합니다.
+    const evts = []
+    let acc0 = 0
+    for (const cue of sc.cues) { evts.push({ ms: acc0, run: () => page.evaluate((l) => window.__vid?.say(l), cue.lines) }); acc0 += cue.ms }
+    const span = sc.sec * 1000
+    during.forEach((fn, i) => evts.push({ ms: Math.round((i * span) / during.length), run: fn, act: true }))
+    //  같은 시각이면 자막이 먼저 — 말과 화면이 어긋나 보이지 않게.
+    evts.sort((a, b) => (a.ms - b.ms) || ((a.act ? 1 : 0) - (b.act ? 1 : 0)))
+    for (const e of evts) {
+      const left = t0 + e.ms - Date.now()
+      if (left > 0) await page.waitForTimeout(left)
+      if (e.act || caption) await e.run()
+    }
+    const left = t0 + span - Date.now()
     if (left > 0) await page.waitForTimeout(left)
+  } else {
+    let acc = 0
+    let ai = 0
+    for (const cue of sc.cues) {
+      if (caption) await page.evaluate((l) => window.__vid?.say(l), cue.lines)
+      acc += cue.ms
+      if (during[ai]) { await during[ai](); ai += 1 }
+      const left = t0 + acc - Date.now()
+      if (left > 0) await page.waitForTimeout(left)
+    }
+    //  남은 동작이 있으면 말이 끝난 뒤에라도 마저 합니다.
+    while (during[ai]) { await during[ai](); ai += 1 }
   }
-  //  남은 동작이 있으면 말이 끝난 뒤에라도 마저 합니다.
-  while (during[ai]) { await during[ai](); ai += 1 }
   //  ⚠ 직접 녹음일 때는 여기서 더 쉬지 않습니다 — 다음 장면 시작 시각이
   //    녹음에 이미 박혀 있어서, 남는 시간은 그 앞에서 알아서 기다립니다.
   if (!VO && pad) await page.waitForTimeout(pad)
@@ -597,82 +787,51 @@ async function scene(id, { during = [], pad = H.padAfterVoice } = {}) {
 }
 
 console.log('── 녹화 ──')
-mark('시작 화면 (심사 시연 안내)')
-await page.waitForTimeout(H.intro)
 
-//  투어 켜기
-//  투어 켜기 — 화면에 보이는 단추이므로 커서가 움직입니다.
-await point('[data-demo-tour] [data-tour-start]', { fast: true })
-await page.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'attached', timeout: 15000 })
-await page.waitForTimeout(H.afterRoute)
-await expect(1, '①')
-await checkSpot('①')
-await scene('s1')
-
-//  ① → ②  (읽는 단계이므로 「다음」)
-await advance()
-await page.locator('[data-tour-title]:has-text("바로 업무로")').waitFor({ state: 'attached', timeout: 15000 })
-await page.waitForTimeout(H.afterRoute)
-await expect(2, '②')
-await checkSpot('②')
-await scene('s2')
-
-//  ② → ③  **실제 미션 단추**를 누릅니다 — 투어가 따라옵니다
-await point('[data-coach-go="collect-today"]')
-await page.locator('[data-collect-save]').waitFor({ state: 'visible', timeout: 15000 })
-await page.waitForTimeout(H.afterClick)
-await expect(3, '③')
-await checkSpot('③')
-
-//  거래처 · 차량 · 수거량 — **말하는 동안** 한 칸씩 채웁니다.
-//  ⚠ 채우는 칸이 화면에 보이도록 먼저 올려 둡니다 (bring 설명 참고).
-await scene('s3', {
-  during: [
-    async () => {
-      await bring('[data-guide="guide-client"]', 'start')
-      await page.locator('select').first().selectOption(C0)
-    },
-    async () => {
-      //  수거량 칸을 화면 가운데로 — 숫자가 채워지는 것이 보여야 합니다.
-      await bring('[data-guide="guide-amount"]', 'center')
-      await page.locator('[data-actual-amount]').fill('70')
-      await page.locator('select').nth(1).selectOption('v1')
-    },
-  ],
+// ── 흐름 ────────────────────────────────────────────────────────────────────
+//   무엇을 어떤 순서로 누르고 짚을지는 **흐름 파일**에 있습니다.
+//   이 파일(엔진)은 무대·커서·강조·자막·흉내 서버까지만 맡습니다.
+//
+//     flows/short-demo.mjs      50초 심사 시연 — 제품의 그 투어를 그대로 녹화
+//     flows/evidence-guide.mjs  경영진용 — 투어 없이 화면을 직접 돕니다
+//
+//   config 의 flow 에 적힌 파일을 불러옵니다.
+await runFlow({
+  page, CFG, H, ST, F, FIX, C0, VO, VOICE,
+  at, mark, scene, point, bring, advance, expect, stepNo, checkSpot,
+  sleep: (ms) => page.waitForTimeout(ms),
+  spot: async (sel, opt = {}) => {
+    const el = page.locator(sel).first()
+    await el.waitFor({ state: 'visible', timeout: 15000 })
+    //  화면 밖이면 먼저 굴려 놓습니다 — 안 보이는 곳을 강조할 수는 없습니다.
+    const seen = await el.evaluate((n) => {
+      const r = n.getBoundingClientRect()
+      return r.top >= 6 && r.bottom <= window.innerHeight - 6
+    })
+    if (!seen && opt.bring !== false) {
+      await el.evaluate((n, b) => n.scrollIntoView({ behavior: 'smooth', block: b }), opt.block ?? 'center')
+      await page.waitForTimeout(H.scroll ?? 320)
+    }
+    const r = await el.boundingBox()
+    await page.evaluate(([rect, p]) => window.__vid?.spotRect(rect, p), [r, opt.pad ?? 10])
+  },
+  spotOff: () => page.evaluate(() => window.__vid?.spotOff()),
+  card: (lines, foot) => page.evaluate(([l, f]) => window.__vid?.card(l, f), [lines, foot ?? null]),
+  cardOff: (ms) => page.evaluate((m) => window.__vid?.cardOff(m), ms ?? 250),
+  veil: (lines) => page.evaluate((l) => window.__vid?.veil(l), lines),
+  veilOff: () => page.evaluate(() => window.__vid?.veilOff()),
+  chip: (t) => page.evaluate((x) => window.__vid?.chip(x), t ?? null),
+  voiceSec: (id) => VOICE.scenes.find((x) => x.id === id)?.sec ?? 0,
 })
 
-//  ③ → ④  저장. **흉내 서버가 받습니다 — 실제 저장이 아닙니다.**
-await point('[data-collect-save]')
-await page.locator('[data-tour="collect-done"]').waitFor({ state: 'visible', timeout: 15000 })
-await page.waitForTimeout(H.afterSave ?? H.afterClick)
-await expect(4, '④')
-await checkSpot('④')
-await scene('s4')
-
-//  ④ → ⑤
-await advance()
-await page.locator('[data-tour-title]:has-text("실제 기록을 확인")').waitFor({ state: 'attached', timeout: 15000 })
-await page.waitForTimeout(H.afterRoute)
-await expect(5, '⑤')
-await checkSpot('⑤')
-await scene('s5')
-
-//  마무리 — 투어가 성과 화면으로 넘겨 줍니다.
-//  ⚠ 강조가 옅어진 덕에 투어가 끝나도 화면이 확 밝아지지 않습니다 —
-//    덮개 자체가 16% 뿐이라 걷혀도 눈에 띄는 계단이 안 생깁니다.
-await advance()
-await page.waitForURL('**/performance', { timeout: 15000 })
-await page.waitForTimeout(H.afterRoute)
-//  ⚠ 0118-b — 마무리는 **말이 끝난 자리에서** 꼬리를 셉니다.
-//    고정된 몇 초가 아닙니다. 그래서 여기서는 더 쉬지 않고(pad 0),
-//    아래 outroTail 하나만 붙입니다 — 직접 녹음으로 바꿔도 같은 규칙입니다.
-await scene('outro', { pad: 0 })
-//  직접 녹음이면 마지막 말이 끝나는 시각(endSec)까지 화면을 붙잡아 둡니다.
+//  ── 꼬리 ────────────────────────────────────────────────────────────────
+//   직접 녹음이면 마지막 말이 끝나는 시각(endSec)까지 화면을 붙잡아 둔 뒤,
+//   **말이 끝난 자리에서** outroTail 만큼 더 보여 줍니다. 고정된 몇 초가
+//   아닙니다 — 녹음이 길든 짧든 꼬리는 같습니다.
 if (VO && voBase !== null) {
   const left = (voBase + VO.totalSec) - at()
   if (left > 0) await page.waitForTimeout(Math.round(left * 1000))
 }
-//  말이 끝난 뒤 성과 화면을 이만큼 더 — 숫자를 읽을 시간입니다.
 await page.waitForTimeout(H.outroTail)
 
 const tEnd = Date.now()
@@ -701,6 +860,7 @@ for (const f of readdirSync(OUT)) {
 
 const timeline = {
   tenant: CFG.tenant,
+  flow: FLOW,
   recordedAt: new Date().toISOString(),
   viewport: CFG.viewport,
   //  ── 어디를 잘라야 하는가 ────────────────────────────────────────────
@@ -732,7 +892,7 @@ const timeline = {
   //   장면마다 「영상 몇 초 자리에서 시작하는가」입니다. mux 가 이 값으로
   //   wav 를 제자리에 놓습니다. 화면과 말이 어긋날 수 없는 이유가 이것입니다.
   voice: {
-    provider: VOICE.provider, dir: 'voice', scenes: audio,
+    provider: VOICE.provider, dir: VOICE_DIR, scenes: audio,
     ...(VO ? { file: VO.file, offsetSec: VO.offsetSec, endSec: VO.endSec, totalSec: VO.totalSec } : {}),
   },
   marks,
@@ -747,6 +907,8 @@ const timeline = {
     stage: stageInfo,
     //  직접 녹음일 때, 화면이 음성보다 늦은 장면 (없어야 정상)
     voiceLag: lags,
+    //  화면이 물어본 확인 (자재 수량 등) — 받아 넘긴 것을 남겨 둡니다
+    dialogs,
   },
 }
 writeFileSync(join(OUT, CFG.out.timeline), JSON.stringify(timeline, null, 2))

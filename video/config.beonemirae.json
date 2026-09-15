@@ -9,6 +9,8 @@
   "fps": 30,
   "watermark": "예시 데이터 · 기능 시연용",
   "narration": "video/narration.ko.json",
+  "//flow": "무엇을 어떤 순서로 누르고 짚을지. 엔진(record.mjs)은 무대·커서·강조·자막·흉내 서버까지만 맡습니다.",
+  "flow": "video/flows/short-demo.mjs",
 
   "//stage": "녹화하는 창에만 씌우는 값들. 제품(src/)은 건드리지 않습니다. 화면 크기를 바꾸면 여기 숫자도 같이 바꿉니다.",
   "stage": {

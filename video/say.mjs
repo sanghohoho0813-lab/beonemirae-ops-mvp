@@ -33,7 +33,9 @@ const ROOT = resolve(new URL('..', import.meta.url).pathname)
 const cfgPath = process.argv.slice(2).find((a) => a.endsWith('.json')) ?? join(ROOT, 'video/config.beonemirae.json')
 const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
 const NAR = JSON.parse(readFileSync(join(ROOT, CFG.narration), 'utf8'))
-const OUT = join(ROOT, CFG.out.dir, 'voice')
+//  영상마다 음성 폴더를 따로 둡니다 — 짧은 Demo 와 경영진용이 서로
+//  덮어쓰지 않게 (config 의 out.voice).
+const OUT = join(ROOT, CFG.out.dir, CFG.out.voice ?? 'voice')
 
 /** 자막 한 줄에 넣을 수 있는 글자 수 (한글 기준) */
 const LINE = CFG.subtitle?.charsPerLine ?? 30

@@ -42,5 +42,6 @@
       "label": "닫는 말",
       "text": "업무를 바꾸고, 그 변화를 데이터로 남기고, 그 데이터가 회사의 다음 성장 근거가 됩니다."
     }
-  ]
+  ],
+  "//대체됨": "⚠ 0119 — 이 대본은 「AX Evidence Guide」(video/narration.evidence.ko.json)로 대체됐습니다. 읽으실 것은 video/voiceover-script.evidence.txt 입니다. 기록으로만 남겨 둡니다."
 }

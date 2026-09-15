@@ -148,5 +148,23 @@ export function captureFixture(today = F.TODAY) {
     }
   }
 
-  return { schedules, events, requests, payments, receipts, startedOn: ago(today, 30) }
+  //  ── 사무실 자재 재고 (0119 · 경영진용 영상 때문에 더했습니다) ───────────
+  //
+  //   경영진용 영상 PART 4 는 「한 번 입력이 여러 업무로 이어진다」를 보여
+  //   줍니다. 그중 **재고 차감**은 병원에 용기를 하나라도 드리고 왔을 때만
+  //   저장 결과에 나타납니다. 창고가 비어 있으면 드릴 수가 없어(저장이
+  //   막힙니다) 그 줄이 영영 안 나옵니다.
+  //
+  //   그래서 **창고에 있을 법한 최소 수량**만 둡니다. 실제 재고를 베낀 것이
+  //   아니고, 금액도 매출도 만들지 않습니다 — 개수뿐입니다.
+  //   50초짜리 짧은 영상은 자재를 드리지 않으므로 이 값을 쓰지 않습니다.
+  const officeStock = {
+    id: 1,
+    corrugated_box: 40,
+    plastic_container: 24,
+    bag: 60,
+    needle_box: 12,
+  }
+
+  return { schedules, events, requests, payments, receipts, officeStock, startedOn: ago(today, 30) }
 }

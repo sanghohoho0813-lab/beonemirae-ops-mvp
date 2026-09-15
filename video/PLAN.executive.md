@@ -1,3 +1,7 @@
+> ⚠ **대체됨 (0119)** — 이 기획은 「비원미래 AX Evidence Guide」로 이어졌습니다.
+> 실제로 만든 것은 `video/flows/evidence-guide.mjs` 이고, 읽으실 대본은
+> `video/voiceover-script.evidence.txt` 입니다. 이 파일은 기록으로만 남겨 둡니다.
+
 # 경영진용 소개영상 (Executive · 약 2분 25초) — 기획
 
 > **아직 만들지 않았습니다.** 이 문서와 대본(`video/voiceover-script.executive.txt`,

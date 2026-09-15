@@ -1,3 +1,7 @@
+> ⚠ **대체됨 (0119)** — 이 기획은 「비원미래 AX Evidence Guide」로 이어졌습니다.
+> 실제로 만든 것은 `video/flows/evidence-guide.mjs` 이고, 읽으실 대본은
+> `video/voiceover-script.evidence.txt` 입니다. 이 파일은 기록으로만 남겨 둡니다.
+
 비원미래 AX — 경영진용 소개영상 내레이션 대본
 전체 795자 · 차분히 읽으면 약 2분 8초 (영상 전체 약 2분 25초)
 

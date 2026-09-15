@@ -15,7 +15,11 @@
     "video:voices": "node video/voices.mjs",
     "video:sample": "node video/sample.mjs",
     "video:flicker": "node video/flicker.mjs",
-    "video:silent": "node video/record.mjs && node video/mux.mjs --silent"
+    "video:silent": "node video/record.mjs && node video/mux.mjs --silent",
+    "video:evidence": "node video/say.mjs video/config.evidence.json && node video/record.mjs video/config.evidence.json && node video/mux.mjs video/config.evidence.json",
+    "video:evidence:say": "node video/say.mjs video/config.evidence.json",
+    "video:evidence:rec": "node video/record.mjs video/config.evidence.json",
+    "video:evidence:silent": "node video/record.mjs video/config.evidence.json && node video/mux.mjs video/config.evidence.json --silent"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.1",
