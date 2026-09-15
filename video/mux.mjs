@@ -11,7 +11,11 @@ import { join, resolve } from 'node:path'
 //
 //   ⚠ Playwright 가 들고 다니는 ffmpeg 는 **webm 전용**입니다 (MP4·음성 불가).
 //     그래서 제대로 된 ffmpeg 를 따로 찾습니다 — 아래 순서로.
-//   ⚠ 음성은 여기서 넣지 않습니다. 다음 단계(AI 음성)에서 이 자리에 붙습니다.
+//   ⚠ 0114 — 음성을 여기서 붙입니다. 장면마다 「영상 몇 초 자리에서 말이
+//     시작되는가」가 timeline.json 에 적혀 있으므로, 그 자리에 wav 를 놓고
+//     하나로 섞습니다. **편집 프로그램이 필요 없습니다** — 녹화할 때 이미
+//     음성 길이에 맞춰 화면을 붙잡아 두었기 때문입니다.
+//   ⚠ 어느 회사 음성인지는 몰라도 됩니다. wav 와 시각만 봅니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const require_ = createRequire(import.meta.url)
@@ -72,19 +76,39 @@ const trimSec = webmSec !== null && tl.closeOffsetSec
   ? Math.max(0, Number((webmSec - tl.closeOffsetSec).toFixed(2)))
   : 0
 
+//  ── 음성 트랙 ──────────────────────────────────────────────────────────────
+//   장면 wav 를 각자의 시작 시각만큼 밀어 놓고 하나로 섞습니다.
+const voice = tl.voice ?? null
+const wavs = (voice?.scenes ?? []).map((s) => ({ ...s, file: join(OUT, voice.dir, `${s.id}.wav`) }))
+const missing = wavs.filter((w) => !existsSync(w.file))
+if (voice && missing.length) {
+  throw new Error(`음성 파일이 없습니다: ${missing.map((w) => w.file).join(', ')}\n  먼저 node video/say.mjs 를 돌려 주세요.`)
+}
+
+const filters = wavs.map((w, i) =>
+  //  adelay 는 밀리초입니다. 44100Hz 로 맞춰 둬야 섞을 때 떨어지지 않습니다.
+  `[${i + 1}:a]aresample=44100,adelay=${Math.round(w.at * 1000)}|${Math.round(w.at * 1000)}[v${i}]`)
+const mixIn = wavs.map((_, i) => `[v${i}]`).join('')
+const aChain = wavs.length
+  ? `${filters.join(';')};${mixIn}amix=inputs=${wavs.length}:normalize=0,alimiter=limit=0.95[aout]`
+  : null
+
 //  앞부분(자료 읽는 동안)을 잘라 내고, 30fps 고정 · H.264 로 다시 씁니다.
-//  ⚠ -ss 를 -i 앞에 두면 키프레임 단위로 건너뛰어 어긋납니다. 뒤에 둡니다.
+//  ⚠ -ss 는 **영상 입력에만** 겁니다. 출력 쪽에 걸면 음성까지 같이 밀려서
+//    말과 화면이 어긋납니다.
 const args = [
   '-hide_banner', '-loglevel', 'error', '-y',
-  '-i', webm,
-  '-ss', String(trimSec),
+  '-ss', String(trimSec), '-i', webm,
+  ...wavs.flatMap((w) => ['-i', w.file]),
+  ...(aChain ? ['-filter_complex', `${aChain};[0:v]scale=${width}:${height}:flags=lanczos,fps=${CFG.fps}[vout]`]
+    : ['-vf', `scale=${width}:${height}:flags=lanczos,fps=${CFG.fps}`]),
+  ...(aChain ? ['-map', '[vout]', '-map', '[aout]'] : []),
   //  끝도 잘라 냅니다. 녹화는 브라우저를 닫을 때까지 이어져서, 마지막 장면
   //  뒤에 2~3초가 덤으로 붙습니다 — 영상이 끝난 줄 모르고 멈춰 있게 됩니다.
   ...(tl.bodySec ? ['-t', String(tl.bodySec)] : []),
-  '-vf', `scale=${width}:${height}:flags=lanczos,fps=${CFG.fps}`,
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '20',
   '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
-  '-an',
+  ...(aChain ? ['-c:a', 'aac', '-b:a', '128k', '-ac', '1'] : ['-an']),
   mp4,
 ]
 execFileSync(FF, args, { stdio: 'inherit' })
@@ -98,6 +122,7 @@ try {
 const d = info.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/)
 const sec = d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : null
 const stream = (info.match(/Stream #0:0.*\n?/) ?? [''])[0].trim()
+const astream = (info.match(/Stream #0:1.*\n?/) ?? [''])[0].trim()
 const size = statSync(mp4).size
 
 console.log('')
@@ -105,6 +130,8 @@ console.log(`  MP4      ${mp4}`)
 console.log(`  크기     ${(size / 1024 / 1024).toFixed(1)} MB`)
 console.log(`  길이     ${sec === null ? '?' : sec.toFixed(2)}초`)
 console.log(`  영상     ${stream || `${width}x${height} @ ${CFG.fps}fps`}`)
+if (astream) console.log(`  음성     ${astream}`)
+if (voice) console.log(`  내레이션 ${voice.provider} · ${wavs.length}장면`)
 
 if (sec !== null) {
   const { minSec, maxSec } = CFG.length

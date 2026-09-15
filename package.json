@@ -10,7 +10,8 @@
     "lint": "tsc --noEmit",
     "video:rec": "node video/record.mjs",
     "video:mux": "node video/mux.mjs",
-    "video": "node video/record.mjs && node video/mux.mjs"
+    "video": "node video/say.mjs && node video/record.mjs && node video/mux.mjs",
+    "video:say": "node video/say.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.1",

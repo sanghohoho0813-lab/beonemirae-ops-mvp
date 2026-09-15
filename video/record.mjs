@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, readFileSync, renameSync, rmSync, readdirSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, renameSync, rmSync, readdirSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { chromium, EXEC } from '../test/browser/_pw.mjs'
 import * as W from '../test/browser/walk_lib.mjs'
@@ -18,7 +18,8 @@ import { captureFixture } from './fixture.mjs'
 //      TourOverlay 가 그리는 그대로입니다. 이 파일은 「누르는 손」일 뿐입니다.
 //    · **실제 서버에 아무것도 보내지 않습니다.** 검사들이 쓰는 흉내 서버
 //      (test/browser/walk_lib.mjs)를 그대로 씁니다. 저장 RPC 도 흉내만 냅니다.
-//    · 음성·자막·전환 효과는 여기서 하지 않습니다 (다음 단계).
+//    · **음성을 만들지 않습니다.** video/say.mjs 가 미리 만들어 둔 것을
+//      읽기만 합니다 — 그래서 이 파일은 어느 회사 음성인지 모릅니다.
 //
 //   영상에만 더한 것 — 딱 둘입니다
 //    ① 「예시 데이터 · 기능 시연용」 구석 표시  ← 대표님 지시
@@ -26,9 +27,10 @@ import { captureFixture } from './fixture.mjs'
 //   둘 다 **제품 코드가 아니라** 이 파일이 브라우저에 끼워 넣습니다.
 //   `src/` 는 한 줄도 바뀌지 않습니다.
 //
-//   ⚠ 자막은 일부러 넣지 않았습니다. 투어 설명 상자가 이미 같은 문장을 크게
-//     보여 주고 있어서, 한 화면에 같은 말이 두 번 적히면 지저분해집니다.
-//     아래쪽 자막 자리는 **AI 음성을 붙일 때** 그 음성이 읽는 문장으로 씁니다.
+//   ⚠ 0114 — 장면이 머무는 시간은 **음성 길이가 정합니다.** 고정된 초가
+//     아닙니다(video/out/voice/timing.json). 말이 끝나면 0.5초 쉬고 넘어가며,
+//     화면에서 할 일이 남아 있으면 그것까지 끝난 뒤에 넘어갑니다 —
+//     다음 장면의 말이 화면보다 앞서 나가지 않게 하려는 것입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname)
@@ -36,6 +38,14 @@ const cfgPath = process.argv[2] ?? join(ROOT, 'video/config.beonemirae.json')
 const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
 const OUT = join(ROOT, CFG.out.dir)
 const H = CFG.hold
+const SUB = CFG.subtitle ?? {}
+
+//  음성 — 먼저 video/say.mjs 를 돌려 두어야 합니다.
+const voicePath = join(OUT, 'voice/timing.json')
+if (!existsSync(voicePath)) {
+  throw new Error(`음성이 아직 없습니다: ${voicePath}\n  먼저 node video/say.mjs 를 돌려 주세요.`)
+}
+const VOICE = JSON.parse(readFileSync(voicePath, 'utf8'))
 
 mkdirSync(OUT, { recursive: true })
 
@@ -56,7 +66,7 @@ const FIX = captureFixture(TODAY)
 //     두고 **녹화하는 창에서만** 가립니다.
 //     `.justify-end` 로 좁힌 이유는 시연 화면의 「투어 시작」 카드도 같은
 //     단추를 품고 있어서입니다 — 그건 눌러야 하므로 가리면 안 됩니다.
-const OVERLAY = (watermark) => `
+const OVERLAY = (watermark, sub) => `
 (() => {
   const put = () => {
     if (document.getElementById('vid-layer')) return
@@ -93,11 +103,25 @@ const OVERLAY = (watermark) => `
       'border:2px solid rgba(49,130,246,.9)','opacity:0',
     ].join(';')
 
+    const cap = document.createElement('div')
+    cap.id = 'vid-cap'
+    cap.style.cssText = [
+      'position:absolute','left:50%','transform:translateX(-50%)',
+      'bottom:' + ${sub.bottomPx ?? 58} + 'px',
+      'max-width:' + ${sub.maxWidthPct ?? 64} + '%',
+      'padding:8px 16px','border-radius:12px',
+      //  읽을 만큼만 어둡게 — 뒤 화면이 비쳐 보이는 정도입니다.
+      'background:rgba(8,15,28,.68)','color:#fff',
+      'font:600 ' + ${sub.fontPx ?? 21} + 'px/1.45 system-ui,sans-serif',
+      'text-align:center','white-space:pre-line','word-break:keep-all',
+      'opacity:0','transition:opacity .16s linear',
+    ].join(';')
+
     const css = document.createElement('style')
     css.textContent = 'main > div.justify-end:has(> [data-tour-start]){display:none !important}'
     document.head.appendChild(css)
 
-    layer.append(mark, ring, cur)
+    layer.append(mark, cap, ring, cur)
     document.body.appendChild(layer)
 
     window.__vid = {
@@ -116,6 +140,8 @@ const OVERLAY = (watermark) => `
           { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' })
       },
       hide() { cur.style.opacity = '0'; ring.style.opacity = '0' },
+      say(lines) { cap.textContent = lines.join(String.fromCharCode(10)); cap.style.opacity = '1' },
+      sayOff() { cap.style.opacity = '0' },
     }
   }
   if (document.body) put()
@@ -265,7 +291,7 @@ await page.addInitScript(([k, u]) => {
   //  묶음은 접힌 기본 상태로 — 화면을 깔끔하게 시작합니다 (0110 메뉴 구조)
   window.sessionStorage.removeItem('beonemirae-ops:tour-run')
 }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }])
-await page.addInitScript(OVERLAY(CFG.watermark))
+await page.addInitScript(OVERLAY(CFG.watermark, SUB))
 
 const tPage = Date.now()
 await page.goto(`${CFG.baseUrl}/presentation`, { waitUntil: 'domcontentloaded' })
@@ -291,9 +317,9 @@ async function point(sel, { click = true } = {}) {
   const x = Math.round(box.x + box.width / 2)
   const y = Math.round(box.y + box.height / 2)
   await page.evaluate(([x, y, ms]) => window.__vid?.move(x, y, ms), [x, y, H.cursorMove])
-  await page.waitForTimeout(H.cursorMove + 120)
+  await page.waitForTimeout(H.cursorMove + 80)
   await page.evaluate(() => window.__vid?.tap())
-  await page.waitForTimeout(220)
+  await page.waitForTimeout(180)
   if (click) await el.click()
 }
 
@@ -328,6 +354,39 @@ async function checkOverlap(label) {
   if (px > 0) console.log(`  ⚠ ${label} — 설명 상자가 강조한 자리를 ${px}px² 덮고 있습니다`)
 }
 
+/**
+ * 한 장면 — **음성이 시간을 정합니다** (0114).
+ *
+ *   · 장면이 시작되는 순간을 적어 둡니다 (mux 가 그 자리에 음성을 붙입니다).
+ *   · 자막은 음성 길이를 글자 수로 나눠 조각마다 띄웁니다.
+ *   · `during` 에 넘긴 화면 동작은 자막 조각 사이사이에 끼워 넣습니다.
+ *     동작이 말보다 오래 걸리면 **끝날 때까지 기다린 뒤** 넘어갑니다 —
+ *     다음 장면의 말이 화면보다 앞서 나가지 않게 하려는 것입니다.
+ *   · 말이 끝나면 0.5초 쉬고 자막을 내립니다.
+ */
+const audio = []
+async function scene(id, { during = [] } = {}) {
+  const sc = VOICE.scenes.find((x) => x.id === id)
+  if (!sc) throw new Error(`대사가 없습니다: ${id}`)
+  audio.push({ id, label: sc.label, at: Number(at().toFixed(2)), sec: sc.sec })
+  mark(`${sc.label} — 음성 ${sc.sec.toFixed(1)}초`)
+
+  const t0 = Date.now()
+  let acc = 0
+  let ai = 0
+  for (const cue of sc.cues) {
+    await page.evaluate((l) => window.__vid?.say(l), cue.lines)
+    acc += cue.ms
+    if (during[ai]) { await during[ai](); ai += 1 }
+    const left = t0 + acc - Date.now()
+    if (left > 0) await page.waitForTimeout(left)
+  }
+  //  남은 동작이 있으면 말이 끝난 뒤에라도 마저 합니다.
+  while (during[ai]) { await during[ai](); ai += 1 }
+  await page.waitForTimeout(H.padAfterVoice)
+  await page.evaluate(() => window.__vid?.sayOff())
+}
+
 console.log('── 녹화 ──')
 mark('시작 화면 (심사 시연 안내)')
 await page.waitForTimeout(H.intro)
@@ -338,8 +397,7 @@ await page.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').w
 await page.evaluate(() => window.__vid?.hide())
 await expect(1, '①')
 await checkOverlap('①')
-mark('① AX 코치 — 무엇이 비어 있는가')
-await page.waitForTimeout(H.step1)
+await scene('s1')
 
 //  ① → ②  (읽는 단계이므로 「다음」)
 await point('[data-tour-next]')
@@ -347,8 +405,7 @@ await page.locator('[data-tour-title]:has-text("바로 업무로")').waitFor({ s
 await page.evaluate(() => window.__vid?.hide())
 await expect(2, '②')
 await checkOverlap('②')
-mark('② 추천에서 바로 업무로 (직접 누르는 단계)')
-await page.waitForTimeout(H.step2)
+await scene('s2')
 
 //  ② → ③  **실제 미션 단추**를 누릅니다 — 투어가 따라옵니다
 await point('[data-coach-go="collect-today"]')
@@ -357,16 +414,17 @@ await page.waitForTimeout(H.afterClick)
 await page.evaluate(() => window.__vid?.hide())
 await expect(3, '③')
 await checkOverlap('③')
-mark('③ 수거 1건 입력 (거래처 · 차량 · 수거량)')
 
-//  거래처 · 차량 · 수거량 — 사람이 채우는 속도로 하나씩
-const third = Math.round(H.step3 / 3)
-await page.locator('select').first().selectOption(C0)
-await page.waitForTimeout(third)
-await page.locator('select').nth(1).selectOption('v1')
-await page.waitForTimeout(third)
-await page.locator('[data-actual-amount]').fill('70')
-await page.waitForTimeout(third)
+//  거래처 · 차량 · 수거량 — **말하는 동안** 한 칸씩 채웁니다.
+await scene('s3', {
+  during: [
+    async () => { await page.locator('select').first().selectOption(C0) },
+    async () => {
+      await page.locator('select').nth(1).selectOption('v1')
+      await page.locator('[data-actual-amount]').fill('70')
+    },
+  ],
+})
 
 //  ③ → ④  저장. **흉내 서버가 받습니다 — 실제 저장이 아닙니다.**
 await point('[data-collect-save]')
@@ -375,8 +433,7 @@ await page.waitForTimeout(H.afterClick)
 await page.evaluate(() => window.__vid?.hide())
 await expect(4, '④')
 await checkOverlap('④')
-mark('④ 한 번 입력이 여러 곳으로')
-await page.waitForTimeout(H.step4)
+await scene('s4')
 
 //  ④ → ⑤
 await point('[data-tour-next]')
@@ -384,16 +441,15 @@ await page.locator('[data-tour-title]:has-text("실제 기록을 확인")').wait
 await page.evaluate(() => window.__vid?.hide())
 await expect(5, '⑤')
 await checkOverlap('⑤')
-mark('⑤ AX 가 실제 기록을 확인합니다')
-await page.waitForTimeout(H.step5)
+await scene('s5')
 
 //  마무리 — 투어가 성과 화면으로 넘겨 줍니다
 await point('[data-tour-next]')
 await page.waitForURL('**/performance', { timeout: 15000 })
-await page.waitForTimeout(600)
+await page.waitForTimeout(250)
 await page.evaluate(() => window.__vid?.hide())
-mark('마무리 — AX 도입 성과')
-await page.waitForTimeout(H.outro)
+await scene('outro')
+await page.waitForTimeout(H.outroTail)
 
 const tEnd = Date.now()
 mark('끝')
@@ -433,6 +489,10 @@ const timeline = {
   //   닫을 때까지」만 넘겨 주면 됩니다.
   closeOffsetSec: Number(((tClose - tReady) / 1000).toFixed(2)),
   bodySec: Number(((tEnd - tReady) / 1000).toFixed(2)),
+  //  ── 음성을 어디에 붙일지 ────────────────────────────────────────────
+  //   장면마다 「영상 몇 초 자리에서 시작하는가」입니다. mux 가 이 값으로
+  //   wav 를 제자리에 놓습니다. 화면과 말이 어긋날 수 없는 이유가 이것입니다.
+  voice: { provider: VOICE.provider, dir: 'voice', scenes: audio },
   marks,
   //  ⚠ 실제 서버에 나간 것이 없다는 증거를 같이 남깁니다.
   proof: {
@@ -447,7 +507,7 @@ writeFileSync(join(OUT, CFG.out.timeline), JSON.stringify(timeline, null, 2))
 
 console.log('')
 console.log(`  webm      ${webm}`)
-console.log(`  본문 길이 ${timeline.bodySec}초`)
+console.log(`  본문 길이 ${timeline.bodySec}초 (말 ${VOICE.totalSec.toFixed(1)}초)`)
 console.log(`  바깥으로 나간 요청 ${escaped.length}건 · 화면 오류 ${errors.length}건`)
 if (escaped.length) console.log('  ⚠ ' + escaped.slice(0, 3).join(' | '))
 if (errors.length) { console.log('  ⚠ ' + errors.slice(0, 2).join(' | ')); process.exitCode = 1 }

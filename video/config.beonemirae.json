@@ -7,23 +7,42 @@
   "output": { "width": 1280, "height": 720 },
   "fps": 30,
   "watermark": "예시 데이터 · 기능 시연용",
+  "narration": "video/narration.ko.json",
+
+  "//tts": "공급자를 바꾸려면 provider 이름만 갈면 됩니다 (video/tts/index.mjs 의 PROVIDERS). 녹화·자막·합치기 코드는 그대로입니다.",
+  "tts": {
+    "provider": "piper",
+    "voice": {
+      "//": "lengthScale 은 클수록 느립니다. 1.0 은 조금 빨라 설명 영상에는 1.05 가 편합니다. 흔들림(noise)은 기본값보다 낮춰 또박또박 읽게 했습니다.",
+      "lengthScale": 1.05,
+      "noiseScale": 0.5,
+      "noiseW": 0.6,
+      "sentenceSilence": 0.35
+    }
+  },
+
+  "//subtitle": "하단 가운데. 오른쪽 아래 예시 표시와 겹치지 않게 폭을 제한합니다.",
+  "subtitle": {
+    "charsPerLine": 30,
+    "bottomPx": 58,
+    "maxWidthPct": 64,
+    "fontPx": 21
+  },
+
   "out": {
     "dir": "video/out",
     "webm": "demo.webm",
     "mp4": "beonemirae-ax-60s.mp4",
     "timeline": "timeline.json"
   },
-  "length": { "minSec": 45, "maxSec": 70 },
-  "//hold": "각 장면을 몇 ms 붙잡을지. 다음 단계(AI 음성)에서는 이 값이 음성 길이로 바뀝니다.",
+  "length": { "minSec": 55, "maxSec": 65 },
+
+  "//hold": "말이 끝난 뒤 쉬는 시간과 손동작 시간. 장면 체류시간은 음성 길이에서 나오므로 여기에 없습니다.",
   "hold": {
-    "intro": 2000,
-    "step1": 9000,
-    "step2": 5000,
-    "step3": 7000,
-    "step4": 9000,
-    "step5": 9000,
-    "outro": 4000,
-    "cursorMove": 800,
-    "afterClick": 900
+    "intro": 400,
+    "padAfterVoice": 400,
+    "outroTail": 250,
+    "cursorMove": 320,
+    "afterClick": 350
   }
 }
