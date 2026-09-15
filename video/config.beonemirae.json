@@ -1,0 +1,29 @@
+{
+  "tenant": "beonemirae",
+  "title": "비원미래 AX — 60초 심사 시연",
+  "baseUrl": "http://localhost:4173",
+  "//viewport": "브라우저 크기. 720 으로 녹화하면 ④단계(저장 결과)처럼 긴 화면에서 설명 상자가 내용을 덮습니다 — 투어는 900 높이에서 맞춰져 있습니다. 16:9 를 유지한 채 900 으로 찍고 아래 output 크기로 줄입니다.",
+  "viewport": { "width": 1600, "height": 900 },
+  "output": { "width": 1280, "height": 720 },
+  "fps": 30,
+  "watermark": "예시 데이터 · 기능 시연용",
+  "out": {
+    "dir": "video/out",
+    "webm": "demo.webm",
+    "mp4": "beonemirae-ax-60s.mp4",
+    "timeline": "timeline.json"
+  },
+  "length": { "minSec": 45, "maxSec": 70 },
+  "//hold": "각 장면을 몇 ms 붙잡을지. 다음 단계(AI 음성)에서는 이 값이 음성 길이로 바뀝니다.",
+  "hold": {
+    "intro": 2000,
+    "step1": 9000,
+    "step2": 5000,
+    "step3": 7000,
+    "step4": 9000,
+    "step5": 9000,
+    "outro": 4000,
+    "cursorMove": 800,
+    "afterClick": 900
+  }
+}

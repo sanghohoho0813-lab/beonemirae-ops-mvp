@@ -1,0 +1,120 @@
+import { existsSync, readFileSync, statSync, mkdirSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { createRequire } from 'node:module'
+import { join, resolve } from 'node:path'
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  0111 — 심사 시연 영상 ②  「webm → 어디서나 열리는 MP4」
+//
+//   Playwright 가 남기는 것은 webm 입니다. 카카오톡·메일·발표 노트북에서
+//   바로 열리려면 H.264 MP4 여야 합니다.
+//
+//   ⚠ Playwright 가 들고 다니는 ffmpeg 는 **webm 전용**입니다 (MP4·음성 불가).
+//     그래서 제대로 된 ffmpeg 를 따로 찾습니다 — 아래 순서로.
+//   ⚠ 음성은 여기서 넣지 않습니다. 다음 단계(AI 음성)에서 이 자리에 붙습니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const require_ = createRequire(import.meta.url)
+
+/** ffmpeg 를 어디서 찾을지 — 환경변수 → ffmpeg-static → 시스템 */
+function ffmpegPath() {
+  if (process.env.FFMPEG && existsSync(process.env.FFMPEG)) return process.env.FFMPEG
+  try {
+    const p = require_('ffmpeg-static')
+    const bin = typeof p === 'string' ? p : p?.default
+    if (bin && existsSync(bin)) return bin
+  } catch { /* 없으면 다음 자리 */ }
+  try {
+    execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' })
+    return 'ffmpeg'
+  } catch { /* 없습니다 */ }
+  throw new Error(
+    'ffmpeg 를 못 찾았습니다.\n'
+    + '  · npm i -D ffmpeg-static  으로 넣거나\n'
+    + '  · FFMPEG=/어딘가/ffmpeg 로 자리를 알려 주세요.\n'
+    + '  ⚠ Playwright 가 들고 있는 ffmpeg 는 webm 전용이라 쓸 수 없습니다.')
+}
+
+const ROOT = resolve(new URL('..', import.meta.url).pathname)
+const cfgPath = process.argv[2] ?? join(ROOT, 'video/config.beonemirae.json')
+const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
+const OUT = join(ROOT, CFG.out.dir)
+mkdirSync(OUT, { recursive: true })
+
+const webm = join(OUT, CFG.out.webm)
+const mp4 = join(OUT, CFG.out.mp4)
+const tlPath = join(OUT, CFG.out.timeline)
+if (!existsSync(webm)) throw new Error(`녹화본이 없습니다: ${webm}\n  먼저 node video/record.mjs 를 돌려 주세요.`)
+
+const tl = existsSync(tlPath) ? JSON.parse(readFileSync(tlPath, 'utf8')) : { marks: [] }
+const FF = ffmpegPath()
+const { width, height } = CFG.output ?? CFG.viewport
+
+/** ffmpeg 가 스스로 말하는 길이 (ffprobe 없이) */
+function seconds(file) {
+  let txt = ''
+  try { execFileSync(FF, ['-hide_banner', '-i', file], { stdio: ['ignore', 'pipe', 'pipe'] }) }
+  catch (e) { txt = String(e.stderr ?? '') }
+  const m = txt.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/)
+  return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : null
+}
+
+//  ── 앞부분을 얼마나 잘라야 하는가 ──────────────────────────────────────────
+//   녹화가 **언제 시작되는지**는 우리가 정하지 못합니다(브라우저가 첫 프레임을
+//   만드는 순간). 대신 끝나는 시점은 확실합니다 — 브라우저를 닫는 순간입니다.
+//   그래서 끝에서부터 되짚습니다.
+//
+//     잘라 낼 앞부분 = 영상 전체 길이 − (본문 시작부터 닫을 때까지)
+//
+//   시계로만 앞에서부터 셌더니 2초쯤 어긋나 장면 시각이 맞지 않았습니다.
+const webmSec = seconds(webm)
+const trimSec = webmSec !== null && tl.closeOffsetSec
+  ? Math.max(0, Number((webmSec - tl.closeOffsetSec).toFixed(2)))
+  : 0
+
+//  앞부분(자료 읽는 동안)을 잘라 내고, 30fps 고정 · H.264 로 다시 씁니다.
+//  ⚠ -ss 를 -i 앞에 두면 키프레임 단위로 건너뛰어 어긋납니다. 뒤에 둡니다.
+const args = [
+  '-hide_banner', '-loglevel', 'error', '-y',
+  '-i', webm,
+  '-ss', String(trimSec),
+  //  끝도 잘라 냅니다. 녹화는 브라우저를 닫을 때까지 이어져서, 마지막 장면
+  //  뒤에 2~3초가 덤으로 붙습니다 — 영상이 끝난 줄 모르고 멈춰 있게 됩니다.
+  ...(tl.bodySec ? ['-t', String(tl.bodySec)] : []),
+  '-vf', `scale=${width}:${height}:flags=lanczos,fps=${CFG.fps}`,
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', '20',
+  '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+  '-an',
+  mp4,
+]
+execFileSync(FF, args, { stdio: 'inherit' })
+
+let info = ''
+try {
+  execFileSync(FF, ['-hide_banner', '-i', mp4], { stdio: ['ignore', 'pipe', 'pipe'] })
+} catch (e) {
+  info = String(e.stderr ?? '')
+}
+const d = info.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/)
+const sec = d ? Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]) : null
+const stream = (info.match(/Stream #0:0.*\n?/) ?? [''])[0].trim()
+const size = statSync(mp4).size
+
+console.log('')
+console.log(`  MP4      ${mp4}`)
+console.log(`  크기     ${(size / 1024 / 1024).toFixed(1)} MB`)
+console.log(`  길이     ${sec === null ? '?' : sec.toFixed(2)}초`)
+console.log(`  영상     ${stream || `${width}x${height} @ ${CFG.fps}fps`}`)
+
+if (sec !== null) {
+  const { minSec, maxSec } = CFG.length
+  if (sec < minSec || sec > maxSec) {
+    console.log(`  ⚠ 목표 길이(${minSec}~${maxSec}초)를 벗어났습니다 — config 의 hold 값을 조정하세요.`)
+    process.exitCode = 1
+  }
+}
+if (tl.marks?.length) {
+  console.log('')
+  console.log('  장면 (영상 시작 기준)')
+  for (const m of tl.marks) console.log(`    ${String(m.sec.toFixed(1)).padStart(5)}s  ${m.label}`)
+}
