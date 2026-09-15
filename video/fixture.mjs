@@ -25,6 +25,9 @@ import * as F from '../test/browser/perf_fixtures.mjs'
 //  ⚠ **매출은 한 건도 만들지 않았습니다.** 주문·청구·입금을 지어내면 금액이
 //    생깁니다. 없는 매출을 만드는 것은 이 시스템이 하지 않기로 한 일입니다.
 //    그래서 「매출 증거」는 0% 로 남습니다 — 그것도 사실입니다.
+//  ⚠ 청구·입금은 **미수 건수를 보여 주기 위한 최소한**만 둡니다 (0113).
+//    검사용 기본 자료는 3년치라 「입금 확인이 안 된 청구가 648건」으로 떴는데,
+//    심사 영상에서 그 숫자는 「밀린 더미」로 읽힙니다.
 //  ⚠ 회사의 실제 실적·수치가 아닙니다. 그래서 화면에 「예시 데이터 · 기능
 //    시연용」이 항상 떠 있습니다.
 //  ⚠ 날짜는 **오늘에서 며칠 전**으로만 셉니다. 무작위가 없으므로 같은 날
@@ -114,5 +117,36 @@ export function captureFixture(today = F.TODAY) {
     req('vr3', 0, 2, '추가수거', null),
   ]
 
-  return { schedules, events, requests, startedOn: ago(today, 30) }
+  //  ── 청구 · 입금 ────────────────────────────────────────────────────────
+  //   최근 8개월 청구 8건 중 3건 입금 완료 → **입금 확인이 안 된 청구 5건**.
+  //   코치의 「입금된 청구 1건을 통장 내역과 맞춰 주세요」가 이 숫자를 말합니다.
+  //   ⚠ 금액은 예시 한 가지(30만원)뿐이고 영상 어디에도 나오지 않습니다 —
+  //     코치 카드는 **건수만** 말합니다.
+  const payments = []
+  const receipts = []
+  const AMOUNT = 300000
+  for (let k = 0; k < 8; k += 1) {
+    const d = new Date(`${today}T00:00:00+09:00`)
+    d.setMonth(d.getMonth() - (k + 1))
+    const month = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 7)
+    const c = cl[k % cl.length]
+    //  옛날 달 3건만 입금이 끝난 상태입니다 (k 가 클수록 옛날)
+    const paid = k >= 5
+    payments.push({
+      id: `vp${k + 1}`, client_id: c.id, billing_month: month, amount: AMOUNT,
+      status: paid ? '입금완료' : '미수금', method: '무통장',
+      paid_at: paid ? `${month}-28T01:00:00Z` : null, memo: '', demo_session_id: null,
+      snapshot: { kind: '정기', confirmedAt: `${month}-25T00:00:00Z`, scheduleIds: [], materialIds: [] },
+      canceled_at: null, created_at: `${month}-25T00:00:00Z`, updated_at: `${month}-25T00:00:00Z`,
+    })
+    if (paid) {
+      receipts.push({
+        id: `vpr${k + 1}`, payment_id: `vp${k + 1}`, received_on: `${month}-28`, amount: AMOUNT,
+        method: '계좌이체', memo: '', actor_id: null, actor_name: '대표',
+        created_at: `${month}-28T00:00:00Z`, updated_at: `${month}-28T00:00:00Z`,
+      })
+    }
+  }
+
+  return { schedules, events, requests, payments, receipts, startedOn: ago(today, 30) }
 }

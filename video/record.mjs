@@ -222,6 +222,19 @@ await ctx.route('**/rest/v1/experiment_settings*', (r) => r.fulfill({
     ? { id: 1, start_date: startedOn }
     : [{ id: 1, start_date: startedOn }]),
 }))
+//  청구 · 입금 — 코치가 말하는 「입금 확인이 안 된 청구 N건」이 여기서 나옵니다.
+//  ⚠ 검사용 기본 자료(3년치)를 그대로 쓰면 648건이 됩니다 — 심사 영상에서는
+//    밀린 더미로 읽히므로 촬영용 최소한(미수 5건)으로 덮어씁니다.
+for (const [table, rows] of [['payments', FIX.payments], ['payment_receipts', FIX.receipts]]) {
+  await ctx.route(`**/rest/v1/${table}*`, (r) => {
+    if (r.request().method() !== 'GET') {
+      state.writes.push({ url: table, method: r.request().method() })
+      return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    }
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) })
+  })
+}
+
 //  병원이 포털로 직접 올린 요청 — 「병원 직접사용」 영역의 근거입니다.
 await ctx.route('**/rest/v1/client_requests*', (r) => {
   if (r.request().method() !== 'GET') {
