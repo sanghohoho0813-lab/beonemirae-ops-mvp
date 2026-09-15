@@ -1,7 +1,11 @@
 import { chromium, EXEC } from './_pw.mjs'
 
-//  관리자 사이드바에서 「운영 도구」·「관리」가 접혀서 시작하는지,
-//  눌러서 펼쳐지는지, 그 안의 화면에 들어가면 저절로 펼쳐지는지 확인합니다.
+//  관리자 사이드바의 묶음이 접혀서 시작하는지, 눌러서 펼쳐지는지,
+//  그 안의 화면에 들어가면 저절로 펼쳐지는지 확인합니다.
+//
+//   ⚠ 0110 — 묶음이 여섯으로 다시 짜였습니다. **「오늘 업무」만 펼쳐진 채로**
+//     시작하고 나머지 다섯은 접혀 있습니다. 여기서는 「정산·매출」과 「관리」로
+//     확인합니다 — 규칙이 같으므로 둘이면 충분합니다.
 
 const BASE = 'http://localhost:4173'
 const SHOT = (process.env.TEST_OUT ?? '/tmp')
@@ -41,17 +45,22 @@ await p.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2200)
 
 const aside = p.locator('aside')
-const tools = p.locator('[data-nav-group="tools"]')
+const tools = p.locator('[data-nav-group="money"]')
 const admin = p.locator('[data-nav-group="admin"]')
-const toolsBtn = p.locator('[data-nav-group-header="운영 도구"]')
+const toolsBtn = p.locator('[data-nav-group-header="정산·매출"]')
 const adminBtn = p.locator('[data-nav-group-header="관리"]')
+const todayBtn = p.locator('[data-nav-group-header="오늘 업무"]')
 
-// 1) 처음에는 접혀 있어야 합니다
-ok(await toolsBtn.isVisible(), '「운영 도구」 제목이 보임')
+// 1) 처음에는 「오늘 업무」만 펼쳐져 있어야 합니다
+ok(await toolsBtn.isVisible(), '「정산·매출」 제목이 보임')
 ok(await adminBtn.isVisible(), '「관리」 제목이 보임')
-ok((await tools.count()) === 0, '처음엔 운영 도구가 접혀 있음')
+ok((await tools.count()) === 0, '처음엔 정산·매출이 접혀 있음')
 ok((await admin.count()) === 0, '처음엔 관리가 접혀 있음')
-ok(await toolsBtn.getAttribute('aria-expanded') === 'false', '운영 도구 aria-expanded=false')
+ok(await toolsBtn.getAttribute('aria-expanded') === 'false', '정산·매출 aria-expanded=false')
+//  ⚠ 0110 — 매일 쓰는 묶음 하나만 펼쳐 둡니다. 전부 접으면 목차가 제목만
+//    남아 「메뉴가 사라졌다」로 읽힙니다.
+ok((await p.locator('[data-nav-group="today"]').count()) === 1, '**「오늘 업무」는 펼쳐진 채로 시작**')
+ok(await todayBtn.getAttribute('aria-expanded') === 'true', '오늘 업무 aria-expanded=true')
 
 // 접혀 있으면 안쪽 메뉴명이 사이드바에 없어야 합니다
 const asideText = () => aside.textContent().then((t) => t ?? '')
@@ -59,12 +68,13 @@ const t0 = await asideText()
 for (const m of ['미수금 관리', '감사로그', '사용자 관리', '엑셀 가져오기']) {
   ok(!t0.includes(m), `접힌 상태에서 「${m}」 안 보임`)
 }
-//  ⚠ 0076 — **자재 관리와 수거이력은 접히지 않습니다.** 매일 여는 화면이라
-//    「핵심 운영」으로 올라갔습니다(대표님 지시). 접히는 쪽에 두면 재고를
-//    보려고 매번 묶음을 펼쳐야 합니다.
-ok(t0.includes('대시보드') && t0.includes('수거 입력') && t0.includes('거래처'), '매일 쓰는 메뉴는 그대로 보임')
-ok(t0.includes('자재 관리'), '**자재 관리는 접혀도 보임** (매일 여는 화면)')
-ok(t0.includes('수거이력'), '**수거이력도 접혀도 보임** (잘못된 입력을 찾는 자리)')
+//  ⚠ 0110 — 매일 누르는 넷(폰 하단 고정 탭과 같은 항목)만 처음부터 보입니다.
+//    자재 관리·수거이력은 「현장·운영」으로 내려갔습니다 — 매일이 아니라
+//    **무언가 확인할 때** 여는 자리입니다.
+ok(t0.includes('대시보드') && t0.includes('오늘 일정') && t0.includes('수거 입력') && t0.includes('거래처'),
+  '매일 쓰는 넷은 처음부터 보임')
+ok(!t0.includes('자재 관리'), '자재 관리는 「현장·운영」 안에 접혀 있음')
+ok(!t0.includes('수거이력'), '수거이력도 「현장·운영」 안에 접혀 있음')
 
 // 접힌 묶음 개수 배지
 //  숫자를 여기에 적어 두면 메뉴가 늘 때마다 검사가 아니라 기대값을 고치게
@@ -73,9 +83,9 @@ const badgeOf = (name) => {
   const m = t0.replace(/\s+/g, ' ').match(new RegExp(`${name}\\s*(\\d+)`))
   return m ? Number(m[1]) : -1
 }
-const toolBadge = badgeOf('운영 도구')
+const toolBadge = badgeOf('정산·매출')
 const adminBadge = badgeOf('관리')
-ok(toolBadge > 0, '운영 도구에 개수 배지가 있음', String(toolBadge))
+ok(toolBadge > 0, '정산·매출에 개수 배지가 있음', String(toolBadge))
 ok(adminBadge > 0, '관리에 개수 배지가 있음', String(adminBadge))
 
 // 사이드바 세로 길이 — 접히면 짧아져야 합니다
@@ -85,20 +95,21 @@ await p.screenshot({ path: `${SHOT}/nav-collapsed.png`, fullPage: false })
 // 2) 눌러서 펼치기
 await toolsBtn.click()
 await p.waitForTimeout(350)
-ok((await tools.count()) === 1, '누르면 운영 도구가 펼쳐짐')
+ok((await tools.count()) === 1, '누르면 정산·매출이 펼쳐짐')
 ok((await asideText()).includes('미수금 관리'), '펼치면 「미수금 관리」가 보임')
-//  배지 숫자 = 펼쳤을 때 실제로 있는 줄 수 (쓸 수 있는 것 + 예정)
-const usable = await tools.locator('a').count()
-const planned = await tools.locator('[data-nav-planned]').count()
-ok(toolBadge === usable + planned, '배지 숫자가 실제 줄 수와 같음',
-  `배지 ${toolBadge} = 쓸 수 있는 것 ${usable} + 예정 ${planned}`)
-ok(planned > 0, '「추가 개발 예정」이 운영 도구 안에 함께 들어 있음', `${planned}가지`)
-ok((await asideText()).includes('추가 개발 예정'), '예정 줄에 소제목이 붙음')
+//  배지 숫자 = 펼쳤을 때 실제로 있는 줄 수
+ok(toolBadge === (await tools.locator('a').count()), '배지 숫자가 실제 줄 수와 같음',
+  `배지 ${toolBadge} · 실제 ${await tools.locator('a').count()}`)
 await adminBtn.click()
 await p.waitForTimeout(350)
 ok((await asideText()).includes('감사로그'), '펼치면 「감사로그」가 보임')
-ok(adminBadge === (await admin.locator('a').count()), '관리 배지도 실제 줄 수와 같음',
-  `배지 ${adminBadge} · 실제 ${await admin.locator('a').count()}`)
+//  ⚠ 0110 — 「추가 개발 예정」은 「활용 계획」과 같은 자리(관리)로 옮겼습니다.
+const usable = await admin.locator('a').count()
+const planned = await admin.locator('[data-nav-planned]').count()
+ok(planned > 0, '「추가 개발 예정」이 관리 안에 함께 들어 있음', `${planned}가지`)
+ok((await asideText()).includes('추가 개발 예정'), '예정 줄에 소제목이 붙음')
+ok(adminBadge === usable + planned, '관리 배지도 실제 줄 수와 같음',
+  `배지 ${adminBadge} = 쓸 수 있는 것 ${usable} + 예정 ${planned}`)
 const h1 = await aside.evaluate((el) => el.scrollHeight)
 ok(h1 > h0, '펼치면 메뉴가 길어짐', `${h0}px → ${h1}px`)
 await p.screenshot({ path: `${SHOT}/nav-expanded.png`, fullPage: false })
@@ -109,7 +120,7 @@ await adminBtn.click()
 await p.waitForTimeout(300)
 await p.reload({ waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2000)
-ok((await p.locator('[data-nav-group="tools"]').count()) === 0, '새로고침해도 접힌 상태를 기억함')
+ok((await p.locator('[data-nav-group="money"]').count()) === 0, '새로고침해도 접힌 상태를 기억함')
 
 // 4) 펼친 상태도 기억되어야 합니다
 await p.locator('[data-nav-group-header="관리"]').click()
@@ -125,15 +136,15 @@ await p.evaluate(() => window.localStorage.removeItem('beonemirae-ops:nav-open')
 //    저절로 펼쳐지는가」이지 특정 화면이 아닙니다.
 await p.goto(`${BASE}/receivables`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2000)
-ok((await p.locator('[data-nav-group="tools"]').count()) === 1, '접힌 묶음 안쪽 화면으로 들어가면 저절로 펼쳐짐')
-const active = await p.locator('aside a[href="/materials"]').count()
+ok((await p.locator('[data-nav-group="money"]').count()) === 1, '접힌 묶음 안쪽 화면으로 들어가면 저절로 펼쳐짐')
+const active = await p.locator('aside a[href="/receivables"]').count()
 ok(active === 1, '지금 보는 화면이 메뉴에 표시됨')
 ok((await p.locator('[data-nav-group="admin"]').count()) === 0, '상관없는 「관리」는 접힌 채로 둠')
 
 // 6) 「추가 개발 예정」은 이제 따로 있는 묶음이 아닙니다
-//    운영 도구 안으로 들어갔습니다 — 둘 다 업무 도구라 목차를 두 칸
-//    차지할 이유가 없었습니다. 옛 묶음이 남아 있으면 같은 것이 두 군데
-//    보입니다.
+//    「활용 계획」과 같은 자리(관리)로 들어갔습니다 — 둘 다 「앞으로
+//    무엇을 할 것인가」라 목차를 두 칸 차지할 이유가 없습니다. 옛 묶음이
+//    남아 있으면 같은 것이 두 군데 보입니다.
 ok((await p.locator('[data-nav-group-header="추가 개발 예정"]').count()) === 0,
   '「추가 개발 예정」은 따로 있는 묶음이 아님')
 //    접힌 상태에서는 예정 항목도 같이 숨습니다.
@@ -146,7 +157,7 @@ ok(!(await asideText()).includes('올바로 API 연동'), '접으면 예정 항�
 //    ⚠ 재는 자리를 옮겼습니다. 예전 보장은 「눌러도 아무 일이 없다」였는데,
 //      대표님 지시로 누르면 「계획 중」 미리보기가 열립니다. 지키는 것은
 //      그대로입니다 — 링크가 아니고, 화면을 옮기지 않고, 되는 척하지 않습니다.
-await p.locator('[data-nav-group-header="운영 도구"]').click()
+await p.locator('[data-nav-group-header="관리"]').click()
 await p.waitForTimeout(350)
 const lock = p.locator('[data-nav-planned]').first()
 const label = (await lock.textContent()) ?? ''

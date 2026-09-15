@@ -106,84 +106,82 @@ async function open(role, width = 390, height = 900) {
   ok(/이 시스템을 만든 이유/.test(sheet), '맨 위에 이 시스템을 만든 이유')
   ok((await p.locator('[data-dev-request-more]').count()) === 1, '사용 후기 남기기도 그대로')
 
-  //  묶음 제목이 PC 와 같아야 합니다.
-  //  「운영 도구」와 「추가 개발 예정」은 한 묶음으로 합쳤습니다 — 둘 다
-  //  업무 도구인데 목차만 둘로 갈려 있었습니다.
-  for (const t of ['병원 서비스 · 성과', '운영 도구', '관리']) {
+  //  ⚠ 0110 — 묶음이 **여섯**으로 다시 짜였습니다 (lib/nav.ts 의 NAV_GROUPS).
+  //    폰 「더보기」는 그중 첫 묶음(오늘 업무)만 빼고 그대로 읽습니다 —
+  //    그 넷은 아래 고정 탭이 맡고 있어 두 자리에 둘 이유가 없습니다.
+  for (const t of ['현장·운영', '병원 서비스', '정산·매출', 'AX·심사', '관리']) {
     ok(sheet.includes(t), `묶음 제목 「${t}」`)
   }
+  ok(!sheet.includes('운영 도구'), '옛 묶음 이름 「운영 도구」가 안 남음')
 
-  //  순서 — 병원 서비스 → 운영 도구 → 추가 개발 예정 → 관리.
+  //  순서 — PC 사이드바와 같은 차례여야 합니다.
   //  본문 글자로 찾으면 「자재 관리」의 '관리' 가 먼저 걸립니다. 화면에
   //  그려진 자리(y 좌표)로 봅니다.
   const topOf = async (sel) =>
     await p.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().top + window.scrollY))
-  const svcTop = await topOf('[data-more-section="more-service"]')
-  const toolTop = await topOf('[data-more-section="more-tools"]')
-  const adminTop = await topOf('[data-more-section="more-admin"]')
-  ok(svcTop < toolTop, '병원 서비스가 운영 도구보다 위')
-  ok(toolTop < adminTop, '운영 도구가 관리보다 위 — PC 사이드바와 같은 차례')
+  const tops = []
+  for (const id of ['ops', 'service', 'money', 'ax', 'admin']) {
+    tops.push(await topOf(`[data-more-section="more-${id}"]`))
+  }
+  ok(tops.every((v, i) => i === 0 || tops[i - 1] < v),
+    '다섯 묶음이 PC 사이드바와 같은 차례', tops.join(' < '))
 
-  //  각 묶음의 항목이 PC 목록과 같은 순서인지
-  const svc = await p.locator('[data-more-section="more-service"] [data-more-item]').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('data-more-item')))
+  //  각 묶음의 항목이 PC 목록과 **같은 순서**인지.
+  //  ⚠ 접혀 있어도 DOM 에는 있으므로 펼치지 않고 읽을 수 있습니다.
+  const itemsOf = async (id) =>
+    await p.locator(`[data-more-section="more-${id}"] [data-more-item]`).evaluateAll(
+      (els) => els.map((e) => e.getAttribute('data-more-item')))
+
   //  Pilot 동안 내려 둔 것은 빼고 견줍니다 (0080). 순서 자체는 그대로
   //  지켜져야 하므로 목록을 지우지 않고 **걸러서** 비교합니다.
-  //  0083 — 「거래처 인사이트」가 병원 서비스 묶음에 들어왔습니다.
-  //  0108 — 「AX 코치」가 성과 **앞**에 들어왔습니다. 오늘 할 일이 먼저이고
-  //         결과는 그다음입니다 (lib/nav.ts 의 SERVICE_NAV 와 같은 차례).
-  const wantSvc = ['/revenue', '/requests', '/insight', '/supplies', '/reports', '/ax-coach', '/performance']
-    .filter((r) => !(PILOT.requests && r === '/requests') && !(PILOT.supplies && r === '/supplies'))
-  ok(svc.join(',') === wantSvc.join(','),
-    `병원 서비스 ${wantSvc.length}개가 PC 와 같은 순서`, `${svc.join(',')} ← 기대 ${wantSvc.join(',')}`)
-  //  소모품 주문(/supplies)은 폰에서도 열려야 합니다 — 사무실이 현장에서 씁니다
-  if (!skipIfHidden('supplies', '폰 더보기의 「소모품 주문」')) {
-    ok(svc.includes('/supplies'), '소모품 주문이 폰 더보기에도 있음')
+  const keep = (list) =>
+    list.filter((r) => !(PILOT.requests && r === '/requests') && !(PILOT.supplies && r === '/supplies'))
+
+  const want = {
+    ops: ['/history', '/plan', '/dispatch', '/materials'],
+    service: ['/requests', '/reports', '/insight', '/supplies'],
+    money: ['/billing', '/receivables', '/pricing', '/bank', '/revenue', '/stats'],
+    //  0110 — 「심사 시연」·「만든 이유」가 **처음으로** 목차에 올라왔습니다.
+    ax: ['/ax-coach', '/performance', '/readiness', '/presentation', '/why'],
+    admin: ['/settings', '/users', '/dev-requests', '/import', '/audit', '/roadmap'],
+  }
+  for (const [id, list] of Object.entries(want)) {
+    const got = await itemsOf(id)
+    const exp = keep(list)
+    ok(got.join(',') === exp.join(','), `「${id}」 묶음이 PC 와 같은 순서`, `${got.join(',')} ← 기대 ${exp.join(',')}`)
   }
 
-  const tools = await p.locator('[data-more-section="more-tools"] [data-more-item]').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('data-more-item')))
-  //  ⚠ 0076 — **자재 관리와 수거이력이 「핵심 운영」으로 올라갔습니다**
-  //    (대표님 지시). 매일 여는 화면인데 도구 열 줄 사이에 묻혀 있었습니다.
-  //    목록을 통째로 못 박아 두면 메뉴를 손볼 때마다 검사가 깨지면서 정작
-  //    「폰과 PC 가 같은 순서인가」는 안 보게 됩니다. 순서 규칙만 봅니다.
-  ok(tools.join(',') === '/plan,/dispatch,/billing,/pricing,/receivables,/bank,/stats,/roadmap',
-    '운영 도구가 PC 와 같은 순서', tools.join(','))
   //  ⚠ 같은 메뉴가 두 자리에 있으면 어느 쪽이 진짜인지 헷갈립니다.
-  ok(!tools.includes('/materials') && !tools.includes('/history'),
-    '**자재 관리·수거이력은 도구에 남아 있지 않음** (핵심으로 올라갔습니다)', tools.join(','))
-  //  거래처 점검(/pricing)은 예전 더보기에 아예 없었습니다 — 폰에서는 못 열었습니다
-  ok(tools.includes('/pricing'), '거래처 점검이 폰에서도 열림 (예전에는 목록에 없었음)')
+  const all = [...(await itemsOf('ops')), ...(await itemsOf('service')), ...(await itemsOf('money')),
+    ...(await itemsOf('ax')), ...(await itemsOf('admin'))]
+  ok(new Set(all).size === all.length, '한 메뉴가 두 묶음에 있지 않음', all.join(','))
+  //  소모품 주문(/supplies)은 폰에서도 열려야 합니다 — 사무실이 현장에서 씁니다
+  if (!skipIfHidden('supplies', '폰 더보기의 「소모품 주문」')) {
+    ok(all.includes('/supplies'), '소모품 주문이 폰 더보기에도 있음')
+  }
 
-  //  운영 도구 열 개는 접혀서 시작합니다 — 펼치면 화면 두 개를 씁니다.
-  //  그 아래 「추가 개발 예정 · 관리」가 첫 화면 안에 들어오는 것이 목적입니다.
+  //  ⚠ 0110 — 폰에서도 **전부 접힌 채로** 시작합니다. 매일 누르는 넷은
+  //    아래 고정 탭에 있으므로, 더보기는 목차만 짧게 보여 주는 자리입니다.
   ok(!(await p.locator('[data-more-item="/pricing"]').first().isVisible()),
-    '운영 도구는 접힌 채로 시작 — 스크롤을 줄입니다')
-  ok((await p.locator('[data-more-toggle="more-tools"]').count()) === 1, '펼쳐보기 단추가 있음')
-  await p.click('[data-more-toggle="more-tools"]')
+    '더보기의 묶음은 접힌 채로 시작 — 스크롤을 줄입니다')
+  ok((await p.locator('[data-more-toggle="more-money"]').count()) === 1, '펼쳐보기 단추가 있음')
+  await p.click('[data-more-toggle="more-money"]')
   await p.waitForTimeout(400)
   ok(await p.locator('[data-more-item="/pricing"]').first().isVisible(), '누르면 펼쳐짐')
 
-  const admin = await p.locator('[data-more-section="more-admin"] [data-more-item]').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('data-more-item')))
-  //  0096 — 「심사 준비도」가 관리 묶음에 추가됐습니다. 보장은 그대로입니다:
-  //  폰과 PC 의 관리 메뉴가 같은 항목·같은 순서.
-  ok(admin.join(',') === '/users,/dev-requests,/import,/settings,/audit,/readiness', '관리 6개가 PC 와 같은 순서',
-    admin.join(','))
-
   //  두 칸 격자인지 — 같은 줄에 두 개가 나란히 서야 합니다
-  const boxes = await p.locator('[data-more-section="more-tools"] [data-more-item]').evaluateAll(
+  const boxes = await p.locator('[data-more-section="more-money"] [data-more-item]').evaluateAll(
     (els) => els.slice(0, 2).map((e) => Math.round(e.getBoundingClientRect().top)))
   ok(boxes.length === 2 && boxes[0] === boxes[1], '두 칸 격자 — 첫 두 개가 같은 줄', String(boxes))
 
-  //  핵심 운영은 하단 고정 메뉴가 맡으므로 더보기에 또 넣지 않습니다
+  //  오늘 업무 넷은 하단 고정 메뉴가 맡으므로 더보기에 또 넣지 않습니다
   ok((await p.locator('[data-more-item="/collection"]').count()) === 0,
     '수거 입력은 더보기에 없음 — 하단에 있습니다')
 
-  //  눌러서 실제로 가는지
+  //  눌러서 실제로 가는지 (주소는 그대로 /pricing — 이름만 「청구 전 점검」)
   await p.locator('[data-more-item="/pricing"]').click()
   await p.waitForTimeout(1400)
-  ok(p.url().endsWith('/pricing'), '더보기에서 거래처 점검으로 이동', p.url())
+  ok(p.url().endsWith('/pricing'), '더보기에서 청구 전 점검으로 이동', p.url())
   await ctx.close()
 }
 

@@ -20,6 +20,9 @@ import {
   ScrollText,
   MessageSquarePlus,
   Gauge,
+  ClipboardCheck,
+  Presentation,
+  Lightbulb,
   Compass,
   Inbox,
   UserCog,
@@ -60,57 +63,36 @@ export interface NavItem {
  *    걸리는 시간이 곧 대표님이 카톡으로 되묻는 이유였습니다.
  *    (현장 담당자에게는 두 화면 다 안 열립니다 — access.ts 가 막습니다.)
  */
-export const CORE_NAV: NavItem[] = [
-  { to: '/', label: '대시보드', icon: LayoutGrid, desc: '오늘 현황 · 핵심 지표', tone: 'blue' },
-  { to: '/today', label: '오늘 일정', icon: CalendarClock, desc: '방문 · 완료 · 입력 대기', tone: 'sky' },
-  { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '한 번 입력 → 자동 연결', tone: 'emerald' },
-  { to: '/clients', label: '거래처', icon: Building2, desc: '병원별 이력 · 메모 · 추천', tone: 'navy' },
-  { to: '/materials', label: '자재 관리', icon: Boxes, desc: '재고 · 입고 · 정정 · 최근 변동', tone: 'teal' },
-  { to: '/history', label: '수거이력', icon: History, desc: '지난 입력 확인 · 수정 · 취소', tone: 'sky' },
-]
+// ─────────────────────────────────────────────────────────────────────────────
+//  묶음을 접고 편 상태 — **PC 와 폰이 같은 것을 씁니다** (0110)
+//
+//   예전에는 PC 사이드바만 기억하고 폰 「더보기」는 열 때마다 초기 상태로
+//   돌아갔습니다. 같은 목차를 두 곳에서 보는데 한쪽만 기억하면, 「아까 펴
+//   뒀는데」가 됩니다. 묶음 id 가 같으므로 저장소도 하나면 됩니다.
+// ─────────────────────────────────────────────────────────────────────────────
 
-/** 병원 서비스 · 성과 — 병원에 무엇을 제공하고 무엇을 받았는지 */
-export const SERVICE_NAV: NavItem[] = [
-  { to: '/revenue', label: '매출 현황', icon: TrendingUp, desc: '누적 · 월평균 · 예상 연매출', tone: 'teal' },
-  { to: '/requests', label: '고객 요청', icon: Inbox, desc: '병원이 올린 요청·문의 처리 · 회신', tone: 'violet' },
-  //  0083 — 거래처를 「목록」이 아니라 「관리할 고객」으로 봅니다.
-  { to: '/insight', label: '거래처 인사이트', icon: Activity, desc: '거래처 상태 · 다음 조치 (규칙 기반)', tone: 'teal' },
-  //  매출 AX — 쇼핑몰이 아니라 「병원이 쓰는 만큼 추천하고 다음 수거 때 전달」입니다.
-  { to: '/supplies', label: '소모품 주문', icon: PackageCheck, desc: '사용량 추천 · 수거 때 전달 · 판매 실적', tone: 'teal' },
-  { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
-  //  0108 — 성과(결과를 보는 곳) 바로 앞에 둡니다. 오늘 할 일이 먼저이고,
-  //  결과는 그다음입니다. 기사님 폰에서도 열립니다 (access.ts).
-  { to: '/ax-coach', label: 'AX 코치', icon: Compass, desc: '오늘 할 일 · 실증 자료 준비도', tone: 'emerald' },
-  { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · 확인된 변화 · 다음 할 일', tone: 'teal' },
-]
+const NAV_OPEN_KEY = 'beonemirae-ops:nav-open'
 
-/**
- * 운영 도구 · 추가 고도화 예정 — 핵심 흐름을 보조하는 실사용 화면.
- *  순서는 실제 월 업무 흐름입니다: 편성 → 배차 → 청구 → 점검 → 미수 →
- *  통장 → 통계 → 계획.
- *  ⚠ 자재 관리와 수거이력은 **매일** 여는 화면이라 0074 에서 핵심 운영으로
- *    올렸습니다. 여기에 남겨 두면 같은 메뉴가 두 자리에 생깁니다.
- */
-export const TOOL_NAV: NavItem[] = [
-  { to: '/plan', label: '일정 편성', icon: CalendarPlus, desc: '실제 기록의 요일로 예정 만들기', tone: 'navy' },
-  { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '차량별 배차 · 경로 추천', tone: 'navy' },
-  { to: '/billing', label: '월말 청구', icon: ReceiptText, desc: '그 달 전체를 한 번에 청구 확정', tone: 'navy' },
-  { to: '/pricing', label: '거래처 점검', icon: Tags, desc: '청구·세금계산서에 빠진 값이 있는 곳 (단가 · 사업자정보)', tone: 'navy' },
-  { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구 · 입금 현황과 미수금', tone: 'navy' },
-  { to: '/bank', label: '통장 입금 대사', icon: Landmark, desc: '통장 입금내역을 청구에 붙이기', tone: 'navy' },
-  { to: '/stats', label: '통계', icon: PieChart, desc: '수거량 · 거래처 · 차량 실적', tone: 'navy' },
-  { to: '/roadmap', label: '활용 계획', icon: Workflow, desc: '어떤 기능을 언제 쓰는지', tone: 'navy' },
-]
+export function readNavOpen(id: string, fallback: boolean): boolean {
+  try {
+    const raw = window.localStorage.getItem(NAV_OPEN_KEY)
+    if (!raw) return fallback
+    const map = JSON.parse(raw) as Record<string, unknown>
+    return typeof map?.[id] === 'boolean' ? (map[id] as boolean) : fallback
+  } catch {
+    return fallback
+  }
+}
 
-/** 관리 — 관리자만 보이는 영역 */
-export const ADMIN_NAV: NavItem[] = [
-  { to: '/users', label: '사용자 관리', icon: UserCog, desc: '계정 승인 · 역할 · 사용 중지', tone: 'navy' },
-  { to: '/dev-requests', label: '사용자 피드백', icon: MessageSquarePlus, desc: '직원·관리자가 남긴 후기', tone: 'navy' },
-  { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '거래처별 정산 엑셀 옮기기', tone: 'navy' },
-  { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '글자 크기 · 데이터 백업 · 초기화', tone: 'navy' },
-  { to: '/audit', label: '감사로그', icon: ScrollText, desc: '누가 무엇을 언제 바꿨는지', tone: 'navy' },
-  { to: '/readiness', label: '실증 준비 상태', icon: Gauge, desc: '준비 상태 · 증빙 · 브리핑 인쇄', tone: 'navy' },
-]
+export function writeNavOpen(id: string, value: boolean): void {
+  try {
+    const raw = window.localStorage.getItem(NAV_OPEN_KEY)
+    const map = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+    window.localStorage.setItem(NAV_OPEN_KEY, JSON.stringify({ ...map, [id]: value }))
+  } catch {
+    /* 저장이 안 되더라도 메뉴 자체는 그대로 동작해야 합니다 */
+  }
+}
 
 /** 추가 개발 예정 — 아직 실사용 단계가 아닌 확장 기능 */
 export const PLANNED: string[] = [
@@ -121,6 +103,127 @@ export const PLANNED: string[] = [
   '올바로 API 연동',
   '병원 다중 담당자 계정',
   'SaaS 서비스 확장',
+]
+
+/**
+ * 목차 한 묶음.
+ *
+ *  ⚠ 0110 — **묶음을 여섯으로 다시 짰습니다** (대표님 지시).
+ *
+ *    예전에는 「핵심 운영 6 · 병원 서비스 7 · 운영 도구 8(+예정 7) · 관리 6」
+ *    이 전부 펼쳐진 채로 37줄이었습니다. 1080 화면에서 「관리」를 보려면
+ *    스크롤을 해야 했고, 묶음 이름이 일하는 순서와 달라 어디를 봐야 할지
+ *    한 번에 읽히지 않았습니다.
+ *
+ *    이제 **여섯 묶음**이고, 처음에는 「오늘 업무」만 펼쳐져 있습니다.
+ *    나머지는 제목 한 줄씩이라 목차 전체가 한눈에 들어옵니다.
+ *
+ *  ⚠ **아무 기능도 지우지 않았습니다. 주소도 전부 그대로입니다.**
+ *    접는 것은 감추는 것이지 없애는 것이 아닙니다.
+ *  ⚠ 접고 펴는 상태는 예전 방식 그대로 기억합니다(localStorage).
+ *  ⚠ 폰 「더보기」도 이 같은 목록을 읽습니다 — 첫 묶음(오늘 업무)만 빼고요.
+ *    그 넷은 폰 하단 고정 탭이 맡고 있어서, 더보기에 또 넣으면 같은 것이
+ *    두 자리에 생깁니다.
+ */
+export interface NavGroupDef {
+  id: string
+  title: string
+  /** 처음 열었을 때 펼쳐 둘지 — 「오늘 업무」 하나뿐입니다 */
+  defaultOpen: boolean
+  items: NavItem[]
+  /** 아직 못 쓰는 것 (자물쇠) — 「활용 계획」과 같은 자리에 둡니다 */
+  planned?: string[]
+}
+
+export const NAV_GROUPS: NavGroupDef[] = [
+  {
+    id: 'today',
+    title: '오늘 업무',
+    //  ⚠ 여기 네 줄은 폰 하단 고정 탭과 **같은 항목**입니다. 매일 누르는
+    //    자리라고 이미 정해 둔 것이라, 「자주 쓰는 것」의 근거를 새로
+    //    지어내지 않았습니다.
+    defaultOpen: true,
+    items: [
+      { to: '/', label: '대시보드', icon: LayoutGrid, desc: '오늘 현황 · 핵심 지표', tone: 'blue' },
+      { to: '/today', label: '오늘 일정', icon: CalendarClock, desc: '방문 · 완료 · 입력 대기', tone: 'sky' },
+      { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '한 번 입력 → 자동 연결', tone: 'emerald' },
+      { to: '/clients', label: '거래처', icon: Building2, desc: '병원별 이력 · 메모 · 추천', tone: 'navy' },
+    ],
+  },
+  {
+    id: 'ops',
+    title: '현장·운영',
+    //  매일 열지는 않지만 **무언가 확인할 때** 여는 자리입니다.
+    //  (0074 에서 자재 관리·수거이력을 핵심으로 올렸던 판단을 여기로 옮겼습니다)
+    defaultOpen: false,
+    items: [
+      { to: '/history', label: '수거이력', icon: History, desc: '지난 입력 확인 · 수정 · 취소', tone: 'sky' },
+      { to: '/plan', label: '일정 편성', icon: CalendarPlus, desc: '실제 기록의 요일로 예정 만들기', tone: 'navy' },
+      { to: '/dispatch', label: '배차·경로', icon: Truck, desc: '차량별 배차 · 경로 추천', tone: 'navy' },
+      { to: '/materials', label: '자재 관리', icon: Boxes, desc: '재고 · 입고 · 정정 · 최근 변동', tone: 'teal' },
+    ],
+  },
+  {
+    id: 'service',
+    title: '병원 서비스',
+    defaultOpen: false,
+    items: [
+      { to: '/requests', label: '고객 요청', icon: Inbox, desc: '병원이 올린 요청·문의 처리 · 회신', tone: 'violet' },
+      { to: '/reports', label: '운영 리포트', icon: FileBarChart, desc: '병원에 제공하는 월간 리포트', tone: 'sky' },
+      //  0083 — 거래처를 「목록」이 아니라 「관리할 고객」으로 봅니다.
+      { to: '/insight', label: '거래처 인사이트', icon: Activity, desc: '거래처 상태 · 다음 조치 (규칙 기반)', tone: 'teal' },
+      //  매출 AX — 쇼핑몰이 아니라 「병원이 쓰는 만큼 추천하고 다음 수거 때 전달」입니다.
+      { to: '/supplies', label: '소모품 주문', icon: PackageCheck, desc: '사용량 추천 · 수거 때 전달 · 판매 실적', tone: 'teal' },
+    ],
+  },
+  {
+    id: 'money',
+    title: '정산·매출',
+    //  순서는 실제 월 업무 흐름입니다: 청구 → 미수 → 점검 → 입금 → 매출 → 통계.
+    defaultOpen: false,
+    items: [
+      { to: '/billing', label: '월말 청구', icon: ReceiptText, desc: '그 달 전체를 한 번에 청구 확정', tone: 'navy' },
+      { to: '/receivables', label: '미수금 관리', icon: Wallet, desc: '청구 · 입금 현황과 미수금', tone: 'navy' },
+      //  ⚠ 0110 — 「거래처 점검」에서 이름만 바꿨습니다. 하는 일은 그대로
+      //    (청구·세금계산서에 빠진 값 찾기). 옛 이름은 무엇을 하는 화면인지
+      //    알려 주지 않았습니다. **주소는 그대로 `/pricing` 입니다.**
+      { to: '/pricing', label: '청구 전 점검', icon: Tags, desc: '청구·세금계산서에 빠진 값이 있는 곳 (단가 · 사업자정보)', tone: 'navy' },
+      { to: '/bank', label: '통장 입금 대사', icon: Landmark, desc: '통장 입금내역을 청구에 붙이기', tone: 'navy' },
+      { to: '/revenue', label: '매출 현황', icon: TrendingUp, desc: '누적 · 월평균 · 예상 연매출', tone: 'teal' },
+      { to: '/stats', label: '통계', icon: PieChart, desc: '수거량 · 거래처 · 차량 실적', tone: 'navy' },
+    ],
+  },
+  {
+    id: 'ax',
+    title: 'AX·심사',
+    //  ⚠ 0110 — 「심사 시연」과 「만든 이유」를 **처음으로 목차에 올렸습니다.**
+    //    둘 다 화면은 예전부터 있었는데 메뉴 어디에도 없어서 주소를 직접
+    //    쳐야 했습니다. 실사 자리에서 못 찾는 화면은 없는 화면입니다.
+    defaultOpen: false,
+    items: [
+      { to: '/ax-coach', label: 'AX 코치', icon: Compass, desc: '오늘 할 일 · 실증 자료 준비도', tone: 'emerald' },
+      { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · 확인된 변화 · 다음 할 일', tone: 'teal' },
+      { to: '/readiness', label: '실증 준비 상태', icon: ClipboardCheck, desc: '준비 상태 · 증빙 · 브리핑 인쇄', tone: 'navy' },
+      { to: '/presentation', label: '심사 시연', icon: Presentation, desc: '60초 시연 투어 · 발표 순서', tone: 'navy' },
+      { to: '/why', label: '만든 이유', icon: Lightbulb, desc: '왜 만들었고 어디로 가는지', tone: 'amber' },
+    ],
+  },
+  {
+    id: 'admin',
+    title: '관리',
+    defaultOpen: false,
+    items: [
+      { to: '/settings', label: '설정', icon: SlidersHorizontal, desc: '글자 크기 · 데이터 백업 · 초기화', tone: 'navy' },
+      { to: '/users', label: '사용자 관리', icon: UserCog, desc: '계정 승인 · 역할 · 사용 중지', tone: 'navy' },
+      { to: '/dev-requests', label: '사용자 피드백', icon: MessageSquarePlus, desc: '직원·관리자가 남긴 후기', tone: 'navy' },
+      { to: '/import', label: '엑셀 가져오기', icon: FileSpreadsheet, desc: '거래처별 정산 엑셀 옮기기', tone: 'navy' },
+      { to: '/audit', label: '감사로그', icon: ScrollText, desc: '누가 무엇을 언제 바꿨는지', tone: 'navy' },
+      { to: '/roadmap', label: '활용 계획', icon: Workflow, desc: '어떤 기능을 언제 쓰는지', tone: 'navy' },
+    ],
+    //  아직 못 쓰는 것 — 「활용 계획」 바로 아래, 자물쇠로 구분해 둡니다.
+    //  누르면 「무엇을 검토 중이고 지금은 어떻게 하고 있는지」가 열립니다.
+    planned: PLANNED,
+  },
 ]
 
 /**

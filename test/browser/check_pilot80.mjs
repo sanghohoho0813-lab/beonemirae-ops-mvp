@@ -136,13 +136,26 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   //  ⚠ 소모품은 실사에서 보여 드릴 화면이라 다시 켰습니다 (0081).
   //    그래도 「켜져 있으면 실제로 보이는가」는 그대로 봅니다 — 스위치가
   //    한쪽으로만 무는 것이 아니라는 뜻입니다.
-  ok(PILOT.supplies ? !/소모품 주문/.test(body) : /소모품 주문/.test(body),
+  //  ⚠ 0110 — 목차가 여섯 묶음이 되면서 「병원 서비스」·「현장·운영」은
+  //    **접힌 채로** 시작합니다. 글자로 찾으면 접혀 있다는 이유만으로
+  //    「메뉴가 없다」가 됩니다. 여기서 확인하려는 것은 **목록에 있는가**
+  //    이므로 메뉴 링크로 봅니다.
+  //  접힌 묶음은 안쪽을 아예 그리지 않습니다 — 전부 펼쳐 놓고 셉니다.
+  const expandAll = async () => {
+    for (const h of await p.locator('[data-nav-group-header]').all()) {
+      if ((await h.getAttribute('aria-expanded')) === 'false') await h.click()
+    }
+    await p.waitForTimeout(300)
+  }
+  await expandAll()
+  const menu = async (to) => await p.locator(`aside a[href="${to}"]`).count()
+  ok(PILOT.supplies ? (await menu('/supplies')) === 0 : (await menu('/supplies')) === 1,
     PILOT.supplies ? '**「소모품 주문」 메뉴가 없다**' : '**「소모품 주문」 메뉴가 다시 보인다** (실사용)')
 
   //  ⚠ 핵심은 남아 있어야 합니다 — 없애기만 하면 안 됩니다.
   ok(/오늘 일정/.test(body), '**「오늘 일정」은 그대로 있다**')
   ok(/수거 입력/.test(body), '「수거 입력」도 그대로')
-  ok(/자재 관리/.test(body), '「자재 관리」도 그대로')
+  ok((await menu('/materials')) === 1, '「자재 관리」도 그대로 (현장·운영 묶음 안)')
   ok(/거래처/.test(body), '「거래처」도 그대로')
   await ctx.close()
 }
@@ -181,7 +194,12 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   const { ctx, p } = await open('/', { role: 'office' })
   const body = flat(await p.locator('body').innerText())
   if (PILOT.requests) ok(!/병원 요청/.test(body), '**이사님 화면에도 「병원 요청」이 없다**')
-  ok(PILOT.supplies ? !/소모품 주문/.test(body) : /소모품 주문/.test(body),
+  for (const h of await p.locator('[data-nav-group-header]').all()) {
+    if ((await h.getAttribute('aria-expanded')) === 'false') await h.click()
+  }
+  await p.waitForTimeout(300)
+  const officeMenu = await p.locator('aside a[href="/supplies"]').count()
+  ok(PILOT.supplies ? officeMenu === 0 : officeMenu === 1,
     PILOT.supplies ? '이사님 화면에도 「소모품 주문」이 없다' : '이사님 화면에도 「소모품 주문」이 다시 보인다')
   ok((await p.locator('[data-urgent-banner]').count()) === 0, '요청 경고 배너도 없다')
   ok(/오늘 일정/.test(body) && /수거 입력/.test(body), '**핵심 업무는 그대로 보인다**')

@@ -109,13 +109,22 @@ const findVertical = (p) =>
  *  재면 시트 뒤에 있는 페이지를 재게 되어 아무리 펼쳐도 숫자가 안 바뀝니다.
  *  실제로 미는 그 통을 찾아서 잽니다.
  */
+/**
+ * 더보기 시트 안쪽 내용의 실제 높이(px).
+ *
+ *  ⚠ 0110 — 「화면에서 가장 긴 스크롤 상자」로 찾으면 안 됩니다. 목차가
+ *    짧아지면서 시트 뒤의 본문이 더 길어져, 엉뚱한 것을 재고 있었습니다.
+ *    시트의 스크롤 상자를 이름으로 집습니다.
+ */
+const sheetScrollPx = (p) =>
+  p.evaluate(() => {
+    const box = document.querySelector('[data-sheet-scroll]')
+    return box ? box.scrollHeight : null
+  })
+
 const sheetScrollLen = (p) =>
   p.evaluate(() => {
-    const boxes = [...document.querySelectorAll('div')].filter((e) => {
-      const st = getComputedStyle(e)
-      return (st.overflowY === 'auto' || st.overflowY === 'scroll') && e.clientHeight > 200
-    })
-    const box = boxes.sort((a, b) => b.scrollHeight - a.scrollHeight)[0]
+    const box = document.querySelector('[data-sheet-scroll]')
     if (!box) return null
     return Math.round((box.scrollHeight / box.clientHeight) * 10) / 10
   })
@@ -188,12 +197,15 @@ const sheetScrollLen = (p) =>
   //  고친 뒤 실측 기준. 이 숫자가 커지면 무언가를 또 펼쳐 둔 것입니다.
   ok(len <= 4.2, `더보기 전체 길이가 화면 ${len}개 — 4.2개 이하`, `${len}개`)
 
-  //  운영 도구를 펼치면 길어지는 것이 맞습니다. 대신 **접었을 때** 짧아야
+  //  묶음을 펼치면 길어지는 것이 맞습니다. 대신 **접었을 때** 짧아야
   //  합니다 — 접기가 실제로 효과가 있는지 재서 확인합니다.
-  await p.click('[data-more-toggle="more-tools"]')
+  //  ⚠ 0110 — 전부 접힌 시트는 한 화면 안에 들어갑니다(비율 1.0). 그래서
+  //    비율로는 차이가 안 보입니다 — **실제 높이(px)** 로 잽니다.
+  const closedPx = await sheetScrollPx(p)
+  await p.click('[data-more-toggle="more-money"]')
   await p.waitForTimeout(400)
-  const opened = await sheetScrollLen(p)
-  ok(opened > len, '펼치면 길어짐 (접기가 실제로 줄이고 있음)', `${len} → ${opened}개`)
+  const openedPx = await sheetScrollPx(p)
+  ok(openedPx > closedPx, '펼치면 길어짐 (접기가 실제로 줄이고 있음)', `${closedPx}px → ${openedPx}px`)
   await ctx.close()
 }
 
@@ -298,10 +310,10 @@ for (const w of [320, 360, 390, 430]) {
   ok(/㈜비원미래/.test(foot), '상호는 그대로')
 }
 
-// ── 9. 운영 도구 한 묶음 — 쓸 수 있는 것 · 아직 못 쓰는 것 ───────────────
-//   목차가 둘로 갈려 있던 것을 하나로 합쳤습니다. 합치면서 **아직 못 쓰는
-//   것을 눌러도 아무 일이 없어야** 합니다 — 눌리는데 반응이 없는 것보다
-//   애초에 안 눌리는 편이 낫습니다.
+// ── 9. 「추가 개발 예정」 — 활용 계획과 같은 묶음, 눌러도 화면은 안 바뀐다 ──
+//   0110 — 목차가 여섯 묶음으로 다시 짜이면서 「추가 개발 예정」은
+//   「활용 계획」과 같은 자리(관리)로 들어갔습니다. 둘 다 「앞으로 무엇을
+//   할 것인가」입니다. 자물쇠 항목은 여전히 **화면을 옮기지 않습니다.**
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } })
   wire(ctx)
@@ -309,16 +321,15 @@ for (const w of [320, 360, 390, 430]) {
   await p.locator('nav.fixed.bottom-0 button:has-text("더보기")').click()
   await p.waitForTimeout(1000)
   const sheet = flat(await p.textContent('body'))
-  ok(/운영 도구/.test(sheet), '「운영 도구」 한 묶음')
-  ok(!/운영 도구 · 추가 고도화 예정/.test(sheet), '옛 묶음 이름이 안 남음')
+  ok(/관리/.test(sheet), '「관리」 묶음이 있음')
+  ok(!/운영 도구/.test(sheet), '옛 묶음 이름 「운영 도구」가 안 남음')
 
-  await p.click('[data-more-toggle="more-tools"]')
+  await p.click('[data-more-toggle="more-admin"]')
   await p.waitForTimeout(400)
   const planned = await p.locator('[data-more-planned-item]').count()
-  ok(planned === 7, '아직 못 쓰는 7가지가 같은 묶음 안에', String(planned))
-  const real = await p.locator('[data-more-section="more-tools"] [data-more-item]').count()
-  //  ⚠ 0076 — 자재 관리·수거이력이 「핵심 운영」으로 올라가 도구에서 빠졌습니다.
-  //    개수를 못 박기보다 **비어 있지 않은지**를 봅니다.
+  ok(planned === 7, '아직 못 쓰는 7가지가 활용 계획과 같은 묶음 안에', String(planned))
+  const real = await p.locator('[data-more-section="more-admin"] [data-more-item]').count()
+  //  개수를 못 박기보다 **비어 있지 않은지**를 봅니다.
   ok(real >= 6, '쓸 수 있는 것들이 같은 묶음 안에', String(real))
 
   //  ⚠ 0095 — 재는 자리를 옮겼습니다. 예전에는 「눌러도 아무 일이 없다」가
@@ -336,9 +347,11 @@ for (const w of [320, 360, 390, 430]) {
   await p.getByRole('button', { name: '확인' }).last().click()
   await p.waitForTimeout(700)
   ok((await p.locator('[data-planned-preview]').count()) === 0, '미리보기가 닫힘')
-  ok((await p.locator('[data-more-toggle="more-tools"]').count()) === 1, '시트가 그대로 열려 있음')
+  ok((await p.locator('[data-more-toggle="more-admin"]').count()) === 1, '시트가 그대로 열려 있음')
 
-  //  쓸 수 있는 것은 그대로 열려야 합니다
+  //  쓸 수 있는 것은 그대로 열려야 합니다 (주소는 그대로 /pricing)
+  await p.click('[data-more-toggle="more-money"]')
+  await p.waitForTimeout(400)
   await p.locator('[data-more-item="/pricing"]').click()
   await p.waitForTimeout(1400)
   ok(p.url().endsWith('/pricing'), '쓸 수 있는 것은 그대로 열림', p.url())
@@ -351,10 +364,10 @@ for (const w of [320, 360, 390, 430]) {
   wire(ctx)
   const p = await open(ctx, '/')
   const side = flat(await p.textContent('aside'))
-  ok(/운영 도구/.test(side), 'PC 도 「운영 도구」 한 묶음')
-  ok(!/운영 도구 · 추가 고도화 예정/.test(side), 'PC 옛 묶음 이름 없음')
+  ok(/관리/.test(side), 'PC 도 「관리」 묶음')
+  ok(!/운영 도구/.test(side), 'PC 옛 묶음 이름 없음')
   //  묶음을 펼칩니다
-  await p.locator('aside button:has-text("운영 도구")').click()
+  await p.locator('[data-nav-group-header="관리"]').click()
   await p.waitForTimeout(400)
   const planned = await p.locator('[data-nav-planned]').count()
   ok(planned === 7, 'PC 도 같은 묶음 안에 7가지', String(planned))

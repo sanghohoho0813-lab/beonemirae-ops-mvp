@@ -91,7 +91,7 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
             {/* 스크롤 영역 */}
             {/* 하단 탭바는 시트 위에 떠 있습니다(앱의 기본 이동 수단이라 항상 눌려야 합니다).
                 그만큼 아래에 자리를 비워 두지 않으면 마지막 항목이 탭바에 가립니다. */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(4.9rem+env(safe-area-inset-bottom))] pt-2">
+            <div data-sheet-scroll className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(4.9rem+env(safe-area-inset-bottom))] pt-2">
               {children}
             </div>
           </motion.div>

@@ -49,26 +49,31 @@ import { PageMotion } from './motion'
 // 앱 전체 레이아웃 — 반응형 B2B 운영관리 콘솔
 //  · 데스크톱(lg↑): 다크 네이비 사이드바 + 밝은 본문
 //  · 모바일(lg 미만): 상단 헤더 + 본문 + 하단 탭바(앱형)
-//  · 메뉴는 "현재 운영 / 운영 도구 / 추가 개발 예정" 3단으로 분리해
-//    지금 바로 사용하는 기능과 향후 확장 기능을 명확히 구분합니다.
+//  · 메뉴는 여섯 묶음입니다 (0110 · lib/nav.ts 의 NAV_GROUPS).
+//    처음에는 「오늘 업무」만 펼쳐져 있고 나머지는 제목 한 줄씩입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
-  CORE_NAV,
-  SERVICE_NAV,
-  TOOL_NAV,
-  ADMIN_NAV,
-  PLANNED,
+  NAV_GROUPS,
+  readNavOpen,
+  writeNavOpen,
   BOTTOM_NAV_STAFF,
   BOTTOM_NAV_FIELD,
   type NavItem,
+  type NavGroupDef,
 } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 
+//  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
+//  아닌 모든 업무 화면입니다. 빠지면 그 화면에 있는 동안 아래 탭 어디에도
+//  불이 안 들어와 「지금 어디인지」가 안 보입니다.
+//  ⚠ 0110 — /ax-coach · /why · /supplies 가 빠져 있었습니다. 목차를 여섯
+//    묶음으로 정리하면서 함께 채웁니다.
 const MORE_PATHS = [
   '/more', '/plan', '/billing', '/bank', '/materials', '/receivables', '/stats', '/demo', '/dispatch',
-  '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance',
-  '/audit', '/readiness', '/requests', '/insight', '/pricing', '/users', '/dev-requests', '/import', '/revenue',
+  '/presentation', '/history', '/roadmap', '/reports', '/settings', '/performance', '/ax-coach', '/why',
+  '/supplies', '/audit', '/readiness', '/requests', '/insight', '/pricing', '/users', '/dev-requests',
+  '/import', '/revenue',
 ]
 
 /**
@@ -79,6 +84,20 @@ function useVisibleNav(items: NavItem[]): NavItem[] {
   const { configured, role } = useAuth()
   if (!configured) return items          // 시연 모드에서는 기존과 동일
   return items.filter((i) => canAccess(role, i.to))
+}
+
+/**
+ * 이 역할이 실제로 열 수 있는 묶음만 (0110).
+ *
+ *  ⚠ 안이 비는 묶음은 제목째 뺍니다. 제목만 남으면 「여기 뭔가 있는데
+ *    안 열린다」로 읽힙니다 — 현장 담당자에게 실제로 그랬습니다.
+ */
+function useVisibleGroups(): NavGroupDef[] {
+  const { configured, role } = useAuth()
+  return NAV_GROUPS.map((g) => ({
+    ...g,
+    items: configured ? g.items.filter((i) => canAccess(role, i.to)) : g.items,
+  })).filter((g) => g.items.length > 0)
 }
 
 // ── 데스크톱 사이드바 (다크 네이비) ──────────────────────────────────────────
@@ -177,29 +196,6 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
 //   · 지금 보고 있는 화면이 그 묶음 안에 있으면 저절로 펼쳐집니다.
 //     (접힌 채로 두면 "내가 지금 어디에 있는지" 표시가 사라집니다)
 
-const NAV_OPEN_KEY = 'beonemirae-ops:nav-open'
-
-function readNavOpen(id: string, fallback: boolean): boolean {
-  try {
-    const raw = window.localStorage.getItem(NAV_OPEN_KEY)
-    if (!raw) return fallback
-    const map = JSON.parse(raw) as Record<string, unknown>
-    return typeof map?.[id] === 'boolean' ? (map[id] as boolean) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function writeNavOpen(id: string, value: boolean) {
-  try {
-    const raw = window.localStorage.getItem(NAV_OPEN_KEY)
-    const map = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
-    window.localStorage.setItem(NAV_OPEN_KEY, JSON.stringify({ ...map, [id]: value }))
-  } catch {
-    /* 저장이 안 되더라도 메뉴 자체는 그대로 동작해야 합니다 */
-  }
-}
-
 /** 접기/펼치기 제목 줄 — 접혀 있을 때는 안에 몇 개가 있는지 숫자로 알려 줍니다 */
 function GroupHeader({
   title,
@@ -222,7 +218,7 @@ function GroupHeader({
       data-nav-group-header={title}
       /*  0082 — navy-400 은 「밝은 바탕의 캡션」 색입니다. 어두운 사이드바에
           얹으니 3.2~3.6:1 로 기준(4.5)에 못 미쳤습니다. 어두운 바탕용은 navy-300. */
-      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-200 transition hover:bg-white/5 hover:text-white"
+      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-200 transition first:mt-1 hover:bg-white/5 hover:text-white"
     >
       {Icon && <Icon size={13} className="shrink-0" />}
       <span className="min-w-0 flex-1 break-keep text-left leading-snug">{title}</span>
@@ -252,16 +248,27 @@ function NavGroup({
   items,
   planned = [],
   onPlanned,
+  defaultOpen = false,
+  prominent = false,
 }: {
   id: string
   title: string
   items: NavItem[]
   planned?: string[]
   onPlanned?: (label: string) => void
+  /**
+   * 처음 열었을 때 펼쳐 둘지 (0110).
+   *
+   *  ⚠ 「오늘 업무」 하나만 true 입니다. 한 번 접거나 펴면 그 뒤로는
+   *    **사용자가 정한 쪽**을 기억합니다 — 기본값은 처음 한 번뿐입니다.
+   */
+  defaultOpen?: boolean
+  /** 매일 쓰는 묶음 — 줄을 크게(아이콘 타일 + 설명) 그립니다 (0110) */
+  prominent?: boolean
 }) {
   const { pathname } = useLocation()
   const hasActive = items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))
-  const [open, setOpen] = useState(() => readNavOpen(id, false))
+  const [open, setOpen] = useState(() => readNavOpen(id, defaultOpen))
 
   //  다른 곳에서 이 묶음 안의 화면으로 넘어오면(예: 대시보드의 바로가기)
   //  접힌 채로 두지 않고 펼쳐 줍니다. 펼친 뒤에는 다시 접을 수 있습니다.
@@ -285,10 +292,14 @@ function NavGroup({
       {open && (
         <div data-nav-group={id} className="space-y-0.5">
           {items.map((item) => (
-            <SidebarLink key={item.to} item={item} muted />
+            <SidebarLink key={item.to} item={item} muted={!prominent} />
           ))}
           {planned.length > 0 && (
-            <p className="px-4 pb-1 pt-3 text-[0.9rem] font-bold tracking-wide text-navy-500">추가 개발 예정</p>
+            /*  ⚠ 0110 — navy-500 은 **밝은 바탕용** 색입니다. 어두운 사이드바에
+                 얹으니 3.0:1 밖에 안 나왔습니다(기준 4.5). 예전에는 이 묶음이
+                 거의 안 펼쳐져 눈에 안 띄었을 뿐, 색 자체가 틀렸습니다.
+                 어두운 바탕의 보조 글자는 navy-200 입니다(0082·0086). */
+            <p className="px-4 pb-1 pt-3 text-[0.9rem] font-bold tracking-wide text-navy-200">추가 개발 예정</p>
           )}
           {planned.map((label) => (
             //  0095 — 예전에는 잠긴 회색 글이었습니다. 눌러도 아무 일이
@@ -301,11 +312,11 @@ function NavGroup({
               data-nav-planned={label}
               onClick={() => onPlanned?.(label)}
               title="계획 중인 기능입니다 — 누르면 무엇을 검토 중인지 나옵니다"
-              className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-400 transition hover:bg-white/5 hover:text-navy-200"
+              className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-200 transition hover:bg-white/5 hover:text-white"
             >
               <Lock size={14} className="shrink-0" />
               <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
-              <span className="shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-400">
+              <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-200">
                 계획중
               </span>
             </button>
@@ -326,10 +337,10 @@ function Sidebar() {
   const { configured, profile, signOut } = useAuth()
   //  0095 — 「추가 개발 예정」 미리보기. 열려 있는 항목 이름 하나만 기억합니다.
   const [plannedOpen, setPlannedOpen] = useState<string | null>(null)
-  const coreNav = useVisibleNav(CORE_NAV)
-  const serviceNav = useVisibleNav(SERVICE_NAV)
-  const toolNav = useVisibleNav(TOOL_NAV)
-  const adminNav = !configured || profile?.role === 'admin' ? ADMIN_NAV : []
+  //  ⚠ 0110 — 묶음이 여섯입니다. 한 곳(lib/nav.ts)에서만 정하고 여기서는
+  //    역할이 못 여는 것만 걸러서 그립니다. 관리자만 보던 「관리」도 같은
+  //    규칙(canAccess)으로 갈립니다 — 예전에는 여기서 따로 판단했습니다.
+  const groups = useVisibleGroups()
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다 — useVisibleNav 과 같은 규칙.
   const showPlanned = !configured || canAccess(profile?.role ?? null, '/roadmap')
   //  0074 — 못 여는 역할에게는 그 단추를 아예 안 보입니다 (아래 ⚠ 참고)
@@ -368,49 +379,18 @@ function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3">
-        <p className="px-4 pb-2.5 pt-2 text-[0.92rem] font-extrabold tracking-wide text-teal-300">
-          핵심 운영
-        </p>
-        <div className="space-y-0.5">
-          {coreNav.map((item) => (
-            <SidebarLink key={item.to} item={item} />
-          ))}
-        </div>
-
-        {serviceNav.length > 0 && (
-          <>
-            <p className="px-4 pb-2.5 pt-7 text-[0.92rem] font-extrabold tracking-wide text-teal-300">
-              병원 서비스 · 성과
-            </p>
-            <div className="space-y-0.5">
-              {serviceNav.map((item) => (
-                <SidebarLink key={item.to} item={item} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/*  현장 담당자에게는 이 묶음이 통째로 비어 있습니다(access.ts).
-             빈 제목만 남으면 "여기 뭔가 있는데 안 열린다"로 읽힙니다. */}
-        {/*  운영 도구 — 쓸 수 있는 것과 아직 못 쓰는 것을 **한 묶음**으로.
-             예전에는 「운영 도구」와 「추가 개발 예정」이 목차 두 칸을 따로
-             차지했습니다. 둘 다 업무 도구라 나눌 이유가 없었고, 목차만
-             길어졌습니다. 자물쇠로 구분하고 아직 못 쓰는 것은 누를 수 없게
-             둡니다. */}
-        {toolNav.length > 0 && (
+        {groups.map((g) => (
           <NavGroup
-            id="tools"
-            title="운영 도구"
-            items={toolNav}
-            planned={showPlanned ? PLANNED : []}
+            key={g.id}
+            id={g.id}
+            title={g.title}
+            items={g.items}
+            defaultOpen={g.defaultOpen}
+            prominent={g.defaultOpen}
+            planned={g.planned && showPlanned ? g.planned : []}
             onPlanned={setPlannedOpen}
           />
-        )}
-
-        {/*  관리 — 관리자 전용. 아직 만들지 않은 「추가 개발 예정」보다 아래에
-             둡니다. 설정·계정·감사로그는 필요할 때만 찾아 들어가는 곳이라
-             메뉴의 마지막 자리가 맞습니다. */}
-        {adminNav.length > 0 && <NavGroup id="admin" title="관리" items={adminNav} />}
+        ))}
       </nav>
 
       {/* 하단 — 계정 / 바로가기 */}

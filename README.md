@@ -42,6 +42,7 @@ npm run preview    # 빌드 미리보기 (검사가 이 주소를 씁니다)
 | [`docs/AX_SUMMARY_0107.md`](./docs/AX_SUMMARY_0107.md) | 성과 화면 세 칸(요약·측정 근거·설정) · 숫자 성격 넉 자 · 업무 재현시험 · 숫자가 안 보인 이유 |
 | [`docs/AX_COACH_0108.md`](./docs/AX_COACH_0108.md) | **AX 코치** — 실증 자료 준비도 · 오늘 할 일 3개 · 실제 업무기록으로만 확인 · 7·14일 리포트 |
 | [`docs/DEMO_TOUR_0109.md`](./docs/DEMO_TOUR_0109.md) | **60초 심사 시연 투어** — 다섯 단계 · 직접 누르는 단계 구분 · 단계 유지(뒤로·새로고침) · 시연 전 확인 사항 |
+| [`docs/NAV_IA_0110.md`](./docs/NAV_IA_0110.md) | **메뉴 정보구조** — 여섯 묶음 · 오늘 업무만 펼침 · PC·폰 같은 구조 · 역할별 노출 |
 | [`docs/FEEDBACK_ANALYSIS_0104.md`](./docs/FEEDBACK_ANALYSIS_0104.md) · [`FEEDBACK_FOLLOWUP_0105.md`](./docs/FEEDBACK_FOLLOWUP_0105.md) | 첫 실사용 피드백 분석과 후속 |
 | [`docs/PENGUIN_ASSESSMENT_0105.md`](./docs/PENGUIN_ASSESSMENT_0105.md) | 신보 펭귄 심사 가능성 평가 (사실 기반) |
 | [`supabase/proposals/`](./supabase/proposals) | 대표가 실행할 SQL 제안 (판 번호 순서대로) |

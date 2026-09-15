@@ -80,7 +80,14 @@ const MONEY = /원\b|만원|억원|\+\s*\d/
   await p.goto(`${BASE}/today`, { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(2500)
   const nav = (await p.textContent('aside')) ?? ''
-  ok(!/운영 도구/.test(nav), '사이드바에 「운영 도구」 묶음이 없음')
+  //  ⚠ 0110 — 묶음이 여섯입니다. 현장 담당자가 못 여는 묶음은 **제목째**
+  //    빠져야 합니다 — 제목만 남으면 「여기 뭔가 있는데 안 열린다」가 됩니다.
+  const heads = await p.locator('[data-nav-group-header]').evaluateAll(
+    (els) => els.map((e) => e.getAttribute('data-nav-group-header')))
+  for (const t of ['현장·운영', '정산·매출', '관리']) {
+    ok(!heads.includes(t), `사이드바에 「${t}」 묶음이 없음`, heads.join(','))
+  }
+  ok(heads.includes('오늘 업무'), '「오늘 업무」 묶음은 있음', heads.join(','))
   ok(!/추가 개발 예정/.test(nav), '사이드바에 「추가 개발 예정」이 없음')
   ok(!/자재 관리|수거이력|활용 계획/.test(nav), '자재 관리·수거이력·활용 계획이 메뉴에 없음')
   ok(/오늘 일정/.test(nav) && /수거 입력/.test(nav) && /거래처/.test(nav), '현장 업무 메뉴는 그대로 있음')
@@ -119,16 +126,19 @@ const MONEY = /원\b|만원|억원|\+\s*\d/
   await p.goto(`${BASE}/clients`, { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(2500)
   const nav = (await p.textContent('aside')) ?? ''
-  ok(/운영 도구/.test(nav), '사무실 담당자에게는 「운영 도구」가 그대로 보임')
-  //  「운영 도구」는 접힌 채로 시작하고, 「추가 개발 예정」은 그 **안에**
-  //  들어갔습니다(예전에는 목차 한 칸을 따로 차지했습니다). 그래서 접힌
-  //  상태에서는 둘 다 안 보이는 것이 맞습니다 — 펼쳐서 확인합니다.
+  //  ⚠ 0110 — 사무실 담당자에게는 「현장·운영」·「정산·매출」이 그대로 보입니다.
+  //    묶음은 접힌 채로 시작하므로 안쪽 이름은 펼쳐서 확인합니다.
+  ok(/현장·운영/.test(nav) && /정산·매출/.test(nav), '사무실 담당자에게는 운영·정산 묶음이 그대로 보임')
   ok(!/추가 개발 예정/.test(nav), '접힌 상태에서는 예정 항목도 같이 숨음')
-  await p.locator('[data-nav-group-header="운영 도구"]').click()
+  await p.locator('[data-nav-group-header="현장·운영"]').click()
   await p.waitForTimeout(300)
   const navOpen = (await p.textContent('aside')) ?? ''
   ok(/자재 관리/.test(navOpen) && /수거이력/.test(navOpen), '자재 관리·수거이력 메뉴 유지')
-  ok(/추가 개발 예정/.test(navOpen), '펼치면 「추가 개발 예정」이 같은 묶음 안에 있음')
+  //  「추가 개발 예정」은 「활용 계획」과 같은 자리(관리)로 옮겼습니다.
+  await p.locator('[data-nav-group-header="관리"]').click()
+  await p.waitForTimeout(300)
+  ok(/추가 개발 예정/.test((await p.textContent('aside')) ?? ''),
+    '펼치면 「추가 개발 예정」이 활용 계획과 같은 묶음 안에 있음')
 
   const list = (await p.textContent('main')) ?? ''
   ok(/추가 수거 제안|소모품 공급 제안|배출자 교육 제안/.test(list), '사무실 담당자에게는 영업 추천이 보임')

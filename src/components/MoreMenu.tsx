@@ -13,7 +13,7 @@ import { TourButton, TourWhyButton } from './TourEntry'
 import { Tappable } from './motion'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, canSeeShowcase } from '../lib/access'
-import { SERVICE_NAV, TOOL_NAV, ADMIN_NAV, PLANNED, type NavItem } from '../lib/nav'
+import { NAV_GROUPS, readNavOpen, writeNavOpen, type NavItem } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 import type { Tone } from '../lib/tone'
 import { canSendDevRequest } from '../lib/devRequests'
@@ -58,20 +58,28 @@ function NavSection({
   collapsible = false,
   defaultOpen = true,
   planned = [],
+  groupId,
 }: {
   title: string
   items: NavItem[]
   onGo: (to: string) => void
   hook: string
-  /** 접었다 폈다 할 수 있는가 (운영 도구처럼 길고 매일 안 쓰는 묶음) */
+  /** 접었다 폈다 할 수 있는가 */
   collapsible?: boolean
   defaultOpen?: boolean
   /** 아직 못 쓰는 것 — 자물쇠 + 「계획 중」 미리보기 (0095) */
   planned?: string[]
+  /**
+   * PC 사이드바와 **같은 묶음 id** (0110).
+   *
+   *  주면 접고 편 상태를 PC 와 한 곳에 기억합니다 — 같은 목차를 두 화면에서
+   *  보는데 한쪽만 기억하면 「아까 펴 뒀는데」가 됩니다.
+   */
+  groupId?: string
 }) {
   //  0095 — 「계획 중」 미리보기. 열려 있는 항목 이름 하나만 기억합니다.
   const [plannedOpen, setPlannedOpen] = useState<string | null>(null)
-  const [open, setOpen] = useState(defaultOpen)
+  const [open, setOpen] = useState(() => (groupId ? readNavOpen(groupId, defaultOpen) : defaultOpen))
   const shown = !collapsible || open
   return (
     <section data-more-section={hook}>
@@ -80,7 +88,12 @@ function NavSection({
         //  그 아래 「추가 개발 예정 · 관리」가 첫 화면 안에 들어옵니다.
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() =>
+            setOpen((v) => {
+              if (groupId) writeNavOpen(groupId, !v)
+              return !v
+            })
+          }
           aria-expanded={open}
           data-more-toggle={hook}
           /*  묶음을 여닫는 자리입니다. 30px 이라 폰에서 자꾸 빗나갔습니다. */
@@ -175,10 +188,12 @@ export function MoreMenu({
   //  PC 사이드바(Layout.tsx 의 useVisibleNav)와 완전히 같은 규칙입니다.
   const visible = (items: NavItem[]) =>
     configured ? items.filter((i) => canAccess(role, i.to)) : items
-  const serviceNav = visible(SERVICE_NAV)
-  const toolNav = visible(TOOL_NAV)
-  //  관리는 사이드바와 같이 관리자에게만 (시연 모드에서는 그대로 보입니다)
-  const adminNav = !configured || role === 'admin' ? ADMIN_NAV : []
+  //  ⚠ 0110 — PC 사이드바와 **같은 목록**을 읽습니다 (lib/nav.ts).
+  //    첫 묶음(오늘 업무)만 뺍니다 — 그 넷은 아래 고정 탭이 맡고 있어서,
+  //    여기에 또 넣으면 같은 것이 두 자리에 생깁니다.
+  const groups = NAV_GROUPS.filter((g) => g.id !== 'today')
+    .map((g) => ({ ...g, items: visible(g.items) }))
+    .filter((g) => g.items.length > 0)
   //  회사 이야기·시연 자료 묶음. PC 사이드바에서는 이미 내렸는데 폰의
   //  「더보기」에는 그대로 남아 있었습니다 — 같은 규칙으로 맞춥니다.
   const showcase = canSeeShowcase(role)
@@ -314,30 +329,22 @@ export function MoreMenu({
       {/*  ⚠ 0075 — 현장 담당자에게 이 묶음은 「병원 요청」 하나뿐인데 제목이
            「병원 서비스 · 성과」였습니다. 없는 성과를 제목이 약속하면
            기사님은 눌러 보고 없어서 헤맵니다. 들어 있는 만큼만 적습니다. */}
-      {serviceNav.length > 0 && (
+      {/*  ⚠ 0110 — 묶음 이름·차례·접힘 상태가 PC 사이드바와 똑같습니다.
+           묶음 안이 하나뿐이면 그 화면 이름을 제목으로 씁니다 — 「병원 서비스」
+           아래 「고객 요청」 한 줄만 있으면 제목이 없는 성과를 약속합니다. */}
+      {groups.map((g) => (
         <NavSection
-          title={serviceNav.length === 1 ? serviceNav[0].label : '병원 서비스 · 성과'}
-          items={serviceNav}
+          key={g.id}
+          groupId={g.id}
+          title={g.items.length === 1 ? g.items[0].label : g.title}
+          items={g.items}
           onGo={go}
-          hook="more-service"
-        />
-      )}
-      {toolNav.length > 0 && (
-        <NavSection
-          title="운영 도구"
-          items={toolNav}
-          onGo={go}
-          hook="more-tools"
+          hook={`more-${g.id}`}
           collapsible
-          defaultOpen={false}
-          planned={showRoadmap ? PLANNED : []}
+          defaultOpen={g.defaultOpen}
+          planned={g.planned && showRoadmap ? g.planned : []}
         />
-      )}
-
-      {/*  관리 — PC 사이드바와 같이 맨 아래. 관리자에게만 열립니다. */}
-      {adminNav.length > 0 && (
-        <NavSection title="관리" items={adminNav} onGo={go} hook="more-admin" />
-      )}
+      ))}
 
       {/*  바로가기 — 메뉴가 아니라 바깥으로 나가는 길입니다. 목차 아래에 둡니다. */}
       <section>
