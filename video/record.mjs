@@ -174,17 +174,26 @@ const OVERLAY = (watermark, sub, st) => `
     ].join(';')
 
     //   ③ 얇은 덮개 + 가운데 글 — 실제 화면을 배경으로 남기고 한마디만.
+    //  ⚠ 0119-b — 덮개는 **.62 까지만** 어둡게 합니다. 성과 화면이 배경으로
+    //    남아 있어야 하기 때문입니다. 그 정도로는 흰 글씨가 흰 카드 위에서
+    //    잘 안 읽혀서, **글 뒤에만** 반투명 판을 따로 깝니다 (veilPanel).
+    //    화면 전체를 더 어둡게 하는 것과 글만 띄우는 것은 다릅니다.
     const veilEl = document.createElement('div')
     veilEl.id = 'vid-veil'
     veilEl.style.cssText = [
-      'position:fixed', 'inset:0', 'display:flex', 'flex-direction:column',
-      'align-items:center', 'justify-content:center', 'gap:18px',
-      //  ⚠ 0119 — .55 로는 흰 카드 위에서 흰 글씨가 씻겨 안 읽혔습니다.
-      //    성과 화면은 배경으로 남기되, 글이 먼저 읽히는 정도까지 내립니다.
-      'padding:0 16%', 'background:rgba(8,15,28,.74)', 'color:#fff',
+      'position:fixed', 'inset:0', 'display:flex',
+      'align-items:center', 'justify-content:center',
+      'padding:0 12%', 'background:rgba(8,15,28,.62)', 'color:#fff',
       'text-align:center', 'word-break:keep-all',
       'opacity:0', 'transition:opacity .3s linear',
     ].join(';')
+    const veilPanel = document.createElement('div')
+    veilPanel.style.cssText = [
+      'display:flex', 'flex-direction:column', 'align-items:center', 'gap:18px',
+      'padding:38px 58px', 'border-radius:26px',
+      'background:rgba(8,15,28,.66)',
+    ].join(';')
+    veilEl.appendChild(veilPanel)
 
     //  왼쪽 아래 아주 작은 단계 표시 — 「1/5 · AX 코치」. 큰 설명 박스 대신입니다.
     const chip = document.createElement('div')
@@ -371,7 +380,7 @@ const OVERLAY = (watermark, sub, st) => `
 
       /** 실제 화면을 배경으로 남기고 한마디만 — 성과 화면 위에 씁니다. */
       veil(lines) {
-        veilEl.textContent = ''
+        veilPanel.textContent = ''
         for (const l of lines) {
           const el = document.createElement('p')
           el.textContent = l.text
@@ -379,7 +388,7 @@ const OVERLAY = (watermark, sub, st) => `
             + 'white-space:pre-line;word-break:keep-all;'
             + 'text-shadow:0 2px 12px rgba(0,0,0,.45);'
             + 'color:' + (l.dim ? 'rgba(255,255,255,.82)' : '#fff')
-          veilEl.appendChild(el)
+          veilPanel.appendChild(el)
         }
         veilEl.style.opacity = '1'
       },
@@ -623,9 +632,12 @@ const mark = (label) => {
  *    강조 테두리는 스크롤을 따라다니므로(TourOverlay) 어긋나지 않습니다.
  */
 async function bring(sel, block = 'center') {
-  await page.evaluate(([s, b]) => {
-    document.querySelector(s)?.scrollIntoView({ behavior: 'smooth', block: b })
-  }, [sel, block])
+  //  ⚠ Playwright 쪽 선택자(:has-text · >> nth=0 …)를 그대로 쓰려면 화면
+  //    안에서 querySelector 로 찾으면 안 됩니다 — 그쪽 문법을 모릅니다.
+  //    찾는 일은 Playwright 에 맡기고, 굴리는 일만 화면에 시킵니다.
+  const el = page.locator(sel).first()
+  await el.waitFor({ state: 'attached', timeout: 15000 })
+  await el.evaluate((n, b) => n.scrollIntoView({ behavior: 'smooth', block: b }), block)
   await page.waitForTimeout(H.scroll ?? 420)
 }
 

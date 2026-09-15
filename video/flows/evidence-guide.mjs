@@ -29,10 +29,12 @@ export const start = {
 
 /** 여는 글자 화면 */
 const INTRO = [
-  { text: 'AX를 만들었다는 사실보다 중요한 것은', size: 46 },
-  { text: '실제로 회사가 어떻게 달라지고 있는가입니다', size: 46 },
-  { text: '누가, 언제, 어떤 업무를 했고 그 결과 무엇이 달라졌는지가\n데이터로 남아야 AX 도입의 변화도 설명할 수 있습니다', size: 27, weight: 600, dim: true },
-  { text: '이 기록은 내부 운영 개선의 기준이 되고,\n앞으로 회사의 성장과 실행력을 외부에 설명하는 근거가 됩니다', size: 22, weight: 600, dim: true },
+  //  ⚠ 0119-b — 첫 10초에 핵심 문장이 바로 읽혀야 합니다. 메인을 46 → 58px
+  //    (약 1.26배)로 키우고, 보조는 더 작고 짧게 줄여 시선을 뺏지 않게 합니다.
+  { text: 'AX를 만들었다는 사실보다 중요한 것은', size: 58 },
+  { text: '실제로 회사가 어떻게 달라지고 있는가입니다', size: 58 },
+  { text: '누가, 언제, 어떤 업무를 했고 무엇이 달라졌는지가\n데이터로 남아야 그 변화를 설명할 수 있습니다', size: 26, weight: 600, dim: true },
+  { text: '내부 운영 개선의 기준이 되고,\n회사의 성장과 실행력을 설명하는 근거가 됩니다', size: 19, weight: 600, dim: true },
 ]
 
 /** 닫는 글자 화면 */
@@ -174,14 +176,24 @@ export async function flow(K) {
   await nav('AX 코치', '[data-coach-total]')
   await chip('오늘 확인된 것')
   await bring('[data-coach-done]', 'center')
+  //  ⚠ 0119-b — **처음에 보신 그 숫자를 다시 보여 줍니다.**
+  //    예전에는 「최근 7일 변화」 띠(33% → 46%)를 짚었는데, 33% 는 *일주일
+  //    전* 값이라 영상 앞부분의 44% 와 이어지지 않아 모순처럼 보였습니다.
+  //    셋 다 제품이 계산한 맞는 값이지만, 보는 사람에게는 기준이 셋입니다.
+  //
+  //    그래서 같은 카드(실증 자료 준비도)를 두 번 보여 줍니다 —
+  //      PART 1 에서 44%  →  수거를 실제로 입력  →  PART 5 에서 46%
+  //    숫자를 맞춘 것이 아니라 **같은 화면을 두 번 찍은 것**입니다.
   await scene('p5', {
     spread: true,
     during: [
       () => spot('[data-coach-done]'),
       () => spot('[data-coach-done] [data-coach-verified], [data-coach-done] li'),
       async () => {
-        await bring('[data-coach-report-pct]', 'center')
-        await spot('[data-coach-report-pct]')
+        //  맨 위로 — 처음에 보신 준비도 카드가 그 자리에 있습니다.
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+        await sleep(H.scroll ?? 380)
+        await spot('[data-coach-total]')
       },
     ],
   })
@@ -190,6 +202,30 @@ export async function flow(K) {
   // ── PART 6 — 기록이 쌓이면 변화가 측정된다 ────────────────────────────
   await nav('AX 도입 성과', '[data-perf-summary]')
   await chip('AX 도입 성과')
+  //  ⚠ 0119-b — 화면 맨 위 「기업 성장 현황」(2025년 매출 5.8억원 등)은
+  //    **회사 실적이지 AX 도입 효과가 아닙니다.** 화면에도 그렇게 적혀
+  //    있지만, 경영진 영상에서 맨 위에 크게 놓이면 AX 성과로 읽힙니다.
+  //    제품은 그대로 두고 **촬영 화면만 아래로 내려** 「AX 로 확인된 변화」
+  //    부터 가운데에 오게 합니다.
+  //  ⚠ 이 화면은 끝까지 내려도 「기업 성장 현황」이 위에 조금 남습니다 —
+  //    더 내려갈 자리가 없기 때문입니다. **촬영하는 창에서만** 본문 아래
+  //    여백을 늘려 내려갈 자리를 만든 뒤 그만큼 더 내립니다.
+  //    제품 자료도 화면 구성도 바꾸지 않습니다 — 찍는 자리만 옮깁니다.
+  await page.evaluate(() => {
+    const m = document.querySelector('main')
+    //  ⚠ 촬영용 무대 CSS 가 아래 여백을 !important 로 박아 두었습니다.
+    //    그냥 넣으면 지고 맙니다 — 같은 무게로 덮어써야 합니다.
+    if (m) m.style.setProperty('padding-bottom', '700px', 'important')
+  })
+  await sleep(120)
+  //  「AX 로 확인된 변화」 제목이 화면 맨 위에 오도록 — 그러면 그 위의
+  //  「기업 성장 현황」은 화면 밖으로 나갑니다.
+  await page.evaluate(() => {
+    const c = document.querySelector('[data-perf-change]')
+    const head = c?.closest('section') ?? c
+    if (head) window.scrollBy({ top: head.getBoundingClientRect().top - 24, behavior: 'smooth' })
+  })
+  await sleep(520)
   await scene('p6', {
     spread: true,
     during: [
@@ -207,6 +243,14 @@ export async function flow(K) {
   // ── PART 7 — 이 데이터가 왜 회사 성장에 중요한가 ──────────────────────
   await spotOff()
   await chip(null)
+  //  덮개를 올리기 전에 다시 「AX 로 확인된 변화」가 위로 오게 합니다 —
+  //  배경으로 비치는 화면에서도 「기업 성장 현황」이 주인공이 되지 않게.
+  await page.evaluate(() => {
+    const c = document.querySelector('[data-perf-change]')
+    const head = c?.closest('section') ?? c
+    if (head) window.scrollBy({ top: head.getBoundingClientRect().top - 24, behavior: 'smooth' })
+  })
+  await sleep(420)
   await veil(WHY)
   await scene('p7', { caption: false, pad: 0 })
 
