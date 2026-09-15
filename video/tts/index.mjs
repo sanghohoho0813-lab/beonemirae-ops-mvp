@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { piper } from './piper.mjs'
+import { elevenlabs } from './elevenlabs.mjs'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  음성 공급자 — **여기 한 곳만 갈아 끼웁니다** (0114)
@@ -17,17 +18,21 @@ import { piper } from './piper.mjs'
 //
 //   공급자가 지켜야 할 약속 (interface)
 //     name        'piper' 처럼 config 에 적는 이름
-//     check()     못 쓸 상태면 **무엇을 어떻게 갖추면 되는지** 적어 던집니다
-//     synth(text, outWav, voice)  그 문장을 wav 로 만듭니다
+//     check(voice) 못 쓸 상태면 **무엇을 어떻게 갖추면 되는지** 적어 던집니다
+//     synth(text, outWav, voice, ctx)  그 문장을 wav 로 만듭니다
+//                  (ctx.prev / ctx.next — 앞뒤 장면의 문장. 읽지는 않고
+//                   문장 사이 호흡을 잇는 데만 씁니다)
 //
 //   ⚠ 열쇠(API key)가 필요한 공급자는 **환경변수로만** 받습니다. 코드·깃·
 //     문서에 적지 않습니다 (이 저장소의 오래된 규칙입니다).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PROVIDERS = {
+  //  심사 영상용 — 열쇠가 필요합니다 (ELEVENLABS_API_KEY)
+  elevenlabs,
+  //  예비 — 열쇠 없이 돌아갑니다. 억양이 평탄해 최종본에는 안 씁니다.
   piper,
   //  나중에 여기에 한 줄씩 더합니다 —
-  //    elevenlabs,   (ELEVENLABS_API_KEY)
   //    openai,       (OPENAI_API_KEY)
   //    google,       (GOOGLE_APPLICATION_CREDENTIALS)
 }
@@ -70,21 +75,30 @@ export function wavSeconds(file) {
  *  같은 문장이면 다시 만들지 않습니다 — 화면 타이밍만 손보는 동안 음성을
  *  매번 새로 뽑을 이유가 없습니다 (piper 는 한 문장에 2~4초 걸립니다).
  */
-export function speakAll(scenes, { provider, voice, outDir, force = false }) {
+export async function speakAll(scenes, { provider, voice, outDir, force = false, only = null }) {
   const engine = getProvider(provider)
-  engine.check()
+  engine.check(voice)
   mkdirSync(outDir, { recursive: true })
 
   const stampPath = join(outDir, 'source.json')
   const stamp = JSON.stringify({ provider, voice, scenes: scenes.map((s) => [s.id, s.text]) })
   const same = !force && existsSync(stampPath) && readFileSync(stampPath, 'utf8') === stamp
 
+  const pick = only ? scenes.filter((s) => only.includes(s.id)) : scenes
   const out = []
-  for (const s of scenes) {
+  for (const s of pick) {
+    const i = scenes.indexOf(s)
     const wav = join(outDir, `${s.id}.wav`)
-    if (!same || !existsSync(wav)) engine.synth(s.text, wav, voice)
+    if (!same || !existsSync(wav)) {
+      //  앞뒤 문장을 함께 넘깁니다 — 장면이 뚝뚝 끊기지 않게 (공급자가 쓰면)
+      await engine.synth(s.text, wav, voice, {
+        prev: scenes[i - 1]?.text ?? '',
+        next: scenes[i + 1]?.text ?? '',
+      })
+    }
     out.push({ id: s.id, text: s.text, wav, sec: Number(wavSeconds(wav).toFixed(3)) })
   }
-  writeFileSync(stampPath, stamp)
+  //  일부만 만든 경우에는 도장을 찍지 않습니다 — 다음에 전체를 만들어야 합니다.
+  if (!only) writeFileSync(stampPath, stamp)
   return { provider, voice, scenes: out, totalSec: Number(out.reduce((a, s) => a + s.sec, 0).toFixed(3)) }
 }

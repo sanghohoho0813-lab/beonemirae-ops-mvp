@@ -9,15 +9,30 @@
   "watermark": "예시 데이터 · 기능 시연용",
   "narration": "video/narration.ko.json",
 
-  "//tts": "공급자를 바꾸려면 provider 이름만 갈면 됩니다 (video/tts/index.mjs 의 PROVIDERS). 녹화·자막·합치기 코드는 그대로입니다.",
+  "//tts": "provider 이름만 갈면 공급자가 바뀝니다 (video/tts/index.mjs 의 PROVIDERS). 녹화·자막·합치기 코드는 그대로입니다. 목소리 설정은 공급자마다 voices 아래에 따로 둡니다.",
   "tts": {
+    "//최종본": "심사 영상은 elevenlabs 로 갑니다. ELEVENLABS_API_KEY(환경변수)와 voiceId 가 정해지면 provider 를 elevenlabs 로 바꾸세요. piper 는 열쇠가 없을 때를 위한 예비입니다.",
     "provider": "piper",
-    "voice": {
-      "//": "lengthScale 은 클수록 느립니다. 1.0 은 조금 빨라 설명 영상에는 1.05 가 편합니다. 흔들림(noise)은 기본값보다 낮춰 또박또박 읽게 했습니다.",
-      "lengthScale": 1.05,
-      "noiseScale": 0.5,
-      "noiseW": 0.6,
-      "sentenceSilence": 0.35
+    "voices": {
+      "piper": {
+        "//": "lengthScale 은 클수록 느립니다. 흔들림(noise)은 기본보다 낮춰 또박또박 읽게 했습니다.",
+        "lengthScale": 1.05,
+        "noiseScale": 0.5,
+        "noiseW": 0.6,
+        "sentenceSilence": 0.35
+      },
+      "elevenlabs": {
+        "//voiceId": "npm run video:voices 로 목록을 보고 고릅니다. 기준: 한국어가 자연스럽고, 광고처럼 들뜨지 않으며, 30~40대 담당자가 차분히 설명하는 느낌.",
+        "voiceId": "",
+        "model": "eleven_multilingual_v2",
+        "languageCode": "ko",
+        "//settings": "여섯 장면 모두 같은 값을 씁니다 — 장면마다 말투가 달라지지 않게. stability 를 높이면 편차가 줄고, style 을 낮추면 광고 톤이 빠집니다.",
+        "stability": 0.6,
+        "similarityBoost": 0.8,
+        "style": 0.05,
+        "speakerBoost": true,
+        "speed": 0.95
+      }
     }
   },
 
@@ -39,10 +54,10 @@
 
   "//hold": "말이 끝난 뒤 쉬는 시간과 손동작 시간. 장면 체류시간은 음성 길이에서 나오므로 여기에 없습니다.",
   "hold": {
-    "intro": 400,
+    "intro": 250,
     "padAfterVoice": 400,
-    "outroTail": 250,
-    "cursorMove": 320,
+    "outroTail": 200,
+    "cursorMove": 270,
     "afterClick": 350
   }
 }

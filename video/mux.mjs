@@ -40,13 +40,13 @@ function ffmpegPath() {
 }
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname)
-const cfgPath = process.argv[2] ?? join(ROOT, 'video/config.beonemirae.json')
+const cfgPath = process.argv.slice(2).find((a) => a.endsWith('.json')) ?? join(ROOT, 'video/config.beonemirae.json')
 const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
 const OUT = join(ROOT, CFG.out.dir)
 mkdirSync(OUT, { recursive: true })
 
 const webm = join(OUT, CFG.out.webm)
-const mp4 = join(OUT, CFG.out.mp4)
+const mp4 = join(OUT, process.argv.includes('--silent') ? (CFG.out.mp4Silent ?? 'silent-' + CFG.out.mp4) : CFG.out.mp4)
 const tlPath = join(OUT, CFG.out.timeline)
 if (!existsSync(webm)) throw new Error(`녹화본이 없습니다: ${webm}\n  먼저 node video/record.mjs 를 돌려 주세요.`)
 
@@ -78,7 +78,9 @@ const trimSec = webmSec !== null && tl.closeOffsetSec
 
 //  ── 음성 트랙 ──────────────────────────────────────────────────────────────
 //   장면 wav 를 각자의 시작 시각만큼 밀어 놓고 하나로 섞습니다.
-const voice = tl.voice ?? null
+//  --silent 이면 음성을 붙이지 않습니다 — 화면만 먼저 확인할 때 씁니다.
+const SILENT = process.argv.includes('--silent')
+const voice = SILENT ? null : (tl.voice ?? null)
 const wavs = (voice?.scenes ?? []).map((s) => ({ ...s, file: join(OUT, voice.dir, `${s.id}.wav`) }))
 const missing = wavs.filter((w) => !existsSync(w.file))
 if (voice && missing.length) {

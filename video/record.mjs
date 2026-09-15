@@ -34,7 +34,7 @@ import { captureFixture } from './fixture.mjs'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname)
-const cfgPath = process.argv[2] ?? join(ROOT, 'video/config.beonemirae.json')
+const cfgPath = process.argv.slice(2).find((a) => a.endsWith('.json')) ?? join(ROOT, 'video/config.beonemirae.json')
 const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
 const OUT = join(ROOT, CFG.out.dir)
 const H = CFG.hold
@@ -117,11 +117,47 @@ const OVERLAY = (watermark, sub) => `
       'opacity:0','transition:opacity .16s linear',
     ].join(';')
 
+    //  ── 전환을 덮는 「유령」 (0115) ─────────────────────────────────────
+    //   장면이 바뀌는 순간 제품 덮개는 「강조 사라짐 → 화면 전체 어두움 →
+    //   새 강조 나타남」을 지납니다. 그 중간 상태가 영상에 찍히면 번쩍입니다.
+    //   그래서 전환 직전에 **지금 보이는 강조를 그대로 복사**해 두고,
+    //   제품 덮개는 잠깐 감춥니다. 새 자리가 준비되면 둘을 교차로 바꿉니다.
+    const ghost = document.createElement('div')
+    ghost.id = 'vid-ghost'
+    ghost.style.cssText = 'position:absolute;border-radius:20px;opacity:0;display:none'
+
+    //  투어가 켜지는 순간 제품 덮개는 **한 프레임에** 화면을 어둡게 만듭니다.
+    //  그 앞에서 우리가 먼저 천천히 어둡게 해 두면 계단이 생기지 않습니다.
+    const veil = document.createElement('div')
+    veil.id = 'vid-veil'
+    //  ⚠ 거의 불투명합니다. 옅게 두면 **덮개 아래에서 화면이 바뀌는 것**이
+    //    비쳐 보여 그 자체가 번쩍임이 됩니다(실측 +38). 잠깐 어두워졌다가
+    //    새 화면이 밝아지는 편이 훨씬 차분합니다.
+    veil.style.cssText = 'position:absolute;inset:0;background:rgba(8,15,28,.86);opacity:0;display:none'
+
     const css = document.createElement('style')
-    css.textContent = 'main > div.justify-end:has(> [data-tour-start]){display:none !important}'
+    css.textContent = [
+      //  오른쪽 위 도구 줄 — 시연 화면의 「투어 시작」 카드는 건드리지 않습니다.
+      'main > div.justify-end:has(> [data-tour-start]){display:none !important}',
+      //  설명 상자는 조금 더 좁게 — 본문을 덜 가립니다.
+      '[data-tour-card]{width:min(19rem,calc(100vw - 1.5rem)) !important}',
+      //  강조가 톡 튀지 않게.
+      '[data-tour-spot]{transition:opacity .22s linear,box-shadow .22s linear !important}',
+      //  ⚠ 덮개(role=dialog)에 fade-in 애니메이션을 걸어 봤는데 **더 나빴습니다.**
+      //    덮개가 들어오는 0.3초 동안 화면이 환한 채로 남아 +137 만큼 번쩍였습니다.
+      //    대신 아래 veil() 로 **우리가 먼저** 어둡게 만든 뒤 넘깁니다.
+    ].join('')
     document.head.appendChild(css)
 
-    layer.append(mark, cap, ring, cur)
+    //  ── 무대 (0115) ────────────────────────────────────────────────────
+    //   왼쪽 목차를 접고 본문이 화면을 넓게 쓰게 합니다. **투어가 켜질 때**
+    //   켭니다 — 시연 화면(첫 1초)은 평소 모습 그대로 보여 주고, 목차가
+    //   사라지는 순간은 어둠 아래에서 지나갑니다.
+    const stage = document.createElement('style')
+    stage.id = 'vid-stage'
+    document.head.appendChild(stage)
+
+    layer.append(veil, mark, cap, ghost, ring, cur)
     document.body.appendChild(layer)
 
     window.__vid = {
@@ -140,6 +176,81 @@ const OVERLAY = (watermark, sub) => `
           { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' })
       },
       hide() { cur.style.opacity = '0'; ring.style.opacity = '0' },
+
+      /** 읽는 동안 커서를 빈자리로 **미끄러뜨려** 둡니다 (사라지지 않습니다) */
+      park(ms) {
+        const x = window.innerWidth - 150
+        const y = window.innerHeight - 140
+        cur.style.transition = 'transform ' + ms + 'ms cubic-bezier(.22,1,.36,1),opacity .25s'
+        cur.style.transform = 'translate(' + x + 'px,' + y + 'px)'
+        ring.style.transform = 'translate(' + x + 'px,' + y + 'px)'
+      },
+
+      /** 목차를 접고 본문을 넓힙니다 (어둠 아래에서 바꿉니다) */
+      stage(on) {
+        stage.textContent = on
+          ? 'aside.sticky{display:none !important}'
+            //  ⚠ 오른쪽에 설명 상자 자리를 **비워 둡니다.** 목차를 접었더니
+            //    강조 대상이 화면 끝까지 넓어져 옆에 설 자리가 없어졌고,
+            //    설명 상자가 화면 한가운데로 내려와 본문을 덮었습니다.
+            //    자리를 미리 비우면 상자는 늘 오른쪽 가장자리에 섭니다.
+            + 'main{padding-left:34px !important;padding-right:22rem !important}'
+          : ''
+      },
+
+      /** 우리가 먼저 화면을 어둡게 — 제품 덮개가 켜지기 전에 */
+      veil(ms) {
+        veil.style.transition = 'none'
+        veil.style.display = 'block'
+        veil.style.opacity = '0'
+        //  ⚠ display 를 바꾼 직후 opacity 를 건드리면 transition 이 **안 걸립니다.**
+        //    한 번 재배치를 강제해서 「0 이었다」는 상태를 확정시킵니다.
+        //    (rAF 한 번으로는 모자라 한 프레임에 129 만큼 떨어졌습니다)
+        void veil.offsetWidth
+        veil.style.transition = 'opacity ' + ms + 'ms ease'
+        veil.style.opacity = '1'
+      },
+      /** 제품 덮개가 자리를 잡은 뒤 우리 것을 걷습니다 */
+      unveil(ms) {
+        veil.style.transition = 'opacity ' + ms + 'ms ease'
+        veil.style.opacity = '0'
+        window.setTimeout(() => { veil.style.display = 'none' }, ms + 60)
+      },
+
+      /** 전환 직전 — 지금 보이는 강조를 복사해 두고 제품 덮개를 감춥니다 */
+      freeze() {
+        const dlg = document.querySelector('[role="dialog"]')
+        const spot = document.querySelector('[data-tour-spot]')
+        if (!dlg) return
+        if (spot) {
+          const r = spot.getBoundingClientRect()
+          const cs = getComputedStyle(spot)
+          ghost.style.transition = 'none'
+          ghost.style.display = 'block'
+          ghost.style.top = r.top + 'px'
+          ghost.style.left = r.left + 'px'
+          ghost.style.width = r.width + 'px'
+          ghost.style.height = r.height + 'px'
+          ghost.style.borderRadius = cs.borderRadius
+          ghost.style.boxShadow = cs.boxShadow
+          ghost.style.opacity = '1'
+        }
+        dlg.style.animation = 'none'
+        dlg.style.transition = 'none'
+        dlg.style.opacity = '0'
+      },
+
+      /** 새 자리가 준비된 뒤 — 유령과 제품 덮개를 교차로 바꿉니다 */
+      thaw(ms) {
+        const dlg = document.querySelector('[role="dialog"]')
+        if (dlg) {
+          dlg.style.transition = 'opacity ' + ms + 'ms linear'
+          dlg.style.opacity = '1'
+        }
+        ghost.style.transition = 'opacity ' + ms + 'ms linear'
+        ghost.style.opacity = '0'
+        window.setTimeout(() => { ghost.style.display = 'none' }, ms + 60)
+      },
       say(lines) { cap.textContent = lines.join(String.fromCharCode(10)); cap.style.opacity = '1' },
       sayOff() { cap.style.opacity = '0' },
     }
@@ -309,7 +420,7 @@ const mark = (label) => {
 }
 
 /** 커서를 그 자리로 옮기고, 눌리는 시늉을 낸 뒤, 실제로 누릅니다 */
-async function point(sel, { click = true } = {}) {
+async function point(sel, { click = true, freeze = false } = {}) {
   const el = page.locator(sel).first()
   await el.waitFor({ state: 'visible', timeout: 15000 })
   const box = await el.boundingBox()
@@ -320,7 +431,40 @@ async function point(sel, { click = true } = {}) {
   await page.waitForTimeout(H.cursorMove + 80)
   await page.evaluate(() => window.__vid?.tap())
   await page.waitForTimeout(180)
+  //  ⚠ 누르기 **직전에** 지금 화면을 얼려 둡니다. 누르는 순간 강조가 사라지고
+  //    새 자리가 잡힐 때까지 화면 전체가 어두워지는데, 그 중간 상태가 영상에
+  //    찍히면 번쩍입니다. thaw() 로 새 자리와 교차로 바꿉니다.
+  if (freeze) await page.evaluate(() => window.__vid?.freeze())
   if (click) await el.click()
+}
+
+/** 새 자리가 준비된 뒤 — 얼려 둔 화면과 교차로 바꿉니다 (같은 화면 안에서) */
+const CROSS = 220
+async function thaw() {
+  await page.evaluate((ms) => window.__vid?.thaw(ms), CROSS)
+  await page.waitForTimeout(CROSS + 40)
+}
+
+/**
+ * **화면이 바뀌는 전환** — 어둠을 덮고 지나갑니다 (0115).
+ *
+ *  커서로 짚어 두고 → 0.24초에 걸쳐 어두워지고 → 그 아래에서 화면을 옮기고
+ *  → 새 자리가 준비되면 0.26초에 걸쳐 걷습니다.
+ *  단추를 누르는 순간의 「강조 사라짐 → 전체 어두움 → 새 강조」가 한 프레임도
+ *  찍히지 않습니다.
+ */
+const VEIL_IN = 260
+const VEIL_OUT = 290
+async function swap(sel, ready, { stage = null } = {}) {
+  await point(sel, { click: false })
+  await page.evaluate((ms) => window.__vid?.veil(ms), VEIL_IN)
+  await page.waitForTimeout(VEIL_IN + 40)
+  if (stage !== null) await page.evaluate((on) => window.__vid?.stage(on), stage)
+  await page.locator(sel).first().click()
+  await ready()
+  await page.waitForTimeout(90)
+  await page.evaluate((ms) => window.__vid?.unveil(ms), VEIL_OUT)
+  await page.waitForTimeout(VEIL_OUT + 40)
 }
 
 /** 지금 몇 단계인지 — 영상이 제 순서대로 도는지 스스로 확인합니다 */
@@ -368,6 +512,8 @@ const audio = []
 async function scene(id, { during = [] } = {}) {
   const sc = VOICE.scenes.find((x) => x.id === id)
   if (!sc) throw new Error(`대사가 없습니다: ${id}`)
+  //  읽는 동안 커서가 자막이나 본문 위에 얹혀 있지 않게 옆으로 비켜 둡니다.
+  await page.evaluate(() => window.__vid?.park(700))
   audio.push({ id, label: sc.label, at: Number(at().toFixed(2)), sec: sc.sec })
   mark(`${sc.label} — 음성 ${sc.sec.toFixed(1)}초`)
 
@@ -392,26 +538,32 @@ mark('시작 화면 (심사 시연 안내)')
 await page.waitForTimeout(H.intro)
 
 //  투어 켜기
-await point('[data-demo-tour] [data-tour-start]')
-await page.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 15000 })
-await page.evaluate(() => window.__vid?.hide())
+//  투어 켜기 — 목차를 접는 것도 이 어둠 아래에서 지나갑니다.
+await swap(
+  '[data-demo-tour] [data-tour-start]',
+  () => page.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 15000 }),
+  { stage: true },
+)
 await expect(1, '①')
 await checkOverlap('①')
 await scene('s1')
 
 //  ① → ②  (읽는 단계이므로 「다음」)
-await point('[data-tour-next]')
+await point('[data-tour-next]', { freeze: true })
 await page.locator('[data-tour-title]:has-text("바로 업무로")').waitFor({ state: 'visible', timeout: 15000 })
-await page.evaluate(() => window.__vid?.hide())
+await thaw()
 await expect(2, '②')
 await checkOverlap('②')
 await scene('s2')
 
 //  ② → ③  **실제 미션 단추**를 누릅니다 — 투어가 따라옵니다
-await point('[data-coach-go="collect-today"]')
-await page.locator('[data-collect-save]').waitFor({ state: 'visible', timeout: 15000 })
-await page.waitForTimeout(H.afterClick)
-await page.evaluate(() => window.__vid?.hide())
+await swap(
+  '[data-coach-go="collect-today"]',
+  async () => {
+    await page.locator('[data-collect-save]').waitFor({ state: 'visible', timeout: 15000 })
+    await page.waitForTimeout(H.afterClick)
+  },
+)
 await expect(3, '③')
 await checkOverlap('③')
 
@@ -427,26 +579,33 @@ await scene('s3', {
 })
 
 //  ③ → ④  저장. **흉내 서버가 받습니다 — 실제 저장이 아닙니다.**
-await point('[data-collect-save]')
+await point('[data-collect-save]', { freeze: true })
 await page.locator('[data-tour="collect-done"]').waitFor({ state: 'visible', timeout: 15000 })
 await page.waitForTimeout(H.afterClick)
-await page.evaluate(() => window.__vid?.hide())
+await thaw()
 await expect(4, '④')
 await checkOverlap('④')
 await scene('s4')
 
 //  ④ → ⑤
-await point('[data-tour-next]')
-await page.locator('[data-tour-title]:has-text("실제 기록을 확인")').waitFor({ state: 'visible', timeout: 15000 })
-await page.evaluate(() => window.__vid?.hide())
+await swap(
+  '[data-tour-next]',
+  () => page.locator('[data-tour-title]:has-text("실제 기록을 확인")').waitFor({ state: 'visible', timeout: 15000 }),
+)
 await expect(5, '⑤')
 await checkOverlap('⑤')
 await scene('s5')
 
-//  마무리 — 투어가 성과 화면으로 넘겨 줍니다
-await point('[data-tour-next]')
-await page.waitForURL('**/performance', { timeout: 15000 })
-await page.waitForTimeout(250)
+//  마무리 — 투어가 성과 화면으로 넘겨 줍니다.
+//  ⚠ 여기서 투어가 끝나면 덮개가 **한 프레임에** 사라져 화면이 확 밝아집니다.
+//    같은 어둠으로 덮고 지나갑니다.
+await swap(
+  '[data-tour-next]',
+  async () => {
+    await page.waitForURL('**/performance', { timeout: 15000 })
+    await page.waitForTimeout(250)
+  },
+)
 await page.evaluate(() => window.__vid?.hide())
 await scene('outro')
 await page.waitForTimeout(H.outroTail)

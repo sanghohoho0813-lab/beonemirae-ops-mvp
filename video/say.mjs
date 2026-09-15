@@ -23,7 +23,7 @@ import { speakAll } from './tts/index.mjs'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname)
-const cfgPath = process.argv[2] ?? join(ROOT, 'video/config.beonemirae.json')
+const cfgPath = process.argv.slice(2).find((a) => a.endsWith('.json')) ?? join(ROOT, 'video/config.beonemirae.json')
 const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
 const NAR = JSON.parse(readFileSync(join(ROOT, CFG.narration), 'utf8'))
 const OUT = join(ROOT, CFG.out.dir, 'voice')
@@ -83,11 +83,20 @@ function spread(cues, sec) {
 mkdirSync(OUT, { recursive: true })
 
 const force = process.argv.includes('--force')
-const res = speakAll(NAR.scenes, {
+//  --only s1,s2  — 앞 두 장면만 시험해 볼 때 (목소리를 고르는 단계)
+const onlyArg = process.argv.find((a) => a.startsWith('--only'))
+const only = onlyArg
+  ? (onlyArg.includes('=') ? onlyArg.split('=')[1] : process.argv[process.argv.indexOf(onlyArg) + 1] ?? '')
+    .split(',').map((x) => x.trim()).filter(Boolean)
+  : null
+
+const res = await speakAll(NAR.scenes, {
   provider: CFG.tts.provider,
-  voice: CFG.tts.voice,
+  //  목소리 설정은 공급자마다 따로 둡니다 — 바꿔 끼울 때 값이 섞이지 않게.
+  voice: CFG.tts.voices?.[CFG.tts.provider] ?? CFG.tts.voice ?? {},
   outDir: OUT,
   force,
+  only,
 })
 
 const scenes = res.scenes.map((s) => {
@@ -96,9 +105,10 @@ const scenes = res.scenes.map((s) => {
 })
 
 const timing = { provider: res.provider, voice: res.voice, totalSec: res.totalSec, scenes }
-writeFileSync(join(OUT, 'timing.json'), JSON.stringify(timing, null, 2))
+//  ⚠ 일부만 만든 것으로 timing.json 을 덮어쓰면 녹화가 장면을 못 찾습니다.
+writeFileSync(join(OUT, only ? 'timing.sample.json' : 'timing.json'), JSON.stringify(timing, null, 2))
 
-console.log(`── 음성 (${res.provider}) ──`)
+console.log(`── 음성 (${res.provider})${only ? ` · ${only.join(',')} 만` : ''} ──`)
 for (const s of scenes) {
   console.log(`  ${s.id.padEnd(6)} ${String(s.text.length).padStart(3)}자  ${s.sec.toFixed(2)}초  자막 ${s.cues.length}조각`)
   for (const c of s.cues) console.log(`         ${(c.ms / 1000).toFixed(1)}s  ${c.lines.join(' / ')}`)
