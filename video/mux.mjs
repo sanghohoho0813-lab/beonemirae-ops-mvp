@@ -63,18 +63,27 @@ function seconds(file) {
   return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : null
 }
 
-//  ── 앞부분을 얼마나 잘라야 하는가 ──────────────────────────────────────────
-//   녹화가 **언제 시작되는지**는 우리가 정하지 못합니다(브라우저가 첫 프레임을
-//   만드는 순간). 대신 끝나는 시점은 확실합니다 — 브라우저를 닫는 순간입니다.
-//   그래서 끝에서부터 되짚습니다.
+//  ── 영상 시간을 실제 시간으로 되돌리고, 앞부분을 잘라 냅니다 (0118) ───────
+//   Playwright 가 남기는 webm 은 **실제로 흐른 시간과 길이가 다릅니다.**
+//   화면이 멈춰 있으면 프레임을 덜 만들고, 그것을 되살리면서 길이가 1~2%
+//   늘어납니다 (54초에 1초쯤). 그래서
+//     · 끝에서 되짚어도   (영상길이 − 닫을 때까지)
+//     · 앞에서 세어도     (페이지 연 뒤 흐른 시간)
+//   둘 다 어긋났습니다. 어긋난 채로 자르면 **시작 화면이 통째로 사라집니다.**
 //
-//     잘라 낼 앞부분 = 영상 전체 길이 − (본문 시작부터 닫을 때까지)
-//
-//   시계로만 앞에서부터 셌더니 2초쯤 어긋나 장면 시각이 맞지 않았습니다.
+//   대신 이렇게 합니다.
+//     늘어난 비율 k = 영상 파일 길이 ÷ 실제로 흐른 시간
+//     setpts 로 영상 시간을 k 만큼 되돌려 실제 시간과 같게 만든 뒤
+//     「페이지를 연 뒤 본문이 시작될 때까지」만큼 잘라 냅니다.
+//   그러면 자르는 자리도, 장면 시각도, 음성 붙이는 자리도 전부 맞습니다.
 const webmSec = seconds(webm)
-const trimSec = webmSec !== null && tl.closeOffsetSec
-  ? Math.max(0, Number((webmSec - tl.closeOffsetSec).toFixed(2)))
-  : 0
+const wallSec = tl.videoWallSec ?? null
+//  k — 1 보다 크면 영상이 실제보다 길게 늘어나 있다는 뜻입니다.
+const stretch = webmSec !== null && wallSec ? Number((webmSec / wallSec).toFixed(6)) : 1
+const trimSec = tl.readyOffsetSec != null
+  ? Math.max(0, Number(tl.readyOffsetSec.toFixed(2)))
+  //  예전 방식 (readyOffsetSec 이 없는 오래된 timeline 용)
+  : (webmSec !== null && tl.closeOffsetSec ? Math.max(0, Number((webmSec - tl.closeOffsetSec).toFixed(2))) : 0)
 
 //  ── 음성 트랙 ──────────────────────────────────────────────────────────────
 //   두 가지 길이 있습니다. **둘 다 하는 일은 같습니다** — 소리를 제자리에
@@ -122,18 +131,25 @@ if (VO) {
     : null
 }
 
-//  앞부분(자료 읽는 동안)을 잘라 내고, 30fps 고정 · H.264 로 다시 씁니다.
-//  ⚠ -ss 는 **영상 입력에만** 겁니다. 출력 쪽에 걸면 음성까지 같이 밀려서
-//    말과 화면이 어긋납니다.
+//  ⚠ -ss 를 입력에 걸지 않습니다. 시간을 되돌리는 것(setpts)이 먼저라서,
+//    자르는 것도 그 뒤에 와야 합니다. 음성은 손대지 않습니다.
+const vChain = [
+  //  ① 늘어난 만큼 되돌려 실제 시간과 같게
+  stretch !== 1 ? `setpts=PTS/${stretch}` : null,
+  //  ② 본문이 시작되는 자리부터, 본문 길이만큼만
+  `trim=start=${trimSec}${tl.bodySec ? `:duration=${tl.bodySec}` : ''}`,
+  'setpts=PTS-STARTPTS',
+  `scale=${width}:${height}:flags=lanczos`,
+  `fps=${CFG.fps}`,
+].filter(Boolean).join(',')
+
 const args = [
   '-hide_banner', '-loglevel', 'error', '-y',
-  '-ss', String(trimSec), '-i', webm,
+  '-i', webm,
   ...inputs.flatMap((f) => ['-i', f]),
-  ...(aChain ? ['-filter_complex', `${aChain};[0:v]scale=${width}:${height}:flags=lanczos,fps=${CFG.fps}[vout]`]
-    : ['-vf', `scale=${width}:${height}:flags=lanczos,fps=${CFG.fps}`]),
-  ...(aChain ? ['-map', '[vout]', '-map', '[aout]'] : []),
-  //  끝도 잘라 냅니다. 녹화는 브라우저를 닫을 때까지 이어져서, 마지막 장면
-  //  뒤에 2~3초가 덤으로 붙습니다 — 영상이 끝난 줄 모르고 멈춰 있게 됩니다.
+  '-filter_complex', `${aChain ? `${aChain};` : ''}[0:v]${vChain}[vout]`,
+  '-map', '[vout]',
+  ...(aChain ? ['-map', '[aout]'] : []),
   ...(tl.bodySec ? ['-t', String(tl.bodySec)] : []),
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '20',
   '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
@@ -159,6 +175,8 @@ console.log(`  MP4      ${mp4}`)
 console.log(`  크기     ${(size / 1024 / 1024).toFixed(1)} MB`)
 console.log(`  길이     ${sec === null ? '?' : sec.toFixed(2)}초`)
 console.log(`  영상     ${stream || `${width}x${height} @ ${CFG.fps}fps`}`)
+console.log(`  자른 앞부분 ${trimSec.toFixed(2)}초 · 영상 시간 보정 ×${(1 / stretch).toFixed(4)}`
+  + (Math.abs(stretch - 1) > 0.005 ? `  (녹화본이 실제보다 ${((stretch - 1) * 100).toFixed(1)}% 늘어나 있었습니다)` : ''))
 if (astream) console.log(`  음성     ${astream}`)
 if (voice) {
   console.log(VO

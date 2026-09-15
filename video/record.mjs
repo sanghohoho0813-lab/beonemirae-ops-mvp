@@ -83,6 +83,9 @@ const FIX = captureFixture(TODAY)
 const OVERLAY = (watermark, sub, st) => `
 (() => {
   const CUR = ${st.cursorPx ?? 26}
+  //  목차를 얼마나 줄일지 · 덮개를 얼마나 어둡게 할지 — config 의 stage
+  const Z = ${st.sidebarZoom ?? 1}
+  const D = ${st.dim ?? 0.16}
   const put = () => {
     if (document.getElementById('vid-layer')) return
     const layer = document.createElement('div')
@@ -129,7 +132,7 @@ const OVERLAY = (watermark, sub, st) => `
       'padding:8px 16px','border-radius:12px',
       //  읽을 만큼만 어둡게 — 뒤 화면이 비쳐 보이는 정도입니다.
       'background:rgba(8,15,28,.68)','color:#fff',
-      'font:600 ' + ${sub.fontPx ?? 21} + 'px/1.45 system-ui,sans-serif',
+      'font:600 ' + ${sub.fontPx ?? 21} + 'px/' + ${sub.lineHeight ?? 1.35} + ' system-ui,sans-serif',
       'text-align:center','white-space:pre-line','word-break:keep-all',
       'opacity:0','transition:opacity .16s linear',
     ].join(';')
@@ -156,30 +159,37 @@ const OVERLAY = (watermark, sub, st) => `
       //   ⚠ 1600×900 으로 찍어 1280×720 으로 줄이던 것을 그만둡니다.
       //     줄이면 글자 획이 뭉개집니다. 1080 으로 찍어 1080 으로 냅니다.
       //
-      //   다만 창만 키우면 **같은 내용이 넓게 퍼져** 글자와 강조가 상대적으로
-      //   작아집니다. 그래서 이 앱의 기준 글자 크기를 화면 비율만큼 같이
-      //   키웁니다 — 1600 기준 17.8px × (1920/1600) = 21.4px.
-      //   배치 비율은 900 높이에서 맞춰 둔 그대로이고, 픽셀만 진짜 1080 입니다.
-      //   (제품에는 손대지 않습니다. 녹화하는 창에서만 덮어씁니다.)
+      //   기준 글자 크기를 화면 비율만큼 같이 키워야 배치가 넓게 퍼지지
+      //   않습니다. 0118 에서는 거기서 한 번 더 줄였습니다 — 본문만 꽉 차
+      //   있으면 「시스템 화면」이 아니라 「확대한 웹페이지」로 보입니다.
       'html,html.scale-normal,html.scale-lg,html.scale-xl{font-size:'
         + ${st.rootFontPx ?? 17.8} + 'px !important}',
-      //  왼쪽 목차를 접고, 본문이 **화면 가로를 그대로** 씁니다.
-      //  ⚠ 오른쪽에 설명 상자 자리를 비워 두던 것을 없앴습니다 — 상자를
-      //    감추니 비워 둘 이유가 없고, 비워 두면 AX 가 그만큼 작아집니다.
-      'aside.sticky{display:none !important}',
+      //  ── 왼쪽 목차를 **얇게 되살립니다** (0118) ──────────────────────
+      //   0116~0117 에서는 아예 감췄습니다. 그랬더니 본문이 화면을 꽉 채워
+      //   실제 시스템을 보는 느낌이 사라졌습니다. 다시 보이되 **제 폭으로
+      //   두지는 않습니다** — 392px 짜리를 zoom 으로 줄여 1920 화면의 10%
+      //   안쪽만 차지하게 합니다. 「오늘 업무」만 펼친 기본 상태 그대로입니다.
+      //   ⚠ zoom 은 높이도 같이 줄이므로 h-[100dvh] 를 그만큼 되돌려 줘야
+      //     목차가 화면 중간에서 끊기지 않습니다.
+      'aside.sticky{zoom:' + Z + ' !important;height:calc(100dvh / ' + Z + ') !important}',
+      //  본문은 화면 끝에 붙지 않게 — 좌우·위아래로 숨 쉴 자리를 둡니다.
       'main{padding-left:' + ${st.mainPadPx ?? 34} + 'px !important;'
-        + 'padding-right:' + ${st.mainPadPx ?? 34} + 'px !important}',
+        + 'padding-right:' + ${st.mainPadPx ?? 34} + 'px !important;'
+        + 'padding-top:' + ${st.mainTopPx ?? 28} + 'px !important;'
+        + 'padding-bottom:' + ${st.mainBottomPx ?? 96} + 'px !important}',
       //  ⚠ **설명 상자를 감춥니다.** 설명은 음성과 자막이 맡습니다.
       //    display:none 이라 자리도 안 차지합니다 — 그래서 강조 대상이
       //    화면 가운데에 크게 놓입니다.
       '[data-tour-card]{display:none !important}',
       //  ⚠ 강조는 **얇은 테두리와 은은한 빛**까지만. 예전에는 나머지 화면을
-      //    72% 어둡게 덮어 실제 내용이 잘 안 읽혔습니다.
-      '[data-tour-spot]{box-shadow:0 0 0 9999px rgba(8,15,28,.16),'
-        + '0 0 0 2px rgba(49,130,246,.85),0 0 26px 6px rgba(49,130,246,.22) !important;'
+      //    72% 어둡게 덮어 실제 내용이 잘 안 읽혔습니다. 0118 에서 16% → 9%.
+      //    「나머지를 감추는 것」이 아니라 「여기를 한번 보세요」입니다 —
+      //    덮인 자리의 글씨와 카드가 계속 읽혀야 합니다.
+      '[data-tour-spot]{box-shadow:0 0 0 9999px rgba(8,15,28,' + D + '),'
+        + '0 0 0 2px rgba(49,130,246,.8),0 0 18px 5px rgba(49,130,246,.16) !important;'
         + 'transition:opacity .16s linear,box-shadow .16s linear !important}',
-      //  강조가 아직 없을 때 쓰는 덮개도 아주 옅게 — 화면이 컴컴해지지 않게.
-      '[role="dialog"] > div[class*="bg-navy-950"]{background:rgba(8,15,28,.16) !important;'
+      //  강조가 아직 없을 때 쓰는 덮개도 같은 농도로 — 계단이 안 생기게.
+      '[role="dialog"] > div[class*="bg-navy-950"]{background:rgba(8,15,28,' + D + ') !important;'
         + 'transition:background .16s linear !important}',
     ].join('')
     document.head.appendChild(css)
@@ -366,6 +376,10 @@ await ctx.route('**/rest/v1/collection_events*', (r) => {
 })
 
 const page = await ctx.newPage()
+//  녹화가 시작되는 순간 — Playwright 는 페이지가 생길 때부터 찍습니다.
+//  이 시각이 있어야 「영상 파일의 시간이 실제 시간과 얼마나 어긋났는지」를
+//  잴 수 있습니다 (아래 timeline 의 videoWallSec 설명).
+const tVideo = Date.now()
 const errors = []
 page.on('pageerror', (e) => errors.push(String(e)))
 
@@ -380,11 +394,39 @@ await page.addInitScript(([k, u]) => {
 }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }])
 await page.addInitScript(OVERLAY(CFG.watermark, SUB, ST))
 
+/**
+ * 얇게 되살린 왼쪽 목차가 실제로 몇 px 인지 재고, 왼쪽 아래 단계 표시를
+ * 그 오른쪽으로 비켜 둡니다 — 목차는 짙은 남색이라 그 위에 얹으면 안 읽힙니다.
+ */
+let stageInfo = { asideW: 0, asidePct: 0, mainW: 0 }
+async function measureStage() {
+  stageInfo = await page.evaluate((edge) => {
+    const a = document.querySelector('aside.sticky')
+    const w = a ? Math.round(a.getBoundingClientRect().width) : 0
+    const chip = document.getElementById('vid-chip')
+    if (chip) chip.style.left = (w + edge) + 'px'
+    const m = document.querySelector('main')
+    const cap = document.getElementById('vid-cap')
+    const cs = cap ? getComputedStyle(cap) : null
+    return {
+      asideW: w,
+      asidePct: Number((w / window.innerWidth * 100).toFixed(1)),
+      mainW: m ? Math.round(m.getBoundingClientRect().width) : 0,
+      rootFontPx: Number(getComputedStyle(document.documentElement).fontSize.replace('px', '')),
+      //  자막이 실제로 몇 px 로 그려지는지 — 설정값이 아니라 그려진 값입니다
+      capFontPx: cs ? Number(cs.fontSize.replace('px', '')) : 0,
+      //  maxWidth 는 % 로 적어 두므로 화면 폭을 곱해 px 로 적어 둡니다
+      capMaxW: cs ? Math.round(window.innerWidth * parseFloat(cs.maxWidth) / 100) : 0,
+    }
+  }, ST.edgePx ?? 16)
+}
+
 const tPage = Date.now()
 await page.goto(`${CFG.baseUrl}/presentation`, { waitUntil: 'domcontentloaded' })
 await W.settle(page, state)
 await page.locator('[data-demo-tour] [data-tour-start]').waitFor({ state: 'visible', timeout: 15000 })
-await page.waitForTimeout(500)
+await measureStage()
+await page.waitForTimeout(300)
 
 // ── 여기서부터가 영상 본문 ───────────────────────────────────────────────────
 const tReady = Date.now()
@@ -413,7 +455,7 @@ async function bring(sel, block = 'center') {
 }
 
 /** 커서를 그 자리로 옮기고, 눌리는 시늉을 낸 뒤, 실제로 누릅니다 */
-async function point(sel, { click = true } = {}) {
+async function point(sel, { click = true, fast = false } = {}) {
   const el = page.locator(sel).first()
   await el.waitFor({ state: 'visible', timeout: 15000 })
   //  화면 밖에 있으면 커서가 엉뚱한 자리로 갑니다 — 먼저 굴려 놓습니다.
@@ -426,10 +468,14 @@ async function point(sel, { click = true } = {}) {
   if (!box) throw new Error(`자리를 못 찾았습니다: ${sel}`)
   const x = Math.round(box.x + box.width / 2)
   const y = Math.round(box.y + box.height / 2)
-  await page.evaluate(([x, y, ms]) => window.__vid?.move(x, y, ms), [x, y, H.cursorMove])
-  await page.waitForTimeout(H.cursorMove + 60)
+  //  ⚠ 첫 단추(투어 시작)만 빠르게 — 영상 첫 1초 안에 실제 AX 가 나와야
+  //    합니다. 그 뒤 실제 AX 단추들은 눈으로 따라올 수 있는 속도로.
+  const move = fast ? (H.introCursor ?? 110) : H.cursorMove
+  const hold = fast ? 60 : (H.beforeClick ?? 130)
+  await page.evaluate(([x, y, ms]) => window.__vid?.move(x, y, ms), [x, y, move])
+  await page.waitForTimeout(move + (fast ? 20 : 60))
   await page.evaluate(() => window.__vid?.tap())
-  await page.waitForTimeout(H.beforeClick ?? 130)
+  await page.waitForTimeout(hold)
   if (click) await el.click()
 }
 
@@ -551,7 +597,7 @@ await page.waitForTimeout(H.intro)
 
 //  투어 켜기
 //  투어 켜기 — 화면에 보이는 단추이므로 커서가 움직입니다.
-await point('[data-demo-tour] [data-tour-start]')
+await point('[data-demo-tour] [data-tour-start]', { fast: true })
 await page.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'attached', timeout: 15000 })
 await page.waitForTimeout(H.afterRoute)
 await expect(1, '①')
@@ -626,11 +672,16 @@ mark('끝')
 // ── 정리 ────────────────────────────────────────────────────────────────────
 const video = page.video()
 await ctx.close()
+//  ⚠ 0118 — **여기서 시각을 찍습니다.**
+//    녹화는 페이지가 실제로 닫히는 순간 멈춥니다. 그 순간은 ctx.close() 가
+//    끝나는 때입니다 — 닫으라고 이르기 **전**에 찍으면 뒷정리 시간(0.5초쯤)만큼
+//    모자라고, 브라우저까지 다 닫은 **뒤**에 찍으면 그만큼 남습니다.
+//    앞의 것으로 쟀더니 앞부분을 0.5초 더 잘라 내 시작 화면이 통째로
+//    사라졌습니다. 둘 사이의 이 자리가 맞습니다.
+const tClose = Date.now()
 await b.close()
 
 const raw = await video.path()
-//  브라우저를 닫은 시각 — **영상 시작점을 되짚는 기준**입니다 (아래 설명).
-const tClose = Date.now()
 const webm = join(OUT, CFG.out.webm)
 try { rmSync(webm) } catch { /* 처음이면 없습니다 */ }
 renameSync(raw, webm)
@@ -657,6 +708,16 @@ const timeline = {
   //   영상 길이는 mux 가 파일에서 직접 읽습니다. 여기서는 「본문 시작부터
   //   닫을 때까지」만 넘겨 주면 됩니다.
   closeOffsetSec: Number(((tClose - tReady) / 1000).toFixed(2)),
+  //  ── 영상 파일의 시간이 실제 시간과 어긋나는 문제 (0118) ──────────────
+  //   Playwright 가 남기는 webm 은 **실제로 흐른 시간과 길이가 다릅니다.**
+  //   화면이 멈춰 있으면 프레임을 덜 만들고, 그것을 되살리면서 길이가
+  //   1~2% 씩 늘어납니다. 54초 영상에서 1초쯤 어긋났습니다.
+  //
+  //   그래서 「끝에서 되짚기」도 「앞에서 세기」도 어긋났습니다. 대신
+  //   **실제로 흐른 시간**을 여기에 남기고, 합칠 때(mux) 영상 시간을 그
+  //   비율로 되돌린 뒤 자릅니다. 그러면 자르는 자리도 장면 시각도 맞습니다.
+  videoWallSec: Number(((tClose - tVideo) / 1000).toFixed(2)),
+  readyOffsetSec: Number(((tReady - tVideo) / 1000).toFixed(2)),
   bodySec: Number(((tEnd - tReady) / 1000).toFixed(2)),
   //  ── 음성을 어디에 붙일지 ────────────────────────────────────────────
   //   장면마다 「영상 몇 초 자리에서 시작하는가」입니다. mux 가 이 값으로
@@ -673,6 +734,8 @@ const timeline = {
     escapedRequests: escaped,
     spotSize: spots,
     pageErrors: errors,
+    //  화면 구성 — 목차 폭·본문 폭·기준 글자 크기 (숫자로 남겨 둡니다)
+    stage: stageInfo,
     //  직접 녹음일 때, 화면이 음성보다 늦은 장면 (없어야 정상)
     voiceLag: lags,
   },
@@ -683,6 +746,8 @@ console.log('')
 console.log(`  webm      ${webm}`)
 console.log(`  본문 길이 ${timeline.bodySec}초 (말 ${VOICE.totalSec.toFixed(1)}초)`)
 console.log(`  화면      ${CFG.viewport.width}x${CFG.viewport.height} → ${(CFG.output ?? CFG.viewport).width}x${(CFG.output ?? CFG.viewport).height}`)
+console.log(`  목차      ${stageInfo.asideW}px (화면의 ${stageInfo.asidePct}%) · 본문 ${stageInfo.mainW}px · 기준 글자 ${stageInfo.rootFontPx}px`)
+console.log(`  자막      ${stageInfo.capFontPx}px · 최대 폭 ${stageInfo.capMaxW}px`)
 console.log(`  바깥으로 나간 요청 ${escaped.length}건 · 화면 오류 ${errors.length}건`)
 if (lags.length) {
   console.log('  ⚠ 화면이 음성보다 늦은 장면 — ' + lags.map((l) => `${l.id} ${l.sec}초`).join(' · '))
