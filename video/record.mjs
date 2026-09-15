@@ -86,6 +86,10 @@ const OVERLAY = (watermark, sub, st) => `
   //  목차를 얼마나 줄일지 · 덮개를 얼마나 어둡게 할지 — config 의 stage
   const Z = ${st.sidebarZoom ?? 1}
   const D = ${st.dim ?? 0.16}
+  //  강조 테두리와 빛의 진하기 — 덮개(D)와 따로 둡니다. 0118-b 에서
+  //  덮개는 그대로 두고 이 둘만 낮췄습니다 (「선택된 칸」처럼 보이지 않게).
+  const B = ${st.spotBorder ?? 0.8}
+  const G = ${st.spotGlow ?? 0.16}
   const put = () => {
     if (document.getElementById('vid-layer')) return
     const layer = document.createElement('div')
@@ -186,7 +190,8 @@ const OVERLAY = (watermark, sub, st) => `
       //    「나머지를 감추는 것」이 아니라 「여기를 한번 보세요」입니다 —
       //    덮인 자리의 글씨와 카드가 계속 읽혀야 합니다.
       '[data-tour-spot]{box-shadow:0 0 0 9999px rgba(8,15,28,' + D + '),'
-        + '0 0 0 2px rgba(49,130,246,.8),0 0 18px 5px rgba(49,130,246,.16) !important;'
+        + '0 0 0 2px rgba(49,130,246,' + B + '),'
+        + '0 0 16px 4px rgba(49,130,246,' + G + ') !important;'
         + 'transition:opacity .16s linear,box-shadow .16s linear !important}',
       //  강조가 아직 없을 때 쓰는 덮개도 같은 농도로 — 계단이 안 생기게.
       '[role="dialog"] > div[class*="bg-navy-950"]{background:rgba(8,15,28,' + D + ') !important;'
@@ -544,7 +549,7 @@ const STEP_NO = { s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 }
 const lags = []
 /** 첫 장면이 영상 몇 초에 시작했는가 — 뒤 장면은 전부 여기에 더해 맞춥니다 */
 let voBase = null
-async function scene(id, { during = [] } = {}) {
+async function scene(id, { during = [], pad = H.padAfterVoice } = {}) {
   const sc = VOICE.scenes.find((x) => x.id === id)
   if (!sc) throw new Error(`대사가 없습니다: ${id}`)
 
@@ -587,7 +592,7 @@ async function scene(id, { during = [] } = {}) {
   while (during[ai]) { await during[ai](); ai += 1 }
   //  ⚠ 직접 녹음일 때는 여기서 더 쉬지 않습니다 — 다음 장면 시작 시각이
   //    녹음에 이미 박혀 있어서, 남는 시간은 그 앞에서 알아서 기다립니다.
-  if (!VO) await page.waitForTimeout(H.padAfterVoice)
+  if (!VO && pad) await page.waitForTimeout(pad)
   await page.evaluate(() => window.__vid?.sayOff())
 }
 
@@ -658,12 +663,16 @@ await scene('s5')
 await advance()
 await page.waitForURL('**/performance', { timeout: 15000 })
 await page.waitForTimeout(H.afterRoute)
-await scene('outro')
+//  ⚠ 0118-b — 마무리는 **말이 끝난 자리에서** 꼬리를 셉니다.
+//    고정된 몇 초가 아닙니다. 그래서 여기서는 더 쉬지 않고(pad 0),
+//    아래 outroTail 하나만 붙입니다 — 직접 녹음으로 바꿔도 같은 규칙입니다.
+await scene('outro', { pad: 0 })
 //  직접 녹음이면 마지막 말이 끝나는 시각(endSec)까지 화면을 붙잡아 둡니다.
 if (VO && voBase !== null) {
   const left = (voBase + VO.totalSec) - at()
   if (left > 0) await page.waitForTimeout(Math.round(left * 1000))
 }
+//  말이 끝난 뒤 성과 화면을 이만큼 더 — 숫자를 읽을 시간입니다.
 await page.waitForTimeout(H.outroTail)
 
 const tEnd = Date.now()
