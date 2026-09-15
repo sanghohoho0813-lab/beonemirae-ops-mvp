@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path'
 import { chromium, EXEC } from '../test/browser/_pw.mjs'
 import * as W from '../test/browser/walk_lib.mjs'
 import * as F from '../test/browser/perf_fixtures.mjs'
+import { captureFixture } from './fixture.mjs'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  0111 — 심사 시연 영상 ①  「사람 없이 화면이 스스로 도는 것을 녹화」
@@ -41,17 +42,20 @@ mkdirSync(OUT, { recursive: true })
 const TODAY = F.TODAY
 const C0 = F.clients[0].id
 
-/** 오늘 예정 방문 1건 — 「오늘 수거 바로 입력」 일이 떠야 ②단계 단추가 생깁니다 */
-const PENDING = [{
-  id: 'sx', date: TODAY, client_id: C0, waste_type: '의료폐기물', vehicle_id: 'v1', scheduled_time: '10:00',
-  status: '예정', expected_amount: 80, actual_amount: null, completed_at: null, memo: '', origin: 'field',
-  is_additional: false, demo_session_id: null, plan_batch: null, handover_status: null, driver_name: '1호기사',
-  created_at: `${TODAY}T00:00:00Z`, updated_at: `${TODAY}T00:00:00Z`,
-}]
+//  촬영용 기록 — 지난 방문 12건 · 그중 현장 입력 1건 · 포털 요청 3건 ·
+//  오늘 예정 1건. 무엇을 왜 넣었는지는 video/fixture.mjs 맨 위에 있습니다.
+const FIX = captureFixture(TODAY)
 
 // ── 영상에만 얹는 것 ─────────────────────────────────────────────────────────
 //   투어 덮개(z-100)보다 위에 뜨되, **클릭은 전부 통과**시킵니다.
 //   통과시키지 않으면 자동 진행이 자기가 얹은 것에 막힙니다.
+//
+//   ⚠ 0112 — 오른쪽 위 도구 줄(화면 색 · 만든 이유 · 사용 방법 · 사용 후기)을
+//     **영상 내내** 감춥니다. 제품은 투어가 끝나면 이 줄을 되돌려 놓는데,
+//     영상에서는 마지막 4초에 갑자기 나타나 산만합니다. 제품 동작은 그대로
+//     두고 **녹화하는 창에서만** 가립니다.
+//     `.justify-end` 로 좁힌 이유는 시연 화면의 「투어 시작」 카드도 같은
+//     단추를 품고 있어서입니다 — 그건 눌러야 하므로 가리면 안 됩니다.
 const OVERLAY = (watermark) => `
 (() => {
   const put = () => {
@@ -89,6 +93,10 @@ const OVERLAY = (watermark) => `
       'border:2px solid rgba(49,130,246,.9)','opacity:0',
     ].join(';')
 
+    const css = document.createElement('style')
+    css.textContent = 'main > div.justify-end:has(> [data-tour-start]){display:none !important}'
+    document.head.appendChild(css)
+
     layer.append(mark, ring, cur)
     document.body.appendChild(layer)
 
@@ -124,7 +132,7 @@ const prof = { ...W.profileFor('admin'), font_scale: 'normal' }
  *  · rpcCalls — 저장 RPC 호출 (흉내로 성공만 돌려줍니다)
  * 끝나고 timeline.json 에 남겨서, **무엇이 어디로 갔는지** 눈으로 보게 합니다.
  */
-const state = { profile: prof, reqs: 0, writes: [], schemaVersion: 108, schedules: PENDING, rpcCalls: [] }
+const state = { profile: prof, reqs: 0, writes: [], schemaVersion: 108, schedules: FIX.schedules, rpcCalls: [] }
 
 /**
  * 촬영용 기록 — **흉내 서버 안에만 있습니다.**
@@ -140,12 +148,12 @@ const state = { profile: prof, reqs: 0, writes: [], schemaVersion: 108, schedule
  *  AX 코치는 그 기록을 제 눈으로 읽고 확인 표시를 띄웁니다 — 판정 로직은
  *  제품 것 그대로입니다. 여기서 확인 결과를 지어내지 않습니다.
  */
-const events = []
+const events = [...FIX.events]
 state.rpc = (url) => {
   if (url.includes('/rpc/complete_collection')) {
     state.rpcCalls.push('complete_collection')
     const at = new Date().toISOString()
-    const sc = state.schedules[0]
+    const sc = state.schedules.find((s) => s.id === 'sx')
     sc.status = '완료'
     sc.actual_amount = 70
     sc.completed_at = at
@@ -164,11 +172,7 @@ state.rpc = (url) => {
 }
 
 /** 실증 시작일 — 없으면 화면이 「설정에서 시작일을 먼저 정해 주세요」만 띄웁니다 */
-const startedOn = (() => {
-  const d = new Date(`${TODAY}T00:00:00+09:00`)
-  d.setDate(d.getDate() - 30)
-  return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
-})()
+const startedOn = FIX.startedOn
 
 const ctx = await b.newContext({
   viewport: CFG.viewport,
@@ -218,6 +222,15 @@ await ctx.route('**/rest/v1/experiment_settings*', (r) => r.fulfill({
     ? { id: 1, start_date: startedOn }
     : [{ id: 1, start_date: startedOn }]),
 }))
+//  병원이 포털로 직접 올린 요청 — 「병원 직접사용」 영역의 근거입니다.
+await ctx.route('**/rest/v1/client_requests*', (r) => {
+  if (r.request().method() !== 'GET') {
+    state.writes.push({ url: 'client_requests', method: r.request().method() })
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  }
+  return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FIX.requests) })
+})
+
 await ctx.route('**/rest/v1/collection_events*', (r) => {
   if (r.request().method() !== 'GET') {
     state.writes.push({ url: 'collection_events', method: r.request().method() })
