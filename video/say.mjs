@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { speakAll } from './tts/index.mjs'
+import { voiceoverTiming } from './voiceover.mjs'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  0114 — 심사 시연 영상 ③  「대사를 음성으로 만들고, 길이를 잰다」
@@ -20,6 +21,12 @@ import { speakAll } from './tts/index.mjs'
 //      글자 수를 따라가므로, 이것이 음성과 가장 잘 맞습니다.
 //
 //   ⚠ 문장을 줄이거나 바꾸지 않습니다. 읽는 말과 적히는 말이 같아야 합니다.
+//
+//  ⚠ 0117 — **직접 녹음한 파일이 있으면 TTS 를 만들지 않습니다.**
+//    video/audio/voiceover.wav (또는 .mp3 / .m4a) 가 있으면 그 파일 하나를
+//    쓰고, config 의 voiceover.marks 에 적힌 시각으로 장면을 나눕니다.
+//    내놓는 것(timing.json)의 모양은 똑같으므로 **녹화·자막·합치기 코드는
+//    그대로**입니다 — 다시 녹음하시면 marks 숫자만 고치면 됩니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname)
@@ -90,7 +97,19 @@ const only = onlyArg
     .split(',').map((x) => x.trim()).filter(Boolean)
   : null
 
-const res = await speakAll(NAR.scenes, {
+// ── ① 직접 녹음한 파일이 있는가 ──────────────────────────────────────────────
+CFG.__cfgName = cfgPath.replace(ROOT + '/', '')
+let VO = null
+try {
+  VO = voiceoverTiming(CFG, NAR.scenes, ROOT)
+} catch (e) {
+  //  ⚠ 여기서 걸리는 것은 「무엇을 적어야 하는지」이지 프로그램 오류가
+  //    아닙니다. 쌓아 놓은 호출 기록은 도움이 안 되므로 말만 보여 줍니다.
+  console.error(String(e.message ?? e))
+  process.exit(1)
+}
+
+const res = VO ?? await speakAll(NAR.scenes, {
   provider: CFG.tts.provider,
   //  목소리 설정은 공급자마다 따로 둡니다 — 바꿔 끼울 때 값이 섞이지 않게.
   voice: CFG.tts.voices?.[CFG.tts.provider] ?? CFG.tts.voice ?? {},
@@ -104,13 +123,28 @@ const scenes = res.scenes.map((s) => {
   return { ...s, label: meta?.label ?? s.id, cues: spread(cuesOf(s.text), s.sec) }
 })
 
-const timing = { provider: res.provider, voice: res.voice, totalSec: res.totalSec, scenes }
+const timing = {
+  provider: res.provider,
+  voice: res.voice,
+  totalSec: res.totalSec,
+  //  직접 녹음일 때만 — 파일 하나를 통째로 붙이는 데 필요한 것들
+  ...(VO ? { file: VO.file, offsetSec: VO.offsetSec, fileSec: VO.fileSec, endSec: VO.endSec, gapSec: VO.gapSec } : {}),
+  scenes,
+}
 //  ⚠ 일부만 만든 것으로 timing.json 을 덮어쓰면 녹화가 장면을 못 찾습니다.
 writeFileSync(join(OUT, only ? 'timing.sample.json' : 'timing.json'), JSON.stringify(timing, null, 2))
 
-console.log(`── 음성 (${res.provider})${only ? ` · ${only.join(',')} 만` : ''} ──`)
+if (VO) {
+  console.log(`── 직접 녹음한 음성 ──`)
+  console.log(`  파일     ${VO.file}  (${VO.fileSec.toFixed(2)}초)`)
+  console.log(`  쓰는 구간 ${VO.offsetSec.toFixed(2)}초 ~ ${VO.endSec.toFixed(2)}초  →  영상 ${VO.totalSec.toFixed(2)}초`)
+  console.log(`  ⚠ 다시 녹음하시면 ${CFG.__cfgName} 의 voiceover.marks 만 고치면 됩니다.`)
+} else {
+  console.log(`── 음성 (${res.provider})${only ? ` · ${only.join(',')} 만` : ''} ──`)
+}
 for (const s of scenes) {
-  console.log(`  ${s.id.padEnd(6)} ${String(s.text.length).padStart(3)}자  ${s.sec.toFixed(2)}초  자막 ${s.cues.length}조각`)
+  const head = VO ? `${s.startSec.toFixed(1).padStart(5)}s +` : '       '
+  console.log(`  ${head}${s.id.padEnd(6)} ${String(s.text.length).padStart(3)}자  ${s.sec.toFixed(2)}초  자막 ${s.cues.length}조각`)
   for (const c of s.cues) console.log(`         ${(c.ms / 1000).toFixed(1)}s  ${c.lines.join(' / ')}`)
 }
 console.log(`  합계 ${res.totalSec.toFixed(2)}초`)

@@ -47,6 +47,9 @@ const CFG = JSON.parse(readFileSync(cfgPath, 'utf8'))
 const OUT = join(ROOT, CFG.out.dir)
 const H = CFG.hold
 const SUB = CFG.subtitle ?? {}
+//  0117 — 화면 크기가 바뀌면 얹는 것들도 같이 커져야 합니다. 값은 전부
+//  config 의 stage 에 있습니다 (1920×1080 기준으로 적어 두었습니다).
+const ST = CFG.stage ?? {}
 
 //  음성 — 먼저 video/say.mjs 를 돌려 두어야 합니다.
 const voicePath = join(OUT, 'voice/timing.json')
@@ -54,6 +57,9 @@ if (!existsSync(voicePath)) {
   throw new Error(`음성이 아직 없습니다: ${voicePath}\n  먼저 node video/say.mjs 를 돌려 주세요.`)
 }
 const VOICE = JSON.parse(readFileSync(voicePath, 'utf8'))
+//  직접 녹음한 파일 하나를 쓰는 경우 — 장면 시각이 **녹음에 박혀 있습니다.**
+//  그러면 화면이 음성을 따라가야 합니다 (반대가 아닙니다).
+const VO = VOICE.provider === 'voiceover' ? VOICE : null
 
 mkdirSync(OUT, { recursive: true })
 
@@ -74,8 +80,9 @@ const FIX = captureFixture(TODAY)
 //     두고 **녹화하는 창에서만** 가립니다.
 //     `.justify-end` 로 좁힌 이유는 시연 화면의 「투어 시작」 카드도 같은
 //     단추를 품고 있어서입니다 — 그건 눌러야 하므로 가리면 안 됩니다.
-const OVERLAY = (watermark, sub) => `
+const OVERLAY = (watermark, sub, st) => `
 (() => {
+  const CUR = ${st.cursorPx ?? 26}
   const put = () => {
     if (document.getElementById('vid-layer')) return
     const layer = document.createElement('div')
@@ -86,18 +93,19 @@ const OVERLAY = (watermark, sub) => `
     mark.id = 'vid-mark'
     mark.textContent = ${JSON.stringify(watermark)}
     mark.style.cssText = [
-      'position:absolute','right:14px','bottom:12px',
-      'padding:6px 12px','border-radius:999px',
+      'position:absolute','right:' + ${st.edgePx ?? 14} + 'px','bottom:' + ${st.edgePx ?? 12} + 'px',
+      'padding:7px 14px','border-radius:999px',
       'background:rgba(8,15,28,.62)','color:#fff',
-      'font:600 13px/1.2 system-ui,sans-serif','letter-spacing:.01em',
+      'font:600 ' + ${st.markFontPx ?? 13} + 'px/1.2 system-ui,sans-serif','letter-spacing:.01em',
       'box-shadow:0 1px 6px rgba(0,0,0,.25)',
     ].join(';')
 
     const cur = document.createElement('div')
     cur.id = 'vid-cursor'
     cur.style.cssText = [
-      'position:absolute','left:0','top:0','width:26px','height:26px',
-      'margin:-13px 0 0 -13px','border-radius:999px',
+      'position:absolute','left:0','top:0',
+      'width:' + CUR + 'px','height:' + CUR + 'px',
+      'margin:' + (-CUR / 2) + 'px 0 0 ' + (-CUR / 2) + 'px','border-radius:999px',
       'background:rgba(255,255,255,.92)','border:2px solid rgba(20,30,50,.55)',
       'box-shadow:0 2px 10px rgba(0,0,0,.35)','opacity:0',
       'transition:transform .8s cubic-bezier(.22,1,.36,1),opacity .25s',
@@ -106,8 +114,9 @@ const OVERLAY = (watermark, sub) => `
     const ring = document.createElement('div')
     ring.id = 'vid-ring'
     ring.style.cssText = [
-      'position:absolute','left:0','top:0','width:26px','height:26px',
-      'margin:-13px 0 0 -13px','border-radius:999px',
+      'position:absolute','left:0','top:0',
+      'width:' + CUR + 'px','height:' + CUR + 'px',
+      'margin:' + (-CUR / 2) + 'px 0 0 ' + (-CUR / 2) + 'px','border-radius:999px',
       'border:2px solid rgba(49,130,246,.9)','opacity:0',
     ].join(';')
 
@@ -129,10 +138,10 @@ const OVERLAY = (watermark, sub) => `
     const chip = document.createElement('div')
     chip.id = 'vid-chip'
     chip.style.cssText = [
-      'position:absolute', 'left:16px', 'bottom:14px',
-      'padding:5px 11px', 'border-radius:999px',
+      'position:absolute', 'left:' + ${st.edgePx ?? 16} + 'px', 'bottom:' + ${st.edgePx ?? 14} + 'px',
+      'padding:6px 13px', 'border-radius:999px',
       'background:rgba(8,15,28,.55)', 'color:rgba(255,255,255,.92)',
-      'font:600 12px/1.2 system-ui,sans-serif', 'letter-spacing:.01em',
+      'font:600 ' + ${st.chipFontPx ?? 12} + 'px/1.2 system-ui,sans-serif', 'letter-spacing:.01em',
       'opacity:0', 'transition:opacity .2s linear',
     ].join(';')
 
@@ -143,11 +152,23 @@ const OVERLAY = (watermark, sub) => `
     css.textContent = [
       //  오른쪽 위 도구 줄 — 시연 화면의 「투어 시작」 카드는 건드리지 않습니다.
       'main > div.justify-end:has(> [data-tour-start]){display:none !important}',
+      //  ── 1920×1080 으로 찍습니다 (0117) ────────────────────────────
+      //   ⚠ 1600×900 으로 찍어 1280×720 으로 줄이던 것을 그만둡니다.
+      //     줄이면 글자 획이 뭉개집니다. 1080 으로 찍어 1080 으로 냅니다.
+      //
+      //   다만 창만 키우면 **같은 내용이 넓게 퍼져** 글자와 강조가 상대적으로
+      //   작아집니다. 그래서 이 앱의 기준 글자 크기를 화면 비율만큼 같이
+      //   키웁니다 — 1600 기준 17.8px × (1920/1600) = 21.4px.
+      //   배치 비율은 900 높이에서 맞춰 둔 그대로이고, 픽셀만 진짜 1080 입니다.
+      //   (제품에는 손대지 않습니다. 녹화하는 창에서만 덮어씁니다.)
+      'html,html.scale-normal,html.scale-lg,html.scale-xl{font-size:'
+        + ${st.rootFontPx ?? 17.8} + 'px !important}',
       //  왼쪽 목차를 접고, 본문이 **화면 가로를 그대로** 씁니다.
       //  ⚠ 오른쪽에 설명 상자 자리를 비워 두던 것을 없앴습니다 — 상자를
       //    감추니 비워 둘 이유가 없고, 비워 두면 AX 가 그만큼 작아집니다.
       'aside.sticky{display:none !important}',
-      'main{padding-left:34px !important;padding-right:34px !important}',
+      'main{padding-left:' + ${st.mainPadPx ?? 34} + 'px !important;'
+        + 'padding-right:' + ${st.mainPadPx ?? 34} + 'px !important}',
       //  ⚠ **설명 상자를 감춥니다.** 설명은 음성과 자막이 맡습니다.
       //    display:none 이라 자리도 안 차지합니다 — 그래서 강조 대상이
       //    화면 가운데에 크게 놓입니다.
@@ -357,7 +378,7 @@ await page.addInitScript(([k, u]) => {
   //  묶음은 접힌 기본 상태로 — 화면을 깔끔하게 시작합니다 (0110 메뉴 구조)
   window.sessionStorage.removeItem('beonemirae-ops:tour-run')
 }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }])
-await page.addInitScript(OVERLAY(CFG.watermark, SUB))
+await page.addInitScript(OVERLAY(CFG.watermark, SUB, ST))
 
 const tPage = Date.now()
 await page.goto(`${CFG.baseUrl}/presentation`, { waitUntil: 'domcontentloaded' })
@@ -374,18 +395,41 @@ const mark = (label) => {
   console.log(`  ${String(marks.length).padStart(2)} · ${at().toFixed(1).padStart(5)}s  ${label}`)
 }
 
+/**
+ * 화면을 그 자리까지 부드럽게 굴립니다.
+ *
+ *  ⚠ 0117 — ③단계(수거 입력)에서 투어가 「수거 완료 저장」을 화면 가운데로
+ *    끌어오는데, 그러면 정작 **채워 넣는 칸들(거래처·수거량)이 위로 밀려**
+ *    보이지 않았습니다. 말로는 「거래처와 차량, 수거량을 입력합니다」라고
+ *    하면서 화면에는 그 칸이 없는 셈입니다. 그래서 채우는 동안에는 칸이
+ *    보이는 자리로 올렸다가, 누를 때 다시 단추로 내려갑니다.
+ *    강조 테두리는 스크롤을 따라다니므로(TourOverlay) 어긋나지 않습니다.
+ */
+async function bring(sel, block = 'center') {
+  await page.evaluate(([s, b]) => {
+    document.querySelector(s)?.scrollIntoView({ behavior: 'smooth', block: b })
+  }, [sel, block])
+  await page.waitForTimeout(H.scroll ?? 420)
+}
+
 /** 커서를 그 자리로 옮기고, 눌리는 시늉을 낸 뒤, 실제로 누릅니다 */
 async function point(sel, { click = true } = {}) {
   const el = page.locator(sel).first()
   await el.waitFor({ state: 'visible', timeout: 15000 })
+  //  화면 밖에 있으면 커서가 엉뚱한 자리로 갑니다 — 먼저 굴려 놓습니다.
+  const seen = await el.evaluate((n) => {
+    const r = n.getBoundingClientRect()
+    return r.top >= 8 && r.bottom <= window.innerHeight - 8
+  })
+  if (!seen) await bring(sel, 'center')
   const box = await el.boundingBox()
   if (!box) throw new Error(`자리를 못 찾았습니다: ${sel}`)
   const x = Math.round(box.x + box.width / 2)
   const y = Math.round(box.y + box.height / 2)
   await page.evaluate(([x, y, ms]) => window.__vid?.move(x, y, ms), [x, y, H.cursorMove])
-  await page.waitForTimeout(H.cursorMove + 80)
+  await page.waitForTimeout(H.cursorMove + 60)
   await page.evaluate(() => window.__vid?.tap())
-  await page.waitForTimeout(180)
+  await page.waitForTimeout(H.beforeClick ?? 130)
   if (click) await el.click()
 }
 
@@ -445,15 +489,42 @@ async function advance() {
 const audio = []
 /** 다섯 단계 중 몇 번째인가 — 마무리는 번호가 없습니다 */
 const STEP_NO = { s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 }
+/**
+ * 직접 녹음한 음성일 때, 화면이 음성보다 늦은 장면들.
+ *  ⚠ 늦으면 말이 화면보다 앞서 나갑니다 — 조용히 넘어가지 않고 적어 둡니다.
+ *    고치는 법은 둘뿐입니다: marks 의 그 장면을 뒤로 미루거나, 녹음할 때
+ *    장면 사이를 조금 더 쉬거나.
+ */
+const lags = []
+/** 첫 장면이 영상 몇 초에 시작했는가 — 뒤 장면은 전부 여기에 더해 맞춥니다 */
+let voBase = null
 async function scene(id, { during = [] } = {}) {
   const sc = VOICE.scenes.find((x) => x.id === id)
   if (!sc) throw new Error(`대사가 없습니다: ${id}`)
+
+  //  ── 화면이 여기까지 오는 데 실제로 걸린 시간 ───────────────────────────
+  //   앞 장면의 말이 끝난 순간부터 이 장면 화면이 준비될 때까지입니다.
+  //   **녹음하실 때 여기서 이만큼은 쉬셔야** 말이 화면을 앞지르지 않습니다.
+  //   (기다리기 **전에** 재야 진짜 필요한 시간이 나옵니다.)
+  const prev = audio[audio.length - 1]
+  const need = prev ? Number((at() - (prev.at + prev.sec)).toFixed(2)) : null
+
+  //  ── 직접 녹음: 시작 시각을 맞춥니다 (0117) ─────────────────────────────
+  //   녹음은 이미 끝나 있고 그 안의 시각은 못 바꿉니다. 그러니 **화면이
+  //   기다립니다.** 일찍 준비됐으면 그 자리에서 멈춰 서고, 늦었으면 적어 둡니다.
+  if (VO) {
+    if (voBase === null) voBase = at()
+    const want = voBase + sc.startSec
+    const late = at() - want
+    if (late > 0.08) lags.push({ id, sec: Number(late.toFixed(2)) })
+    else if (late < -0.02) await page.waitForTimeout(Math.round(-late * 1000))
+  }
   //  읽는 동안 커서가 자막이나 본문 위에 얹혀 있지 않게 옆으로 비켜 둡니다.
   await page.evaluate(() => window.__vid?.park(700))
   //  큰 설명 박스 대신 왼쪽 아래에 아주 작게 — 「1/5 · AX 코치」
   const no = STEP_NO[id]
   await page.evaluate((t) => window.__vid?.chip(t), no ? `${no}/5 · ${sc.label}` : sc.label)
-  audio.push({ id, label: sc.label, at: Number(at().toFixed(2)), sec: sc.sec })
+  audio.push({ id, label: sc.label, at: Number(at().toFixed(2)), sec: sc.sec, needGapSec: need })
   mark(`${sc.label} — 음성 ${sc.sec.toFixed(1)}초`)
 
   const t0 = Date.now()
@@ -468,7 +539,9 @@ async function scene(id, { during = [] } = {}) {
   }
   //  남은 동작이 있으면 말이 끝난 뒤에라도 마저 합니다.
   while (during[ai]) { await during[ai](); ai += 1 }
-  await page.waitForTimeout(H.padAfterVoice)
+  //  ⚠ 직접 녹음일 때는 여기서 더 쉬지 않습니다 — 다음 장면 시작 시각이
+  //    녹음에 이미 박혀 있어서, 남는 시간은 그 앞에서 알아서 기다립니다.
+  if (!VO) await page.waitForTimeout(H.padAfterVoice)
   await page.evaluate(() => window.__vid?.sayOff())
 }
 
@@ -480,7 +553,7 @@ await page.waitForTimeout(H.intro)
 //  투어 켜기 — 화면에 보이는 단추이므로 커서가 움직입니다.
 await point('[data-demo-tour] [data-tour-start]')
 await page.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'attached', timeout: 15000 })
-await page.waitForTimeout(360)
+await page.waitForTimeout(H.afterRoute)
 await expect(1, '①')
 await checkSpot('①')
 await scene('s1')
@@ -488,7 +561,7 @@ await scene('s1')
 //  ① → ②  (읽는 단계이므로 「다음」)
 await advance()
 await page.locator('[data-tour-title]:has-text("바로 업무로")').waitFor({ state: 'attached', timeout: 15000 })
-await page.waitForTimeout(320)
+await page.waitForTimeout(H.afterRoute)
 await expect(2, '②')
 await checkSpot('②')
 await scene('s2')
@@ -496,17 +569,23 @@ await scene('s2')
 //  ② → ③  **실제 미션 단추**를 누릅니다 — 투어가 따라옵니다
 await point('[data-coach-go="collect-today"]')
 await page.locator('[data-collect-save]').waitFor({ state: 'visible', timeout: 15000 })
-await page.waitForTimeout(H.afterClick + 200)
+await page.waitForTimeout(H.afterClick)
 await expect(3, '③')
 await checkSpot('③')
 
 //  거래처 · 차량 · 수거량 — **말하는 동안** 한 칸씩 채웁니다.
+//  ⚠ 채우는 칸이 화면에 보이도록 먼저 올려 둡니다 (bring 설명 참고).
 await scene('s3', {
   during: [
-    async () => { await page.locator('select').first().selectOption(C0) },
     async () => {
-      await page.locator('select').nth(1).selectOption('v1')
+      await bring('[data-guide="guide-client"]', 'start')
+      await page.locator('select').first().selectOption(C0)
+    },
+    async () => {
+      //  수거량 칸을 화면 가운데로 — 숫자가 채워지는 것이 보여야 합니다.
+      await bring('[data-guide="guide-amount"]', 'center')
       await page.locator('[data-actual-amount]').fill('70')
+      await page.locator('select').nth(1).selectOption('v1')
     },
   ],
 })
@@ -514,7 +593,7 @@ await scene('s3', {
 //  ③ → ④  저장. **흉내 서버가 받습니다 — 실제 저장이 아닙니다.**
 await point('[data-collect-save]')
 await page.locator('[data-tour="collect-done"]').waitFor({ state: 'visible', timeout: 15000 })
-await page.waitForTimeout(H.afterClick + 200)
+await page.waitForTimeout(H.afterSave ?? H.afterClick)
 await expect(4, '④')
 await checkSpot('④')
 await scene('s4')
@@ -522,7 +601,7 @@ await scene('s4')
 //  ④ → ⑤
 await advance()
 await page.locator('[data-tour-title]:has-text("실제 기록을 확인")').waitFor({ state: 'attached', timeout: 15000 })
-await page.waitForTimeout(320)
+await page.waitForTimeout(H.afterRoute)
 await expect(5, '⑤')
 await checkSpot('⑤')
 await scene('s5')
@@ -532,8 +611,13 @@ await scene('s5')
 //    덮개 자체가 16% 뿐이라 걷혀도 눈에 띄는 계단이 안 생깁니다.
 await advance()
 await page.waitForURL('**/performance', { timeout: 15000 })
-await page.waitForTimeout(350)
+await page.waitForTimeout(H.afterRoute)
 await scene('outro')
+//  직접 녹음이면 마지막 말이 끝나는 시각(endSec)까지 화면을 붙잡아 둡니다.
+if (VO && voBase !== null) {
+  const left = (voBase + VO.totalSec) - at()
+  if (left > 0) await page.waitForTimeout(Math.round(left * 1000))
+}
 await page.waitForTimeout(H.outroTail)
 
 const tEnd = Date.now()
@@ -577,7 +661,10 @@ const timeline = {
   //  ── 음성을 어디에 붙일지 ────────────────────────────────────────────
   //   장면마다 「영상 몇 초 자리에서 시작하는가」입니다. mux 가 이 값으로
   //   wav 를 제자리에 놓습니다. 화면과 말이 어긋날 수 없는 이유가 이것입니다.
-  voice: { provider: VOICE.provider, dir: 'voice', scenes: audio },
+  voice: {
+    provider: VOICE.provider, dir: 'voice', scenes: audio,
+    ...(VO ? { file: VO.file, offsetSec: VO.offsetSec, endSec: VO.endSec, totalSec: VO.totalSec } : {}),
+  },
   marks,
   //  ⚠ 실제 서버에 나간 것이 없다는 증거를 같이 남깁니다.
   proof: {
@@ -586,6 +673,8 @@ const timeline = {
     escapedRequests: escaped,
     spotSize: spots,
     pageErrors: errors,
+    //  직접 녹음일 때, 화면이 음성보다 늦은 장면 (없어야 정상)
+    voiceLag: lags,
   },
 }
 writeFileSync(join(OUT, CFG.out.timeline), JSON.stringify(timeline, null, 2))
@@ -593,6 +682,18 @@ writeFileSync(join(OUT, CFG.out.timeline), JSON.stringify(timeline, null, 2))
 console.log('')
 console.log(`  webm      ${webm}`)
 console.log(`  본문 길이 ${timeline.bodySec}초 (말 ${VOICE.totalSec.toFixed(1)}초)`)
+console.log(`  화면      ${CFG.viewport.width}x${CFG.viewport.height} → ${(CFG.output ?? CFG.viewport).width}x${(CFG.output ?? CFG.viewport).height}`)
 console.log(`  바깥으로 나간 요청 ${escaped.length}건 · 화면 오류 ${errors.length}건`)
+if (lags.length) {
+  console.log('  ⚠ 화면이 음성보다 늦은 장면 — ' + lags.map((l) => `${l.id} ${l.sec}초`).join(' · '))
+  console.log('    voiceover.marks 에서 그 장면을 뒤로 미루거나, 녹음할 때 장면 사이를 더 쉬어 주세요.')
+}
+//  녹음하실 때 참고 — 장면 사이에 **최소 이만큼**은 쉬어야 화면이 따라옵니다.
+console.log('')
+console.log('  녹음할 때 장면 사이에 필요한 최소 간격')
+for (const a of audio) {
+  if (a.needGapSec === null) continue
+  console.log(`    ${a.id.padEnd(6)} 앞에서 ${a.needGapSec.toFixed(1)}초`)
+}
 if (escaped.length) console.log('  ⚠ ' + escaped.slice(0, 3).join(' | '))
 if (errors.length) { console.log('  ⚠ ' + errors.slice(0, 2).join(' | ')); process.exitCode = 1 }

@@ -53,3 +53,10 @@ video/out/
 #  piper 음성 엔진·목소리 파일 (0114) — 278MB 짜리 내려받은 것이라 소스가 아닙니다.
 #  준비하는 법은 video/tts/piper.mjs 맨 위에 있습니다.
 video/.piper/
+#  직접 녹음한 내레이션 (0117) — 대표님이 넣어 두시는 음성 원본입니다.
+#  용량이 크고 다시 녹음하면 바뀌므로 소스로 세지 않습니다.
+#  넣는 자리는 video/audio/voiceover.wav (또는 .mp3 / .m4a) 이고,
+#  구간은 video/config.<업체>.json 의 voiceover.marks 에 적습니다.
+#  (자리를 안내하는 README 는 남겨 둡니다 — 어디에 넣는지가 소스입니다.)
+video/audio/*
+!video/audio/README.md

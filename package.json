@@ -14,7 +14,8 @@
     "video:say": "node video/say.mjs",
     "video:voices": "node video/voices.mjs",
     "video:sample": "node video/sample.mjs",
-    "video:flicker": "node video/flicker.mjs"
+    "video:flicker": "node video/flicker.mjs",
+    "video:silent": "node video/record.mjs && node video/mux.mjs --silent"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.1",
