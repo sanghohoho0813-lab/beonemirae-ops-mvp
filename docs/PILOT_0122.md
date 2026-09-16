@@ -51,7 +51,7 @@
 | 직원 사용 N명 (이름별 건수) | 이벤트 `actor_name` → 없으면 일정 기사 이름 → 없으면 「(이름 미기록)」 | COLLECTION TABLE |
 | 거래처 Coverage M / N곳 | 기간 안 입력 1건 이상인 Pilot 거래처 | COLLECTION TABLE |
 | Portal Self-Service | `client_requests.source='portal'` · Pilot 거래처 · 기간 · 요청/처리/병원 수 | CUSTOMER REQUEST |
-| Re-entry Reduction Proxy | 취소 후 재입력 건수 / 입력 건수 — 「줄었다」 아님 | COLLECTION TABLE |
+| 입력 정정 기록 | 취소된 입력 N건 / 전체 입력 N건 | COLLECTION TABLE |
 | Data Connection | 입력 → 완료 일정(수거이력·거래처 화면) 연결 건수 | COLLECTION TABLE |
 | 규격별 사용 확인 / 공급 | `usedItems` 합 · `materials.items` 합 | MATERIAL USAGE |
 | 세지 않은 것 | 시연 · 시작일 이전 · 취소 · Pilot 외 거래처 — 건수 그대로 | — |
@@ -59,6 +59,8 @@
 | USER FEEDBACK | 도입 후 조사 응답이 있으면 「따로 봅니다」라고만 — 시스템 건수와 합치지 않음 | USER FEEDBACK |
 
 - 개선율(%) · 「향상」 · 월 환산 — **없음**(검사가 정규식으로 확인). 라벨 「1주 Pilot 실제 기록」.
+- **「입력 정정 기록」은 취소된 입력을 세는 값입니다.** 취소 뒤 같은 수거가 다시 들어왔는지를 짝지어 보지 않으므로 「재입력이 줄었다」로 읽을 수 없습니다. 검토(2026-09-16) 결과 로직을 넓히지 않고 **문구만** 사실에 맞게 고쳤습니다 — 이전 이름(Re-entry Reduction Proxy)은 화면·문서에서 뺐고, 검사가 「재입력 · Reduction」이 다시 나타나지 않는지 확인합니다.
+- **시연 공급 혼입 차단.** 수거 완료가 자재를 함께 넣을 때 서버가 그 수거와 같은 시연 표식(`materials.demo_session_id`)을 자재에도 붙입니다. 화면이 그 칸을 안 읽고 있어서, Pilot 거래처에 시연 공급이 남으면 **수거는 빠지고 공급만 남는** 어긋남이 생길 수 있었습니다. 칸은 이미 있었으므로 구조를 바꾸지 않고 **읽기만 추가**(`MaterialSupply.demoSessionId` · `toMaterial` 한 줄)해서 수거 쪽과 같은 기준으로 뺍니다. 검사가 진짜 공급 4개 · 시연 공급 7개를 넣고 **4개만 세는지** 확인합니다.
 - 시작일이 비어 있으면 오늘 하루만 세고 「시작일 미설정」이라고 적습니다 — 임의 기간을 만들지 않습니다.
 - 새 이벤트 표 없음. `pilotEvidence.ts` 는 순수 함수이며 저장하지 않습니다(같은 값 두 곳 저장 금지 원칙).
 
@@ -69,6 +71,7 @@
 | USED MATERIAL → `schedules.containers.usedItems` (SQL 0) | 같은 뜻의 구조(가져온 용기 = 병원이 사용해 배출한 용기)가 이미 있고, 저장·수정 함수가 이 열을 해석 없이 통과시킵니다. 모든 읽는 곳이 4키 이름으로만 접근하는 것을 확인했습니다(`PROJECT_STATE.md` §1-4) |
 | Pilot → `experiment_settings.pilot_client_ids` (SQL 1, 추가만) | `clients` 는 열 단위 권한 목록(`CLIENT_COLS` · grant · `app_health_check`)이라 칸 하나가 세 곳을 건드리고, SQL 전후 불일치 시 거래처 전체가 안 읽힙니다. 실증 설정은 `select *` · 관리자 쓰기라 안전 |
 | `CollectionEvent.actorId/actorName` | DB 에 이미 있는 칸을 TS 타입·매핑에 **읽기만** 추가 (실사용자 수) |
+| `MaterialSupply.demoSessionId` | DB 에 처음부터 있던 `materials.demo_session_id` 를 **읽기만** 추가 (다른 표 4곳이 이미 같은 방식으로 읽고 있습니다). Pilot 공급 집계에서 시연을 수거와 같은 기준으로 빼기 위함 — 쓰기·계산 변경 없음 |
 | 기존 마이그레이션 수정 | 없음. DROP/TRUNCATE/DELETE 없음 |
 
 ## F. QA
@@ -104,7 +107,7 @@ Dashboard · Excel Import · 일정/배차/차량 로직 · 수거이력 화면 
 | 2. 현장 업무량이 늘었나 | 선택 입력. 규격별을 적으면 4칸을 또 적지 않게 자동 계산. 최근 규격 「지난번」 한 번 채움 | **P1 고침** — 접힌 줄이 「가져온 용기 없음」이라 4칸을 또 적을 수 있었음 → 「규격별 N개로 자동 계산」 |
 | 3. 공급/사용 혼동 | 구역·키·보기 줄 분리, 설명에 「재고를 움직이지 않습니다」. 검사가 공급 0 확인 | 없음 |
 | 4. 재고 이중 차감 | `usedItems` 는 어느 경로에서도 `supplied` 를 만들지 않음. 수정 검사가 supplied 불변 확인. SQL 미변경 | 없음 |
-| 5. Pilot / 시연 혼합 | 시연 거래처 제외 · `demo_session_id` 이벤트 제외 · `origin` demo/seed 일정 제외. 공급 기록(`materials`)에는 TS 타입에 시연 표식이 없어 Pilot 거래처·기간으로만 거름 — 운영 모드는 시연 태깅을 하지 않으므로 실무 영향 없음 | 기록만 (P2) |
+| 5. Pilot / 시연 혼합 | 시연 거래처 제외 · `demo_session_id` 이벤트 제외 · `origin` demo/seed 일정 제외 | **P1 고침 (2026-09-16 검토)** — 공급 기록은 시연 표식을 안 읽어 Pilot 거래처에 시연 공급이 남으면 수거는 빠지고 공급만 남을 수 있었음 → `MaterialSupply.demoSessionId` 읽기 추가 + 집계에서 제외, 검사 1건 추가 |
 | 6. 과장된 숫자 | % · 향상 · 월 환산 없음(검사). 「예상 차이」는 남은 개수가 아니라고 명시. BASELINE UNKNOWN 비움 | **P1 고침** — 「자주」 배지가 1회 기록에도 붙었음 → 「이전 N회」로 횟수 표기 |
 | 7. 53곳 전체 강제 | 거래처별 체크, 일괄 켜기 없음, 10 은 권장 표기만 | 없음 |
 | 8. 범위 밖 기능 | 자재관리 카드는 지시서의 「계산 가능하면 표시」 범위. 설정 화면은 안내 문장 1줄 | 없음 |

@@ -95,9 +95,22 @@ const EXP = {
     + F.schedules.filter((s) => PILOT.includes(s.client_id) && s.status === '완료' && inPeriod(s.date)).length,
 }
 
+//  공급 기록 — 진짜 1건 · 시연 중 만들어진 1건.
+//  수거 완료가 자재를 함께 넣을 때 서버가 같은 시연 표식을 자재에도 붙이므로,
+//  시연 건이 Pilot 거래처에 남아 있을 수 있습니다. 그것이 빠지는지 봅니다.
+const supplies = [
+  { id: 'sup1', date: day(-3), client_id: 'c0', box_count: 4, vinyl_count: 0, needle_box_count: 0,
+    is_additional_request: false, memo: '', origin: 'field', demo_session_id: null, items: { box63: 4 },
+    created_at: `${day(-3)}T00:00:00Z`, updated_at: `${day(-3)}T00:00:00Z` },
+  { id: 'sup2', date: day(-3), client_id: 'c0', box_count: 7, vinyl_count: 0, needle_box_count: 0,
+    is_additional_request: false, memo: '', origin: 'field', demo_session_id: 'demo-1', items: { box63: 7 },
+    created_at: `${day(-3)}T00:00:00Z`, updated_at: `${day(-3)}T00:00:00Z` },
+]
+
 const state = { reqs: 0, writes: [], profile: W.profileFor('admin'), schedules: [...F.schedules, ...mine] }
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
 W.wire(ctx, state)
+ctx.route('**/rest/v1/materials**', (r) => json(r, supplies))
 ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, { id: 1, start_date: START, pilot_client_ids: [...PILOT, '00000000-0000-0000-0000-00000000dead'] }))
 ctx.route('**/rest/v1/collection_events**', (r) => json(r, events))
 ctx.route('**/rest/v1/client_requests**', (r) => json(r, requests))
@@ -125,13 +138,18 @@ const detail = (await p.locator('[data-pilot-detail]').innerText()).replace(/\s+
 ok(new RegExp(`자재사용 기록률 ${EXP.used} / ${EXP.ofRecords}건`).test(detail), `기록률 ${EXP.used} / ${EXP.ofRecords}건 — 분모는 Pilot 완료 수거`, detail.match(/자재사용 기록률[^·]*/)?.[0] ?? '')
 ok(new RegExp(`거래처 Coverage ${EXP.coverage} / ${EXP.clients}곳`).test(detail), `Coverage ${EXP.coverage} / ${EXP.clients}곳`)
 ok(/직원 사용 2명 — (김기사 4건 · 박기사 2건|박기사 2건 · 김기사 4건)/.test(detail), '직원별 건수 (김기사 4 · 박기사 2)')
-ok(new RegExp(`취소 후 재입력 ${EXP.excluded.reverted}건 / 입력 ${EXP.entered}건`).test(detail), '재입력 대리지표는 건수로만')
+ok(new RegExp(`입력 정정 기록 취소된 입력 ${EXP.excluded.reverted}건 / 전체 입력 ${EXP.entered}건`).test(detail),
+  '**「입력 정정 기록 · 취소된 입력 N건 / 전체 입력 N건」** — 「재입력」이라 부르지 않음')
+ok(!/재입력|Re-entry|Reduction/.test(detail), '확인하지 않은 「재입력」·「Reduction」 표현이 없음')
 ok(new RegExp(`연결 ${EXP.entered} / ${EXP.entered}건`).test(detail), '입력 → 이력 연결 6 / 6건')
 ok(new RegExp(`Portal Self-Service 요청 ${EXP.portal}건 · 처리 1건 · 병원 1곳`).test(detail), 'Portal 요청 · 처리 · 병원 수')
 const exc = (await p.locator('[data-pilot-excluded]').innerText()).replace(/\s+/g, ' ')
 ok(new RegExp(`시연 ${EXP.excluded.demo}건 · 시작일 이전 ${EXP.excluded.practice}건 · 취소 ${EXP.excluded.reverted}건 · Pilot 외 거래처 ${EXP.excluded.nonPilot}건`).test(exc),
   '**빠진 건수가 그대로 적힘**', exc)
 ok(/63L 박스 사용 확인 16개/.test(detail) && /12L 봉투형용기 사용 확인 20개/.test(detail), '규격별 사용 합계 (63L 16 · 봉투 20 — 시작일 이전 99 · Pilot 외 5 는 빠짐)')
+//  공급 4(진짜) + 7(시연) 중 4만 세야 합니다
+ok(/63L 박스 사용 확인 16개 · 공급 4개/.test(detail), '**시연 중 만든 공급(7개)은 빼고 진짜 공급 4개만 셈**',
+  detail.match(/63L 박스[^가-힣]*[^·]*·[^·]*/)?.[0] ?? '')
 const card = (await p.locator('[data-pilot-summary]').innerText()).replace(/\s+/g, ' ')
 ok(!/\d+(\.\d+)?\s*%/.test(card) && !/향상|절감|개선율/.test(card), '**개선율·% 표기 없음**')
 ok(/1주 Pilot 실제 기록/.test(card), '「1주 Pilot 실제 기록」 라벨')

@@ -59,7 +59,13 @@ export interface PilotEvidence {
   }
   /** Portal 요청 (CUSTOMER REQUEST) — 병원이 포털에서 직접 올린 것만 */
   portal: { requests: number; handled: number; clients: number }
-  /** 재입력 대리지표 — 취소된 입력 건수. 「줄었다」가 아니라 건수입니다 */
+  /**
+   * 입력 정정 기록 — **취소된 입력 건수**입니다.
+   *
+   *  ⚠ 「다시 입력했는가」를 확인한 값이 아닙니다. 취소 뒤 같은 수거가 다시
+   *    들어왔는지를 짝지어 보지 않으므로, 「재입력이 줄었다」로 읽으면 안 됩니다.
+   *    화면도 그렇게 적지 않습니다.
+   */
   reentry: { reverted: number; entered: number }
   /** 거래처 Coverage — Pilot 거래처 중 이 기간에 입력이 1건 이상인 곳 */
   coverage: { withInput: number; pilot: number }
@@ -142,8 +148,10 @@ export function pilotEvidence(data: AppData, todayStr = today()): PilotEvidence 
   const suppliedBy = new Map<string, number>()
   let suppliedRecords = 0
   for (const m of data.materials) {
-    //  공급 기록에는 시연 표식 칸이 없습니다 — Pilot 거래처(시연용 제외)와 기간으로만 거릅니다.
-    if (!pilotIds.has(m.clientId) || !inPeriod(m.date)) continue
+    //  ⚠ 시연 중 만든 공급도 뺍니다 — 수거 완료가 자재를 함께 넣을 때 서버가
+    //    그 수거와 같은 시연 표식을 자재에도 붙입니다. 이것을 안 빼면 수거는
+    //    빠지고 공급만 남아 「공급 vs 확인된 사용」이 시연만큼 부풀어 보입니다.
+    if (!pilotIds.has(m.clientId) || !inPeriod(m.date) || m.demoSessionId) continue
     if (isLegacySupply(m)) continue
     suppliedRecords += 1
     for (const [k, n] of Object.entries(itemsOf(m))) suppliedBy.set(k, (suppliedBy.get(k) ?? 0) + (n ?? 0))

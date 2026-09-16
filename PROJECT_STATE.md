@@ -89,7 +89,7 @@
 |---|---|---|
 | `src/types/index.ts` | `ContainerBreakdown.usedItems?: Record<string, number>` · `CollectionEvent.actorId?/actorName?` · `ExperimentConfig.pilotClientIds?: string[]` | 저장·집계에 필요한 선택 칸 |
 | `src/lib/collection.ts` | `usedItemsOf(containers)` · `containersFromUsed(usedItems, etc)` 순수 함수 2개 | 규격별 → 4칸 접기, 한 곳에서만 |
-| `src/lib/repo.ts` | `toEvent` 에 actor 2칸 · `experiment` 매핑에 `pilotClientIds` · `savePilotClients(ids)` (update 1줄) | 읽기·쓰기 각 1곳 |
+| `src/lib/repo.ts` | `toEvent` 에 actor 2칸 · `toMaterial` 에 `demoSessionId` 1칸(이미 있던 열, 읽기만) · `experiment` 매핑에 `pilotClientIds` · `savePilotClients(ids)` (update 1줄) | 읽기·쓰기 각 1곳 |
 | `src/pages/CollectionInput.tsx` | 접힌 구역 **1개 추가** 「이번 수거 자재 사용량」 + `buildInput()` 에서 `containers` 에 `usedItems` 동봉. 4칸이 비어 있고 규격별이 있으면 4칸을 규격별 합계로 채움(두 번 적지 않게) | TASK A |
 | `src/components/CollectionRecord.tsx` | 보기: 「사용 자재」 줄 1개 · 수정: 규격별 줄 Fold 1개 | 수정이 사용량을 깨지 않게 |
 | `src/lib/ops.ts` `collectionHistory` | `HistoryRow.usedText` 1칸 추가(기존 `containerType` 유지) | 거래처 상세 표시 |
@@ -101,7 +101,7 @@
 | `src/context/DataContext.tsx` | `setPilotClients(ids)` 1개 노출 | TASK B |
 
 ## 4. PILOT ADD — 새로 만드는 것
-- `src/lib/pilotEvidence.ts` — 순수 함수. 입력 `AppData`, 출력 Pilot 요약(기간 · 거래처 · 수거 입력 · 자재사용 기록 · 실사용자 · Portal 요청 · 연결 건수 · 재입력 대리지표 · BASELINE KNOWN/UNKNOWN 목록). 개선율 계산 **없음**.
+- `src/lib/pilotEvidence.ts` — 순수 함수. 입력 `AppData`, 출력 Pilot 요약(기간 · 거래처 · 수거 입력 · 자재사용 기록 · 실사용자 · Portal 요청 · 연결 건수 · 입력 정정 기록(취소된 입력 건수) · BASELINE KNOWN/UNKNOWN 목록). 개선율 계산 **없음**.
 - `src/components/PilotSummaryCard.tsx` — 카드 1장 + 「상세 보기」 접힘.
 - `supabase/proposals/PROPOSAL_0122_pilot_clients.sql` — `alter table experiment_settings add column if not exists pilot_client_ids uuid[] not null default '{}'` + 판 번호 122. **DROP/TRUNCATE/DELETE 없음**. 대표님이 실행.
 - `PILOT_PLAN.md` — OBJECTIVE / SCOPE / PERIOD / SUCCESS EVIDENCE / PHASE 1~4 / AX Owner.

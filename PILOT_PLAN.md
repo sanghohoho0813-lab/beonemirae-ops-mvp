@@ -53,7 +53,7 @@
 | 직원 사용 | 이벤트에 남은 입력자 (없으면 일정의 기사 이름) 수 | COLLECTION TABLE |
 | 거래처 Coverage | Pilot 거래처 중 기간 안 입력 1건 이상인 곳 / Pilot 거래처 | COLLECTION TABLE |
 | Portal Self-Service | client_requests.source = 'portal' (Pilot 거래처 · 기간) 건수 · 처리 건수 · 병원 수 | CUSTOMER REQUEST |
-| Re-entry Reduction Proxy | 취소 후 재입력 건수 / 입력 건수 — **줄었다가 아니라 건수** | COLLECTION TABLE |
+| 입력 정정 기록 | 취소된 입력 건수 / 전체 입력 건수. **「재입력」을 확인한 값이 아닙니다** — 취소 뒤 같은 수거가 다시 들어왔는지는 짝지어 보지 않습니다 | COLLECTION TABLE |
 | Data Connection | 입력 → 완료 일정(수거이력·거래처 화면)으로 연결된 건수 | COLLECTION TABLE |
 | 규격별 사용 · 공급 | usedItems 합계 · materials.items 합계 (남은 개수가 아님) | MATERIAL USAGE |
 | 세지 않은 것 | 시연 · 시작일 이전 · 취소 · Pilot 외 거래처 — 건수를 그대로 적음 | — |

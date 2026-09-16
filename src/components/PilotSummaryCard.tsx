@@ -111,8 +111,10 @@ export function PilotSummaryCard() {
                 <b>Portal Self-Service</b> 요청 {ev.portal.requests}건 · 처리 {ev.portal.handled}건 · 병원 {ev.portal.clients}곳
                 <Src p={ev.provenance.portal} />
               </li>
+              {/*  ⚠ 「재입력」이라고 부르지 않습니다 — 취소된 입력을 셀 뿐,
+                   그 뒤 다시 들어왔는지는 확인하지 않습니다 (0122 검토). */}
               <li data-kpi="reentry">
-                <b>Re-entry Reduction Proxy</b> 취소 후 재입력 {ev.reentry.reverted}건 / 입력 {ev.reentry.entered}건 — 줄었다는 뜻이 아니라 건수입니다
+                <b>입력 정정 기록</b> 취소된 입력 {ev.reentry.reverted}건 / 전체 입력 {ev.reentry.entered}건
                 <Src p={ev.provenance.reentry} />
               </li>
               <li data-kpi="linked">

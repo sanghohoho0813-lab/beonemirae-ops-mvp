@@ -287,6 +287,10 @@ const toMaterial = (r: Row): MaterialSupply => ({
   isAdditionalRequest: !!r.is_additional_request,
   memo: r.memo ?? '',
   items: r.items ?? undefined,
+  //  수거 완료가 함께 넣은 자재에는 그 수거와 **같은** 시연 표식이 붙습니다
+  //  (complete_collection). 읽지 않으면 Pilot 집계에서 수거는 빠지고 공급만
+  //  남아 두 숫자가 어긋납니다 (0122).
+  demoSessionId: r.demo_session_id ?? null,
 })
 
 const toPayment = (r: Row): Payment => ({
