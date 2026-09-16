@@ -23,6 +23,7 @@ import { TONE } from '../lib/tone'
 import { LiveClock } from './LiveClock'
 import { ThemeButton } from './ThemePicker'
 import { SyncBar } from './SyncBar'
+import { CoachPin } from './axCoach/CoachPin'
 import { useTour } from '../context/TourContext'
 import { SchemaBar } from './SchemaBar'
 import { BottomSheet } from './BottomSheet'
@@ -377,6 +378,11 @@ function Sidebar() {
           <span className="text-amber-200">{SYSTEM_WORDMARK_TAIL}</span>
         </p>
       </div>
+
+      {/*  ⚠ 0121 — 묶음 **밖**입니다. 0110 에서 「AX·심사」가 접힌 채로 시작하게
+           되면서 AX 코치로 들어가는 단추가 첫 화면에서 사라졌습니다. 여섯
+           묶음 구조는 그대로 두고, 오늘 상태를 이고 있는 자리 하나만 더합니다. */}
+      <CoachPin />
 
       <nav className="flex-1 px-3">
         {groups.map((g) => (

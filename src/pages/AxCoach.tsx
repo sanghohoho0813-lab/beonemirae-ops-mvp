@@ -252,6 +252,20 @@ export function AxCoach() {
       {/* ── 오늘 할 일 ────────────────────────────────────────────────────── */}
       <section data-coach-today>
         <SectionTitle hint="실제 업무를 하면서 실증자료도 같이 쌓입니다">오늘 이것만 해주세요</SectionTitle>
+        {/*  ⚠ 0121 — 오늘 받은 일 중 몇 개가 **실제 기록으로** 확인됐는지
+             한 줄로 먼저 말합니다. 아래 두 묶음(할 일 / 확인된 것)을 눈으로
+             세지 않아도 되게 하려는 것입니다. 「완료」가 아니라 「확인됨」인
+             이유는 이 시스템에 「했다」 단추가 없기 때문입니다. */}
+        {missions.todo.length + missions.done.length > 0 && (
+          <p data-coach-progress className="t-body mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 break-keep rounded-2xl bg-navy-50 px-4 py-3 font-bold text-navy-700">
+            <span>
+              오늘 할 일 {missions.todo.length + missions.done.length}개 중{' '}
+              <b className="text-teal-700">{missions.done.length}개 확인됨</b>
+            </span>
+            {missions.todo.length > 0 && <span className="text-navy-500">· {missions.todo.length}개 남음</span>}
+            <span className="text-navy-500">· 실증 자료 준비도 {cov.pct}%</span>
+          </p>
+        )}
         {note && <p data-coach-note className="t-body mb-3 break-keep rounded-2xl bg-amber-50 px-4 py-3 font-bold text-amber-800">{note}</p>}
         {missions.todo.length === 0 ? (
           <div data-coach-none className="card p-5 sm:p-6">

@@ -1,32 +1,25 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Compass } from 'lucide-react'
-import { useData } from '../../context/DataContext'
-import { useAuth } from '../../context/AuthContext'
-import { coachMissions, coverageOf, earliestRecord } from '../../lib/axCoach'
-import { today } from '../../lib/format'
+import { useCoachStatus } from './useCoachStatus'
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  첫 화면 한 줄 — 「오늘 할 일 N개 · 준비도 N%」 (0108)
+//  첫 화면 한 줄 — 「오늘 할 일 N개 중 M개 확인됨 · 준비도 N%」 (0108 · 0121)
 //
-//   ⚠ 띠를 크게 두지 않습니다. 이 자리 위에 있는 것은 오늘 나갈 차이고,
-//     그것이 밀리면 안 됩니다. 한 줄이고, 오늘 할 일이 없으면 아예 없습니다.
+//   ⚠ 0108 에는 띠를 작게, 오늘 나갈 차 **아래**에 두었습니다. 그런데 그
+//     자리가 페이지 절반 아래(1880px)라 아무도 못 봤습니다. 0121 에서
+//     「오늘 처리할 업무」 맨 위로 올립니다 — 오늘 무엇을 하면 자료가 쌓이는지
+//     알려 주는 줄이므로, 오늘 할 일 목록보다 뒤에 있을 이유가 없습니다.
+//     여전히 **한 줄**입니다. 아래 일정을 밀어내지 않도록 크게 만들지 않습니다.
+//
+//   ⚠ 「확인됨」입니다. 「완료」가 아닙니다 — 눌러서 끝나는 것이 아니라
+//     실제 업무기록이 생겨야 확인되기 때문입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function CoachLine({ className = '' }: { className?: string }) {
-  const { data } = useData()
-  const { role } = useAuth()
-  const t = today()
+  const { pct, todo, done, total, canSee } = useCoachStatus()
 
-  const info = useMemo(() => {
-    const start = data.experiment?.startDate ?? earliestRecord(data) ?? t
-    const cov = coverageOf(data, { from: start <= t ? start : t, to: t })
-    const m = coachMissions(data, cov, { role: role ?? 'office', today: t, issued: data.coachMissions })
-    return { pct: cov.pct, todo: m.todo.length, done: m.done.length }
-  }, [data, role, t])
-
-  if (role !== 'admin' && role !== 'office') return null
-  if (info.todo === 0 && info.done === 0) return null
+  if (!canSee) return null
+  if (total === 0) return null
 
   return (
     <Link
@@ -36,9 +29,16 @@ export function CoachLine({ className = '' }: { className?: string }) {
     >
       <Compass size={17} className="shrink-0 text-teal-600" />
       <span className="min-w-0 flex-1 break-keep text-[1.02rem] font-bold text-navy-700">
-        AX 코치 — 오늘 할 일 {info.todo}개
-        {info.done > 0 && <span className="text-teal-700"> · 오늘 확인된 것 {info.done}개</span>}
-        <span className="text-navy-500"> · 실증 자료 준비도 {info.pct}%</span>
+        AX 코치 — 오늘 할 일 {total}개 중 <span className="text-teal-700">{done}개 확인됨</span>
+        {todo > 0 && <span className="text-navy-500"> · {todo}개 남음</span>}
+        <span className="text-navy-500"> · 실증 자료 준비도 {pct}%</span>
+      </span>
+      {/*  준비도 막대 — 넓은 화면에서만. 폰에서는 줄이 두 줄로 접힙니다. */}
+      <span aria-hidden className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-navy-100 sm:block">
+        <span
+          className="block h-full rounded-full bg-teal-500"
+          style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }}
+        />
       </span>
       <ArrowRight size={15} className="shrink-0 text-navy-400" strokeWidth={2.6} />
     </Link>
