@@ -714,11 +714,23 @@ export function coachMissions(
   })
 
   const done = cards.filter((c) => c.status === 'verified')
+  //  ── 하루에 세 개 (0125) ─────────────────────────────────────────────────
+  //
+  //   ⚠ 예전에는 **확인될 때마다 그 자리가 새 일로 채워졌습니다.** 세 개를
+  //     다 하면 곧바로 또 세 개가 떠서, 하루 종일 줄지 않는 목록이 됐습니다.
+  //     실제로 재 봤습니다 — 수거 1건을 넣자 「오늘 할 일 3개」가 「4개 중
+  //     1개 확인됨」이 됐습니다. 오늘 받은 일이 늘어난 것입니다.
+  //
+  //   오늘 몫은 **확인된 것까지 합쳐 세 개**입니다. 세 개를 다 확인하면
+  //   남은 일은 0 이 되고, 다음 몫은 **내일** 그때까지 쌓인 자료를 다시 보고
+  //   고릅니다. 일을 감추는 것이 아닙니다 — 후보는 그대로 있고, 하루에
+  //   내미는 양만 정합니다.
+  const left = Math.max(0, max - done.length)
   const todo = cards
     .filter((c) => c.status !== 'verified')
     //  발행됐지만 오늘 할 대상이 사라진 일(priority 0)은 목록 맨 뒤로 갑니다.
     .sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key))
-    .slice(0, max)
+    .slice(0, left)
   return { todo, done, historyAvailable }
 }
 

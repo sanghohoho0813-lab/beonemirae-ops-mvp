@@ -284,11 +284,26 @@ export function AxCoach() {
         )}
         {note && <p data-coach-note className="t-body mb-3 break-keep rounded-2xl bg-amber-50 px-4 py-3 font-bold text-amber-800">{note}</p>}
         {missions.todo.length === 0 ? (
-          <div data-coach-none className="card p-5 sm:p-6">
-            <p className="t-card text-navy-900">오늘 드릴 일이 없습니다</p>
-            <p className="t-body mt-1.5 break-keep text-navy-600">
-              오늘 예정된 방문 · 처리할 주문 · 입금 확인할 청구가 없습니다. 할 수 있는 일이 없을 때는 만들어 내지 않습니다.
-            </p>
+          //  ⚠ 0125 — 「다 했다」와 「줄 것이 없다」는 다른 상태입니다. 예전에는
+          //    둘 다 「오늘 드릴 일이 없습니다」로 같아서, 세 개를 다 한 날에도
+          //    아무것도 안 한 날과 같은 말을 봤습니다.
+          <div data-coach-none data-coach-none-kind={missions.done.length > 0 ? 'done' : 'empty'} className="card p-5 sm:p-6">
+            {missions.done.length > 0 ? (
+              <>
+                <p className="t-card text-navy-900">오늘 할 일 {missions.done.length}개를 모두 확인했습니다</p>
+                <p className="t-body mt-1.5 break-keep text-navy-600">
+                  오늘 몫은 여기까지입니다. 다음 할 일은 <b className="text-navy-700">내일</b> 그때까지 쌓인 기록을 다시 보고
+                  고릅니다 — 다 했다고 그 자리에서 또 드리지 않습니다.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="t-card text-navy-900">오늘 드릴 일이 없습니다</p>
+                <p className="t-body mt-1.5 break-keep text-navy-600">
+                  오늘 예정된 방문 · 처리할 주문 · 입금 확인할 청구가 없습니다. 할 수 있는 일이 없을 때는 만들어 내지 않습니다.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <ol className="grid gap-3">
