@@ -19,7 +19,10 @@
     "video:evidence": "node video/say.mjs video/config.evidence.json && node video/record.mjs video/config.evidence.json && node video/mux.mjs video/config.evidence.json",
     "video:evidence:say": "node video/say.mjs video/config.evidence.json",
     "video:evidence:rec": "node video/record.mjs video/config.evidence.json",
-    "video:evidence:silent": "node video/record.mjs video/config.evidence.json && node video/mux.mjs video/config.evidence.json --silent"
+    "video:evidence:silent": "node video/record.mjs video/config.evidence.json && node video/mux.mjs video/config.evidence.json --silent",
+    "video:evidence2": "node video/say.mjs video/config.evidence2.json && node video/record.mjs video/config.evidence2.json && node video/mux.mjs video/config.evidence2.json",
+    "video:evidence2:say": "node video/say.mjs video/config.evidence2.json",
+    "video:evidence2:silent": "node video/record.mjs video/config.evidence2.json && node video/mux.mjs video/config.evidence2.json --silent"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.1",

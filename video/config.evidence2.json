@@ -1,0 +1,106 @@
+{
+  "tenant": "beonemirae",
+  "title": "비원미래 AX Evidence Guide v2 — 경영진용",
+  "baseUrl": "http://localhost:4173",
+
+  "//": "0120 — Evidence Guide v2 (약 4분 30초). 50초 short-demo 와 2분 31초 v1 은 그대로 있고 이것만 새로 만듭니다. 촬영 엔진·fixture·흉내 서버·무대·커서·강조·자막은 나눠 쓰고, flow 와 대본만 다릅니다.",
+  "flow": "video/flows/evidence-guide2.mjs",
+  "narration": "video/narration.evidence2.ko.json",
+
+  "viewport": { "width": 1920, "height": 1080 },
+  "output": { "width": 1920, "height": 1080 },
+  "fps": 30,
+  "watermark": "예시 데이터 · 기능 시연용",
+
+  "//stage": "짧은 Demo 와 같은 무대입니다. coverAtStart 하나만 다릅니다 — 여는 글자 화면으로 시작하므로 앱이 뜨는 동안을 가려 둡니다.",
+  "stage": {
+    "rootFontPx": 19.5,
+    "sidebarZoom": 0.48,
+    "dim": 0.09,
+    "spotBorder": 0.58,
+    "spotGlow": 0.11,
+    "mainPadPx": 44,
+    "mainTopPx": 30,
+    "mainBottomPx": 110,
+    "cursorPx": 30,
+    "chipFontPx": 15,
+    "markFontPx": 16,
+    "edgePx": 18,
+    "coverAtStart": true
+  },
+
+  "//tts": "⚠ 최종 음성은 대표님이 직접 녹음하신 파일 하나입니다. piper 는 **타이밍을 맞춰 보는 용도로만** 씁니다 — 저품질 TTS 를 최종 영상에 넣지 않습니다.",
+  "tts": {
+    "provider": "piper",
+    "voices": {
+      "piper": {
+        "lengthScale": 1.25,
+        "noiseScale": 0.5,
+        "noiseW": 0.6,
+        "sentenceSilence": 0.25
+      }
+    }
+  },
+
+  "//voiceover": "대표님이 읽으실 원문은 video/voiceover-script.evidence.txt 에 있습니다. 녹음하신 파일을 아래 자리에 넣고 marks 만 적으면 됩니다. ⚠ 짧은 Demo 의 voiceover.wav 와 다른 파일입니다.",
+  "voiceover": {
+    "file": "video/audio/voiceover.evidence2.wav",
+    "gapSec": 0.6,
+    "//예시": { "intro": "0:00.50", "p1": ["0:15.20", "0:33.10"], "end": "2:28.00" },
+    "marks": {
+      "s0": null,
+      "s1": null,
+      "s2": null,
+      "s3": null,
+      "s4": null,
+      "s5": null,
+      "s6": null,
+      "s7": null,
+      "s8": null,
+      "s9": null,
+      "s10": null,
+      "s11": null,
+      "s12": null,
+      "s13": null,
+      "s14": null,
+      "s15": null,
+      "s16": null,
+      "s17": null,
+      "outro": null,
+      "end": null
+    }
+  },
+
+  "subtitle": {
+    "charsPerLine": 26,
+    "bottomPx": 42,
+    "maxWidthPct": 72,
+    "fontPx": 32,
+    "lineHeight": 1.35
+  },
+
+  "//out": "짧은 Demo 와 파일이 섞이지 않게 이름을 전부 따로 둡니다 — 음성 폴더까지.",
+  "out": {
+    "dir": "video/out",
+    "voice": "voice-evidence2",
+    "webm": "evidence2.webm",
+    "mp4": "beonemirae-ax-evidence-v2.mp4",
+    "mp4Silent": "silent-beonemirae-ax-evidence-v2.mp4",
+    "timeline": "timeline.evidence2.json"
+  },
+  "length": { "minSec": 240, "maxSec": 320 },
+
+  "//hold": "경영진용은 교육받듯 보는 영상이라 짧은 Demo 보다 화면 체류시간이 조금 더 깁니다.",
+  "hold": {
+    "intro": 0,
+    "introCursor": 150,
+    "padAfterVoice": 260,
+    "outroTail": 900,
+    "cursorMove": 210,
+    "beforeClick": 150,
+    "afterClick": 220,
+    "afterSave": 320,
+    "afterRoute": 220,
+    "scroll": 380
+  }
+}

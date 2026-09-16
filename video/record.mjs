@@ -172,6 +172,14 @@ const OVERLAY = (watermark, sub, st) => `
       'text-align:center', 'word-break:keep-all',
       'opacity:0', 'transition:opacity .25s linear',
     ].join(';')
+    //  ⚠ 0120 — 여는 말에서 사례 카드를 **여러 장 갈아 끼웁니다.** 판은 그대로
+    //    두고 글만 바뀌어야 깜빡이지 않으므로, 글을 담는 칸을 따로 둡니다.
+    const cardBody = document.createElement('div')
+    cardBody.style.cssText = [
+      'display:flex', 'flex-direction:column', 'align-items:center', 'gap:26px',
+      'width:100%', 'transition:opacity .22s linear',
+    ].join(';')
+    cardEl.appendChild(cardBody)
 
     //   ③ 얇은 덮개 + 가운데 글 — 실제 화면을 배경으로 남기고 한마디만.
     //  ⚠ 0119-b — 덮개는 **.62 까지만** 어둡게 합니다. 성과 화면이 배경으로
@@ -353,25 +361,38 @@ const OVERLAY = (watermark, sub, st) => `
       },
       spotOff() { box.style.opacity = '0'; spotSel = null },
 
-      /** 글자 화면 (여는 말·닫는 말) */
+      /**
+       * 글자 화면 (여는 말·닫는 말·사례 카드).
+       *
+       *  이미 떠 있는 상태에서 다시 부르면 **글만 갈아 끼웁니다** — 판은
+       *  그대로 있으므로 화면이 깜빡이지 않습니다. 바꾸는 동안(0.22초)을
+       *  기다릴 수 있게 약속(Promise)을 돌려줍니다.
+       */
       card(lines, foot) {
-        cardEl.textContent = ''
-        for (const l of lines) {
-          const el = document.createElement('p')
-          el.textContent = l.text
-          el.style.cssText = 'margin:0;font:' + (l.weight || 800) + ' ' + l.size + 'px/1.5 system-ui,sans-serif;'
-            + 'white-space:pre-line;word-break:keep-all;'
-            + 'color:' + (l.dim ? 'rgba(255,255,255,.62)' : '#fff') + ';max-width:' + (l.narrow ? '70%' : '100%')
-          cardEl.appendChild(el)
+        const fill = () => {
+          cardBody.textContent = ''
+          for (const l of lines) {
+            const el = document.createElement('p')
+            el.textContent = l.text
+            el.style.cssText = 'margin:0;font:' + (l.weight || 800) + ' ' + l.size + 'px/1.5 system-ui,sans-serif;'
+              + 'white-space:pre-line;word-break:keep-all;'
+              + 'color:' + (l.dim ? 'rgba(255,255,255,.62)' : '#fff') + ';max-width:' + (l.narrow ? '70%' : '100%')
+            cardBody.appendChild(el)
+          }
+          if (foot) {
+            const f = document.createElement('p')
+            f.textContent = foot
+            f.style.cssText = 'margin:18px 0 0;font:700 20px/1.4 system-ui,sans-serif;'
+              + 'color:rgba(255,255,255,.5);letter-spacing:.03em'
+            cardBody.appendChild(f)
+          }
+          cardBody.style.opacity = '1'
         }
-        if (foot) {
-          const f = document.createElement('p')
-          f.textContent = foot
-          f.style.cssText = 'margin:18px 0 0;font:700 21px/1.4 system-ui,sans-serif;'
-            + 'color:rgba(255,255,255,.55);letter-spacing:.04em'
-          cardEl.appendChild(f)
-        }
+        const swapping = cardEl.style.opacity === '1' && cardBody.childElementCount > 0
         cardEl.style.opacity = '1'
+        if (!swapping) { fill(); return Promise.resolve() }
+        cardBody.style.opacity = '0'
+        return new Promise((done) => setTimeout(() => { fill(); done() }, 220))
       },
       cardOff(ms) {
         cardEl.style.transition = 'opacity ' + (ms || 250) + 'ms linear'
@@ -720,8 +741,12 @@ async function advance() {
  *   · 말이 끝나면 0.5초 쉬고 자막을 내립니다.
  */
 const audio = []
-/** 다섯 단계 중 몇 번째인가 — 마무리는 번호가 없습니다 */
-const STEP_NO = { s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 }
+/**
+ * 다섯 단계 중 몇 번째인가 — 마무리는 번호가 없습니다.
+ *  ⚠ 0120 — **짧은 Demo 에서만** 씁니다(config 의 stepChips). 다른 영상은
+ *    장면 이름이 s1·s2… 여도 「1/5」가 아니라 장면 이름만 답니다.
+ */
+const STEP_NO = CFG.stepChips === true ? { s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 } : {}
 /**
  * 직접 녹음한 음성일 때, 화면이 음성보다 늦은 장면들.
  *  ⚠ 늦으면 말이 화면보다 앞서 나갑니다 — 조용히 넘어가지 않고 적어 둡니다.
