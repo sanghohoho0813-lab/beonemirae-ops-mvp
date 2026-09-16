@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Check, Clock, KeyRound, Loader2, RefreshCw, UserPlus, X } from 'lucide-react'
 import { useAuth, ROLE_LABEL, type UserRole } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
@@ -55,6 +55,21 @@ function suggestPassword(): string {
   return Array.from(buf, (n) => pool[n % pool.length]).join('')
 }
 
+/**
+ * 테스트용으로 만든 계정인가 (0124) — **이름·이메일에 이 낱말이 들어간 것만**.
+ *
+ *  ⚠ 시스템에는 「이건 테스트다」라고 적는 칸이 없습니다. 칸을 새로 만들지
+ *    않고 이름으로만 가릅니다. 그래서 규칙을 좁게 둡니다 — 낱말이 통째로
+ *    들어간 경우만 잡고, 이름 중간에 우연히 낀 글자는 잡지 않습니다
+ *    (예: 'latest', 'testa' 는 아닙니다).
+ *  ⚠ 판정이 하는 일은 **자리와 크기**뿐입니다. 권한·로그인·데이터에는
+ *    아무 영향이 없습니다.
+ */
+const TEST_WORD = /(^|[^a-z])(test|tester|demo|dummy|sample|qa)([^a-z]|$)|테스트|데모|샘플|예시/i
+function isTestAccount(r: { email: string; name: string | null }): boolean {
+  return TEST_WORD.test(r.email ?? '') || TEST_WORD.test(r.name ?? '')
+}
+
 export function UserAdmin() {
   const { mode, profile } = useAuth()
   const { data } = useData()
@@ -83,6 +98,26 @@ export function UserAdmin() {
     [rows],
   )
   const approvedRows = useMemo(() => rows.filter((r) => !isPending(r)), [rows])
+
+  //  ── 목록 순서 (0124) ──────────────────────────────────────────────────
+  //
+  //   위: **지금 일하는 사람** — 대표·관리자 → 사무실 → 현장 → 병원 순.
+  //   아래: **테스트 계정과 중지된 계정**을 한 묶음으로 작게 모읍니다.
+  //
+  //   ⚠ 「테스트 계정」은 이름·이메일에 아래 낱말이 들어간 계정만입니다.
+  //     시스템에 「이건 테스트다」라고 적는 칸이 없어 이름으로 가르는 것이라,
+  //     실제 쓰는 계정이 잘못 내려가면 **이 목록만 고치면 됩니다.**
+  //     지우거나 숨기지 않습니다 — 자리만 아래로 옮기고 작게 그립니다.
+  //   ⚠ 중지된 계정도 아래로 갑니다. 퇴사한 분의 계정은 기록 때문에 지우지
+  //     못하고 중지만 하므로, 위에 남아 있으면 현재 인원처럼 보입니다.
+  const orderedRows = useMemo(() => {
+    const rank: Record<UserRole, number> = { admin: 0, office: 1, field: 2, client: 3 }
+    const byPerson = (a: ProfileRow, b: ProfileRow) =>
+      (rank[a.role] ?? 9) - (rank[b.role] ?? 9) || (a.name || a.email).localeCompare(b.name || b.email, 'ko')
+    const quiet = approvedRows.filter((r) => isTestAccount(r) || !r.active).sort(byPerson)
+    const main = approvedRows.filter((r) => !(isTestAccount(r) || !r.active)).sort(byPerson)
+    return { list: [...main, ...quiet], quietIds: new Set(quiet.map((r) => r.id)), quietCount: quiet.length }
+  }, [approvedRows])
 
   //  ── 같은 이름으로 사용 중인 계정 (0105) ──────────────────────────────────
   //  실제로 있었던 일(0102): 한 분이 회사 메일과 개인 메일로 계정을 둘 갖고
@@ -233,13 +268,34 @@ export function UserAdmin() {
       )}
 
       <div className="divide-y divide-navy-50 overflow-hidden rounded-2xl bg-navy-50">
-        {approvedRows.map((r) => {
+        {orderedRows.list.map((r, i) => {
           const self = r.id === profile?.id
+          //  아래 묶음이 시작되는 자리에 머리글을 한 번만 끼웁니다.
+          const quiet = orderedRows.quietIds.has(r.id)
+          const head = quiet && (i === 0 || !orderedRows.quietIds.has(orderedRows.list[i - 1].id))
           return (
-            /*  줄 전체를 집을 수 있는 표시를 답니다. 없으면 검사가 "이메일이
-                적힌 곳에서 div 를 두 번 올라간 자리" 같은 식으로 집게 되는데,
-                줄 안에 무엇이 하나 늘어나는 순간 엉뚱한 데를 잡습니다. */
-            <div key={r.id} data-user-row={r.id} data-user-dup={dupIds.has(r.id) ? '1' : undefined} className="bg-white px-4 py-3.5">
+            <Fragment key={r.id}>
+            {head && (
+              <div data-user-quiet-head className="bg-navy-50 px-4 py-2">
+                <p className="t-caption break-keep font-bold text-navy-500">
+                  테스트 · 중지된 계정 {orderedRows.quietCount}개 — 지우지 않고 아래에 모아 둡니다
+                </p>
+              </div>
+            )}
+            {/*  줄 전체를 집을 수 있는 표시를 답니다. 없으면 검사가 "이메일이
+                 적힌 곳에서 div 를 두 번 올라간 자리" 같은 식으로 집게 되는데,
+                 줄 안에 무엇이 하나 늘어나는 순간 엉뚱한 데를 잡습니다. */}
+            <div
+              data-user-row={r.id}
+              data-user-quiet={quiet ? '1' : undefined}
+              data-user-dup={dupIds.has(r.id) ? '1' : undefined}
+              //  작게 = 글자 한 단계 · 여백 절반 · 살짝 흐리게. 가리지는 않습니다.
+              className={
+                quiet
+                  ? 'bg-white px-4 py-2 opacity-75 [&_.pill]:text-[0.82rem] [&_.t-body]:text-[0.98rem] [&_.t-muted]:text-[0.88rem]'
+                  : 'bg-white px-4 py-3.5'
+              }
+            >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <div className="min-w-0 flex-1">
                   <p className="t-body break-keep font-extrabold text-navy-900">
@@ -379,6 +435,7 @@ export function UserAdmin() {
                 </div>
               )}
             </div>
+            </Fragment>
           )
         })}
         {approvedRows.length === 0 && !busy && (
