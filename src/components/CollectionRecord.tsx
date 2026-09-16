@@ -408,6 +408,8 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                       <QtyField
                         row
                         label={it.label}
+                        //  같은 창 안의 「주고 온 자재」와 이름이 겹치지 않게 (0122)
+                        ariaLabel={`${it.label} 사용량`}
                         value={used[it.key as ItemKey] ?? 0}
                         onChange={(v) =>
                           setUsed((cur) => {

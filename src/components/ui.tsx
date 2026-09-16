@@ -144,8 +144,19 @@ export function QtyField({
   badge,
   quick,
   row,
+  ariaLabel,
 }: {
   label?: string
+  /**
+   * 낭독기에 읽힐 이름 — 안 주면 label 을 그대로 씁니다 (0122).
+   *
+   *  ⚠ 한 화면에 **같은 품목이 다른 뜻으로** 두 번 나올 때 필요합니다.
+   *    수거 입력에는 「이번 수거 자재 사용량 · 63L 박스」와 「주고 온 자재 ·
+   *    63L 박스」가 함께 있는데, 이름이 같으면 눈으로는 구역으로 갈라도
+   *    낭독기에서는 똑같이 「63L 박스」로 들립니다 — 사용과 공급을 바꿔
+   *    적으면 재고와 청구가 틀립니다.
+   */
+  ariaLabel?: string
   value: number
   onChange: (n: number) => void
   unit?: string
@@ -176,7 +187,7 @@ export function QtyField({
   const control = (
     <>
       <div className={`flex items-center ${row ? 'gap-1.5' : 'gap-2'}`}>
-        <button type="button" aria-label={`${label ?? ''} 빼기`} className={btn} onClick={() => set(value - step)} disabled={value <= 0}>
+        <button type="button" aria-label={`${ariaLabel ?? label ?? ''} 빼기`} className={btn} onClick={() => set(value - step)} disabled={value <= 0}>
           <Minus size={20} strokeWidth={3} />
         </button>
         <input
@@ -184,7 +195,7 @@ export function QtyField({
           inputMode="numeric"
           min={0}
           max={max}
-          aria-label={label}
+          aria-label={ariaLabel ?? label}
           className={`field-input no-spinner px-1 py-3 text-center text-[1.24rem] font-extrabold tabular-nums ${
             row ? 'w-[3.9rem] shrink-0' : 'min-w-0 flex-1'
           } ${danger ? 'bg-rose-50 ring-1 ring-rose-300' : ''}`}
@@ -193,7 +204,7 @@ export function QtyField({
           onFocus={(e) => e.currentTarget.select()}
           placeholder="0"
         />
-        <button type="button" aria-label={`${label ?? ''} 더하기`} className={btn} onClick={() => set(value + step)}>
+        <button type="button" aria-label={`${ariaLabel ?? label ?? ''} 더하기`} className={btn} onClick={() => set(value + step)}>
           <Plus size={20} strokeWidth={3} />
         </button>
         <span className={`shrink-0 text-[1.05rem] font-bold text-navy-400 ${row ? 'ml-0.5' : 'w-6'}`}>{unit}</span>

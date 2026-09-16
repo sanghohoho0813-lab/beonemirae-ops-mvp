@@ -84,7 +84,7 @@ const overflowX = (p) => p.evaluate(() => Math.max(0, document.documentElement.s
   ok(m.minBtn >= 44, '**− / + 단추가 44px 이상**', `${m.minBtn}px`)
 
   //  숫자칸에 포커스 → 저장 단추가 보이는가
-  await p.locator('[data-collect-used]').getByLabel('63L 박스', { exact: true }).focus()
+  await p.locator('[data-collect-used]').getByLabel('63L 박스 사용량', { exact: true }).focus()
   await p.waitForTimeout(300)
   await p.fill('#collection-amount', '100')
   const save = await p.evaluate(() => {

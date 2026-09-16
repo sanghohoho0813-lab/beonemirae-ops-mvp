@@ -1289,6 +1289,9 @@ export function CollectionInput() {
                   <QtyField
                     row
                     label={it.label}
+                    //  ⚠ 아래 「주고 온 자재」에 같은 품목이 또 있습니다. 눈으로는 구역이
+                    //    갈리지만 낭독기에는 똑같이 들려, 사용과 공급을 바꿔 적을 수 있습니다.
+                    ariaLabel={`${it.label} 사용량`}
                     value={usedItems[it.key as ItemKey] ?? 0}
                     badge={
                       last > 0 ? (

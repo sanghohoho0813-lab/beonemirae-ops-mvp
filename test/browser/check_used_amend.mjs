@@ -107,7 +107,7 @@ async function open({ role = 'admin', path = '/history', w = 1280 } = {}) {
   ok(rows === 2, '② 값이 있는 규격 2줄만 펼침', `${rows}줄`)
   ok((await p.locator('[data-record-used-more]').count()) === 1, '② 「나머지 규격 보기」가 있음')
   ok(await p.locator('[data-record-save]').isDisabled(), '② 바꾼 것이 없으면 저장 못 함')
-  await p.locator('[data-record-used-row="box63"]').getByRole('button', { name: '63L 박스 더하기' }).click()
+  await p.locator('[data-record-used-row="box63"]').getByRole('button', { name: '63L 박스 사용량 더하기' }).click()
   await p.waitForTimeout(300)
   ok(await p.locator('[data-record-save]').isDisabled(), '② **사유 없이는 저장 못 함** (기존 amend 정책 그대로)')
   const preview = flat(await p.locator('[data-record]').innerText())
