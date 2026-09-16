@@ -241,17 +241,33 @@ export function AxCoach() {
         )}
       </section>
 
-      {/* ── 네 갈래 ───────────────────────────────────────────────────────── */}
-      <section>
-        <SectionTitle hint="누르면 무엇이 얼마나 모였는지 항목별로 보입니다">무엇이 쌓였고 무엇이 비었나</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {cov.areas.map((a) => <CoverageCard key={a.area} a={a} detail={role === 'admin' || role === 'office'} />)}
+      {/* ── 오늘 할 일 ────────────────────────────────────────────────────────
+           ⚠ 0124 — 이 화면에서 **가장 먼저 눈에 들어와야 하는 실행 영역**입니다.
+             준비도 바로 아래에 두고, 옅은 강조 바탕과 테두리로 한 덩어리임을
+             보입니다. 기능·계산·기록은 하나도 바뀌지 않았습니다 — 순서와
+             크기만 바꿨습니다. */}
+      <section
+        data-coach-today
+        className="rounded-3xl border-2 border-teal-200 bg-teal-50/50 p-4 sm:p-5"
+      >
+        <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-1">
+          {/*  ⚠ 크기는 **rem** 으로 둡니다 — 이 앱은 「글자 크게」 설정이 root 크기를
+               바꾸는 구조라, px 로 박아 두면 크게 설정한 화면에서 이 제목만
+               작아집니다. 아래 섹션 제목(t-section, 1.4/1.8rem)보다 한 단계 위. */}
+          <h2 data-coach-today-title className="min-w-0 break-keep text-[1.55rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[2rem]">
+            오늘 이것만 해주세요
+          </h2>
+          {/*  몇 개인지를 제목 옆에 붙입니다 — 세어 보지 않아도 되게. */}
+          {missions.todo.length > 0 && (
+            <span
+              data-coach-today-count
+              className="shrink-0 rounded-full bg-teal-600 px-3 py-1 text-[1rem] font-extrabold text-white"
+            >
+              오늘 해야 할 {missions.todo.length}개
+            </span>
+          )}
+          <p className="t-muted w-full break-keep">실제 업무를 하면서 실증자료도 같이 쌓입니다</p>
         </div>
-      </section>
-
-      {/* ── 오늘 할 일 ────────────────────────────────────────────────────── */}
-      <section data-coach-today>
-        <SectionTitle hint="실제 업무를 하면서 실증자료도 같이 쌓입니다">오늘 이것만 해주세요</SectionTitle>
         {/*  ⚠ 0121 — 오늘 받은 일 중 몇 개가 **실제 기록으로** 확인됐는지
              한 줄로 먼저 말합니다. 아래 두 묶음(할 일 / 확인된 것)을 눈으로
              세지 않아도 되게 하려는 것입니다. 「완료」가 아니라 「확인됨」인
@@ -307,6 +323,17 @@ export function AxCoach() {
             {!missions.historyAvailable && ' 받은 일을 남기는 표가 아직 없어, 오늘 0시부터의 기록으로 확인합니다.'}
           </span>
         </p>
+      </section>
+
+      {/* ── 네 갈래 ───────────────────────────────────────────────────────── */}
+      <section>
+        {/*  ⚠ 0124 — 「오늘 할 일」 아래로 내렸습니다. 여기는 **읽는 곳**이고
+             위는 **하는 곳**입니다. 제목 무게도 한 단계 낮춰(sub) 위가 먼저
+             읽히게 합니다 — 항목·계산·펼치기 동작은 그대로입니다. */}
+        <SectionTitle size="sub" hint="누르면 무엇이 얼마나 모였는지 항목별로 보입니다">무엇이 쌓였고 무엇이 비었나</SectionTitle>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {cov.areas.map((a) => <CoverageCard key={a.area} a={a} detail={role === 'admin' || role === 'office'} />)}
+        </div>
       </section>
 
       {/* ── 최근 변화 ─────────────────────────────────────────────────────── */}

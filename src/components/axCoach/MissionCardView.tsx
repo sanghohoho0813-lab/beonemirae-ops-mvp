@@ -55,13 +55,16 @@ export function MissionCardView({
         </p>
       ) : (
         <>
+          {/*  ⚠ 0124 — 「지금 눌러야 하는 것」이 카드에서 가장 큰 것이 되게 합니다.
+               폰에서는 한 줄 전체를 차지해 엄지로 바로 눌립니다. 누르면 가는
+               곳·하는 일은 그대로입니다. */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               data-coach-go={m.key}
               data-tour={tourAnchor}
               onClick={() => onGo(m)}
               disabled={busy}
-              className="btn-navy min-h-[3rem] px-6"
+              className="btn-navy min-h-[3.4rem] w-full justify-center px-7 text-[1.12rem] font-extrabold sm:w-auto"
             >
               {busy ? <Loader2 size={18} className="animate-spin" /> : <>{m.actionLabel} <ArrowRight size={18} strokeWidth={2.4} /></>}
             </button>
