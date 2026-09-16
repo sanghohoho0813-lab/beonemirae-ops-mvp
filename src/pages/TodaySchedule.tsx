@@ -29,6 +29,8 @@ import { DayClose } from '../components/DayClose'
 import { CarNotice } from '../components/CarNotice'
 import { useSchemaAtLeast } from '../lib/schemaGate'
 import { hideRequests } from '../lib/pilotMode'
+import { isPilotClient } from '../lib/pilotClients'
+import { PilotBadge } from '../components/PilotBadge'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
 import { schedulesOn } from '../lib/selectors'
 import { openRequests } from '../lib/ops'
@@ -502,6 +504,8 @@ export function TodaySchedule() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="tabular-nums text-lg font-extrabold text-navy-900">{s.scheduledTime}</span>
                         <WasteBadge type={s.wasteType} />
+                        {/*  이번 주 Pilot 거래처 표식 (0122) — 배지 하나뿐, 흐름은 평소와 같습니다 */}
+                        {isPilotClient(data, s.clientId) && <PilotBadge />}
                         {!done && <StatusBadge status={s.status} />}
                         {/*  사람이 날짜를 정해 잡은 방문 (0058). 자동으로 생긴
                              예정과 무게가 다릅니다 — 이건 병원과 한 약속이라

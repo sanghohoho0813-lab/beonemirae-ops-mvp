@@ -11,6 +11,7 @@ import { facilityByWaste } from '../data/ops'
 import { schedulesOn, todaySummary, additionalMaterialCount, outstandingOf, paidTotalOf } from './selectors'
 import { today, thisMonth, nowHm, shiftDays } from './format'
 import { isPending, isDone } from './scheduleLive'
+import { ITEM_BY_KEY, type ItemKey } from './billing'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 운영 파생 로직 (시연용 추천/위험 시뮬레이션)
@@ -677,6 +678,8 @@ export interface HistoryRow {
   containerType: string | null
   /** 용기 개수 — 기록이 없으면 null (0으로 두면 「0개 받았다」가 됩니다) */
   containerCount: number | null
+  /** 규격별 사용 자재 (0122) — 「63L 박스 10개 · 20L 합성수지 3개」. 규격별로 안 적었으면 null */
+  usedText: string | null
   driver: string
   vehicleName: string
   handoverTime: string
@@ -715,6 +718,11 @@ export function collectionHistory(data: AppData, clientId: string, limit = 10): 
       }
       const containerCount = c ? c.corrugated + c.plastic + c.bag + c.etc : null
       const containerType = parts.length > 0 ? parts.join(' · ') : null
+      //  규격별 사용량 (0122) — 적힌 것만. Material Master 이름으로 적습니다.
+      const usedParts = Object.entries(c?.usedItems ?? {})
+        .filter(([k, n]) => (Number(n) || 0) > 0 && ITEM_BY_KEY[k as ItemKey])
+        .map(([k, n]) => `${ITEM_BY_KEY[k as ItemKey].label} ${n}개`)
+      const usedText = usedParts.length > 0 ? usedParts.join(' · ') : null
       const handoverStatus = s.handoverStatus ?? (done ? '인계 완료' : null)
       return {
         id: s.id,
@@ -725,6 +733,7 @@ export function collectionHistory(data: AppData, clientId: string, limit = 10): 
         amountKg: s.actualAmount,
         containerType,
         containerCount,
+        usedText,
         driver: s.driverName ?? v?.driver ?? '-',
         vehicleName: v?.name ?? '-',
         handoverTime: facility?.targetTime ?? '-',

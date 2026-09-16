@@ -14,7 +14,8 @@ import { additionalMaterialCount } from '../lib/selectors'
 import { materialUsage, type UsageStatus } from '../lib/ops'
 import { num, prettyDate, thisMonth, today, weight } from '../lib/format'
 import { SUPPLY_ITEMS, itemsOf, stockDeltaOf, isLegacySupply, type ItemCounts, type ItemKey } from '../lib/billing'
-import { STOCK_KEYS } from '../lib/collection'
+import { STOCK_KEYS, usedItemsOf } from '../lib/collection'
+import { addDays } from '../lib/performance'
 import type { MaterialSupply } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +124,40 @@ export function Materials() {
   const monthList = sorted.filter((m) => m.date.startsWith(month))
   const addCount = additionalMaterialCount(data)
   const usage = useMemo(() => materialUsage(data), [data])
+
+  //  ── [최근 30일] 규격별 공급 vs 확인된 사용 (0122) ─────────────────────────
+  //   공급 = materials.items (회사 창고에서 병원에 준 것)
+  //   확인된 사용 = 수거 입력의 「이번 수거 자재 사용량」(schedules.containers.usedItems)
+  //   ⚠ 「예상 차이」는 공급 − 확인된 사용일 뿐, 「남아 있는 개수」가 아닙니다.
+  //     현장이 규격별로 안 적은 수거는 사용 0 이 아니라 **미확인**입니다.
+  //     그래서 재고·손실·과다사용을 단정하지 않고, 사용이 공급보다 많은
+  //     줄만 「확인 필요」로 표시합니다 — 기준선 없는 판정은 하지 않습니다.
+  const supplyVsUsed = useMemo(() => {
+    const from = addDays(today(), -29)
+    const supplied: ItemCounts = {}
+    const used: ItemCounts = {}
+    let usedRecords = 0
+    let doneRecords = 0
+    for (const r of data.materials) {
+      if (r.date < from || isLegacySupply(r)) continue
+      for (const [k, n] of Object.entries(itemsOf(r))) supplied[k as ItemKey] = (supplied[k as ItemKey] ?? 0) + (n ?? 0)
+    }
+    for (const s of data.schedules) {
+      if (s.status !== '완료' || s.date < from) continue
+      doneRecords += 1
+      const u = usedItemsOf(s.containers)
+      const keys = Object.keys(u)
+      if (keys.length === 0) continue
+      usedRecords += 1
+      for (const k of keys) used[k as ItemKey] = (used[k as ItemKey] ?? 0) + (u[k as ItemKey] ?? 0)
+    }
+    const rows = SUPPLY_ITEMS.map((it) => {
+      const s = supplied[it.key as ItemKey] ?? 0
+      const u = used[it.key as ItemKey] ?? 0
+      return { key: it.key, label: it.label, supplied: s, used: u, diff: s - u }
+    }).filter((r) => r.supplied > 0 || r.used > 0)
+    return { rows, usedRecords, doneRecords }
+  }, [data.materials, data.schedules])
   const totals = monthList.reduce(
     (acc, m) => ({
       box: acc.box + m.boxCount,
@@ -251,6 +286,54 @@ export function Materials() {
       <section className="mb-5">
         <SectionTitle>자재 소진 위험</SectionTitle>
         <MaterialRiskCard />
+      </section>
+
+      {/*  [최근 30일] 규격별 공급 vs 확인된 사용 (0122) — 계산 가능한 것만 보여 줍니다.
+           「남아 있다」고 말하지 않습니다 — 미확인 수거가 있는 한 차이는 예상치입니다. */}
+      <section className="mb-5" data-supply-vs-used>
+        <SectionTitle>[최근 30일] 공급 vs 확인된 사용</SectionTitle>
+        <div className="card p-4 sm:p-5">
+          <p className="mb-3 text-[1.03rem] leading-snug text-navy-400">
+            공급은 회사 창고에서 병원에 드린 규격별 수량, 확인된 사용은 수거 입력에서 규격별로 적은 「이번 수거 자재 사용량」입니다.
+            <b className="text-navy-500"> 예상 차이 = 공급 − 확인된 사용</b> — 남아 있는 개수가 아니라 점검용 수치입니다.
+            {supplyVsUsed.doneRecords > 0 && (
+              <span className="text-navy-500">
+                {' '}· 최근 30일 완료 수거 {supplyVsUsed.doneRecords}건 중 규격별 사용 기록 {supplyVsUsed.usedRecords}건
+                {supplyVsUsed.usedRecords < supplyVsUsed.doneRecords && ' (나머지는 미확인)'}
+              </span>
+            )}
+          </p>
+          {supplyVsUsed.rows.length === 0 ? (
+            <p className="rounded-xl bg-navy-50 px-3.5 py-3 text-[1.08rem] text-navy-400">최근 30일 규격별 공급·사용 기록이 쌓이면 표시됩니다.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-[0.98rem]">
+                <thead>
+                  <tr className="bg-navy-50 text-navy-500">
+                    {['규격', '공급', '확인된 사용', '예상 차이'].map((h) => (
+                      <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {supplyVsUsed.rows.map((r) => (
+                    <tr key={r.key} data-svu-row={r.key} className="border-t border-navy-100 text-navy-700">
+                      <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.label}</td>
+                      <td className="whitespace-nowrap px-2.5 py-2 tabular-nums">{num(r.supplied)}</td>
+                      <td className="whitespace-nowrap px-2.5 py-2 tabular-nums">{num(r.used)}</td>
+                      <td className="whitespace-nowrap px-2.5 py-2 tabular-nums">
+                        {num(r.diff)}
+                        {r.diff < 0 && (
+                          <span className="ml-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[0.9rem] font-bold text-amber-700">확인 필요</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 자재 공급 대비 배출 비교 (원가·관리 점검) */}

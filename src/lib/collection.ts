@@ -12,6 +12,7 @@ import type {
 } from '../types'
 import { requestsClosedByCollection } from './ops'
 import { today } from './format'
+import { ITEM_BY_KEY, type ItemCounts, type ItemKey } from './billing'
 import { checkAmount, checkItemCounts, itemCheckMessage } from './amountCheck'
 import { uid } from './storage'
 
@@ -50,7 +51,9 @@ export interface SuppliedMaterials {
 //     CONTAINER_KEYS  병원에서 **배출되어 우리가 가져온** 용기 수 — 재고와 무관
 //     STOCK_KEYS      회사 창고에서 **병원에 새로 주고 온** 자재 수 — 재고가 줄어듦
 //     둘 다 「골판지 전용박스」라고 적히지만 방향이 반대입니다.
-export const CONTAINER_KEYS: { key: keyof ContainerBreakdown; label: string }[] = [
+/** 가져온 용기 4칸 — usedItems(규격별 세부, 0122)는 칸이 아니라 여기서 뺍니다 */
+export type ContainerBucket = 'corrugated' | 'plastic' | 'bag' | 'etc'
+export const CONTAINER_KEYS: { key: ContainerBucket; label: string }[] = [
   { key: 'corrugated', label: '골판지 전용박스' },
   { key: 'plastic', label: '합성수지 전용용기' },
   { key: 'bag', label: '전용 봉투' },
@@ -118,6 +121,76 @@ export const EMPTY_SUPPLIED: SuppliedMaterials = { corrugatedBox: 0, plasticCont
 
 export function containerTotal(c: ContainerBreakdown): number {
   return c.corrugated + c.plastic + c.bag + c.etc
+}
+
+//  ─────────────────────────────────────────────────────────────────────────
+//  이번 수거 자재 사용량 — 규격별 (0122)
+//
+//   병원이 **실제 사용해 배출한** 자재를 규격(63L 박스 · 20L 합성수지 …)으로
+//   셉니다. 위 4칸(가져온 용기)의 세부이며 같은 jsonb 에 `usedItems` 로 함께
+//   저장됩니다. 서버 함수는 containers 를 그대로 통과시키므로 SQL 변경이
+//   없습니다.
+//
+//   ⚠ 「주고 온 자재(공급)」와 절대 섞지 않습니다. 이 값은 재고를 움직이지
+//     않고 정산에도 들어가지 않습니다 — 병원이 쓴 것과 회사 창고에서 나간
+//     것은 다른 사실입니다.
+//   ⚠ 규격 목록은 billing.ts ITEMS(Material Master) 를 그대로 씁니다. 여기서
+//     이름을 새로 만들지 않습니다.
+//   ⚠ 0 은 저장하지 않습니다. 하나도 없으면 usedItems 자체를 빼서 「규격별로
+//     적지 않았다」가 남게 합니다 — 0 을 적으면 「없었다」가 됩니다.
+
+/** 저장된 용기 칸에서 규격별 사용량만 꺼냅니다 — 없으면 빈 객체 */
+export function usedItemsOf(c: ContainerBreakdown | null | undefined): ItemCounts {
+  const raw = c?.usedItems
+  if (!raw || typeof raw !== 'object') return {}
+  const out: ItemCounts = {}
+  for (const [k, v] of Object.entries(raw)) {
+    const n = Math.round(Number(v) || 0)
+    if (n > 0 && ITEM_BY_KEY[k as ItemKey]) out[k as ItemKey] = n
+  }
+  return out
+}
+
+export function usedTotal(u: ItemCounts): number {
+  return Object.values(u).reduce((a, n) => a + (n ?? 0), 0)
+}
+
+/** 규격별 사용량 → 가져온 용기 4칸 (골판지 / 합성수지 / 봉투). 「기타」는 규격이 없어 그대로 둡니다 */
+export function bucketsFromUsed(u: ItemCounts): Pick<ContainerBreakdown, 'corrugated' | 'plastic' | 'bag'> {
+  const b = { corrugated: 0, plastic: 0, bag: 0 }
+  for (const [k, n] of Object.entries(u)) {
+    const def = ITEM_BY_KEY[k as ItemKey]
+    if (!def || !n) continue
+    if (def.bucket === 'corrugatedBox') b.corrugated += n
+    else if (def.bucket === 'plasticContainer') b.plastic += n
+    else if (def.bucket === 'bag') b.bag += n
+  }
+  return b
+}
+
+/**
+ * 저장할 용기 칸을 만듭니다.
+ *  · 규격별이 하나도 없으면 4칸 그대로(usedItems 없이).
+ *  · 규격별이 있고 4칸(기타 제외)이 **모두 비어 있으면** 4칸을 규격별 합계로
+ *    채웁니다 — 현장이 같은 것을 두 번 적지 않게. 4칸에 손으로 적은 값이
+ *    있으면 그 값을 존중하고 덮어쓰지 않습니다.
+ */
+export function withUsedItems(c: ContainerBreakdown, used: ItemCounts): ContainerBreakdown {
+  const clean = usedItemsOf({ ...c, usedItems: used as Record<string, number> })
+  const { usedItems: _drop, ...four } = c
+  void _drop
+  if (usedTotal(clean) === 0) return four
+  const untouched = four.corrugated === 0 && four.plastic === 0 && four.bag === 0
+  const buckets = untouched ? bucketsFromUsed(clean) : { corrugated: four.corrugated, plastic: four.plastic, bag: four.bag }
+  return { ...four, ...buckets, usedItems: clean as Record<string, number> }
+}
+
+/** 화면에 적는 한 줄 — 「63L 박스 10개 · 20L 합성수지 3개」. 없으면 빈 문자열 */
+export function usedItemsText(u: ItemCounts): string {
+  return Object.entries(u)
+    .filter(([, n]) => (n ?? 0) > 0)
+    .map(([k, n]) => `${ITEM_BY_KEY[k as ItemKey]?.label ?? k} ${n}개`)
+    .join(' · ')
 }
 export function suppliedTotal(s: SuppliedMaterials): number {
   return s.corrugatedBox + s.plasticContainer + s.bag + s.needleBox

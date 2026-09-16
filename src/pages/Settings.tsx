@@ -370,6 +370,10 @@ export function Settings() {
                   </button>
                 )}
               </div>
+              {/*  이번 주 Pilot 요약(0122)도 이 날을 시작일로 씁니다 — 설정을 따로 만들지 않았습니다. */}
+              <p className="t-caption mt-1.5 break-keep text-navy-500">
+                성과 화면의 「이번 주 Pilot 요약」도 이 날부터 셉니다. 비어 있으면 오늘 하루만 세고 「시작일 미설정」으로 적습니다.
+              </p>
               <p className="t-muted mt-2">이 날짜 이후의 입력만 「도입 후 성과」로 집계합니다. 미설정 시 전체 기간을 집계합니다.</p>
             </div>
 

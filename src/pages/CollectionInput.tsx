@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
 import { addDays } from '../lib/performance'
-import { checkAmount, checkItemCounts, itemCheckMessage } from '../lib/amountCheck'
+import { checkAmount, checkItemCounts, itemCheckMessage, usedCheckMessage } from '../lib/amountCheck'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -38,6 +38,9 @@ import {
   STOCK_KEYS,
   containerTotal,
   suppliedTotal,
+  usedItemsOf,
+  usedTotal,
+  withUsedItems,
   type CollectionCompletionInput,
 } from '../lib/collection'
 import type { ContainerBreakdown, HandoverStatus, WasteType } from '../types'
@@ -196,6 +199,10 @@ export function CollectionInput() {
   // 규격별 공급 수량. 단가가 규격마다 다르므로 여기서부터 규격으로 받습니다.
   // 재고(4칸) 차감량은 이 값에서 계산합니다 — 현장이 두 번 적지 않게.
   const [suppliedItems, setSuppliedItems] = useState<ItemCounts>({})
+  //  이번 수거 자재 사용량 — 규격별 (0122). 병원이 **실제 사용해 배출한** 것.
+  //  ⚠ 위 suppliedItems(주고 온 자재 = 공급)와 다른 값입니다. 재고를 움직이지
+  //    않고 containers.usedItems 로 함께 저장됩니다.
+  const [usedItems, setUsedItems] = useState<ItemCounts>({})
   const [isAdditional, setIsAdditional] = useState(false)
   //  ── 다녀온 날 (0061) ────────────────────────────────────────────────────
   //   기본은 오늘입니다. 저녁이나 다음 날 아침에 넣을 때 실제로 간 날로
@@ -212,9 +219,15 @@ export function CollectionInput() {
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null)
   //  방금 넣은 것을 그 자리에서 지우기 (0076)
   const [undoId, setUndoId] = useState<string | null>(null)
-  const [success, setSuccess] = useState<null | { client: string; amount: number; supplied: number; created: boolean; eventId?: string }>(
-    null,
-  )
+  const [success, setSuccess] = useState<null | {
+    client: string
+    amount: number
+    supplied: number
+    /** 규격별 사용 자재 합계 (0122) — 0 이면 규격별로 적지 않은 것 */
+    used: number
+    created: boolean
+    eventId?: string
+  }>(null)
 
   const client = data.clients.find((c) => c.id === clientId)
   //  지금 고른 예정 일정 — 「지금 이 병원」 카드가 이 값을 씁니다.
@@ -386,6 +399,36 @@ export function CollectionInput() {
     showAllItems || index === 0 || (lastSupply[key] ?? 0) > 0 || (suppliedItems[key] ?? 0) > 0
   const hiddenItemCount = SUPPLY_ITEMS.filter((it, si) => !rowShown(it.key as ItemKey, si)).length
 
+  //  ── 이번 수거 자재 사용량 — 어느 규격을 먼저 보일까 (0122) ─────────────
+  //   AI 추천이 아닙니다. 이 병원의 **완료된 수거에 실제로 적힌** 규격을
+  //   셉니다: ① 가장 최근 수거에 적힌 규격 → ② 이 병원에서 여러 번 적힌
+  //   규격(횟수순) → ③ 나머지는 Material Master 순서로 「나머지 보기」 뒤에.
+  //   근거가 없으면(첫 방문) 첫 줄 하나만 펼쳐 「규격마다 한 줄, ± 로 센다」를
+  //   알립니다 — 공급 구역과 같은 규칙입니다.
+  const usedRank = useMemo(() => {
+    const last: ItemCounts = {}
+    const freq = new Map<string, number>()
+    if (!clientId) return { last, freq }
+    const done = data.schedules
+      .filter((s) => s.clientId === clientId && s.status === '완료' && usedTotal(usedItemsOf(s.containers)) > 0)
+      .sort((a, b) => b.date.localeCompare(a.date))
+    for (const [i, s] of done.entries()) {
+      const u = usedItemsOf(s.containers)
+      if (i === 0) Object.assign(last, u)
+      for (const k of Object.keys(u)) freq.set(k, (freq.get(k) ?? 0) + 1)
+    }
+    return { last, freq }
+  }, [data.schedules, clientId])
+  const usedOrder = useMemo(() => {
+    const score = (k: string) => ((usedRank.last[k as ItemKey] ?? 0) > 0 ? 1_000_000 : 0) + (usedRank.freq.get(k) ?? 0) * 1_000
+    return SUPPLY_ITEMS.map((it, i) => ({ it, i })).sort((a, b) => score(b.it.key) - score(a.it.key) || a.i - b.i).map((x) => x.it)
+  }, [usedRank])
+  const [showAllUsed, setShowAllUsed] = useState(false)
+  const usedRowShown = (key: ItemKey, index: number) =>
+    showAllUsed || index === 0 || (usedRank.last[key] ?? 0) > 0 || (usedRank.freq.get(key) ?? 0) > 0 || (usedItems[key] ?? 0) > 0
+  const hiddenUsedCount = usedOrder.filter((it, i) => !usedRowShown(it.key as ItemKey, i)).length
+  const usedSum = usedTotal(usedItems)
+
   const stock = data.officeStock
   // 규격별 입력 → 재고 4칸 차감량
   const supplied = { ...EMPTY_SUPPLIED, ...stockDeltaOf(suppliedItems) }
@@ -426,6 +469,7 @@ export function CollectionInput() {
   //   ⚠ 접혀 있어도 저장될 값은 접힌 줄에 그대로 적습니다(summary).
   //     안 적으면 그건 접는 게 아니라 숨기는 것입니다.
   const [openContainers, setOpenContainers] = useState<boolean | null>(null)
+  const [openUsed, setOpenUsed] = useState<boolean | null>(null)
   const [openSupply, setOpenSupply] = useState<boolean | null>(null)
   const [openHandover, setOpenHandover] = useState<boolean | null>(null)
   const [openMemo, setOpenMemo] = useState<boolean | null>(null)
@@ -450,7 +494,9 @@ export function CollectionInput() {
       //  다녀온 날 (0061). 예정을 눌러 완료할 때는 그 일정의 날짜를 쓰므로
       //  보내지 않습니다 — 여기서 보내면 서버가 일정 날짜를 덮어쓸 이유가 없습니다.
       date: scheduleId ? undefined : visitDate,
-      containers,
+      //  규격별 사용량은 같은 jsonb 에 usedItems 로 동봉합니다 (0122). 4칸을 손대지
+      //  않았으면 규격별 합계로 4칸을 채웁니다 — 같은 것을 두 번 적지 않게.
+      containers: withUsedItems(containers, usedItems),
       handoverStatus: handover,
       supplied,
       suppliedItems,
@@ -518,6 +564,11 @@ export function CollectionInput() {
     const itemMsg = itemCheckMessage(checkItemCounts(data, clientId, suppliedItems))
     if (itemMsg && !window.confirm(`${itemMsg}\n\n이대로 저장할까요?`)) return
 
+    //  사용 자재도 같은 규칙입니다 (0122) — 160개를 1,600개로 치면 그 병원의
+    //  사용 기록이 열 배가 됩니다. 묻기만 하고 막지 않습니다.
+    const usedMsg = usedCheckMessage(data, clientId, usedItems as Record<string, number>)
+    if (usedMsg && !window.confirm(`${usedMsg}\n\n이대로 저장할까요?`)) return
+
     // 서버가 실제로 저장했는지 확인한 뒤에만 성공 화면으로 넘어갑니다.
     // (통신이 끊긴 채로 성공 화면을 보여 주면 그 수거는 사라집니다)
     const result = await completeCollection(buildInput())
@@ -546,6 +597,7 @@ export function CollectionInput() {
       client: client?.name ?? '거래처',
       amount: Number(amount) || 0,
       supplied: suppliedSum,
+      used: usedSum,
       created: !scheduleId,
       //  ⚠ 0076 — 저장 **직후**가 실수를 알아채는 순간입니다. 그때 바로
       //    지울 수 있게 기록 번호를 들고 있습니다.
@@ -557,6 +609,8 @@ export function CollectionInput() {
     setAmount('')
     setContainers({ ...EMPTY_CONTAINERS })
     setSuppliedItems({})
+    setUsedItems({})
+    setShowAllUsed(false)
     setIsAdditional(false)
     setHandover('수거 완료')
     setMemo('')
@@ -573,6 +627,7 @@ export function CollectionInput() {
   //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
   const timeOpen = openTime || visitDate !== today()
   const containersOpen = openContainers ?? containerSum > 0
+  const usedOpen = openUsed ?? usedSum > 0
   //  ⚠ 재고를 넘겼을 때는 **접히지 않습니다.** 접으면 빨간 경고가 사라져
   //    무엇이 잘못됐는지 못 봅니다.
   const supplyOpen = overStock || (openSupply ?? suppliedSum > 0)
@@ -627,6 +682,7 @@ export function CollectionInput() {
           <p className="mt-1.5 text-[1.07rem] text-navy-500">
             {success.client} · {weight(success.amount)}
             {success.supplied > 0 && ` · 자재 ${success.supplied}점 동시공급`}
+            {success.used > 0 && <span data-collect-done-used>{` · 사용 자재 ${success.used}개 기록`}</span>}
           </p>
 
           {/* 경고 — 저장은 됐지만 확인이 필요한 것.
@@ -649,6 +705,8 @@ export function CollectionInput() {
               '거래처 최근 활동 · 월간 수거량 반영',
               success.supplied > 0 ? '자재 공급 이력 기록 · 사무실 재고 차감' : '대시보드·통계 수거량 반영',
               '처리장 인계 상태 · 수거대장/월간 명세 초안 반영',
+              //  규격별로 적었을 때만 — 안 적었으면 그 줄은 없습니다 (0122)
+              ...(success.used > 0 ? ['사용 자재 규격별 기록 · 거래처 수거이력 반영 (재고와 무관)'] : []),
             ].map((t) => (
               <p key={t} className="flex items-center gap-2 text-navy-700">
                 <CheckCircle2 size={15} className="shrink-0 text-teal-500" /> {t}
@@ -1177,7 +1235,9 @@ export function CollectionInput() {
             open: containersOpen,
             onOpen: () => setOpenContainers(true),
             onFold: () => setOpenContainers(false),
-            summary: containerSum > 0 ? `${containerSum}개 가져옴` : '가져온 용기 없음',
+            //  규격별 사용량만 적었으면 접힌 줄에도 그 사실을 적습니다 — 「없음」이라고 하면
+            //  기사님이 4칸을 또 적습니다 (0122 RED TEAM).
+            summary: containerSum > 0 ? `${containerSum}개 가져옴` : usedSum > 0 ? `규격별 ${usedSum}개로 자동 계산` : '가져온 용기 없음',
             id: 'containers',
           }}
         >
@@ -1193,6 +1253,76 @@ export function CollectionInput() {
             ))}
           </div>
           {containerSum > 0 && <p className="mt-2 text-[0.98rem] font-semibold text-navy-500">합계 {containerSum}개</p>}
+          {containerSum === 0 && usedSum > 0 && (
+            <p className="mt-2 text-[0.98rem] font-semibold text-navy-500">
+              아래 규격별 사용량 {usedSum}개로 저장 시 자동 계산됩니다 — 직접 적으면 그 값을 씁니다
+            </p>
+          )}
+        </Section>
+
+        {/*
+          ── 이번 수거 자재 사용량 — 규격별 (0122) ─────────────────────────
+          병원이 **실제 사용해 배출한** 자재를 규격(63L 박스 · 20L 합성수지 …)
+          으로 셉니다. 위 「가져온 용기」 4칸의 세부이고, 아래 「주고 온 자재」
+          (공급)와는 방향이 반대입니다 — 이 값은 재고를 움직이지 않습니다.
+          규격 목록은 Material Master(billing.ts ITEMS) 그대로입니다.
+          기본 접힘 · 이 병원에서 최근/자주 적힌 규격만 펼침 · 나머지는 「보기」.
+        */}
+        <Section
+          n={step()}
+          title="이번 수거 자재 사용량"
+          desc="병원이 이번에 실제 사용해 배출한 자재를 규격별로 셉니다 — 주고 온 자재(공급)와 다르고, 회사 재고를 움직이지 않습니다 (선택)"
+          fold={{
+            open: usedOpen,
+            onOpen: () => setOpenUsed(true),
+            onFold: () => setOpenUsed(false),
+            summary: usedSum > 0 ? `${usedSum}개 사용 기록` : '규격별 기록 없음',
+            id: 'used',
+          }}
+        >
+          <div data-collect-used className="divide-y divide-navy-50">
+            {usedOrder.map((it, ui) => {
+              const last = usedRank.last[it.key as ItemKey] ?? 0
+              const cls = usedRowShown(it.key as ItemKey, ui) ? '' : 'hidden'
+              return (
+                <div key={it.key} data-used-row={it.key} className={cls}>
+                  <QtyField
+                    row
+                    label={it.label}
+                    value={usedItems[it.key as ItemKey] ?? 0}
+                    badge={
+                      last > 0 ? (
+                        <span className="pill bg-navy-100 text-navy-500">최근 사용</span>
+                      ) : (usedRank.freq.get(it.key) ?? 0) > 0 ? (
+                        //  한 번 적힌 것도 여기 옵니다 — 「자주」라고 부르지 않고 횟수를 그대로 적습니다
+                        <span className="pill bg-navy-100 text-navy-500">이전 {usedRank.freq.get(it.key)}회</span>
+                      ) : undefined
+                    }
+                    quick={last > 0 ? { label: '지난번', value: last } : undefined}
+                    onChange={(v) =>
+                      setUsedItems((cur) => {
+                        const next = { ...cur }
+                        if (v > 0) next[it.key as ItemKey] = v
+                        else delete next[it.key as ItemKey]
+                        return next
+                      })
+                    }
+                  />
+                </div>
+              )
+            })}
+          </div>
+          {hiddenUsedCount > 0 && (
+            <button
+              type="button"
+              data-used-more
+              onClick={() => setShowAllUsed(true)}
+              className="mt-2 w-full rounded-2xl bg-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-600 transition hover:bg-navy-100 active:scale-[0.99]"
+            >
+              나머지 규격 {hiddenUsedCount}개 보기
+            </button>
+          )}
+          {usedSum > 0 && <p className="mt-2 text-[0.98rem] font-semibold text-navy-500">합계 {usedSum}개 · 재고와 무관</p>}
         </Section>
 
         {/* 자재 동시공급 */}
@@ -1478,6 +1608,12 @@ export function CollectionInput() {
               <span className="text-right font-bold">{weight(Number(amount) || 0)}</span>
               <span className="text-navy-500">용기 합계</span>
               <span className="text-right font-bold">{containerSum}개</span>
+              {usedSum > 0 && (
+                <>
+                  <span className="text-navy-500">사용 자재 (규격별)</span>
+                  <span data-collect-review-used className="text-right font-bold">{usedSum}개</span>
+                </>
+              )}
               <span className="text-navy-500">자재 동시공급</span>
               <span className="text-right font-bold">{suppliedSum > 0 ? `${suppliedSum}점` : '없음'}</span>
               <span className="text-navy-500">처리장 인계</span>

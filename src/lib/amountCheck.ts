@@ -243,3 +243,61 @@ export function oddItemsIn(data: AppData, clientId: string, month: string): Arra
   }
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용 자재 개수 자릿수 확인 (0122)
+//
+//  「이번 수거 자재 사용량」은 재고·정산을 움직이지 않지만, 거래처 화면과
+//  Pilot 증거에 그대로 남습니다. 160개를 1,600개로 치면 그 병원의 사용
+//  기록이 열 배가 됩니다. 위 공급 규칙과 **같은 상수**로 봅니다 — 그 병원이
+//  평소 그 규격을 몇 개 썼는지의 중앙값과 비교하고, 근거가 모자라면 판단하지
+//  않고, 막지 않습니다.
+//  근거가 없어도 **네 자리 이상**이면 한 번 묻습니다 — 기준선이 아니라
+//  자릿수 확인입니다 (「수량이 1,600개가 맞나요?」).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 이 병원이 평소 그 규격을 몇 개 썼는지 (완료된 수거의 usedItems) */
+function usedHistory(data: AppData, clientId: string, key: string, skipScheduleId?: string | null): number[] {
+  const from = addDays(today(), -WINDOW_DAYS)
+  const out: number[] = []
+  for (const s of data.schedules) {
+    if (s.clientId !== clientId || s.status !== '완료' || s.date < from || s.id === skipScheduleId) continue
+    const n = Number(s.containers?.usedItems?.[key] ?? 0) || 0
+    if (n > 0) out.push(n)
+  }
+  return out
+}
+
+/** 근거 없이도 한 번 묻는 자릿수 — 기준선이 아닙니다 */
+export const BIG_COUNT = 1000
+
+export function usedCheckMessage(
+  data: AppData,
+  clientId: string,
+  items: Record<string, number>,
+  skipScheduleId?: string | null,
+): string | null {
+  const odd: string[] = []
+  const big: string[] = []
+  for (const [key, raw] of Object.entries(items)) {
+    const n = Number(raw) || 0
+    if (n <= 0) continue
+    const label = ITEM_BY_KEY[key as ItemKey]?.label ?? key
+    const past = usedHistory(data, clientId, key, skipScheduleId)
+    if (past.length >= MIN_HISTORY) {
+      const med = median(past)
+      if (med > 0) {
+        const ratio = n / med
+        if (ratio > HIGH_RATIO || ratio < LOW_RATIO) {
+          odd.push(`${label} ${n.toLocaleString('ko-KR')}개 (평소 ${med.toLocaleString('ko-KR')}개)`)
+          continue
+        }
+      }
+    }
+    if (n >= BIG_COUNT) big.push(`${label} ${n.toLocaleString('ko-KR')}개`)
+  }
+  const parts: string[] = []
+  if (odd.length > 0) parts.push(`평소와 크게 다른 사용 수량이 있습니다 — ${odd.join(' · ')}.`)
+  if (big.length > 0) parts.push(`수량이 ${big.join(' · ')}가 맞나요?`)
+  return parts.length > 0 ? `${parts.join('\n')} 자릿수를 확인해 주세요.` : null
+}

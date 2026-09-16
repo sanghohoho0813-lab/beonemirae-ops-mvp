@@ -342,6 +342,8 @@ interface DataContextValue {
   // AX 실증·성과측정 (v4)
   setBaseline: (patch: Partial<BaselineMetrics>) => void // 도입 전 기준값 (사용자 입력)
   setExperimentStart: (date: string | null) => void // 실증 시작일
+  /** Pilot 거래처 목록 (0122) — 관리자만. 실패하면 서버의 말을 그대로 돌려줍니다 */
+  setPilotClients: (ids: string[]) => Promise<{ ok: boolean; error: string | null }>
   // 매출 전환 실증 (v5) — 추천 → 제안 → 수락 → 실제 매출
   setLeadStage: (action: NextAction, stage: LeadStage, month?: string) => void
   setLeadRevenue: (leadId: string, amount: number | null) => void
@@ -1122,6 +1124,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setData((d) => ({ ...d, experiment: { ...d.experiment, startDate: date } }))
     },
     [live, runLive],
+  )
+
+  //  Pilot 거래처 (0122). 운영 DB 에서는 experiment_settings 한 칸을 고치고,
+  //  성공했을 때만 화면 값을 바꿉니다 — 서버가 거절했는데 화면만 바뀌면
+  //  다음에 열 때 사라져서 「내가 켰는데 왜 꺼졌지」가 됩니다.
+  const setPilotClients = useCallback(
+    async (ids: string[]) => {
+      const uniq = Array.from(new Set(ids))
+      if (live) {
+        try {
+          await repo.savePilotClients(uniq)
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : String(e) }
+        }
+      }
+      setData((d) => ({ ...d, experiment: { ...d.experiment, pilotClientIds: uniq } }))
+      return { ok: true, error: null }
+    },
+    [live],
   )
 
   // ── 매출 전환 실증 ──────────────────────────────────────────────────────
@@ -2470,6 +2491,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClientSet,
       setBaseline,
       setExperimentStart,
+      setPilotClients,
       setLeadStage,
       setLeadRevenue,
       addRequest,
@@ -2556,6 +2578,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClientSet,
       setBaseline,
       setExperimentStart,
+      setPilotClients,
       setLeadStage,
       setLeadRevenue,
       addRequest,

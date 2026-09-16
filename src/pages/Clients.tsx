@@ -5,6 +5,8 @@ import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canSeeMoney } from '../lib/access'
 import { PageHeader } from '../components/PageHeader'
+import { PilotBadge } from '../components/PilotBadge'
+import { PILOT_RECOMMENDED, isFlatFeeClient, pilotClientsOf, pilotColumnMissing, pilotIdsOf } from '../lib/pilotClients'
 import { Modal } from '../components/Modal'
 import { FilterChip, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
@@ -44,8 +46,24 @@ function matchFilter(c: Client, f: Filter): boolean {
 }
 
 export function Clients() {
-  const { data, addClient, restoreClient, clientSet, setClientSet, mode } = useData()
+  const { data, addClient, restoreClient, clientSet, setClientSet, mode, setPilotClients } = useData()
   const { configured, role } = useAuth()
+  //  ── 이번 주 Pilot 거래처 (0122) ─────────────────────────────────────────
+  //   관리자만 켜고 끕니다. 현장에는 배지 하나만 보이고 흐름은 평소와 같습니다.
+  //   「10」은 권장 수이지 상한이 아닙니다 — 11번째를 막지 않습니다.
+  const canPilot = !configured || role === 'admin'
+  const pilotIds = pilotIdsOf(data)
+  const pilotCount = pilotClientsOf(data).length
+  const [pilotError, setPilotError] = useState('')
+  const [pilotBusy, setPilotBusy] = useState('')
+  async function togglePilot(id: string, on: boolean) {
+    const next = on ? [...pilotIds, id] : [...pilotIds].filter((x) => x !== id)
+    setPilotBusy(id)
+    setPilotError('')
+    const r = await setPilotClients(next)
+    setPilotBusy('')
+    if (!r.ok) setPilotError(r.error ?? 'Pilot 표식을 저장하지 못했습니다.')
+  }
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const showMoney = !configured || canSeeMoney(role)
   const canAddClient = !configured || canSeeMoney(role)
@@ -120,7 +138,10 @@ export function Clients() {
     <div>
       <PageHeader
         title="거래처 관리"
-        subtitle={live ? `총 ${data.clients.length}곳` : `총 ${data.clients.length}곳 · 실제 ${realCount} / 시연용 ${demoCount}`}
+        subtitle={
+          (live ? `총 ${data.clients.length}곳` : `총 ${data.clients.length}곳 · 실제 ${realCount} / 시연용 ${demoCount}`) +
+          (canPilot ? ` · Pilot ${pilotCount} / ${PILOT_RECOMMENDED}` : '')
+        }
         action={
           //  거래처 등록은 사무실·관리자 업무입니다. 서버도 막고 있어
           //  (RLS: clients_write) 현장 담당자가 눌러도 저장되지 않습니다.
@@ -218,6 +239,24 @@ export function Clients() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={SearchX} title="조건에 맞는 거래처가 없어요" subtitle="검색어나 필터를 바꿔 보세요." />
       ) : (
+        <>
+        {/*  Pilot 안내 한 줄 (0122) — 관리자만. 칸이 없는 판이면 SQL 이름을 알려 주고,
+             저장이 거절되면 서버의 말을 그대로 보여 줍니다. */}
+        {canPilot && live && pilotColumnMissing(data) && (
+          <p data-pilot-note className="mb-2.5 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[0.98rem] font-semibold text-amber-700">
+            Pilot 거래처 칸이 아직 없습니다 — supabase/proposals/PROPOSAL_0122_pilot_clients.sql 을 실행하면 켜집니다. 그전까지 Pilot 은 0곳으로 셉니다.
+          </p>
+        )}
+        {canPilot && !pilotColumnMissing(data) && pilotCount === 0 && !pilotError && (
+          <p data-pilot-note className="mb-2.5 rounded-xl bg-navy-50 px-3.5 py-2.5 text-[0.98rem] font-semibold text-navy-500">
+            이번 주 Pilot 거래처를 5~10곳 켜 주세요 — 월정액 거래처부터 권합니다(카드 아래 「이번 주 PILOT」).
+          </p>
+        )}
+        {pilotError && (
+          <p data-pilot-error className="mb-2.5 rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.98rem] font-bold text-rose-700">
+            Pilot 표식을 저장하지 못했습니다 — {pilotError}
+          </p>
+        )}
         <ul data-guide="guide-client-list" className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {filtered.map((c, ci) => {
             const unpaid = clientOutstanding(data, c.id) > 0
@@ -240,6 +279,7 @@ export function Clients() {
                       ) : (
                         <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.9rem] font-bold text-teal-600">주요거래처</span>
                       )}
+                      {pilotIds.has(c.id) && !c.isDemoGenerated && <PilotBadge />}
                     </div>
                     <p className="mt-1 break-keep t-caption">{c.manager} · {c.collectionCycle}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
@@ -262,10 +302,29 @@ export function Clients() {
                   </div>
                   <ChevronRight size={16} className="shrink-0 text-navy-400" />
                 </button>
+                {/*  Pilot 켜기 (0122) — 관리자만. 카드(button) 안에 단추를 넣을 수 없어
+                     카드 아래 한 줄로 둡니다. 시연용 거래처는 켜도 세지 않으므로 칸을 안 보입니다. */}
+                {canPilot && !c.isDemoGenerated && (
+                  <label
+                    data-pilot-toggle={c.id}
+                    className="-mt-1.5 mb-1 flex min-h-[2.75rem] cursor-pointer items-center justify-end gap-2 px-3 text-[0.98rem] font-bold text-navy-500"
+                  >
+                    {isFlatFeeClient(c) && <span className="rounded-md bg-navy-50 px-1.5 py-0.5 text-[0.88rem] font-bold text-navy-500">월정액</span>}
+                    <span>이번 주 PILOT</span>
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5 accent-violet-600"
+                      checked={pilotIds.has(c.id)}
+                      disabled={pilotBusy === c.id}
+                      onChange={(e) => void togglePilot(c.id, e.target.checked)}
+                    />
+                  </label>
+                )}
               </li>
             )
           })}
         </ul>
+        </>
       )}
 
       {/*  거래 종료한 거래처 — 되돌리는 길.

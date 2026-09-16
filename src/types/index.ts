@@ -255,6 +255,15 @@ export interface ContainerBreakdown {
   plastic: number // 합성수지 전용용기
   bag: number // 전용 봉투
   etc: number // 기타
+  /**
+   * 병원이 이번 수거에 **실제 사용해 배출한** 자재 — 규격별 (0122).
+   *  예: { box63: 10, plastic20: 3 }  키는 billing.ts ITEMS 의 key.
+   *  ⚠ 위 4칸의 규격별 세부입니다. 「주고 온 자재(공급)」와 다릅니다 —
+   *    이 값은 재고를 움직이지 않습니다. 같은 jsonb(schedules.containers)에
+   *    함께 저장되고, 서버 함수는 이 열을 그대로 통과시킵니다.
+   *  없으면 「규격별로 적지 않았다」이지 0 이 아닙니다.
+   */
+  usedItems?: Record<string, number>
 }
 
 /** 사무실(창고) 자재 재고 — 자재 동시공급 시 차감되는 물리 재고 */
@@ -620,6 +629,9 @@ export interface CollectionEvent {
   // 화면을 켜둔 채 방치한 경우 등 왜곡이 있을 수 있어 '시스템 측정값'으로만 표시하고,
   // 집계 시 이상치(INPUT_SESSION_MAX_MS 초과)는 제외합니다.
   inputDurationMs?: number | null
+  /** 넣은 사람 (collection_events.actor_id / actor_name). Pilot 「실사용자 수」에만 씁니다 (0122). */
+  actorId?: string | null
+  actorName?: string
 }
 
 /** 입력 처리시간 집계 유효 범위 — 이 범위를 벗어난 표본은 왜곡으로 보고 제외합니다.
@@ -970,6 +982,12 @@ export interface BaselineMetrics {
 /** 실증 설정 — 이 날짜 이후의 입력만 '도입 후' 성과로 집계합니다. */
 export interface ExperimentConfig {
   startDate: string | null // YYYY-MM-DD (미설정이면 전체 기간)
+  /**
+   * Pilot 거래처 id 목록 (0122, experiment_settings.pilot_client_ids).
+   *  SQL(PROPOSAL_0122) 을 아직 안 돌렸으면 undefined — Pilot 0곳으로 봅니다.
+   *  거래처 표에는 아무 칸도 더하지 않았습니다.
+   */
+  pilotClientIds?: string[]
 }
 
 /** 기준값 미입력 상태 — 시스템이 임의 값을 만들지 않음을 명시합니다. */

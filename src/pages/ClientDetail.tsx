@@ -1,5 +1,7 @@
 import { LastCollectionLine } from '../components/FieldTodayCard'
 import { hideRequests } from '../lib/pilotMode'
+import { isPilotClient } from '../lib/pilotClients'
+import { PilotBadge } from '../components/PilotBadge'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -332,6 +334,7 @@ export function ClientDetail() {
               <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[0.9rem] font-bold ${client.isDemoGenerated ? 'bg-navy-100 text-navy-500' : 'bg-teal-50 text-teal-600'}`}>
                 {client.isDemoGenerated ? '시연용' : '주요거래처'}
               </span>
+              {isPilotClient(data, client.id) && !client.isDemoGenerated && <PilotBadge />}
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {client.collectsMedicalWaste && <WasteBadge type="의료폐기물" />}
@@ -821,7 +824,10 @@ export function ClientDetail() {
                     <td className="whitespace-nowrap px-2.5 py-2 font-bold">{r.amountKg != null ? `${r.amountKg}kg` : '-'}</td>
                     {/*  용기는 현장에서 적은 것만 보여 줍니다 — 안 적었으면
                          비웁니다. 기본값을 채우면 「이만큼 받았다」가 됩니다. */}
-                    <td className="whitespace-nowrap px-2.5 py-2">{r.containerType ?? '-'}</td>
+                    {/*  규격별 사용량(0122)이 적혀 있으면 그것을, 없으면 4칸 합계를 보여 줍니다. */}
+                    <td className="whitespace-nowrap px-2.5 py-2" data-history-used={r.usedText ? 'yes' : undefined}>
+                      {r.usedText ? `사용 자재 - ${r.usedText}` : (r.containerType ?? '-')}
+                    </td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.driver}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">{r.vehicleName}</td>
                     <td className="whitespace-nowrap px-2.5 py-2">

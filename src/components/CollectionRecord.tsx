@@ -8,7 +8,17 @@ import { RevertReasonFields } from './RevertReason'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { useSchemaAtLeast } from '../lib/schemaGate'
-import { CONTAINER_KEYS, STOCK_KEYS, EMPTY_CONTAINERS, EMPTY_SUPPLIED, containerTotal } from '../lib/collection'
+import {
+  CONTAINER_KEYS,
+  STOCK_KEYS,
+  EMPTY_CONTAINERS,
+  EMPTY_SUPPLIED,
+  containerTotal,
+  usedItemsOf,
+  usedItemsText,
+  usedTotal,
+  withUsedItems,
+} from '../lib/collection'
 import { SUPPLY_ITEMS, itemsOf, stockDeltaOf, type ItemCounts, type ItemKey } from '../lib/billing'
 import { prettyDate, weight } from '../lib/format'
 import type { ContainerBreakdown, WasteType } from '../types'
@@ -82,6 +92,9 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
   const [memo, setMemo] = useState('')
   const [waste, setWaste] = useState<WasteType>('의료폐기물')
   const [containers, setContainers] = useState<ContainerBreakdown>({ ...EMPTY_CONTAINERS })
+  //  규격별 사용 자재 (0122) — 위 4칸의 세부. 재고와 무관.
+  const [used, setUsed] = useState<ItemCounts>({})
+  const [showAllUsed, setShowAllUsed] = useState(false)
   const [items, setItems] = useState<ItemCounts>({})
   const [reason, setReason] = useState('')
   const [showAll, setShowAll] = useState(false)
@@ -99,6 +112,8 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
     setMemo(sched?.memo ?? ev.note ?? '')
     setWaste(ev.wasteType)
     setContainers({ ...EMPTY_CONTAINERS, ...(sched?.containers ?? {}) })
+    setUsed(usedItemsOf(sched?.containers))
+    setShowAllUsed(false)
     setItems({ ...suppliedNow })
   }, [ev, sched, suppliedNow])
 
@@ -119,6 +134,7 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
       memo !== (sched?.memo ?? '') ||
       waste !== ev.wasteType ||
       JSON.stringify(containers) !== JSON.stringify({ ...EMPTY_CONTAINERS, ...(sched?.containers ?? {}) }) ||
+      JSON.stringify(used) !== JSON.stringify(usedItemsOf(sched?.containers)) ||
       JSON.stringify(items) !== JSON.stringify(suppliedNow))
   const ready = changed && reason.trim().length > 0 && Number(amount) > 0 && atTime !== '' && !over
 
@@ -133,7 +149,9 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
       actualAmount: Number(amount),
       actualTime: atTime,
       date: sched?.date,
-      containers,
+      //  규격별 사용량은 같은 jsonb 에 동봉합니다 (0122). 서버는 이 값으로 재고를
+      //  움직이지 않습니다 — 재고 정정은 아래 suppliedItems 만 봅니다.
+      containers: withUsedItems(containers, used),
       handoverStatus: sched?.handoverStatus ?? '수거 완료',
       supplied: suppliedBuckets,
       suppliedItems: items,
@@ -316,6 +334,12 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                         .join(' · ')
                     : '없음'}
                 </Row>
+                {/*  규격별 사용량 (0122) — 위 용기의 세부. 안 적었으면 「없음」이 아니라 「기록 없음」입니다. */}
+                <Row label="사용 자재">
+                  <span data-record-used>
+                    {usedTotal(usedItemsOf(sched?.containers)) > 0 ? usedItemsText(usedItemsOf(sched?.containers)) : '규격별 기록 없음'}
+                  </span>
+                </Row>
                 {/*  ⚠ 용기와 다른 줄로 둡니다 — 방향이 반대라서 한 줄에 있으면 섞입니다. */}
                 <Row label="주고 온 자재">
                   {Object.keys(suppliedNow).length > 0 ? (
@@ -374,6 +398,38 @@ export function CollectionRecord({ eventId, onClose }: { eventId: string | null;
                       onChange={(v) => setContainers((c) => ({ ...c, [key]: v }))}
                     />
                   ))}
+                </Fold>
+
+                {/*  규격별 사용량 고치기 (0122). 값이 있는 규격만 펼치고 나머지는 「보기」.
+                     재고와 무관 — 고쳐도 재고는 움직이지 않습니다. */}
+                <Fold title="이번 수거 자재 사용량" desc="병원이 실제 사용해 배출한 자재 — 규격별. 재고와 무관합니다">
+                  {SUPPLY_ITEMS.filter((it) => showAllUsed || (used[it.key as ItemKey] ?? 0) > 0).map((it) => (
+                    <div key={it.key} data-record-used-row={it.key}>
+                      <QtyField
+                        row
+                        label={it.label}
+                        value={used[it.key as ItemKey] ?? 0}
+                        onChange={(v) =>
+                          setUsed((cur) => {
+                            const next = { ...cur }
+                            if (v > 0) next[it.key as ItemKey] = v
+                            else delete next[it.key as ItemKey]
+                            return next
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                  {!showAllUsed && (
+                    <button
+                      type="button"
+                      data-record-used-more
+                      onClick={() => setShowAllUsed(true)}
+                      className="mt-2 w-full rounded-2xl bg-navy-50 py-2.5 text-[1.02rem] font-bold text-navy-600 transition hover:bg-navy-100 active:scale-[0.99]"
+                    >
+                      {usedTotal(used) > 0 ? '나머지 규격 보기' : '규격 목록 보기'}
+                    </button>
+                  )}
                 </Fold>
 
                 <Fold title="주고 온 자재" desc="회사 창고에서 나간 수량입니다 — 고치면 재고도 함께 정정됩니다">

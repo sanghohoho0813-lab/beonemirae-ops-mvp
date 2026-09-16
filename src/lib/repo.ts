@@ -333,6 +333,9 @@ const toEvent = (r: Row): CollectionEvent => ({
   revertedAt: r.reverted_at ?? null,
   demoSessionId: r.demo_session_id ?? null,
   inputDurationMs: r.input_duration_ms ?? null,
+  //  Pilot 「실사용자 수」용 (0122). 없는 판에서는 null/빈 문자열입니다.
+  actorId: r.actor_id ?? null,
+  actorName: r.actor_name ?? '',
 })
 
 const toRequest = (r: Row): ClientRequest => ({
@@ -1015,7 +1018,15 @@ export async function loadAppData(): Promise<AppData> {
           updatedAt: baselineRow.updated_at ?? null,
         }
       : { ...EMPTY_BASELINE },
-    experiment: experimentRow ? { startDate: experimentRow.start_date ?? null } : { ...EMPTY_EXPERIMENT },
+    experiment: experimentRow
+      ? {
+          startDate: experimentRow.start_date ?? null,
+          //  PROPOSAL_0122 전에는 이 칸이 없습니다 → undefined (Pilot 0곳). 지어내지 않습니다.
+          pilotClientIds: Array.isArray(experimentRow.pilot_client_ids)
+            ? (experimentRow.pilot_client_ids as unknown[]).map(String)
+            : undefined,
+        }
+      : { ...EMPTY_EXPERIMENT },
     leads: leads.map(toLead),
     // 실제 운영 모드에서는 시연 세션 개념을 쓰지 않습니다(=null).
     demoSession: null,
@@ -2194,6 +2205,16 @@ export async function saveBaseline(
 export async function saveExperimentStart(date: string | null): Promise<void> {
   const sb = need()
   unwrap(await sb.from('experiment_settings').update({ start_date: date }).eq('id', 1).select())
+}
+
+/**
+ * Pilot 거래처 목록 저장 (0122). experiment_settings.pilot_client_ids 한 칸.
+ *  ⚠ 거래처 표는 건드리지 않습니다. PROPOSAL_0122 를 안 돌린 판에서는
+ *    서버가 「칸이 없다」고 거절하고, 그 말이 화면에 그대로 뜹니다.
+ */
+export async function savePilotClients(ids: string[]): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('experiment_settings').update({ pilot_client_ids: ids }).eq('id', 1).select())
 }
 
 // ── 핵심 1: 수거 완료 통합 커맨드 (DB 트랜잭션) ─────────────────────────────
