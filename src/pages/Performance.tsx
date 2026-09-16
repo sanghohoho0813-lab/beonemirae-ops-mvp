@@ -250,7 +250,7 @@ export function Performance() {
       {/* ═══ 요약 ═══════════════════════════════════════════════════════════ */}
       {tab === 'summary' && (
         <div data-perf-summary className="space-y-5">
-          {/*  이번 주 Pilot 실제 기록 (0122) — 관리자만. 건수만 적고 개선율은 만들지 않습니다. */}
+          {/*  Pilot 실제 기록 (0122) — 관리자만. 건수만 적고 개선율은 만들지 않습니다. */}
           {isAdmin && <PilotSummaryCard />}
           {/* ① 기업 성장 현황 */}
           <section data-perf-growth className="card p-5 sm:p-6">

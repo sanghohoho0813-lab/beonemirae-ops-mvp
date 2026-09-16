@@ -7,7 +7,7 @@ import { PILOT_RECOMMENDED } from '../lib/pilotClients'
 import { prettyDate } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 이번 주 Pilot 실제 기록 — 카드 한 장 (0122, 관리자용)
+// Pilot 실제 기록 — 카드 한 장 (0122 · 기간 표기 0123, 관리자용)
 //
 //  숫자는 전부 건수·명수·날짜입니다. 「몇 % 향상」·「월 환산」은 없습니다.
 //  줄마다 어디서 나온 값인지(출처)를 적습니다 — 시스템 기록과 사람 피드백을
@@ -23,9 +23,15 @@ export function PilotSummaryCard() {
   const ev = useMemo(() => pilotEvidence(data), [data])
   const [open, setOpen] = useState(false)
 
+  //  ⚠ 「1주」처럼 고정된 말을 쓰지 않습니다 (0123). 기간은 Pilot 시작일에서
+  //    그대로 계산해 적습니다 — 19일치를 「1주」라고 부르면 그 자체가 과장입니다.
+  const short = (iso: string) => {
+    const [, m, d] = iso.split('-')
+    return `${Number(m)}/${Number(d)}`
+  }
   const periodLabel = ev.startUnset
-    ? `시작일 미설정 — 오늘(${prettyDate(ev.period.to)}) 하루만`
-    : `${prettyDate(ev.period.from)} ~ ${prettyDate(ev.period.to)} · ${ev.period.days}일`
+    ? '시작일 미설정 — 오늘 하루만'
+    : `${short(ev.period.from)}~현재 · ${ev.period.days}일`
 
   const tiles: { key: string; label: string; value: string; src: Provenance | 'SETTINGS' }[] = [
     { key: 'clients', label: 'Pilot 거래처', value: `${ev.clients.length}곳`, src: ev.provenance.clients },
@@ -39,10 +45,17 @@ export function PilotSummaryCard() {
     <section data-pilot-summary className="card p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <FlaskConical size={20} className="shrink-0 text-violet-600" strokeWidth={2.3} />
-        <p className="t-card text-navy-900">이번 주 Pilot 실제 기록</p>
-        <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[0.85rem] font-extrabold text-violet-700">1주 Pilot 실제 기록</span>
-        <span className="t-muted ml-auto break-keep" data-pilot-period>
+        <p className="t-card text-navy-900">Pilot 실제 기록</p>
+        <span
+          data-pilot-period
+          className="rounded-lg bg-violet-50 px-2 py-0.5 text-[0.85rem] font-extrabold text-violet-700"
+        >
           {periodLabel}
+        </span>
+        {/*  기존 실증 시작일(성과 화면이 쓰는 값)과 다른 날짜라는 것을 적어 둡니다 —
+             두 숫자가 달라 보일 때 「어느 날부터 센 건가」를 여기서 알 수 있게. */}
+        <span className="t-muted ml-auto break-keep">
+          {ev.startUnset ? 'Pilot 시작일이 설정되지 않았습니다' : `${prettyDate(ev.period.from)}부터 · 기존 실증 시작일과 별개로 셉니다`}
         </span>
       </div>
 
@@ -58,7 +71,8 @@ export function PilotSummaryCard() {
       )}
       {ev.startUnset && (
         <p data-pilot-summary-start className="mt-3 rounded-xl bg-navy-50 px-3.5 py-2.5 text-[0.98rem] font-semibold text-navy-500">
-          Pilot 시작일이 비어 있어 오늘 하루만 셉니다 — <Link to="/settings" className="underline">설정 · 실증 시작일</Link>에 넣어 주세요.
+          Pilot 시작일이 비어 있어 오늘 하루만 셉니다 — <Link to="/settings" className="underline">설정 · Pilot 시작일</Link>에 넣어 주세요.
+          PROPOSAL_0123_pilot_start.sql 을 아직 안 돌리셨다면 그 뒤에 넣을 수 있습니다. (기존 「실증 시작일」은 성과 화면이 쓰는 다른 값입니다)
         </p>
       )}
 

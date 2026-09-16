@@ -57,7 +57,7 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
   const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: w < 700, hasTouch: w < 700 })
   W.wire(ctx, state)
   //  ⚠ 나중에 등록한 길이 먼저 잡힙니다 — Pilot 설정과 이벤트만 덧댑니다.
-  ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, { id: 1, start_date: T, pilot_client_ids: [C1] }))
+  ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, { id: 1, start_date: T, pilot_start_date: T, pilot_client_ids: [C1] }))
   ctx.route('**/rest/v1/collection_events**', (r) => json(r, events))
   const p = await ctx.newPage()
   await p.addInitScript(([k, u]) => window.localStorage.setItem(k, JSON.stringify({

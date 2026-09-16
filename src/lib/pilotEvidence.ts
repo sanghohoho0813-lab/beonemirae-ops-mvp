@@ -6,7 +6,7 @@ import { ITEM_BY_KEY, itemsOf, isLegacySupply, type ItemKey } from './billing'
 import { today } from './format'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 이번 주 Pilot 실제 기록 (0122) — 자동으로 쌓인 것만, 있는 그대로
+// Pilot 실제 기록 (0122) — 자동으로 쌓인 것만, 있는 그대로
 //
 //  ⚠ 새 표도, 새 이벤트 표도 없습니다. 이미 쌓이는 collection_events ·
 //    schedules · materials · client_requests 를 **Pilot 거래처 × Pilot 기간**
@@ -18,8 +18,10 @@ import { today } from './format'
 //
 //  ── 표본 규칙 (evidenceBase 와 같음) ──────────────────────────────────────
 //   · Pilot 거래처: experiment_settings.pilot_client_ids 중 시연용이 아닌 것
-//   · Pilot 기간: experiment_settings.start_date ~ 오늘. 시작일이 비어 있으면
-//     **오늘 하루**만 세고 startUnset 을 켭니다 — 임의 기간을 만들지 않습니다.
+//   · Pilot 기간: experiment_settings.**pilot_start_date** ~ 오늘 (0123).
+//     기존 start_date(실증 시작일)는 여기서 읽지 않습니다 — 그 값은 기존 성과
+//     화면이 쓰고 있어 Pilot 때문에 옮기면 지난 기록의 분류가 바뀝니다.
+//     비어 있으면 **오늘 하루**만 세고 startUnset 을 켭니다 — 임의 기간을 만들지 않습니다.
 //   · 시연(demo_session_id) · 취소(reverted) · 시작일 이전(practice) 은 뺍니다.
 //     뺀 건수도 적어 둡니다 — 「빠졌다」가 보여야 합니다.
 //
@@ -33,8 +35,9 @@ import { today } from './format'
 export type Provenance = 'COLLECTION TABLE' | 'MATERIAL USAGE' | 'CUSTOMER REQUEST' | 'USER FEEDBACK'
 
 export interface PilotEvidence {
-  /** SQL(PROPOSAL_0122) 을 아직 안 돌려 Pilot 칸이 없는 상태 */
+  /** SQL(PROPOSAL_0122) 을 아직 안 돌려 Pilot 거래처 칸이 없는 상태 */
   columnMissing: boolean
+  /** Pilot 전용 시작일 (0123). 기존 실증 시작일과 다른 값이며 서로 대신하지 않습니다 */
   startDate: string | null
   startUnset: boolean
   period: { from: string; to: string; days: number }
@@ -93,7 +96,12 @@ function whoOf(e: CollectionEvent, sched: Schedule | undefined): string {
 export function pilotEvidence(data: AppData, todayStr = today()): PilotEvidence {
   const pilot = pilotClientsOf(data)
   const pilotIds = new Set(pilot.map((c) => c.id))
-  const startDate = data.experiment?.startDate ?? null
+  //  ⚠ **Pilot 전용 시작일**입니다 (0123, experiment_settings.pilot_start_date).
+  //    기존 실증 시작일(experiment.startDate)은 성과 화면이 「도입 후 / 연습
+  //    입력」을 가르는 데 쓰고 있어, Pilot 때문에 그 값을 옮기면 지금까지 쌓인
+  //    기록의 분류가 통째로 바뀝니다. 그래서 여기서는 그 값을 **읽지 않습니다**
+  //    — 대신이 되지도 않습니다. 없으면 「미설정」으로 두고 오늘 하루만 셉니다.
+  const startDate = data.experiment?.pilotStartDate ?? null
   const startUnset = !startDate
   const from = startDate ?? todayStr
   const to = todayStr

@@ -151,6 +151,7 @@ export function Settings() {
     startDemo,
     setBaseline,
     setExperimentStart,
+    setPilotStart,
     setDemoActive,
   } = useData()
   const { mode, profile } = useAuth()
@@ -370,11 +371,36 @@ export function Settings() {
                   </button>
                 )}
               </div>
-              {/*  이번 주 Pilot 요약(0122)도 이 날을 시작일로 씁니다 — 설정을 따로 만들지 않았습니다. */}
-              <p className="t-caption mt-1.5 break-keep text-navy-500">
-                성과 화면의 「이번 주 Pilot 요약」도 이 날부터 셉니다. 비어 있으면 오늘 하루만 세고 「시작일 미설정」으로 적습니다.
-              </p>
               <p className="t-muted mt-2">이 날짜 이후의 입력만 「도입 후 성과」로 집계합니다. 미설정 시 전체 기간을 집계합니다.</p>
+            </div>
+
+            {/*  ── Pilot 시작일 (0123) — 위 실증 시작일과 **다른 칸** ─────────────
+                 위 날짜는 성과 화면이 「도입 후 / 연습 입력」을 가르는 데 쓰고 있어,
+                 Pilot 때문에 옮기면 지금까지 쌓인 기록의 분류가 통째로 바뀝니다.
+                 그래서 Pilot 집계만 이 칸을 봅니다 — 둘은 서로 덮어쓰지 않습니다. */}
+            <div className="mt-4 rounded-2xl bg-navy-50 p-4">
+              <label className="field-label" htmlFor="pilot-start">
+                Pilot 시작일 <span className="font-medium text-navy-500">(이번 Pilot 집계 전용)</span>
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  id="pilot-start"
+                  data-pilot-start-input
+                  type="date"
+                  className="field-input max-w-[14rem]"
+                  value={data.experiment.pilotStartDate ?? ''}
+                  onChange={(e) => void setPilotStart(e.target.value || null)}
+                />
+                {data.experiment.pilotStartDate && (
+                  <button className="btn-ghost" onClick={() => void setPilotStart(null)}>
+                    해제
+                  </button>
+                )}
+              </div>
+              <p className="t-muted mt-2 break-keep">
+                성과 화면의 「Pilot 실제 기록」 카드만 이 날부터 셉니다. <b className="text-navy-600">위 실증 시작일은 바뀌지 않습니다.</b>{' '}
+                비어 있으면 오늘 하루만 세고 「시작일 미설정」으로 적습니다. (칸이 없다고 나오면 PROPOSAL_0123_pilot_start.sql 실행이 필요합니다)
+              </p>
             </div>
 
             {/* 기준값 5종 */}

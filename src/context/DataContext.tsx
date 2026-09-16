@@ -344,6 +344,8 @@ interface DataContextValue {
   setExperimentStart: (date: string | null) => void // 실증 시작일
   /** Pilot 거래처 목록 (0122) — 관리자만. 실패하면 서버의 말을 그대로 돌려줍니다 */
   setPilotClients: (ids: string[]) => Promise<{ ok: boolean; error: string | null }>
+  /** Pilot 집계 시작일 (0123) — 기존 실증 시작일(setExperimentStart)과 다른 칸입니다 */
+  setPilotStart: (date: string | null) => Promise<{ ok: boolean; error: string | null }>
   // 매출 전환 실증 (v5) — 추천 → 제안 → 수락 → 실제 매출
   setLeadStage: (action: NextAction, stage: LeadStage, month?: string) => void
   setLeadRevenue: (leadId: string, amount: number | null) => void
@@ -1140,6 +1142,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
       }
       setData((d) => ({ ...d, experiment: { ...d.experiment, pilotClientIds: uniq } }))
+      return { ok: true, error: null }
+    },
+    [live],
+  )
+
+  //  Pilot 집계 시작일 (0123).
+  //  ⚠ 위 setExperimentStart(실증 시작일)와 **다른 칸**입니다. 그 값은 기존 성과
+  //    화면이 「도입 후 / 연습 입력」을 가르는 데 쓰므로 여기서 건드리지 않습니다.
+  const setPilotStart = useCallback(
+    async (date: string | null) => {
+      if (live) {
+        try {
+          await repo.savePilotStart(date)
+        } catch (e) {
+          return { ok: false, error: e instanceof Error ? e.message : String(e) }
+        }
+      }
+      setData((d) => ({ ...d, experiment: { ...d.experiment, pilotStartDate: date } }))
       return { ok: true, error: null }
     },
     [live],
@@ -2492,6 +2512,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setBaseline,
       setExperimentStart,
       setPilotClients,
+      setPilotStart,
       setLeadStage,
       setLeadRevenue,
       addRequest,
@@ -2579,6 +2600,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setBaseline,
       setExperimentStart,
       setPilotClients,
+      setPilotStart,
       setLeadStage,
       setLeadRevenue,
       addRequest,

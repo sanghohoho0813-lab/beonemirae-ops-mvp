@@ -111,7 +111,14 @@ const state = { reqs: 0, writes: [], profile: W.profileFor('admin'), schedules: 
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
 W.wire(ctx, state)
 ctx.route('**/rest/v1/materials**', (r) => json(r, supplies))
-ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, { id: 1, start_date: START, pilot_client_ids: [...PILOT, '00000000-0000-0000-0000-00000000dead'] }))
+//  ⚠ 기존 실증 시작일(start_date)은 **일부러 훨씬 이른 날**로 둡니다. Pilot 집계가
+//    이 값을 쓰면 시작일 이전 건(e7, day(-10))까지 세어 버리므로, 두 칸이 정말
+//    갈라져 있는지 여기서 드러납니다 (0123).
+const OLD_START = day(-30)
+ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, {
+  id: 1, start_date: OLD_START, pilot_start_date: START,
+  pilot_client_ids: [...PILOT, '00000000-0000-0000-0000-00000000dead'],
+}))
 ctx.route('**/rest/v1/collection_events**', (r) => json(r, events))
 ctx.route('**/rest/v1/client_requests**', (r) => json(r, requests))
 const p = await ctx.newPage()
@@ -126,11 +133,18 @@ ok((await p.locator('[data-pilot-summary]').count()) === 1, '성과 화면 요�
 const tile = async (k) => (await p.locator(`[data-pilot-tile="${k}"]`).innerText()).replace(/\s+/g, ' ')
 ok(new RegExp(`${EXP.clients}곳`).test(await tile('clients')), `Pilot 거래처 ${EXP.clients}곳 (목록에 없는 id 는 세지 않음)`, await tile('clients'))
 ok(new RegExp(`${EXP.entered}건`).test(await tile('entered')), `수거 입력 ${EXP.entered}건 (시연·취소·시작일 이전·Pilot 외 제외)`, await tile('entered'))
+//  기존 실증 시작일(30일 전)을 썼다면 e7(10일 전)까지 세어 7건이 됩니다 — 6건이어야 갈라진 것입니다.
+ok(!new RegExp(`${EXP.entered + 1}건`).test(await tile('entered')),
+  '**기존 실증 시작일(30일 전)이 아니라 Pilot 시작일로 셈** — 두 칸이 갈라져 있음', await tile('entered'))
 ok(new RegExp(`${EXP.used}건`).test(await tile('used')), `자재사용 기록 ${EXP.used}건`, await tile('used'))
 ok(new RegExp(`${EXP.users}명`).test(await tile('users')), `실사용자 ${EXP.users}명`, await tile('users'))
 ok(new RegExp(`${EXP.portal}건`).test(await tile('portal')), `Portal 요청 ${EXP.portal}건 (직원 접수·Pilot 외·기간 밖 제외)`, await tile('portal'))
 const period = await p.locator('[data-pilot-period]').innerText()
-ok(/7일/.test(period) && !/미설정/.test(period), '기간 = 시작일 ~ 오늘 · 7일', period)
+const shortFrom = `${Number(START.split('-')[1])}/${Number(START.split('-')[2])}`
+ok(period.replace(/\s+/g, '') === `${shortFrom}~현재·7일`,
+  '제목 옆 기간이 **실제 기간에서 계산**됨 (「1주」 같은 고정 표현 없음)', period)
+ok(!/1주/.test(await p.locator('[data-pilot-summary]').innerText()), '카드 어디에도 「1주」라고 적지 않음')
+ok(!/미설정/.test(period), 'Pilot 시작일이 설정돼 있음')
 
 await p.locator('[data-pilot-detail-toggle]').click()
 await p.waitForTimeout(500)
@@ -152,7 +166,7 @@ ok(/63L 박스 사용 확인 16개 · 공급 4개/.test(detail), '**시연 중 �
   detail.match(/63L 박스[^가-힣]*[^·]*·[^·]*/)?.[0] ?? '')
 const card = (await p.locator('[data-pilot-summary]').innerText()).replace(/\s+/g, ' ')
 ok(!/\d+(\.\d+)?\s*%/.test(card) && !/향상|절감|개선율/.test(card), '**개선율·% 표기 없음**')
-ok(/1주 Pilot 실제 기록/.test(card), '「1주 Pilot 실제 기록」 라벨')
+ok(/Pilot 실제 기록/.test(card) && !/1주/.test(card), '제목은 「Pilot 실제 기록」 — 기간을 「1주」로 고정해 부르지 않음')
 ok((await p.locator('[data-baseline]').count()) === 5 && /BASELINE UNKNOWN/.test(card), '기준값 5줄 — 없는 것은 UNKNOWN 으로 (지어내지 않음)')
 ok(/COLLECTION TABLE/.test(card) && /MATERIAL USAGE/.test(card) && /CUSTOMER REQUEST/.test(card) && /USER FEEDBACK/.test(card), '출처 4종이 줄마다 적힘')
 

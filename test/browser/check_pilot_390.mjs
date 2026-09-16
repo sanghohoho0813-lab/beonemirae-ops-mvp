@@ -30,7 +30,7 @@ async function open(role, w, h, extra = {}) {
   const state = { reqs: 0, writes: [], profile: W.profileFor(role), schedules: seed(), ...extra }
   const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true })
   W.wire(ctx, state)
-  ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, { id: 1, start_date: T, pilot_client_ids: [C1, F.clients[1].id] }))
+  ctx.route('**/rest/v1/experiment_settings**', (r) => json(r, { id: 1, start_date: T, pilot_start_date: T, pilot_client_ids: [C1, F.clients[1].id] }))
   const p = await ctx.newPage()
   await p.addInitScript(([k, u]) => window.localStorage.setItem(k, JSON.stringify({
     access_token: 't', token_type: 'bearer', expires_in: 3600,

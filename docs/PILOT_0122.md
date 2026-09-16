@@ -37,11 +37,11 @@
 | 세는 법 | `pilotClientsOf` — 시연용(`isDemoGenerated`)은 켜져 있어도 세지 않음 |
 | 현장 | 별도 Pilot 모드 없음. 오늘 일정 줄 · 거래처 목록 · 거래처 상세에 **PILOT 배지** 하나 |
 | PHASE | 1 월정액 5~10곳(이번 주) · 2 단순 거래처 · 3 kg 단가 · 4 박스/자재/복합 — `PILOT_PLAN.md` · `pilotClients.PILOT_PHASES` |
-| 시작일 | 기존 `experiment_settings.start_date`(설정 「실증 시작일」) 재사용. 새 설정 없음 |
+| 시작일 | **`experiment_settings.pilot_start_date`** — 0123 에서 칸 1개 추가(판 122 → 123). 기존 `start_date`(실증 시작일, 2026-08-29)는 기존 성과 화면이 「도입 후 / 연습 입력」을 가르는 데 쓰고 있어 **읽지도 쓰지도 않습니다.** 이번 Pilot 시작일 = 2026-09-16 |
 
 ## D. Evidence
 
-성과 화면 → 요약 탭 맨 위 「이번 주 Pilot 실제 기록」 카드(관리자만). 모두 **건수·명수·날짜**, 출처 표기 포함.
+성과 화면 → 요약 탭 맨 위 「Pilot 실제 기록」 카드(관리자만). 모두 **건수·명수·날짜**, 출처 표기 포함.
 
 | 항목 | 계산 | 출처 |
 |---|---|---|
@@ -58,10 +58,11 @@
 | BASELINE | 도입 전 기준값 5항목 — 실측이면 KNOWN + 값, 없거나 시연 예시값이면 UNKNOWN(비움) | SETTINGS |
 | USER FEEDBACK | 도입 후 조사 응답이 있으면 「따로 봅니다」라고만 — 시스템 건수와 합치지 않음 | USER FEEDBACK |
 
-- 개선율(%) · 「향상」 · 월 환산 — **없음**(검사가 정규식으로 확인). 라벨 「1주 Pilot 실제 기록」.
+- 개선율(%) · 「향상」 · 월 환산 — **없음**(검사가 정규식으로 확인).
 - **「입력 정정 기록」은 취소된 입력을 세는 값입니다.** 취소 뒤 같은 수거가 다시 들어왔는지를 짝지어 보지 않으므로 「재입력이 줄었다」로 읽을 수 없습니다. 검토(2026-09-16) 결과 로직을 넓히지 않고 **문구만** 사실에 맞게 고쳤습니다 — 이전 이름(Re-entry Reduction Proxy)은 화면·문서에서 뺐고, 검사가 「재입력 · Reduction」이 다시 나타나지 않는지 확인합니다.
 - **시연 공급 혼입 차단.** 수거 완료가 자재를 함께 넣을 때 서버가 그 수거와 같은 시연 표식(`materials.demo_session_id`)을 자재에도 붙입니다. 화면이 그 칸을 안 읽고 있어서, Pilot 거래처에 시연 공급이 남으면 **수거는 빠지고 공급만 남는** 어긋남이 생길 수 있었습니다. 칸은 이미 있었으므로 구조를 바꾸지 않고 **읽기만 추가**(`MaterialSupply.demoSessionId` · `toMaterial` 한 줄)해서 수거 쪽과 같은 기준으로 뺍니다. 검사가 진짜 공급 4개 · 시연 공급 7개를 넣고 **4개만 세는지** 확인합니다.
 - 시작일이 비어 있으면 오늘 하루만 세고 「시작일 미설정」이라고 적습니다 — 임의 기간을 만들지 않습니다.
+- **Pilot 시작일은 기존 실증 시작일과 별개입니다 (0123).** 카드 제목은 「Pilot 실제 기록」이고 그 옆에 `9/16~현재 · N일` 처럼 **실제 기간에서 계산한 값**이 찍힙니다 — 「1주」처럼 고정된 말은 쓰지 않습니다. 검사가 ⑴ 기존 `start_date` 를 30일 전으로 둬도 집계가 Pilot 시작일을 따르는지, ⑵ 카드 어디에도 「1주」가 없는지 확인합니다.
 - 새 이벤트 표 없음. `pilotEvidence.ts` 는 순수 함수이며 저장하지 않습니다(같은 값 두 곳 저장 금지 원칙).
 
 ## E. 데이터베이스
@@ -72,6 +73,7 @@
 | Pilot → `experiment_settings.pilot_client_ids` (SQL 1, 추가만) | `clients` 는 열 단위 권한 목록(`CLIENT_COLS` · grant · `app_health_check`)이라 칸 하나가 세 곳을 건드리고, SQL 전후 불일치 시 거래처 전체가 안 읽힙니다. 실증 설정은 `select *` · 관리자 쓰기라 안전 |
 | `CollectionEvent.actorId/actorName` | DB 에 이미 있는 칸을 TS 타입·매핑에 **읽기만** 추가 (실사용자 수) |
 | `MaterialSupply.demoSessionId` | DB 에 처음부터 있던 `materials.demo_session_id` 를 **읽기만** 추가 (다른 표 4곳이 이미 같은 방식으로 읽고 있습니다). Pilot 공급 집계에서 시연을 수거와 같은 기준으로 빼기 위함 — 쓰기·계산 변경 없음 |
+| Pilot 시작일 → `experiment_settings.pilot_start_date` (SQL 1, 추가만) | 기존 `start_date` 를 옮기면 `evidenceBase.classifyEvent` 가 그 날짜로 「도입 후 / 연습 입력」을 가르므로 **지금까지 쌓인 기록의 분류가 통째로 바뀝니다.** 읽는 곳이 다른 칸을 따로 두어 기존 성과 화면에 영향 0 |
 | 기존 마이그레이션 수정 | 없음. DROP/TRUNCATE/DELETE 없음 |
 
 ## F. QA
@@ -108,7 +110,7 @@ Dashboard · Excel Import · 일정/배차/차량 로직 · 수거이력 화면 
 
 ## H. 권고
 
-1. **SQL 1회 실행** `supabase/proposals/PROPOSAL_0122_pilot_clients.sql` → 거래처 관리에서 월정액 5~10곳 체크 → 설정 「실증 시작일」. 이 셋이 없으면 Pilot 요약은 「칸 없음 / 0곳 / 시작일 미설정」으로 정직하게 남습니다.
+1. **SQL 2회 실행** `PROPOSAL_0122_pilot_clients.sql`(Pilot 거래처 칸) → `PROPOSAL_0123_pilot_start.sql`(Pilot 시작일 칸 + 2026-09-16) → 거래처 관리에서 월정액 5~10곳 체크. 이것들이 없으면 Pilot 요약은 「칸 없음 / 0곳 / 시작일 미설정」으로 정직하게 남고, 기존 성과 화면은 어느 경우에도 영향받지 않습니다.
 2. 첫 이틀은 기사님이 「이번 수거 자재 사용량」을 **한 병원에서만** 적어 보고, 거래처 상세에 「사용 자재 - …」로 보이는지 대표·이사가 확인하는 것을 권합니다.
 3. BASELINE UNKNOWN 5항목은 비워 두셔도 됩니다. 넣으실 때는 실측만 — 시연 예시값은 KNOWN 으로 치지 않습니다.
 4. 자재 추천·예측·비용·급증·재주문은 `RECOMMENDATIONS.md` Future 에만 있습니다. 규격별 기록이 몇 주 쌓인 뒤에 판단해 주세요.
@@ -141,7 +143,7 @@ Dashboard · Excel Import · 일정/배차/차량 로직 · 수거이력 화면 
 - [x] PHASE 1~4 기록 (`PILOT_PLAN.md` · `PROJECT_STATE.md`)
 - [x] Pilot 시작일 = 기존 실증 시작일, 미설정 시 오늘 + 표기
 - [x] Evidence 자동 · 시연/취소/시작일 이전/Pilot 외 제외 · 출처 표기 · BASELINE KNOWN/UNKNOWN
-- [x] 임의 개선율 0 · 월 환산 0 · 라벨 「1주 Pilot 실제 기록」
+- [x] 임의 개선율 0 · 월 환산 0 · 제목 「Pilot 실제 기록 · 9/16~현재 · N일」 (기간은 실제 값에서 계산)
 - [x] Mobile 360/390/430 정상 (검사)
 - [x] 정산/청구/재고 코드 변경 0 · 회귀 142 스위트 · 검사 5,770 · 실패 6(전부 기존)
 - [x] 범위 밖 신규기능 0 (Future 는 RECOMMENDATIONS.md 에만)

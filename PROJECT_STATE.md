@@ -12,7 +12,7 @@
 | A. USED MATERIAL | 완료 — 입력 구역 · `containers.usedItems` 저장 · 수정 · 거래처 상세 · 자재관리 공급 vs 확인사용 | `check_used_material` · `check_used_amend` |
 | B. Pilot 거래처 | 완료 — 관리자 체크 · 「Pilot N / 10」 · PILOT 배지(오늘 일정·거래처·상세) · SQL 제안 1개 | `check_pilot_390` |
 | C. Evidence | 완료 — `pilotEvidence.ts` · 성과 화면 카드(관리자) · 출처 표기 · BASELINE KNOWN/UNKNOWN | `check_pilot_evidence` |
-| SQL | `supabase/proposals/PROPOSAL_0122_pilot_clients.sql` — **대표님 실행 대기** (칸 1개 추가, 판 108 → 122) | — |
+| SQL | `PROPOSAL_0122_pilot_clients.sql` (Pilot 거래처 칸, 판 108 → 122) **실행 완료** · `PROPOSAL_0123_pilot_start.sql` (Pilot 시작일 칸 + 2026-09-16, 판 122 → 123) — 둘 다 추가만, 기존 `start_date` 불변 | — |
 
 ---
 
@@ -23,7 +23,7 @@
 | A. USED MATERIAL (병원 사용 자재, 규격별) | 이미 있는 `schedules.containers` jsonb(= 「가져온 용기」) 안에 `usedItems: {규격key: 수량}` 을 **더 담는다**. 저장 함수(`complete_collection` · `amend_collection`)는 `containers` 를 **그대로 통과**시키므로 SQL 변경 0 | **없음** |
 | B. Pilot 거래처 5~10곳 | `experiment_settings` (실증 설정, id=1) 에 `pilot_client_ids uuid[]` 칸 **하나** 추가. 거래처 표(`clients`)는 건드리지 않음 | **1개 (추가만)** — `supabase/proposals/PROPOSAL_0122_pilot_clients.sql` |
 | C. Evidence 자동축적 | 새 표·새 이벤트 표 없음. 이미 쌓이는 `collection_events` · `schedules` · `client_requests` · `materials` 를 **Pilot 거래처 × Pilot 기간**으로 걸러 계산하는 순수 함수 `src/lib/pilotEvidence.ts` + 성과 화면에 카드 1장 | **없음** |
-| PILOT START DATE | 이미 있는 `experiment_settings.start_date`(설정 화면 「실증 시작일」)를 그대로 Pilot 시작일로 씀. 새 설정 안 만듦 | 없음 |
+| PILOT START DATE | ~~기존 `start_date` 재사용~~ → **0123 에서 바꿨습니다.** 그 값(2026-08-29)은 기존 성과 화면이 「도입 후 / 연습 입력」을 가르는 데 쓰고 있어, Pilot 때문에 옮기면 지금까지 쌓인 기록의 분류가 통째로 바뀝니다. 읽는 곳이 다른 `pilot_start_date` 칸을 따로 둡니다 (이번 Pilot = 2026-09-16) | **1개 (추가만)** — `PROPOSAL_0123_pilot_start.sql` |
 
 ---
 
@@ -87,9 +87,9 @@
 ## 3. MINIMAL CHANGE — 최소로 만진다 (추가만, 기존 줄 삭제 없음)
 | 파일 | 무엇을 | 왜 |
 |---|---|---|
-| `src/types/index.ts` | `ContainerBreakdown.usedItems?: Record<string, number>` · `CollectionEvent.actorId?/actorName?` · `ExperimentConfig.pilotClientIds?: string[]` | 저장·집계에 필요한 선택 칸 |
+| `src/types/index.ts` | `ContainerBreakdown.usedItems?` · `CollectionEvent.actorId?/actorName?` · `MaterialSupply.demoSessionId?` · `ExperimentConfig.pilotClientIds?` · `ExperimentConfig.pilotStartDate?` | 저장·집계에 필요한 선택 칸 |
 | `src/lib/collection.ts` | `usedItemsOf(containers)` · `containersFromUsed(usedItems, etc)` 순수 함수 2개 | 규격별 → 4칸 접기, 한 곳에서만 |
-| `src/lib/repo.ts` | `toEvent` 에 actor 2칸 · `toMaterial` 에 `demoSessionId` 1칸(이미 있던 열, 읽기만) · `experiment` 매핑에 `pilotClientIds` · `savePilotClients(ids)` (update 1줄) | 읽기·쓰기 각 1곳 |
+| `src/lib/repo.ts` | `toEvent` 에 actor 2칸 · `toMaterial` 에 `demoSessionId` 1칸(이미 있던 열, 읽기만) · `experiment` 매핑에 `pilotClientIds` · `savePilotClients(ids)` · `savePilotStart(date)` (update 1줄씩) | 읽기·쓰기 각 1곳 |
 | `src/pages/CollectionInput.tsx` | 접힌 구역 **1개 추가** 「이번 수거 자재 사용량」 + `buildInput()` 에서 `containers` 에 `usedItems` 동봉. 4칸이 비어 있고 규격별이 있으면 4칸을 규격별 합계로 채움(두 번 적지 않게) | TASK A |
 | `src/components/CollectionRecord.tsx` | 보기: 「사용 자재」 줄 1개 · 수정: 규격별 줄 Fold 1개 | 수정이 사용량을 깨지 않게 |
 | `src/lib/ops.ts` `collectionHistory` | `HistoryRow.usedText` 1칸 추가(기존 `containerType` 유지) | 거래처 상세 표시 |
@@ -98,7 +98,8 @@
 | `src/pages/TodaySchedule.tsx` | 목록 줄에 작은 PILOT 배지 | TASK B |
 | `src/pages/Materials.tsx` | 「자재 소진 위험」 아래 카드 1장: [최근 30일] 규격별 공급 vs 확인된 사용 · 예상 차이(공급 − 확인사용) | TASK A (계산 가능하므로) |
 | `src/pages/Performance.tsx` | 요약 탭 맨 위 관리자용 Pilot Summary 카드 1장 | TASK C |
-| `src/context/DataContext.tsx` | `setPilotClients(ids)` 1개 노출 | TASK B |
+| `src/context/DataContext.tsx` | `setPilotClients(ids)` · `setPilotStart(date)` 노출 | TASK B · 0123 |
+| `src/pages/Settings.tsx` | 「Pilot 시작일 (이번 Pilot 집계 전용)」 칸 1개 — 기존 「실증 시작일」 칸은 그대로 | 0123 |
 
 ## 4. PILOT ADD — 새로 만드는 것
 - `src/lib/pilotEvidence.ts` — 순수 함수. 입력 `AppData`, 출력 Pilot 요약(기간 · 거래처 · 수거 입력 · 자재사용 기록 · 실사용자 · Portal 요청 · 연결 건수 · 입력 정정 기록(취소된 입력 건수) · BASELINE KNOWN/UNKNOWN 목록). 개선율 계산 **없음**.

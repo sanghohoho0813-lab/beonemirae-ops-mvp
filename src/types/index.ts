@@ -997,6 +997,17 @@ export interface ExperimentConfig {
    *  거래처 표에는 아무 칸도 더하지 않았습니다.
    */
   pilotClientIds?: string[]
+  /**
+   * Pilot 집계 시작일 (0123, experiment_settings.pilot_start_date).
+   *
+   *  ⚠ 위 startDate(실증 시작일)와 **다른 값**입니다. startDate 는 기존 성과
+   *    화면이 「도입 후 / 연습 입력」을 가르는 데 쓰므로 Pilot 때문에 옮기면
+   *    지금까지 쌓인 기록의 분류가 통째로 바뀝니다. 그래서 읽는 곳이 다른
+   *    칸을 따로 둡니다 — 둘은 서로 덮어쓰지 않습니다.
+   *  SQL(PROPOSAL_0123) 전이거나 비어 있으면 null — Pilot 집계는 「시작일
+   *  미설정」으로 적고 오늘 하루만 셉니다.
+   */
+  pilotStartDate?: string | null
 }
 
 /** 기준값 미입력 상태 — 시스템이 임의 값을 만들지 않음을 명시합니다. */

@@ -1029,6 +1029,9 @@ export async function loadAppData(): Promise<AppData> {
           pilotClientIds: Array.isArray(experimentRow.pilot_client_ids)
             ? (experimentRow.pilot_client_ids as unknown[]).map(String)
             : undefined,
+          //  ⚠ Pilot 집계 시작일 (0123). 위 start_date 와 **다른 칸**이며 서로 대신하지
+          //    않습니다 — 없으면 null 로 두고 화면이 「미설정」이라고 적습니다.
+          pilotStartDate: (experimentRow.pilot_start_date as string | null | undefined) ?? null,
         }
       : { ...EMPTY_EXPERIMENT },
     leads: leads.map(toLead),
@@ -2219,6 +2222,16 @@ export async function saveExperimentStart(date: string | null): Promise<void> {
 export async function savePilotClients(ids: string[]): Promise<void> {
   const sb = need()
   unwrap(await sb.from('experiment_settings').update({ pilot_client_ids: ids }).eq('id', 1).select())
+}
+
+/**
+ * Pilot 집계 시작일 저장 (0123). experiment_settings.pilot_start_date 한 칸.
+ *  ⚠ 기존 start_date(실증 시작일)는 건드리지 않습니다 — 그 값은 성과 화면이
+ *    쓰고 있어 옮기면 지금까지 쌓인 기록의 분류가 바뀝니다.
+ */
+export async function savePilotStart(date: string | null): Promise<void> {
+  const sb = need()
+  unwrap(await sb.from('experiment_settings').update({ pilot_start_date: date }).eq('id', 1).select())
 }
 
 // ── 핵심 1: 수거 완료 통합 커맨드 (DB 트랜잭션) ─────────────────────────────
