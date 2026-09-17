@@ -133,27 +133,18 @@ if ((await more.count()) > 0) { await more.first().click(); await p.waitForTimeo
 const boxPlus = p.getByRole('button', { name: '63L 박스 더하기' })
 ok((await boxPlus.count()) > 0, '자재 칸이 폰에서 닿음')
 
-console.log('── 4-b. 차량 · 기사 ──')
-//   ⚠ 저장은 **차량이 있어야** 열립니다(canSubmit). 계정에 차량이 안 묶여
-//     있으면 기사님이 매번 고릅니다 — 예전에 이 단계를 빠뜨리고 「저장이
-//     잠겨 있다」를 제품 결함으로 볼 뻔했습니다.
+console.log('── 4-b. 차량 (0128 — 그날 탄 차를 고릅니다) ──')
+//   ⚠ 저장은 **차량이 있어야** 열립니다(canSubmit). 0128 부터 계정에 차를
+//     묶지 않으므로 기사님은 매번 고릅니다 — 이 단계를 빠뜨리면 「저장이
+//     잠겨 있다」를 제품 결함으로 볼 뻔합니다 (실제로 그럴 뻔했습니다).
 {
-  const one = await p.locator('[data-my-vehicle]').count()
-  if (one > 0) {
-    ok(true, '계정에 차량이 묶여 있어 고를 필요가 없음', flat(await p.locator('[data-my-vehicle]').innerText()))
-  } else {
-    const dump = await p.locator('select').evaluateAll((els) =>
-      els.map((e, i) => ({ i, label: e.getAttribute('aria-label') ?? '', opts: e.options.length, first: e.options[0]?.textContent ?? '' })))
-    console.log('   (참고) select 들:', JSON.stringify(dump))
-    const sel = p.locator('select').filter({ hasText: /차량 선택/ }).first()
-    const has = (await sel.count()) > 0
-    ok(has, '차량을 고르는 칸이 있음')
-    if (has) {
-      const opts = await sel.locator('option').evaluateAll((els) => els.map((e) => ({ v: e.value, t: e.textContent })).filter((o) => o.v))
-      ok(opts.length > 0, '고를 수 있는 차량이 있음', opts.map((o) => o.t).join(','))
-      if (opts.length > 0) { await sel.selectOption(opts[0].v); await p.waitForTimeout(600) }
-    }
-    console.log('   ⚠ 계정에 차량이 안 묶여 있어 매번 고릅니다 (설정 → 사용자 관리에서 묶으면 사라집니다)')
+  const sel = p.locator('[data-vehicle-select]')
+  const has = (await sel.count()) > 0
+  ok(has, '「오늘 운행 차량」 고르는 칸이 있음')
+  if (has) {
+    const opts = await sel.locator('option').evaluateAll((els) => els.map((e) => ({ v: e.value, t: e.textContent })).filter((o) => o.v))
+    ok(opts.length > 0, '고를 수 있는 차량이 있음', opts.map((o) => o.t).join(','))
+    if (opts.length > 0) { await sel.selectOption(opts[0].v); await p.waitForTimeout(600) }
   }
 }
 

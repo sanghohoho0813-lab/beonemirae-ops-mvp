@@ -219,7 +219,11 @@ for (const who of [
   await p.fill('[data-invite-email]', 'New.Driver@Beonemirae.test')
   await p.fill('[data-invite-name]', '오대성')
   await p.click('[data-invite-role="field"]')
-  await p.selectOption('[data-invite-vehicle]', V1)
+  //  ⚠ 0128 — 사전 등록에서 **차량 칸을 없앴습니다.** 여기서 차를 골라 두면
+  //    가입하는 순간 그 사람에게 차가 고정됐습니다.
+  ok((await p.locator('[data-invite-vehicle]').count()) === 0, '사전 등록에 차량 고르는 칸이 없음 (0128)')
+  ok(/차량은 미리 정하지 않습니다/.test(flat(await p.locator('[data-invite-no-vehicle]').textContent().catch(() => ''))),
+    '왜 없는지 적혀 있음 — 수거할 때 그날 탄 차를 고름')
   await p.click(`[data-invite-client="${CA}"]`)
   await p.click('[data-invite-save]')
   await p.waitForTimeout(900)
@@ -227,7 +231,7 @@ for (const who of [
   const inv = calls.find((c) => c.name === 'upsert_staff_invite')
   ok(!!inv, '**서버에 사전 등록을 보냄**')
   ok(inv?.body?.p_role === 'field', '역할이 담김', String(inv?.body?.p_role))
-  ok(inv?.body?.p_vehicle_id === V1, '차량이 담김')
+  ok(inv?.body?.p_vehicle_id === null, '**차량은 비워서 보냄** — 가입하자마자 고정되지 않음', String(inv?.body?.p_vehicle_id))
   ok(Array.isArray(inv?.body?.p_client_ids) && inv.body.p_client_ids.includes(CA), '담당 거래처가 담김')
   //  비밀번호는 **어떤 이름으로도** 보내지 않습니다.
   ok(!/password|pass|pw/i.test(JSON.stringify(inv?.body ?? {})),
@@ -256,49 +260,69 @@ for (const who of [
   await ctx.close()
 }
 
-// ── 계정에 차량 묶기 ────────────────────────────────────────────────────────
+// ── 계정의 고정 차량 — **새로 묶는 길은 없고, 푸는 길만 있습니다** (0128) ───
+//
+//   이사님: 「직원별로 차를 정해둘 필요 없어요. 수거할 때 오늘 타고 간 차만
+//   고르면 됩니다.」 그래서 고르는 칸을 없앴습니다. 옛 값이 남아 있으면
+//   「고정 해제」로 비웁니다.
 {
   const calls = []
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1800 } })
   wire(ctx, { calls })
   const p = await open(ctx, '/users')
-  ok((await p.locator(`[data-user-vehicle="${DRV}"]`).count()) === 1, '계정마다 담당 차량 칸이 있음')
-  ok((await p.locator(`[data-user-vehicle="${DRV}"]`).inputValue()) === V1, '이미 묶인 차량이 골라져 있음')
-  await p.selectOption(`[data-user-vehicle="${DRV}"]`, V2)
+  ok((await p.locator(`[data-user-vehicle="${DRV}"]`).count()) === 1, '계정마다 담당 차량 줄이 있음')
+  //  **고르는 칸이 없어야** 합니다 — 있으면 다시 고정할 수 있습니다.
+  ok((await p.locator(`[data-user-vehicle="${DRV}"] select`).count()) === 0,
+    '**차량을 새로 고정하는 칸이 없음** (0128)')
+  const stale = flat(await p.locator(`[data-user-vehicle-stale="${DRV}"]`).textContent().catch(() => ''))
+  ok(/5506호/.test(stale) && /옛 설정/.test(stale), '옛 고정이 남아 있으면 그대로 보여 줌', stale.slice(0, 60))
+  //  차가 안 묶인 계정에는 「고정 차량 없음 · 수거할 때 고름」
+  const free = flat(await p.locator(`[data-user-vehicle="${UID}"]`).textContent().catch(() => ''))
+  ok(/고정 차량 없음/.test(free) && /그날 탄 차량/.test(free), '안 묶인 계정은 「고정 차량 없음」', free.slice(0, 60))
+
+  await p.click(`[data-user-vehicle-clear="${DRV}"]`)
   await p.waitForTimeout(900)
   const veh = calls.find((c) => c.name === 'set_profile_vehicle')
-  ok(!!veh && veh.body?.p_vehicle === V2 && veh.body?.p_profile === DRV, '**바꾼 차량을 서버에 보냄**', JSON.stringify(veh?.body ?? {}))
+  ok(!!veh && veh.body?.p_profile === DRV && veh.body?.p_vehicle === null,
+    '**「고정 해제」가 서버에 null 을 보냄** (인자 이름은 0056 정의 그대로)', JSON.stringify(veh?.body ?? {}))
   await ctx.close()
 }
 
-// ── ③ 수거 입력 — 차량·기사 칸이 사라진다 ───────────────────────────────────
+// ── ③ 수거 입력 — **오늘 탄 차를 고릅니다** (0128) ─────────────────────────
+//
+//   0056~0126 에서는 계정에 묶인 차가 기본값이었습니다. 0128 부터 화면은
+//   profiles.vehicle_id 를 **읽지 않습니다** — 옛 값이 남아 있어도 무시하고,
+//   기사님이 그날 탄 차를 고릅니다.
 {
-  const me = profiles[1] // 김준기 · 5506호가 묶여 있음
+  const me = profiles[1] // 김준기 · 5506호가 **아직 묶여 있는** 계정
   const calls = []
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx, { me, calls })
   const p = await open(ctx, '/collection', me)
 
-  //  ⚠ 0067 에서 **현장은 차량을 아예 고르지 않습니다.** 예전에는 묶인 차량을
-  //     한 줄로 보여 주고 「오늘은 다른 차로 갔어요」로 되돌릴 수 있었는데,
-  //     대표님 지시로 그 길까지 없앴습니다 — 「기사님이 고를 항목을 최대한
-  //     없애는 것」이 이번 목표라서입니다.
-  //     그래서 표시는 [data-my-vehicle] 이 아니라 [data-vehicle-auto] 입니다.
-  //     ⚠ 여기서 낮추면 안 되는 것: **무엇으로 저장되는지 보여 주는가**와
-  //       **실제로 나가는 값이 본인·본인 차인가**. 아래 그대로 둡니다.
-  ok((await p.locator('[data-vehicle-auto]').count()) === 1, '**묶인 차량이 한 줄로만 보임 (고르는 칸 없음)**')
-  const line = flat(await p.locator('[data-vehicle-auto]').textContent())
-  ok(/5506호/.test(line), '어느 차로 저장되는지 보여 줌', line.slice(0, 50))
-  //  이름은 **로그인한 본인**이어야 합니다 — 차량에 적힌 기본 기사(오대성)가
-  //  아닙니다. 여기가 뒤집히면 안 간 사람 이름으로 기록이 남습니다.
-  ok(/김준기/.test(line) && !/오대성/.test(line),
-    '**이름은 로그인한 본인** — 차량 기본 기사가 아님', line.slice(0, 50))
-  ok((await p.locator('text=배차 차량 *').count()) === 0, '차량 고르는 칸이 없음')
+  ok((await p.locator('[data-field-vehicle]').count()) === 1, '**현장 화면에 「오늘 운행 차량」 칸이 있음**')
+  ok((await p.locator('[data-vehicle-select]').count()) === 1, '차량을 고르는 칸이 늘 보임')
+  //  **계정에 묶인 차가 기본값으로 들어오면 안 됩니다** — 그게 곧 고정 배정입니다.
+  ok((await p.locator('[data-vehicle-select]').inputValue()) === '',
+    '**계정에 묶인 5506호가 자동으로 들어오지 않음** (일정 배차도 없으므로 빈칸)',
+    await p.locator('[data-vehicle-select]').inputValue())
+  const hint = flat(await p.locator('[data-vehicle-hint]').textContent().catch(() => ''))
+  ok(/계정에 차량을 정해 두지 않습니다/.test(hint), '왜 고르는지 적혀 있음', hint.slice(0, 60))
+  ok(/김준기/.test(hint) && !/오대성/.test(hint),
+    '**이름은 로그인한 본인** — 차량에 적힌 기본 기사가 아님', hint.slice(0, 60))
+  //  고를 수 있는 차는 이 구분(의료폐기물)의 운행 중 차량뿐 — 9911호(기저귀)는 없습니다.
+  const opts = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+  ok(opts.length === 1 && opts[0] === V1, '의료폐기물 차량만 목록에 있음 (기저귀 차 없음)', opts.join(','))
 
-  //  **실제로 저장되는 값**까지 봅니다. 화면에 이름이 맞게 떠도, 서버로
-  //  나가는 값이 차량 기본 기사면 기록에는 안 간 사람이 남습니다.
+  //  고르기 전에는 저장이 잠기고, 고르면 열립니다.
   await p.selectOption('select', { index: 1 }).catch(() => {})
   await p.fill('input[inputmode="numeric"][placeholder="예: 320"]', '120')
+  await p.waitForTimeout(400)
+  ok(await p.locator('[data-tour="collect-save"]').isDisabled(), '차를 고르기 전에는 저장이 잠김')
+  await p.selectOption('[data-vehicle-select]', V1)
+  await p.waitForTimeout(400)
+  ok(!(await p.locator('[data-tour="collect-save"]').isDisabled()), '차를 고르면 저장이 열림')
+
   await p.locator('[data-tour="collect-save"]').dispatchEvent('click')
   await p.waitForTimeout(1200)
   const save = calls.find((c) => c.name === 'complete_collection')
@@ -306,53 +330,35 @@ for (const who of [
   ok(save?.body?.p?.driverName === '김준기',
     '**저장되는 기사 이름이 로그인한 본인** — 차량 기본 기사(오대성)가 아님',
     String(save?.body?.p?.driverName))
-  ok(save?.body?.p?.vehicleId === V1, '저장되는 차량이 계정에 묶인 차량', String(save?.body?.p?.vehicleId))
-
-  //  0067 — 「오늘은 다른 차로 갔어요」는 **현장 화면에서 없앴습니다**
-  //  (대표님 지시). 대타로 나간 날은 사무실이 고칩니다.
-  //
-  //  ⚠ 이건 잃은 것이 있는 맞바꿈입니다. 대타로 나간 날 차량이 실제와
-  //    다르게 남습니다. 없앤 것이 맞는지는 대표님이 정하실 일이고, 여기서는
-  //    **정말로 없어졌는지**만 지킵니다 — 슬그머니 되살아나지 않게.
-  //  ⚠ 0126 — 되살렸습니다. Pilot 에서 담당 차량 불일치가 수거 저장을 통째로
-  //    막았습니다. 담당 차량은 기본값이고, 오늘 탄 차로 바꿀 수 있어야 합니다.
-  //    (자세한 시나리오는 check_vehicle_pick)
-  const p2 = await open(ctx, '/collection', me)
-  ok((await p2.locator('[data-vehicle-other]').count()) === 1,
-    '현장 화면에 「오늘은 다른 차로 갔어요」가 있음 (0126 — 기본값이지 제약이 아님)')
-  ok(!/배차 차량/.test(flat(await p2.textContent('body'))), '누르기 전에는 고르는 칸이 펼쳐져 있지 않음')
+  ok(save?.body?.p?.vehicleId === V1, '**저장되는 차량이 이번에 고른 차**', String(save?.body?.p?.vehicleId))
+  //  저장한 뒤에도 계정의 차량을 바꾸지 않습니다 — 오늘 탄 차로 다시 묶이면 안 됩니다.
+  ok(!calls.some((c) => c.name === 'set_profile_vehicle'),
+    '**수거를 저장해도 계정 차량은 건드리지 않음** (다시 고정되지 않음)')
   await ctx.close()
 }
 
-// ── 차량이 안 묶인 현장 계정은 **저장이 막힙니다** (0067) ────────────────────
-//
-//   예전에는 차량을 고르는 칸이 펼쳐졌습니다. 이제 고르는 칸이 없으므로,
-//   차량이 안 묶여 있으면 저장할 방법이 없습니다. 그러면 **저장 직전에
-//   막고 무엇을 해야 하는지 말해 줘야** 합니다 — 대표님이 정해 주신 문구.
+// ── 차량이 안 묶인 현장 계정도 **똑같이** 고르고 저장합니다 (0128) ──────────
 {
   const me = { ...profiles[1], vehicle_id: null }
+  const calls = []
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-  wire(ctx, { me })
+  wire(ctx, { me, calls })
   const p = await open(ctx, '/collection', me)
-  //  ⚠ 0126 — 안 묶인 계정은 더 이상 막지 않습니다. 이 구분의 운행 중 차량을
-  //    골라서 저장합니다. 고르기 전까지만 잠깁니다.
-  ok((await p.locator('[data-vehicle-auto]').count()) === 0, '보여 줄 기본 차량이 없으니 한 줄 표시는 없음')
-  const msg = flat(await p.locator('[data-vehicle-unset]').textContent().catch(() => ''))
-  ok(/담당 차량이 지정되지 않았습니다\. 오늘 탄 차량을 골라 주세요/.test(msg),
-    '**무엇을 해야 하는지 그대로 말해 줌** (고르면 저장됨)', msg.slice(0, 60))
   ok((await p.locator('[data-vehicle-select]').count()) === 1, '차량 고르는 칸이 있음')
-  const opts = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
-  ok(opts.length === 1 && opts[0] === V1, '고를 수 있는 차는 이 구분(의료폐기물)의 운행 중 차량뿐', opts.join(','))
+  ok((await p.locator('[data-vehicle-select]').inputValue()) === '', '고르기 전에는 「차량 선택」')
+  ok(!/사무실에 문의/.test(flat(await p.textContent('main'))), '**「사무실에 문의」로 막지 않음**')
 
-  //  값을 다 채워도 차를 고르기 전에는 잠겨 있어야 합니다 — 눌러 봐야 서버가 거절합니다.
   await p.selectOption('select', { index: 1 }).catch(() => {})
   await p.fill('input[inputmode="numeric"][placeholder="예: 320"]', '120').catch(() => {})
   await p.waitForTimeout(400)
-  const disabled = await p.locator('[data-tour="collect-save"]').isDisabled()
-  ok(disabled, '차를 고르기 전에는 저장 단추가 잠겨 있음')
+  ok(await p.locator('[data-tour="collect-save"]').isDisabled(), '차를 고르기 전에는 저장 단추가 잠겨 있음')
   await p.selectOption('[data-vehicle-select]', V1)
   await p.waitForTimeout(400)
-  ok(!(await p.locator('[data-tour="collect-save"]').isDisabled()), '**차를 고르면 저장 단추가 열림** (0126)')
+  ok(!(await p.locator('[data-tour="collect-save"]').isDisabled()), '**차를 고르면 저장 단추가 열림**')
+  await p.locator('[data-tour="collect-save"]').dispatchEvent('click')
+  await p.waitForTimeout(1200)
+  const save = calls.find((c) => c.name === 'complete_collection')
+  ok(save?.body?.p?.vehicleId === V1, '**차량이 안 묶인 계정도 정상 저장**', String(save?.body?.p?.vehicleId))
   await ctx.close()
 }
 

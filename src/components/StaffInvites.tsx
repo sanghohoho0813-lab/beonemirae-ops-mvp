@@ -9,7 +9,8 @@ import { useData } from '../context/DataContext'
 //  대표님 말씀: "그 담당자 아이디들도 그냥 내가 다 따로 만들어 주는 게 좋을 것
 //  같아."
 //
-//  여기서 이메일·역할·차량·담당 거래처를 미리 적어 둡니다. 그 이메일로 가입하면
+//  여기서 이메일·역할·담당 거래처를 미리 적어 둡니다 (차량은 0128 에서 뺐습니다 —
+//  차는 수거할 때 그날 탄 것을 고릅니다). 그 이메일로 가입하면
 //  적어 둔 대로 바로 붙고 승인도 자동입니다 — 기사님이 가입한 뒤 대표님이 다시
 //  승인을 누를 때까지 기다리지 않습니다.
 //
@@ -29,7 +30,6 @@ export function StaffInvites() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [inviteRole, setInviteRole] = useState<Exclude<UserRole, 'client'>>('field')
-  const [vehicleId, setVehicleId] = useState('')
   const [clientIds, setClientIds] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [filter, setFilter] = useState('')
@@ -55,7 +55,6 @@ export function StaffInvites() {
     setEmail('')
     setName('')
     setInviteRole('field')
-    setVehicleId('')
     setClientIds([])
     setNote('')
     setFilter('')
@@ -67,7 +66,8 @@ export function StaffInvites() {
     setDone(null)
     const r = await saveStaffInvite({
       email, name, role: inviteRole,
-      vehicleId: vehicleId || null,
+      //  0128 — 사전 등록으로 차를 고정하지 않습니다 (인자는 그대로 두고 비웁니다)
+      vehicleId: null,
       clientIds,
       note,
     })
@@ -101,7 +101,7 @@ export function StaffInvites() {
       </div>
 
       <p className="t-muted mt-2 break-keep text-navy-400">
-        미리 적어 두면 그 이메일로 가입하는 순간 역할·차량·담당 거래처가 붙고 바로 씁니다. 비밀번호는 본인이
+        미리 적어 두면 그 이메일로 가입하는 순간 역할·담당 거래처가 붙고 바로 씁니다. 비밀번호는 본인이
         가입 화면에서 정합니다 — 여기서 정해 주지 않습니다.
       </p>
 
@@ -150,24 +150,13 @@ export function StaffInvites() {
             </div>
           </div>
 
-          {/*  차량을 묶어 두면 수거 입력에서 차량·기사 칸이 사라집니다 —
-               기사님이 매번 같은 값을 고르지 않아도 됩니다. */}
-          <div>
-            <label className="field-label">차량 (선택)</label>
-            <select
-              data-invite-vehicle
-              className="field-input"
-              value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
-            >
-              <option value="">묶지 않음</option>
-              {data.vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} ({v.wasteType})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/*  ⚠ 0128 — 「차량 (선택)」 칸을 없앴습니다. 여기서 차를 골라 두면
+               가입하는 순간 그 사람에게 차가 **고정**됐습니다. 이제 차량은
+               수거할 때 그날 탄 것을 고르므로, 미리 정해 둘 것이 없습니다.
+               (repo 의 vehicleId 인자와 DB 칸은 그대로 두고 null 로 보냅니다) */}
+          <p data-invite-no-vehicle className="t-muted break-keep text-navy-500">
+            차량은 미리 정하지 않습니다 — 수거할 때 그날 탄 차량을 고릅니다.
+          </p>
 
           <div>
             <label className="field-label">담당 거래처 (선택 · {clientIds.length}곳)</label>

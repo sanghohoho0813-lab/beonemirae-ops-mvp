@@ -65,6 +65,10 @@ function suggestPassword(): string {
  *  ⚠ 판정이 하는 일은 **자리와 크기**뿐입니다. 권한·로그인·데이터에는
  *    아무 영향이 없습니다.
  */
+/**  계정에 아직 남아 있는 고정 차량 (0128 — 새로 묶는 길은 없앴습니다) */
+const vehicleOf = (vehicles: { id: string; name: string }[], id: string | null | undefined) =>
+  (id ? vehicles.find((v) => v.id === id) : null) ?? null
+
 const TEST_WORD = /(^|[^a-z])(test|tester|demo|dummy|sample|qa)([^a-z]|$)|테스트|데모|샘플|예시/i
 function isTestAccount(r: { email: string; name: string | null }): boolean {
   return TEST_WORD.test(r.email ?? '') || TEST_WORD.test(r.name ?? '')
@@ -383,32 +387,46 @@ export function UserAdmin() {
                 </span>
               </div>
 
-              {/*  담당 차량 (0056) — 묶어 두면 그 사람의 수거 입력에서
-                   차량·기사 칸이 사라집니다. 매번 같은 값을 고르지 않아도
-                   되고, 기록에 남는 이름은 **로그인한 본인**입니다. */}
+              {/*  담당 차량 — **고정하지 않습니다** (0128) ─────────────────────
+                   0056 에서는 계정에 차를 묶어 두면 그 사람의 수거 입력에서
+                   차량 칸이 사라졌습니다. 실제로는 그날 타는 차가 달라서,
+                   묶인 차와 다른 차로 나간 날 수거 저장이 막혔습니다.
+
+                   이사님 말씀: 「직원별로 차를 정해둘 필요 없어요. 수거할 때
+                   오늘 타고 간 차만 고르면 됩니다.」
+
+                   그래서 **고르는 칸을 없앴습니다.** 다시 묶지 못하게 하는 것이
+                   목적이라, 여기서는 지금 상태만 보여 줍니다. 칸(vehicle_id)은
+                   DB 에 그대로 있고(지우지 않았습니다) 수거 입력은 읽지 않습니다.
+                   옛 값이 남아 있으면 「고정 해제」로 비울 수 있습니다. */}
               {r.role !== 'client' && (
-                <div className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-teal-50 px-3.5 py-2.5`}>
-                  <span className="t-muted shrink-0 font-bold text-teal-700">담당 차량</span>
-                  <select
-                    data-user-vehicle={r.id}
-                    disabled={busy}
-                    aria-label={`${r.name || r.email} 담당 차량`}
-                    value={r.vehicleId ?? ''}
-                    onChange={(e) =>
-                      void change(
-                        () => setProfileVehicle(r.id, e.target.value || null),
-                        e.target.value ? '담당 차량을 지정했습니다.' : '담당 차량을 해제했습니다.',
-                      )
-                    }
-                    className="min-w-0 flex-1 rounded-xl border border-teal-200 bg-white px-3 py-2 text-[1.02rem] font-bold text-navy-900"
-                  >
-                    <option value="">묶지 않음 (수거 입력에서 매번 고름)</option>
-                    {data.vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.wasteType})
-                      </option>
-                    ))}
-                  </select>
+                <div
+                  data-user-vehicle={r.id}
+                  className={`${openRows[r.id] ? 'flex' : 'hidden sm:flex'} mt-2.5 flex-wrap items-center gap-2 rounded-2xl bg-navy-50 px-3.5 py-2.5`}
+                >
+                  <span className="t-muted shrink-0 font-bold text-navy-500">담당 차량</span>
+                  {vehicleOf(data.vehicles, r.vehicleId) ? (
+                    <>
+                      <span data-user-vehicle-stale={r.id} className="t-muted min-w-0 break-keep font-bold text-amber-800">
+                        {vehicleOf(data.vehicles, r.vehicleId)?.name} 고정 (옛 설정 — 수거 입력은 쓰지 않습니다)
+                      </span>
+                      <button
+                        type="button"
+                        data-user-vehicle-clear={r.id}
+                        disabled={busy}
+                        onClick={() =>
+                          void change(() => setProfileVehicle(r.id, null), '담당 차량 고정을 해제했습니다.')
+                        }
+                        className="ml-auto shrink-0 rounded-full bg-white px-3 py-1.5 text-[0.95rem] font-extrabold text-navy-600 transition hover:text-navy-900 disabled:opacity-40"
+                      >
+                        고정 해제
+                      </button>
+                    </>
+                  ) : (
+                    <span className="t-muted min-w-0 break-keep font-bold text-navy-500">
+                      고정 차량 없음 · 수거할 때 그날 탄 차량을 고릅니다
+                    </span>
+                  )}
                 </div>
               )}
 

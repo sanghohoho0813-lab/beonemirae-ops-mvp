@@ -28,18 +28,16 @@ export function NextVisitCard({
   notesFor: (clientId: string) => SiteNote[]
 }) {
   const navigate = useNavigate()
-  const { profile, role } = useAuth()
+  const { role } = useAuth()
   const done = list.filter((s) => s.status === '완료').length
   const next = list.find((s) => s.status !== '완료')
   const client = next ? data.clients.find((c) => c.id === next.clientId) : null
-  //  ⚠ 0076 — 예전에는 **일정에 적힌 차**만 봤습니다. 예정 일정은 차가 비어
-  //    있는 것이 보통이라 「차량 미배정」이 떴는데, 정작 저장은 계정에 묶인
-  //    차로 됩니다. 기사님이 읽으면 「차가 없어서 못 가나」로 읽힙니다.
-  //    **실제로 쓰일 차**를 보여 줍니다 — 일정에 지정된 차가 있으면 그것을,
-  //    없으면 본인 계정에 묶인 차를.
-  const myVehicle = profile?.vehicleId ? data.vehicles.find((v) => v.id === profile.vehicleId) : null
-  const vehicle = (next ? data.vehicles.find((v) => v.id === next.vehicleId) : null)
-    ?? (role === 'field' ? myVehicle : null)
+  //  ⚠ 0076 에서는 일정에 차가 없으면 **계정에 묶인 차**를 대신 보여 줬습니다.
+  //    0128 부터 계정에 차를 묶지 않으므로(수거 입력에서 그날 탄 차를 고릅니다)
+  //    그 대체값은 없앴습니다 — 여기 보이는 차는 **일정에 적힌 배차**뿐입니다.
+  //    배차가 없다고 못 가는 것이 아니므로, 아래 문구도 「수거 입력에서 고름」
+  //    이라고 사실대로 적습니다.
+  const vehicle = next ? data.vehicles.find((v) => v.id === next.vehicleId) : null
   const pct = list.length ? Math.round((done / list.length) * 100) : 0
 
   if (list.length === 0) return null
@@ -118,7 +116,7 @@ export function NextVisitCard({
             <span className="min-w-0">
               {/*  차가 정말 없을 때는 **무엇을 해야 하는지**까지 말합니다.
                    「미배정」만으로는 기사님이 할 수 있는 일이 없습니다. */}
-              {vehicle?.name ?? (role === 'field' ? '담당 차량 없음 · 사무실에 문의' : '차량 미배정')}
+              {vehicle?.name ?? (role === 'field' ? '차량은 수거 입력에서 고릅니다' : '차량 미배정')}
               {next.expectedAmount > 0 && ` · 예상 ${next.expectedAmount}kg`}
             </span>
           </p>

@@ -142,8 +142,11 @@ async function open(ctx, path) {
   await p.locator('#collection-amount').fill('120')
   await p.waitForTimeout(400)
 
-  //  0067 — 차량은 계정에 묶인 것이 자동으로 들어갑니다. 고를 칸이 없습니다.
-  ok((await p.locator('[data-vehicle-auto]').count()) === 1, '차량이 자동으로 들어감 (고를 칸 없음)')
+  //  0128 — 차량은 **그날 탄 차를 고릅니다** (계정에 묶지 않습니다).
+  ok((await p.locator('[data-vehicle-select]').count()) === 1, '차량을 고르는 칸이 있음')
+  const vopts = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+  ok(vopts.length >= 1, '고를 차가 있음', vopts.join(','))
+  await p.selectOption('[data-vehicle-select]', vopts[0])
   await p.waitForTimeout(300)
 
   lastPayload = null

@@ -100,7 +100,10 @@
 | `src/pages/Performance.tsx` | 요약 탭 맨 위 관리자용 Pilot Summary 카드 1장 | TASK C |
 | `src/context/DataContext.tsx` | `setPilotClients(ids)` · `setPilotStart(date)` 노출 | TASK B · 0123 |
 | `src/pages/Settings.tsx` | 「Pilot 시작일 (이번 Pilot 집계 전용)」 칸 1개 — 기존 「실증 시작일」 칸은 그대로 | 0123 |
-| `src/pages/CollectionInput.tsx` (0126) | 현장의 차량은 **기본값**(① 일정 배차 → ② 담당 차량 → ③ 없음)이고, 「오늘은 다른 차로 갔어요」로 같은 구분의 운행 중 차량을 고를 수 있음. 담당 차량 미지정·구분 불일치로 **저장을 막던 화면 조건(`noVehicleForField`) 제거**. 서버 검증(차량 있음)은 그대로 — ⚠ 구분 일치 검사는 서버에 **없음**(0070 에서 대표님 지시로 제거), 화면 목록(같은 구분·운행 중만)이 유일한 구분 방어선 | P0 — Pilot 에서 담당차량 불일치가 수거 저장을 막음 |
+| `src/pages/CollectionInput.tsx` (0126 → **0128**) | 0126: 담당 차량을 기본값으로만 쓰고 저장을 막던 조건 제거. **0128: `profiles.vehicle_id` 를 아예 읽지 않습니다.** 기본값은 ① 일정 배차 → ② 없음이고, 「오늘 운행 차량」 칸에서 **그날 탄 차**를 고릅니다. 목록 = 같은 구분 · 운행 중. 저장 뒤 선택은 지워져 다음 건으로 따라가지 않음 — ⚠ 구분 일치 검사는 서버에 **없음**(0070 에서 대표님 지시로 제거), 이 목록이 유일한 구분 방어선 |
+| `src/components/NextVisit.tsx` (0128) | 일정에 배차가 없을 때 **계정에 묶인 차를 대신 보여 주던 것**을 뺌. 「차량은 수거 입력에서 고릅니다」 | 고정 배정 개념 제거 |
+| `src/components/UserAdmin.tsx` (0128) | 담당 차량 **고르는 칸 삭제**. 「고정 차량 없음 · 수거할 때 그날 탄 차량을 고릅니다」로 표시하고, 옛 값이 남아 있으면 「고정 해제」 단추로만 비움 (새로 고정하는 길 없음) | 운영자가 다시 고정하지 못하게 |
+| `src/components/StaffInvites.tsx` (0128) | 사전 등록의 「차량 (선택)」 칸 삭제 · `vehicleId: null` 로 보냄 (repo 인자·DB 칸은 그대로) | 가입 즉시 고정되던 길 차단 | P0 — Pilot 에서 담당차량 불일치가 수거 저장을 막음 |
 | `src/lib/repo.ts` `setProfileVehicle` (0126) | RPC 인자 이름을 서버 정의와 맞춤 `p_profile`/`p_vehicle` (전에는 `p_profile_id`/`p_vehicle_id` → 실제 DB 에서 PGRST202 로 거절돼 담당 차량 변경이 저장되지 않았음) | 사용자 관리 담당 차량 변경이 실제로 저장되게 |
 
 ## 4. PILOT ADD — 새로 만드는 것

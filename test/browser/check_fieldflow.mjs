@@ -152,12 +152,10 @@ async function measure(bound) {
     if (await pick.count()) { await pick.dispatchEvent('click'); await q.waitForTimeout(900) }
   }
   const r = await q.evaluate(() => {
-    //  「차량·기사」 덩어리의 실제 높이 — 접힌 쪽은 한 줄 카드입니다.
-    //  0067 — 현장은 한 줄입니다 (고르는 칸 없음).
-    //  ⚠ [data-auto-vehicle] 는 **칸 전체**라 차량이 없을 때도 있습니다
-    //    (그 안에 안내문이 들어갑니다). 「보여 줄 차가 있는가」는
-    //    [data-vehicle-auto] — 차량 줄 자체 — 로 봐야 합니다.
-    const one = document.querySelector('[data-vehicle-auto]') ?? document.querySelector('[data-my-vehicle]')
+    //  「차량」 덩어리의 실제 높이.
+    //  0128 — 현장은 **늘 고르는 칸 하나**입니다 (계정에 차를 묶지 않습니다).
+    //  그래서 계정에 차가 묶였든 아니든 이 덩어리는 같아야 합니다.
+    const one = document.querySelector('[data-field-vehicle]')
     let vh = 0
     if (one) vh = Math.round(one.getBoundingClientRect().height)
     else {
@@ -178,11 +176,13 @@ async function measure(bound) {
       height: document.documentElement.scrollHeight,
       vehicleH: vh,
       //  고를 차가 실제로 있는지 — 0 대면 「접혔다/펼쳤다」 비교가 무의미합니다
-      options: [...document.querySelectorAll('main select option')]
-        .filter((o) => /\(1t\)|\(3\.5t\)/.test(o.textContent || '')).length,
+      options: [...document.querySelectorAll('[data-vehicle-select] option')]
+        .filter((o) => o.value).length,
+      picked: document.querySelector('[data-vehicle-select]')?.value ?? '(칸 없음)',
       hasOneLine: !!one,
-      canRepick: !!document.querySelector('[data-vehicle-other]'),
-      //  안 묶인 계정에는 「담당 차량이 지정되지 않았습니다」 안내가 뜹니다
+      //  0128 — 「담당 차량 미지정」 안내도, 「오늘은 다른 차로」 단추도 없습니다.
+      //  칸 하나로 늘 같습니다.
+      canRepick: !!document.querySelector('[data-vehicle-select]'),
       unset: !!document.querySelector('[data-vehicle-unset]'),
       saveLocked: !!document.querySelector('[data-tour="collect-save"]')?.disabled,
       text: (one?.textContent ?? '').replace(/\s+/g, ' ').trim(),
@@ -206,15 +206,21 @@ const boundM = await measure(true)
 //    운행 중 차를 골라서 저장할 수 있고(막지 않음), 묶인 계정은 한 줄로
 //    보이되 「오늘은 다른 차로 갔어요」로 바꿀 수 있습니다. Pilot 에서
 //    담당 차량 불일치가 수거 저장을 통째로 막았던 것을 푼 자리입니다.
-ok(free.options === 2, '안 묶인 계정에는 이 구분의 운행 중 차량 2대를 고르는 칸이 있음 (0126)', `${free.options}대`)
-ok(!free.hasOneLine, '차량이 안 묶이면 한 줄 표시 대신 고르는 칸')
-ok(free.unset, '**안 묶인 계정에는 「담당 차량이 지정되지 않았습니다」 안내** (골라 달라는 안내로)')
+ok(free.options === 2, '현장 화면에 이 구분의 운행 중 차량 2대가 보임 (0128)', `${free.options}대`)
+ok(free.hasOneLine, '차량 칸은 늘 한 덩어리로 있음')
+ok(!free.unset, '「담당 차량이 지정되지 않았습니다」 같은 안내가 없음 — 막지 않습니다')
+ok(free.picked === '', '고르기 전에는 「차량 선택」', free.picked)
 ok(free.saveLocked, '고르기 전에는 저장이 잠김 (차량 없이는 서버가 받지 않음)')
-ok(boundM.hasOneLine, '**계정에 차량이 묶이면 한 줄로 보임**')
-ok(/80가 1234/.test(boundM.text), '무엇으로 저장되는지는 그대로 보여 줌', boundM.text)
-ok(/김준기/.test(boundM.text), '기사 이름은 **로그인한 본인** — 차량에 적힌 기본 기사가 아님', boundM.text)
-ok(boundM.canRepick, '「오늘은 다른 차로 갔어요」가 있음 (0126 — 기본값이지 제약이 아님)')
-ok(!boundM.saveLocked, '묶여 있으면 저장이 잠기지 않음')
+//  ⚠ 0128 의 핵심 — **계정에 차를 묶어 놔도 화면이 달라지지 않습니다.**
+//    달라지면 그게 곧 고정 배정이 살아 있다는 뜻입니다.
+ok(boundM.options === free.options, '계정에 차가 묶여 있어도 고를 수 있는 차는 같음', `${boundM.options} vs ${free.options}`)
+ok(boundM.picked === '', '**묶인 차가 자동으로 들어오지 않음** (0128)', boundM.picked)
+ok(boundM.saveLocked, '묶여 있어도 고르기 전까지는 저장이 잠김 — 계정 차량을 쓰지 않으므로')
+//  ⚠ 묶인 차(80가 1234)는 **목록에는 있어야** 합니다 — 오늘 그 차를 탔을 수
+//    있으니까요. 없어야 하는 것은 「미리 골라져 있는 것」이고 그건 위 picked 가 봅니다.
+ok(/계정에 차량을 정해 두지 않습니다/.test(boundM.text), '왜 고르는지 화면이 말해 줌', boundM.text.slice(0, 60))
+ok(/김준기/.test(boundM.text), '기사 이름은 **로그인한 본인**', boundM.text.slice(0, 60))
+ok(boundM.canRepick, '차를 고르는 칸이 늘 있음 (그날 탄 차를 고릅니다)')
 //  ⚠ 여기 숫자는 **잰 값**이지 목표가 아닙니다.
 //
 //    묶으면 2,785 → 2,631px 입니다. 제가 잡았던 2,600px 에 **31px 못 미칩니다.**
