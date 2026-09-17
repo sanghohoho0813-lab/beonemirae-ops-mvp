@@ -64,9 +64,12 @@ async function open(role,uid,vehicles,mobile){
   //     대도 없다」와 「내 계정에 차량이 안 묶였다」가 기사님에게는 같은 일이고,
   //     할 일도 같습니다 — 사무실에 문의. 대표님이 정해 주신 문구를 씁니다.
   //     (사무실·관리자 화면에는 예전 문구가 그대로 있습니다.)
+  //  ⚠ 0126 — 차량이 0대면 「운행 중인 차량이 없습니다 · 사무실에 문의」가 뜹니다.
+  //     (담당 차량 미지정은 이제 막지 않고 고르게 합니다 — check_vehicle_pick)
   ok(/담당 차량이 지정되지 않았습니다/.test(t),'현장에 이유를 알려 줌')
+  ok(/운행 중인 의료폐기물 차량이 없습니다/.test(t),'차량이 한 대도 없다고 알려 줌')
   ok(/사무실에 문의해 주세요/.test(t),'무엇을 하면 되는지 알려 줌')
-  //  저장이 실제로 잠겨 있어야 합니다 — 말만 하고 눌리면 서버가 거절합니다.
+  //  고를 차가 없으니 저장이 실제로 잠겨 있어야 합니다 — 눌리면 서버가 거절합니다.
   ok(await p.locator('[data-tour="collect-save"]').isDisabled(),'저장이 잠겨 있음')
   await p.screenshot({path:`${SHOT}/collection-no-vehicle.png`,fullPage:true})
   await ctx.close()

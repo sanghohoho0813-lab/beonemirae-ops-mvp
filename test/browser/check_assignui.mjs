@@ -267,7 +267,7 @@ for (const who of [
   await p.selectOption(`[data-user-vehicle="${DRV}"]`, V2)
   await p.waitForTimeout(900)
   const veh = calls.find((c) => c.name === 'set_profile_vehicle')
-  ok(!!veh && veh.body?.p_vehicle_id === V2, '**바꾼 차량을 서버에 보냄**', JSON.stringify(veh?.body ?? {}))
+  ok(!!veh && veh.body?.p_vehicle === V2 && veh.body?.p_profile === DRV, '**바꾼 차량을 서버에 보냄**', JSON.stringify(veh?.body ?? {}))
   await ctx.close()
 }
 
@@ -314,10 +314,13 @@ for (const who of [
   //  ⚠ 이건 잃은 것이 있는 맞바꿈입니다. 대타로 나간 날 차량이 실제와
   //    다르게 남습니다. 없앤 것이 맞는지는 대표님이 정하실 일이고, 여기서는
   //    **정말로 없어졌는지**만 지킵니다 — 슬그머니 되살아나지 않게.
+  //  ⚠ 0126 — 되살렸습니다. Pilot 에서 담당 차량 불일치가 수거 저장을 통째로
+  //    막았습니다. 담당 차량은 기본값이고, 오늘 탄 차로 바꿀 수 있어야 합니다.
+  //    (자세한 시나리오는 check_vehicle_pick)
   const p2 = await open(ctx, '/collection', me)
-  ok((await p2.locator('[data-vehicle-other]').count()) === 0,
-    '현장 화면에는 「오늘은 다른 차로 갔어요」가 없음 (0067)')
-  ok(!/배차 차량/.test(flat(await p2.textContent('body'))), '차량 고르는 칸이 아예 없음')
+  ok((await p2.locator('[data-vehicle-other]').count()) === 1,
+    '현장 화면에 「오늘은 다른 차로 갔어요」가 있음 (0126 — 기본값이지 제약이 아님)')
+  ok(!/배차 차량/.test(flat(await p2.textContent('body'))), '누르기 전에는 고르는 칸이 펼쳐져 있지 않음')
   await ctx.close()
 }
 
@@ -331,18 +334,25 @@ for (const who of [
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   wire(ctx, { me })
   const p = await open(ctx, '/collection', me)
-  ok((await p.locator('[data-vehicle-auto]').count()) === 0, '보여 줄 차량이 없으니 차량 줄도 없음')
+  //  ⚠ 0126 — 안 묶인 계정은 더 이상 막지 않습니다. 이 구분의 운행 중 차량을
+  //    골라서 저장합니다. 고르기 전까지만 잠깁니다.
+  ok((await p.locator('[data-vehicle-auto]').count()) === 0, '보여 줄 기본 차량이 없으니 한 줄 표시는 없음')
   const msg = flat(await p.locator('[data-vehicle-unset]').textContent().catch(() => ''))
-  ok(/담당 차량이 지정되지 않았습니다\. 사무실에 문의해 주세요\./.test(msg),
-    '**무엇을 해야 하는지 그대로 말해 줌**', msg.slice(0, 60))
-  ok(!/배차 차량/.test(flat(await p.textContent('body'))), '아무 차나 고르게 하지 않음')
+  ok(/담당 차량이 지정되지 않았습니다\. 오늘 탄 차량을 골라 주세요/.test(msg),
+    '**무엇을 해야 하는지 그대로 말해 줌** (고르면 저장됨)', msg.slice(0, 60))
+  ok((await p.locator('[data-vehicle-select]').count()) === 1, '차량 고르는 칸이 있음')
+  const opts = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+  ok(opts.length === 1 && opts[0] === V1, '고를 수 있는 차는 이 구분(의료폐기물)의 운행 중 차량뿐', opts.join(','))
 
-  //  값을 다 채워도 저장이 잠겨 있어야 합니다 — 눌러 봐야 서버가 거절합니다.
+  //  값을 다 채워도 차를 고르기 전에는 잠겨 있어야 합니다 — 눌러 봐야 서버가 거절합니다.
   await p.selectOption('select', { index: 1 }).catch(() => {})
   await p.fill('input[inputmode="numeric"][placeholder="예: 320"]', '120').catch(() => {})
   await p.waitForTimeout(400)
   const disabled = await p.locator('[data-tour="collect-save"]').isDisabled()
-  ok(disabled, '**저장 단추가 잠겨 있음** (거절당하는 화면을 안 보여 줌)')
+  ok(disabled, '차를 고르기 전에는 저장 단추가 잠겨 있음')
+  await p.selectOption('[data-vehicle-select]', V1)
+  await p.waitForTimeout(400)
+  ok(!(await p.locator('[data-tour="collect-save"]').isDisabled()), '**차를 고르면 저장 단추가 열림** (0126)')
   await ctx.close()
 }
 

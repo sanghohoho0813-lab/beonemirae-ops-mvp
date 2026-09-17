@@ -1263,11 +1263,18 @@ export async function deleteStaffInvite(email: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-/** 계정에 차량을 묶습니다 (null 이면 해제) */
+/** 계정에 차량을 묶습니다 (null 이면 해제)
+ *
+ *  ⚠ 0126 — 인자 이름은 **서버 함수와 똑같아야** 합니다. 0056 의
+ *    `set_profile_vehicle(p_profile uuid, p_vehicle uuid)` 인데 여기서
+ *    `p_profile_id`/`p_vehicle_id` 로 보내고 있었습니다. PostgREST 는 인자
+ *    이름으로 함수를 찾으므로 실제 DB 에서는 「함수를 찾을 수 없다」(PGRST202)
+ *    로 거절돼, 사용자 관리에서 담당 차량을 바꿔도 **저장되지 않았습니다.**
+ *    시늉 서버(테스트)는 이름을 안 보므로 드러나지 않았습니다. */
 export async function setProfileVehicle(profileId: string, vehicleId: string | null): Promise<void> {
   const sb = need()
   const { error } = await sb.rpc('set_profile_vehicle', {
-    p_profile_id: profileId, p_vehicle_id: vehicleId,
+    p_profile: profileId, p_vehicle: vehicleId,
   })
   if (error) throw new Error(error.message)
 }

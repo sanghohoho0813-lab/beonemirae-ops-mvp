@@ -265,9 +265,9 @@ export function CollectionInput() {
   //   ⚠ 사무실·관리자 화면은 그대로 고릅니다. 사무실은 여러 차를 대신
   //     입력하는 자리라, 고르는 칸을 없애면 일이 안 됩니다.
   const autoVehicle = role === 'field' && configured
-  //  묶인 차가 없으면 저장 직전에 막습니다 (아래 canSubmit·submit).
-  const noVehicleForField = autoVehicle && !myVehicle
-  const vehicleHidden = !!boundVehicle && !showVehiclePick
+  //  ⚠ 사무실·관리자만 — 현장은 아래 0126 기본값 계산이 담당합니다. 둘이 같이
+  //    돌면 서로 값을 덮어 씁니다.
+  const vehicleHidden = !autoVehicle && !!boundVehicle && !showVehiclePick
 
   useEffect(() => {
     if (!vehicleHidden || !boundVehicle) return
@@ -276,17 +276,43 @@ export function CollectionInput() {
     if (mine && driverName !== mine) setDriverName(mine)
   }, [vehicleHidden, boundVehicle, vehicleId, driverName, profile?.name])
 
-  //  현장 계정 — 고르는 칸이 없으므로 여기서 값을 채웁니다.
-  //  ⚠ 구분이 안 맞는 차(의료폐기물 차인데 기저귀 수거)는 서버가 저장을
-  //    막습니다. 그때는 채우지 않고 비워 둬서, 아래 안내가 뜨게 합니다.
+  //  ── 현장의 차량은 「기본값」이지 「제약」이 아닙니다 (0126) ────────────────
+  //
+  //   0067 에서는 계정에 묶인 차만 쓰고, 안 묶였거나 구분이 다르면 저장을
+  //   **막았습니다.** 실제 Pilot 에서 이것이 수거 저장 자체를 막았습니다 —
+  //   담당 차량이 비어 있거나 오늘 다른 차로 나간 기사님은 아무것도 적을 수
+  //   없었습니다. 서버(complete_collection)는 계정과 차량의 묶임을 보지
+  //   않습니다 — 차량의 **구분**만 봅니다. 그래서 막은 것은 화면뿐이었습니다.
+  //
+  //   이제 기본값을 이렇게 고릅니다: ① 일정에 배차된 차량 → ② 계정의 담당
+  //   차량 → ③ 없음. 어느 경우든 기사님이 **오늘 탄 차로 바꿀 수 있고**,
+  //   고를 수 있는 차는 이 구분의 운행 중 차량뿐입니다 (서버 검증 그대로).
+  //   기사 이름은 여전히 **로그인한 본인**입니다.
+  //
+  //   `fieldPicked` 는 기사님이 직접 고른 차입니다. null 이면 기본값을 씁니다.
+  //   일정을 새로 고르면 지웁니다 — 일정의 배차가 다시 기본값이 됩니다.
+  const [fieldPicked, setFieldPicked] = useState<string | null>(null)
+  const scheduleVehicle = useMemo(() => {
+    const s = scheduleId ? data.schedules.find((x) => x.id === scheduleId) : null
+    if (!s?.vehicleId) return null
+    return data.vehicles.find((v) => v.id === s.vehicleId && v.wasteType === wasteType) ?? null
+  }, [scheduleId, data.schedules, data.vehicles, wasteType])
+  const fieldDefault = scheduleVehicle ?? boundVehicle
+  //  직접 고른 차가 이 구분에 없으면(구분을 바꿨을 때) 기본값으로 돌아갑니다.
+  const fieldChosen = fieldPicked && vehicles.some((v) => v.id === fieldPicked) ? fieldPicked : null
+  const fieldVehicleId = fieldChosen ?? fieldDefault?.id ?? ''
+  const fieldVehicle = fieldVehicleId ? (data.vehicles.find((v) => v.id === fieldVehicleId) ?? null) : null
+  //  기본값이 없어(안 묶임·구분 불일치) 기사님이 골라야 하는 상태
+  const fieldNeedsPick = autoVehicle && !fieldDefault
+  //  고르는 칸을 보여 주는 상태 — 기본값이 없거나, 「다른 차로 갔어요」를 눌렀거나
+  const fieldPickOpen = autoVehicle && (fieldNeedsPick || showVehiclePick)
+
   useEffect(() => {
     if (!autoVehicle) return
-    const use = myVehicle && myVehicle.wasteType === wasteType ? myVehicle : null
-    const nextId = use ? use.id : ''
-    if (vehicleId !== nextId) setVehicleId(nextId)
+    if (vehicleId !== fieldVehicleId) setVehicleId(fieldVehicleId)
     const mine = (profile?.name ?? '').trim()
     if (mine && driverName !== mine) setDriverName(mine)
-  }, [autoVehicle, myVehicle, wasteType, vehicleId, driverName, profile?.name])
+  }, [autoVehicle, fieldVehicleId, vehicleId, driverName, profile?.name])
 
   // 일정 선택 시 거래처/폐기물/차량/기사/시간/수거량 자동 채움
   function applySchedule(id: string) {
@@ -298,7 +324,9 @@ export function CollectionInput() {
     if (!s) return
     setClientId(s.clientId)
     setWasteType(s.wasteType)
-    //  ⚠ 현장 계정은 차량을 **고르지 않습니다** — 위 자동 채움(0067)이 담당합니다.
+    //  ⚠ 현장 계정은 여기서 차량을 **직접 넣지 않습니다** — 위 기본값 계산(0126)이
+    //    일정의 배차 차량을 먼저 봅니다. 직접 고른 차는 지웁니다: 새로 고른
+    //    일정의 배차가 기본값이 되어야 합니다.
     //
     //    여기서 일정에 적힌 차량으로 덮으면 안 됩니다. 예정 일정은 대개
     //    차량이 비어 있어서(null) 빈 값으로 덮이는데, 자동 채움은 이미
@@ -310,6 +338,8 @@ export function CollectionInput() {
     //    ⚠ 이 길은 「오늘 일정 → 병원 줄 → 수거 입력」입니다. 자료가 이미
     //      들어와 있을 때만 이렇게 되므로, 주소창에 직접 쳐서 들어가는
     //      시험에서는 드러나지 않습니다. 기사님의 실제 길이 그 길입니다.
+    setFieldPicked(null)
+    setShowVehiclePick(false)
     if (!autoVehicle) {
       setVehicleId(s.vehicleId)
       const v = data.vehicles.find((x) => x.id === s.vehicleId)
@@ -543,12 +573,13 @@ export function CollectionInput() {
   }, [setRetryHandler])
 
   async function submit() {
-    //  ── 차량이 안 묶인 계정은 여기서 멈춥니다 (0067) ──────────────────────
-    //   현장에는 차량 고르는 칸이 없으므로, 안 막으면 서버가 거절하는
-    //   화면을 기사님이 보게 됩니다. 단추도 잠기지만 여기서도 한 번 더
-    //   봅니다 — 단추만 믿으면 나중에 조건이 바뀌었을 때 새어 나갑니다.
-    if (noVehicleForField) {
-      setErrors(['담당 차량이 지정되지 않았습니다. 사무실에 문의해 주세요.'])
+    //  ── 차량이 비어 있으면 여기서 멈춥니다 ─────────────────────────────────
+    //   0067 에는 「담당 차량이 안 묶인 계정」을 막는 줄이 있었습니다. 0126 부터
+    //   현장도 차를 고를 수 있으므로 묶임은 더 이상 조건이 아닙니다. 서버가
+    //   보는 것(차량이 있는가 · 구분이 맞는가)만 여기서도 한 번 더 봅니다 —
+    //   단추만 믿으면 나중에 조건이 바뀌었을 때 새어 나갑니다.
+    if (!vehicleId) {
+      setErrors(['차량을 골라 주세요. 오늘 탄 차량을 아래 「차량」 칸에서 고르면 저장할 수 있습니다.'])
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
@@ -614,12 +645,15 @@ export function CollectionInput() {
     setIsAdditional(false)
     setHandover('수거 완료')
     setMemo('')
+    //  다음 건은 다시 기본 차량부터 — 대차는 그날 그 건에만 남습니다.
+    setFieldPicked(null)
+    setShowVehiclePick(false)
     setTime(nowTime())
   }
 
-  //  ⚠ 현장은 차량을 고르는 칸이 없으므로, 차량이 안 묶여 있으면 여기서
-  //    막습니다. 막지 않으면 서버가 거절하는 화면을 기사님이 보게 됩니다.
-  const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock && !noVehicleForField
+  //  ⚠ 차량이 비어 있으면 잠급니다 — 서버가 차량 없이는 받지 않습니다.
+  //    계정에 차량이 묶였는지는 더 이상 조건이 아닙니다 (0126).
+  const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock
 
   //  ⚠ 매 렌더마다 최신 submit 을 넣어 둡니다 — 위 setRetryHandler 참고
   submitRef.current = submit
@@ -1461,29 +1495,92 @@ export function CollectionInput() {
           //  ── 현장: 고르는 칸이 없습니다 ────────────────────────────────────
           //   무엇으로 저장되는지는 그대로 보여 줍니다. 안 보여 주면
           //   「내 차로 들어갔나」를 알 수 없습니다.
-          <section data-auto-vehicle className="card p-4 sm:p-5">
-            {noVehicleForField ? (
-              <div className="flex items-start gap-2.5">
-                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
-                <p data-vehicle-unset className="t-body min-w-0 break-keep font-bold text-amber-800">
-                  담당 차량이 지정되지 않았습니다. 사무실에 문의해 주세요.
-                </p>
-              </div>
-            ) : myVehicle && myVehicle.wasteType !== wasteType ? (
-              //  묶인 차가 이번 구분과 다른 경우 — 서버가 저장을 막으므로
-              //  「왜 저장이 안 되는지」를 여기서 미리 말해 줍니다.
-              <div className="flex items-start gap-2.5">
-                <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
-                <p data-vehicle-mismatch className="t-body min-w-0 break-keep font-bold text-amber-800">
-                  담당 차량 {myVehicle.name}는 {myVehicle.wasteType} 차량이라 {wasteType} 수거를 저장할 수
-                  없습니다. 사무실에 문의해 주세요.
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2.5">
+          //  0126 — 담당 차량은 **기본값**입니다. 기사님은 오늘 탄 차로 바꿀 수
+          //  있고, 담당 차량이 없어도 고르면 저장됩니다. 고를 수 있는 차는 이
+          //  구분의 운행 중 차량뿐입니다 (서버가 구분을 다시 확인합니다).
+          <section
+            data-auto-vehicle
+            data-vehicle-source={scheduleVehicle && fieldVehicleId === scheduleVehicle.id ? 'schedule' : boundVehicle && fieldVehicleId === boundVehicle.id ? 'profile' : fieldVehicleId ? 'picked' : 'none'}
+            className="card p-4 sm:p-5"
+          >
+            {!fieldPickOpen && fieldVehicle ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <Truck size={19} strokeWidth={2.3} className="shrink-0 text-navy-400" />
                 <p data-vehicle-auto className="t-body min-w-0 break-keep text-navy-600">
-                  <b className="text-navy-900">{myVehicle?.name}</b> · {profile?.name} 기사님으로 저장됩니다
+                  <b className="text-navy-900">{fieldVehicle.name}</b> · {profile?.name} 기사님으로 저장됩니다
+                  {scheduleVehicle && fieldVehicleId === scheduleVehicle.id && (
+                    <span className="ml-1.5 text-[0.92rem] font-bold text-navy-400">(일정 배차)</span>
+                  )}
+                </p>
+                {/*  누를 자리는 44px — 장갑 낀 손으로 눌러야 하는 자리입니다. */}
+                <button
+                  type="button"
+                  data-vehicle-other
+                  onClick={() => setShowVehiclePick(true)}
+                  className="t-muted -my-2.5 ml-auto shrink-0 rounded-xl px-3 py-2.5 font-bold text-navy-400 underline transition hover:bg-navy-50 hover:text-navy-700"
+                >
+                  오늘은 다른 차로 갔어요
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {fieldNeedsPick && myVehicle && myVehicle.wasteType !== wasteType ? (
+                  //  묶인 차가 이번 구분과 다른 경우 — 서버가 그 차로는 막으므로
+                  //  이번 건만 이 구분의 차를 고르게 합니다.
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
+                    <p data-vehicle-mismatch className="t-body min-w-0 break-keep font-bold text-amber-800">
+                      담당 차량 {myVehicle.name}는 {myVehicle.wasteType} 차량입니다. 이번 {wasteType} 수거는 아래에서
+                      오늘 탄 차량을 골라 주세요.
+                    </p>
+                  </div>
+                ) : fieldNeedsPick ? (
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
+                    <p data-vehicle-unset className="t-body min-w-0 break-keep font-bold text-amber-800">
+                      담당 차량이 지정되지 않았습니다. 오늘 탄 차량을 골라 주세요 — 고르면 저장할 수 있습니다.
+                    </p>
+                  </div>
+                ) : null}
+                {sync.ready && vehicles.length === 0 && (
+                  <p data-vehicle-none className="t-body break-keep font-bold text-amber-800">
+                    운행 중인 {wasteType} 차량이 없습니다. 사무실에 문의해 주세요.
+                  </p>
+                )}
+                <div>
+                  <label className="field-label" htmlFor="field-vehicle">차량 *</label>
+                  <select
+                    id="field-vehicle"
+                    data-vehicle-select
+                    className="field-input"
+                    value={fieldVehicleId}
+                    onChange={(e) => setFieldPicked(e.target.value || null)}
+                  >
+                    <option value="">차량 선택</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                        {boundVehicle && v.id === boundVehicle.id ? ' (담당 차량)' : ''}
+                        {scheduleVehicle && v.id === scheduleVehicle.id ? ' (일정 배차)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="t-muted break-keep text-navy-500">
+                  {profile?.name} 기사님 이름으로 저장됩니다.
+                  {fieldDefault && showVehiclePick && (
+                    <button
+                      type="button"
+                      data-vehicle-back
+                      onClick={() => {
+                        setShowVehiclePick(false)
+                        setFieldPicked(null)
+                      }}
+                      className="ml-2 min-h-[2.75rem] rounded-xl px-2 font-bold text-navy-400 underline hover:text-navy-700"
+                    >
+                      {fieldDefault.name}로 되돌리기
+                    </button>
+                  )}
                 </p>
               </div>
             )}
@@ -1671,7 +1768,7 @@ export function CollectionInput() {
              차량까지 함께 말하는 위쪽을 남깁니다.
              ⚠ 차량이 안 묶여 있어 위 줄이 안 뜨는 경우에는 누구 이름으로
                남는지 알 길이 없어지므로, 그때는 이 줄을 그대로 띄웁니다. */}
-        {profile?.name && !boundVehicle && (
+        {profile?.name && !boundVehicle && !autoVehicle && (
           <p data-collect-actor className="t-muted text-center">
             {profile.name} 이름으로 저장됩니다
           </p>
