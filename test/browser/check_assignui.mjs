@@ -311,8 +311,12 @@ for (const who of [
   ok(/김준기/.test(hint) && !/오대성/.test(hint),
     '**이름은 로그인한 본인** — 차량에 적힌 기본 기사가 아님', hint.slice(0, 60))
   //  고를 수 있는 차는 이 구분(의료폐기물)의 운행 중 차량뿐 — 9911호(기저귀)는 없습니다.
+  //  ⚠ 0129 — 구분으로 거르지 않습니다. 1톤은 그날그날 둘 다 싣기 때문입니다.
+  //    대신 구분이 다른 차는 이름 옆에 무슨 차인지 적습니다.
   const opts = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
-  ok(opts.length === 1 && opts[0] === V1, '의료폐기물 차량만 목록에 있음 (기저귀 차 없음)', opts.join(','))
+  ok(opts.length === 2 && opts.includes(V1) && opts.includes(V2), '운행 중인 차가 모두 보임 (0129)', opts.join(','))
+  const labels = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.textContent ?? ''))
+  ok(labels.some((t) => /9911호.*일회용기저귀차/.test(t)), '구분이 다른 차는 무슨 차인지 적혀 있음', labels.join(' / '))
 
   //  고르기 전에는 저장이 잠기고, 고르면 열립니다.
   await p.selectOption('select', { index: 1 }).catch(() => {})

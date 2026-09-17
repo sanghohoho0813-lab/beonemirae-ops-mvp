@@ -101,9 +101,15 @@ ok('⑤ 아래 줄 여백이 더 좁음', (size.quiet?.pad ?? 9) < (size.top?.pa
 ok('⑤ 아래 줄 글자가 더 작음', (size.quiet?.font ?? 99) < (size.top?.font ?? 0), JSON.stringify(size))
 ok('⑤ 아래 줄이 살짝 흐림 (가려지지는 않음)', (size.quiet?.opacity ?? 1) < 1 && (size.quiet?.opacity ?? 0) >= 0.6, JSON.stringify(size))
 
-// ⑥ 아래로 내려가도 손댈 수 있다 — 역할 고르는 칸이 그대로 있음
-const canEdit = await p.locator('[data-user-row="u-quit"] select').count()
+// ⑥ 아래로 내려가도 손댈 수 있다 — 역할·사용여부 단추가 그대로 있음
+//   ⚠ 0129 — 예전에는 그 줄의 `select`(담당 차량)로 「손댈 수 있는가」를 쟀습니다.
+//     0128 에서 차량 고르는 칸을 없앴으므로, 이제 **역할 단추**로 봅니다 —
+//     원래 지키려던 것은 「중지된 계정도 눌러서 바꿀 수 있는가」입니다.
+const canEdit = await p.locator('[data-user-row="u-quit"] button').count()
+const roleBtns = await p.locator('[data-user-row="u-quit"] button').evaluateAll((els) =>
+  els.map((e) => (e.textContent ?? '').trim()))
 ok('⑥ 중지된 계정도 역할·상태를 그대로 바꿀 수 있음', canEdit >= 1, `${canEdit}개`)
+ok('⑥ 역할 단추가 실제로 있음', roleBtns.some((t) => /현장|사무실|관리자|대표/.test(t)), roleBtns.join(','))
 
 // ⑦ 가로 밀림 0
 const of = await p.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))

@@ -111,6 +111,16 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
   ok(shown1 === 13, '③ 펼치면 Material Master 13종이 전부 보임 (하드코딩 없음)', `${shown1}줄`)
 
   // ── ④ 3종 입력 — + 두 번 · + 한 번 · 직접 숫자 ─────────────────────────────
+  //  ⚠ 0129 — 현장은 **그날 탄 차를 고릅니다** (계정에 차를 묶지 않습니다).
+  //    고르기 전에는 저장이 잠겨 있으므로, 기사님이 하는 그대로 먼저 고릅니다.
+  {
+    const sel = p.locator('[data-vehicle-select]')
+    if (await sel.count()) {
+      const v = await sel.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+      if (v[0]) await sel.selectOption(v[0])
+      await p.waitForTimeout(300)
+    }
+  }
   await p.fill('#collection-amount', '118')
   await U.getByRole('button', { name: '63L 박스 사용량 더하기' }).click()
   await U.getByRole('button', { name: '63L 박스 사용량 더하기' }).click()

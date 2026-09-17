@@ -65,6 +65,16 @@ async function run(mode) {
     a?.click()
   })
   await p.waitForTimeout(3200)
+  //  ⚠ 0129 — 현장은 **그날 탄 차를 고릅니다** (계정에 차를 묶지 않습니다).
+  //    고르기 전에는 저장이 잠겨 있으므로, 기사님이 하는 그대로 먼저 고릅니다.
+  {
+    const sel = p.locator('[data-vehicle-select]')
+    if (await sel.count()) {
+      const v = await sel.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+      if (v[0]) await sel.selectOption(v[0])
+      await p.waitForTimeout(300)
+    }
+  }
   await p.fill('#collection-amount', '147')
   await p.waitForTimeout(700)
 

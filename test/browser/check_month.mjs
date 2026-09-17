@@ -172,6 +172,16 @@ for (const W of [673, 768]) {
     '**용기·자재는 그 아래로** (매번 쓰지 않는 칸)')
 
   //  채우면 저장이 아래에 붙습니다
+  //  ⚠ 0129 — 현장은 **그날 탄 차를 고릅니다** (계정에 차를 묶지 않습니다).
+  //    고르기 전에는 저장이 잠겨 있으므로, 기사님이 하는 그대로 먼저 고릅니다.
+  {
+    const sel = p.locator('[data-vehicle-select]')
+    if (await sel.count()) {
+      const v = await sel.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+      if (v[0]) await sel.selectOption(v[0])
+      await p.waitForTimeout(300)
+    }
+  }
   await p.fill('#collection-amount', '118')
   await p.waitForTimeout(600)
   const stuck = await p.evaluate(() => {
@@ -207,6 +217,16 @@ for (const W of [673, 768]) {
   await p.locator('[data-guide="guide-today-list"]').first().dispatchEvent('click')
   await p.waitForTimeout(2600)
   ok(new URL(p.url()).pathname === '/collection', '병원 줄을 누르면 수거 입력으로 감', p.url().slice(-30))
+  //  ⚠ 0129 — 현장은 **그날 탄 차를 고릅니다** (계정에 차를 묶지 않습니다).
+  //    고르기 전에는 저장이 잠겨 있으므로, 기사님이 하는 그대로 먼저 고릅니다.
+  {
+    const sel = p.locator('[data-vehicle-select]')
+    if (await sel.count()) {
+      const v = await sel.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+      if (v[0]) await sel.selectOption(v[0])
+      await p.waitForTimeout(300)
+    }
+  }
   await p.fill('#collection-amount', '118')
   await p.waitForTimeout(800)
   const dis = await p.evaluate(() => document.querySelector('[data-collect-save]')?.disabled)

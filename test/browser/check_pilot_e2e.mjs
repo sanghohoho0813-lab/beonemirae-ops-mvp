@@ -173,8 +173,8 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
       .filter((e) => [...e.querySelectorAll('input,select,textarea')].some(vis))
       .map((e) => e.getAttribute('data-fold'))
     return {
-      selects: [...document.querySelectorAll('main select')].filter(vis).length,
-      autoVehicle: /으로 저장됩니다/.test(txt),
+      picker: [...document.querySelectorAll('[data-vehicle-select]')].filter(vis).length,
+      autoVehicle: /이름으로 저장됩니다/.test(txt),
       folds: [...document.querySelectorAll('[data-fold]')].length,
       openFolds,
       tel: [...document.querySelectorAll('a[href^="tel:"]')].filter(vis).length,
@@ -182,14 +182,25 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
       overflowX: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
     }
   })
-  ok(form.selects === 0, '⑤ **기사·차량 고르는 칸이 없음** (계정 기본값 자동)', `보이는 select ${form.selects}개`)
-  ok(form.autoVehicle, '⑤ 어느 차·누구로 저장되는지 적혀 있음')
+  //  ⚠ 0129 — 계정에 차를 묶지 않습니다. 그날 탄 차를 고릅니다.
+  ok(form.picker === 1, '⑤ **오늘 운행 차량 고르는 칸이 하나** (0129)', `${form.picker}개`)
+  ok(form.autoVehicle, '⑤ 누구 이름으로 저장되는지 적혀 있음')
   ok(form.folds > 0 && form.openFolds.length === 0, '⑤ **자재·용기가 기본 접힘**', `접힘 ${form.folds}개 · 펼쳐진 것 ${form.openFolds.length}개`)
   ok(form.tel >= 1, '⑤ 병원 전화가 눌러지는 링크')
   ok(form.addr, '⑤ 병원 주소·연락 칸이 있음')
   ok(form.overflowX === 0, '⑤ 가로로 안 밀림', `${form.overflowX}px`)
 
   //  저장 연타 — 한 번만 가야 합니다
+  //  ⚠ 0129 — 현장은 **그날 탄 차를 고릅니다** (계정에 차를 묶지 않습니다).
+  //    고르기 전에는 저장이 잠겨 있으므로, 기사님이 하는 그대로 먼저 고릅니다.
+  {
+    const sel = s.p.locator('[data-vehicle-select]')
+    if (await sel.count()) {
+      const v = await sel.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+      if (v[0]) await sel.selectOption(v[0])
+      await s.p.waitForTimeout(300)
+    }
+  }
   await s.p.fill('#collection-amount', '118')
   await s.p.waitForTimeout(800)
   const taps = await s.p.evaluate(async () => {

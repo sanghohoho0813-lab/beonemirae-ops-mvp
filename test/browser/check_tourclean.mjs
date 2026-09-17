@@ -73,7 +73,11 @@ async function afterClose(p, label, base) {
   ok(`${label} — pointer-events 잠금 남지 않음`, r.noPointer === 0)
   ok(`${label} — 스크롤 잠금 남지 않음`, r.scrollLock === 0)
   ok(`${label} — 포커스가 화면 안에 있음`, r.focusOk)
-  ok(`${label} — inert/aria-hidden 남지 않음`, r.inert === 0, `${r.inert}개`)
+  //  ⚠ TEST HARNESS DEFECT (0129 확인) — 이 줄은 **투어를 켜기도 전에** 이미
+  //    1개를 셌습니다. 세던 것은 화면 안의 장식용 `<span aria-hidden="true">`
+  //    (진행 막대 자리)로, 투어가 남긴 것이 아닙니다. 위 covers·blur 와 같은
+  //    방식으로 **켜기 전 값과 견줍니다** — 끝낸 뒤에 그보다 늘어 있으면 남은 것.
+  ok(`${label} — inert/aria-hidden 남지 않음`, r.inert <= base.inert, `${r.inert}개 (켜기 전 ${base.inert})`)
   //  실제로 눌리는가 — 왼쪽 메뉴(폰은 아래 탭)의 다른 화면으로 가 봅니다
   //  PC 는 왼쪽 메뉴, 폰은 아래 탭 — **보이는** 메뉴 링크 중 지금 화면이 아닌 첫 것
   const before = await p.evaluate(() => location.pathname)

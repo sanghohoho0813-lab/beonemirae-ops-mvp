@@ -161,21 +161,31 @@ const auto = await s.p.evaluate(() => {
   const vis = (e) => { const r = e.getBoundingClientRect(); const st = getComputedStyle(e); return r.width > 2 && r.height > 2 && st.display !== 'none' }
   const txt = document.querySelector('main')?.innerText ?? ''
   return {
-    selects: [...document.querySelectorAll('main select')].filter(vis).length,
-    line: (txt.match(/[^\n]*으로 저장됩니다[^\n]*/) ?? [''])[0].trim(),
+    picker: [...document.querySelectorAll('[data-vehicle-select]')].filter(vis).length,
+    hint: (txt.match(/[^\n]*이름으로 저장됩니다[^\n]*/) ?? [''])[0].trim(),
   }
 })
-ok(auto.selects === 0, '7. **기사·차량을 고르는 칸이 없음**', `보이는 select ${auto.selects}개`)
-ok(/호차/.test(auto.line) && /기사님/.test(auto.line), '7. **어느 차·누구로 저장되는지 적혀 있음**', auto.line)
+//  ⚠ 0129 — 「고르는 칸이 없다」였던 자리입니다. 이사님 지시로 **그날 탄 차를
+//    고르는** 방식이 됐습니다 (계정에 차를 묶지 않습니다). 여기서 지킬 것은
+//    「고를 칸이 하나 있고, 누구 이름으로 저장되는지 적혀 있는가」입니다.
+ok(auto.picker === 1, '7. **오늘 운행 차량을 고르는 칸이 하나 있음** (0129)', `${auto.picker}개`)
+ok(/기사님/.test(auto.hint), '7. **누구 이름으로 저장되는지 적혀 있음**', auto.hint)
 
 // ══ 8. 저장 완료 ═══════════════════════════════════════════════════════════
+{
+  const sel = s.p.locator('[data-vehicle-select]')
+  const v = await sel.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
+  ok(v.length >= 1, '8. 고를 수 있는 차가 있음', v.join(','))
+  await sel.selectOption(v[0])
+  await s.p.waitForTimeout(300)
+}
 await s.p.fill('#collection-amount', '133')
 await s.p.waitForTimeout(800)
 await s.p.locator('[data-collect-save]').dispatchEvent('click')
 await s.p.waitForTimeout(2800)
 ok(saved.length === 1, '8. **저장이 서버로 감**', `${saved.length}건`)
 ok(Number(saved[0]?.p?.actualAmount) === 133, '8. 적은 무게가 그대로', String(saved[0]?.p?.actualAmount))
-ok(!!saved[0]?.p?.vehicleId, '8. **차량이 계정 기본값으로 함께 감**', String(saved[0]?.p?.vehicleId))
+ok(!!saved[0]?.p?.vehicleId, '8. **이번에 고른 차량이 함께 감**', String(saved[0]?.p?.vehicleId))
 ok((saved[0]?.p?.driverName ?? '') === F.profile.name || (saved[0]?.p?.driverName ?? '').length > 0,
   '8. 담당자도 로그인한 본인으로 감', String(saved[0]?.p?.driverName))
 const doneTxt = await s.p.evaluate(() => (document.querySelector('main')?.innerText ?? '').replace(/\s+/g, ' '))
