@@ -233,12 +233,20 @@ console.log('\n── D. 다른 구분 차량 ──')
   ok('D 기저귀 차량(5호차)은 목록에 없음', !opts.includes(VD), opts.join(','))
   ok('D 고르기 전에는 저장 잠김', await p.locator('[data-tour="collect-save"]').isDisabled())
   await ctx.close()
-  //  서버 검증은 그대로입니다 — 코드로 확인 (파일이 바뀌지 않았는지)
-  const sql = readFileSync(new URL('../../supabase/migrations/0063_field_money_lock.sql', import.meta.url), 'utf8')
-  ok('D 서버 complete_collection 의 구분 검증이 그대로 있음',
-    /if v_vehicle\.waste_type <> \(p->>'wasteType'\) then/.test(sql) && /배차 차량을 선택해 주세요/.test(sql))
-  ok('D 서버는 계정↔차량 묶임을 보지 않음 (profiles.vehicle_id 참조 없음)',
-    !/profiles\.vehicle_id|p_profile_vehicle|v_profile\.vehicle_id/.test(sql.split('create or replace function public.complete_collection')[1]?.split('$$;')[0] ?? 'x'))
+  //  서버 쪽은 코드로 확인합니다 — **마지막 판(PROPOSAL_0070)** 의 complete_collection.
+  //  ⚠ 0063 에는 구분 일치 검사가 있었지만 0070 에서 대표님 지시로 뺐습니다.
+  //    그래서 서버는 「차량이 있는가」만 보고, 구분을 지키는 자리는 위 목록뿐입니다.
+  //    이 검사는 (1) 차량 필수 검사가 그대로인지 (2) 계정↔차량 묶임 검사가
+  //    서버에 없는지(=화면이 막던 것이었음)를 봅니다.
+  const sql = readFileSync(new URL('../../supabase/proposals/PROPOSAL_0070_ops_setup.sql', import.meta.url), 'utf8')
+  //  0070 은 머리를 대문자로, 몸통을 $function$ 로 감쌉니다 — 대소문자 없이 찾습니다.
+  const from = sql.search(/create or replace function public\.complete_collection/i)
+  const rest = from >= 0 ? sql.slice(from) : ''
+  const end = rest.search(/\n\$(function)?\$;?\s*\n/)
+  const fn = end > 0 ? rest.slice(0, end) : ''
+  ok('D 서버(0070 판) complete_collection 은 차량 필수 검사를 그대로 둠', /배차 차량을 선택해 주세요/.test(fn))
+  ok('D 서버(0070 판)는 구분 일치를 보지 않음 — 화면 목록이 유일한 구분 방어선', !/waste_type <> \(p->>'wasteType'\)/.test(fn) && /차량 구분으로 막지 않습니다/.test(fn))
+  ok('D 서버는 계정↔차량 묶임을 보지 않음 (profiles.vehicle_id 참조 없음)', fn.length > 0 && !/profiles\.vehicle_id|v_actor\.vehicle_id|v_profile\.vehicle_id/.test(fn))
 }
 
 // ── E. 사용자 관리에서 A→B → 서버 인자 이름 그대로 · 새로고침해도 B ─────────

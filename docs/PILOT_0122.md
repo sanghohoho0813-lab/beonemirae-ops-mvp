@@ -37,7 +37,7 @@
 | 세는 법 | `pilotClientsOf` — 시연용(`isDemoGenerated`)은 켜져 있어도 세지 않음 |
 | 현장 | 별도 Pilot 모드 없음. 오늘 일정 줄 · 거래처 목록 · 거래처 상세에 **PILOT 배지** 하나 |
 | PHASE | 1 월정액 5~10곳(이번 주) · 2 단순 거래처 · 3 kg 단가 · 4 박스/자재/복합 — `PILOT_PLAN.md` · `pilotClients.PILOT_PHASES` |
-| 시작일 | **`experiment_settings.pilot_start_date`** — 0123 에서 칸 1개 추가(판 122 → 123). 기존 `start_date`(실증 시작일, 2026-08-29)는 기존 성과 화면이 「도입 후 / 연습 입력」을 가르는 데 쓰고 있어 **읽지도 쓰지도 않습니다.** 이번 Pilot 시작일 = 2026-09-16 |
+| 시작일 | **`experiment_settings.pilot_start_date`** — 0123 에서 칸 1개 추가(판 122 → 123). 기존 `start_date`(실증 시작일, 2026-08-29)는 기존 성과 화면이 「도입 후 / 연습 입력」을 가르는 데 쓰고 있어 **읽지도 쓰지도 않습니다.** 이번 Pilot 시작일 = 2026-09-17 (0127 Clean Start 에서 9/16 → 9/17 로 옮김) |
 
 ## D. Evidence
 
@@ -110,7 +110,7 @@ Dashboard · Excel Import · 일정/배차/차량 로직 · 수거이력 화면 
 
 ## H. 권고
 
-1. **SQL 2회 실행** `PROPOSAL_0122_pilot_clients.sql`(Pilot 거래처 칸) → `PROPOSAL_0123_pilot_start.sql`(Pilot 시작일 칸 + 2026-09-16) → 거래처 관리에서 월정액 5~10곳 체크. 이것들이 없으면 Pilot 요약은 「칸 없음 / 0곳 / 시작일 미설정」으로 정직하게 남고, 기존 성과 화면은 어느 경우에도 영향받지 않습니다.
+1. **SQL 2회 실행** `PROPOSAL_0122_pilot_clients.sql`(Pilot 거래처 칸) → `PROPOSAL_0123_pilot_start.sql`(Pilot 시작일 칸 + 2026-09-17) → 거래처 관리에서 월정액 5~10곳 체크. 이것들이 없으면 Pilot 요약은 「칸 없음 / 0곳 / 시작일 미설정」으로 정직하게 남고, 기존 성과 화면은 어느 경우에도 영향받지 않습니다.
 2. 첫 이틀은 기사님이 「이번 수거 자재 사용량」을 **한 병원에서만** 적어 보고, 거래처 상세에 「사용 자재 - …」로 보이는지 대표·이사가 확인하는 것을 권합니다.
 3. BASELINE UNKNOWN 5항목은 비워 두셔도 됩니다. 넣으실 때는 실측만 — 시연 예시값은 KNOWN 으로 치지 않습니다.
 4. 자재 추천·예측·비용·급증·재주문은 `RECOMMENDATIONS.md` Future 에만 있습니다. 규격별 기록이 몇 주 쌓인 뒤에 판단해 주세요.

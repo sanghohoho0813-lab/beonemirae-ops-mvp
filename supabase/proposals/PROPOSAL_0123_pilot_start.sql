@@ -10,7 +10,7 @@
 --   쓰고 있습니다. 그 날짜로 「도입 후 / 연습 입력」을 가르기 때문에, 이 값을
 --   옮기면 지금까지 쌓인 기록의 분류가 통째로 바뀝니다.
 --
---   이번 Pilot 은 9월 16일부터 셉니다. 그래서 **읽는 곳이 다른 칸**을 하나
+--   이번 Pilot 은 9월 17일부터 셉니다 (Clean Start 0127 — 처음 9/16 로 잡았다가 옮김). 그래서 **읽는 곳이 다른 칸**을 하나
 --   더합니다. 기존 start_date 는 이 SQL 이 **읽지도 쓰지도 않습니다.**
 --
 --   experiment_settings.pilot_start_date  date  (없으면 Pilot 집계는
@@ -44,12 +44,14 @@ alter table public.experiment_settings
 comment on column public.experiment_settings.pilot_start_date is
   '이번 Pilot 집계 시작일 (0123). 기존 start_date(실증 시작일, 성과 화면이 쓰는 값)와 별개이며 서로 덮어쓰지 않습니다.';
 
--- ── ② 이번 Pilot 시작일 — 2026-09-16 ──────────────────────────────────────
---   ⚠ 이미 값이 들어 있으면 덮어쓰지 않습니다. start_date 는 건드리지 않습니다.
+-- ── ② 이번 Pilot 시작일 — 2026-09-17 ──────────────────────────────────────
+--   start_date 는 건드리지 않습니다.
+--   ⚠ 처음 판(09-16)으로 이미 실행했다면 그 값만 09-17 로 옮깁니다. 다른 값을
+--     손으로 넣어 두셨다면 덮어쓰지 않습니다 (설정 화면에서 바꾸실 수 있습니다).
 update public.experiment_settings
-   set pilot_start_date = date '2026-09-16'
+   set pilot_start_date = date '2026-09-17'
  where id = 1
-   and pilot_start_date is null;
+   and (pilot_start_date is null or pilot_start_date = date '2026-09-16');
 
 -- ── ③ 판 번호 ─────────────────────────────────────────────────────────────
 create or replace function public.app_schema_version()

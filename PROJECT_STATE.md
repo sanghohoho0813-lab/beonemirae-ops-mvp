@@ -100,7 +100,7 @@
 | `src/pages/Performance.tsx` | 요약 탭 맨 위 관리자용 Pilot Summary 카드 1장 | TASK C |
 | `src/context/DataContext.tsx` | `setPilotClients(ids)` · `setPilotStart(date)` 노출 | TASK B · 0123 |
 | `src/pages/Settings.tsx` | 「Pilot 시작일 (이번 Pilot 집계 전용)」 칸 1개 — 기존 「실증 시작일」 칸은 그대로 | 0123 |
-| `src/pages/CollectionInput.tsx` (0126) | 현장의 차량은 **기본값**(① 일정 배차 → ② 담당 차량 → ③ 없음)이고, 「오늘은 다른 차로 갔어요」로 같은 구분의 운행 중 차량을 고를 수 있음. 담당 차량 미지정·구분 불일치로 **저장을 막던 화면 조건(`noVehicleForField`) 제거**. 서버 검증(차량 있음·구분 일치)은 그대로 | P0 — Pilot 에서 담당차량 불일치가 수거 저장을 막음 |
+| `src/pages/CollectionInput.tsx` (0126) | 현장의 차량은 **기본값**(① 일정 배차 → ② 담당 차량 → ③ 없음)이고, 「오늘은 다른 차로 갔어요」로 같은 구분의 운행 중 차량을 고를 수 있음. 담당 차량 미지정·구분 불일치로 **저장을 막던 화면 조건(`noVehicleForField`) 제거**. 서버 검증(차량 있음)은 그대로 — ⚠ 구분 일치 검사는 서버에 **없음**(0070 에서 대표님 지시로 제거), 화면 목록(같은 구분·운행 중만)이 유일한 구분 방어선 | P0 — Pilot 에서 담당차량 불일치가 수거 저장을 막음 |
 | `src/lib/repo.ts` `setProfileVehicle` (0126) | RPC 인자 이름을 서버 정의와 맞춤 `p_profile`/`p_vehicle` (전에는 `p_profile_id`/`p_vehicle_id` → 실제 DB 에서 PGRST202 로 거절돼 담당 차량 변경이 저장되지 않았음) | 사용자 관리 담당 차량 변경이 실제로 저장되게 |
 
 ## 4. PILOT ADD — 새로 만드는 것

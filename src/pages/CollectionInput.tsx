@@ -286,7 +286,11 @@ export function CollectionInput() {
   //
   //   이제 기본값을 이렇게 고릅니다: ① 일정에 배차된 차량 → ② 계정의 담당
   //   차량 → ③ 없음. 어느 경우든 기사님이 **오늘 탄 차로 바꿀 수 있고**,
-  //   고를 수 있는 차는 이 구분의 운행 중 차량뿐입니다 (서버 검증 그대로).
+  //   고를 수 있는 차는 이 구분의 운행 중 차량뿐입니다.
+  //   ⚠ 서버(complete_collection · 0070 판)는 「차량이 있는가」만 봅니다 —
+  //     구분 일치 검사는 0070 에서 대표님 지시로 뺐습니다. 그래서 구분을
+  //     지키는 자리는 **이 화면의 목록**뿐입니다. 여기서 아무 차나 보여 주면
+  //     기저귀 차로 의료폐기물이 그대로 저장됩니다.
   //   기사 이름은 여전히 **로그인한 본인**입니다.
   //
   //   `fieldPicked` 는 기사님이 직접 고른 차입니다. null 이면 기본값을 씁니다.
@@ -576,8 +580,8 @@ export function CollectionInput() {
     //  ── 차량이 비어 있으면 여기서 멈춥니다 ─────────────────────────────────
     //   0067 에는 「담당 차량이 안 묶인 계정」을 막는 줄이 있었습니다. 0126 부터
     //   현장도 차를 고를 수 있으므로 묶임은 더 이상 조건이 아닙니다. 서버가
-    //   보는 것(차량이 있는가 · 구분이 맞는가)만 여기서도 한 번 더 봅니다 —
-    //   단추만 믿으면 나중에 조건이 바뀌었을 때 새어 나갑니다.
+    //   보는 것(차량이 있는가)만 여기서도 한 번 더 봅니다 — 단추만 믿으면
+    //   나중에 조건이 바뀌었을 때 새어 나갑니다.
     if (!vehicleId) {
       setErrors(['차량을 골라 주세요. 오늘 탄 차량을 아래 「차량」 칸에서 고르면 저장할 수 있습니다.'])
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1497,7 +1501,8 @@ export function CollectionInput() {
           //   「내 차로 들어갔나」를 알 수 없습니다.
           //  0126 — 담당 차량은 **기본값**입니다. 기사님은 오늘 탄 차로 바꿀 수
           //  있고, 담당 차량이 없어도 고르면 저장됩니다. 고를 수 있는 차는 이
-          //  구분의 운행 중 차량뿐입니다 (서버가 구분을 다시 확인합니다).
+          //  구분의 운행 중 차량뿐입니다 (구분을 지키는 곳은 이 목록입니다 —
+          //  서버는 0070 부터 구분을 보지 않습니다).
           <section
             data-auto-vehicle
             data-vehicle-source={scheduleVehicle && fieldVehicleId === scheduleVehicle.id ? 'schedule' : boundVehicle && fieldVehicleId === boundVehicle.id ? 'profile' : fieldVehicleId ? 'picked' : 'none'}
@@ -1525,8 +1530,8 @@ export function CollectionInput() {
             ) : (
               <div className="space-y-3">
                 {fieldNeedsPick && myVehicle && myVehicle.wasteType !== wasteType ? (
-                  //  묶인 차가 이번 구분과 다른 경우 — 서버가 그 차로는 막으므로
-                  //  이번 건만 이 구분의 차를 고르게 합니다.
+                  //  묶인 차가 이번 구분과 다른 경우 — 그 차로 저장하면 기저귀 차에
+                  //  의료폐기물이 실린 기록이 남으므로, 이번 건만 이 구분의 차를 고르게 합니다.
                   <div className="flex items-start gap-2.5">
                     <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
                     <p data-vehicle-mismatch className="t-body min-w-0 break-keep font-bold text-amber-800">
