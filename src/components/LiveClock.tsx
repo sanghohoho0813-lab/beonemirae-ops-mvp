@@ -49,9 +49,15 @@ function seoulNow() {
 }
 
 /**
- *  @param full 연도까지 보입니다 (PC). 폰에서는 자리가 좁아 월·일부터 씁니다.
+ *  @param full    연도까지 보입니다. 폰에서는 자리가 좁아 월·일부터 씁니다.
+ *  @param compact 날짜를 「9/17(목)」로 줄입니다 (0129).
+ *
+ *   ⚠ compact 는 PC 오른쪽 위 도구 줄 전용입니다. 그 줄에는 이미 단추가 넷
+ *     있어서, 보통 형식(「9월 17일 (목) · 오후 7:44:09」 226px)을 넣으면 줄이
+ *     넘쳐 **단추가 찌그러지거나 아랫줄로 접힙니다.** 시·분·초는 그대로입니다 —
+ *     줄이는 것은 날짜 표기뿐입니다.
  */
-export function LiveClock({ full = false, className = '' }: { full?: boolean; className?: string }) {
+export function LiveClock({ full = false, compact = false, className = '' }: { full?: boolean; compact?: boolean; className?: string }) {
   const [t, setT] = useState(seoulNow)
 
   useEffect(() => {
@@ -69,8 +75,16 @@ export function LiveClock({ full = false, className = '' }: { full?: boolean; cl
   return (
     <span data-live-clock className={`tabular-nums ${className}`}>
       <span className="whitespace-nowrap">
-        {full && <>{t.y}년 </>}
-        {t.m}월 {t.d}일 ({t.dow})
+        {compact ? (
+          <>
+            {t.m}/{t.d}({t.dow})
+          </>
+        ) : (
+          <>
+            {full && <>{t.y}년 </>}
+            {t.m}월 {t.d}일 ({t.dow})
+          </>
+        )}
       </span>{' '}
       <span className="whitespace-nowrap">
         {/*  ⚠ 0082 — 여기에 navy-400 을 못 박아 두었더니, 이 시계가 **어두운

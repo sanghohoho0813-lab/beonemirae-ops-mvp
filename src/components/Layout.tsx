@@ -349,24 +349,6 @@ function Sidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
-      {/*  ── 오늘 날짜 · 지금 시각 (0129) ──────────────────────────────────
-           대표님: 「상단에 고정시켜 잘 보이게」.
-
-           ⚠ 이 `sticky top-0` 은 **사이드바 안**에서 붙습니다 — aside 자체가
-             스크롤 상자(overflow-y-auto)라, 메뉴를 아래로 내려도 이 줄만
-             맨 위에 남습니다. 예전 자리(계정 카드 아래)는 끝까지 내려야
-             보였습니다.
-           ⚠ 글자는 흰색입니다. 어두운 바탕에서 navy-200 은 보조 글자용이고,
-             이건 「잘 보이게」가 요구사항이라 본문 밝기로 둡니다 (0082·0086). */}
-      <div
-        data-clock-top
-        className="sticky top-0 z-20 border-b border-white/10 bg-navy-950/95 px-5 py-3 backdrop-blur"
-      >
-        <p className="break-keep text-center text-[1.18rem] font-extrabold leading-snug text-white">
-          <LiveClock full />
-        </p>
-      </div>
-
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
@@ -750,19 +732,42 @@ export function Layout() {
             {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
                 사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
                 안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
-            <div className={`mb-3 items-center justify-end gap-2 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
+            {/*  ⚠ 0129 — 시계가 들어오면서 이 줄이 968px 를 넘었고, 그러자
+                 「화면 색」 단추가 70px 로 **찌그러져 세 줄**이 됐습니다.
+                 줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
+                 (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
+                 같은 이유로 안전합니다. */}
+            <div className={`mb-3 flex-wrap items-center justify-end gap-1.5 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
               {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
                    설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
                    설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
                    새 줄을 만들지 않고 이미 있던 오른쪽 위 줄에 얹었습니다 —
                    배치를 바꾸지 않는 것이 이번 작업의 전제입니다. */}
-              <ThemeButton className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900" />
+              {/*  ── 오늘 날짜 · 지금 시각 (0129) ────────────────────────────
+                   대표님: 「시간을 화면 색 옆으로, 간격 좀 띄워서」.
+                   처음에는 왼쪽 계정 카드 아래에 있었고(끝까지 내려야 보임),
+                   그다음 사이드바 맨 위였는데 자리가 마음에 안 드셨습니다.
+                   이제 **오른쪽 위 도구 줄**의 맨 앞입니다.
+
+                   ⚠ 단추가 아닙니다. 옆의 흰 알약들과 같은 모양으로 두면
+                     눌러 보게 됩니다 — 알약 없이 글자만, 대신 굵게.
+                   ⚠ `me-3` 은 「간격 좀 띄워서」입니다 (줄 기본 간격 8px + 12px). */}
+              <p
+                data-clock-top
+                className="me-3 shrink-0 whitespace-nowrap text-[0.98rem] font-extrabold text-navy-700"
+              >
+                {/*  ⚠ 날짜는 짧게 씁니다 — 이 줄에는 이미 단추가 넷입니다.
+                     `full`(312px)·보통(226px)을 넣으면 968px 짜리 줄이 넘쳐
+                     단추가 찌그러집니다. 시·분·초는 그대로 둡니다. */}
+                <LiveClock compact />
+              </p>
+              <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900" />
               {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
               {showWhy && (
-                <TourWhyButton className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+                <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
               )}
               <TourButton
-                className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
                 label="사용 방법"
               />
               {/*  사용 후기 남기기 — 왼쪽 목차에서 여기로 올렸습니다.
@@ -770,7 +775,7 @@ export function Layout() {
                    **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고
                    이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
               <FeedbackButton
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
+                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
                 /*  PC 는 한 줄짜리 알약이라 아래에 붙일 자리가 없습니다 —
                     괄호를 뒤에 답니다. 폰 더보기·도움말에서는 제목 아래 줄에
                     들어갑니다(그쪽은 두 줄짜리 칸이라). */

@@ -52,7 +52,11 @@ for (const role of ['field', 'office', 'admin', 'client']) {
     ok(c !== null, `${role} · ${label} — **날짜·시각이 보임**`, c?.text ?? '(안 보임)')
     if (c) {
       //  「8월 22일 (토) · 오후 2:37:12」 — 분·초까지 있어야 합니다
-      ok(/\d+월 \d+일 \(.\)/.test(c.text), `${role} · ${label} — 오늘 날짜(요일까지)`, c.text)
+      //  ⚠ 0129 — PC 는 오른쪽 위 도구 줄로 옮기면서 날짜를 「9/17(목)」로 줄였습니다
+      //    (그 줄에 단추가 넷이라 「9월 17일 (목)」은 넘칩니다). 폰은 그대로입니다.
+      //    여기서 지킬 것은 **오늘 날짜와 요일이 읽히는가** 이지 표기 방식이 아닙니다.
+      ok(/\d+월 \d+일 \(.\)/.test(c.text) || /\d+\/\d+\(.\)/.test(c.text),
+        `${role} · ${label} — 오늘 날짜(요일까지)`, c.text)
       ok(/(오전|오후) \d{1,2}:\d{2}:\d{2}/.test(c.text), `${role} · ${label} — **시·분·초까지**`, c.text)
       ok(c.px >= 15, `${role} · ${label} — 읽을 만한 크기`, `${c.px}px`)
     }
@@ -90,42 +94,49 @@ for (const role of ['field', 'office', 'admin', 'client']) {
   }
 }
 
-// ── PC — 시계가 **사이드바 맨 위에 붙어 있는가** (0129) ─────────────────────
+// ── PC — 시계가 **오른쪽 위 「화면 색」 옆**에 있는가 (0129) ────────────────
 //
-//   대표님: 「왼쪽 아래 계정 아래에 두지 말고 상단에 고정시켜 잘 보이게」.
-//   예전에는 계정 카드 아래(사이드바 맨 밑)라, 메뉴가 길면 끝까지 내려야
-//   시각이 보였습니다.
+//   대표님 지시가 두 번 바뀐 자리입니다:
+//    ① 처음 — 왼쪽 계정 카드 아래 (끝까지 내려야 보임)
+//    ② 다음 — 사이드바 맨 위 고정 (「현재 위치 너무 별로」)
+//    ③ 지금 — **오른쪽 위 도구 줄, 「화면 색」 옆 · 간격 띄워서**
 {
   const s = await open('admin', 1440, 900)
   const r = await s.p.evaluate(() => {
-    const band = document.querySelector('[data-clock-top]')
-    if (!band) return null
-    const aside = band.closest('aside')
-    const clock = band.querySelector('[data-live-clock]')
-    const before = band.getBoundingClientRect()
-    //  메뉴를 아래로 굴려도 이 줄은 맨 위에 남아야 합니다 (sticky).
-    if (aside) aside.scrollTop = aside.scrollHeight
-    const after = band.getBoundingClientRect()
-    //  계정 카드(로그아웃 단추가 있는 줄) 안에는 시계가 없어야 합니다.
-    const account = [...document.querySelectorAll('aside button[aria-label="로그아웃"]')][0]
-    const card = account?.closest('div')?.parentElement ?? null
+    const clock = document.querySelector('[data-clock-top]')
+    if (!clock) return null
+    //  「화면 색」 단추 — 글자로 찾습니다 (아이콘만 남는 좁은 화면은 PC 가 아닙니다)
+    //  ⚠ 「화면 색」 단추는 화면에 **두 벌**입니다(폰용은 숨어 있습니다).
+    //    숨은 쪽을 집으면 좌표가 0 이라 「같은 줄」 판정이 뒤집힙니다.
+    const theme = [...document.querySelectorAll('button')]
+      .filter((b) => /화면 색/.test(b.textContent ?? '') || /화면 색/.test(b.getAttribute('aria-label') ?? ''))
+      .find((b) => b.getBoundingClientRect().width > 2)
+    const cb = clock.getBoundingClientRect()
+    const tb = theme?.getBoundingClientRect()
+    const sidebar = document.querySelector('aside')
     return {
-      top: Math.round(before.top),
-      stickyTop: Math.round(after.top),
-      px: clock ? Math.round(parseFloat(getComputedStyle(clock).fontSize)) : 0,
-      text: (clock?.textContent ?? '').replace(/\s+/g, ' ').trim(),
-      inAccount: card ? !!card.querySelector('[data-live-clock]') : false,
-      asideTop: aside ? Math.round(aside.getBoundingClientRect().top) : -1,
+      text: (clock.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      px: Math.round(parseFloat(getComputedStyle(clock).fontSize)),
+      sameRow: tb ? Math.abs((cb.top + cb.height / 2) - (tb.top + tb.height / 2)) <= 12 : false,
+      //  「옆」 = 화면 색 **왼쪽**에 붙어 있습니다
+      gap: tb ? Math.round(tb.left - cb.right) : -1,
+      //  왼쪽 사이드바 **밖**이어야 합니다 (거기 있던 것을 옮겨 온 것이니)
+      outOfSidebar: sidebar ? cb.left > sidebar.getBoundingClientRect().right : true,
+      inSidebar: !!sidebar?.querySelector('[data-live-clock]'),
+      //  단추처럼 보이면 눌러 보게 됩니다 — 알약(배경·테두리)이 없어야 합니다
+      looksClickable: clock.tagName === 'BUTTON' || clock.closest('button') !== null,
     }
   })
-  ok(r !== null, 'PC — 사이드바 맨 위에 시계 줄이 있음')
+  ok(r !== null, 'PC — 오른쪽 위 도구 줄에 시계가 있음')
   if (r) {
-    ok(r.top <= r.asideTop + 4, '**사이드바 맨 위**에 있음', `줄 ${r.top}px · 사이드바 ${r.asideTop}px`)
-    ok(r.stickyTop <= r.asideTop + 4, '**메뉴를 끝까지 내려도 그대로 붙어 있음** (고정)', `${r.stickyTop}px`)
-    ok(/\d+월 \d+일 \(.\)/.test(r.text) && /(오전|오후) \d{1,2}:\d{2}:\d{2}/.test(r.text),
-      '날짜·요일·시·분·초가 그대로 보임', r.text)
-    ok(r.px >= 17, '아래 자리보다 크게 — 잘 보임', `${r.px}px`)
-    ok(!r.inAccount, '**계정 카드 아래에는 이제 없음**')
+    ok(r.sameRow, '**「화면 색」과 같은 줄**')
+    ok(r.gap >= 12 && r.gap <= 80, '**간격이 띄워져 있음** (12px 이상)', `${r.gap}px`)
+    ok(r.outOfSidebar, '왼쪽 사이드바 밖 — 오른쪽 위로 옮겨졌음')
+    ok(!r.inSidebar, '**사이드바(계정 아래·맨 위)에는 이제 없음**')
+    ok(!r.looksClickable, '단추처럼 보이지 않음 (눌러 보게 하지 않음)')
+    ok(/\d+\/\d+\(.\)/.test(r.text) && /(오전|오후) \d{1,2}:\d{2}:\d{2}/.test(r.text),
+      '날짜·요일·시·분·초가 그대로 (PC 는 짧은 날짜 표기)', r.text)
+    ok(r.px >= 16, '읽을 만한 크기', `${r.px}px`)
   }
   await s.ctx.close()
 }
