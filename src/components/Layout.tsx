@@ -349,6 +349,24 @@ function Sidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
+      {/*  ── 오늘 날짜 · 지금 시각 (0129) ──────────────────────────────────
+           대표님: 「상단에 고정시켜 잘 보이게」.
+
+           ⚠ 이 `sticky top-0` 은 **사이드바 안**에서 붙습니다 — aside 자체가
+             스크롤 상자(overflow-y-auto)라, 메뉴를 아래로 내려도 이 줄만
+             맨 위에 남습니다. 예전 자리(계정 카드 아래)는 끝까지 내려야
+             보였습니다.
+           ⚠ 글자는 흰색입니다. 어두운 바탕에서 navy-200 은 보조 글자용이고,
+             이건 「잘 보이게」가 요구사항이라 본문 밝기로 둡니다 (0082·0086). */}
+      <div
+        data-clock-top
+        className="sticky top-0 z-20 border-b border-white/10 bg-navy-950/95 px-5 py-3 backdrop-blur"
+      >
+        <p className="break-keep text-center text-[1.18rem] font-extrabold leading-snug text-white">
+          <LiveClock full />
+        </p>
+      </div>
+
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
@@ -414,10 +432,10 @@ function Sidebar() {
             <p className="break-keep text-[1rem] text-navy-200">
               {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
             </p>
-            {/*  오늘 날짜 · 지금 시각 (0078) — PC 는 자리가 넉넉해 연도까지 씁니다 */}
-            <p className="mt-1 break-keep text-[1rem] font-bold text-navy-200">
-              <LiveClock full />
-            </p>
+            {/*  ⚠ 0129 — 여기 있던 시계를 **사이드바 맨 위로** 옮겼습니다.
+                 대표님: 「왼쪽 아래 계정 아래에 두지 말고 상단에 고정시켜
+                 잘 보이게」. 계정 카드는 스크롤을 끝까지 내려야 나오는
+                 자리라, 시각을 확인하려면 매번 내려야 했습니다. */}
           </div>
           {profile && (
             <button

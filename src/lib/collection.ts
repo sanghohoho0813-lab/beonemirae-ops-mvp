@@ -217,13 +217,25 @@ function validate(data: AppData, input: CollectionCompletionInput): { errors: st
     errors.push('실제 수거량은 0kg보다 커야 합니다.')
   }
 
-  // 차량 폐기물 구분 일치 (의료폐기물 ↔ 기저귀 양방향 차단)
+  //  ── 차량 구분은 **막지 않고 알립니다** (0129) ──────────────────────────
+  //
+  //   예전에는 「의료폐기물 수거에는 의료폐기물 차량만」으로 **저장을 막았습니다.**
+  //   서버는 0070 에서 대표님 지시로 그 검사를 뺐는데, 화면 쪽 이 줄이 남아
+  //   실제로는 여기서 막히고 있었습니다.
+  //
+  //   현장 사실: 1톤 네 대는 그날그날 의료폐기물도 기저귀도 싣습니다. 차량 표는
+  //   구분을 하나만 가질 수 있어서, 그 한 값으로 막으면 **오늘 실제로 탄 차를
+  //   적을 수 없습니다.** 이사님 지시: 「1톤 4대는 알아서 선택할 수 있게」.
+  //
+  //   그래서 막지 않되 **경고로 남깁니다** — 고르는 사람이 알고 고르게 하고,
+  //   나중에 「왜 기저귀 차로 의료폐기물이 들어갔나」를 물으면 이 줄이 답합니다.
+  //   ⚠ 차량이 **없는** 것은 그대로 막습니다 (서버도 막습니다).
   const vehicle = data.vehicles.find((v) => v.id === input.vehicleId)
   if (!vehicle) {
     errors.push('배차 차량을 선택해 주세요.')
   } else if (vehicle.wasteType !== input.wasteType) {
-    errors.push(
-      `${input.wasteType} 수거에는 ${input.wasteType} 차량만 배차할 수 있습니다. (선택한 차량: ${vehicle.wasteType})`,
+    warnings.push(
+      `${vehicle.name}는 ${vehicle.wasteType} 차량으로 등록돼 있습니다. 이번 수거는 ${input.wasteType}입니다 — 실제로 그 차로 다녀오셨다면 그대로 저장하셔도 됩니다.`,
     )
   }
 

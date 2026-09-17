@@ -14,10 +14,13 @@ import { readFileSync } from 'node:fs'
 //    A. 담당 차량 없음        → 골라서 정상 저장
 //    B. 옛 담당 차량이 남아 있음(기저귀 차) → 무시하고 실제 차를 골라 저장
 //    C. 일정 차량 1호차       → 기본값 1호차 → 2호차로 바꿔 저장 → 기록은 2호차
-//    D. 의료폐기물 수거       → 기저귀 차·운행중지 차는 목록에 없음
+//    D. 목록 = **운행 중인 차 전부** (0129 — 1톤은 그날그날 둘 다 싣습니다).
+//                              운행 중지 차만 빠지고, 구분이 다른 차는 이름 옆에 표시
 //    E. 저장해도 profiles.vehicle_id 는 그대로 (자동으로 다시 묶이지 않음)
 //    F. 다음 수거에 들어가면 지난번 고른 차가 따라오지 않음
 //    G. 390px 에서 차량 → 병원 → 수거량 → 자재 → 저장까지 밀림 없이 진행
+//    H. 3.5톤 공용차 — 남이 잡아 둔 날은 목록에서 빠지고, 내가 잡았거나
+//                      아무도 안 잡은 날은 보임 (0129)
 //
 //   ⚠ 여기서 낮추면 안 되는 것: **저장되는 vehicle_id 가 이번에 고른 차인가**와
 //     **계정 차량이 조용히 바뀌지 않는가**. 그 둘이 이번 변경의 전부입니다.
@@ -28,8 +31,9 @@ const DRV = '00000000-0000-0000-0000-0000000000d1'
 const CA = '00000000-0000-0000-0000-0000000000c1'
 const VA = '00000000-0000-0000-0000-0000000000v1' // 1호차 · 의료폐기물
 const VB = '00000000-0000-0000-0000-0000000000v2' // 2호차 · 의료폐기물
-const VD = '00000000-0000-0000-0000-0000000000v3' // 5호차 · 일회용기저귀 — 목록에 없어야 함
+const VD = '00000000-0000-0000-0000-0000000000v3' // 5호차 · 일회용기저귀 — 0129 부터 **보입니다**
 const VX = '00000000-0000-0000-0000-0000000000v4' // 9호차 · 운행중지 — 목록에 없어야 함
+const VS = '00000000-0000-0000-0000-0000000000v5' // 3.5톤 공용차 — 예약에 따라 보였다 숨었다
 const T = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
 let pass = 0
@@ -58,6 +62,7 @@ const vehicles = [
   veh(VB, '2호차', '의료폐기물', true, '김진환'),
   veh(VD, '5호차(기저귀)', '일회용기저귀', true, '오대성'),
   veh(VX, '9호차(중지)', '의료폐기물', false, ''),
+  { ...veh(VS, '802루9844 (3.5톤 공용)', '의료폐기물', true, ''), tonnage: 3.5, nominal_capacity: 3500, expected_capacity: 2800 },
 ]
 const prof = (id, name, role, vehicle_id) => ({
   id, email: `${id.slice(-2)}@b.c`, name, role, font_scale: 'normal', active: true,
@@ -111,6 +116,7 @@ function wire(ctx, st) {
       const rows = one ? st.roster.filter((x) => x.id === one) : st.roster
       return json(single ? (rows[0] ?? null) : rows)
     }
+    if (url.includes('/vehicle_reservations')) return json(st.reservations ?? [])
     if (url.includes('/vehicles')) return json(vehicles)
     if (url.includes('/schedules')) return json(st.schedules)
     if (url.includes('/clients')) return json(single ? clients[0] : clients)
@@ -125,17 +131,23 @@ async function open(ctx, path, me) {
     window.localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client')
   }, ['beonemirae-ops:auth', { id: me.id, aud: 'authenticated', email: me.email, app_metadata: {}, user_metadata: {} }])
   p.on('pageerror', (e) => console.log('PAGEERROR', String(e).slice(0, 200)))
+  //  ⚠ 평소와 다른 수거량이면 저장 **전에** 「이대로 저장할까요?」를 묻습니다.
+  //    Playwright 는 손대지 않으면 그 물음을 **거절**로 처리해서, 저장이 조용히
+  //    멈춥니다 — 처음에 이걸 「차량 때문에 막혔다」로 잘못 읽을 뻔했습니다.
+  p.on('dialog', (d) => { void d.accept() })
   await p.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await p.waitForFunction(() => !/불러오는 중/.test(document.body?.innerText ?? ''), null, { timeout: 30000 }).catch(() => {})
   await p.waitForTimeout(1500)
   return p
 }
-const state = (me, schedules) => ({
+const state = (me, schedules, reservations = []) => ({
   me,
   roster: [prof(ADM, '송현근', 'admin', null), me],
   schedules,
+  reservations,
   calls: [],
 })
+const RES = (profileId, who) => [{ id: 'r1', vehicle_id: VS, date: T, profile_id: profileId, profile_name: who, note: '' }]
 const phone = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }
 const options = (p) =>
   p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean))
@@ -177,7 +189,9 @@ console.log('\n── B. 옛 담당 차량(기저귀 차)이 남아 있음 ─�
   wire(ctx, st)
   const p = await open(ctx, '/collection?schedule=s1', me)
   ok('B 옛 담당 차량이 기본값으로 들어오지 않음', (await p.locator('[data-vehicle-select]').inputValue()) === '')
-  ok('B 화면에 기저귀 차 이름이 없음', !/5호차/.test(flat(await p.textContent('main'))))
+  //  ⚠ 0129 — 기저귀 차도 **목록에는 있습니다** (1톤은 그날그날 둘 다 싣습니다).
+  //    없어야 하는 것은 「미리 골라져 있는 것」이고, 그건 바로 위에서 봤습니다.
+  ok('B 옛 담당 차량이 미리 골라져 있지 않음', (await p.locator('[data-vehicle-select]').inputValue()) !== VD)
   ok('B 막는 문구가 없음', !/저장할 수 없|사무실에 문의/.test(flat(await p.textContent('main'))))
   await p.selectOption('[data-vehicle-select]', VA)
   await p.waitForTimeout(400)
@@ -223,8 +237,12 @@ console.log('\n── C. 일정 차량 1호차 → 2호차로 바꿈 ──')
   await ctx.close()
 }
 
-// ── D. 고를 수 있는 차 = 이 구분 · 운행 중 ──────────────────────────────────
-console.log('\n── D. 목록 제한 ──')
+// ── D. 고를 수 있는 차 = **운행 중인 차 전부** (0129) ───────────────────────
+//
+//   이사님: 「1톤 4대는 알아서 선택할 수 있게」. 차량 표는 구분을 하나만
+//   가질 수 있는데 1톤은 그날그날 의료폐기물도 기저귀도 싣습니다. 구분으로
+//   거르면 **오늘 탄 차가 목록에 없는** 일이 생깁니다 (실제로 5대 중 3대만 보였습니다).
+console.log('\n── D. 목록 규칙 ──')
 {
   const me = prof(DRV, '백광호', 'field', null)
   const st = state(me, [sched('s1', null)])
@@ -232,9 +250,19 @@ console.log('\n── D. 목록 제한 ──')
   wire(ctx, st)
   const p = await open(ctx, '/collection?schedule=s1', me)
   const opts = await options(p)
-  ok('D 의료폐기물 차량 2대만 보임', opts.sort().join() === [VA, VB].sort().join(), opts.join(','))
-  ok('D 기저귀 차량(5호차)은 없음', !opts.includes(VD))
-  ok('D 운행 중지 차량(9호차)도 없음', !opts.includes(VX))
+  ok('D 운행 중인 차가 모두 보임 (의료 2 + 기저귀 1 + 공용 1)',
+    opts.sort().join() === [VA, VB, VD, VS].sort().join(), opts.join(','))
+  ok('D **운행 중지 차량(9호차)은 없음**', !opts.includes(VX))
+  //  구분이 다른 차는 **무슨 차인지 적어** 둡니다 — 막지는 않되 알고 고르게.
+  const labels = await p.locator('[data-vehicle-select] option').evaluateAll((o) => o.map((x) => x.textContent ?? ''))
+  ok('D 구분이 다른 차는 이름 옆에 표시', labels.some((t) => /5호차.*일회용기저귀차/.test(t)), labels.join(' / '))
+  ok('D 같은 구분 차에는 군더더기가 안 붙음', labels.some((t) => /^1호차$/.test(t.trim())), labels.join(' / '))
+  //  그 차로도 저장이 됩니다 (서버가 구분을 보지 않으므로 막는 시늉을 하지 않습니다)
+  await p.selectOption('[data-vehicle-select]', VD)
+  await p.waitForTimeout(400)
+  ok('D 구분이 달라도 저장 단추가 열림', !(await p.locator('[data-tour="collect-save"]').isDisabled()))
+  const call = await save(p, st)
+  ok('D 구분이 다른 차를 골라도 저장됨 (막지 않음)', call?.body?.p?.vehicleId === VD, String(call?.body?.p?.vehicleId))
   await ctx.close()
 }
 
@@ -305,6 +333,43 @@ console.log('\n── G. 390px 흐름 ──')
   ok('G 수거량도 그대로', call?.body?.p?.actualAmount === 140, String(call?.body?.p?.actualAmount))
   ok('G 저장 뒤에도 가로 밀림 0', (await ofl()) === 0, `${await ofl()}px`)
   await ctx.close()
+}
+
+// ── H. 3.5톤 공용차 — 남이 잡아 둔 날은 안 보입니다 (0129) ──────────────────
+//
+//   공용차는 본사 앞에 서 있고 그날 쓸 사람이 예약(체크)합니다. 남이 잡아 둔
+//   차를 목록에서 고르면 그 기록은 틀립니다.
+//   ⚠ **예약한 본인에게는 보여야** 합니다 — 그 차로 나간 사람이 기록을 남깁니다.
+console.log('\n── H. 3.5톤 공용차 예약 ──')
+{
+  const me = prof(DRV, '백광호', 'field', null)
+
+  //  ① 아무도 안 잡은 날 — 지금처럼 보입니다
+  const st1 = state(me, [sched('s1', null)], [])
+  const c1 = await b.newContext(phone); wire(c1, st1)
+  const p1 = await open(c1, '/collection?schedule=s1', me)
+  ok('H 아무도 안 잡은 날에는 공용차가 보임', (await options(p1)).includes(VS))
+  await c1.close()
+
+  //  ② 남이 잡은 날 — 목록에서 빠집니다
+  const st2 = state(me, [sched('s1', null)], RES('00000000-0000-0000-0000-0000000000d9', '김진환'))
+  const c2 = await b.newContext(phone); wire(c2, st2)
+  const p2 = await open(c2, '/collection?schedule=s1', me)
+  const o2 = await options(p2)
+  ok('H **남이 잡아 둔 날에는 공용차가 목록에서 빠짐**', !o2.includes(VS), o2.join(','))
+  ok('H 나머지 차는 그대로 보임', o2.includes(VA) && o2.includes(VB) && o2.includes(VD), o2.join(','))
+  await c2.close()
+
+  //  ③ 내가 잡은 날 — 보입니다 (그 차로 나간 사람이 기록해야 하니까)
+  const st3 = state(me, [sched('s1', null)], RES(DRV, '백광호'))
+  const c3 = await b.newContext(phone); wire(c3, st3)
+  const p3 = await open(c3, '/collection?schedule=s1', me)
+  ok('H **내가 잡은 날에는 보임**', (await options(p3)).includes(VS))
+  await p3.selectOption('[data-vehicle-select]', VS)
+  await p3.waitForTimeout(300)
+  const call = await save(p3, st3)
+  ok('H 공용차로 저장까지 정상', call?.body?.p?.vehicleId === VS, String(call?.body?.p?.vehicleId))
+  await c3.close()
 }
 
 console.log(`\n합계 ${pass + fail}검사 · 실패 ${fail}`)

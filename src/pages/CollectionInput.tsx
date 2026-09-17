@@ -232,7 +232,19 @@ export function CollectionInput() {
   const client = data.clients.find((c) => c.id === clientId)
   //  지금 고른 예정 일정 — 「지금 이 병원」 카드가 이 값을 씁니다.
   const picked = scheduleId ? todayPending.find((s) => s.id === scheduleId) ?? null : null
-  const vehicles = useMemo(() => data.vehicles.filter((v) => v.wasteType === wasteType), [data.vehicles, wasteType])
+  //  ── 고를 수 있는 차량 (0129) ────────────────────────────────────────────
+  //
+  //   전에는 **폐기물 구분이 같은 차**만 보여 줬습니다. 그런데 1톤 네 대는
+  //   그날그날 의료폐기물도 기저귀도 싣습니다. 차량 표는 구분을 **하나만**
+  //   가질 수 있어서, 그 필터가 실제로는 「오늘 탄 차가 목록에 없다」를
+  //   만들었습니다 (대표님 확인: 5대 중 3대만 보임).
+  //
+  //   이사님 지시: 「1톤 4대는 알아서 선택할 수 있게」. 그래서 구분으로
+  //   거르지 않고 **운행 중인 차를 전부** 보여 줍니다.
+  //   ⚠ 잃은 것: 구분이 다른 차를 골라도 아무도 막지 않습니다(서버는 0070
+  //     부터 구분을 보지 않습니다). 대신 목록에서 그 차 옆에 무슨 차인지
+  //     적어, 고르는 사람이 알고 고르게 합니다.
+  const vehicles = useMemo(() => data.vehicles, [data.vehicles])
 
   //  ── 직원은 차량에 고정되지 않습니다 (0128) ─────────────────────────────
   //
@@ -265,11 +277,32 @@ export function CollectionInput() {
   const scheduleVehicle = useMemo(() => {
     const s = scheduleId ? data.schedules.find((x) => x.id === scheduleId) : null
     if (!s?.vehicleId) return null
-    //  운행 중이고 이번 구분에 맞는 차만 기본값이 됩니다.
-    return data.vehicles.find((v) => v.id === s.vehicleId && v.wasteType === wasteType) ?? null
-  }, [scheduleId, data.schedules, data.vehicles, wasteType])
-  //  고른 차가 이 구분에 없으면(구분을 바꿨을 때) 기본값으로 돌아갑니다.
-  const fieldChosen = fieldPicked && vehicles.some((v) => v.id === fieldPicked) ? fieldPicked : null
+    //  운행 중인 차만 기본값이 됩니다 (구분은 0129 에서 안 봅니다).
+    return data.vehicles.find((v) => v.id === s.vehicleId) ?? null
+  }, [scheduleId, data.schedules, data.vehicles])
+  //  ── 3.5톤 공용차는 **남이 잡아 둔 날** 목록에서 뺍니다 (0129) ──────────
+  //
+  //   공용차는 본사 앞에 서 있고 필요한 분이 몰고 나갑니다. 그래서 그날 누가
+  //   쓸지 예약(설정 → 공용 차량)으로 정합니다. 남이 잡아 둔 차를 목록에서
+  //   고르면 그 기록은 틀립니다.
+  //   ⚠ **예약한 본인에게는 그대로 보입니다** — 그 차로 나간 사람이 기록을
+  //     남겨야 하니까요. 아무도 안 잡은 날에도 지금처럼 모두에게 보입니다.
+  //   ⚠ 사무실·관리자 화면은 거르지 않습니다. 사무실은 남을 대신해 적는
+  //     자리라, 남이 잡은 차라고 빼 버리면 그 수거를 적을 방법이 없습니다.
+  const pickDate = scheduleId ? (data.schedules.find((x) => x.id === scheduleId)?.date ?? visitDate) : visitDate
+  const fieldVehicles = useMemo(() => {
+    const mine = profile?.id ?? ''
+    const takenByOthers = new Set(
+      (data.vehicleReservations ?? [])
+        .filter((r) => r.date === pickDate && r.profileId && r.profileId !== mine)
+        .map((r) => r.vehicleId),
+    )
+    //  공용차 = 2톤 이상 (SharedTruck 과 같은 기준)
+    return vehicles.filter((v) => !(v.tonnage >= 2 && takenByOthers.has(v.id)))
+  }, [vehicles, data.vehicleReservations, pickDate, profile?.id])
+
+  //  고른 차가 목록에서 사라졌으면(남이 잡아갔거나) 기본값으로 돌아갑니다.
+  const fieldChosen = fieldPicked && fieldVehicles.some((v) => v.id === fieldPicked) ? fieldPicked : null
   const fieldVehicleId = fieldChosen ?? scheduleVehicle?.id ?? ''
 
   useEffect(() => {
@@ -362,9 +395,14 @@ export function CollectionInput() {
     //  현장은 위 자동 채움이 담당합니다 — 여기서 아무 차나 잡으면 본인 차가
     //  아닌 차로 저장됩니다.
     if (fieldPick) return
-    if (vehicles.length && !vehicles.some((v) => v.id === vehicleId)) {
-      setVehicleId(vehicles[0].id)
-      setDriverName(vehicles[0].driver)
+    //  ⚠ 0129 — 목록에서 구분 필터를 뺐으므로(1톤은 둘 다 싣습니다) 여기서
+    //    `vehicles[0]` 을 그냥 잡으면 **구분이 다른 차가 조용히 기본값**이
+    //    됩니다. 기본값은 이번 구분에 맞는 차 중 첫 대로만 둡니다. 없으면
+    //    비워 두고 사무실이 직접 고릅니다 — 짐작으로 채우지 않습니다.
+    const fit = vehicles.filter((v) => v.wasteType === wasteType)
+    if (fit.length && !fit.some((v) => v.id === vehicleId)) {
+      setVehicleId(fit[0].id)
+      setDriverName(fit[0].driver)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wasteType, fieldPick])
@@ -1480,9 +1518,12 @@ export function CollectionInput() {
                 onChange={(e) => setFieldPicked(e.target.value || null)}
               >
                 <option value="">차량 선택</option>
-                {vehicles.map((v) => (
+                {fieldVehicles.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.name}
+                    {/*  구분이 이번 수거와 다른 차는 **무슨 차인지 적어** 둡니다.
+                         막지는 않습니다 (1톤은 그날그날 둘 다 싣습니다). */}
+                    {v.wasteType !== wasteType ? ` · ${v.wasteType}차` : ''}
                     {scheduleVehicle && v.id === scheduleVehicle.id ? ' (일정 배차)' : ''}
                   </option>
                 ))}
@@ -1490,11 +1531,11 @@ export function CollectionInput() {
             </div>
             {/*  ⚠ 「아직 안 읽었다」와 「정말 없다」는 다릅니다 — 읽는 중에는
                  차가 0대로 보입니다. 다 읽은 뒤에만 없다고 말합니다. */}
-            {sync.ready && vehicles.length === 0 && (
+            {sync.ready && fieldVehicles.length === 0 && (
               <div className="flex items-start gap-2.5">
                 <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" strokeWidth={2.2} />
                 <p data-vehicle-none className="t-body min-w-0 break-keep font-bold text-amber-800">
-                  운행 중인 {wasteType} 차량이 없습니다. 사무실에 문의해 주세요.
+                  고를 수 있는 차량이 없습니다. 사무실에 문의해 주세요.
                 </p>
               </div>
             )}
@@ -1561,10 +1602,10 @@ export function CollectionInput() {
               />
             </div>
           </div>
-          {/*  ⚠ 서버는 0070 부터 구분을 보지 않습니다. 이 목록이 유일한
-               방어선이라 「막힌다」고 적지 않습니다 — 실제로 막는 것은 여기입니다. */}
+          {/*  ⚠ 0129 — 구분으로 거르지 않습니다 (1톤은 그날그날 둘 다 싣습니다).
+               서버도 0070 부터 구분을 보지 않으므로, 「막힌다」고 적지 않습니다. */}
           <p className="mt-1.5 text-[0.95rem] text-navy-400">
-            {wasteType} 수거에는 {wasteType} 차량만 배차합니다 (이 목록에 그 차량만 보입니다).
+            운행 중인 차량이 모두 나옵니다. 이번 수거는 {wasteType}입니다 — 실제로 실은 차를 골라 주세요.
           </p>
         </Section>
         )}

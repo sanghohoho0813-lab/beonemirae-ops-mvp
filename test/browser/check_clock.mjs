@@ -90,4 +90,44 @@ for (const role of ['field', 'office', 'admin', 'client']) {
   }
 }
 
+// ── PC — 시계가 **사이드바 맨 위에 붙어 있는가** (0129) ─────────────────────
+//
+//   대표님: 「왼쪽 아래 계정 아래에 두지 말고 상단에 고정시켜 잘 보이게」.
+//   예전에는 계정 카드 아래(사이드바 맨 밑)라, 메뉴가 길면 끝까지 내려야
+//   시각이 보였습니다.
+{
+  const s = await open('admin', 1440, 900)
+  const r = await s.p.evaluate(() => {
+    const band = document.querySelector('[data-clock-top]')
+    if (!band) return null
+    const aside = band.closest('aside')
+    const clock = band.querySelector('[data-live-clock]')
+    const before = band.getBoundingClientRect()
+    //  메뉴를 아래로 굴려도 이 줄은 맨 위에 남아야 합니다 (sticky).
+    if (aside) aside.scrollTop = aside.scrollHeight
+    const after = band.getBoundingClientRect()
+    //  계정 카드(로그아웃 단추가 있는 줄) 안에는 시계가 없어야 합니다.
+    const account = [...document.querySelectorAll('aside button[aria-label="로그아웃"]')][0]
+    const card = account?.closest('div')?.parentElement ?? null
+    return {
+      top: Math.round(before.top),
+      stickyTop: Math.round(after.top),
+      px: clock ? Math.round(parseFloat(getComputedStyle(clock).fontSize)) : 0,
+      text: (clock?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      inAccount: card ? !!card.querySelector('[data-live-clock]') : false,
+      asideTop: aside ? Math.round(aside.getBoundingClientRect().top) : -1,
+    }
+  })
+  ok(r !== null, 'PC — 사이드바 맨 위에 시계 줄이 있음')
+  if (r) {
+    ok(r.top <= r.asideTop + 4, '**사이드바 맨 위**에 있음', `줄 ${r.top}px · 사이드바 ${r.asideTop}px`)
+    ok(r.stickyTop <= r.asideTop + 4, '**메뉴를 끝까지 내려도 그대로 붙어 있음** (고정)', `${r.stickyTop}px`)
+    ok(/\d+월 \d+일 \(.\)/.test(r.text) && /(오전|오후) \d{1,2}:\d{2}:\d{2}/.test(r.text),
+      '날짜·요일·시·분·초가 그대로 보임', r.text)
+    ok(r.px >= 17, '아래 자리보다 크게 — 잘 보임', `${r.px}px`)
+    ok(!r.inAccount, '**계정 카드 아래에는 이제 없음**')
+  }
+  await s.ctx.close()
+}
+
 await b.close()
