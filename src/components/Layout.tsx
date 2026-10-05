@@ -12,6 +12,7 @@ import {
   ChevronDown,
   LogOut,
   HelpCircle,
+  PlayCircle,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -703,6 +704,10 @@ export function Layout() {
   const minimal = !!runningTour?.compact
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const showWhy = !configured || canAccess(role, '/why')
+  //  신용보증기금 방문용 영상 (0130) — 대표·이사님(사무실)만. 매출 숫자가 든 상담 영상입니다.
+  //  ⚠ 시연 모드(설정 없음)에서도 띄우지 않습니다 — 영상 파일이 실제 계정으로만 열립니다.
+  const showVisitVideo = configured && canAccess(role, '/visit-video')
+  const navigate = useNavigate()
   const [moreOpen, setMoreOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   //  더보기 시트 안에서 열면 시트가 닫힐 때 함께 사라집니다 — 여기서 소유합니다.
@@ -752,6 +757,23 @@ export function Layout() {
                    ⚠ 단추가 아닙니다. 옆의 흰 알약들과 같은 모양으로 두면
                      눌러 보게 됩니다 — 알약 없이 글자만, 대신 굵게.
                    ⚠ `me-3` 은 「간격 좀 띄워서」입니다 (줄 기본 간격 8px + 12px). */}
+              {/*  ── 신용보증기금 방문용 영상 (0130) ─────────────────────────
+                   대표님: 「오늘 날짜·현재 시각 옆에 버튼을」.
+                   ⚠ 시계 **왼쪽**에 둡니다. 시계와 「화면 색」은 붙어 있어야 합니다
+                     (0129 「화면 색 옆으로」 — check_clock 이 지킵니다).
+                   ⚠ 이 줄에서 유일하게 **진한 색** 알약입니다 — 상담 자리에서 바로
+                     찾아 눌러야 하는 단추라서입니다. */}
+              {showVisitVideo && (
+                <button
+                  type="button"
+                  data-visit-video-btn
+                  onClick={() => navigate('/visit-video')}
+                  className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-800 px-4 py-2 text-[1rem] font-bold text-white shadow-sm transition hover:bg-navy-900"
+                >
+                  <PlayCircle className="h-[18px] w-[18px]" aria-hidden />
+                  신용보증기금 방문용 영상
+                </button>
+              )}
               <p
                 data-clock-top
                 className="me-3 shrink-0 whitespace-nowrap text-[0.98rem] font-extrabold text-navy-700"

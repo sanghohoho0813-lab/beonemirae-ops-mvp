@@ -108,6 +108,7 @@
 | `src/lib/collection.ts` (0129) | 차량 구분 불일치를 **오류 → 경고**로. 서버는 0070 에서 이미 이 검사를 뺐는데 화면 쪽 이 줄이 남아 실제로 저장을 막고 있었습니다 | 서버와 화면을 같은 기준으로 |
 | `src/components/Layout.tsx` · `LiveClock.tsx` (0129) | 오늘 날짜·시각을 **PC 오른쪽 위 도구 줄 「화면 색」 왼쪽**으로 (`data-clock-top` · 간격 20px). 그 줄에 단추가 넷이라 날짜는 `compact`(「9/17(목)」)로 줄였고 시·분·초는 그대로. 줄이 좁으면 단추가 찌그러지던 것을 `shrink-0`+`flex-wrap`으로 접히게 | 대표님: 「계정 아래 말고」 → 「사이드바 맨 위도 별로」 → 「화면 색 옆으로, 간격 띄워서」 | P0 — Pilot 에서 담당차량 불일치가 수거 저장을 막음 |
 | `src/lib/repo.ts` `setProfileVehicle` (0126) | RPC 인자 이름을 서버 정의와 맞춤 `p_profile`/`p_vehicle` (전에는 `p_profile_id`/`p_vehicle_id` → 실제 DB 에서 PGRST202 로 거절돼 담당 차량 변경이 저장되지 않았음) | 사용자 관리 담당 차량 변경이 실제로 저장되게 |
+| `src/components/Layout.tsx` · `src/pages/VisitVideo.tsx` · `src/lib/visitVideo.ts` (0130) | 「**신용보증기금 방문용 영상**」 단추를 PC 오른쪽 위 도구 줄의 **오늘 날짜·시각 바로 왼쪽**에 (`data-visit-video-btn`, 시계 ↔ 「화면 색」 간격은 그대로). 대표(admin)·이사님(office)만 보이고 `/visit-video` 도 그 둘만(`access.ts`). 화면 = 세로 영상 + 재생 속도 1배·1.25배·1.5배 + 전체 화면 + 영상 흐름(누르면 그 장면부터) + 영상에서 말하는 숫자(음성 그대로, 연환산은 「전망 · 실적 아님」) + 보여드리기 전 메모. ⚠ **영상 파일은 저장소에 넣지 않음** — 저장소가 공개라, Supabase Storage 비공개 칸 `visit-media` 에 두고 6시간짜리 서명 주소로만 엶 (`PROPOSAL_0130_visit_video_storage.sql`, 대표님 실행 + 영상 직접 업로드). 폰 「더보기」에는 넣지 않음(높이 한계) — 폰은 주소로 열면 됨 | 대표님: 「대표님·이사님·개발자 화면에서 볼 수 있게, 날짜·시각 옆에 버튼, 1.25배·1.5배로도」 |
 
 ## 4. PILOT ADD — 새로 만드는 것
 - `src/lib/pilotEvidence.ts` — 순수 함수. 입력 `AppData`, 출력 Pilot 요약(기간 · 거래처 · 수거 입력 · 자재사용 기록 · 실사용자 · Portal 요청 · 연결 건수 · 입력 정정 기록(취소된 입력 건수) · BASELINE KNOWN/UNKNOWN 목록). 개선율 계산 **없음**.

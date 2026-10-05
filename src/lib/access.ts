@@ -85,6 +85,9 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   //  현장 담당자가 폰으로 여는 것은 오늘 갈 곳과 입력 화면입니다. 발표용
   //  자료가 같은 메뉴에 섞여 있으면 업무 화면을 찾기가 더 어려워집니다.
   { prefix: '/why', roles: ['admin', 'office'] },
+  //  신용보증기금 방문용 영상 (0130) — 매출 숫자가 든 상담 영상. 대표·이사님(사무실)만.
+  //  ⚠ 파일 자체도 Storage 비공개 칸 + is_staff 정책으로 막습니다 (화면 숨김만으로 끝내지 않음).
+  { prefix: '/visit-video', roles: ['admin', 'office'] },
   //  모바일 미리보기 — **현장 담당자도 엽니다** (0074).
   //
   //   대표님 보고: 「field 계정에서 PC 버전 → 모바일 버전 전환이 안 된다.

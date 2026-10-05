@@ -25,6 +25,7 @@ import { Performance } from './pages/Performance'
 import { AxCoach } from './pages/AxCoach'
 import { DemoSummary } from './pages/DemoSummary'
 import { Roadmap } from './pages/Roadmap'
+import { VisitVideo } from './pages/VisitVideo'
 import { CollectionHistory } from './pages/CollectionHistory'
 import { Presentation } from './pages/Presentation'
 import { MobilePreview } from './pages/MobilePreview'
@@ -177,6 +178,7 @@ export default function App() {
           <Route path="import" element={<ImportExcel />} />
           <Route path="demo" element={<DemoSummary />} />
           <Route path="roadmap" element={<Roadmap />} />
+          <Route path="visit-video" element={<VisitVideo />} />
           <Route path="presentation" element={<Presentation />} />
           {/*
             없는 주소로 들어왔을 때 대시보드를 그려 주고 있었습니다. 그런데
