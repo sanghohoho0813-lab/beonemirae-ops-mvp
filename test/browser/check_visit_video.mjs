@@ -10,6 +10,9 @@ import { fileURLToPath } from 'node:url'
 //   버튼을. 누르면 영상과 간단한 상세가 뜨게. 1.25배·1.5배로도 재생 가능하게」.
 //   이어서: 「SQL 실행 안 해도 바로 보이게. 폰에서도 — 지금은 PC 버전으로만 보여요」.
 //
+//   v3.1 — 세로(9:16)·가로(16:9) 두 판. 대표님: 「클릭 한 번에 왔다 갔다 · 각각 파일로
+//   내려받아 카카오톡으로」. 바꿔도 보던 자리·속도·재생 중인지 그대로 이어야 합니다.
+//
 //   ⚠ 영상 파일은 앱 안(public/media/)에 있습니다. 저장소가 공개라 파일 주소를
 //     아는 사람은 받을 수 있다는 것을 대표님께 알리고 정했습니다.
 //     단추·화면은 대표·이사님(admin·office)에게만 보입니다.
@@ -20,9 +23,11 @@ import { fileURLToPath } from 'node:url'
 
 const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? ` — ${d}` : ''}`); if (!c) process.exitCode = 1 }
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const SRC = '/media/sinbo_visit_v3.mp4'
+const SRC = '/media/sinbo_visit_v31_tall.mp4'
+const SRC_W = '/media/sinbo_visit_v31_wide.mp4'
 //  재생 시험용 — 기본은 같은 영상을 2.5초·108×192 VP9 로 자른 조각(24KB)
-const FILE = process.env.VISIT_VIDEO_FILE || join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'visit_tiny.webm')
+const FILE_T = process.env.VISIT_VIDEO_FILE || join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'visit_tiny.webm')
+const FILE_W = process.env.VISIT_VIDEO_FILE_W || join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'visit_tiny_wide.webm')
 const b = await chromium.launch({ executablePath: EXEC })
 
 async function open(role, { w = 1440, h = 900, path = '/', media = 'real' } = {}) {
@@ -32,8 +37,9 @@ async function open(role, { w = 1440, h = 900, path = '/', media = 'real' } = {}
   W.wire(ctx, state)
   //  예전(Storage 서명 주소) 길이 남아 있지 않은지 셉니다
   await ctx.route('**/storage/v1/**', (r) => { state.storage += 1; return r.fulfill({ status: 400, body: '{}' }) })
-  await ctx.route(`**${SRC}`, async (r) => {
+  await ctx.route(/\/media\/sinbo_visit_v31_(tall|wide)\.mp4$/, async (r) => {
     state.media += 1
+    const FILE = r.request().url().includes('_wide') ? FILE_W : FILE_T
     if (media === 'missing') return r.fulfill({ status: 404, body: '' })
     if (media === 'garbage') return r.fulfill({ status: 200, contentType: 'video/mp4', body: 'not a video' })
     //  재생 시험용 webm 조각 — 없으면 미리보기 서버의 진짜 파일을 그대로
@@ -221,6 +227,47 @@ for (const role of ['field', 'client']) {
     ok(play.h > 0 && Math.abs(play.w / play.h - 9 / 16) < .01, '실제 영상 — 세로 9:16', `${play.w}×${play.h}`)
     ok(play.rate === 1.5 && play.speed > 1.3, '실제 영상 — **재생 중 1.5배로 흐름**', `${play.speed.toFixed(2)}배`)
   }
+
+  // ── ⑤-2 세로 ↔ 가로 — 한 번 눌러 바꾸고, 보던 자리·속도·재생을 그대로 ────────
+  const vs = await s.p.evaluate(() => [...document.querySelectorAll('[data-visit-version]')].map((x) => ({ id: x.dataset.visitVersion, text: x.textContent.trim(), on: x.getAttribute('aria-pressed') })))
+  ok(vs.length === 2 && vs[0].id === 'tall' && vs[0].on === 'true' && vs[1].id === 'wide', '비율 단추 둘 — 기본은 세로', vs.map((x) => `${x.text}${x.on === 'true' ? '●' : ''}`).join(' · '))
+  if (play.decoded) {
+    //  세로 조각을 1.2초까지 재생해 둔 상태에서 가로로
+    const before = await s.p.evaluate(async () => {
+      const el = document.querySelector('[data-visit-video]'); el.currentTime = 1.0
+      await new Promise((r) => el.addEventListener('seeked', r, { once: true })); await el.play()
+      return { t: el.currentTime, rate: el.playbackRate }
+    })
+    await s.p.locator('[data-visit-version="wide"]').click()
+    const after = await s.p.evaluate(async () => {
+      const el = document.querySelector('[data-visit-video]')
+      await Promise.race([new Promise((r) => (el.readyState >= 1 && el.src.includes('_wide') ? r() : el.addEventListener('loadedmetadata', r, { once: true }))), new Promise((r) => setTimeout(r, 8000))])
+      await new Promise((r) => setTimeout(r, 300))
+      const box = document.querySelector('[data-visit-video-box]').getBoundingClientRect()
+      return { src: el.getAttribute('src'), t: el.currentTime, rate: el.playbackRate, playing: !el.paused, w: el.videoWidth, h: el.videoHeight, ratio: box.width / box.height,
+        on: document.querySelector('[data-visit-version="wide"]').getAttribute('aria-pressed') }
+    })
+    ok(after.src === SRC_W && after.on === 'true', '**가로(16:9)로 한 번에 바뀜**', after.src)
+    ok(Math.abs(after.ratio - 16 / 9) < .01 && after.h > 0 && Math.abs(after.w / after.h - 16 / 9) < .02, '가로판 — 칸·영상 모두 16:9', `${after.w}×${after.h}`)
+    ok(Math.abs(after.t - before.t) < .6, '**보던 자리에서 이어서**', `${before.t.toFixed(2)}s → ${after.t.toFixed(2)}s`)
+    ok(after.rate === before.rate && after.playing, '속도(1.5배)·재생 상태 그대로', `${after.rate}배 · ${after.playing ? '재생 중' : '멈춤'}`)
+    await s.p.locator('[data-visit-version="tall"]').click()
+    const back = await s.p.evaluate(async () => { await new Promise((r) => setTimeout(r, 900)); const el = document.querySelector('[data-visit-video]'); return { src: el.getAttribute('src'), w: el.videoWidth, h: el.videoHeight } })
+    ok(back.src === SRC && back.h > back.w, '다시 세로로', back.src)
+  } else {
+    await s.p.locator('[data-visit-version="wide"]').click()
+    const src = await s.p.evaluate(() => document.querySelector('[data-visit-video]')?.getAttribute('src'))
+    ok(src === SRC_W, '**가로(16:9)로 한 번에 바뀜**', src)
+  }
+  //  내려받기 — 판마다 파일 하나씩 (카카오톡으로 보낼 이름)
+  const dl = await s.p.evaluate(() => [...document.querySelectorAll('[data-visit-download]')].map((a) => ({ id: a.dataset.visitDownload, href: a.getAttribute('href'), name: a.getAttribute('download'), text: a.textContent.trim() })))
+  ok(dl.length === 2, '내려받기 단추 둘 (세로 · 가로)', dl.map((x) => x.text).join(' · '))
+  ok(dl.find((x) => x.id === 'tall')?.href === SRC && /vertical_9x16\.mp4$/.test(dl.find((x) => x.id === 'tall')?.name ?? ''), '세로 파일 — 이름에 「vertical_9x16」', dl[0]?.name)
+  ok(dl.find((x) => x.id === 'wide')?.href === SRC_W && /horizontal_16x9\.mp4$/.test(dl.find((x) => x.id === 'wide')?.name ?? ''), '가로 파일 — 이름에 「horizontal_16x9」', dl[1]?.name)
+  ok(dl.every((x) => /\(\d+MB\)/.test(x.text) && !/\(0MB\)/.test(x.text)), '파일 크기 표시', dl.map((x) => x.text).join(' · '))
+  //  실제로 받아지는지 — 같은 주소에서 파일이 옴
+  const [download] = await Promise.all([s.p.waitForEvent('download', { timeout: 15000 }).catch(() => null), s.p.locator('[data-visit-download="wide"]').click()])
+  ok(!!download && /^BeoneMirae_KODIT_visit_horizontal_16x9\.mp4$/.test(download.suggestedFilename()), '눌러서 **파일이 내려받아짐**', download?.suggestedFilename() ?? '(안 받아짐)')
   await s.ctx.close()
 }
 
@@ -241,6 +288,17 @@ for (const [w, h] of [[1024, 800], [1280, 800], [1440, 900], [390, 844]]) {
   ok(r.detailW >= 320, `${w}px — 상세 칸 폭이 읽을 만함`, `${r.detailW}px`)
   await s.ctx.close()
 }
+for (const [w, h] of [[1440, 900], [1024, 800], [390, 844]]) {
+  const s = await open('admin', { w, h, path: '/visit-video' })
+  await s.p.locator('[data-visit-version="wide"]').click()
+  await s.p.waitForTimeout(400)
+  const r = await s.p.evaluate(() => {
+    const e = document.querySelector('[data-visit-video-box]').getBoundingClientRect()
+    return { r: Math.round(e.right), w: Math.round(e.width), ratio: e.width / e.height, hscroll: document.documentElement.scrollWidth > window.innerWidth + 1 }
+  })
+  ok(r.r <= w - 8 && !r.hscroll && Math.abs(r.ratio - 16 / 9) < .01, `가로판 · ${w}px — 화면 안 · 16:9`, `폭 ${r.w}px`)
+  await s.ctx.close()
+}
 
 // ── ⑦ 파일을 못 받으면 — 막히지 않고 안내 ───────────────────────────────────
 {
@@ -259,22 +317,25 @@ for (const [w, h] of [[1024, 800], [1280, 800], [1440, 900], [390, 844]]) {
   await s.ctx.close()
 }
 
-// ── ⑧ 영상 파일 — 앱 안에 있고, 폰에서 받자마자 재생되게 ───────────────────
-{
-  const f = join(ROOT, 'public', 'media', 'sinbo_visit_v3.mp4')
-  ok(existsSync(f), 'public/media/sinbo_visit_v3.mp4 있음')
+// ── ⑧ 영상 파일 두 개 — 앱 안에 있고, 폰에서 받자마자 재생되게 ───────────────
+for (const [id, name, rw, rh] of [['tall', 'sinbo_visit_v31_tall.mp4', 1080, 1920], ['wide', 'sinbo_visit_v31_wide.mp4', 1920, 1080]]) {
+  const f = join(ROOT, 'public', 'media', name)
+  ok(existsSync(f), `public/media/${name} 있음`)
   if (existsSync(f)) {
-    const size = statSync(f).size
-    ok(size > 10e6 && size < 90e6, '크기 (GitHub 한 파일 100MB 제한 아래)', `${(size / 1e6).toFixed(1)}MB`)
+    const buf = readFileSync(f)
+    ok(buf.length > 10e6 && buf.length < 90e6, `${id} — 크기 (GitHub 한 파일 100MB 제한 아래)`, `${(buf.length / 1e6).toFixed(1)}MB`)
     //  +faststart — 「moov」가 「mdat」보다 앞이어야 폰이 전부 받기 전에 재생을 시작합니다
-    const head = readFileSync(f).subarray(0, 4096).toString('latin1')
+    const head = buf.subarray(0, 4096).toString('latin1')
     const moov = head.indexOf('moov'); const mdat = head.indexOf('mdat')
-    ok(moov > 0 && (mdat < 0 || moov < mdat), '받는 즉시 재생 (moov 가 앞 · faststart)', `moov@${moov} mdat@${mdat}`)
-    //  폰(아이폰 사파리 포함)이 바로 푸는 형식 — 화면 H.264(avc1) · 소리 AAC(mp4a)
-    const moovBox = readFileSync(f).subarray(0, 400000).toString('latin1')
-    ok(moovBox.includes('avc1') && moovBox.includes('mp4a'), '형식 H.264 + AAC (폰·PC 브라우저 모두 재생)')
+    ok(moov > 0 && (mdat < 0 || moov < mdat), `${id} — 받는 즉시 재생 (faststart)`, `moov@${moov}`)
+    const mv = buf.subarray(0, 400000)
+    ok(mv.toString('latin1').includes('avc1') && mv.toString('latin1').includes('mp4a'), `${id} — 형식 H.264 + AAC (폰·PC 모두 재생)`)
+    //  화면 크기 — tkhd 의 폭·높이 (16.16 고정소수)
+    const tk = mv.indexOf('tkhd'); const wv = mv.readUInt32BE(tk + 4 + 76) >> 16; const hv = mv.readUInt32BE(tk + 4 + 80) >> 16
+    ok(wv === rw && hv === rh, `${id} — ${rw}×${rh}`, `${wv}×${hv}`)
   }
-  ok(existsSync(join(ROOT, 'dist', 'media', 'sinbo_visit_v3.mp4')), '빌드 결과(dist)에도 들어감 — 배포하면 바로 보임')
+  ok(existsSync(join(ROOT, 'dist', 'media', name)), `${id} — 빌드 결과(dist)에도 들어감`)
 }
+ok(!existsSync(join(ROOT, 'public', 'media', 'sinbo_visit_v3.mp4')), '지난 판(v3) 파일은 치움 — 옛 영상이 섞여 나가지 않게')
 
 await b.close()

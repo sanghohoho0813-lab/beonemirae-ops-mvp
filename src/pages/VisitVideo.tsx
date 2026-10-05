@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Expand, Film, Gauge, ListVideo, Play } from 'lucide-react'
+import { Download, Expand, Film, Gauge, ListVideo, Play, RectangleHorizontal, RectangleVertical } from 'lucide-react'
 import { PageShell } from '../components/ui'
 import { VISIT_VIDEO } from '../lib/visitVideo'
 
@@ -14,12 +14,22 @@ import { VISIT_VIDEO } from '../lib/visitVideo'
 //    없이 바로 보이게」를 고르셨습니다. 저장소가 공개라 **파일 주소를 아는
 //    사람은 로그인 없이도 받을 수 있다**는 점을 알리고 정한 것입니다.
 //    단추·화면은 그대로 대표·이사님(admin·office)에게만 보입니다.
+//
+//  v3.1 — 세로(9:16)·가로(16:9) 두 판. 대표님: 「클릭 한 번에 왔다 갔다」·「각각 파일로
+//  내려받아 카카오톡으로 보낼 생각」. 두 판은 같은 음성·같은 길이라, 바꿔도 **보던 자리·
+//  속도·재생 중인지**를 그대로 이어 갑니다. 내려받기는 판마다 따로 있습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RATES = [1, 1.25, 1.5] as const
 type Rate = (typeof RATES)[number]
 
 type Src = { state: 'ready' } | { state: 'missing'; reason: string }
+type Ver = (typeof VISIT_VIDEO.versions)[number]
+type VerId = Ver['id']
+const VKEY = 'beonemirae-ops:visit-video-version'
+const loadVer = (): VerId => {
+  try { return localStorage.getItem(VKEY) === 'wide' ? 'wide' : 'tall' } catch { return 'tall' }
+}
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
@@ -28,6 +38,18 @@ export function VisitVideo() {
   const [src, setSrc] = useState<Src>({ state: 'ready' })
   const [rate, setRate] = useState<Rate>(1)
   const [now, setNow] = useState(0)
+  const [verId, setVerId] = useState<VerId>(loadVer)
+  const ver = VISIT_VIDEO.versions.find((v) => v.id === verId) ?? VISIT_VIDEO.versions[0]
+  //  판을 바꿀 때 — 보던 자리와 재생 중이었는지를 들고 갔다가, 새 판이 준비되면 그대로 잇습니다
+  const resume = useRef<{ t: number; playing: boolean } | null>(null)
+  const switchVer = (id: VerId) => {
+    if (id === verId) return
+    const v = video.current
+    resume.current = v ? { t: v.currentTime, playing: !v.paused && !v.ended } : null
+    setSrc({ state: 'ready' })
+    setVerId(id)
+    try { localStorage.setItem(VKEY, id) } catch { /* 저장 못 해도 화면은 그대로 */ }
+  }
 
   //  ⚠ 브라우저는 영상 주소가 바뀌거나 다시 읽을 때 속도를 1배로 되돌립니다.
   //    고른 속도를 상태로 들고 있다가, 영상이 준비될 때마다 다시 걸어 둡니다.
@@ -45,7 +67,7 @@ export function VisitVideo() {
   //  ⚠ 크롬은 둘 다 같은 오류 번호(4)로 알려 줍니다. 파일이 있는지 직접 물어봅니다.
   const onVideoError = () => {
     const missing = { state: 'missing', reason: '영상을 불러오지 못했습니다 — 인터넷 연결을 확인하고 새로고침해 주세요.' } as const
-    fetch(VISIT_VIDEO.src, { method: 'HEAD' })
+    fetch(ver.src, { method: 'HEAD' })
       .then((r) => setSrc(r.ok
         ? { state: 'missing', reason: '이 브라우저에서는 영상을 재생할 수 없습니다 — 크롬·사파리·엣지에서 열어 주세요.' }
         : missing))
@@ -59,26 +81,61 @@ export function VisitVideo() {
         <p className="text-[0.9rem] font-extrabold tracking-[0.2em] text-teal-600">신용보증기금 방문용</p>
         <h1 className="mt-1 text-[1.75rem] font-extrabold leading-tight text-navy-900 lg:text-[2rem]">신용보증기금 방문용 영상</h1>
         <p className="mt-2 text-[1rem] font-semibold text-navy-500">
-          ㈜비원미래 상담용 소개 영상 · {VISIT_VIDEO.lengthLabel} · 세로 화면(9:16) · 자막 포함
+          ㈜비원미래 상담용 소개 영상 · {VISIT_VIDEO.lengthLabel} · 세로(9:16) · 가로(16:9) · 자막 포함
         </p>
       </header>
 
-      <div className="grid gap-6 min-[1380px]:grid-cols-[minmax(0,auto)_minmax(0,1fr)] min-[1380px]:items-start">
+      {/*  ⚠ 가로판은 영상이 넓어 옆에 상세를 둘 자리가 없습니다 — 가로일 때는 위아래로 */}
+      <div className={`grid gap-6 ${ver.id === 'tall' ? 'min-[1380px]:grid-cols-[minmax(0,auto)_minmax(0,1fr)] min-[1380px]:items-start' : ''}`}>
         {/* ── 영상 ─────────────────────────────────────────────────────── */}
         <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-navy-100 lg:p-4" data-visit-video-player>
+          {/*  세로 ↔ 가로 — 한 번 누르면 바뀝니다 */}
+          <div className="mx-auto mb-3 flex w-fit rounded-full bg-navy-50 p-1 ring-1 ring-navy-100" role="group" aria-label="영상 비율">
+            {VISIT_VIDEO.versions.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                data-visit-version={v.id}
+                aria-pressed={v.id === ver.id}
+                onClick={() => switchVer(v.id)}
+                className={`flex min-h-[44px] items-center gap-1.5 rounded-full px-4 text-[1rem] font-extrabold transition ${
+                  v.id === ver.id ? 'bg-navy-800 text-white shadow-sm' : 'text-navy-600 hover:bg-white'
+                }`}
+              >
+                {v.id === 'tall' ? <RectangleVertical className="h-4 w-4" aria-hidden /> : <RectangleHorizontal className="h-4 w-4" aria-hidden />}
+                {v.short}
+              </button>
+            ))}
+          </div>
           {/*  ⚠ 두 칸은 1380px 부터 — 1024px 에서는 상세가 글자 한 자 폭, 1280px 에서도 252px 로 찌그러졌습니다 */}
           {/*  ⚠ 높이를 고정하면 폰(390px)에서 9:16 폭이 화면보다 넓어져 오른쪽이 잘렸습니다.
                폭을 정하고(화면 폭과 「높이 76vh 일 때의 폭」 중 작은 쪽) 높이는 비율로 따라오게 합니다. */}
-          <div data-visit-video-box className="mx-auto overflow-hidden rounded-2xl bg-[#0f1216]" style={{ aspectRatio: '9 / 16', width: 'min(100%, calc(min(76vh, 760px) * 9 / 16))' }}>
+          <div
+            data-visit-video-box
+            data-ratio={ver.id}
+            className="mx-auto overflow-hidden rounded-2xl bg-[#0f1216]"
+            style={ver.id === 'tall'
+              ? { aspectRatio: '9 / 16', width: 'min(100%, calc(min(76vh, 760px) * 9 / 16))' }
+              : { aspectRatio: '16 / 9', width: 'min(100%, calc(min(70vh, 720px) * 16 / 9))' }}
+          >
             {src.state === 'ready' ? (
               <video
                 ref={video}
-                src={VISIT_VIDEO.src}
+                src={ver.src}
                 controls
                 playsInline
                 preload="metadata"
                 controlsList="nodownload"
-                onLoadedMetadata={(e) => { e.currentTarget.playbackRate = rate }}
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget
+                  v.playbackRate = rate
+                  const r = resume.current
+                  resume.current = null
+                  if (r) {
+                    v.currentTime = Math.min(r.t, Math.max(0, v.duration - .5))
+                    if (r.playing) void v.play().catch(() => {})
+                  }
+                }}
                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)}
                 onError={onVideoError}
                 className="h-full w-full bg-black object-contain"
@@ -119,6 +176,23 @@ export function VisitVideo() {
             >
               <Expand className="h-4 w-4" aria-hidden /> 전체 화면
             </button>
+          </div>
+          {/*  내려받기 — 카카오톡으로 보낼 파일. 판마다 따로 */}
+          <div className="mt-3 border-t border-navy-50 pt-3" data-visit-downloads>
+            <p className="mb-2 text-center text-[0.95rem] font-bold text-navy-500">파일로 내려받기 · 카카오톡 전송용</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {VISIT_VIDEO.versions.map((v) => (
+                <a
+                  key={v.id}
+                  href={v.src}
+                  download={v.file}
+                  data-visit-download={v.id}
+                  className="flex min-h-[44px] items-center gap-1.5 rounded-full bg-white px-4 text-[1rem] font-bold text-navy-700 ring-1 ring-navy-200 transition hover:bg-navy-50"
+                >
+                  <Download className="h-4 w-4" aria-hidden /> {v.short} ({v.sizeMB}MB)
+                </a>
+              ))}
+            </div>
           </div>
         </section>
 
