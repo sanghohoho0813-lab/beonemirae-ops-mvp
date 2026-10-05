@@ -1,19 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // 신용보증기금 방문용 영상 (0130) — 파일 위치와 상세 내용
 //
-//  ⚠ 영상은 Supabase Storage **비공개** 칸에 있습니다 (저장소가 공개라 public/ 금지).
-//    칸·권한: supabase/proposals/PROPOSAL_0130_visit_video_storage.sql
-//    대표·사무실(is_staff) 계정만 서명 주소를 받을 수 있습니다.
+//  영상 파일: public/media/sinbo_visit_v3.mp4 (앱과 같이 배포 · SQL 필요 없음)
+//  ⚠ 저장소가 공개라 파일 주소를 아는 사람은 로그인 없이 받을 수 있습니다 —
+//    대표님이 알고 「바로 보이게」를 고르셨습니다. 단추·화면만 admin·office 전용.
 //
 //  ⚠ 숫자는 **영상 음성에서 말한 그대로**입니다. 1원이라도 바꾸지 않습니다.
-//    영상을 새로 만들면 path · lengthLabel · chapters · numbers 를 같이 고칩니다.
+//    영상을 새로 만들면 src · lengthLabel · chapters · numbers 를 같이 고칩니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const VISIT_VIDEO = {
-  bucket: 'visit-media',
-  path: 'sinbo_visit_v3.mp4',
-  /** 서명 주소 유효 시간 — 상담 한 번(몇 시간) 동안 끊기지 않게 */
-  signSeconds: 6 * 60 * 60,
+  src: '/media/sinbo_visit_v3.mp4',
   lengthLabel: '4분 20초',
   /** 장면 시작 시각(초) — 영상 파일 기준 */
   chapters: [

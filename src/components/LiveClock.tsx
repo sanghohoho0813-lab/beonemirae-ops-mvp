@@ -56,6 +56,8 @@ function seoulNow() {
  *     있어서, 보통 형식(「9월 17일 (목) · 오후 7:44:09」 226px)을 넣으면 줄이
  *     넘쳐 **단추가 찌그러지거나 아랫줄로 접힙니다.** 시·분·초는 그대로입니다 —
  *     줄이는 것은 날짜 표기뿐입니다.
+ *   ⚠ 0130 — 폰 머리띠의 시계 줄에서도 씁니다. 단, 그 줄에 「신용보증기금 방문용
+ *     영상」 단추가 있는 계정(대표·이사님)에서만입니다. 현장·병원 폰은 그대로.
  */
 export function LiveClock({ full = false, compact = false, className = '' }: { full?: boolean; compact?: boolean; className?: string }) {
   const [t, setT] = useState(seoulNow)

@@ -499,8 +499,11 @@ function Sidebar() {
 
 // ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
 function MobileHeader({ onHelp }: { onHelp: () => void }) {
-  const { mode } = useAuth()
+  const { mode, configured, role } = useAuth()
   const live = mode === 'live'
+  //  신용보증기금 방문용 영상 (0130) — 폰에서도. PC 와 같은 규칙(대표·이사님만).
+  const showVisitVideo = configured && canAccess(role, '/visit-video')
+  const navigate = useNavigate()
   return (
     /*  ⚠ 0080 — 폰을 **가로로 들면** 화면 높이가 390px 밖에 안 됩니다
         (트럭 안에서 실제로 이렇게 듭니다). 그런데 위 머리띠 102px + 아래 탭
@@ -595,9 +598,35 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
            ⚠ 위 머리글 **안**에 넣지 않았습니다. 폰은 가로가 390px 뿐이라
              상호·도움말과 자리를 다투다 상호가 「㈜비…」로 잘립니다.
              한 줄 아래에 통째로 두면 아무것도 밀어내지 않습니다. */}
-      <p className="mt-1.5 text-right text-[1rem] font-bold text-navy-500 [@media(max-height:480px)]:hidden">
-        <LiveClock />
-      </p>
+      {/*  ── 신용보증기금 방문용 영상 (0130) — 폰 ─────────────────────────────
+           대표님: 「폰에서도 볼 수 있게 — 지금은 PC 버전으로 들어가야만 보여요」.
+           PC 처럼 **시계 옆**(같은 줄 왼쪽)에 둡니다. 대표·이사님 계정에만 있고,
+           그때만 시계를 짧은 표기(「10/5(월) · 오후 9:19:17」)로 줄여 한 줄에 맞춥니다.
+           ⚠ 현장·병원 계정은 이 줄이 예전과 **똑같습니다** (머리띠 높이 그대로). */}
+      {/*  ⚠ 320px 폰에서 단추가 30px 로 짜부라져 글자가 세로로 섰습니다(check_phoneui).
+           글자는 **두 줄로 고정**(「신용보증기금 / 방문용 영상」)하고 단추는 줄지 않게,
+           자리가 모자라면 **시계가 아랫줄로** 내려갑니다(flex-wrap). */}
+      <div className="mt-1.5 flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1 [@media(max-height:480px)]:hidden">
+        {showVisitVideo && (
+          <button
+            type="button"
+            data-visit-video-btn
+            aria-label="신용보증기금 방문용 영상"
+            onClick={() => navigate('/visit-video')}
+            className="me-auto flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-navy-800 px-2.5 py-1 text-[0.9rem] font-bold leading-tight text-white shadow-sm transition active:bg-navy-900"
+          >
+            <PlayCircle size={16} strokeWidth={2.3} className="shrink-0" aria-hidden />
+            <span className="text-left">
+              <span className="block whitespace-nowrap">신용보증기금</span>
+              <span className="block whitespace-nowrap">방문용 영상</span>
+            </span>
+          </button>
+        )}
+        {/*  단추가 있을 때만 0.95rem(15.2px) — 360px 폰에서 한 줄에 들어가게 (단추 126 + 시계 189 ≤ 324) */}
+        <p className={`shrink-0 whitespace-nowrap text-right font-bold text-navy-500 ${showVisitVideo ? 'text-[0.95rem]' : 'text-[1rem]'}`}>
+          <LiveClock compact={showVisitVideo} />
+        </p>
+      </div>
     </header>
   )
 }
