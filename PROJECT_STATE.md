@@ -113,6 +113,9 @@
 | `src/pages/CollectionHistory.tsx` · `ClientDetail.tsx` (0131) | 수거이력 = **실제 기록만**(앞으로의 예정·무른 방문·오늘 아직 안 간 곳 빠짐). 표 구조는 그대로 두고 「입력된 수거 / **지난 일정 · 미입력**」 칩 + 미입력 줄에 「수거 입력 ›」 · 「지난 달」 · 기사·차량 검색 · `?status=missing` · `?client=<id>`(거래처 상세 「전체 수거이력 보기」) | 빠진 입력을 찾아 바로 넣게 |
 | `src/components/TodayBoard.tsx` · `TodayFocus.tsx` · `src/lib/ops.ts` (0131) | 「지금 처리할 것」에 **지난 일정 입력 없음**(→ 미입력 목록)·**독촉 대상**(→ 미수금) 두 줄. 지어낸 「인증·실사 전 확인」·격리 경보(`isolationAlerts`·`inspectionAlerts`)는 **빈 목록**으로 — fake data 금지(옛 함수는 `demo*` 로 남김) | 대시보드가 실제 할 일만 |
 | `src/pages/Receivables.tsx` · `DunningPanel.tsx` · `Clients.tsx` · `src/lib/koSearch.ts` · `BankMatch.tsx` · `Requests.tsx` · `Supplies.tsx` (0131) | 미수금 검색(초성·전화)·줄 세우기(최근 청구/남은 돈 큰 순/오래된 순) · 독촉 목록이 석 달 넘게 밀리면 한 줄 요약(누르면 펼침) · 거래처 초성·전화번호 검색 · 은행 매칭 확실한 건 한꺼번에 처리 때 매번 다시 읽지 않음·처리 중 중복 누름 막음 · 긴급/추가 수거 요청이 「일정 반영」인데 실제 날짜가 없으면 표시 + 날짜 잡기 · 자재 「전달 완료」「취소」 전 확인 | 데이터가 많아도 찾기 쉽게 · 실수 방지 |
+| `src/lib/collectDraft.ts` · `src/pages/CollectionInput.tsx` (0132) | 수거 입력 **임시 보관** — 전화·카메라·지도로 폰이 화면을 새로 띄워도 적던 kg·용기·자재·메모가 남음. **이 폰에만**(localStorage, 계정별) · 오늘 것만 · 일정만 열어 본 것은 안 남김 · 자동으로 채우지 않고 「적던 수거 입력이 남아 있습니다 → **이어서 입력 / 지우기**」 · 저장 성공이나 그 일정이 이미 저장되면 지움 | 「반복 입력 최소화」 |
+| `src/lib/planGap.ts` · `TodayBoard.tsx` · `TodayFocus.tsx` · `SchedulePlan.tsx` · `ClientDetail.tsx` `?book=1` (0132) | **다음 방문이 안 잡힌 단골** — 최근 120일 실제 방문 간격(중앙값, 완료 3번 이상)으로 「평소라면 갈 날」이 7일 안인데 예정이 없는 곳. 대시보드 「다음 방문 안 잡힘」 → 일정 편성 맨 위 목록(평소 N일마다 · 마지막 방문) → 「방문 잡기 ›」 = 거래처 화면 예약 창. 일정을 시스템이 만들지 않음 | 일정 묶음(1~4주)이 끝나는 날을 아무도 몰랐음 |
+| `src/pages/MonthClose.tsx` (0132) | 청구 확정 실패를 **전부** 적음(예전엔 첫 곳만) + 「N곳만 다시 확정」(성공한 곳은 다시 안 보냄) · 진행 표시가 다시 보내는 수 기준 · 평소와 다른 수거량·공급 수량 옆 「수거 기록 보기 ›」(`/history?client=`) | 월말 실패 복구 |
 
 ## 4. PILOT ADD — 새로 만드는 것
 - `src/lib/pilotEvidence.ts` — 순수 함수. 입력 `AppData`, 출력 Pilot 요약(기간 · 거래처 · 수거 입력 · 자재사용 기록 · 실사용자 · Portal 요청 · 연결 건수 · 입력 정정 기록(취소된 입력 건수) · BASELINE KNOWN/UNKNOWN 목록). 개선율 계산 **없음**.

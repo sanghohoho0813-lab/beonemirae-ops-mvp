@@ -32,6 +32,7 @@ import { WasteBadge } from '../components/Badge'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import { mapUrl } from '../lib/mapLink'
+import { clearDraft, loadDraft, saveDraft, type CollectDraft } from '../lib/collectDraft'
 import {
   CONTAINER_KEYS,
   EMPTY_CONTAINERS,
@@ -656,6 +657,7 @@ export function CollectionInput() {
     }
     setDupNotice(null)
     setErrors([])
+    clearDraft(profile?.id ?? '')
     setSuccess({
       client: client?.name ?? '거래처',
       amount: Number(amount) || 0,
@@ -697,6 +699,74 @@ export function CollectionInput() {
 
   //  ⚠ 매 렌더마다 최신 submit 을 넣어 둡니다 — 위 setRetryHandler 참고
   submitRef.current = submit
+
+  //  ── 적던 것 임시 보관 (0132 · lib/collectDraft) ───────────────────────
+  //   「적은 것이 있다」 = 일정 자동 채움과 다른 값이 하나라도 있을 때.
+  //   일정을 눌러 보기만 한 것은 남기지 않습니다(다시 누르면 똑같이 채워집니다).
+  const draftWho = profile?.id ?? ''
+  const typed =
+    containerSum > 0 ||
+    suppliedSum > 0 ||
+    usedSum > 0 ||
+    memo.trim().length > 0 ||
+    handover !== '수거 완료' ||
+    (scheduleId ? amount !== '' && amount !== String(expectedKg ?? '') : !!clientId && amount !== '')
+  //  화면을 열 때 한 번 읽어 둡니다 — 이어서 넣을지는 사람이 고릅니다.
+  const [draft, setDraft] = useState<CollectDraft | null>(() => loadDraft(draftWho))
+  //  계정 정보가 화면보다 늦게 오면 그 계정 것으로 다시 읽습니다.
+  const draftWhoRef = useRef(draftWho)
+  useEffect(() => {
+    if (draftWhoRef.current === draftWho) return
+    draftWhoRef.current = draftWho
+    setDraft(loadDraft(draftWho))
+  }, [draftWho])
+  useEffect(() => {
+    if (draft) return // 남아 있는 것을 고르기 전에는 덮어쓰지 않습니다
+    const t = window.setTimeout(() => {
+      if (!typed) return clearDraft(draftWho)
+      saveDraft(draftWho, {
+        scheduleId, clientId, wasteType, vehicleId, fieldPicked, driverName, amount, time, visitDate,
+        containers, suppliedItems, usedItems, isAdditional, handover, memo,
+      })
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [draft, typed, draftWho, scheduleId, clientId, wasteType, vehicleId, fieldPicked, driverName, amount, time,
+    visitDate, containers, suppliedItems, usedItems, isAdditional, handover, memo])
+  //  남은 것이 이미 저장된 일정이면(다른 폰·사무실에서 넣었거나 재시도로 들어감) 버립니다.
+  const draftSchedule = draft?.scheduleId ? data.schedules.find((x) => x.id === draft.scheduleId) : null
+  const draftStale = !!draft?.scheduleId && data.schedules.length > 0 && (!draftSchedule || !isPending(draftSchedule))
+  const draftClient = draft ? data.clients.find((c) => c.id === draft.clientId) : null
+  useEffect(() => {
+    if (draftStale) {
+      clearDraft(draftWho)
+      setDraft(null)
+    }
+  }, [draftStale, draftWho])
+  function resumeDraft(d: CollectDraft) {
+    if (d.scheduleId) applySchedule(d.scheduleId)
+    else setScheduleId('')
+    setClientId(d.clientId)
+    setWasteType(d.wasteType)
+    if (fieldPick) setFieldPicked(d.fieldPicked)
+    else {
+      setVehicleId(d.vehicleId)
+      setDriverName(d.driverName)
+    }
+    setAmount(d.amount)
+    setTime(d.time)
+    setVisitDate(d.visitDate)
+    setContainers({ ...EMPTY_CONTAINERS, ...d.containers })
+    setSuppliedItems(d.suppliedItems ?? {})
+    setUsedItems(d.usedItems ?? {})
+    setIsAdditional(!!d.isAdditional)
+    setHandover(d.handover)
+    setMemo(d.memo ?? '')
+    setDraft(null)
+  }
+  function dropDraft() {
+    clearDraft(draftWho)
+    setDraft(null)
+  }
 
   //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
   const timeOpen = openTime || visitDate !== today()
@@ -861,6 +931,35 @@ export function CollectionInput() {
         subtitle={role === 'field' ? undefined : '한 번 입력하면 일정·이력·자재·통계에 자동 연결됩니다'}
         action={<AiButton id="photo" />}
       />
+
+      {draft && !draftStale && draftClient && (
+        <div data-collect-draft className="card mb-4 border border-sky-200 bg-sky-50 p-4">
+          <p className="break-keep text-[1.08rem] font-extrabold text-navy-900">적던 수거 입력이 남아 있습니다</p>
+          <p className="mt-0.5 break-keep text-[1.02rem] text-navy-600">
+            {draftClient.name}
+            {draft.amount && ` · ${draft.amount}kg`} ·{' '}
+            {new Date(draft.savedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}에 적던 것 — 아직 저장되지 않았습니다
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-collect-draft-resume
+              onClick={() => resumeDraft(draft)}
+              className="min-h-[2.75rem] rounded-xl bg-navy-800 px-4 font-extrabold text-white"
+            >
+              이어서 입력
+            </button>
+            <button
+              type="button"
+              data-collect-draft-drop
+              onClick={dropDraft}
+              className="min-h-[2.75rem] rounded-xl bg-white px-4 font-bold text-navy-600 ring-1 ring-navy-200"
+            >
+              지우기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/*  이미 저장돼 있는 경우 — 빨강이 아니라 청록입니다.
            「안 됐다」가 아니라 「이미 됐다」이기 때문입니다. */}

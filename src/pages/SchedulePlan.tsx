@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { CalendarPlus, CalendarX2, CheckCircle2, Info, Truck, Undo2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CalendarClock, CalendarPlus, CalendarX2, CheckCircle2, Info, Truck, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { AiButton } from '../components/AiAction'
@@ -9,6 +10,7 @@ import { today, prettyDate } from '../lib/format'
 import { addDays } from '../lib/performance'
 import { buildPlan, WEEKDAY_LABEL, type PlanResult } from '../lib/schedulePlan'
 import { HolidayPanel } from '../components/HolidayPanel'
+import { planGaps } from '../lib/planGap'
 import { buildAssignment, dayLabel } from '../lib/vehiclePlan'
 import type { AssignResultRow, PlanBatchResult } from '../lib/repo'
 
@@ -297,6 +299,10 @@ export function SchedulePlan() {
   //  data 가 바뀌면(저장 후 다시 읽어오면) 미리보기도 함께 다시 계산됩니다 —
   //  방금 만든 일정이 「이미 있음」으로 바뀌어 두 번 만들어지지 않습니다.
   const plan: PlanResult = useMemo(() => buildPlan(data, from, to), [data, from, to])
+  //  0132 — 대시보드 「다음 방문 안 잡힘」에서 넘어온 곳. 요일이 일정치 않아
+  //  아래 편성에 안 잡히는 곳은 거래처 화면에서 방문을 직접 잡습니다.
+  const gaps = useMemo(() => planGaps(data), [data])
+  const [gapsAll, setGapsAll] = useState(false)
 
   const key = (clientId: string, wasteType: string) => `${clientId}|${wasteType}`
   const rows = plan.rows.filter((r) => !excluded.has(key(r.clientId, r.wasteType)))
@@ -368,6 +374,38 @@ export function SchedulePlan() {
           }
         />
       </div>
+
+      {gaps.length > 0 && (
+        <div data-plan-gaps className="card border-amber-200 bg-amber-50 p-4 sm:p-5">
+          <p className="flex items-center gap-2 break-keep text-[1.1rem] font-extrabold text-amber-800">
+            <CalendarClock size={19} className="shrink-0" />
+            다음 방문이 안 잡힌 곳 {gaps.length}곳 — 평소 간격이면 이번 주에 갈 곳입니다
+          </p>
+          <ul className="mt-2.5 space-y-1">
+            {(gapsAll ? gaps : gaps.slice(0, 5)).map((g) => (
+              <li key={g.clientId}>
+                <Link
+                  to={`/clients/${g.clientId}?book=1`}
+                  data-plan-gap={g.clientId}
+                  className="flex min-h-[2.75rem] flex-wrap items-center gap-x-2 rounded-xl px-2 py-1.5 text-[1.03rem] text-navy-700 transition hover:bg-amber-100"
+                >
+                  <b className="text-navy-900">{g.clientName}</b>
+                  <span className="text-navy-500">
+                    평소 {g.usualGap}일마다 · 마지막 {prettyDate(g.lastDone)}
+                  </span>
+                  <span className="ms-auto font-bold text-amber-800">방문 잡기 ›</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {gaps.length > 5 && !gapsAll && (
+            <button type="button" onClick={() => setGapsAll(true)} className="mt-1 min-h-[2.75rem] px-2 font-bold text-amber-800 underline">
+              {gaps.length - 5}곳 더 보기
+            </button>
+          )}
+          <p className="t-muted mt-1.5 break-keep px-2">요일이 일정한 곳은 아래 「① 예정 만들기」로 한꺼번에 잡힙니다.</p>
+        </div>
+      )}
 
       {/* 무엇을 근거로 만드는지 — 먼저 밝힙니다 */}
       <div className="card flex gap-3 p-4 sm:p-5">

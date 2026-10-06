@@ -32,7 +32,8 @@ export function MonthClose() {
   const [off, setOff] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<{ ok: number; amount: number; failed: { name: string; error: string }[] } | null>(null)
+  const [runTotal, setRunTotal] = useState(0)
+  const [result, setResult] = useState<{ ok: number; amount: number; failed: { id: string; name: string; error: string }[] } | null>(null)
 
   const close = useMemo(() => monthClose(data, month), [data, month])
   //  확정한 청구의 명세서 — 병원에 보낼 문서입니다.
@@ -65,13 +66,18 @@ export function MonthClose() {
   }
 
   const picked = close.ready.filter((r) => !excluded.has(r.clientId))
+  //  실패한 곳 중 아직 확정 대기에 남아 있는 곳 (다시 읽은 목록 기준)
+  const retryable = close.ready.filter((r) => result?.failed.some((f) => f.id === r.clientId))
   const pickedTotal = picked.reduce((s, r) => s + r.amount, 0)
 
-  const run = async () => {
+  //  targets — 「실패한 곳만 다시」는 그 곳들만 다시 보냅니다 (0132).
+  //  ⚠ 성공한 곳은 이미 확정돼 목록(close.ready)에서 빠졌으므로 두 번 확정될 일은 없습니다.
+  const run = async (targets = picked) => {
+    const total = targets.reduce((s, r) => s + r.amount, 0)
     if (
       !window.confirm(
         `${month.replace('-', '년 ')}월 청구 확정\n` +
-          `거래처 ${picked.length}곳 · 합계 ${won(pickedTotal)}\n\n` +
+          `거래처 ${targets.length}곳 · 합계 ${won(total)}\n\n` +
           '확정하면 금액과 거래명세서가 그대로 고정됩니다. 이후 단가를 바꾸거나 ' +
           '수거가 더 들어와도 이 청구는 바뀌지 않습니다. 진행할까요?',
       )
@@ -80,18 +86,19 @@ export function MonthClose() {
     }
     setBusy(true)
     setProgress(0)
+    setRunTotal(targets.length)
     setResult(null)
-    const failed: { name: string; error: string }[] = []
+    const failed: { id: string; name: string; error: string }[] = []
     let okCount = 0
     let amount = 0
-    for (const [i, r] of picked.entries()) {
+    for (const [i, r] of targets.entries()) {
       //  건마다 전체를 다시 읽지 않습니다 — 아래에서 한 번만 읽습니다.
       const res = await confirmBilling(r.clientId, month, { quiet: true })
       if (res.ok) {
         okCount++
         amount += r.amount
       } else {
-        failed.push({ name: r.clientName, error: res.error ?? '알 수 없는 오류' })
+        failed.push({ id: r.clientId, name: r.clientName, error: res.error ?? '알 수 없는 오류' })
       }
       setProgress(i + 1)
     }
@@ -200,9 +207,9 @@ export function MonthClose() {
       </div>
 
       <div className="card flex flex-wrap items-center gap-3 p-4 sm:p-5">
-        <PrimaryButton onClick={run} disabled={busy || sync.saving || picked.length === 0}>
+        <PrimaryButton onClick={() => void run()} disabled={busy || sync.saving || picked.length === 0}>
           <span data-close-confirm>
-            {busy ? `확정하는 중… ${progress}/${picked.length}` : `${picked.length}곳 청구 확정하기`}
+            {busy ? `확정하는 중… ${progress}/${runTotal}` : `${picked.length}곳 청구 확정하기`}
           </span>
         </PrimaryButton>
         {close.ready.length > 0 && (
@@ -281,10 +288,30 @@ export function MonthClose() {
             <p className="font-bold text-teal-700">
               {result.ok.toLocaleString('ko-KR')}곳 · {won(result.amount)} 청구를 확정했습니다
             </p>
+            {/*  0132 — 예전에는 첫 곳 하나만 적혀, 나머지 어디가 안 됐는지 몰랐습니다.
+                 전부 적고, 그 곳들만 다시 보내는 단추를 둡니다. */}
             {result.failed.length > 0 && (
-              <p className="mt-1 text-rose-600">
-                {result.failed.length}곳은 실패했습니다 — {result.failed[0].name}: {result.failed[0].error}
-              </p>
+              <div data-close-failed className="mt-2 rounded-xl bg-rose-50 px-3.5 py-2.5 text-rose-700">
+                <p className="font-bold">{result.failed.length}곳은 확정되지 않았습니다</p>
+                <ul className="mt-1 space-y-0.5">
+                  {result.failed.map((f) => (
+                    <li key={f.id} className="break-keep">
+                      {f.name} — {f.error}
+                    </li>
+                  ))}
+                </ul>
+                {retryable.length > 0 && (
+                  <button
+                    type="button"
+                    data-close-retry
+                    disabled={busy}
+                    onClick={() => void run(retryable)}
+                    className="mt-2 min-h-[2.75rem] rounded-xl bg-rose-600 px-4 font-extrabold text-white disabled:opacity-50"
+                  >
+                    {retryable.length}곳만 다시 확정
+                  </button>
+                )}
+              </div>
             )}
             <p className="mt-1 text-navy-500">
               「미수금 관리」에 바로 잡히고, <Link to="/bank" className="font-bold underline">통장 대사</Link>에서 입금을
@@ -374,6 +401,16 @@ export function MonthClose() {
                         .join(' · ')}
                       {r.oddAmounts.length > 2 && ` 외 ${r.oddAmounts.length - 2}건`}
                     </span>
+                  )}
+                  {(r.oddAmounts.length > 0 || r.oddItems.length > 0) && (
+                    <Link
+                      to={`/history?client=${r.clientId}`}
+                      data-close-odd-history={r.clientId}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex min-h-[2.75rem] shrink-0 items-center px-1 text-[0.98rem] font-bold text-navy-600 underline"
+                    >
+                      수거 기록 보기 ›
+                    </Link>
                   )}
                   <span className="break-keep text-[0.98rem] text-navy-400">
                     수거 {r.collections}건 · 공급 {r.supplies}건

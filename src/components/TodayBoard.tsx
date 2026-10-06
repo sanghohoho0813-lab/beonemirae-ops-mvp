@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ClipboardEdit,
   CalendarX2,
+  CalendarClock,
   HandCoins,
   FileWarning,
   Inbox,
@@ -15,6 +16,7 @@ import {
 import type { AppData } from '../types'
 import { missedEntries, openRequests, todayProgress } from '../lib/ops'
 import { dunningSummary } from '../lib/dunning'
+import { planGaps } from '../lib/planGap'
 import { won } from '../lib/format'
 import { hideRequests } from '../lib/pilotMode'
 import { daysToContractEnd } from '../lib/billing'
@@ -71,6 +73,7 @@ export function TodayBoard({ data }: { data: AppData }) {
 
   const missed = useMemo(() => missedEntries(data).length, [data])
   const dunning = useMemo(() => dunningSummary(data), [data])
+  const gaps = useMemo(() => planGaps(data), [data])
 
   const tasks = useMemo<Task[]>(() => {
     const all: Task[] = [
@@ -132,6 +135,20 @@ export function TodayBoard({ data }: { data: AppData }) {
         to: '/history?status=missing',
         cta: '바로 입력',
       },
+      //  0132 — 일정 묶음이 끝나 다음 방문이 비는 단골 (lib/planGap)
+      {
+        key: 'plan-gap',
+        icon: CalendarClock,
+        label: '다음 방문 안 잡힘',
+        detail: gaps.length
+          ? `${gaps[0].clientName}${gaps.length > 1 ? ` 외 ${gaps.length - 1}곳` : ''} — 평소 간격이면 이번 주 갈 곳`
+          : '',
+        count: gaps.length,
+        unit: '곳',
+        tone: 'amber',
+        to: '/plan',
+        cta: '일정 편성',
+      },
       {
         key: 'dunning',
         icon: HandCoins,
@@ -156,7 +173,7 @@ export function TodayBoard({ data }: { data: AppData }) {
       },
     ]
     return all.filter((t) => t.count > 0)
-  }, [data, open, urgent, openInquiries.length, progress.pendingInput, missed, dunning])
+  }, [data, open, urgent, openInquiries.length, progress.pendingInput, missed, dunning, gaps])
 
   const left = Math.max(0, progress.planned - progress.done)
   const pct = progress.planned ? Math.round((progress.done / progress.planned) * 100) : 0

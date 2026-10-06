@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
+  CalendarClock,
   CheckCircle2,
   ChevronRight,
   ClipboardEdit,
@@ -12,6 +13,7 @@ import {
 import type { AppData } from '../types'
 import { missedEntries, openRequests, todayProgress } from '../lib/ops'
 import { dunningSummary } from '../lib/dunning'
+import { planGaps } from '../lib/planGap'
 import { MessageSquare } from 'lucide-react'
 import { hideRequests } from '../lib/pilotMode'
 import { TONE, type Tone } from '../lib/tone'
@@ -103,6 +105,15 @@ export function TodayFocus({ data }: { data: AppData }) {
       unit: '건',
       tone: 'amber' as const,
       to: '/history?status=missing',
+    },
+    {
+      key: 'plan-gap',
+      icon: CalendarClock,
+      label: '다음 방문 안 잡힘',
+      count: planGaps(data).length,
+      unit: '곳',
+      tone: 'amber' as const,
+      to: '/plan',
     },
     {
       key: 'dunning',

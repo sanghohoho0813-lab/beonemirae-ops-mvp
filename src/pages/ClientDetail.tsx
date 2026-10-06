@@ -174,6 +174,14 @@ export function ClientDetail() {
     setParams((p) => { p.delete('edit'); return p }, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantEdit, client?.id])
+  //  ?book=1 — 「일정 편성 → 다음 방문 안 잡힌 곳」에서 왔을 때 바로 예약 창 (0132)
+  const wantBook = params.get('book') === '1'
+  useEffect(() => {
+    if (!wantBook || !client) return
+    if (canBook) setBookOpen(true)
+    setParams((p) => { p.delete('book'); return p }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantBook, client?.id])
   const [logOpen, setLogOpen] = useState(false)
   //  폰에서 추천을 **한 건만** 펼칩니다.
   //   PC 는 오른쪽 절반이라 세 건이 다 들어가지만, 폰에서는 이 추천 묶음
