@@ -94,7 +94,7 @@ export function NextVisitCard({
               href={mapUrl(client?.address) ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
-              className="t-body -my-1 flex min-h-[2.75rem] items-start gap-2 break-keep py-1 text-navy-600"
+              className="t-body !mb-3 flex min-h-[2.75rem] items-start gap-2 break-keep py-1 text-navy-600"
             >
               <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-teal-600" />
               <span className="min-w-0">

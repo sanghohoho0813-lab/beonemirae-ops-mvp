@@ -1780,9 +1780,10 @@ export function CollectionInput() {
             {missing.map((m, i) => (
               <span key={m.label}>
                 {i > 0 && ' · '}
+                {/*  누를 자리는 44px — 글자만 한 단추는 장갑 낀 손으로 못 누릅니다 */}
                 <button
                   type="button"
-                  className="font-extrabold text-blue-600 underline underline-offset-2"
+                  className="mx-0.5 inline-flex min-h-[2.75rem] min-w-[2.75rem] items-center justify-center px-1.5 font-extrabold text-blue-600 underline underline-offset-2"
                   onClick={() => document.getElementById(m.target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
                   {m.label}
