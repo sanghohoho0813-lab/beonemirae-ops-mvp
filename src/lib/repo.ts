@@ -247,13 +247,23 @@ const toVehicle = (r: Row): Vehicle => ({
   driver: r.driver ?? '',
 })
 
+//  시각을 「HH:MM」으로 맞춥니다 (0131).
+//  ⚠ scheduled_time 칸은 **글자(text)** 라 엑셀 가져오기·직접 수정으로 「9:00」이 들어올 수
+//    있습니다. 화면 곳곳이 시각을 **글자 순서로** 정렬하는데, 그러면 「9:00」이 「16:00」
+//    뒤로 가서 「다음 방문」이 9시 병원을 건너뛰었습니다. 읽는 자리 한 곳에서 맞춥니다.
+//    알아볼 수 없는 값(빈칸 등)은 그대로 둡니다 — 지어내지 않습니다.
+export function normHm(v: string | null | undefined): string {
+  const m = /^\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*$/.exec(v ?? '')
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}` : (v ?? '')
+}
+
 const toSchedule = (r: Row): Schedule => ({
   id: r.id,
   date: r.date,
   clientId: r.client_id,
   wasteType: r.waste_type,
   vehicleId: r.vehicle_id ?? '',
-  scheduledTime: r.scheduled_time ?? '',
+  scheduledTime: normHm(r.scheduled_time),
   status: r.status,
   expectedAmount: r.expected_amount ?? 0,
   actualAmount: r.actual_amount ?? null,

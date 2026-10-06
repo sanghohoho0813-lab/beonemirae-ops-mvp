@@ -206,6 +206,12 @@ export function IsolationCard() {
           <p className="text-[0.95rem] font-medium text-navy-400">격리의료폐기물 보관기한 대응</p>
         </div>
       </div>
+      {/*  0131 — 지어낸 경보를 껐습니다. 실제 요청만 봅니다 (lib/ops isolationAlerts 참고) */}
+      {alerts.length === 0 && (
+        <p data-isolation-empty className="mt-3 break-keep rounded-2xl bg-navy-50 p-3.5 text-[1rem] font-semibold text-navy-500">
+          지금 확인할 격리·보관기한 건이 없습니다. 병원이 긴급·격리 수거를 요청하면 「고객 요청」과 대시보드 맨 위에 바로 뜹니다.
+        </p>
+      )}
       <ul className="mt-3 space-y-2">
         {alerts.map((a) => {
           const Icon = kindIcon[a.kind]

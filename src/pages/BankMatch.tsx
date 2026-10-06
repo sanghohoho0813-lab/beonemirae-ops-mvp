@@ -72,7 +72,7 @@ const LEVEL_STYLE: Record<string, string> = {
   '못 찾음': 'bg-navy-100 text-navy-500',
 }
 
-function LineRow({ r, onPick }: { r: MatchRow; onPick?: (paymentId: string) => void }) {
+function LineRow({ r, onPick, busy = false }: { r: MatchRow; onPick?: (paymentId: string) => void; busy?: boolean }) {
   return (
     <div data-bank-row={r.line.ref} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 p-3.5">
       <span className={`shrink-0 rounded-lg px-2.5 py-1 text-[0.98rem] font-bold ${LEVEL_STYLE[r.level]}`}>
@@ -98,8 +98,9 @@ function LineRow({ r, onPick }: { r: MatchRow; onPick?: (paymentId: string) => v
               key={c.paymentId}
               type="button"
               data-bank-pick={`${r.line.ref}|${c.paymentId}`}
+              disabled={busy}
               onClick={() => onPick(c.paymentId)}
-              className="rounded-xl bg-navy-50 px-2.5 py-1.5 text-[0.98rem] font-bold text-navy-700 transition hover:bg-navy-100"
+              className="rounded-xl bg-navy-50 px-2.5 py-1.5 text-[0.98rem] font-bold text-navy-700 transition hover:bg-navy-100 disabled:opacity-50"
             >
               {c.clientName} {c.month}월 · 남은 {won(c.outstanding)}
             </button>
@@ -125,8 +126,13 @@ export function BankMatch() {
   const rows = useMemo(() => matchLines(data, lines), [data, lines])
   const sum = useMemo(() => summarize(rows), [rows])
 
+  //  누르고 응답을 기다리는 줄 (0131) — 기다리는 동안 다시 못 누르게. 예전에는
+  //  아무 표시가 없어서 한 번 더 눌렀고, 서버가 막아 주긴 해도 빨간 오류가 떴습니다.
+  const [picking, setPicking] = useState<string | null>(null)
   const pick = async (r: MatchRow, paymentId: string) => {
+    if (picking) return
     setError(null)
+    setPicking(r.line.ref)
     const res = await addReceipt({
       paymentId,
       receivedOn: r.line.date,
@@ -135,6 +141,7 @@ export function BankMatch() {
       memo: `통장 대사 · ${r.line.description}`.trim(),
       sourceRef: r.line.ref,
     })
+    setPicking(null)
     if (!res.ok) setError(res.error ?? '기록하지 못했습니다.')
   }
 
@@ -183,7 +190,7 @@ export function BankMatch() {
         method: '계좌이체',
         memo: `통장 대사 · ${r.line.description}`.trim(),
         sourceRef: r.line.ref,
-      })
+      }, { quiet: true })
       if (res.ok) okCount++
       else failed.push({ ref: r.line.ref, error: res.error ?? '알 수 없는 오류' })
       setProgress(i + 1)
@@ -387,7 +394,7 @@ export function BankMatch() {
               <SectionTitle>확인 필요 {sum.check}건</SectionTitle>
               <div className="card divide-y divide-navy-100" data-bank-check>
                 {rows.filter((r) => r.level === '확인 필요').map((r) => (
-                  <LineRow key={r.line.ref} r={r} onPick={(pid) => void pick(r, pid)} />
+                  <LineRow key={r.line.ref} r={r} busy={picking != null} onPick={(pid) => void pick(r, pid)} />
                 ))}
               </div>
               <p className="mt-2 flex items-center gap-1.5 px-1 text-[0.98rem] text-navy-400">

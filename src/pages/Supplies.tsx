@@ -203,7 +203,12 @@ function OrdersTab({
                     data-order-next={o.id}
                     className={next === '전달완료' ? 'btn-primary' : 'btn-ghost'}
                     disabled={busy === o.id}
-                    onClick={() => onMove(o, next)}
+                    onClick={() => {
+                      //  ⚠ 0131 — 전달완료는 서버가 재고를 빼고 **되돌릴 수 없습니다**.
+                      //    한 번 묻습니다. (앞 단계 요청→확인→준비는 묻지 않습니다)
+                      if (next === '전달완료' && !window.confirm(`${nameOf(o.clientId)} 주문을 전달완료로 바꿉니다.\n재고에서 빠지고 되돌릴 수 없습니다. 진행할까요?`)) return
+                      onMove(o, next)
+                    }}
                   >
                     {next} 으로
                   </button>
@@ -213,7 +218,10 @@ function OrdersTab({
                     data-order-cancel={o.id}
                     className="btn-ghost text-rose-600"
                     disabled={busy === o.id}
-                    onClick={() => onMove(o, '취소')}
+                    onClick={() => {
+                      if (!window.confirm(`${nameOf(o.clientId)} 주문을 취소합니다. 병원 화면에도 취소로 보입니다. 진행할까요?`)) return
+                      onMove(o, '취소')
+                    }}
                   >
                     취소
                   </button>

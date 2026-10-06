@@ -5,6 +5,7 @@ import type {
   RequestKind,
   RequestSource,
   RequestStatus,
+  Schedule,
   WasteType,
 } from '../types'
 import { facilityByWaste } from '../data/ops'
@@ -139,7 +140,17 @@ export interface IsolationAlert {
   message: string
 }
 
-export function isolationAlerts(data: AppData): IsolationAlert[] {
+//  ⚠ 0131 — **지어낸 경보를 끕니다.** 아래 함수는 거래처 목록의 앞쪽 병원에
+//    「격리환자 발생 가능」「보관창고 협소」를 **아무 근거 없이** 붙이고 있었습니다
+//    (시연용으로 시작한 것). 실제 운영 중인 병원 이름 옆에 그 말이 뜨면 사무실은
+//    없는 일을 확인하러 전화합니다. 격리·긴급은 병원이 올린 **실제 요청**으로만
+//    봅니다(고객 요청 · urgentRisk). 이 표를 채울 자료가 생기기 전까지 빈 목록입니다.
+export function isolationAlerts(_data: AppData): IsolationAlert[] {
+  return []
+}
+
+/** (참고용으로 남긴 옛 시연 규칙 — 화면에서 부르지 않습니다) */
+export function demoIsolationAlerts(data: AppData): IsolationAlert[] {
   // 요양병원·요양원 우선, 없으면 임의 거래처 — 세트 크기와 무관하게 동작
   const seen = new Set<string>()
   const pool: Client[] = []
@@ -205,6 +216,16 @@ export function todayChecklist(data: AppData): CheckItem[] {
     { key: 'log', label: '수거대장 작성 필요', count: logTargets, status: logTargets ? '정보' : '완료', to: '/clients' },
     { key: 'isolation', label: '격리/보관기한 확인', count: isolation, status: isolation ? '긴급' : '완료', to: '/dispatch' },
   ]
+}
+
+// ── 지난 날짜인데 입력이 없는 일정 (0131) ────────────────────────────────────
+//  「수거 입력 대기」는 **오늘** 것만 셌습니다. 어제·그제 빠진 입력은 어디에도 안 떠서
+//  월말 청구 때에야 「이 병원 왜 비었지」로 드러났습니다. 최근 days 일만 봅니다 —
+//  오래전에 버려진 예정이 영원히 남아 화면을 덮지 않게.
+export function missedEntries(data: AppData, days = 30): Schedule[] {
+  const t = today()
+  const from = shiftDays(-days)
+  return data.schedules.filter((s) => s.date < t && s.date >= from && s.status !== '완료' && !s.canceledAt)
 }
 
 // ── 거래처별 이력 ────────────────────────────────────────────────────────────
@@ -380,8 +401,19 @@ export interface InspectionItem {
   needs: string[]
 }
 
-/** 14일 이내 인증·실사 예정 (병원·요양병원 우선, 규칙 기반 시연 데이터) */
-export function inspectionAlerts(data: AppData): InspectionItem[] {
+/**
+ * 14일 이내 인증·실사 예정.
+ *  ⚠ 0131 — 빈 목록입니다. 예전에는 앞쪽 병원 두 곳에 「D-7 병원 정기인증」
+ *    「D-13 보건소 실사」를 **지어서** 붙였고, 그 숫자가 대시보드 「오늘 챙길 일」에
+ *    「인증·실사 전 확인 2건」으로 떴습니다. 인증 일정을 넣는 자리가 시스템에 없으니
+ *    보여 줄 것도 없습니다 (거래처 상세의 같은 칸은 이미 꺼져 있었습니다 — SHOW_INSPECTION).
+ */
+export function inspectionAlerts(_data: AppData): InspectionItem[] {
+  return []
+}
+
+/** (참고용으로 남긴 옛 시연 규칙 — 화면에서 부르지 않습니다) */
+export function demoInspectionAlerts(data: AppData): InspectionItem[] {
   const pool = data.clients.filter((c) => c.type === '병원' || c.type === '요양병원')
   const base = pool.length ? pool : data.clients
   const defs: Omit<InspectionItem, 'clientId' | 'clientName'>[] = [

@@ -4,6 +4,7 @@ import type { AppData, Schedule } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { NoteChips } from './SiteNotes'
 import type { SiteNote } from '../types'
+import { mapUrl } from '../lib/mapLink'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 다음 방문 (모바일 전용)
@@ -86,10 +87,27 @@ export function NextVisitCard({
         </p>
 
         <div className="mt-2.5 space-y-1.5">
-          <p className="t-body flex items-start gap-2 break-keep text-navy-500">
-            <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-navy-400" />
-            <span className="min-w-0">{client?.address ?? '주소 없음'}</span>
-          </p>
+          {/*  주소를 누르면 지도 (0131) — 다른 앱에서 주소를 다시 치지 않게 */}
+          {mapUrl(client?.address) ? (
+            <a
+              data-next-map
+              href={mapUrl(client?.address) ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="t-body -my-1 flex min-h-[2.75rem] items-start gap-2 break-keep py-1 text-navy-600"
+            >
+              <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-teal-600" />
+              <span className="min-w-0">
+                {client?.address}
+                <span className="ms-1.5 whitespace-nowrap font-bold text-teal-700">지도 ›</span>
+              </span>
+            </a>
+          ) : (
+            <p className="t-body flex items-start gap-2 break-keep text-navy-500">
+              <MapPin size={17} strokeWidth={2.3} className="mt-1 shrink-0 text-navy-400" />
+              <span className="min-w-0">주소 없음</span>
+            </p>
+          )}
           {/*  ⚠ 0074 — 주소는 있는데 **전화는 누를 수 없었습니다.** 기사님이
                「문 앞인데 아무도 안 나온다」 할 때 여기서 바로 걸어야 하는데,
                수거 입력 화면까지 들어가야 전화 링크가 나왔습니다.

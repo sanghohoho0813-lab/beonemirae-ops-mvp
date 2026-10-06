@@ -847,7 +847,7 @@ export function ClientDetail() {
                수거이력 화면이 막혀 있어(access.ts) 누르면 차단 안내만 뜹니다.
                이 탭 안에서 이 거래처의 이력은 이미 위 표에 다 나와 있습니다. */}
           {canGoHistory && (
-            <button onClick={() => navigate('/history')} className="card pressable flex w-full items-center gap-3 p-4 text-left">
+            <button onClick={() => navigate(`/history?client=${client.id}`)} className="card pressable flex w-full items-center gap-3 p-4 text-left">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
                 <FileText size={19} strokeWidth={2.2} />
               </span>

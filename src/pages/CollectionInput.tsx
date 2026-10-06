@@ -31,6 +31,7 @@ import { TimeField } from '../components/TimeField'
 import { WasteBadge } from '../components/Badge'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
+import { mapUrl } from '../lib/mapLink'
 import {
   CONTAINER_KEYS,
   EMPTY_CONTAINERS,
@@ -301,6 +302,24 @@ export function CollectionInput() {
     return vehicles.filter((v) => !(v.tonnage >= 2 && takenByOthers.has(v.id)))
   }, [vehicles, data.vehicleReservations, pickDate, profile?.id])
 
+  //  ── 오늘 앞 건에서 탄 차 (0131) ────────────────────────────────────────
+  //   기사님은 하루 종일 대개 같은 차를 탑니다. 그런데 매 건마다 「차량 선택」을
+  //   열어 같은 차를 다시 찾아 골랐습니다(목록 열기 → 찾기 → 고르기).
+  //   ⚠ **자동으로 채우지 않습니다.** 0128 결정 — 건마다 그날 탄 차를 **직접**
+  //     고릅니다(check_vehicle_pick F). 중간에 차를 바꿔 탔는데 앞 차가 조용히
+  //     따라오면 틀린 기록이 남습니다. 대신 「같은 차」를 **한 번 누르면** 고르게 합니다.
+  //   ⚠ **그날 하루만** 봅니다. 어제 탄 차는 보지 않습니다 (계정에 묶인 차 금지).
+  //   ⚠ 지금 목록(구분·공용차 예약)에 있는 차일 때만 보입니다.
+  const todayVehicle = useMemo(() => {
+    if (!fieldPick) return null
+    const mine = (profile?.name ?? '').trim()
+    if (!mine) return null
+    const last = data.schedules
+      .filter((x) => x.date === pickDate && x.status === '완료' && (x.driverName ?? '').trim() === mine && x.vehicleId)
+      .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))[0]
+    return last && fieldVehicles.some((v) => v.id === last.vehicleId) ? last.vehicleId : null
+  }, [fieldPick, profile?.name, data.schedules, pickDate, fieldVehicles])
+
   //  고른 차가 목록에서 사라졌으면(남이 잡아갔거나) 기본값으로 돌아갑니다.
   const fieldChosen = fieldPicked && fieldVehicles.some((v) => v.id === fieldPicked) ? fieldPicked : null
   const fieldVehicleId = fieldChosen ?? scheduleVehicle?.id ?? ''
@@ -342,8 +361,14 @@ export function CollectionInput() {
       const v = data.vehicles.find((x) => x.id === s.vehicleId)
       setDriverName(v?.driver ?? '')
     }
-    setTime(s.scheduledTime || nowTime())
+    //  ⚠ 0131 — 오늘 일정이면 **지금 시각**이 실제 수거 시각입니다(방금 다녀와서 넣으니까).
+    //    예전에는 예정 시각(10:00)이 그대로 들어가, 10시 40분에 수거해도 대장에는
+    //    10:00 으로 남았습니다. 지난 일정을 나중에 넣을 때만 예정 시각을 씁니다.
+    setTime(s.date === today() ? nowTime() : s.scheduledTime || nowTime())
     setAmount(String(s.expectedAmount))
+    //  입력 시간 측정(성과 근거)은 **이 건**부터 잽니다. 「다음 방문」으로 이어서
+    //  넣으면 화면이 그대로라, 예전에는 첫 건부터의 누적 시간이 들어갔습니다.
+    sessionStartRef.current = Date.now()
   }
 
   // 최초 진입 시 ?schedule= 프리필 (오늘 일정 '수거 완료'에서 넘어옴)
@@ -477,11 +502,14 @@ export function CollectionInput() {
         (s) =>
           s.clientId === clientId &&
           s.wasteType === wasteType &&
-          s.date === today() &&
+          //  ⚠ 0131 — 「오늘」이 아니라 **다녀온 날** 기준입니다. 어제 일을 오늘 넣을 때
+          //    어제 같은 병원 기록이 있으면 서버는 막는데 화면은 몰랐습니다.
+          s.date === pickDate &&
           s.status === '완료',
       ),
-    [data.schedules, clientId, wasteType],
+    [data.schedules, clientId, wasteType, pickDate],
   )
+  const expectedKg = scheduleId ? (data.schedules.find((x) => x.id === scheduleId)?.expectedAmount ?? null) : null
   const containerSum = containerTotal(containers)
 
   //  ── 접힘 상태 (0065) ────────────────────────────────────────────────────
@@ -514,7 +542,7 @@ export function CollectionInput() {
   let stepNo = 0
   const step = () => (stepNo += 1)
 
-  function buildInput(): CollectionCompletionInput {
+  function buildInput(over?: { isAdditional?: boolean }): CollectionCompletionInput {
     return {
       scheduleId: scheduleId || null,
       clientId,
@@ -532,7 +560,7 @@ export function CollectionInput() {
       handoverStatus: handover,
       supplied,
       suppliedItems,
-      isAdditional,
+      isAdditional: over?.isAdditional ?? isAdditional,
       memo,
       role: '현장 담당자',
       screen: '수거 입력',
@@ -556,6 +584,8 @@ export function CollectionInput() {
   //   말만** 바꿉니다. 저장됐다고 지어내지도 않습니다 — 확인할 곳을 알려 줍니다.
   const alreadySaved = (msgs: string[]) =>
     msgs.some((m) => /이미 완료 처리된 일정|이미 저장되어 있습니다/.test(m))
+  //  일정 없이 넣은 건의 「오늘 같은 병원 기록 있음」 — 두 번째 방문일 수 있습니다 (0131)
+  const dupAdhoc = !!dupNotice && /추가 수거/.test(dupNotice) && !/이미 완료 처리된 일정/.test(dupNotice)
 
   //  ── 「다시 시도」를 이 화면이 맡습니다 (0077) ──────────────────────────
   //
@@ -574,7 +604,7 @@ export function CollectionInput() {
     return () => setRetryHandler(null)
   }, [setRetryHandler])
 
-  async function submit() {
+  async function submit(over?: { isAdditional?: boolean }) {
     //  ── 차량이 비어 있으면 여기서 멈춥니다 ─────────────────────────────────
     //   0067 에는 「담당 차량이 안 묶인 계정」을 막는 줄이 있었습니다. 0126 부터
     //   현장도 차를 고를 수 있으므로 묶임은 더 이상 조건이 아닙니다. 서버가
@@ -604,7 +634,7 @@ export function CollectionInput() {
 
     // 서버가 실제로 저장했는지 확인한 뒤에만 성공 화면으로 넘어갑니다.
     // (통신이 끊긴 채로 성공 화면을 보여 주면 그 수거는 사라집니다)
-    const result = await completeCollection(buildInput())
+    const result = await completeCollection(buildInput(over))
     setWarnings(result.warnings)
     if (!result.ok) {
       if (alreadySaved(result.errors)) {
@@ -650,12 +680,20 @@ export function CollectionInput() {
     //  다음 건은 다시 「선택 안 됨」부터 (일정 배차가 있으면 그것부터).
     //  ⚠ 이번에 고른 차가 다음 건까지 따라오면 그게 새 고정 배정입니다.
     setFieldPicked(null)
+    sessionStartRef.current = Date.now()
     setTime(nowTime())
   }
 
   //  ⚠ 차량이 비어 있으면 잠급니다 — 서버가 차량 없이는 받지 않습니다.
   //    계정에 차량이 묶였는지는 더 이상 조건이 아닙니다 (0126).
   const canSubmit = !!clientId && Number(amount) > 0 && !!vehicleId && !overStock
+  //  비어서 저장이 잠긴 칸 — 단추 위에 이름으로 보여 줍니다 (0131)
+  const missing: { label: string; target: string }[] = [
+    ...(!clientId ? [{ label: '거래처', target: 'collection-client' }] : []),
+    ...(!(Number(amount) > 0) ? [{ label: '수거량', target: 'collection-amount' }] : []),
+    ...(!vehicleId ? [{ label: '차량', target: fieldPick ? 'field-vehicle' : 'collection-vehicle' }] : []),
+    ...(overStock ? [{ label: '재고 초과', target: 'collection-supplied' }] : []),
+  ]
 
   //  ⚠ 매 렌더마다 최신 submit 을 넣어 둡니다 — 위 setRetryHandler 참고
   submitRef.current = submit
@@ -828,12 +866,46 @@ export function CollectionInput() {
            「안 됐다」가 아니라 「이미 됐다」이기 때문입니다. */}
       {dupNotice && (
         <div data-collect-dup className="card mb-4 border border-teal-200 bg-teal-50 p-4">
-          <p className="t-body flex items-start gap-1.5 font-extrabold text-teal-800">
-            <CheckCircle2 size={17} strokeWidth={2.4} className="mt-0.5 shrink-0" />
-            이미 저장돼 있습니다 — 다시 넣지 않으셔도 됩니다.
-          </p>
-          <p className="t-muted mt-1.5 break-keep text-teal-700">{dupNotice}</p>
+          {/*  ⚠ 0131 — 두 경우가 있습니다.
+               ① 예정 일정을 다시 눌렀다(응답만 끊겼던 것) → 정말 이미 저장됨.
+               ② 일정 없이 넣었는데 **오늘 같은 병원 기록이 이미 있다** → 방금 그 건을
+                  다시 누른 것일 수도, **진짜 두 번째 방문**일 수도 있습니다.
+               예전에는 ②도 「다시 넣지 않으셔도 됩니다」라고 해서, 두 번째 방문이
+               저장된 줄 알고 그냥 떠났습니다 — 청구될 수거가 조용히 빠집니다.
+               ②에서는 기사님이 고르게 합니다. */}
+          {dupAdhoc ? (
+            <p className="t-body flex items-start gap-1.5 font-extrabold text-teal-800">
+              <CheckCircle2 size={17} strokeWidth={2.4} className="mt-0.5 shrink-0" />
+              오늘 이 병원 수거가 이미 하나 저장돼 있습니다.
+            </p>
+          ) : (
+            <p className="t-body flex items-start gap-1.5 font-extrabold text-teal-800">
+              <CheckCircle2 size={17} strokeWidth={2.4} className="mt-0.5 shrink-0" />
+              이미 저장돼 있습니다 — 다시 넣지 않으셔도 됩니다.
+            </p>
+          )}
+          {dupAdhoc ? (
+            <p className="t-muted mt-1.5 break-keep text-teal-700">
+              방금 누른 저장이 이미 들어간 것이면 그대로 두시면 됩니다. <b>오늘 한 번 더 다녀온 것</b>이면 아래 「추가 수거로 저장」을 눌러 주세요.
+            </p>
+          ) : (
+            <p className="t-muted mt-1.5 break-keep text-teal-700">{dupNotice}</p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
+            {dupAdhoc && (
+              <button
+                data-collect-dup-additional
+                disabled={sync.saving}
+                onClick={() => {
+                  setIsAdditional(true)
+                  setDupNotice(null)
+                  void submit({ isAdditional: true })
+                }}
+                className="rounded-full bg-navy-800 px-4 py-2.5 text-[1rem] font-extrabold text-white transition hover:bg-navy-900 disabled:opacity-50"
+              >
+                추가 수거로 저장
+              </button>
+            )}
             <button
               data-collect-dup-check
               onClick={() => navigate('/today')}
@@ -893,7 +965,17 @@ export function CollectionInput() {
               {client?.name ?? '거래처'}
             </p>
             {client?.address && (
-              <p className="t-body mt-1 break-keep leading-snug text-navy-500">{client.address}</p>
+              //  누르면 지도 (0131)
+              <a
+                data-collect-map
+                href={mapUrl(client.address) ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="t-body mt-1 block break-keep leading-snug text-navy-600"
+              >
+                {client.address}
+                <span className="ms-1.5 whitespace-nowrap font-bold text-teal-700">지도 ›</span>
+              </a>
             )}
             {(client?.manager || client?.phone) && (
               <p className="t-body mt-0.5 break-keep text-navy-500">
@@ -1023,6 +1105,7 @@ export function CollectionInput() {
                 </div>
               )}
               <select
+                id="collection-client"
                 className="field-input"
                 value={clientId}
                 disabled={!!scheduleId}
@@ -1186,6 +1269,13 @@ export function CollectionInput() {
                 }}
                 placeholder="예: 320"
               />
+              {/*  예상값이 그대로면 알려 줍니다 (0131) — 막지는 않습니다.
+                   kg 이 곧 청구 금액이라, 예상값이 실제 값처럼 굳으면 안 됩니다. */}
+              {expectedKg != null && expectedKg > 0 && amount === String(expectedKg) && (
+                <p data-amount-expected className="mt-1.5 break-keep text-[1rem] font-bold text-amber-700">
+                  예상값({expectedKg}kg) 그대로입니다 — 저울 값이 다르면 고쳐 주세요.
+                </p>
+              )}
             </div>
           </div>
         </Section>
@@ -1365,6 +1455,7 @@ export function CollectionInput() {
         </Section>
 
         {/* 자재 동시공급 */}
+        <div id="collection-supplied" aria-hidden />
         <Section
           n={step()}
           title="주고 온 자재"
@@ -1525,10 +1616,23 @@ export function CollectionInput() {
                          막지는 않습니다 (1톤은 그날그날 둘 다 싣습니다). */}
                     {v.wasteType !== wasteType ? ` · ${v.wasteType}차` : ''}
                     {scheduleVehicle && v.id === scheduleVehicle.id ? ' (일정 배차)' : ''}
+                    {todayVehicle === v.id ? ' (오늘 앞 건과 같은 차)' : ''}
                   </option>
                 ))}
               </select>
             </div>
+            {/*  같은 차 한 번에 (0131) — 아직 아무 차도 안 골랐을 때만 */}
+            {!fieldVehicleId && todayVehicle && (
+              <button
+                type="button"
+                data-vehicle-same-today={todayVehicle}
+                onClick={() => setFieldPicked(todayVehicle)}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-teal-50 px-4 text-[1.05rem] font-extrabold text-teal-700 ring-1 ring-teal-200 transition active:scale-[0.98]"
+              >
+                <Truck size={18} strokeWidth={2.4} className="shrink-0" />
+                오늘 앞 건과 같은 차 · {fieldVehicles.find((v) => v.id === todayVehicle)?.name}
+              </button>
+            )}
             {/*  ⚠ 「아직 안 읽었다」와 「정말 없다」는 다릅니다 — 읽는 중에는
                  차가 0대로 보입니다. 다 읽은 뒤에만 없다고 말합니다. */}
             {sync.ready && fieldVehicles.length === 0 && (
@@ -1576,6 +1680,7 @@ export function CollectionInput() {
             <div>
               <label className="field-label">배차 차량 *</label>
               <select
+                id="collection-vehicle"
                 className="field-input"
                 value={vehicleId}
                 onChange={(e) => {
@@ -1666,6 +1771,27 @@ export function CollectionInput() {
           ⚠ 채우기 전에는 붙이지 않습니다. 아직 못 누르는 단추가 화면을
             계속 가리면 그게 더 답답합니다.
         */}
+        {/*  ── 왜 못 누르는지 (0131) ───────────────────────────────────────
+             단추가 흐리게 잠겨 있으면 기사님은 「저장이 고장 났다」고 전화합니다.
+             무엇이 비었는지 단추 바로 위에 적습니다. 누르면 그 칸으로 갑니다. */}
+        {!canSubmit && !sync.saving && missing.length > 0 && (
+          <p data-collect-missing className="break-keep text-center text-[1.02rem] font-bold text-navy-500">
+            저장하려면{' '}
+            {missing.map((m, i) => (
+              <span key={m.label}>
+                {i > 0 && ' · '}
+                <button
+                  type="button"
+                  className="font-extrabold text-blue-600 underline underline-offset-2"
+                  onClick={() => document.getElementById(m.target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                >
+                  {m.label}
+                </button>
+              </span>
+            ))}
+            {missing.some((m) => m.label === '재고 초과') ? ' 를 확인해 주세요' : ' 을(를) 채워 주세요'}
+          </p>
+        )}
         <button
           data-tour="collect-save"
           data-guide="guide-save"
@@ -1676,7 +1802,7 @@ export function CollectionInput() {
               : ''
           }`}
           style={{ minHeight: 48 }}
-          onClick={submit}
+          onClick={() => void submit()}
           disabled={!canSubmit || sync.saving}
         >
           {sync.saving ? (

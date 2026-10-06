@@ -90,6 +90,9 @@ export function Requests() {
   const [replyText, setReplyText] = useState('')
   //  0106 — 저장 결과를 그 자리에 적습니다. 예전에는 저장 전에 창이 닫혔고 실패해도 표시가 없었습니다.
   const [saveMsg, setSaveMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
+  //  그 병원에 오늘 이후로 잡힌(무르지 않은·아직 안 끝난) 방문이 있는가 (0131)
+  const hasUpcoming = (clientId: string) =>
+    data.schedules.some((x) => x.clientId === clientId && x.date >= today() && x.status !== '완료' && !x.canceledAt)
   const [replyBusy, setReplyBusy] = useState(false)
   const [replyErr, setReplyErr] = useState<string | null>(null)
   //  0106 — AI 요청 정리 (서버 함수 ai-triage). 판 106 + 사무실·관리자 + 실운영에서만 단추가 있습니다.
@@ -132,7 +135,8 @@ export function Requests() {
     if (isSnoozed(r) && filter !== '전체') return false
     if (filter === '진행 중') return r.status !== '처리 완료'
     if (filter === '병원 직접') return r.source === 'portal'
-    if (filter === '긴급') return r.urgent
+    //  긴급 칸은 **아직 할 일**만 — 끝난 긴급이 섞이면 지금 급한 게 묻힙니다 (0131)
+    if (filter === '긴급') return r.urgent && r.status !== '처리 완료'
     return true
   })
 
@@ -418,6 +422,21 @@ export function Requests() {
               {saveMsg[r.id] && (
                 <p data-req-save={saveMsg[r.id].ok ? 'ok' : 'fail'} className={`t-caption mt-2 break-keep font-bold ${saveMsg[r.id].ok ? 'text-teal-700' : 'text-rose-600'}`}>
                   {saveMsg[r.id].text}
+                </p>
+              )}
+              {/*  ⚠ 0131 — 수거 요청을 「일정 반영」으로 바꿨는데 이 병원에 **잡힌 방문이 없으면**
+                   병원 화면에는 예약된 것처럼 보이고 차는 안 갑니다(0058 과 같은 사고).
+                   막지는 않습니다 — 대신 바로 날짜를 잡을 길을 같은 자리에 둡니다. */}
+              {(r.type === '긴급수거' || r.type === '추가수거') && r.status === '일정 반영' && !hasUpcoming(r.clientId) && (
+                <p data-req-no-visit={r.id} className="t-caption mt-2 flex flex-wrap items-center gap-2 break-keep font-bold text-amber-800">
+                  이 병원에 잡힌 방문이 아직 없습니다 — 병원에는 예약된 것으로 보입니다.
+                  <button
+                    type="button"
+                    onClick={() => setBookFor(r)}
+                    className="rounded-full bg-navy-800 px-3 py-1.5 text-[0.98rem] font-extrabold text-white"
+                  >
+                    날짜 잡기
+                  </button>
                 </p>
               )}
             </div>

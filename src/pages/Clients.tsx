@@ -19,6 +19,7 @@ import { wonShort } from '../lib/format'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { findNameMatches, type NameMatch } from '../lib/clientName'
 import type { Client } from '../types'
+import { koMatch } from '../lib/koSearch'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 관리 — 데이터 세트 선택 + 실제/시연용 구분 + 필터
@@ -83,13 +84,22 @@ export function Clients() {
     //  폰 자판은 낱말 뒤에 공백을 붙여 주는 일이 잦습니다. 그대로 비교하면
     //  분명히 있는 거래처인데 "없어요" 가 나옵니다. 앞뒤 공백을 떼고,
     //  영문 대소문자도 가리지 않습니다.
-    const q = query.trim().toLowerCase()
+    //  0131 — 담당자·전화·초성으로도 찾습니다(「ㄱㄴ」 · 「5000100」). 병원에서 전화가
+    //  오면 번호로 바로, 폰에서는 초성만 쳐서 찾습니다.
     return data.clients.filter((c) => {
       if (!matchFilter(c, filter)) return false
-      if (q && !c.name.toLowerCase().includes(q) && !c.address.toLowerCase().includes(q)) return false
+      if (!koMatch(query, [c.name, c.address, c.manager, c.phone])) return false
       return true
     })
   }, [data.clients, filter, query])
+
+  //  카드마다 붙는 미수·추천 — 거래처 × (일정+청구+입금)을 훑는 계산이라 검색 글자마다
+  //  다시 하면 버벅입니다. 자료가 바뀔 때 한 번만 셉니다 (0131).
+  const signals = useMemo(() => {
+    const m = new Map<string, { unpaid: boolean; top: ReturnType<typeof nextActionsFor>[number] | undefined }>()
+    for (const c of data.clients) m.set(c.id, { unpaid: clientOutstanding(data, c.id) > 0, top: nextActionsFor(data, c)[0] })
+    return m
+  }, [data])
 
   //  거래를 종료한 곳 — 목록에는 없지만 되살릴 수 있어야 합니다.
   const retired = data.retiredClients ?? []
@@ -208,7 +218,7 @@ export function Clients() {
           data-client-search
           autoFocus={typeof window !== 'undefined' && window.innerWidth >= 1024}
           className="field-input !pl-11 ring-2 ring-teal-200 focus:ring-teal-500"
-          placeholder="거래처명 · 주소 검색"
+          placeholder="거래처 · 주소 · 담당자 · 전화 (초성 가능)"
           aria-label="거래처명 · 주소 검색"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -259,9 +269,9 @@ export function Clients() {
         )}
         <ul data-guide="guide-client-list" className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {filtered.map((c, ci) => {
-            const unpaid = clientOutstanding(data, c.id) > 0
+            const unpaid = signals.get(c.id)?.unpaid ?? false
             // 이 거래처의 최우선 추천 (수거이력·자재·청구 데이터 기반)
-            const topAction = nextActionsFor(data, c)[0]
+            const topAction = signals.get(c.id)?.top
             const meta = topAction ? actionMeta[topAction.kind] : null
             return (
               <li

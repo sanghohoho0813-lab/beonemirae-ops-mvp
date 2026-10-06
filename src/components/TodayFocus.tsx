@@ -10,7 +10,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { AppData } from '../types'
-import { openRequests, todayProgress } from '../lib/ops'
+import { missedEntries, openRequests, todayProgress } from '../lib/ops'
+import { dunningSummary } from '../lib/dunning'
 import { MessageSquare } from 'lucide-react'
 import { hideRequests } from '../lib/pilotMode'
 import { TONE, type Tone } from '../lib/tone'
@@ -92,6 +93,25 @@ export function TodayFocus({ data }: { data: AppData }) {
       unit: '건',
       tone: 'amber' as const,
       to: '/today',
+    },
+    //  0131 — PC 와 같은 두 줄 (TodayBoard 참고)
+    {
+      key: 'missed',
+      icon: ClipboardEdit,
+      label: '지난 일정 · 입력 없음',
+      count: missedEntries(data).length,
+      unit: '건',
+      tone: 'amber' as const,
+      to: '/history?status=missing',
+    },
+    {
+      key: 'dunning',
+      icon: MessageSquare,
+      label: '독촉 대상',
+      count: dunningSummary(data).rows.length,
+      unit: '곳',
+      tone: 'rose' as const,
+      to: '/receivables',
     },
   ].filter((t) => t.count > 0)
 

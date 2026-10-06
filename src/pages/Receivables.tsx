@@ -9,6 +9,7 @@ import { Stagger, StaggerItem } from '../components/motion'
 import { PaymentBadge } from '../components/Badge'
 import { DunningPanel } from '../components/DunningPanel'
 import { ageOf } from '../lib/dunning'
+import { koMatch } from '../lib/koSearch'
 import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
 import { strandedReceipts } from '../lib/moneyGuard'
 import { num, won, today } from '../lib/format'
@@ -31,13 +32,34 @@ export function Receivables() {
     [data.payments],
   )
   const [month, setMonth] = useState<string>('전체')
+  //  ── 거래처로 찾기 · 줄 세우기 (0131) ─────────────────────────────────────
+  //   병원에서 「우리 얼마 남았어요?」 전화가 오면 청구월 칩을 넘기며 눈으로
+  //   찾았습니다. 이름으로 바로 좁힙니다. 줄 세우기는 받을 돈이 큰 순 · 오래된 순.
+  const [query, setQuery] = useState('')
+  type SortKey = '최근 청구' | '남은 돈 큰 순' | '오래된 순'
+  const [sort, setSort] = useState<SortKey>('최근 청구')
 
   const list = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    //  남은 돈은 입금 기록을 훑어 계산하므로 줄 세우기 전에 한 번씩만 셉니다
+    const restMap = sort === '최근 청구' ? null : new Map(data.payments.map((p) => [p.id, outstandingOf(data, p)]))
+    const rest = (p: (typeof data.payments)[number]) => restMap?.get(p.id) ?? 0
     return data.payments
       .filter((p) => (filter === '전체' ? true : p.status === filter))
       .filter((p) => (month === '전체' ? true : p.billingMonth === month))
-      .sort((a, b) => b.billingMonth.localeCompare(a.billingMonth) || b.amount - a.amount)
-  }, [data.payments, filter, month])
+      .filter((p) => {
+        if (!q) return true
+        const c = clientById(p.clientId)
+        return koMatch(q, [c?.name, c?.manager, c?.phone])
+      })
+      .sort((a, b) =>
+        sort === '남은 돈 큰 순'
+          ? rest(b) - rest(a) || a.billingMonth.localeCompare(b.billingMonth)
+          : sort === '오래된 순'
+            ? a.billingMonth.localeCompare(b.billingMonth) || rest(b) - rest(a)
+            : b.billingMonth.localeCompare(a.billingMonth) || b.amount - a.amount,
+      )
+  }, [data, clientById, filter, month, query, sort])
 
   //  ── 한 번에 몇 장까지 (0082) ────────────────────────────────────────────
   //   청구가 쌓일수록 이 화면이 길어집니다. 폰에서 재 봤더니 20,406px —
@@ -47,7 +69,7 @@ export function Receivables() {
   const PAGE = 24
   const [shown, setShown] = useState(PAGE)
   //  조건을 바꾸면 처음부터 — 안 그러면 좁혔는데 「더 보기」가 남습니다.
-  useEffect(() => { setShown(PAGE) }, [filter, month])
+  useEffect(() => { setShown(PAGE) }, [filter, month, query, sort])
   const visible = list.slice(0, shown)
 
   //  돈 기록입니다 — 누구의 얼마를 오늘 날짜로 넣는지 한 번 보여 주고
@@ -155,6 +177,23 @@ export function Receivables() {
       {/*  독촉 대상 — 오래 밀린 곳부터. 미수가 없으면 아무것도 그리지 않습니다. */}
       <DunningPanel />
 
+      {/* 거래처 검색 · 줄 세우기 (0131) */}
+      <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          data-recv-search
+          className="field-input sm:max-w-sm"
+          placeholder="거래처 · 담당자 · 전화 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-2" data-recv-sort>
+          {(['최근 청구', '남은 돈 큰 순', '오래된 순'] as const).map((k) => (
+            <FilterChip key={k} active={sort === k} onClick={() => setSort(k)}>
+              {k}
+            </FilterChip>
+          ))}
+        </div>
+      </div>
       {/* 상태 필터 칩 */}
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => (

@@ -28,6 +28,7 @@ export function DunningPanel() {
   const sum = useMemo(() => dunningSummary(data), [data])
   const [open, setOpen] = useState<DunningRow | null>(null)
   const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   if (sum.rows.length === 0) return null
 
@@ -80,7 +81,22 @@ export function DunningPanel() {
               </div>
               <div className="mt-1.5 flex items-end justify-between gap-3">
                 <p className="t-caption min-w-0 break-keep">
-                  {r.bills.map((b) => `${b.billingMonth} ${won(b.outstanding)}`).join(' · ')}
+                  {/*  ⚠ 0131 — 몇 달 밀린 곳은 달마다 다 적으면 한 거래처가 열 줄을
+                       넘었습니다(36개월 = 화면 한 장). 셋까지는 그대로, 그보다 많으면
+                       「몇 개월 · 언제부터 언제까지」로 줄이고 눌러서 펼칩니다. */}
+                  {r.bills.length <= 3 || expanded.has(r.clientId) ? (
+                    r.bills.map((b) => `${b.billingMonth} ${won(b.outstanding)}`).join(' · ')
+                  ) : (
+                    <button
+                      type="button"
+                      data-dunning-expand={r.clientId}
+                      onClick={() => setExpanded((prev) => new Set(prev).add(r.clientId))}
+                      className="text-left font-bold text-navy-600 underline underline-offset-2"
+                    >
+                      미납 {r.bills.length}개월 · {[...r.bills].map((b) => b.billingMonth).sort()[0]} ~{' '}
+                      {[...r.bills].map((b) => b.billingMonth).sort().slice(-1)[0]} (달마다 보기)
+                    </button>
+                  )}
                   {r.manager || r.phone ? (
                     <span className="ml-1 text-navy-400">
                       {' / '}

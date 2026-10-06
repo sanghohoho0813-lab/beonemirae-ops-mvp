@@ -177,7 +177,7 @@ interface DataContextValue {
     sourceRef?: string | null
     /** 저장 시도 표 (0042) — 통신이 끊겨 다시 눌러도 두 번 들어가지 않게 */
     requestId?: string | null
-  }) => Promise<{ ok: boolean; error: string | null }>
+  }, opts?: { quiet?: boolean }) => Promise<{ ok: boolean; error: string | null }>
   /** 잘못 넣은 입금 취소 */
   removeReceipt: (id: string) => Promise<{ ok: boolean; error: string | null }>
   /** 확인된 예정 일정을 한 번에 저장 (0028) */
@@ -580,9 +580,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setSyncError(null)
       try {
         await fn()
-        if (!quiet) setData(await repo.loadAppData())
+        //  ⚠ 0131 — 서버 저장이 끝난 순간 「저장됨」입니다. 그 뒤 화면을 새로 읽는
+        //    일은 저장과 따로 봅니다. 예전에는 둘이 한 try 안에 있어서, 저장은
+        //    됐는데 **다시 읽기만** 끊겨도(지하·엘리베이터) 빨간 「저장하지 못했습니다」가
+        //    떴고, 기사님이 다시 누르면 중복 막힘에 걸렸습니다.
         setLastSavedAt(new Date().toISOString())
         pending.current = null
+        if (!quiet) {
+          try {
+            setData(await repo.loadAppData())
+          } catch (e) {
+            //  다시 읽기 실패는 조용히 기록만 하고, 2초 뒤 한 번 더 읽습니다
+            //  (그래도 안 되면 45초 배경 갱신이 맞춥니다).
+            void repo.recordAppError({
+              kind: 'load',
+              screen: typeof window === 'undefined' ? '' : window.location.pathname,
+              message: '저장 뒤 다시 읽기 실패',
+              detail: { raw: e instanceof Error ? e.message : String(e ?? '') },
+            })
+            window.setTimeout(() => void repo.loadAppData().then(setData).catch(() => {}), 2000)
+          }
+        }
         return { ok: true, error: null }
       } catch (e) {
         const message = friendlyError(e)
@@ -1939,15 +1957,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
       sourceRef?: string | null
       /** 저장 시도 표 (0042) — 다시 눌러도 두 번 들어가지 않게 */
       requestId?: string | null
-    }) => {
+    }, opts?: { quiet?: boolean }) => {
       if (!live) return { ok: false, error: '입금 기록은 실제 운영 모드에서만 됩니다.' }
+      //  ⚠ 0131 — 예전에는 runLive 가 다시 읽고, 끝나고 reload() 로 **한 번 더** 읽었습니다.
+      //    통장 대사에서 50줄을 붙이면 전체 조회가 100번이었습니다. 한 번만 읽고,
+      //    여러 줄을 잇달아 붙이는 화면은 quiet 로 넘긴 뒤 마지막에 한 번 읽습니다.
       const r = await runLive(async () => {
         await repo.addPaymentReceipt(input)
-      })
-      if (r.ok) await reload()
+      }, !!opts?.quiet)
       return { ok: r.ok, error: r.error ?? null }
     },
-    [live, runLive, reload],
+    [live, runLive],
   )
 
   const removeReceipt = useCallback(
@@ -1956,10 +1976,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const r = await runLive(async () => {
         await repo.deletePaymentReceipt(id)
       })
-      if (r.ok) await reload()
       return { ok: r.ok, error: r.error ?? null }
     },
-    [live, runLive, reload],
+    [live, runLive],
   )
 
   /**

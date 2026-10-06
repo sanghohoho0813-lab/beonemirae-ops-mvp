@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -9,6 +9,8 @@ import { CollectionRecord } from '../components/CollectionRecord'
 import { facilityByWaste } from '../data/ops'
 import { num, weight, today, shiftDays } from '../lib/format'
 import type { WasteType } from '../types'
+import { isCanceled } from '../lib/scheduleLive'
+import { koMatch } from '../lib/koSearch'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 전체 수거이력 (/history) — 거래처 상세·통계에서 진입하는 파생 조회 화면
@@ -17,7 +19,13 @@ import type { WasteType } from '../types'
 
 type WasteFilter = '전체' | WasteType
 type KindFilter = '전체' | '정기' | '추가' | '긴급'
-type PeriodFilter = '전체' | '최근 7일' | '이번 달'
+type PeriodFilter = '전체' | '최근 7일' | '이번 달' | '지난 달'
+//  0131 — 이 화면은 **실제 수거 기록**입니다. 예전에는 일정 표 전체를 그대로 보여 줘서
+//  다음 주 예정·무른 방문까지 「수거 기록」 맨 위에 섞였고, 위 「전체 수거건수」도
+//  그만큼 부풀었습니다(월말에 이 숫자를 보고 맞춥니다).
+//   완료    — 실제로 다녀와 입력된 것 (기본)
+//   미입력  — **어제까지** 일정인데 아직 입력이 없는 것 → 여기서 바로 입력하러 갑니다
+type StatusFilter = '완료' | '미입력'
 
 //  기간 경계도 한국 시각 기준입니다 (lib/format).
 const shift = shiftDays
@@ -42,16 +50,30 @@ export function CollectionHistory() {
   const PAGE = 60
   const [shown, setShown] = useState(PAGE)
   const [period, setPeriod] = useState<PeriodFilter>('전체')
-  const [query, setQuery] = useState('')
+  //  거래처 상세의 「전체 수거이력 보기」·대시보드에서 조건을 달고 들어옵니다 (0131)
+  //   ?client=<id> → 그 거래처 이름으로 검색 · ?status=missing → 미입력
+  const [params] = useSearchParams()
+  const [status, setStatus] = useState<StatusFilter>(params.get('status') === 'missing' ? '미입력' : '완료')
+  const [query, setQuery] = useState(() => {
+    const id = params.get('client')
+    return id ? (clientById(id)?.name ?? '') : ''
+  })
+  //  새로고침으로 바로 들어오면 첫 그림 때 거래처 목록이 아직 없습니다 — 읽히면 한 번 채웁니다.
+  const linkedName = params.get('client') ? clientById(params.get('client')!)?.name : undefined
+  useEffect(() => { if (linkedName) setQuery((q) => q || linkedName) }, [linkedName])
   //  ⚠ 조건을 바꾸면 처음부터 봅니다. 안 그러면 「이번 달」로 좁혔는데
   //    120줄이 그려져 있고 「더 보기」가 남은 것처럼 보입니다.
-  useEffect(() => { setShown(PAGE) }, [waste, kind, period, query])
+  useEffect(() => { setShown(PAGE) }, [waste, kind, period, query, status])
 
   const rows = useMemo(() => {
     const t = today()
     const weekAgo = shift(-7)
     const month = t.slice(0, 7)
+    const lastMonth = (() => { const [y, m] = month.split('-').map(Number); const d = new Date(y, m - 2, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` })()
     return data.schedules
+      //  무른 방문 · 앞으로의 예정은 기록이 아닙니다
+      .filter((s) => !isCanceled(s) && s.date <= t)
+      .filter((s) => (status === '완료' ? s.status === '완료' : s.status !== '완료' && s.date < t))
       .map((s) => {
         //  그만둔 거래처의 과거 수거도 이름이 남아야 합니다.
         //  활성 목록만 뒤지면 '거래처' 라는 이름으로 뭉개집니다.
@@ -85,14 +107,14 @@ export function CollectionHistory() {
       })
       .filter((r) => (waste === '전체' ? true : r.wasteType === waste))
       .filter((r) => (kind === '전체' ? true : r.kind === kind))
-      .filter((r) => (period === '전체' ? true : period === '이번 달' ? r.date.startsWith(month) : r.date >= weekAgo && r.date <= t))
+      .filter((r) => (period === '전체' ? true : period === '이번 달' ? r.date.startsWith(month) : period === '지난 달' ? r.date.startsWith(lastMonth) : r.date >= weekAgo && r.date <= t))
       //  거래처 검색과 같은 이유로 앞뒤 공백을 떼고 대소문자를 가리지 않습니다.
       .filter((r) => {
-        const q = query.trim().toLowerCase()
-        return q ? r.clientName.toLowerCase().includes(q) : true
+        //  기사·차량으로도 찾습니다 (0131) — 「김 기사님 지난주 기록」을 찾을 길이 없었습니다
+        return koMatch(query, [r.clientName, r.driver, r.vehicleName])
       })
       .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
-  }, [data, clientById, waste, kind, period, query])
+  }, [data, clientById, waste, kind, period, query, status])
 
   const completedRows = rows.filter((r) => r.completed)
   const totalKg = completedRows.reduce((s, r) => s + (r.amount ?? 0), 0)
@@ -115,7 +137,7 @@ export function CollectionHistory() {
       {/* 요약 */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card kpi-box p-4">
-          <p className="text-[1.03rem] font-semibold text-navy-400">전체 수거건수</p>
+          <p className="text-[1.03rem] font-semibold text-navy-400">{status === '완료' ? '수거건수' : '미입력 건수'}</p>
           <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
         </div>
         <div className="card kpi-box p-4">
@@ -133,7 +155,14 @@ export function CollectionHistory() {
       </div>
 
       {/* 필터 */}
-      <input className="field-input mb-3" placeholder="거래처명 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1" data-history-status>
+        {(['완료', '미입력'] as StatusFilter[]).map((st) => (
+          <FilterChip key={st} active={status === st} onClick={() => setStatus(st)}>
+            {st === '완료' ? '입력된 수거' : '지난 일정 · 미입력'}
+          </FilterChip>
+        ))}
+      </div>
+      <input data-history-search className="field-input mb-3" placeholder="거래처 · 기사 · 차량 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
       <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
         {(['전체', '의료폐기물', '일회용기저귀'] as WasteFilter[]).map((w) => (
           <FilterChip key={w} active={waste === w} onClick={() => setWaste(w)}>{w}</FilterChip>
@@ -145,7 +174,7 @@ export function CollectionHistory() {
         ))}
       </div>
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {(['전체', '최근 7일', '이번 달'] as PeriodFilter[]).map((p) => (
+        {(['전체', '최근 7일', '이번 달', '지난 달'] as PeriodFilter[]).map((p) => (
           <FilterChip key={p} active={period === p} onClick={() => setPeriod(p)}>{p}</FilterChip>
         ))}
       </div>
@@ -215,9 +244,18 @@ export function CollectionHistory() {
                       </button>
                     ) : (
                       //  왜 못 고치는지 적습니다 — 빈 칸이면 고장으로 보입니다.
-                      <span className="text-[0.95rem] text-navy-400">
-                        {r.completed ? '엑셀 기록' : '아직 미완료'}
-                      </span>
+                      //  ⚠ 0131 — 지난 일정의 미입력은 **여기서 바로 입력**하러 갑니다.
+                      r.completed ? (
+                        <span className="text-[0.95rem] text-navy-400">엑셀 기록</span>
+                      ) : (
+                        <button
+                          data-history-input={r.id}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/collection?schedule=${r.id}`) }}
+                          className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-blue-600 transition hover:bg-blue-50"
+                        >
+                          수거 입력 ›
+                        </button>
+                      )
                     )}
                   </td>
                 )}
@@ -227,7 +265,7 @@ export function CollectionHistory() {
               <tr><td colSpan={canRevert ? 11 : 10} className="px-3 py-4 text-center text-navy-400">
                 {data.schedules.length === 0
                   ? '아직 수거 기록이 없습니다. 첫 수거를 입력하면 여기에 쌓입니다.'
-                  : '조건에 맞는 이력이 없습니다.'}
+                  : status === '미입력' ? '빠진 입력이 없습니다 — 지난 일정은 모두 입력됐습니다.' : '조건에 맞는 이력이 없습니다.'}
               </td></tr>
             )}
           </tbody>

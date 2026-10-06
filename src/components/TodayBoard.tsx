@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   ChevronRight,
   ClipboardEdit,
+  CalendarX2,
+  HandCoins,
   FileWarning,
   Inbox,
   MessageSquare,
@@ -11,7 +13,9 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { AppData } from '../types'
-import { openRequests, todayProgress } from '../lib/ops'
+import { missedEntries, openRequests, todayProgress } from '../lib/ops'
+import { dunningSummary } from '../lib/dunning'
+import { won } from '../lib/format'
 import { hideRequests } from '../lib/pilotMode'
 import { daysToContractEnd } from '../lib/billing'
 import { today } from '../lib/format'
@@ -65,6 +69,9 @@ export function TodayBoard({ data }: { data: AppData }) {
     [data.inquiries],
   )
 
+  const missed = useMemo(() => missedEntries(data).length, [data])
+  const dunning = useMemo(() => dunningSummary(data), [data])
+
   const tasks = useMemo<Task[]>(() => {
     const all: Task[] = [
       {
@@ -111,6 +118,31 @@ export function TodayBoard({ data }: { data: AppData }) {
         to: '/today',
         cta: '확인',
       },
+      //  ── 0131 — 지난 날짜 미입력 · 밀린 돈 ──────────────────────────────
+      //   둘 다 시스템이 이미 알고 있었는데 대시보드에는 안 떴습니다. 각각
+      //   그 일을 끝내는 화면으로 바로 갑니다(미입력은 그 목록에서 바로 입력).
+      {
+        key: 'missed',
+        icon: CalendarX2,
+        label: '지난 일정 · 입력 없음',
+        detail: '최근 30일 — 다녀왔다면 입력, 안 갔다면 일정 정리',
+        count: missed,
+        unit: '건',
+        tone: 'amber',
+        to: '/history?status=missing',
+        cta: '바로 입력',
+      },
+      {
+        key: 'dunning',
+        icon: HandCoins,
+        label: '독촉 대상',
+        detail: dunning.rows.length ? `지난달 이전 청구가 남은 곳 · ${won(dunning.total)}` : '',
+        count: dunning.rows.length,
+        unit: '곳',
+        tone: 'rose',
+        to: '/receivables',
+        cta: '연락하기',
+      },
       {
         key: 'contract',
         icon: FileWarning,
@@ -124,7 +156,7 @@ export function TodayBoard({ data }: { data: AppData }) {
       },
     ]
     return all.filter((t) => t.count > 0)
-  }, [data, open, urgent, openInquiries.length, progress.pendingInput])
+  }, [data, open, urgent, openInquiries.length, progress.pendingInput, missed, dunning])
 
   const left = Math.max(0, progress.planned - progress.done)
   const pct = progress.planned ? Math.round((progress.done / progress.planned) * 100) : 0
