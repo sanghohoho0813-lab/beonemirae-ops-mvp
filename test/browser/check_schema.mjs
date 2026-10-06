@@ -214,7 +214,7 @@ const open = async (version, prof = admin, opts = {}) => {
     res.replace(/\s+/g, ' ').slice(0, 100))
   ok(/화면을 새로 고쳐 확인해 주세요/.test(res), '무엇을 해야 하는지도 그대로')
   ok(/0곳 · 0원 청구를 확정했습니다/.test(res), '한 건도 확정되지 않은 것으로 집계')
-  ok(/1곳은 실패했습니다/.test(res), '실패 건수를 알려 줌')
+  ok(/1곳은 확정되지 않았습니다/.test(res), '실패 건수를 알려 줌 (0132 문구)')
   await ctx.close()
 }
 
