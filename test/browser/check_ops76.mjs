@@ -218,6 +218,8 @@ for (const w of [1280, 390]) {
   await p.waitForTimeout(400)
   const amt = p.locator('input[type="number"]').first()
   await amt.fill('120')
+  //  0128 부터 현장은 건마다 그날 탄 차를 직접 고릅니다 (계정에 묶인 차를 안 씀)
+  await p.locator('[data-vehicle-select]').selectOption(V3)
   await p.waitForTimeout(300)
   await p.getByRole('button', { name: /수거 완료 저장|저장/ }).last().click()
   await p.waitForTimeout(2000)

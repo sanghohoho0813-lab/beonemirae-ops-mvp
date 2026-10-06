@@ -298,7 +298,7 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
 
   //  ㉮ 스위치가 정말 한 곳인가 — 화면마다 흩어져 있으면 다시 켤 때
   //     한 군데는 반드시 빠집니다.
-  const flagSrc = readFileSync('src/lib/pilotMode.ts', 'utf-8')
+  const flagSrc = readFileSync(new URL('../../src/lib/pilotMode.ts', import.meta.url), 'utf-8')
   ok(/clientRequests:\s*(true|false)/.test(flagSrc) && /supplies:\s*(true|false)/.test(flagSrc),
     '**스위치가 `src/lib/pilotMode.ts` 한 곳에 있다**',
     `요청 ${PILOT.requests ? '내림' : '켬'} · 소모품 ${PILOT.supplies ? '내림' : '켬'}`)
@@ -306,7 +306,7 @@ async function open(path, { role = 'admin', w = 1280, requests = REQUESTS, sched
   //  ㉯ 코드를 지우지 않았는가 — 요청·소모품 화면이 그대로 있어야
   //     스위치만 되돌려도 예전처럼 돌아옵니다.
   for (const f of ['src/pages/Requests.tsx', 'src/pages/Supplies.tsx', 'src/components/UrgentRisk.tsx']) {
-    ok(existsSync(f), `**${f} 는 그대로 있다** (지우지 않았습니다)`)
+    ok(existsSync(new URL(`../../${f}`, import.meta.url)), `**${f} 는 그대로 있다** (지우지 않았습니다)`)
   }
 
   //  ㉰ 서버에서 요청을 **계속 받아 오는가.** 아예 안 받아 오게 만들면
