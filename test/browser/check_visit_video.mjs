@@ -13,6 +13,9 @@ import { fileURLToPath } from 'node:url'
 //   v3.1 — 세로(9:16)·가로(16:9) 두 판. 대표님: 「클릭 한 번에 왔다 갔다 · 각각 파일로
 //   내려받아 카카오톡으로」. 바꿔도 보던 자리·속도·재생 중인지 그대로 이어야 합니다.
 //
+//   0133 — 영상이 둘. 「강남 스타트업 지점 발표용 영상」이 맨 위, 신용보증기금 방문용은 그 아래.
+//   영상마다 같은 묶음(비율 · 속도 · 내려받기 · 흐름)이 따로 있어야 합니다.
+//
 //   ⚠ 영상 파일은 앱 안(public/media/)에 있습니다. 저장소가 공개라 파일 주소를
 //     아는 사람은 받을 수 있다는 것을 대표님께 알리고 정했습니다.
 //     단추·화면은 대표·이사님(admin·office)에게만 보입니다.
@@ -25,6 +28,10 @@ const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? `
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const SRC = '/media/sinbo_visit_v31_tall.mp4'
 const SRC_W = '/media/sinbo_visit_v31_wide.mp4'
+const G_SRC = '/media/gangnam_present_v43_tall.mp4'
+const G_SRC_W = '/media/gangnam_present_v43_wide.mp4'
+const K = '[data-video-block="kodit"]'
+const G = '[data-video-block="gangnam"]'
 //  재생 시험용 — 기본은 같은 영상을 2.5초·108×192 VP9 로 자른 조각(24KB)
 const FILE_T = process.env.VISIT_VIDEO_FILE || join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'visit_tiny.webm')
 const FILE_W = process.env.VISIT_VIDEO_FILE_W || join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'visit_tiny_wide.webm')
@@ -37,7 +44,7 @@ async function open(role, { w = 1440, h = 900, path = '/', media = 'real' } = {}
   W.wire(ctx, state)
   //  예전(Storage 서명 주소) 길이 남아 있지 않은지 셉니다
   await ctx.route('**/storage/v1/**', (r) => { state.storage += 1; return r.fulfill({ status: 400, body: '{}' }) })
-  await ctx.route(/\/media\/sinbo_visit_v31_(tall|wide)\.mp4$/, async (r) => {
+  await ctx.route(/\/media\/(sinbo_visit_v31|gangnam_present_v43)_(tall|wide)\.mp4$/, async (r) => {
     state.media += 1
     const FILE = r.request().url().includes('_wide') ? FILE_W : FILE_T
     if (media === 'missing') return r.fulfill({ status: 404, body: '' })
@@ -158,14 +165,69 @@ for (const role of ['field', 'client']) {
   await d.ctx.close()
 }
 
+// ── ④-0 영상 둘 — 강남 발표용이 맨 위, 신용보증기금 방문용은 그 아래 (0133) ─────
+{
+  const s = await open('admin', { path: '/visit-video' })
+  await s.p.waitForSelector('[data-video-block]', { timeout: 15000 }).catch(() => {})
+  const o = await s.p.evaluate(() => [...document.querySelectorAll('[data-video-block]')].map((e) => ({
+    id: e.dataset.videoBlock, title: e.querySelector('[data-video-title]')?.textContent ?? '', top: Math.round(e.getBoundingClientRect().top + scrollY) })))
+  ok(o.length === 2, '영상 **두 개**', o.map((x) => x.title).join(' · '))
+  ok(o[0]?.id === 'gangnam' && o[0].title === '강남 스타트업 지점 발표용 영상', '**맨 위 = 「강남 스타트업 지점 발표용 영상」**', o[0]?.title)
+  ok(o[1]?.id === 'kodit' && o[1].title === '신용보증기금 방문용 영상' && o[1].top > o[0].top, '기존 「신용보증기금 방문용 영상」은 **아래로**', o[1]?.title)
+  const h1 = await s.p.evaluate(() => document.querySelector('h1')?.textContent ?? '')
+  ok(h1 === '방문 · 발표용 영상', '화면 제목 — 방문 · 발표용 영상', h1)
+  const g = await s.p.evaluate((G) => ({
+    src: document.querySelector(`${G} [data-visit-video]`)?.getAttribute('src'),
+    chapters: document.querySelectorAll(`${G} [data-visit-chapters] li`).length,
+    numbers: document.querySelectorAll(`${G} [data-visit-numbers]`).length,
+    tips: document.querySelector(`${G} [data-visit-tips]`)?.textContent ?? '',
+    versions: [...document.querySelectorAll(`${G} [data-visit-version]`)].map((x) => x.dataset.visitVersion + (x.getAttribute('aria-pressed') === 'true' ? '●' : '')),
+    dl: [...document.querySelectorAll(`${G} [data-visit-download]`)].map((a) => ({ id: a.dataset.visitDownload, href: a.getAttribute('href'), name: a.getAttribute('download'), text: a.textContent.trim() })),
+  }), G)
+  ok(g.src === G_SRC, '강남 — 앱 안의 영상 파일 (세로 기본)', g.src)
+  ok(g.versions.join(',') === 'tall●,wide', '강남 — 세로 ↔ 가로 단추', g.versions.join(' · '))
+  ok(g.chapters >= 8, '강남 — 영상 흐름 (누르면 그 장면부터)', `${g.chapters}장`)
+  ok(g.numbers === 0, '강남 — 숫자를 말하지 않는 영상 → 「말하는 숫자」 칸 없음')
+  ok(/준비 중/.test(g.tips) && /예시 데이터/.test(g.tips), '강남 — 보여드리기 전 메모', g.tips.slice(0, 40))
+  ok(g.dl.length === 2 && g.dl.find((x) => x.id === 'tall')?.href === G_SRC && g.dl.find((x) => x.id === 'wide')?.href === G_SRC_W,
+    '강남 — **내려받기 둘 (세로 · 가로)**', g.dl.map((x) => x.text).join(' · '))
+  ok(/Gangnam_startup_presentation_vertical_9x16\.mp4$/.test(g.dl[0]?.name ?? '') && /Gangnam_startup_presentation_horizontal_16x9\.mp4$/.test(g.dl[1]?.name ?? ''),
+    '강남 — 카카오톡으로 보낼 파일 이름 (영문)', g.dl.map((x) => x.name).join(' · '))
+  ok(g.dl.every((x) => /\(\d+MB\)/.test(x.text) && !/\(0MB\)/.test(x.text)), '강남 — 파일 크기 표시', g.dl.map((x) => x.text).join(' · '))
+  const [download] = await Promise.all([s.p.waitForEvent('download', { timeout: 15000 }).catch(() => null), s.p.locator(`${G} [data-visit-download="tall"]`).click()])
+  ok(!!download && download.suggestedFilename() === 'BeoneMirae_Gangnam_startup_presentation_vertical_9x16.mp4', '강남 — 눌러서 **파일이 내려받아짐**', download?.suggestedFilename() ?? '(안 받아짐)')
+  //  속도 — 강남 영상만 바뀌고 아래 영상은 그대로
+  await s.p.locator(`${G} [data-rate="1.25"]`).click()
+  const rates = await s.p.evaluate(([G, K]) => [document.querySelector(`${G} [data-visit-video]`)?.playbackRate, document.querySelector(`${K} [data-visit-video]`)?.playbackRate], [G, K])
+  ok(rates[0] === 1.25 && rates[1] === 1, '강남 — 1.25배 · **다른 영상 속도는 그대로**', rates.join(' / '))
+  //  가로로 — 강남만 바뀜
+  await s.p.locator(`${G} [data-visit-version="wide"]`).click()
+  await s.p.waitForTimeout(500)
+  const sw = await s.p.evaluate(([G, K]) => ({ g: document.querySelector(`${G} [data-visit-video]`)?.getAttribute('src'), k: document.querySelector(`${K} [data-visit-video]`)?.getAttribute('src'),
+    ratio: (() => { const e = document.querySelector(`${G} [data-visit-video-box]`).getBoundingClientRect(); return e.width / e.height })() }), [G, K])
+  ok(sw.g === G_SRC_W && Math.abs(sw.ratio - 16 / 9) < .01 && sw.k === SRC, '강남 — **가로(16:9)로 한 번에** · 아래 영상은 세로 그대로', `${sw.g} · ${sw.k}`)
+  //  둘을 동시에 틀면 — 먼저 튼 것이 멈춤 (소리 겹침 방지)
+  const both = await s.p.evaluate(async ([G, K]) => {
+    const g = document.querySelector(`${G} [data-visit-video]`); const k = document.querySelector(`${K} [data-visit-video]`)
+    g.muted = true; k.muted = true
+    try { await g.play() } catch { return null }
+    try { await k.play() } catch { return null }
+    await new Promise((r) => setTimeout(r, 300))
+    return { g: g.paused, k: k.paused }
+  }, [G, K])
+  if (both) ok(both.g && !both.k, '아래 영상을 틀면 **위 영상은 멈춤**', JSON.stringify(both))
+  else console.log('  -- 이 브라우저가 영상을 풀지 못해 동시 재생 시험 건너뜀')
+  await s.ctx.close()
+}
+
 // ── ④ 누르면 영상 + 간단한 상세 — **SQL·업로드 없이 바로** ─────────────────
 {
   const s = await open('admin')
   await s.p.locator('[data-visit-video-btn]:visible').first().click()
-  await s.p.waitForSelector('[data-visit-video]', { timeout: 15000 }).catch(() => {})
+  await s.p.waitForSelector('[data-video-block="kodit"] [data-visit-video]', { timeout: 15000 }).catch(() => {})
   ok(s.p.url().endsWith('/visit-video'), '단추를 누르면 **/visit-video** 로', s.p.url().replace(W.BASE, ''))
   const v = await s.p.evaluate(() => {
-    const el = document.querySelector('[data-visit-video]')
+    const el = document.querySelector('[data-video-block="kodit"] [data-visit-video]')
     return el ? { src: el.getAttribute('src') ?? '', controls: el.hasAttribute('controls') } : null
   })
   ok(v !== null, '**영상이 뜸**')
@@ -174,12 +236,12 @@ for (const role of ['field', 'client']) {
   ok(!!v?.controls, '재생·멈춤·소리 조절 (기본 조작 막대)')
 
   const d = await s.p.evaluate(() => ({
-    title: document.querySelector('h1')?.textContent ?? '',
-    chapters: document.querySelectorAll('[data-visit-chapters] li').length,
-    numbers: (document.querySelector('[data-visit-numbers]')?.textContent ?? '').replace(/\s+/g, ' '),
+    title: document.querySelector('[data-video-block="kodit"] [data-video-title]')?.textContent ?? '',
+    chapters: document.querySelectorAll('[data-video-block="kodit"] [data-visit-chapters] li').length,
+    numbers: (document.querySelector('[data-video-block="kodit"] [data-visit-numbers]')?.textContent ?? '').replace(/\s+/g, ' '),
     body: document.body.innerText,
   }))
-  ok(d.title.includes('신용보증기금 방문용 영상'), '상세 제목', d.title)
+  ok(d.title.includes('신용보증기금 방문용 영상'), '상세 제목 — 신용보증기금 방문용 영상 (그대로 남아 있음)', d.title)
   ok(d.chapters >= 5, '영상 흐름 (누르면 그 장면부터)', `${d.chapters}장`)
   //  ⚠ 숫자는 영상 음성 그대로 — 1원이라도 다르면 FAIL
   for (const want of ['1억 2천만 원 수준', '5억 8천만 원', '약 5배 가까이', '약 4억 5천만 원', '약 9억 원 수준']) {
@@ -194,20 +256,20 @@ for (const role of ['field', 'client']) {
 
   // ── ⑤ 재생 속도 1 · 1.25 · 1.5 ────────────────────────────────────────
   for (const r of [1.25, 1.5, 1]) {
-    await s.p.locator(`[data-rate="${r}"]`).click()
+    await s.p.locator(`[data-video-block="kodit"] [data-rate="${r}"]`).click()
     const st = await s.p.evaluate(() => ({
-      rate: document.querySelector('[data-visit-video]')?.playbackRate,
-      pressed: [...document.querySelectorAll('[data-rate]')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset.rate),
+      rate: document.querySelector('[data-video-block="kodit"] [data-visit-video]')?.playbackRate,
+      pressed: [...document.querySelectorAll('[data-video-block="kodit"] [data-rate]')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset.rate),
     }))
     ok(st.rate === r && st.pressed.length === 1 && Number(st.pressed[0]) === r, `**${r}배** — 영상 속도가 실제로 바뀜`, `playbackRate=${st.rate}`)
   }
-  const labels = await s.p.locator('[data-rate]').allInnerTexts()
+  const labels = await s.p.locator('[data-video-block="kodit"] [data-rate]').allInnerTexts()
   ok(labels.join(',') === '1배,1.25배,1.5배', '속도 단추 글자', labels.join(' · '))
 
   //  실제 재생 — 시간 제한을 두어 멈춰 서지 않게
-  await s.p.locator('[data-rate="1.5"]').click()
+  await s.p.locator('[data-video-block="kodit"] [data-rate="1.5"]').click()
   const play = await s.p.evaluate(async () => {
-    const el = document.querySelector('[data-visit-video]')
+    const el = document.querySelector('[data-video-block="kodit"] [data-visit-video]')
     el.muted = true
     const meta = await Promise.race([
       new Promise((res) => (el.readyState >= 1 ? res(true) : el.addEventListener('loadedmetadata', () => res(true), { once: true }))),
@@ -229,44 +291,44 @@ for (const role of ['field', 'client']) {
   }
 
   // ── ⑤-2 세로 ↔ 가로 — 한 번 눌러 바꾸고, 보던 자리·속도·재생을 그대로 ────────
-  const vs = await s.p.evaluate(() => [...document.querySelectorAll('[data-visit-version]')].map((x) => ({ id: x.dataset.visitVersion, text: x.textContent.trim(), on: x.getAttribute('aria-pressed') })))
+  const vs = await s.p.evaluate(() => [...document.querySelectorAll('[data-video-block="kodit"] [data-visit-version]')].map((x) => ({ id: x.dataset.visitVersion, text: x.textContent.trim(), on: x.getAttribute('aria-pressed') })))
   ok(vs.length === 2 && vs[0].id === 'tall' && vs[0].on === 'true' && vs[1].id === 'wide', '비율 단추 둘 — 기본은 세로', vs.map((x) => `${x.text}${x.on === 'true' ? '●' : ''}`).join(' · '))
   if (play.decoded) {
     //  세로 조각을 1.2초까지 재생해 둔 상태에서 가로로
     const before = await s.p.evaluate(async () => {
-      const el = document.querySelector('[data-visit-video]'); el.currentTime = 1.0
+      const el = document.querySelector('[data-video-block="kodit"] [data-visit-video]'); el.currentTime = 1.0
       await new Promise((r) => el.addEventListener('seeked', r, { once: true })); await el.play()
       return { t: el.currentTime, rate: el.playbackRate }
     })
-    await s.p.locator('[data-visit-version="wide"]').click()
+    await s.p.locator('[data-video-block="kodit"] [data-visit-version="wide"]').click()
     const after = await s.p.evaluate(async () => {
-      const el = document.querySelector('[data-visit-video]')
+      const el = document.querySelector('[data-video-block="kodit"] [data-visit-video]')
       await Promise.race([new Promise((r) => (el.readyState >= 1 && el.src.includes('_wide') ? r() : el.addEventListener('loadedmetadata', r, { once: true }))), new Promise((r) => setTimeout(r, 8000))])
       await new Promise((r) => setTimeout(r, 300))
-      const box = document.querySelector('[data-visit-video-box]').getBoundingClientRect()
+      const box = document.querySelector('[data-video-block="kodit"] [data-visit-video-box]').getBoundingClientRect()
       return { src: el.getAttribute('src'), t: el.currentTime, rate: el.playbackRate, playing: !el.paused, w: el.videoWidth, h: el.videoHeight, ratio: box.width / box.height,
-        on: document.querySelector('[data-visit-version="wide"]').getAttribute('aria-pressed') }
+        on: document.querySelector('[data-video-block="kodit"] [data-visit-version="wide"]').getAttribute('aria-pressed') }
     })
     ok(after.src === SRC_W && after.on === 'true', '**가로(16:9)로 한 번에 바뀜**', after.src)
     ok(Math.abs(after.ratio - 16 / 9) < .01 && after.h > 0 && Math.abs(after.w / after.h - 16 / 9) < .02, '가로판 — 칸·영상 모두 16:9', `${after.w}×${after.h}`)
     ok(Math.abs(after.t - before.t) < .6, '**보던 자리에서 이어서**', `${before.t.toFixed(2)}s → ${after.t.toFixed(2)}s`)
     ok(after.rate === before.rate && after.playing, '속도(1.5배)·재생 상태 그대로', `${after.rate}배 · ${after.playing ? '재생 중' : '멈춤'}`)
-    await s.p.locator('[data-visit-version="tall"]').click()
-    const back = await s.p.evaluate(async () => { await new Promise((r) => setTimeout(r, 900)); const el = document.querySelector('[data-visit-video]'); return { src: el.getAttribute('src'), w: el.videoWidth, h: el.videoHeight } })
+    await s.p.locator('[data-video-block="kodit"] [data-visit-version="tall"]').click()
+    const back = await s.p.evaluate(async () => { await new Promise((r) => setTimeout(r, 900)); const el = document.querySelector('[data-video-block="kodit"] [data-visit-video]'); return { src: el.getAttribute('src'), w: el.videoWidth, h: el.videoHeight } })
     ok(back.src === SRC && back.h > back.w, '다시 세로로', back.src)
   } else {
-    await s.p.locator('[data-visit-version="wide"]').click()
-    const src = await s.p.evaluate(() => document.querySelector('[data-visit-video]')?.getAttribute('src'))
+    await s.p.locator('[data-video-block="kodit"] [data-visit-version="wide"]').click()
+    const src = await s.p.evaluate(() => document.querySelector('[data-video-block="kodit"] [data-visit-video]')?.getAttribute('src'))
     ok(src === SRC_W, '**가로(16:9)로 한 번에 바뀜**', src)
   }
   //  내려받기 — 판마다 파일 하나씩 (카카오톡으로 보낼 이름)
-  const dl = await s.p.evaluate(() => [...document.querySelectorAll('[data-visit-download]')].map((a) => ({ id: a.dataset.visitDownload, href: a.getAttribute('href'), name: a.getAttribute('download'), text: a.textContent.trim() })))
+  const dl = await s.p.evaluate(() => [...document.querySelectorAll('[data-video-block="kodit"] [data-visit-download]')].map((a) => ({ id: a.dataset.visitDownload, href: a.getAttribute('href'), name: a.getAttribute('download'), text: a.textContent.trim() })))
   ok(dl.length === 2, '내려받기 단추 둘 (세로 · 가로)', dl.map((x) => x.text).join(' · '))
   ok(dl.find((x) => x.id === 'tall')?.href === SRC && /vertical_9x16\.mp4$/.test(dl.find((x) => x.id === 'tall')?.name ?? ''), '세로 파일 — 이름에 「vertical_9x16」', dl[0]?.name)
   ok(dl.find((x) => x.id === 'wide')?.href === SRC_W && /horizontal_16x9\.mp4$/.test(dl.find((x) => x.id === 'wide')?.name ?? ''), '가로 파일 — 이름에 「horizontal_16x9」', dl[1]?.name)
   ok(dl.every((x) => /\(\d+MB\)/.test(x.text) && !/\(0MB\)/.test(x.text)), '파일 크기 표시', dl.map((x) => x.text).join(' · '))
   //  실제로 받아지는지 — 같은 주소에서 파일이 옴
-  const [download] = await Promise.all([s.p.waitForEvent('download', { timeout: 15000 }).catch(() => null), s.p.locator('[data-visit-download="wide"]').click()])
+  const [download] = await Promise.all([s.p.waitForEvent('download', { timeout: 15000 }).catch(() => null), s.p.locator('[data-video-block="kodit"] [data-visit-download="wide"]').click()])
   ok(!!download && /^BeoneMirae_KODIT_visit_horizontal_16x9\.mp4$/.test(download.suggestedFilename()), '눌러서 **파일이 내려받아짐**', download?.suggestedFilename() ?? '(안 받아짐)')
   await s.ctx.close()
 }
@@ -275,25 +337,27 @@ for (const role of ['field', 'client']) {
 //   ⚠ 1024px 에서 두 칸을 나란히 두었더니 오른쪽 상세가 글자 한 자 폭이 됐습니다.
 for (const [w, h] of [[1024, 800], [1280, 800], [1440, 900], [390, 844]]) {
   const s = await open('admin', { w, h, path: '/visit-video' })
-  await s.p.waitForSelector('[data-visit-numbers]', { timeout: 15000 }).catch(() => {})
+  await s.p.waitForSelector('[data-video-block="kodit"] [data-visit-numbers]', { timeout: 15000 }).catch(() => {})
   const r = await s.p.evaluate(() => ({
-    over: [...document.querySelectorAll('[data-visit-numbers] li, [data-visit-chapters] li')].filter((li) => li.scrollWidth > li.clientWidth + 1).length,
-    detailW: Math.round(document.querySelector('[data-visit-chapters]')?.getBoundingClientRect().width ?? 0),
+    over: [...document.querySelectorAll('[data-video-block="kodit"] [data-visit-numbers] li, [data-video-block="kodit"] [data-visit-chapters] li')].filter((li) => li.scrollWidth > li.clientWidth + 1).length,
+    detailW: Math.round(document.querySelector('[data-video-block="kodit"] [data-visit-chapters]')?.getBoundingClientRect().width ?? 0),
     hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
-    box: (() => { const e = document.querySelector('[data-visit-video-box]')?.getBoundingClientRect(); return e ? { r: Math.round(e.right), ratio: e.width / e.height } : null })(),
+    box: (() => { const e = document.querySelector('[data-video-block="kodit"] [data-visit-video-box]')?.getBoundingClientRect(); return e ? { r: Math.round(e.right), ratio: e.width / e.height } : null })(),
   }))
   ok(r.over === 0 && !r.hscroll, `${w}px — 넘치는 칸 없음 · 옆으로 밀리지 않음`, `넘침 ${r.over}`)
   //  ⚠ 폰에서 영상 칸 오른쪽이 잘렸던 자리 — 높이를 고정해 두어 9:16 폭이 화면보다 넓었습니다
   ok(!!r.box && r.box.r <= w - 8 && Math.abs(r.box.ratio - 9 / 16) < .01, `${w}px — 영상 칸이 화면 안 · 9:16 그대로`, r.box ? `오른쪽 끝 ${r.box.r}px` : '(없음)')
   ok(r.detailW >= 320, `${w}px — 상세 칸 폭이 읽을 만함`, `${r.detailW}px`)
+  const gb = await s.p.evaluate(() => { const e = document.querySelector('[data-video-block="gangnam"] [data-visit-video-box]')?.getBoundingClientRect(); return e ? { r: Math.round(e.right), ratio: e.width / e.height } : null })
+  ok(!!gb && gb.r <= w - 8 && Math.abs(gb.ratio - 9 / 16) < .01, `${w}px — 강남 영상 칸도 화면 안 · 9:16`, gb ? `오른쪽 끝 ${gb.r}px` : '(없음)')
   await s.ctx.close()
 }
 for (const [w, h] of [[1440, 900], [1024, 800], [390, 844]]) {
   const s = await open('admin', { w, h, path: '/visit-video' })
-  await s.p.locator('[data-visit-version="wide"]').click()
+  await s.p.locator('[data-video-block="kodit"] [data-visit-version="wide"]').click()
   await s.p.waitForTimeout(400)
   const r = await s.p.evaluate(() => {
-    const e = document.querySelector('[data-visit-video-box]').getBoundingClientRect()
+    const e = document.querySelector('[data-video-block="kodit"] [data-visit-video-box]').getBoundingClientRect()
     return { r: Math.round(e.right), w: Math.round(e.width), ratio: e.width / e.height, hscroll: document.documentElement.scrollWidth > window.innerWidth + 1 }
   })
   ok(r.r <= w - 8 && !r.hscroll && Math.abs(r.ratio - 16 / 9) < .01, `가로판 · ${w}px — 화면 안 · 16:9`, `폭 ${r.w}px`)
@@ -318,7 +382,8 @@ for (const [w, h] of [[1440, 900], [1024, 800], [390, 844]]) {
 }
 
 // ── ⑧ 영상 파일 두 개 — 앱 안에 있고, 폰에서 받자마자 재생되게 ───────────────
-for (const [id, name, rw, rh] of [['tall', 'sinbo_visit_v31_tall.mp4', 1080, 1920], ['wide', 'sinbo_visit_v31_wide.mp4', 1920, 1080]]) {
+for (const [id, name, rw, rh] of [['tall', 'sinbo_visit_v31_tall.mp4', 1080, 1920], ['wide', 'sinbo_visit_v31_wide.mp4', 1920, 1080],
+  ['강남 tall', 'gangnam_present_v43_tall.mp4', 1080, 1920], ['강남 wide', 'gangnam_present_v43_wide.mp4', 1920, 1080]]) {
   const f = join(ROOT, 'public', 'media', name)
   ok(existsSync(f), `public/media/${name} 있음`)
   if (existsSync(f)) {
