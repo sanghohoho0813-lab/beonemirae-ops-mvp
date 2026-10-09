@@ -50,9 +50,9 @@ export const GANGNAM_VIDEO: VideoDef = {
   summary: '㈜비원미래 발표 오프닝 영상',
   lengthLabel: '4분 19초',
   versions: [
-    { id: 'tall', label: '세로 · 릴스 (9:16)', short: '세로 9:16', src: '/media/gangnam_present_v43_tall.mp4',
+    { id: 'tall', label: '세로 · 릴스 (9:16)', short: '세로 9:16', src: '/media/gangnam_present_v44_tall.mp4',
       file: 'BeoneMirae_Gangnam_startup_presentation_vertical_9x16.mp4', ratio: [9, 16], sizeMB: 27 },
-    { id: 'wide', label: '가로 · 화면용 (16:9)', short: '가로 16:9', src: '/media/gangnam_present_v43_wide.mp4',
+    { id: 'wide', label: '가로 · 화면용 (16:9)', short: '가로 16:9', src: '/media/gangnam_present_v44_wide.mp4',
       file: 'BeoneMirae_Gangnam_startup_presentation_horizontal_16x9.mp4', ratio: [16, 9], sizeMB: 27 },
   ],
   chapters: [
