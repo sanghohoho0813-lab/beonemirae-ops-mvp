@@ -104,7 +104,7 @@ export function ReportSheet({
           <button
             data-drawer-print
             onClick={() => window.print()}
-            className="flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-2xl bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-700 transition hover:bg-navy-100"
+            className="flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-[14px] bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-700 transition hover:bg-navy-100"
           >
             <Printer size={17} strokeWidth={2.5} /> 인쇄 · PDF 저장
           </button>

@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import { ClipboardList, Hospital, PackagePlus, Siren } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
-import { usePortalSheet } from '../lib/portalSheet'
+import { usePortalSheet, useRequestDetail } from '../lib/portalSheet'
 import { requestsForClient } from '../lib/ops'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
-import { RequestRow } from '../components/portal/PortalUi'
+import { FeedRow, PortalEmpty } from '../components/portal/PortalUi'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 요청 내역 (포털 1차 고도화)
@@ -20,6 +20,10 @@ import { RequestRow } from '../components/portal/PortalUi'
 //  ⚠ 전화로 말씀하셔서 비원미래가 대신 올린 요청도 여기 같이 나옵니다.
 //    앱으로만 요청하시라는 화면이 아닙니다 — 어떻게 요청하셨든 진행 상태는
 //    여기서 보실 수 있다는 화면입니다.
+//
+//  포털 3차 — 요청마다 큰 카드 + 진행 막대를 그리던 것을 **활동 목록 한 줄**로
+//    바꿨습니다. 목록에는 지금 상태 칩만, 접수 → 처리 완료 단계와 담당자 안내는
+//    줄을 누르면 올라오는 요청 상세에서 봅니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Filter = 'all' | 'open' | 'done'
@@ -28,6 +32,7 @@ export function PortalRequests() {
   const { data } = useData()
   const { client } = usePortalClient()
   const { open } = usePortalSheet()
+  const detail = useRequestDetail()
   const [filter, setFilter] = useState<Filter>('all')
 
   const all = useMemo(() => (client ? requestsForClient(data, client.id) : []), [data, client])
@@ -68,7 +73,7 @@ export function PortalRequests() {
           type="button"
           data-req-new="urgent"
           onClick={() => open('urgent')}
-          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-white px-3 text-[1.05rem] font-extrabold text-rose-700 shadow-card ring-1 ring-rose-200 transition hover:bg-rose-50"
+          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-[16px] bg-rose-50 px-3 text-[1.05rem] font-extrabold text-rose-700 transition hover:bg-rose-100"
         >
           <Siren size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">긴급수거 요청</span>
         </button>
@@ -76,7 +81,7 @@ export function PortalRequests() {
           type="button"
           data-req-new="supply"
           onClick={() => open('supply')}
-          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-white px-3 text-[1.05rem] font-extrabold text-teal-800 shadow-card ring-1 ring-teal-200 transition hover:bg-teal-50"
+          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-[16px] bg-teal-50 px-3 text-[1.05rem] font-extrabold text-teal-800 transition hover:bg-teal-100"
         >
           <PackagePlus size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">자재·용기 요청</span>
         </button>
@@ -89,7 +94,7 @@ export function PortalRequests() {
         role="group"
         aria-label="요청 상태로 보기"
         data-req-filters
-        className="grid grid-cols-3 gap-1 rounded-2xl bg-navy-100 p-1 sm:inline-grid sm:min-w-[26rem]"
+        className="grid grid-cols-3 gap-1 rounded-full bg-navy-50 p-1 sm:inline-grid sm:min-w-[26rem]"
       >
         {FILTERS.map((f) => (
           <button
@@ -98,14 +103,14 @@ export function PortalRequests() {
             data-req-filter={f.v}
             aria-pressed={filter === f.v}
             onClick={() => setFilter(f.v)}
-            className={`flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-xl px-2 text-[1.02rem] font-bold transition ${
-              filter === f.v ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-600 hover:bg-white/70'
+            className={`flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-full px-2 text-[1.02rem] font-bold transition ${
+              filter === f.v ? 'bg-navy-900 text-white' : 'text-navy-700 hover:bg-navy-100'
             }`}
           >
             <span className="break-keep">{f.l}</span>
             <span
               className={`min-w-[1.6rem] rounded-full px-1.5 text-center tabular-nums ${
-                filter === f.v ? 'bg-navy-900 text-white' : 'bg-white text-navy-700'
+                filter === f.v ? 'bg-white/15 text-white' : 'bg-white text-navy-700'
               }`}
             >
               {f.n}
@@ -119,7 +124,7 @@ export function PortalRequests() {
         <LoadGate
           loadingTitle="요청 내역을 불러오는 중입니다"
           empty={
-            <EmptyState
+            <PortalEmpty
               icon={ClipboardList}
               title={
                 all.length === 0
@@ -137,9 +142,9 @@ export function PortalRequests() {
           }
         />
       ) : (
-        <ul data-req-list className="space-y-3">
+        <ul data-req-list className="p-list">
           {rows.map((r) => (
-            <RequestRow key={r.id} r={r} />
+            <FeedRow key={r.id} r={r} preview onOpen={() => detail.open(r.id)} />
           ))}
         </ul>
       )}

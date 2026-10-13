@@ -7,6 +7,7 @@ import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
 import { BRAND_IMG } from '../lib/brandAssets'
 import { BrandImg } from '../components/BrandImg'
+import { BrandLogo } from '../components/BrandLogo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 로그인 — 비원미래 운영관리 시스템
@@ -148,9 +149,7 @@ export function Login() {
              병원 쪽에서 보면 남의 회사 내부 화면처럼 읽혔습니다.
              ⚠ 직원도 같은 화면으로 들어옵니다. 그래서 아래에 한 줄 적어 둡니다. */}
         <div className="mb-8 flex items-center gap-3.5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.62rem] font-extrabold text-white">
-            비
-          </span>
+          <BrandLogo size="lg" />
           <div className="min-w-0">
             <p className="t-body break-keep font-bold text-teal-300">㈜비원미래</p>
             <p className="t-section break-keep text-white">병원 고객 포털</p>

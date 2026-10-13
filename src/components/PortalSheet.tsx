@@ -52,7 +52,7 @@ type SheetKind = 'form' | 'wide' | 'drawer'
  *  ⚠ 예전에는 보내면 창이 닫히고 아래에 4초짜리 토스트만 떴습니다. 50~70대
  *    담당자분들은 그 4초를 놓치면 「갔나 안 갔나」를 모른 채 다시 누르거나
  *    전화를 거십니다. 보낸 창 **그 자리에서** 「접수되었습니다」를 크게
- *    보여 주고, 다음에 갈 곳(요청 내역 · 홈)을 단추로 드립니다.
+ *    보여 주고, 「확인」을 누르면 창이 닫히고, 방금 보낸 요청이 보던 화면에 바로 보입니다(포털 3차).
  */
 export interface SheetDone {
   title: string
@@ -156,7 +156,7 @@ export function PortalSheet({
           {/*  뒤 화면을 어둡게 — 지금 하는 일에 집중하도록 */}
           <motion.div
             data-sheet-dim
-            className="absolute inset-0 bg-navy-900/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-navy-950/45"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -167,7 +167,7 @@ export function PortalSheet({
             className={
               isDrawer
                 ? 'relative z-10 flex h-full w-full flex-col bg-app shadow-2xl sm:max-w-[40rem]'
-                : `relative z-10 flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-app shadow-2xl sm:rounded-3xl ${BOX[kind]}`
+                : `relative z-10 flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-[20px] bg-app shadow-2xl sm:rounded-[22px] ${BOX[kind]}`
             }
             initial={
               isDrawer
@@ -183,7 +183,7 @@ export function PortalSheet({
               {HeadIcon && (
                 <span
                   aria-hidden="true"
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white ${
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white ${
                     tone === 'rose' ? 'bg-rose-600' : tone === 'teal' ? 'bg-teal-600' : 'bg-navy-800'
                   }`}
                 >
@@ -233,17 +233,18 @@ export function PortalSheet({
                   <button
                     type="button"
                     data-done-primary
+                    data-done-close
                     onClick={done.primary.onClick}
-                    className="flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+                    className="flex min-h-[3.25rem] items-center justify-center rounded-[14px] bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
                   >
                     {done.primary.label}
                   </button>
                   {done.secondary && (
                     <button
                       type="button"
-                      data-done-home
+                      data-done-secondary
                       onClick={done.secondary.onClick}
-                      className="flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-navy-50 px-5 text-[1.08rem] font-extrabold text-navy-800 transition hover:bg-navy-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+                      className="flex min-h-[3.25rem] items-center justify-center rounded-[14px] bg-navy-50 px-5 text-[1.08rem] font-extrabold text-navy-800 transition hover:bg-navy-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
                     >
                       {done.secondary.label}
                     </button>
@@ -283,13 +284,13 @@ function DoneView({ done }: { done: SheetDone }) {
       <p className="t-body mt-2 max-w-[26rem] break-keep leading-snug text-navy-600">{done.message}</p>
       {done.steps && (
         //  「다음에 무슨 일이 일어나나」 — 지금은 첫 칸(접수)입니다.
-        <div data-done-steps className="mt-6 w-full rounded-2xl bg-white px-4 py-4 text-left ring-1 ring-navy-100">
-          <p className="t-label mb-3 text-navy-600">진행 단계 · 바뀌면 알려 드립니다</p>
+        <div data-done-steps className="mt-7 w-full border-t border-navy-100 pt-5 text-left">
+          <p className="p-sub mb-3 font-bold">진행 단계 · 바뀌면 알려 드립니다</p>
           <StatusSteps status="접수" />
         </div>
       )}
       {done.lines && done.lines.length > 0 && (
-        <ul data-done-lines className="mt-6 w-full divide-y divide-navy-50 rounded-2xl bg-white text-left ring-1 ring-navy-100">
+        <ul data-done-lines className="mt-6 w-full divide-y divide-navy-100 rounded-[14px] bg-navy-50 text-left">
           {done.lines.map((l) => (
             <li key={l} className="t-body break-keep px-4 py-3 font-bold leading-snug text-navy-800">
               {l}
@@ -388,7 +389,7 @@ export function ChoiceGrid({
             data-picked={picked ? '1' : undefined}
             aria-pressed={picked}
             onClick={() => onPick(it.value)}
-            className={`flex min-h-[3.25rem] items-center gap-2.5 rounded-2xl px-4 py-3 text-left transition ${
+            className={`flex min-h-[3.25rem] items-center gap-2.5 rounded-[14px] px-4 py-3 text-left transition ${
               picked
                 ? 'bg-navy-900 text-white ring-2 ring-navy-900'
                 : 'bg-white text-navy-800 ring-1 ring-navy-200 hover:ring-navy-400'

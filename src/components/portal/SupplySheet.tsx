@@ -278,7 +278,7 @@ export function SupplySheet({
             data-supply-send
             onClick={() => void send()}
             disabled={!anyPicked || busy}
-            className="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-2xl bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 disabled:opacity-40"
+            className="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-[14px] bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 disabled:opacity-40"
           >
             <Send size={18} strokeWidth={2.5} />
             {busy ? '보내는 중…' : '요청하기'}
@@ -303,7 +303,7 @@ export function SupplySheet({
              않습니다 — 처음 필요해진 규격을 주문할 길이 없어집니다. */}
       <SheetStep no={1} title="필요한 품목과 수량" hint="＋ 를 누르거나 빠른 수량을 고르세요" done={pickedSpecs.length > 0}>
         {specs.length === 0 ? (
-          <p data-supply-empty className="t-body break-keep rounded-2xl bg-navy-50 px-5 py-5 leading-snug text-navy-500">
+          <p data-supply-empty className="t-body break-keep rounded-[14px] bg-navy-50 px-5 py-5 leading-snug text-navy-500">
             이 병원에 등록된 수거 품목이 없어 용기 목록을 만들 수 없습니다. 상담센터로 말씀해 주시면
             바로 확인해 드리겠습니다.
           </p>
@@ -315,7 +315,7 @@ export function SupplySheet({
                 <li
                   key={it.key}
                   data-spec-item={it.key}
-                  className={`rounded-2xl bg-white p-3 transition ${
+                  className={`rounded-[14px] bg-white p-3 transition ${
                     n > 0 ? 'ring-2 ring-navy-900' : 'ring-1 ring-navy-200'
                   }`}
                 >
@@ -407,7 +407,7 @@ export function SupplySheet({
                 <li
                   key={p.id}
                   data-supply-item={p.id}
-                  className={`rounded-2xl bg-white p-3.5 transition ${
+                  className={`rounded-[14px] bg-white p-3.5 transition ${
                     n > 0 ? 'ring-2 ring-navy-900' : 'ring-1 ring-navy-200'
                   }`}
                 >
@@ -507,7 +507,7 @@ export function SupplySheet({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="남기실 말씀 (예: 3층 창고에 넣어 주세요)"
-          className="field-input mt-2.5 min-h-[3.25rem] w-full"
+          className="field-input rounded-[14px] mt-2.5 min-h-[3.25rem] w-full"
         />
       </SheetStep>
 

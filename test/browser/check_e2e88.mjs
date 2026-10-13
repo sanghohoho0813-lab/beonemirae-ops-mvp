@@ -227,10 +227,17 @@ const store = makeStore()
   }
 
   //  올린 직후 병원 화면에 자기 요청이 보이는가 — 「요청 내역 보기」로 갑니다.
+  //  (포털 3차 — 큰 단추는 「확인」(창 닫기), 「요청 내역 보기」는 그 옆)
   ok((await p.locator('main [data-portal-requests] [data-req-row]').count()) >= 1, '홈 「최근 요청」에 바로 올라와 있다')
-  await p.locator('[data-done-primary]').click(); await p.waitForTimeout(1200)
-  const body = flat(await p.locator('main').innerText())
-  ok(new URL(p.url()).pathname === '/portal/requests' && body.includes('격리환자'), '올린 요청이 「요청 내역」에 바로 보인다', new URL(p.url()).pathname)
+  await p.locator('[data-done-secondary]').click(); await p.waitForTimeout(1200)
+  //  포털 3차 — 목록은 한 줄씩(보낸 내용 첫 줄까지). 적은 특이사항 전체는
+  //  그 줄을 누르면 열리는 요청 상세에 있습니다.
+  ok(new URL(p.url()).pathname === '/portal/requests' && (await p.locator(`[data-req-row="${saved.id}"]`).count()) === 1,
+    '올린 요청이 「요청 내역」에 바로 보인다', new URL(p.url()).pathname)
+  await p.locator(`[data-req-open="${saved.id}"]`).click()
+  await p.locator(`[data-req-detail-body="${saved.id}"]`).waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+  ok(flat(await p.locator(`[data-req-detail-body="${saved.id}"]`).innerText().catch(() => '')).includes('격리환자'),
+    '그 줄을 누르면 적은 내용이 그대로 보인다 (요청 상세)')
   await ctx.close()
 }
 
@@ -288,11 +295,14 @@ let reqId = null
   //  회신은 서버에만 넣고(직원 화면 조작은 ③에서 이미 확인), 병원이
   //  읽는지를 봅니다 — 같은 자료를 양쪽이 보고 있는지가 요점입니다.
   store.requests.find((x) => x.id === reqId).reply = '9월 3일 오전에 방문하겠습니다.'
-  //  포털 1차 고도화 — 회신은 「요청 내역」에서 그 요청 아래에 보입니다.
+  //  포털 3차 — 회신은 「요청 내역」에서 그 줄을 누르면 열리는 요청 상세의
+  //  「담당자 안내」에 보입니다.
   const { ctx, p } = await openAs(store, 'client', '/portal/requests', HOSP.id)
-  const body = flat(await p.locator('main').innerText())
-  ok(/9월 3일 오전에 방문하겠습니다/.test(body), '**비원미래 회신이 병원 화면에 그대로 보인다**')
-  ok(/비원미래 회신/.test(body), '누가 쓴 말인지 적혀 있다')
+  await p.locator(`[data-req-open="${reqId}"]`).click()
+  await p.locator(`[data-req-reply="${reqId}"]`).waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+  const body = flat(await p.locator(`[data-req-reply="${reqId}"]`).innerText().catch(() => ''))
+  ok(/9월 3일 오전에 방문하겠습니다/.test(body), '**비원미래 회신이 병원 화면에 그대로 보인다**', body)
+  ok(/비원미래 회신/.test(body) && /담당자 안내/.test(body), '누가 쓴 말인지 적혀 있다 (담당자 안내 · 비원미래 회신)')
   await ctx.close()
 }
 
@@ -346,6 +356,10 @@ let reqId = null
   //  ⚠ ①에서 올린 요청은 **다른 병원 것**입니다. 한 글자도 보이면 안 됩니다.
   ok(!body.includes('격리환자'), '**다른 병원의 요청이 한 줄도 안 보인다**')
   ok(!body.includes('9월 3일 오전에 방문하겠습니다'), '다른 병원에 보낸 회신도 안 보인다')
+  //  ⚠ 주소에 **남의 요청 id** 를 넣어도 요청 상세가 열리지 않는다 (포털 3차)
+  await p.goto(`${W.BASE}/portal/requests?req=${reqId}`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1500)
+  ok((await p.locator('[data-portal-sheet="request"]').count()) === 0, '**남의 요청 id 로는 요청 상세가 안 열린다**')
+  ok(!flat(await p.locator('body').innerText()).includes('9월 3일 오전에 방문하겠습니다'), '그 주소로도 회신이 안 보인다')
   await ctx.close()
 }
 

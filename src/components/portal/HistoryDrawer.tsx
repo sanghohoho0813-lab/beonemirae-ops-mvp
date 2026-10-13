@@ -92,7 +92,7 @@ export function HistoryDrawer({
           <button
             data-drawer-print
             onClick={() => window.print()}
-            className="flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-2xl bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-700 transition hover:bg-navy-100"
+            className="flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-[14px] bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-700 transition hover:bg-navy-100"
           >
             <Printer size={17} strokeWidth={2.5} /> 인쇄 · PDF 저장
           </button>
@@ -107,13 +107,13 @@ export function HistoryDrawer({
       </div>
 
       {rows.length === 0 ? (
-        <p data-drawer-empty className="t-body break-keep rounded-2xl bg-navy-50 px-5 py-5 leading-snug text-navy-500">
+        <p data-drawer-empty className="t-body break-keep rounded-[14px] bg-navy-50 px-5 py-5 leading-snug text-navy-500">
           {all.length === 0
             ? '아직 수거 기록이 없습니다. 첫 수거가 완료되면 여기에 표시됩니다.'
             : '고르신 기간에 수거 기록이 없습니다. 기간을 「전체」로 바꿔 보세요.'}
         </p>
       ) : (
-        <ul data-drawer-rows className="divide-y divide-navy-100 rounded-2xl bg-white ring-1 ring-navy-100">
+        <ul data-drawer-rows className="divide-y divide-navy-100 rounded-[14px] bg-white ring-1 ring-navy-100">
           {rows.map((r) => (
             <li key={r.id} data-drawer-row={r.id} className="px-4 py-3.5">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">

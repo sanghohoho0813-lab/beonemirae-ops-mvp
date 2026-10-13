@@ -49,10 +49,16 @@ import { usePcViewport, PcViewBar } from './PcViewBar'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const OPEN_PC = 'beonemirae:portal-pc-view'
+const OPEN_PHONE = 'beonemirae:portal-phone-view'
 
 /** 화면 맨 아래 단추가 부릅니다 */
 export function openPortalPcView() {
   window.dispatchEvent(new CustomEvent(OPEN_PC))
+}
+
+/** 포털 3차 — 「더보기」 메뉴가 부릅니다 (PC 에서 폰 화면 띄우기) */
+export function openPortalPhoneView() {
+  window.dispatchEvent(new CustomEvent(OPEN_PHONE))
 }
 
 /** 지금 이 화면이 「폰 틀 안」인가 */
@@ -61,7 +67,7 @@ export function useInPhoneFrame(): boolean {
   return new URLSearchParams(search).get('frame') === '1'
 }
 
-export function PortalViewSwitch({ className = '' }: { className?: string }) {
+export function PortalViewSwitch({ className = '', withButton = true }: { className?: string; withButton?: boolean }) {
   const { pathname, search } = useLocation()
   const inFrame = useInPhoneFrame()
 
@@ -78,6 +84,11 @@ export function PortalViewSwitch({ className = '' }: { className?: string }) {
 
   //  PC → 폰.
   const [phoneView, setPhoneView] = useState(false)
+  useEffect(() => {
+    const on = () => setPhoneView(true)
+    window.addEventListener(OPEN_PHONE, on)
+    return () => window.removeEventListener(OPEN_PHONE, on)
+  }, [])
 
   //  ⚠ 화면을 옮기면 보기 모드를 끕니다. 켜 둔 채로 다른 화면에 가면
   //    「왜 이렇게 보이지」가 됩니다.
@@ -114,6 +125,7 @@ export function PortalViewSwitch({ className = '' }: { className?: string }) {
       {/*  넓은 화면에서만 — 「모바일 화면으로 보기」
            ⚠ 폰용 단추는 여기 없습니다. 화면 맨 아래에 있습니다 —
              위 주석의 「단추를 어디에 두었나」 참고. */}
+      {withButton && (
       <button
         data-portal-phone-view
         onClick={() => setPhoneView(true)}
@@ -124,6 +136,7 @@ export function PortalViewSwitch({ className = '' }: { className?: string }) {
         <Smartphone size={17} strokeWidth={2.3} />
         <span className="t-btn">모바일 화면</span>
       </button>
+      )}
 
       {/*  폰에서 PC 화면을 보는 중 — 돌아가는 길을 항상 띄워 둡니다 */}
       {pcView && <PcViewBar onExit={() => setPcView(false)} />}

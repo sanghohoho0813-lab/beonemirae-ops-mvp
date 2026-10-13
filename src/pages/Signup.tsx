@@ -3,6 +3,7 @@ import { COMPANY_HOURS, COMPANY_TEL, SYSTEM_TAGLINE } from '../lib/brand'
 import { Link, Navigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Lock, Mail, ShieldCheck, User, UserPlus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { BrandLogo } from '../components/BrandLogo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 가입 신청
@@ -55,9 +56,7 @@ export function Signup() {
     <div className="flex min-h-[100dvh] items-center justify-center bg-navy-950 px-4 py-10">
       <div className="w-full max-w-[30rem]">
         <div className="mb-8 flex items-center gap-3.5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.62rem] font-extrabold text-white">
-            비
-          </span>
+          <BrandLogo size="lg" />
           <div className="min-w-0">
             <p className="t-section break-keep text-white">㈜비원미래 운영관리 시스템</p>
             <p className="t-body mt-1 break-keep font-medium text-navy-400">{SYSTEM_TAGLINE}</p>

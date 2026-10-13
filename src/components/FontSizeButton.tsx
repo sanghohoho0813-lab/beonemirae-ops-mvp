@@ -17,7 +17,7 @@ import { FontSizeControl } from './FontSizeControl'
 //    다른 방식으로 열리면 그 자체가 배울 것이 됩니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function FontSizeButton({ className = '' }: { className?: string }) {
+export function FontSizeButton({ className = '', showLabel = false }: { className?: string; showLabel?: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <>
@@ -33,7 +33,7 @@ export function FontSizeButton({ className = '' }: { className?: string }) {
         }
       >
         <Type size={17} strokeWidth={2.4} className="shrink-0" />
-        <span className="hidden min-[420px]:inline">글자 크기</span>
+        <span className={showLabel ? 'min-w-0 flex-1 break-keep text-left' : 'hidden min-[420px]:inline'}>글자 크기</span>
       </button>
 
       {open && (

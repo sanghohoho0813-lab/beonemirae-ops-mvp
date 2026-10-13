@@ -160,7 +160,8 @@ async function open(path, role, w = 1440, extra = {}) {
   //  (뒤 화면에 바로 올라오는지는 서버가 저장까지 하는 check_e2e88 이 잽니다 —
   //   이 검사의 가짜 서버는 받은 요청을 저장하지 않습니다.)
   //  「요청 내역 보기」 — 그 병원을 달고 요청 내역으로 갑니다.
-  await p.locator('[data-done-primary]').click(); await p.waitForTimeout(900)
+  //  (포털 3차 — 큰 단추는 「확인」, 「요청 내역 보기」는 그 옆 단추)
+  await p.locator('[data-done-secondary]').click(); await p.waitForTimeout(900)
   ok(new URL(p.url()).pathname === `${HOME}/requests`, '「요청 내역 보기」 → 그 병원의 요청 내역', new URL(p.url()).pathname)
   ok((await p.locator('[data-portal-sheet]').count()) === 0, '옮기면서 창이 닫힌다')
   ok((await p.locator('main h1').first().innerText()).includes('요청 내역'), '요청 내역 화면이 열린다')

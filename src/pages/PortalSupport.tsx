@@ -4,7 +4,8 @@ import { CLIENT_TEL, COMPANY_HOURS } from '../lib/brand'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { useAuth } from '../context/AuthContext'
-import { PageShell, SectionTitle, EmptyState } from '../components/ui'
+import { PageShell, EmptyState } from '../components/ui'
+import { SectionHead, PortalEmpty } from '../components/portal/PortalUi'
 import { LoadGate } from '../components/LoadState'
 import { INQUIRY_TOPICS, type InquiryTopic } from '../types'
 import { prettyDate } from '../lib/format'
@@ -21,12 +22,16 @@ import { prettyDate } from '../lib/format'
 //
 //  ⚠ 병원은 올린 뒤 **못 고칩니다.** 서버도 그렇게 막혀 있습니다(0083 RLS).
 //    답은 비원미래가 씁니다.
+//
+//  포털 3차 — 카드 · 말풍선 · 「비」 얼굴을 걷었습니다. 보낸 문의는 목록 한 줄씩,
+//    답은 요청 상세와 같은 「담당자 안내」 칸 하나입니다(채팅방처럼 꾸미지 않습니다).
 // ─────────────────────────────────────────────────────────────────────────────
 
+//  ⚠ 요청 상태 칩과 **같은 색**입니다 — 접수 회색 · 확인 중 파랑 · 끝 초록.
 const STATUS_TONE = {
-  접수: 'bg-sky-50 text-sky-800 ring-1 ring-sky-100',
-  '확인 중': 'bg-amber-50 text-amber-800 ring-1 ring-amber-100',
-  '답변 완료': 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100',
+  접수: 'bg-navy-100 text-navy-800',
+  '확인 중': 'bg-teal-50 text-teal-800',
+  '답변 완료': 'bg-emerald-50 text-emerald-800',
 } as const
 
 export function PortalSupport() {
@@ -106,32 +111,33 @@ export function PortalSupport() {
       <a
         href={`tel:${CLIENT_TEL}`}
         data-support-call
-        className="card flex items-center gap-4 px-5 py-4 transition hover:bg-navy-50 sm:px-6"
+        className="-mx-2 flex items-center gap-4 rounded-[16px] px-2 py-2 transition hover:bg-navy-50"
       >
-        <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-white">
+        <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white">
           <Headset size={24} strokeWidth={2.3} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="t-body block break-keep font-extrabold text-navy-900">
+          <span className="p-body block break-keep font-extrabold">
             전화 상담 <span className="whitespace-nowrap tabular-nums">{CLIENT_TEL}</span>
           </span>
-          <span className="t-muted mt-0.5 block break-keep">급하시면 전화가 빠릅니다 · {COMPANY_HOURS}</span>
+          <span className="p-sub mt-0.5 block break-keep">급하시면 전화가 빠릅니다 · {COMPANY_HOURS}</span>
         </span>
         <Phone size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-teal-700" />
       </a>
 
-      <section className="card p-5 sm:p-6">
-        <SectionTitle size="sub">새 문의</SectionTitle>
+      <section className="border-t border-navy-100 pt-5">
+        <SectionHead title="새 문의" />
 
-        <label className="field-label mt-4 transition-colors hover:text-navy-900" htmlFor="inq-topic">무엇에 대한 문의인가요?</label>
+        <label className="field-label mt-2 transition-colors hover:text-navy-900" htmlFor="inq-topic">무엇에 대한 문의인가요?</label>
         <div id="inq-topic" className="flex flex-wrap gap-2">
           {INQUIRY_TOPICS.map((t) => (
             <button
               key={t}
               data-inq-topic={t}
               onClick={() => setTopic(t)}
-              className={`min-h-[44px] rounded-2xl px-4 text-[1.05rem] font-bold transition ${
-                topic === t ? 'bg-navy-900 text-white shadow-sm hover:bg-navy-800' : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
+              aria-pressed={topic === t}
+              className={`min-h-[44px] rounded-full px-4 text-[1.05rem] font-bold transition ${
+                topic === t ? 'bg-navy-900 text-white hover:bg-navy-800' : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
               }`}
             >
               {t}
@@ -143,7 +149,7 @@ export function PortalSupport() {
         <input
           id="inq-subject"
           data-inq-subject
-          className="field-input"
+          className="field-input rounded-[14px]"
           value={subject}
           onChange={(e) => { setSubject(e.target.value); setSent(false) }}
           placeholder="예) 다음 주 수거 일정을 하루 당길 수 있을까요"
@@ -154,19 +160,19 @@ export function PortalSupport() {
           id="inq-body"
           data-inq-body
           rows={4}
-          className="field-input"
+          className="field-input rounded-[14px]"
           value={body}
           onChange={(e) => { setBody(e.target.value); setSent(false) }}
           placeholder="자세히 적어 주시면 더 정확히 답변드릴 수 있습니다."
         />
 
         {error && (
-          <p data-inq-error className="mt-3 break-keep rounded-2xl bg-rose-50 px-4 py-3 t-body font-bold text-rose-500">
+          <p data-inq-error className="mt-3 break-keep rounded-[14px] bg-rose-50 px-4 py-3 t-body font-bold text-rose-700">
             {error}
           </p>
         )}
         {sent && (
-          <p data-inq-sent className="mt-3 break-keep rounded-2xl bg-emerald-50 px-4 py-3 t-body font-bold text-emerald-600">
+          <p data-inq-sent className="mt-3 break-keep rounded-[14px] bg-emerald-50 px-4 py-3 t-body font-bold text-emerald-800">
             문의가 접수되었습니다. 담당자가 확인하면 아래 목록의 상태가 바뀌고 답변이 표시됩니다.
           </p>
         )}
@@ -175,19 +181,19 @@ export function PortalSupport() {
           data-inq-send
           disabled={!canSend}
           onClick={send}
-          className="btn-primary mt-4 w-full disabled:opacity-40"
+          className="btn-primary mt-4 w-full shadow-none disabled:opacity-40"
         >
           <Send size={18} strokeWidth={2.4} /> {sending ? '보내는 중…' : '문의 보내기'}
         </button>
       </section>
 
       <section>
-        <SectionTitle>보낸 문의</SectionTitle>
+        <SectionHead title="보낸 문의" />
         {mine.length === 0 ? (
           <LoadGate
             loadingTitle="문의를 불러오는 중입니다"
             empty={
-              <EmptyState
+              <PortalEmpty
                 icon={HelpCircle}
                 title="아직 보낸 문의가 없습니다"
                 subtitle="위에서 문의를 남기시면 여기에 진행 상태가 표시됩니다."
@@ -195,35 +201,29 @@ export function PortalSupport() {
             }
           />
         ) : (
-          //  포털 2차 — 문의는 **대화**입니다. 보낸 말은 오른쪽, 비원미래 답은 왼쪽.
-          <ul className="space-y-4">
+          <ul className="p-list border-t border-navy-100">
             {mine.map((q) => (
-              <li key={q.id} data-inq-row={q.id} className="card p-4 sm:p-5">
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-                  <span className="pill bg-navy-50 text-navy-700">{q.topic}</span>
-                  <span className={`pill ${STATUS_TONE[q.status]}`}>{q.status}</span>
-                  <span className="t-muted ml-auto shrink-0">{prettyDate(q.createdAt.slice(0, 10))}</span>
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <div className="max-w-[92%] rounded-2xl rounded-tr-md bg-navy-800 px-4 py-3 text-white">
-                    <p className="t-body break-keep font-extrabold">{q.subject}</p>
-                    {q.body && q.body !== q.subject && (
-                      <p className="t-body mt-1 whitespace-pre-line break-keep leading-snug text-navy-100">{q.body}</p>
-                    )}
+              <li key={q.id} data-inq-row={q.id} className="py-4">
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="p-body break-keep font-extrabold">{q.subject}</p>
+                    <p className="p-sub mt-0.5 break-keep">
+                      {q.topic} · {prettyDate(q.createdAt.slice(0, 10))}
+                    </p>
                   </div>
+                  <span className={`pill shrink-0 ${STATUS_TONE[q.status]}`}>{q.status}</span>
                 </div>
+                {q.body && q.body !== q.subject && (
+                  <p className="p-body mt-2 whitespace-pre-line break-keep text-navy-700">{q.body}</p>
+                )}
                 {q.reply ? (
-                  <div data-inq-reply={q.id} className="mt-3 flex items-start gap-2.5">
-                    <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-[1rem] font-black text-white">
-                      비
-                    </span>
-                    <div className="min-w-0 max-w-[92%] rounded-2xl rounded-tl-md bg-teal-50 px-4 py-3 ring-1 ring-teal-100">
-                      <p className="t-muted break-keep font-extrabold text-teal-800">비원미래 답변</p>
-                      <p className="t-body mt-1 whitespace-pre-line break-keep text-navy-800">{q.reply}</p>
-                    </div>
+                  //  담당자 안내 — 요청 상세와 같은 모양
+                  <div data-inq-reply={q.id} className="mt-3 rounded-[14px] bg-navy-50 px-4 py-3.5">
+                    <p className="p-sub break-keep font-extrabold text-navy-800">비원미래 답변</p>
+                    <p className="p-body mt-1 whitespace-pre-line break-keep">{q.reply}</p>
                   </div>
                 ) : (
-                  <p className="t-muted mt-3 break-keep">담당자 확인을 기다리고 있습니다. 답변이 오면 알림으로도 알려 드립니다.</p>
+                  <p className="p-sub mt-2 break-keep">담당자 확인을 기다리고 있습니다. 답변이 오면 알림으로도 알려 드립니다.</p>
                 )}
               </li>
             ))}

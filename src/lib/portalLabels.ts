@@ -73,3 +73,18 @@ export function daysFromToday(iso: string, todayIso: string): string | null {
   if (d === 1) return '내일'
   return `${d}일 후`
 }
+
+/**
+ * 목록용 시각 — 「오늘 10:49」 · 「어제 14:20」 · 「10월 12일 06:49」 (포털 3차).
+ *  ⚠ 「오늘」은 한국 시각 기준 오늘(format.today)을 받아 비교합니다.
+ */
+export function friendlyWhen(when: string, todayIso: string): string {
+  const m = when.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/)
+  if (!m) return when
+  const date = `${m[1]}-${m[2]}-${m[3]}`
+  const hm = m[4] ? ` ${m[4]}:${m[5]}` : ''
+  if (date === todayIso) return `오늘${hm}`
+  const rel = daysFromToday(todayIso, date)
+  if (rel === '내일') return `어제${hm}`
+  return shortDateTime(when)
+}

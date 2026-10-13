@@ -65,3 +65,33 @@ export function usePortalSheet(): SheetState {
 
   return { sheet, open, close }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 요청 상세 (포털 3차) — 주소 뒤 ?req=<요청 id>
+//
+//  ⚠ 목록에는 지금 상태만 보이고, **전체 진행 단계 · 담당자 안내**는 상세에서만
+//    보입니다. 상세도 화면을 옮기지 않는 창이라, 닫으면 보던 목록 그 자리입니다.
+//  ⚠ ?do= 와 따로 둡니다 — 상세는 「어떤 요청인가」를 함께 들고 다녀야 합니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useRequestDetail() {
+  const [params, setParams] = useSearchParams()
+  const id = params.get('req')
+
+  const open = useCallback(
+    (reqId: string) => {
+      const next = new URLSearchParams(params)
+      next.set('req', reqId)
+      setParams(next)
+    },
+    [params, setParams],
+  )
+
+  const close = useCallback(() => {
+    const next = new URLSearchParams(params)
+    next.delete('req')
+    setParams(next, { replace: true })
+  }, [params, setParams])
+
+  return { id, open, close }
+}

@@ -193,10 +193,10 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
   //  같은 창을 다시 열어 같은 것을 또 보내면 — **새 표**라 새 요청입니다.
   //  (같은 표로 다시 가는 것은 ③ 에서 확인했습니다)
   ok((await p.locator('[data-req-send]').count()) === 0, '보낸 뒤에는 보내기 단추가 사라진다 (두 번 못 보냄)')
-  //  「홈으로」 — 창이 닫히고 첫 화면.
-  await p.locator('[data-done-home]').click()
+  //  「확인」 — 창이 닫히고 보던 홈 그대로 (포털 3차).
+  await p.locator('[data-done-primary]').click()
   await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {})
-  ok((await p.locator('[data-portal-sheet]').count()) === 0 && new URL(p.url()).pathname === '/portal', '「홈으로」를 누르면 창이 닫히고 홈', p.url())
+  ok((await p.locator('[data-portal-sheet]').count()) === 0 && new URL(p.url()).pathname === '/portal', '「확인」을 누르면 창이 닫히고 홈', p.url())
   await ctx.close()
 }
 
@@ -271,7 +271,9 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
 for (const page of ['', 'history', 'support', 'report', 'billing', 'supplies']) {
   const srv = makeServer()
   const { ctx, p } = await open(srv, page ? `/portal/${page}` : '/portal', 'client', HOSP.id, 390)
-  const n = await p.locator('[data-portal-pc-view]').count()
+  //  포털 3차 — 머리띠 「내 정보」 안에 있습니다(머리띠는 모든 화면에 있습니다).
+  await p.locator('[data-portal-more]').click(); await p.waitForTimeout(300)
+  const n = await p.locator('[data-portal-pc-view]:visible').count()
   ok(n === 1, `${page || '홈'} — 「PC 화면으로 보기」가 있다`, `${n}개`)
   await ctx.close()
 }

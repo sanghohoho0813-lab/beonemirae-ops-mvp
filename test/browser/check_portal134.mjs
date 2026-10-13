@@ -18,6 +18,9 @@ import * as F from './perf_fixtures.mjs'
 //     ⑦ 요청 내역 · 정산·증빙 · 수거 이력(예정된 수거)
 //     ⑧ 로그인 · PWA(아이콘 · 이름)
 //     ⑨ 지어낸 것 없음 · 내부 말(소모품 · 일정 반영) 없음 · 남의 병원 없음
+//     ⑬ 포털 3차 — 카드를 걷었다(그림자 상자 0 · 면은 다음 수거 · 빠른 요청 · 정산 상태만),
+//        모서리 위계(다음 수거 20~24 · 빠른 요청 16~20 · 입력 12~14 · 칩 알약),
+//        PC 두 줄(왼쪽 다음 수거 + 최근 요청 · 오른쪽 빠른 요청 + 최근 수거)
 
 const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d && !c ? ` — ${d}` : ''}`); if (!c) process.exitCode = 1 }
 const flat = (t) => (t ?? '').replace(/\s+/g, ' ').trim()
@@ -113,7 +116,9 @@ function wire(ctx, srv, profile) {
 
 async function open(srv, path, { w = 390, scale = 'normal' } = {}) {
   const profile = { ...W.profileFor('client'), font_scale: scale, client_id: HOSP.id }
-  const ctx = await b.newContext({ viewport: { width: w, height: w < 700 ? 844 : 950 }, isMobile: w < 700, hasTouch: w < 700 })
+  //  ⚠ 병원 담당자의 폰 · PC 는 한국 시각입니다. 「오늘 10:49」 같은 시각 글자가
+  //    실제와 같은 조건에서 맞는지 봅니다(검사 기계의 시간대는 UTC).
+  const ctx = await b.newContext({ viewport: { width: w, height: w < 700 ? 844 : 950 }, isMobile: w < 700, hasTouch: w < 700, timezoneId: 'Asia/Seoul' })
   wire(ctx, srv, profile)
   const p = await ctx.newPage()
   const errors = []
@@ -149,7 +154,8 @@ for (const w of [390, 412, 360]) {
   //  최근 요청 — 무엇을 · 언제 · 상태 (최신순)
   const rows = await p.locator('[data-portal-requests] [data-req-row]').allInnerTexts()
   ok(rows.length === 3, `${w}px ① 최근 요청 세 줄`, `${rows.length}`)
-  ok(/긴급수거 요청/.test(rows[0]) && /\d+월 \d+일 \d{2}:\d{2}/.test(rows[0]) && /접수/.test(rows[0]),
+  //  포털 3차 — 시각은 「오늘 10:49」 · 「어제 14:20」 · 「10월 12일 06:49」
+  ok(/긴급수거 요청/.test(rows[0]) && /(오늘|어제|\d+월 \d+일) \d{2}:\d{2}/.test(rows[0]) && /접수/.test(rows[0]),
     `${w}px ① 최근 요청 — 이름 · 날짜시각 · 상태`, flat(rows[0]))
   ok((await p.locator('[data-portal-recent] [data-recent-pickup]').count()) > 0, `${w}px ① 최근 수거가 보인다`)
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -169,10 +175,19 @@ for (const w of [390, 412, 360]) {
   ok(/자재·용기 요청/.test(main) && /긴급수거 요청/.test(main) && /추가수거 요청/.test(main), '② 요청 이름이 병원 말')
   const chips = await p.locator('[data-req-list] [data-status-chip]').allInnerTexts()
   ok(chips.length === 3 && chips.every((c) => /접수|확인 중|일정 확정|처리 완료/.test(c)), '② 요청마다 상태가 **글자로** 있다', chips.join(','))
-  const steps = await p.locator('[data-status-steps]').first().getAttribute('aria-label')
-  ok(/4단계 중 \d단계/.test(steps ?? ''), '② 진행 단계를 화면 읽기 프로그램도 읽는다', steps)
-  ok(/비원미래 회신/.test(main) && /다음 수거 때 함께 가져다 드리겠습니다/.test(main), '② 비원미래 회신이 그 요청 아래에')
+  //  포털 3차 — 목록에는 **지금 상태 칩만**. 전체 단계 · 회신은 줄을 누르면 열리는 요청 상세에.
+  ok((await p.locator('[data-req-list] [data-status-steps]').count()) === 0, '② 목록에는 진행 막대 없이 상태 칩만')
   ok(/전화 접수/.test(main), '② 전화로 말씀하신 요청도 같이 보인다 (앱만 쓰시라는 화면이 아님)')
+  await p.locator('[data-req-open="r1"]').click()
+  await p.locator('[data-portal-sheet="request"]').waitFor({ state: 'visible', timeout: 5000 })
+  const steps = await p.locator('[data-portal-sheet="request"] [data-status-steps]').getAttribute('aria-label')
+  ok(/4단계 중 3단계 일정 확정/.test(steps ?? ''), '② 요청 상세 — 진행 단계를 화면 읽기 프로그램도 읽는다', steps)
+  const reply = flat(await p.locator('[data-req-reply="r1"]').innerText())
+  ok(/담당자 안내/.test(reply) && /비원미래 회신/.test(reply) && /다음 수거 때 함께 가져다 드리겠습니다/.test(reply), '② 요청 상세 — 비원미래 회신이 「담당자 안내」에', reply)
+  ok(new URL(p.url()).searchParams.get('req') === 'r1', '② 상세는 주소에 남는다 (새로고침해도 그대로)', p.url())
+  await p.locator('[data-req-detail-close]').click(); await p.waitForTimeout(900)
+  ok((await p.locator('[data-portal-sheet="request"]').count()) === 0 && new URL(p.url()).pathname === '/portal/requests', '② 닫으면 보던 목록 그 자리',
+    `${await p.locator('[data-portal-sheet="request"]').count()} · ${p.url()}`)
   ok(!/남의병원비밀요청/.test(main) && !main.includes(OTHER.name), '② 남의 병원 요청은 안 보인다')
   //  거르기 — 진행 중 / 처리 완료
   await p.locator('[data-req-filter="done"]').click(); await p.waitForTimeout(300)
@@ -220,16 +235,20 @@ for (const w of [390, 412, 360]) {
   const done = flat(await p.locator('[data-sheet-done]').innerText())
   ok(/요청이 접수되었습니다/.test(done) && /비원미래에서 확인 후 처리 상태를 안내드립니다/.test(done), '③ 「요청이 접수되었습니다」 + 다음 안내', done.slice(0, 80))
   ok(/원하는 시점 · 가능한 가장 빠르게/.test(done) && /특이사항 · 후문으로 와 주세요/.test(done), '③ 무엇이 접수됐는지 그 자리에서', done)
-  const btns = (await p.locator('[data-portal-sheet="urgent"] [data-done-primary], [data-portal-sheet="urgent"] [data-done-home]').allInnerTexts()).map(flat)
-  ok(btns.join(',') === '요청 내역 보기,홈으로', '③ 다음 갈 곳 — 요청 내역 보기 · 홈으로', btns.join(','))
-  for (const sel of ['[data-done-primary]', '[data-done-home]']) {
+  //  포털 3차 — 큰 단추는 「확인」(창 닫기), 작은 단추가 「요청 내역 보기」
+  const btns = (await p.locator('[data-portal-sheet="urgent"] [data-done-primary], [data-portal-sheet="urgent"] [data-done-secondary]').allInnerTexts()).map(flat)
+  ok(btns.join(',') === '확인,요청 내역 보기', '③ 다음 — 확인 · 요청 내역 보기', btns.join(','))
+  for (const sel of ['[data-done-primary]', '[data-done-secondary]']) {
     const bx = await p.locator(sel).boundingBox()
     ok(bx.height >= 44 && bx.y + bx.height <= 844, `③ ${sel} 44px 이상 · 화면 안`, `${Math.round(bx.height)} · ${Math.round(bx.y + bx.height)}`)
   }
   await p.locator('[data-done-primary]').click(); await p.waitForTimeout(1200)
-  ok(new URL(p.url()).pathname === '/portal/requests', '③ 「요청 내역 보기」 → 요청 내역', p.url())
-  ok((await p.locator('[data-portal-sheet]').count()) === 0, '③ 옮기면 창이 닫힌다')
-  ok(/후문으로 와 주세요/.test(flat(await p.locator('main').innerText())), '③ 방금 보낸 요청이 요청 내역 맨 위에')
+  ok(new URL(p.url()).pathname === '/portal', '③ 「확인」 → 홈 그대로', p.url())
+  ok((await p.locator('[data-portal-sheet]').count()) === 0, '③ 「확인」을 누르면 창이 닫힌다')
+  const first = flat(await p.locator('[data-portal-requests] [data-req-row]').first().innerText())
+  ok(/긴급수거 요청/.test(first) && /오늘 \d{2}:\d{2}/.test(first) && /접수/.test(first), '③ 방금 보낸 요청이 홈 「최근 요청」 맨 위에', first)
+  const reqTop = await p.locator('[data-portal-requests]').evaluate((el) => Math.round(el.getBoundingClientRect().top))
+  ok(reqTop >= 0 && reqTop < 400, '③ 「확인」 뒤 「최근 요청」이 화면에 보인다', `${reqTop}px`)
   await ctx.close()
 }
 
@@ -249,8 +268,9 @@ for (const w of [390, 412, 360]) {
   ok(/다음 방문 전에 필요/.test(sent.content ?? '') && sent.desired_date == null, '④ 「그 전에 필요」는 글로 남고 희망일을 다음 방문일로 안 적는다', `${sent.content} · ${sent.desired_date}`)
   const done = flat(await p.locator('[data-sheet-done]').innerText())
   ok(/요청이 접수되었습니다/.test(done) && /63L 박스 10개/.test(done) && /필요한 시점 · 다음 방문 전에 필요/.test(done), '④ 접수 화면에 품목·수량·시점', done)
-  await p.locator('[data-done-home]').click(); await p.waitForTimeout(1000)
-  ok(new URL(p.url()).pathname === '/portal' && (await p.locator('[data-portal-sheet]').count()) === 0, '④ 「홈으로」 → 창 닫히고 홈')
+  await p.locator('[data-done-secondary]').click(); await p.waitForTimeout(1000)
+  ok(new URL(p.url()).pathname === '/portal/requests' && (await p.locator('[data-portal-sheet]').count()) === 0, '④ 「요청 내역 보기」 → 창 닫히고 요청 내역')
+  ok(/63L 박스 10개/.test(flat(await p.locator('[data-req-list]').innerText())), '④ 방금 보낸 요청이 요청 내역 맨 위에 (보낸 내용 첫 줄까지)')
   await ctx.close()
 }
 
@@ -380,24 +400,22 @@ for (const w of [390, 1280]) {
   const heroBg = await p.locator('[data-portal-hero]').evaluate((el) => getComputedStyle(el).backgroundColor)
   ok(lum(headBg) > 240, '⑩ 머리띠는 밝다 (눈이 먼저 「다음 수거」로 가게)', headBg)
   ok(lum(heroBg) < 60, '⑩ 「다음 수거」가 화면에서 가장 짙은 칸', heroBg)
-  //  앞으로 7일 — 등록된 일정만 칠한다 (취소된 것 · 지어낸 날 없음)
-  const days = await p.locator('[data-week-day]').evaluateAll((els) => els.map((e) => ({ d: e.getAttribute('data-week-day'), m: e.getAttribute('data-week-mark') })))
-  ok(days.length === 7, '⑩ 앞으로 7일이 한 줄에', `${days.length}`)
-  ok(flat(await p.locator('[data-week-day]').first().innerText()).startsWith('오늘'), '⑩ 첫 칸은 오늘')
-  const mine = srv.schedules.filter((x) => x.client_id === HOSP.id && !x.canceled_at)
-  const want = days.map(({ d }) => {
-    const on = mine.filter((x) => x.date === d)
-    return on.some((x) => x.status !== '완료') ? 'scheduled' : on.some((x) => x.status === '완료') ? 'done' : ''
-  })
-  ok(days.every((x, i) => x.m === want[i]), '⑩ 칠한 날 = 실제로 등록된 일정 (취소된 날은 안 칠함)', JSON.stringify(days.map((x, i) => `${x.d}:${x.m}/${want[i]}`)))
-  ok(days.some((x) => x.m === 'scheduled'), '⑩ 사흘 뒤 일정이 칠해져 있다')
-  const lbl = await p.locator('[data-week-mark="scheduled"]').last().getAttribute('aria-label')
-  ok(/수거 예정/.test(lbl ?? ''), '⑩ 화면 읽기 프로그램은 「○월 ○일 ○요일 수거 예정」으로 읽는다', lbl)
-  //  최근 요청 — 종류 아이콘 · 진행 막대
-  ok((await p.locator('[data-portal-requests] [data-mini-steps]').count()) === 3, '⑩ 최근 요청마다 진행 막대')
-  //  도움 · 설정 — 한 줄씩, 전부 44px 이상
-  const rows = await p.locator('[data-portal-utility] .grid > *:visible').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
-  ok(rows.length === 4 && rows.every((h) => h >= 44), '⑩ 도움·설정 네 줄 (화면 색 · PC 화면 · 전화 · 로그아웃), 44px 이상', rows.join(','))
+  //  포털 3차 — 「다음 수거」 칸에는 날짜 하나만 크게. 작은 메뉴 · 7일 줄이 없다.
+  ok((await p.locator('[data-week-day]').count()) === 0, '⑩ 「다음 수거」 칸에 7일 줄 · 작은 정보가 겹치지 않는다')
+  ok((await p.locator('[data-portal-hero] button, [data-portal-hero] a').count()) === 0, '⑩ 「다음 수거」 칸에 작은 단추가 없다')
+  //  최근 요청 — 지금 상태 칩만 (전체 단계는 요청 상세에서)
+  ok((await p.locator('[data-portal-requests] [data-status-steps], [data-portal-requests] [data-mini-steps]').count()) === 0, '⑩ 최근 요청 목록에는 진행 막대가 없다')
+  ok((await p.locator('[data-portal-requests] [data-status-chip]').count()) === 3, '⑩ 최근 요청마다 상태 칩 하나')
+  //  도움 · 설정 — 화면마다 깔리던 네 줄은 「내 정보」 안으로
+  ok((await p.locator('[data-portal-utility]').count()) === 0, '⑩ 화면 아래 「도움·설정」 줄이 없다 (내 정보 안으로)')
+  await p.locator('[data-portal-more]').click()
+  await p.locator('[data-portal-more-panel]').waitFor({ state: 'visible', timeout: 3000 })
+  const menu = await p.locator('[data-portal-more-panel] a:visible, [data-portal-more-panel] button:visible').evaluateAll((els) =>
+    els.map((e) => ({ t: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), h: Math.round(e.getBoundingClientRect().height) })))
+  const has = (re) => menu.some((m) => re.test(m.t))
+  ok(has(/전화 상담/) && has(/사용 방법/) && has(/글자 크기/) && has(/화면 색/) && has(/PC 화면/) && has(/로그아웃/),
+    '⑩ 내 정보 — 전화 상담 · 사용 방법 · 글자 크기 · 화면 색 · PC 화면 · 로그아웃', menu.map((m) => m.t).join(' | '))
+  ok(menu.every((m) => m.h >= 44), '⑩ 내 정보 — 줄마다 44px 이상', menu.map((m) => m.h).join(','))
   await ctx.close()
 }
 
@@ -444,6 +462,100 @@ for (const w of [390, 1280]) {
   ok((await p.locator('main img').count()) === 0, '⑫ 고객지원에 장식 사진이 없다')
   ok((await p.locator('[data-support-call]').getAttribute('href'))?.startsWith('tel:'), '⑫ 고객지원 맨 위에 바로 전화 걸기')
   await ctx.close()
+}
+
+// ── ⑬ 포털 3차 — 카드 줄이기 · 모서리 위계 · PC 두 줄 ─────────────────────────
+//  ⚠ 「상자」 = 둥근 모서리 + (색 면 · 보이는 그림자 · 테두리). 바깥 상자만 셉니다.
+//    대표님 브리프: 「카드는 다음 수거 Hero · Primary Action · 강조가 필요한 상태에만」.
+{
+  const LIMIT = { home: 3, requests: 0, history: 0, billing: 1, support: 0 }
+  for (const w of [390, 1440]) {
+    for (const [name, path] of [['home', '/portal'], ['requests', '/portal/requests'], ['history', '/portal/history'], ['billing', '/portal/billing'], ['support', '/portal/support']]) {
+      const srv = makeServer()
+      const { ctx, p } = await open(srv, path, { w })
+      const m = await p.evaluate(() => {
+        const seen = (sh) => (sh && sh !== 'none' ? sh.split(/,(?![^()]*\))/) : []).some((one) => {
+          const alpha = one.match(/rgba\([^)]*,\s*([\d.]+)\)/)
+          if (alpha && Number(alpha[1]) === 0) return false
+          const nums = (one.replace(/rgba?\([^)]*\)/, '').match(/-?[\d.]+px/g) ?? []).map(parseFloat)
+          return nums.some((n) => n !== 0)
+        })
+        const isBox = (el) => {
+          const s = getComputedStyle(el); const r = el.getBoundingClientRect()
+          if (r.width < 150 || r.height < 64 || s.display === 'none' || s.visibility === 'hidden') return false
+          const rad = parseFloat(s.borderTopLeftRadius) || 0
+          const bg = s.backgroundColor
+          const filled = bg !== 'rgba(0, 0, 0, 0)' && bg !== 'rgb(255, 255, 255)'
+          const bd = (parseFloat(s.borderTopWidth) || 0) > 0 && (parseFloat(s.borderBottomWidth) || 0) > 0
+          return rad >= 12 && (filled || seen(s.boxShadow) || bd) && el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT'
+        }
+        let shadows = 0, surfaces = 0
+        const list = []
+        for (const el of document.querySelectorAll('main *')) {
+          const r = el.getBoundingClientRect()
+          if (r.width > 0 && seen(getComputedStyle(el).boxShadow)) { shadows++; list.push(`그림자:${el.tagName}.${String(el.className).slice(0, 40)}`) }
+          if (!isBox(el)) continue
+          let a = el.parentElement, inside = false
+          while (a && a.tagName !== 'MAIN') { if (isBox(a)) { inside = true; break } a = a.parentElement }
+          if (!inside) { surfaces++; list.push((el.getAttribute('data-portal-hero') != null ? 'hero' : el.getAttribute('data-portal-cta') ?? el.getAttribute('data-pb-summary') ?? el.tagName)) }
+        }
+        return { shadows, surfaces, list }
+      })
+      ok(m.shadows === 0, `${w}px ⑬ ${name} — 그림자 상자 0 (그림자는 떠 있는 창에만)`, `${m.shadows}개 ${m.list.join(',')}`)
+      ok(m.surfaces <= LIMIT[name], `${w}px ⑬ ${name} — 면(카드) ${LIMIT[name]}개 이하`, `${m.surfaces}: ${m.list.join(',')}`)
+      await ctx.close()
+    }
+  }
+}
+{
+  //  모서리 위계
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, '/portal', { w: 390 })
+  const rad = (sel) => p.locator(sel).first().evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))
+  const hero = await rad('[data-portal-hero]')
+  const tile = await rad('[data-portal-cta="urgent"]')
+  ok(hero >= 20 && hero <= 24, '⑬ 「다음 수거」 모서리 20~24px', `${hero}`)
+  ok(tile >= 16 && tile <= 20, '⑬ 빠른 요청 모서리 16~20px', `${tile}`)
+  const chip = await p.locator('[data-portal-requests] [data-status-chip]').first().evaluate((el) => {
+    const r = el.getBoundingClientRect(); return parseFloat(getComputedStyle(el).borderTopLeftRadius) >= r.height / 2 - 1
+  })
+  ok(chip, '⑬ 상태 칩은 알약 모양')
+  await p.locator('[data-portal-cta="urgent"]').click()
+  await p.locator('[data-portal-sheet="urgent"]').waitFor({ state: 'visible', timeout: 5000 })
+  const memo = await rad('[data-req-memo]')
+  const choice = await rad('[data-choice="day"] [data-choice-item]')
+  ok(memo >= 12 && memo <= 14 && choice >= 12 && choice <= 14, '⑬ 입력 · 고르는 칸 모서리 12~14px', `${memo} · ${choice}`)
+  //  같은 상태 = 같은 색 — 홈과 요청 내역의 「처리 완료」 칩
+  await ctx.close()
+}
+{
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, '/portal', { w: 390 })
+  const bg = (sel) => p.locator(sel).first().evaluate((el) => getComputedStyle(el).backgroundColor)
+  const homeDone = await bg('[data-portal-requests] [data-status-chip="처리 완료"]')
+  await p.goto(`${W.BASE}/portal/requests`, { waitUntil: 'domcontentloaded' }); await W.settle(p, srv); await p.waitForTimeout(500)
+  const listDone = await bg('[data-req-list] [data-status-chip="처리 완료"]')
+  ok(homeDone === listDone, '⑬ 같은 상태는 어느 화면에서나 같은 색', `${homeDone} / ${listDone}`)
+  await ctx.close()
+}
+{
+  //  PC — 왼쪽 다음 수거 + 최근 요청 · 오른쪽 빠른 요청 + 최근 수거 (관리자 대시보드 아님)
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, '/portal', { w: 1440 })
+  const bx = async (sel) => p.locator(sel).first().boundingBox()
+  const hero = await bx('[data-portal-hero]'), act = await bx('[data-portal-actions]')
+  const req = await bx('[data-portal-requests]'), rec = await bx('[data-portal-recent]')
+  ok(hero.x < act.x && Math.abs(hero.y - act.y) < 4, '⑬ PC — 다음 수거(왼쪽) · 빠른 요청(오른쪽) 한 줄', `${Math.round(hero.x)},${Math.round(hero.y)} / ${Math.round(act.x)},${Math.round(act.y)}`)
+  ok(req.x < rec.x && Math.abs(req.y - rec.y) < 4, '⑬ PC — 최근 요청(왼쪽) · 최근 수거(오른쪽) 한 줄')
+  ok(Math.abs(hero.x - req.x) < 2 && Math.abs(act.x - rec.x) < 2, '⑬ PC — 위아래 칸이 같은 세로선에')
+  await ctx.close()
+  //  폰 — 다음 수거 → 빠른 요청 → 최근 요청 → 최근 수거
+  const srv2 = makeServer()
+  const o2 = await open(srv2, '/portal', { w: 390 })
+  const ys = []
+  for (const sel of ['[data-portal-hero]', '[data-portal-actions]', '[data-portal-requests]', '[data-portal-recent]']) ys.push((await o2.p.locator(sel).first().boundingBox()).y)
+  ok(ys.every((y, i) => i === 0 || y > ys[i - 1]), '⑬ 폰 — 다음 수거 → 빠른 요청 → 최근 요청 → 최근 수거', ys.map(Math.round).join(' → '))
+  await o2.ctx.close()
 }
 
 await b.close()

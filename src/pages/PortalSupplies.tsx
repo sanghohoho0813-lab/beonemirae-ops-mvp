@@ -320,7 +320,7 @@ export function PortalSupplies() {
 
           <input
             data-order-note
-            className="field-input mt-2.5 w-full"
+            className="field-input rounded-[14px] mt-2.5 w-full"
             placeholder="남기실 말씀 (예: 3층 창고에 넣어 주세요)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -339,7 +339,7 @@ export function PortalSupplies() {
             </p>
             <button
               data-order-send
-              className="btn-primary"
+              className="btn-primary shadow-none"
               disabled={picked.length === 0 || busy}
               onClick={() => void send()}
             >

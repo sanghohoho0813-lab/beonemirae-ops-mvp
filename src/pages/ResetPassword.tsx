@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, CheckCircle2, KeyRound, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { BrandLogo } from '../components/BrandLogo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 비밀번호 재설정 (/reset-password)
@@ -49,9 +50,7 @@ export function ResetPassword() {
     <div className="flex min-h-[100dvh] items-center justify-center bg-navy-950 px-4 py-10">
       <div className="w-full max-w-[30rem]">
         <div className="mb-8 flex items-center gap-3.5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.5rem] font-extrabold text-white">
-            비
-          </span>
+          <BrandLogo size="lg" />
           <p className="t-section break-keep text-white">㈜비원미래 운영관리 시스템</p>
         </div>
 

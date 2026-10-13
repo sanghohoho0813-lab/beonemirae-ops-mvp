@@ -76,7 +76,7 @@ export function BillingDrawer({
           </p>
           <a
             href={`tel:${CLIENT_TEL}`}
-            className="flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-2xl bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-700 transition hover:bg-navy-100"
+            className="flex min-h-[2.75rem] shrink-0 items-center gap-2 rounded-[14px] bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-700 transition hover:bg-navy-100"
           >
             <Headset size={17} strokeWidth={2.5} /> {CLIENT_TEL}
           </a>
@@ -84,7 +84,7 @@ export function BillingDrawer({
       }
     >
       {rows.length === 0 ? (
-        <p data-billing-empty className="t-body break-keep rounded-2xl bg-navy-50 px-5 py-5 leading-snug text-navy-500">
+        <p data-billing-empty className="t-body break-keep rounded-[14px] bg-navy-50 px-5 py-5 leading-snug text-navy-500">
           아직 청구 내역이 없습니다. 수거 실적이 쌓이면 월별 청구·입금 현황이 여기에 표시됩니다.
         </p>
       ) : (
@@ -112,7 +112,7 @@ export function BillingDrawer({
           </div>
 
           <h3 className="t-body mb-2.5 mt-5 break-keep font-extrabold text-navy-900">최근 6개월</h3>
-          <ul data-billing-rows className="divide-y divide-navy-100 rounded-2xl bg-white ring-1 ring-navy-100">
+          <ul data-billing-rows className="divide-y divide-navy-100 rounded-[14px] bg-white ring-1 ring-navy-100">
             {recent.map((r) => (
               <li key={r.p.id} data-billing-row={r.p.billingMonth} className="px-4 py-3.5">
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">

@@ -165,10 +165,10 @@ async function sendRequest(p) {
   wire(ctx, { posts })
   const p = await open(ctx, '/portal')
   await sendRequest(p)
-  //  포털 1차 고도화 — 보내면 창이 「접수되었습니다」로 바뀝니다. 「홈으로」를
-  //  눌러 닫고 다시 엽니다.
+  //  포털 1차 고도화 — 보내면 창이 「접수되었습니다」로 바뀝니다. 「확인」을
+  //  눌러 닫고 다시 엽니다 (포털 3차 — 「확인」 = 창 닫기).
   await p.locator('[data-req-send]').waitFor({ state: 'detached', timeout: 8000 })
-  await p.locator('[data-done-home]').click()
+  await p.locator('[data-done-primary]').click()
   //  ⚠ 창이 **완전히 닫힌 뒤에** 다시 엽니다. 닫히는 동안(0.3~0.7초)에
   //    누르면 사라지는 창을 누르게 됩니다 — 시간 재기로 맞추면 가끔 틀립니다.
   await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 8000 })

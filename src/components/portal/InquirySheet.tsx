@@ -122,7 +122,7 @@ export function InquirySheet({
             data-ask-send
             onClick={() => void send()}
             disabled={!canSend || busy}
-            className="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-2xl bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 disabled:opacity-40"
+            className="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-[14px] bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 disabled:opacity-40"
           >
             <Send size={18} strokeWidth={2.5} />
             {busy ? '보내는 중…' : '문의 보내기'}
@@ -177,7 +177,7 @@ export function InquirySheet({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="예: 3층 병동 용기가 특히 빨리 찹니다."
-            className="field-input w-full resize-none"
+            className="field-input rounded-[14px] w-full resize-none"
           />
         </SheetStep>
       )}

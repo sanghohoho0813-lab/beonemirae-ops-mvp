@@ -247,6 +247,29 @@
   .pill {
     @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 t-badge;
   }
+
+  /* ───────────────────────────────────────────────────────────────────────
+     병원 포털 3차 — 「앱 화면」 기본 단위
+     카드로 칸을 나누지 않고 **글자 크기 · 여백 · 구분선**으로 나눕니다.
+     글자는 네 단계뿐입니다: 히어로 날짜 / 섹션 제목 / 본문 / 보조.
+     ⚠ 보조 글자도 navy-600(흰 바탕 7:1) — 흐린 회색 글자를 늘리지 않습니다.
+     ─────────────────────────────────────────────────────────────────────── */
+  .p-hero-date {
+    @apply break-keep text-[2rem] font-extrabold leading-[1.15] tracking-tight sm:text-[2.45rem];
+  }
+  .p-title {
+    @apply break-keep text-[1.22rem] font-extrabold leading-snug tracking-tight text-navy-900 sm:text-[1.32rem];
+  }
+  .p-body {
+    @apply break-keep text-[1.08rem] leading-snug text-navy-900;
+  }
+  .p-sub {
+    @apply break-keep text-[1.02rem] leading-snug text-navy-600;
+  }
+  /* 바탕 위 목록 — 줄 사이 구분선만 */
+  .p-list {
+    @apply divide-y divide-navy-100;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

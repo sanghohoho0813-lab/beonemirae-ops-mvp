@@ -99,9 +99,9 @@ export function DocsDrawer({
                 data-docs-open={x.key}
                 onClick={() => onOpen(x.key)}
                 disabled={!x.on}
-                className="flex w-full items-start gap-3.5 rounded-2xl bg-white p-4 text-left ring-1 ring-navy-200 transition hover:ring-navy-400 disabled:opacity-50"
+                className="flex w-full items-start gap-3.5 rounded-[14px] bg-white p-4 text-left ring-1 ring-navy-200 transition hover:ring-navy-400 disabled:opacity-50"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-navy-50 text-navy-600">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-navy-50 text-navy-600">
                   <Icon size={21} strokeWidth={2.2} />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -115,7 +115,7 @@ export function DocsDrawer({
       </ul>
 
       {/*  ⚠ 인쇄로 PDF 가 나온다는 것을 알려 드립니다 — 모르시면 전화를 겁니다. */}
-      <p className="t-muted mt-3 break-keep rounded-2xl bg-navy-50 px-4 py-3 leading-snug">
+      <p className="t-muted mt-3 break-keep rounded-[14px] bg-navy-50 px-4 py-3 leading-snug">
         열어서 <b className="text-navy-700">인쇄 · PDF 저장</b>을 누르시면, 인쇄 창에서 「PDF로 저장」을
         골라 파일로 받으실 수 있습니다.
       </p>
@@ -126,7 +126,7 @@ export function DocsDrawer({
             <ScrollText size={17} strokeWidth={2.4} className="shrink-0 text-navy-500" />
             계약 정보
           </h3>
-          <ul data-docs-contract className="divide-y divide-navy-100 rounded-2xl bg-white ring-1 ring-navy-100">
+          <ul data-docs-contract className="divide-y divide-navy-100 rounded-[14px] bg-white ring-1 ring-navy-100">
             {contract.map((c) => (
               <li key={c} className="t-body break-keep px-4 py-3 font-bold text-navy-800">
                 {c}
@@ -137,7 +137,7 @@ export function DocsDrawer({
       )}
 
       {/*  ⚠ 없는 것을 없다고 적습니다. 있는 척하는 단추보다 낫습니다. */}
-      <section className="mt-5 rounded-2xl bg-amber-50 px-4 py-4 ring-1 ring-amber-100">
+      <section className="mt-5 rounded-[14px] bg-amber-50 px-4 py-4 ring-1 ring-amber-100">
         <p className="t-body break-keep font-extrabold text-amber-900">아직 준비되지 않은 자료</p>
         <p className="t-muted mt-1 break-keep leading-snug text-amber-800">
           법정 서식 수거대장 자동 발급과 올바로 시스템 연동은 개발 중입니다. 지금 필요하시면 상담센터로
@@ -145,7 +145,7 @@ export function DocsDrawer({
         </p>
         <a
           href={`tel:${CLIENT_TEL}`}
-          className="mt-2.5 inline-flex min-h-[2.75rem] items-center gap-2 rounded-2xl bg-white px-4 text-[1.02rem] font-extrabold text-amber-900 ring-1 ring-amber-200 transition hover:bg-amber-100"
+          className="mt-2.5 inline-flex min-h-[2.75rem] items-center gap-2 rounded-[14px] bg-white px-4 text-[1.02rem] font-extrabold text-amber-900 ring-1 ring-amber-200 transition hover:bg-amber-100"
         >
           <Headset size={17} strokeWidth={2.5} /> {CLIENT_TEL}
         </a>

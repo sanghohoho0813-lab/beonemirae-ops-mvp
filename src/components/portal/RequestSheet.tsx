@@ -200,7 +200,7 @@ export function RequestSheet({
             data-req-send
             onClick={() => void send()}
             disabled={!canSend || busy}
-            className={`flex min-h-[3rem] shrink-0 items-center gap-2 rounded-2xl px-5 text-[1.08rem] font-extrabold text-white transition disabled:opacity-40 ${
+            className={`flex min-h-[3rem] shrink-0 items-center gap-2 rounded-[14px] px-5 text-[1.08rem] font-extrabold text-white transition disabled:opacity-40 ${
               urgent ? 'bg-rose-600 hover:bg-rose-700' : 'bg-navy-900 hover:bg-navy-800'
             }`}
           >
@@ -224,7 +224,7 @@ export function RequestSheet({
         <ChoiceGrid name="day" items={dayItems} value={day} onPick={(v) => setDay(v === day ? '' : v)} />
         {/*  ⚠ 날짜를 직접 고르는 길도 남깁니다 — 「다음 주 화요일」 같은
              경우가 있습니다. 다만 **빠른 선택 아래**에 둡니다. */}
-        <label className="mt-2.5 flex min-h-[3.25rem] items-center gap-2.5 rounded-2xl bg-white px-4 ring-1 ring-navy-200">
+        <label className="mt-2.5 flex min-h-[3.25rem] items-center gap-2.5 rounded-[14px] bg-white px-4 ring-1 ring-navy-200">
           <CalendarDays size={18} strokeWidth={2.4} className="shrink-0 text-navy-400" />
           <span className="t-muted shrink-0 break-keep">날짜 직접 고르기</span>
           <input
@@ -260,7 +260,7 @@ export function RequestSheet({
           rows={2}
           aria-label="특이사항"
           placeholder="예: 경비실에 연락 후 후문으로 들어와 주세요"
-          className="field-input min-h-[3.25rem] w-full resize-y"
+          className="field-input rounded-[14px] min-h-[3.25rem] w-full resize-y"
         />
       </SheetStep>
 

@@ -2,17 +2,16 @@ import { useEffect, useMemo } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CLIENT_TEL } from '../lib/brand'
-import { ChevronRight, ClipboardList, Headset, House, LogOut, MessageSquare, ReceiptText, Truck, type LucideIcon } from 'lucide-react'
+import { ChevronRight, ClipboardList, Headset, House, MessageSquare, ReceiptText, Truck, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
 import { LiveClock } from './LiveClock'
-import { ThemeButton } from './ThemePicker'
 import { PageMotion } from './motion'
-import { TourButton } from './TourEntry'
 import { PortalNoticeBell } from './PortalNoticeBell'
-import { FontSizeButton } from './FontSizeButton'
-import { PortalViewSwitch, PortalPcViewButton } from './PortalViewSwitch'
+import { PortalViewSwitch } from './PortalViewSwitch'
+import { PortalMenu } from './portal/PortalMenu'
+import { BrandLogo } from './BrandLogo'
 import { portalNotices } from '../lib/portalNotices'
 import { usePortalClient, portalPath, PORTAL_SELECT_PATH, type PortalPage } from '../lib/portalClient'
 import { PortalPreviewBar } from './PortalPreviewBar'
@@ -25,6 +24,7 @@ import { HistoryDrawer } from './portal/HistoryDrawer'
 import { ReportSheet } from './portal/ReportSheet'
 import { BillingDrawer } from './portal/BillingDrawer'
 import { DocsDrawer } from './portal/DocsDrawer'
+import { RequestDetailSheet } from './portal/RequestDetailSheet'
 import { touchPortalSeen } from '../lib/repo'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,7 +194,10 @@ export function PortalLayout() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-app">
+    //  포털 3차 — 바탕을 **흰 한 장**으로. 회색 바탕 위에 흰 카드를 띄우던 것이
+    //  「웹 대시보드」처럼 보이게 한 첫째 원인이었습니다. 칸은 여백 · 제목 ·
+    //  구분선으로 나눕니다.
+    <div data-portal-app className="min-h-[100dvh] bg-white">
       {/* 상단 바 — 병원 이름이 가장 먼저 보이게 합니다 */}
       {/*  ⚠ 포털 1차 고도화 — 아이폰 「홈 화면에 추가」로 열면 상태 막대가
            투명(black-translucent)이라 머리띠가 시계·배터리 **밑으로** 들어갔습니다.
@@ -202,137 +205,51 @@ export function PortalLayout() {
       {/*  ⚠ 포털 2차 — 머리띠를 **밝게** 바꿨습니다. 예전에는 화면에서 가장 짙은
            것이 머리띠라 눈이 병원 이름·시계에 먼저 갔습니다. 이제 가장 짙은 칸은
            「다음 수거」입니다 — 병원 직원이 제일 먼저 봐야 할 것입니다. */}
-      <header className="border-b border-cardline bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        {/*  ⚠ 0080 — 여기에 gap-y-2(세로 간격)만 있고 flex-wrap 이 없었습니다.
-             줄이 바뀔 수 없으니 세로 간격은 처음부터 쓰일 일이 없었고, 대신
-             오른쪽 단추들이 **화면 밖으로 밀려났습니다** — 768px 태블릿에서
-             91px, 「매우 크게」로 켜면 254px 이 잘렸습니다(「로그아웃」이
-             화면 밖). 원래 의도대로 접히게 둡니다.
-
-             ⚠ 단, **sm: 부터**입니다. 390px 폰에서는 오른쪽 단추가 이미
-               아이콘만 남아 좁은데, 여기까지 접히게 두면 단추가 한 줄
-               내려가 머리글이 140px → 176px 로 **오히려 커집니다.**
-               폰에서는 병원 이름 쪽이 줄어드는 것이 맞습니다(min-w-0 +
-               두 줄까지 허용). 접기는 글자가 다 보이기 시작하는
-               sm: 부터 필요한 것입니다. */}
-        <div className="mx-auto flex w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] items-center gap-x-3 gap-y-2 px-4 py-3 sm:flex-wrap sm:py-3.5 lg:gap-x-4 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.15rem] font-black text-white sm:h-12 sm:w-12 sm:text-[1.3rem]">
-              비
-            </div>
-            {/*  ⚠ 한 줄로 자르면 「의료법인 한…」만 남습니다. 정작 어느 병원인지는
-                 **뒤쪽**에 있습니다 — 「의료법인 한마음의료재단 **한마음요양병원**」.
-                 병원 담당자가 자기 병원 이름을 못 알아보는 화면이 됩니다.
-                 그렇다고 「의료법인」 같은 앞머리를 임의로 떼지 않습니다 —
-                 등록된 이름을 저희가 줄여 부를 일이 아닙니다.
-                 두 줄까지 허용합니다. 헤더는 한 줄(약 20px)만 길어집니다. */}
-            <div className="min-w-0 leading-tight">
-              <p className="line-clamp-3 break-keep text-[1.15rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:line-clamp-2 sm:text-[1.5rem] sm:leading-snug">{clientName || '우리 병원'}</p>
-              {/*  ⚠ 0086 — 시안의 「고객 포털」 이름표. 여기 있어야 하는 이유는
-                   꾸밈이 아닙니다 — 직원 계정은 내부 화면과 이 화면을 오가고,
-                   두 화면의 머리띠가 똑같이 남색이라 **어느 쪽에 있는지**
-                   한눈에 안 됩니다. 이름표가 그것을 가릅니다.
-                   ⚠ 폰에서는 접습니다: 병원 이름과 가로를 다투면 정작 병원
-                     이름이 잘립니다(0080 에서 이미 겪은 문제입니다). */}
-              <span className="mt-1 hidden flex-wrap items-center gap-2 sm:flex">
-                <span data-portal-badge className="rounded-md bg-teal-500 px-2 py-0.5 text-[0.9rem] font-black tracking-wide text-white">
-                  고객 포털
-                </span>
-                <span className="t-muted break-keep">㈜비원미래</span>
-              </span>
-              {/*  ⚠ 0078 — 폰에서는 여기에 답니다. 오른쪽 단추들과 가로를
-                   다투면 병원 이름이 밀려 잘립니다. 넓은 화면에서는 오른쪽
-                   단추 옆(아래 lg:inline)에 따로 보입니다.
-                   ⚠ 0080 — 자리를 바꾸는 경계를 md(768px)에서 lg(1024px)로
-                     옮겼습니다. 768px 은 오른쪽에 시계까지 낄 자리가 없어,
-                     끼워 넣은 순간 「로그아웃」이 화면 밖으로 나갔습니다.
-                     글자 크기 경계(index.css)와 같은 1024px 을 씁니다 —
-                     경계를 두 군데 다르게 두면 반드시 어긋납니다. */}
-              {/*  ⚠ 시계는 이 칸 **아래 줄**로 옮겼습니다(머리띠 맨 아래). */}
-            </div>
+      <header className="border-b border-navy-100 bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        {/*  ── 포털 3차 — 머리띠는 「어디 · 누구」와 단추 둘(알림 · 내 정보)뿐 ──
+             대표님 브리프: 「상단은 최대한 단순하게 — 비원미래 고객포털 / 병원명 ·
+             알림 · 프로필 또는 더보기」. 사용 방법 · 글자 크기 · 화면 색 · 화면 보기
+             전환 · 로그아웃은 「내 정보」 안으로 옮겼습니다(PortalMenu).
+             ⚠ 전화 상담은 넓은 화면에서 눈에 띄는 자리에 남깁니다. 폰에서는
+               「내 정보」 맨 위와 고객지원 화면에 있습니다.
+             ⚠ 병원 이름은 **줄이지 않습니다**(0080) — 폰에서 세 줄까지 허용하고,
+               그래서 폰에서는 「비원미래 고객 포털」 줄을 접습니다(머리띠 140px). */}
+        <div className="mx-auto flex w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] items-center gap-3 px-4 py-3 sm:py-3.5 lg:px-8">
+          <BrandLogo size="md" />
+          <div className="min-w-0 flex-1 leading-tight">
+            {/*  ⚠ 0086 — 「고객 포털」 이름표: 직원은 내부 화면과 이 화면을 오가므로
+                 어느 쪽인지 한눈에 갈라야 합니다. */}
+            <span className="hidden text-[0.95rem] font-bold text-navy-500 sm:block">
+              비원미래 <span data-portal-badge className="text-teal-700">고객 포털</span>
+            </span>
+            <p className="line-clamp-3 break-keep text-[1.15rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:line-clamp-2 sm:text-[1.35rem] sm:leading-snug">
+              {clientName || '우리 병원'}
+            </p>
           </div>
-
-          {/*  ⚠ 0081 — 「화면 색」 단추가 하나 늘면서 이 묶음이 다시 화면을
-               넘겼습니다(673px 33px · 768px 「매우 크게」 68px, 「로그아웃」이
-               화면 밖). 0080 에서 **바깥 줄**만 접히게 해 뒀는데, 묶음 자체가
-               한 줄을 넘기면 소용이 없습니다. 묶음 안에서도 접히게 둡니다.
-               ⚠ shrink-0 은 뗐습니다 — 안 줄고 안 접히면 넘치는 수밖에 없습니다. */}
-          {/*  ⚠ 포털 1차 고도화 — 폰에서는 단추를 **둘만**(알림 · 글자 크기) 한
-               줄로 둡니다. 넷이 접혀 두 줄이 되면 병원 이름 옆이 들쭉날쭉했습니다.
-               전화 상담 · 로그아웃은 화면 맨 아래 줄로 옮겼습니다(글자로 적어서). */}
-          <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:shrink sm:flex-wrap">
-            {/*  0083 — 알림. 표를 만들지 않고 **지금 자료로** 만듭니다
-                 (lib/portalNotices.ts). 그래서 「읽음」이 없고, 처리하면
-                 저절로 사라집니다. */}
-            <PortalNoticeBell notices={notices} />
-            {/*  ⚠ 0083 — 폰에서는 **감춥니다.** 단추가 여섯이 되면서 머리띠가
-                 두 줄(196px)이 되어 화면의 1/4 을 먹었습니다.
-                 「사용 방법」은 포털 첫 화면의 안내 띠(TourBanner)에 더 크게
-                 그대로 있으므로, 여기서 사라져도 못 찾게 되지 않습니다. */}
-            <TourButton
-              compact
-              tourId="client"
-              className="hidden min-h-[2.75rem] items-center gap-2 rounded-xl bg-navy-50 px-2.5 py-2 text-[1.05rem] font-bold text-navy-700 transition hover:bg-navy-100 min-[430px]:flex sm:px-3.5 sm:py-2.5"
-            />
-            {/*  글자 크기 (0083) — **포털에서는 못 바꾸고 있었습니다.**
-                 직원 「더보기」와 관리자 「설정」에만 있었는데, 병원 계정은
-                 그 두 화면을 못 엽니다. 요양병원 담당자분이 화면이 작아도
-                 방법이 없었습니다. */}
-            <FontSizeButton className="flex min-h-[2.75rem] min-w-[2.75rem] shrink-0 items-center justify-center gap-1.5 rounded-xl bg-navy-50 px-2.5 py-2 text-[1.05rem] font-bold text-navy-700 transition hover:bg-navy-100 sm:px-3.5 sm:py-2.5" />
-            {/*  ── 0090 — 폰에서 PC 화면 / PC 에서 폰 화면 ─────────────────
-                 대표님: 「병원화면도 모바일에서 pc화면 볼 수 있게, 반대
-                 상황도 가능하게」.
-                 ⚠ 두 단추는 서로 다른 폭에서만 보입니다 — 폰에서 「모바일
-                   화면으로 보기」는 뜻이 없고, PC 에서 「PC 화면으로 보기」도
-                   마찬가지입니다. 그래서 한 자리를 나눠 씁니다. */}
-            <PortalViewSwitch />
-            {/*  ⚠ 포털 1차 고도화 — 「화면 색」은 머리띠에서 화면 맨 아래로
-                 옮겼습니다(아래 main 끝). PC 머리띠에 단추가 아홉 개라 정작
-                 병원 이름과 메뉴가 눈에 안 들어왔습니다. 취향 설정은 매일
-                 누르는 것이 아닙니다. */}
-            <a
-              href={`tel:${CLIENT_TEL}`}
-              className="hidden min-h-[2.75rem] items-center gap-2 rounded-xl bg-navy-50 px-3.5 py-2.5 text-navy-700 transition hover:bg-navy-100 sm:flex"
-            >
-              <Headset size={17} strokeWidth={2.3} />
-              <span className="t-btn hidden sm:inline">{CLIENT_TEL}</span>
-            </a>
-            {/*  포털 2차 — 넓은 화면의 시계 · 내 이름은 아래 메뉴 줄 오른쪽으로 옮겼습니다.
-                 이 줄에 다 두면 1440px 에서도 단추가 두 줄로 접혔습니다. */}
-            {profile?.name && (
-              <span data-portal-who className="hidden max-w-[9rem] truncate text-[1.02rem] font-bold text-navy-600 sm:inline lg:hidden">
-                {profile.name}
-              </span>
-            )}
-            {/*  ⚠ 포털 1차 고도화 — 폰에서는 화면 맨 아래(모든 화면 공통)로
-                 옮겼습니다. 머리띠에 단추가 넷이면 줄이 둘로 접혀 병원 이름이
-                 밀립니다. 로그아웃은 매일 누르는 것이 아닙니다. */}
-            <button
-              onClick={() => {
-                void signOut()
-                navigate('/login')
-              }}
-              title="로그아웃"
-              aria-label="로그아웃"
-              className="hidden min-h-[2.75rem] items-center gap-2 rounded-xl bg-navy-50 px-3.5 py-2.5 text-navy-700 transition hover:bg-navy-100 sm:flex"
-            >
-              <LogOut size={17} strokeWidth={2.3} />
-              {/*  ⚠ 0073 — 여기에 **본인 이름**이 적혀 있었습니다. 그래서 병원
-                   담당자가 자기 이름을 눌렀다가 그대로 **로그아웃**됐습니다.
-                   이름은 「내 정보」처럼 보이는 자리인데 하는 일은 나가기라,
-                   글자와 하는 일이 어긋나 있었습니다. 다시 들어오려면 비밀번호를
-                   쳐야 하는데, 병원 담당자는 그것을 모르는 경우가 많습니다.
-                   단추에는 **하는 일**을 적습니다. 이름은 옆에 따로 둡니다. */}
-              <span className="t-btn hidden sm:inline">로그아웃</span>
-            </button>
-          </div>
+          <a
+            href={`tel:${CLIENT_TEL}`}
+            className="hidden min-h-[2.75rem] shrink-0 items-center gap-2 rounded-xl px-3 text-teal-700 transition hover:bg-teal-50 lg:flex"
+          >
+            <Headset size={18} strokeWidth={2.4} aria-hidden="true" />
+            <span className="t-btn whitespace-nowrap">전화 상담 {CLIENT_TEL}</span>
+          </a>
+          {/*  0083 — 알림. 표를 만들지 않고 **지금 자료로** 만듭니다. */}
+          <PortalNoticeBell notices={notices} />
+          <PortalMenu
+            clientName={clientName}
+            profileName={profile?.name}
+            onLogout={() => {
+              void signOut()
+              navigate('/login')
+            }}
+          />
+          {/*  0090 — 폰 ↔ PC 화면 보기. 단추는 「내 정보」 안에 있고, 여기는
+               보기 전환(틀 · 띠)만 맡습니다. */}
+          <PortalViewSwitch withButton={false} />
         </div>
 
-        {/*  ⚠ 시계는 남깁니다 — 「어느 계정이든 오늘 날짜와 지금 시각」이 요구사항입니다
-             (UIUX_0080). 포털 1차 고도화 — 병원 이름 옆이 아니라 **한 줄 전체**를 씁니다.
-             이름이 긴 병원(「의료법인 한마음의료재단 한마음요양병원」)에서 이름 밑에
-             두면 시계가 두 줄로 접혀 머리띠가 140px 을 넘었습니다(check_flow390).
-             폰에서는 날짜를 짧게(10/13(화)). 넓은 화면(lg)에서는 오른쪽 단추 줄에 있습니다. */}
+        {/*  ⚠ 시계는 남깁니다 — 「어느 계정이든 오늘 날짜와 지금 시각」(UIUX_0080).
+             폰에서는 이름 아래 한 줄(짧은 날짜), 넓은 화면(lg)에서는 메뉴 줄 오른쪽. */}
         <p className="mx-auto -mt-1 w-full max-w-[1240px] break-keep px-4 pb-2.5 text-[0.95rem] font-bold text-navy-500 lg:hidden">
           <LiveClock compact className="sm:hidden" />
           <LiveClock className="hidden sm:inline" />
@@ -378,13 +295,8 @@ export function PortalLayout() {
           })}
           {/*  오늘 날짜 · 지금 시각 (0078) — 병원 담당자도 봅니다. 넓은 화면에서는
                메뉴 줄 오른쪽 빈자리에 둡니다(포털 2차). */}
-          <span className="ml-auto hidden shrink-0 items-center gap-3 pl-4 text-[1rem] font-bold text-navy-500 lg:flex">
+          <span className="ml-auto hidden shrink-0 items-center pl-4 text-[1rem] font-bold text-navy-500 lg:flex">
             <LiveClock />
-            {profile?.name && (
-              <span data-portal-who-wide className="max-w-[10rem] truncate text-navy-700">
-                {profile.name}
-              </span>
-            )}
           </span>
         </nav>
       </header>
@@ -441,45 +353,8 @@ export function PortalLayout() {
              ⚠ 머리띠가 아니라 여기입니다 — 머리띠에 두면 단추가 다섯이 되어
                병원 이름이 긴 곳에서 두 줄이 되고 「수거 요청」이 첫 화면
                밖으로 밀립니다(0090 에서 실측). */}
-        {/*  ── 도움 · 설정 (포털 2차) ─────────────────────────────────────
-             예전에는 단추 넷이 제각각 모양으로 흩어져 있었습니다(아이콘만 있는
-             「화면 색」, 큰 「PC 화면으로 보기」, 작은 「로그아웃」). 앱 설정
-             화면처럼 **한 줄씩** 모읍니다. 폰에서만 보이는 줄(전화 · 로그아웃)은
-             넓은 화면에서 머리띠에 있습니다.
-             ⚠ 첫 줄은 늘 보이는 「화면 색」입니다 — 숨는 줄이 맨 앞에 오면
-               구분선이 카드 위 모서리에 한 줄 더 생깁니다. */}
-        <section aria-label="도움 · 설정" data-portal-utility className="mt-10 lg:max-w-[30rem]">
-          <h2 className="t-label mb-2 px-1 text-navy-500">도움 · 설정</h2>
-          {/*  ⚠ 줄끼리 8px 을 띄웁니다 — 붙여 두면 엄지가 옆 줄을 누릅니다(check_scale). */}
-          <div className="grid gap-2 [&>*]:rounded-2xl [&>*]:bg-white [&>*]:shadow-card [&>*]:ring-1 [&>*]:ring-cardline">
-            <ThemeButton
-              showLabel
-              className="flex min-h-[3.5rem] w-full items-center gap-3 px-5 py-3 text-[1.05rem] font-bold text-navy-800 transition hover:bg-navy-50 [&>svg]:text-navy-500"
-            />
-            <PortalPcViewButton row />
-            <a
-              href={`tel:${CLIENT_TEL}`}
-              data-portal-call-bottom
-              className="flex min-h-[3.5rem] items-center gap-3 px-5 py-3 transition hover:bg-navy-50 sm:hidden"
-            >
-              <Headset size={20} strokeWidth={2.3} aria-hidden="true" className="shrink-0 text-navy-500" />
-              <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-800">전화 상담</span>
-              <span className="t-body shrink-0 font-extrabold tabular-nums text-teal-700">{CLIENT_TEL}</span>
-            </a>
-            <button
-              type="button"
-              data-portal-logout-bottom
-              onClick={() => {
-                void signOut()
-                navigate('/login')
-              }}
-              className="flex min-h-[3.5rem] w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-navy-50 sm:hidden"
-            >
-              <LogOut size={20} strokeWidth={2.3} aria-hidden="true" className="shrink-0 text-navy-500" />
-              <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-800">로그아웃</span>
-            </button>
-          </div>
-        </section>
+        {/*  포털 3차 — 화면 맨 아래 「도움 · 설정」 줄은 머리띠의 「내 정보」로 옮겼습니다.
+             병원이 매일 쓰는 것(일정 · 요청 · 이력)보다 설정이 더 눈에 띄면 안 됩니다. */}
       </main>
 
       {/*  ── 창 (0089) ─────────────────────────────────────────────────────
@@ -498,6 +373,8 @@ export function PortalLayout() {
           <HistoryDrawer open={sheets.sheet === 'history'} client={client} onClose={sheets.close} />
           <ReportSheet open={sheets.sheet === 'report'} client={client} onClose={sheets.close} />
           <BillingDrawer open={sheets.sheet === 'billing'} client={client} onClose={sheets.close} />
+          {/*  포털 3차 — 요청 상세(?req=). 목록 어디서 눌러도 같은 창이 열립니다. */}
+          <RequestDetailSheet client={client} />
           <DocsDrawer
             open={sheets.sheet === 'docs'}
             client={client}

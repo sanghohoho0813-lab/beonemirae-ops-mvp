@@ -224,6 +224,9 @@ const box = async (p, sel) => (await p.locator(sel).first().boundingBox()) ?? { 
   wire(ctx)
   const p = await open(ctx, '/portal')
   await p.waitForTimeout(1200)
+  //  포털 3차 — 로그아웃 · 이름은 「내 정보」 안에 있습니다.
+  await p.locator('[data-portal-more]').click()
+  await p.locator('[data-portal-more-panel]').waitFor({ state: 'visible', timeout: 3000 })
   const out = await p.evaluate(() => {
     const el = [...document.querySelectorAll('button')]
       .find((e) => (e.getAttribute('aria-label') ?? '') === '로그아웃')

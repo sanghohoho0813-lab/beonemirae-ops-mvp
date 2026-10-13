@@ -179,6 +179,8 @@ const vpOf = (p) => p.evaluate(() => document.querySelector('meta[name=viewport]
 // ── 병원 계정 · 폰(390) → PC 화면 ─────────────────────────────────────────
 {
   const { ctx, p } = await openPortal('client', '/portal', 390)
+  //  포털 3차 — 보기 전환은 「내 정보」 안에 있습니다.
+  await p.locator('[data-portal-more]').click(); await p.waitForTimeout(400)
   ok((await p.locator('[data-portal-pc-view]:visible').count()) === 1,
     '병원 폰 — 「PC 화면으로 보기」가 있다')
   //  ⚠ 폰에서 「모바일 화면으로 보기」는 뜻이 없습니다 — 이미 모바일입니다.
@@ -222,6 +224,7 @@ const vpOf = (p) => p.evaluate(() => document.querySelector('meta[name=viewport]
 //      아닙니다. PC 폭에 갇히면 병원 담당자는 빠져나올 방법을 못 찾습니다.
 {
   const { ctx, p, state } = await openPortal('client', '/portal', 390)
+  await p.locator('[data-portal-more]').click(); await p.waitForTimeout(400)
   await p.locator('[data-portal-pc-view]').click(); await p.waitForTimeout(800)
   await p.reload({ waitUntil: 'domcontentloaded' })
   await W.settle(p, state, 800, 30000); await p.waitForTimeout(900)
@@ -234,6 +237,7 @@ const vpOf = (p) => p.evaluate(() => document.querySelector('meta[name=viewport]
 {
   const T = F.clients[3]
   const { ctx, p } = await openPortal('admin', `/portal/c/${T.id}`, 1440, 950)
+  await p.locator('[data-portal-more]').click(); await p.waitForTimeout(400)
   ok((await p.locator('[data-portal-phone-view]:visible').count()) === 1,
     'PC — 「모바일 화면으로 보기」가 있다')
   ok((await p.locator('[data-portal-pc-view]:visible').count()) === 0,
@@ -270,6 +274,7 @@ const vpOf = (p) => p.evaluate(() => document.querySelector('meta[name=viewport]
 //    ⚠ 켜 둔 채로 다른 화면에 가면 「왜 이렇게 보이지」가 됩니다.
 {
   const { ctx, p } = await openPortal('client', '/portal', 390)
+  await p.locator('[data-portal-more]').click(); await p.waitForTimeout(400)
   await p.locator('[data-portal-pc-view]').click(); await p.waitForTimeout(800)
   ok((await p.locator('[data-pc-view-bar]').count()) === 1, 'PC 보기 켬')
   await p.locator('header nav a:has-text("고객지원")').first().click()

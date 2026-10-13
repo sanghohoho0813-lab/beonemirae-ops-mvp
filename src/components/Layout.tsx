@@ -65,6 +65,7 @@ import {
   type NavGroupDef,
 } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
+import { BrandLogo } from './BrandLogo'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
 //  아닌 모든 업무 화면입니다. 빠지면 그 화면에 있는 동안 아래 탭 어디에도
@@ -353,9 +354,7 @@ function Sidebar() {
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.42rem] font-black text-white">
-            비
-          </div>
+          <BrandLogo size="lg" />
           <div className="min-w-0 leading-tight">
             <p className="break-keep text-[1.42rem] font-extrabold tracking-tight text-white">{COMPANY}</p>
             <p className="mt-1.5 break-keep text-[1.03rem] font-medium leading-snug text-navy-200">
@@ -515,9 +514,7 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
         요청한 것이라, 자리가 좁다고 뺄 것이 아닙니다. */
     <header className="sticky top-0 z-30 bg-app/90 px-4 py-2.5 backdrop-blur-lg [@media(max-height:480px)]:py-1.5 lg:hidden">
       <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-navy-900 text-[1.08rem] font-black text-teal-300">
-          비
-        </div>
+        <BrandLogo size="sm" tone="dark" />
         {/* 폰 헤더는 가로가 390px 뿐입니다. 회사명·담당자·사용법·상태배지를
             다 넣으면 글자 크기를 '매우 크게'로 둔 사용자에게서 서로 밀어냅니다.
             그래서 이 블록만 줄어들게 두고(min-w-0 + truncate),
