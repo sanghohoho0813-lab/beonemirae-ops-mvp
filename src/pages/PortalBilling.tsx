@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ClipboardList, FileBarChart, Headset, ReceiptText, ScrollText } from 'lucide-react'
+import { CheckCircle2, ChevronRight, ClipboardList, FileBarChart, Headset, ReceiptText, ScrollText } from 'lucide-react'
 import { CLIENT_TEL } from '../lib/brand'
 import { usePortalSheet } from '../lib/portalSheet'
 import { useData } from '../context/DataContext'
@@ -41,6 +41,9 @@ export function PortalBilling() {
   const { open } = usePortalSheet()
   const navigate = useNavigate()
 
+  //  포털 2차 — 처음에는 **최근 6개월**만. 3년치를 다 늘어놓으니 화면이 7,500px
+  //  이 되어 아래의 증빙자료를 아무도 못 찾았습니다. 「안 낸 달」은 접지 않습니다.
+  const [showAll, setShowAll] = useState(false)
   const rows = useMemo(() => {
     if (!client) return []
     return data.payments
@@ -68,24 +71,48 @@ export function PortalBilling() {
         </p>
       </div>
 
+      {/*  ── 포털 2차 — 지금 상태 한 장 ──────────────────────────────────────
+           원무·행정 담당이 이 화면에서 제일 먼저 묻는 것은 「낼 돈이 남았나」
+           하나입니다. 그것을 크게, 색과 **글자**로 함께 말합니다. */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <div className="card kpi-box p-4 sm:p-5">
-            <p className="t-muted break-keep">청구 건수</p>
-            <p data-pb-count className="t-stat mt-1.5 text-navy-900">{rows.length}건</p>
+        <section
+          data-pb-summary
+          className={`card overflow-hidden ${owed > 0 ? 'ring-1 ring-rose-200' : 'ring-1 ring-emerald-200'}`}
+        >
+          <div className={`flex items-start gap-4 px-5 py-5 sm:px-6 ${owed > 0 ? 'bg-rose-50' : 'bg-emerald-50'}`}>
+            <span
+              aria-hidden="true"
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${
+                owed > 0 ? 'bg-rose-600' : 'bg-emerald-600'
+              }`}
+            >
+              {owed > 0 ? <ReceiptText size={24} strokeWidth={2.3} /> : <CheckCircle2 size={24} strokeWidth={2.3} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className={`t-label ${owed > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
+                {owed > 0 ? '아직 안 내신 금액' : '미납 없음'}
+              </p>
+              <p
+                data-pb-owed
+                className={`mt-1 break-keep text-[1.75rem] font-extrabold leading-tight tabular-nums ${
+                  owed > 0 ? 'text-rose-700' : 'text-emerald-800'
+                }`}
+              >
+                {owed > 0 ? won(owed) : '모두 입금 확인되었습니다'}
+              </p>
+            </div>
           </div>
-          <div className="card kpi-box p-4 sm:p-5">
-            <p className="t-muted break-keep">누적 청구액</p>
-            <p data-pb-billed className="t-stat mt-1.5 text-navy-900">{won(billed)}</p>
+          <div className="grid grid-cols-2 divide-x divide-navy-50">
+            <div className="px-5 py-3.5 sm:px-6">
+              <p className="t-muted break-keep">청구 건수</p>
+              <p data-pb-count className="t-body mt-0.5 font-extrabold tabular-nums text-navy-900">{rows.length}건</p>
+            </div>
+            <div className="px-5 py-3.5 sm:px-6">
+              <p className="t-muted break-keep">누적 청구액</p>
+              <p data-pb-billed className="t-body mt-0.5 break-keep font-extrabold tabular-nums text-navy-900">{won(billed)}</p>
+            </div>
           </div>
-          <div className="card kpi-box p-4 sm:p-5">
-            <p className="t-muted break-keep">아직 안 내신 금액</p>
-            {/*  ⚠ 0원이면 빨갛게 적지 않습니다 — 다 내신 것은 좋은 소식입니다. */}
-            <p data-pb-owed className={`t-stat mt-1.5 ${owed > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
-              {owed > 0 ? won(owed) : '없음'}
-            </p>
-          </div>
-        </div>
+        </section>
       )}
 
       <section>
@@ -102,11 +129,19 @@ export function PortalBilling() {
             }
           />
         ) : (
+          <>
           <ul className="space-y-2.5">
-            {rows.map(({ p, paid, rest, label }) => (
+            {rows
+              .filter((r, i) => showAll || i < 6 || r.rest > 0)
+              .map(({ p, paid, rest, label }) => (
               <li key={p.id} data-pb-row={p.billingMonth} className="card p-4 sm:p-5">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                  <p className="t-card min-w-0 break-keep text-navy-900">{p.billingMonth} 청구</p>
+                  <p className="t-card min-w-0 break-keep text-navy-900">
+                    {/^\d{4}-\d{2}$/.test(p.billingMonth)
+                      ? `${Number(p.billingMonth.slice(0, 4))}년 ${Number(p.billingMonth.slice(5, 7))}월`
+                      : p.billingMonth}{' '}
+                    청구
+                  </p>
                   <span className={`pill ${STATUS_TONE[label]}`}>{label}</span>
                   <p className="ml-auto shrink-0 text-[1.2rem] font-extrabold tabular-nums text-navy-900">
                     {won(p.amount)}
@@ -127,6 +162,17 @@ export function PortalBilling() {
               </li>
             ))}
           </ul>
+          {!showAll && rows.filter((r, i) => !(i < 6 || r.rest > 0)).length > 0 && (
+            <button
+              type="button"
+              data-pb-more
+              onClick={() => setShowAll(true)}
+              className="mt-3 flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 text-[1.05rem] font-bold text-navy-700 shadow-card ring-1 ring-cardline transition hover:bg-navy-50"
+            >
+              이전 내역 더 보기 ({rows.filter((r, i) => !(i < 6 || r.rest > 0)).length}건)
+            </button>
+          )}
+          </>
         )}
       </section>
 

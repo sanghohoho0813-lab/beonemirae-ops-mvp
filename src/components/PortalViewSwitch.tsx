@@ -119,7 +119,7 @@ export function PortalViewSwitch({ className = '' }: { className?: string }) {
         onClick={() => setPhoneView(true)}
         title="모바일 화면으로 보기"
         aria-label="모바일 화면으로 보기"
-        className={`hidden min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-white transition hover:bg-white/20 lg:flex lg:px-3.5 lg:py-2.5 ${className}`}
+        className={`hidden min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-navy-50 px-2.5 py-2 text-navy-700 transition hover:bg-navy-100 lg:flex lg:px-3.5 lg:py-2.5 ${className}`}
       >
         <Smartphone size={17} strokeWidth={2.3} />
         <span className="t-btn">모바일 화면</span>
@@ -177,9 +177,22 @@ export function PortalViewSwitch({ className = '' }: { className?: string }) {
 //    같은 상태를 두 군데 두면 언젠가 어긋납니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function PortalPcViewButton() {
+export function PortalPcViewButton({ row = false }: { row?: boolean } = {}) {
   const inFrame = useInPhoneFrame()
   if (inFrame) return null
+  //  포털 2차 — 화면 맨 아래 「도움 · 설정」 목록의 한 줄 모양.
+  if (row) {
+    return (
+      <button
+        data-portal-pc-view
+        onClick={openPortalPcView}
+        className="flex min-h-[3.5rem] w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-navy-50 lg:hidden"
+      >
+        <Monitor size={20} strokeWidth={2.3} aria-hidden="true" className="shrink-0 text-navy-500" />
+        <span className="t-body min-w-0 flex-1 break-keep font-bold text-navy-800">PC 화면으로 보기</span>
+      </button>
+    )
+  }
   return (
     <button
       data-portal-pc-view

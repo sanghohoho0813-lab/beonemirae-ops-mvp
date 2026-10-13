@@ -48,13 +48,13 @@ export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
         data-portal-bell
         aria-label={n > 0 ? `알림 ${n}건` : '알림'}
         onClick={() => setOpen(true)}
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white transition hover:bg-white/20"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-700 transition hover:bg-navy-100"
       >
         <Bell size={20} strokeWidth={2.3} />
         {n > 0 && (
           <span
             data-portal-bell-count
-            className="absolute -right-1 -top-1 flex h-[1.35rem] min-w-[1.35rem] items-center justify-center rounded-full bg-teal-500 px-1 text-[0.9rem] font-black text-white ring-2 ring-navy-900"
+            className="absolute -right-1 -top-1 flex h-[1.35rem] min-w-[1.35rem] items-center justify-center rounded-full bg-teal-500 px-1 text-[0.9rem] font-black text-white ring-2 ring-white"
           >
             {n}
           </span>

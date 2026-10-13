@@ -50,7 +50,7 @@ export function PortalRequests() {
   const FILTERS: { v: Filter; l: string; n: number }[] = [
     { v: 'all', l: '전체', n: all.length },
     { v: 'open', l: '진행 중', n: openCount },
-    { v: 'done', l: '처리 완료', n: all.length - openCount },
+    { v: 'done', l: '완료', n: all.length - openCount },
   ]
 
   return (
@@ -63,28 +63,34 @@ export function PortalRequests() {
       </div>
 
       {/*  새 요청 — 여기서 바로. 홈까지 돌아가지 않으셔도 됩니다. */}
-      <div className="grid gap-2.5 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
           data-req-new="urgent"
           onClick={() => open('urgent')}
-          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-white px-4 text-[1.05rem] font-extrabold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-50"
+          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-white px-3 text-[1.05rem] font-extrabold text-rose-700 shadow-card ring-1 ring-rose-200 transition hover:bg-rose-50"
         >
-          <Siren size={20} strokeWidth={2.4} aria-hidden="true" /> 긴급수거 요청
+          <Siren size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">긴급수거 요청</span>
         </button>
         <button
           type="button"
           data-req-new="supply"
           onClick={() => open('supply')}
-          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-white px-4 text-[1.05rem] font-extrabold text-teal-800 ring-1 ring-teal-200 transition hover:bg-teal-50"
+          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-white px-3 text-[1.05rem] font-extrabold text-teal-800 shadow-card ring-1 ring-teal-200 transition hover:bg-teal-50"
         >
-          <PackagePlus size={20} strokeWidth={2.4} aria-hidden="true" /> 자재·용기 요청
+          <PackagePlus size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">자재·용기 요청</span>
         </button>
       </div>
 
-      {/*  요청이 하나도 없으면 거르기 단추를 안 둡니다 — 「0건」 셋은 소음입니다. */}
+      {/*  요청이 하나도 없으면 거르기 단추를 안 둡니다 — 「0건」 셋은 소음입니다.
+           포털 2차 — 한 덩어리 「나눔 단추」. 셋 중 하나만 켜진다는 것이 모양으로 보입니다. */}
       {all.length > 0 && (
-      <div role="group" aria-label="요청 상태로 보기" data-req-filters className="flex flex-wrap gap-2">
+      <div
+        role="group"
+        aria-label="요청 상태로 보기"
+        data-req-filters
+        className="grid grid-cols-3 gap-1 rounded-2xl bg-navy-100 p-1 sm:inline-grid sm:min-w-[26rem]"
+      >
         {FILTERS.map((f) => (
           <button
             key={f.v}
@@ -92,11 +98,18 @@ export function PortalRequests() {
             data-req-filter={f.v}
             aria-pressed={filter === f.v}
             onClick={() => setFilter(f.v)}
-            className={`min-h-[2.75rem] rounded-full px-4 py-2 text-[1.02rem] font-bold transition ${
-              filter === f.v ? 'bg-navy-900 text-white' : 'bg-white text-navy-700 ring-1 ring-navy-200 hover:bg-navy-50'
+            className={`flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-xl px-2 text-[1.02rem] font-bold transition ${
+              filter === f.v ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-600 hover:bg-white/70'
             }`}
           >
-            {f.l} {f.n}건
+            <span className="break-keep">{f.l}</span>
+            <span
+              className={`min-w-[1.6rem] rounded-full px-1.5 text-center tabular-nums ${
+                filter === f.v ? 'bg-navy-900 text-white' : 'bg-white text-navy-700'
+              }`}
+            >
+              {f.n}
+            </span>
           </button>
         ))}
       </div>
@@ -124,7 +137,7 @@ export function PortalRequests() {
           }
         />
       ) : (
-        <ul data-req-list className="card divide-y divide-navy-50 overflow-hidden">
+        <ul data-req-list className="space-y-3">
           {rows.map((r) => (
             <RequestRow key={r.id} r={r} />
           ))}

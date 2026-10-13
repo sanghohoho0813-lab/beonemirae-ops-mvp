@@ -91,7 +91,7 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
  *  ⚠ 아이콘만 두지 않고 넓은 화면에서는 글자도 답니다. 팔레트 그림만으로는
  *    무엇을 하는 단추인지 50~60대 사용자에게 전달되지 않습니다.
  */
-export function ThemeButton({ className = '' }: { className?: string }) {
+export function ThemeButton({ className = '', showLabel = false }: { className?: string; showLabel?: boolean }) {
   const [open, setOpen] = useState(false)
   const { theme } = useSettings()
   const now = THEMES.find((t) => t.id === theme)
@@ -110,7 +110,7 @@ export function ThemeButton({ className = '' }: { className?: string }) {
         }
       >
         <Palette size={17} strokeWidth={2.3} className="shrink-0" />
-        <span className="hidden min-[420px]:inline">화면 색</span>
+        <span className={showLabel ? 'min-w-0 flex-1 break-keep text-left' : 'hidden min-[420px]:inline'}>화면 색</span>
       </button>
       {/*  ⚠ 0081 — 이 시트는 **문서 맨 바깥(body)** 에 그립니다.
            이 단추는 폰 머리띠 안에 있는데, 그 머리띠에 backdrop-blur 가

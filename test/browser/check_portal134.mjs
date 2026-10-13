@@ -42,7 +42,20 @@ function makeServer({ fail = 0, seed = true } = {}) {
           source: 'portal', requester_name: '남', reply: '', desired_date: null, created_at: ago(1) },
       ]
     : []
-  return { requests, posts: [], fail, reqs: 0, writes: [] }
+  //  포털 2차 — 앞으로 7일 줄을 재려고 이 병원 일정 둘을 더 얹습니다:
+  //  사흘 뒤 「예정」(칠해져야 함) · 이틀 뒤 「취소된 것」(칠하면 안 됨).
+  const kst = (n) => {
+    const t = new Date(Date.now() + 9 * 3_600_000)
+    t.setUTCDate(t.getUTCDate() + n)
+    return t.toISOString().slice(0, 10)
+  }
+  const base = F.schedules.find((x) => x.client_id === HOSP.id)
+  const schedules = [
+    ...F.schedules,
+    { ...base, id: 'w3', date: kst(3), status: '예정', actual_amount: null, completed_at: null, handover_status: null, scheduled_time: '14:00', canceled_at: null },
+    { ...base, id: 'w2', date: kst(2), status: '예정', actual_amount: null, completed_at: null, handover_status: null, scheduled_time: '10:00', canceled_at: '2026-01-01T00:00:00Z' },
+  ]
+  return { requests, schedules, posts: [], fail, reqs: 0, writes: [] }
 }
 
 function wire(ctx, srv, profile) {
@@ -83,7 +96,7 @@ function wire(ctx, srv, profile) {
     if (url.includes('/client_requests')) return page(named(srv.requests.filter((x) => x.client_id === profile.client_id)))
     if (url.includes('/client_inquiries')) return json([])
     if (url.includes('/site_notes')) return page(F.notes)
-    if (url.includes('/schedules')) return page(F.schedules)
+    if (url.includes('/schedules')) return page(srv.schedules)
     if (url.includes('/materials')) return page(F.materials)
     if (url.includes('/payment_receipts')) return page(F.receipts)
     if (url.includes('/payments')) return page(F.payments)
@@ -352,6 +365,84 @@ for (const w of [390, 1280]) {
   const ar = await p.request.get(`${W.BASE}${apple}`)
   ok(ar.status() === 200, '⑧ 아이폰 아이콘 파일이 실제로 있다')
   ok((await p.locator('meta[name="theme-color"]').getAttribute('content')) === man.theme_color, '⑧ 테마 색이 manifest 와 같다')
+  await ctx.close()
+}
+
+// ── ⑩ 포털 2차 — 밝은 머리띠 · 짙은 「다음 수거」 · 앞으로 7일 ────────────────
+{
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, '/portal', { w: 390 })
+  const lum = (rgb) => {
+    const [r, g, bl] = (rgb.match(/\d+/g) ?? []).map(Number)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl
+  }
+  const headBg = await p.locator('header').evaluate((el) => getComputedStyle(el).backgroundColor)
+  const heroBg = await p.locator('[data-portal-hero]').evaluate((el) => getComputedStyle(el).backgroundColor)
+  ok(lum(headBg) > 240, '⑩ 머리띠는 밝다 (눈이 먼저 「다음 수거」로 가게)', headBg)
+  ok(lum(heroBg) < 60, '⑩ 「다음 수거」가 화면에서 가장 짙은 칸', heroBg)
+  //  앞으로 7일 — 등록된 일정만 칠한다 (취소된 것 · 지어낸 날 없음)
+  const days = await p.locator('[data-week-day]').evaluateAll((els) => els.map((e) => ({ d: e.getAttribute('data-week-day'), m: e.getAttribute('data-week-mark') })))
+  ok(days.length === 7, '⑩ 앞으로 7일이 한 줄에', `${days.length}`)
+  ok(flat(await p.locator('[data-week-day]').first().innerText()).startsWith('오늘'), '⑩ 첫 칸은 오늘')
+  const mine = srv.schedules.filter((x) => x.client_id === HOSP.id && !x.canceled_at)
+  const want = days.map(({ d }) => {
+    const on = mine.filter((x) => x.date === d)
+    return on.some((x) => x.status !== '완료') ? 'scheduled' : on.some((x) => x.status === '완료') ? 'done' : ''
+  })
+  ok(days.every((x, i) => x.m === want[i]), '⑩ 칠한 날 = 실제로 등록된 일정 (취소된 날은 안 칠함)', JSON.stringify(days.map((x, i) => `${x.d}:${x.m}/${want[i]}`)))
+  ok(days.some((x) => x.m === 'scheduled'), '⑩ 사흘 뒤 일정이 칠해져 있다')
+  const lbl = await p.locator('[data-week-mark="scheduled"]').last().getAttribute('aria-label')
+  ok(/수거 예정/.test(lbl ?? ''), '⑩ 화면 읽기 프로그램은 「○월 ○일 ○요일 수거 예정」으로 읽는다', lbl)
+  //  최근 요청 — 종류 아이콘 · 진행 막대
+  ok((await p.locator('[data-portal-requests] [data-mini-steps]').count()) === 3, '⑩ 최근 요청마다 진행 막대')
+  //  도움 · 설정 — 한 줄씩, 전부 44px 이상
+  const rows = await p.locator('[data-portal-utility] .grid > *:visible').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
+  ok(rows.length === 4 && rows.every((h) => h >= 44), '⑩ 도움·설정 네 줄 (화면 색 · PC 화면 · 전화 · 로그아웃), 44px 이상', rows.join(','))
+  await ctx.close()
+}
+
+// ── ⑪ 포털 2차 — 창: 고른 단계는 체크 · 접수 뒤 진행 단계 · 맨 위부터 ──────────
+{
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, '/portal?do=urgent', { w: 390 })
+  ok((await p.locator('[data-portal-sheet="urgent"] [data-step-done]').count()) === 0, '⑪ 처음에는 체크된 단계가 없다')
+  await p.locator('[data-choice="day"] [data-choice-item="asap"]').click()
+  ok((await p.locator('[data-sheet-step="1"][data-step-done]').count()) === 1, '⑪ 시점을 고르면 1단계가 체크로 바뀐다')
+  //  맨 아래 칸까지 내려가서 고르고 보낸다 — 접수 화면은 맨 위부터 보여야 한다
+  await p.locator('[data-choice="amount"] [data-choice-item]').first().scrollIntoViewIfNeeded()
+  await p.locator('[data-choice="amount"] [data-choice-item]').first().click()
+  await p.locator('[data-choice="reason"] [data-choice-item]').first().click()
+  await p.locator('[data-req-send]').click()
+  await p.locator('[data-sheet-done]').waitFor({ state: 'visible', timeout: 8000 })
+  await p.waitForTimeout(400)
+  const top = await p.locator('[data-sheet-done]').evaluate((el) => {
+    const box = el.parentElement.getBoundingClientRect()
+    return Math.round(el.getBoundingClientRect().top - box.top)
+  })
+  ok(top < 40, '⑪ 접수 화면은 맨 위부터 보인다 (체크 표시가 잘리지 않음)', `${top}px`)
+  const steps = await p.locator('[data-done-steps] [data-status-steps]').getAttribute('aria-label')
+  ok(/4단계 중 1단계 접수/.test(steps ?? ''), '⑪ 다음에 무슨 일이 일어나는지 — 지금은 「접수」', steps)
+  await ctx.close()
+}
+
+// ── ⑫ 포털 2차 — 수거 이력 달 묶음 · 정산 요약 · 고객지원 대화 ─────────────────
+{
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, '/portal/history', { w: 390 })
+  const groups = await p.locator('[data-hist-month]').evaluateAll((els) => els.map((h) => {
+    const n = h.nextElementSibling?.querySelectorAll('[data-portal-hist-card]').length ?? 0
+    const said = Number((h.textContent ?? '').match(/(\d+)회/)?.[1] ?? -1)
+    return { n, said }
+  }))
+  ok(groups.length > 0 && groups.every((g) => g.n === g.said), '⑫ 달 머리의 「N회」 = 그 달 아래 기록 수', JSON.stringify(groups))
+  await p.goto(`${W.BASE}/portal/billing`, { waitUntil: 'domcontentloaded' }); await W.settle(p, srv); await p.waitForTimeout(500)
+  if ((await p.locator('[data-pb-summary]').count()) > 0) {
+    const sum = flat(await p.locator('[data-pb-summary]').innerText())
+    ok(/아직 안 내신 금액|미납 없음/.test(sum), '⑫ 정산 — 「낼 돈이 남았나」를 맨 위에 글자로', sum.slice(0, 60))
+  }
+  await p.goto(`${W.BASE}/portal/support`, { waitUntil: 'domcontentloaded' }); await W.settle(p, srv); await p.waitForTimeout(500)
+  ok((await p.locator('main img').count()) === 0, '⑫ 고객지원에 장식 사진이 없다')
+  ok((await p.locator('[data-support-call]').getAttribute('href'))?.startsWith('tel:'), '⑫ 고객지원 맨 위에 바로 전화 걸기')
   await ctx.close()
 }
 

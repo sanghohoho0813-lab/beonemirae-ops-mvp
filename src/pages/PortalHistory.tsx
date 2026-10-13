@@ -86,6 +86,37 @@ export function PortalHistory() {
   //    화면에 보이는 줄과 반드시 같은 값이어야 합니다.
   const totalKg = done.reduce((a, r) => a + (r.amountKg ?? 0), 0)
 
+  //  포털 2차 — 폰 목록을 **달마다** 묶습니다. 달 머리에 그 달 횟수 · 무게.
+  const byMonth = useMemo(() => {
+    const out: { month: string; rows: typeof done; kg: number }[] = []
+    for (const r of done) {
+      const m = r.date.slice(0, 7)
+      let g = out[out.length - 1]
+      if (!g || g.month !== m) {
+        g = { month: m, rows: [], kg: 0 }
+        out.push(g)
+      }
+      g.rows.push(r)
+      g.kg += r.amountKg ?? 0
+    }
+    return out
+  }, [done])
+
+  //  넓은 화면 위쪽 요약 — 이번 달 · 지난 달 · 전체 기록. **실제 기록만** 셉니다.
+  const summary = useMemo(() => {
+    const t = today()
+    const thisM = t.slice(0, 7)
+    const d = new Date(`${thisM}-01T00:00:00`)
+    d.setMonth(d.getMonth() - 1)
+    const lastM = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const of = (m: string) => {
+      const rs = all.filter((r) => r.date.startsWith(m))
+      return { n: rs.length, kg: rs.reduce((a, r) => a + (r.amountKg ?? 0), 0) }
+    }
+    return { thisM: of(thisM), lastM: of(lastM), total: all.length, first: all.length ? all[all.length - 1].date : null }
+  }, [all])
+  const monthLabel = (m: string) => `${Number(m.slice(0, 4))}년 ${Number(m.slice(5, 7))}월`
+
   if (!client) {
     return (
       <PageShell>
@@ -118,10 +149,30 @@ export function PortalHistory() {
         </button>
       </div>
 
+      {/*  ── 요약 (넓은 화면) ── 폰에서는 아래 목록의 달 머리가 같은 말을 합니다. */}
+      {all.length > 0 && (
+        <div data-hist-summary className="hidden gap-3 sm:grid sm:grid-cols-3">
+          {[
+            { k: '이번 달', v: `${summary.thisM.n}회`, sub: weight(summary.thisM.kg) },
+            { k: '지난 달', v: `${summary.lastM.n}회`, sub: weight(summary.lastM.kg) },
+            { k: '전체 기록', v: `${summary.total}건`, sub: summary.first ? `${prettyDate(summary.first)}부터` : '' },
+          ].map((x) => (
+            <div key={x.k} className="card kpi-box px-5 py-4">
+              <p className="t-muted break-keep">{x.k}</p>
+              <p className="mt-1 break-keep text-[1.6rem] font-extrabold leading-tight tabular-nums text-navy-900">{x.v}</p>
+              {x.sub && <p className="t-body mt-0.5 break-keep font-bold tabular-nums text-navy-600">{x.sub}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/*  ── 예정된 수거 ── 있을 때만. 없으면 칸을 안 만듭니다. */}
       {upcoming.length > 0 && (
         <section data-hist-upcoming className="card overflow-hidden">
-          <div className="flex items-center gap-3 border-b border-navy-50 px-5 py-3.5">
+          {/*  폰에서는 제목 줄을 접습니다 — 「일정 확정」 칩과 날짜가 스스로 말합니다.
+               이 한 줄 때문에 첫 수거 기록이 첫 화면 밖으로 밀렸습니다. */}
+          <h2 className="sr-only sm:hidden">예정된 수거</h2>
+          <div className="hidden items-center gap-3 border-b border-navy-50 px-5 py-3.5 sm:flex">
             <CalendarClock size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-navy-500" />
             <h2 className="t-body font-extrabold text-navy-900">예정된 수거</h2>
           </div>
@@ -129,6 +180,7 @@ export function PortalHistory() {
             {/*  ⚠ 폰에서는 가장 가까운 하나만 — 첫 수거 기록이 밀리지 않게. */}
             {upcoming.map((x, i) => (
               <li key={x.id} className={`${i > 0 ? 'hidden sm:flex' : 'flex'} flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3`}>
+                <CalendarClock size={19} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-teal-700 sm:hidden" />
                 <b className="t-body break-keep text-navy-900">
                   {prettyDate(x.date)}
                   {timeBand(x.scheduledTime) && <span className="ml-1.5 font-bold">{timeBand(x.scheduledTime)}</span>}
@@ -273,29 +325,46 @@ export function PortalHistory() {
              안 보이면 결국 전화를 겁니다.
              넓은 화면은 표 그대로입니다 — 여러 줄을 한눈에 견주는 데는 표가
              낫습니다. */}
-        <div data-portal-hist-cards className="card divide-y divide-navy-50 sm:hidden">
-          {done.map((r) => (
-            <div key={r.id} data-portal-hist-card={r.id} className="px-4 py-3.5">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                <b className="t-body break-keep text-navy-900">{prettyDate(r.date)}</b>
-                <span className="t-muted text-navy-500">{r.wasteType}</span>
-                <span
-                  data-portal-hist-handover={r.id}
-                  className={`pill ml-auto shrink-0 ${r.handedOver ? 'bg-teal-50 text-teal-700' : 'bg-navy-100 text-navy-500'}`}
-                >
-                  {r.handedOver ? '인계 완료' : (r.handoverStatus ?? '처리 중')}
+        <div data-portal-hist-cards className="card overflow-hidden sm:hidden">
+          {byMonth.map((g) => (
+            <div key={g.month}>
+              <div data-hist-month={g.month} className="flex items-center justify-between gap-3 bg-navy-50 px-4 py-2.5">
+                <b className="t-body break-keep text-navy-800">{monthLabel(g.month)}</b>
+                <span className="t-body shrink-0 font-bold tabular-nums text-navy-600">
+                  {g.rows.length}회 · {weight(g.kg)}
                 </span>
               </div>
-              <p className="t-card mt-1 break-keep text-navy-900">{weight(r.amountKg ?? 0)}</p>
-              {/*  ⚠ 용기를 **안 적었으면 「미기재」**입니다. 0 으로 채우지
-                   않습니다 — 「안 적었다」와 「0개였다」는 다른 말이고,
-                   병원은 이 숫자를 사실로 읽습니다.
-                   예전에는 여기가 그냥 「개」 한 글자만 떠 있었습니다. */}
-              <p className="t-muted mt-0.5 break-keep text-navy-500">
-                {r.containerType
-                  ? `용기 ${r.containerType}${r.containerCount != null ? ` (${r.containerCount}개)` : ''}`
-                  : '용기 미기재'}
-              </p>
+              <div className="divide-y divide-navy-50">
+                {g.rows.map((r) => (
+                  <div key={r.id} data-portal-hist-card={r.id} className="px-4 py-3.5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      <b className="t-body break-keep text-navy-900">{prettyDate(r.date)}</b>
+                      <span className="ml-auto text-[1.25rem] font-extrabold tabular-nums text-navy-900">
+                        {weight(r.amountKg ?? 0)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      {/*  ⚠ 용기를 **안 적었으면 「미기재」**입니다. 0 으로 채우지
+                           않습니다 — 「안 적었다」와 「0개였다」는 다른 말이고,
+                           병원은 이 숫자를 사실로 읽습니다. */}
+                      <span className="t-muted min-w-0 break-keep">
+                        {r.wasteType} ·{' '}
+                        {r.containerType
+                          ? `용기 ${r.containerType}${r.containerCount != null ? ` (${r.containerCount}개)` : ''}`
+                          : '용기 미기재'}
+                      </span>
+                      <span
+                        data-portal-hist-handover={r.id}
+                        className={`pill ml-auto shrink-0 ring-1 ${
+                          r.handedOver ? 'bg-emerald-50 text-emerald-800 ring-emerald-100' : 'bg-navy-50 text-navy-600 ring-navy-100'
+                        }`}
+                      >
+                        {r.handedOver ? '인계 완료' : (r.handoverStatus ?? '처리 중')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

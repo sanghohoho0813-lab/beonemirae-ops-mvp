@@ -622,8 +622,10 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
             </span>
           </button>
         )}
-        {/*  단추가 있을 때만 0.95rem(15.2px) — 360px 폰에서 한 줄에 들어가게 (단추 126 + 시계 189 ≤ 324) */}
-        <p className={`shrink-0 whitespace-nowrap text-right font-bold text-navy-500 ${showVisitVideo ? 'text-[0.95rem]' : 'text-[1rem]'}`}>
+        {/*  단추가 있을 때만 작게 — 360px 폰에서 한 줄에 들어가게 (단추 126 + 시계 189 ≤ 324)
+             ⚠ 0135 — 0.95rem 이면 **오전·오후 10~12시**(시가 두 자리)에 시계가 10px
+               길어져 단추와 1px 겹쳤습니다(밤 10시 이후 회귀에서 잡힘). 0.9rem(16px)으로. */}
+        <p className={`shrink-0 whitespace-nowrap text-right font-bold text-navy-500 ${showVisitVideo ? 'text-[0.9rem]' : 'text-[1rem]'}`}>
           <LiveClock compact={showVisitVideo} />
         </p>
       </div>

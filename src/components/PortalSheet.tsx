@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useEscapeClose } from '../lib/useEscapeClose'
-import { Check, X } from 'lucide-react'
+import { Check, X, type LucideIcon } from 'lucide-react'
+import { StatusSteps } from './portal/PortalUi'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { BrandImg } from './BrandImg'
 
@@ -60,6 +61,8 @@ export interface SheetDone {
   lines?: string[]
   primary: { label: string; onClick: () => void }
   secondary?: { label: string; onClick: () => void }
+  /** 요청이면 「접수 → 확인 중 → 일정 확정 → 처리 완료」 중 지금 자리를 보여 줍니다 */
+  steps?: boolean
 }
 
 const BOX: Record<SheetKind, string> = {
@@ -82,6 +85,8 @@ export function PortalSheet({
   name,
   hero,
   done,
+  icon: HeadIcon,
+  tone = 'navy',
 }: {
   open: boolean
   title: string
@@ -100,8 +105,18 @@ export function PortalSheet({
   hero?: string
   /** 보낸 뒤 — 있으면 본문과 아래 단추를 「접수되었습니다」로 바꿉니다 */
   done?: SheetDone | null
+  /** 포털 2차 — 제목 옆 아이콘 (홈 단추와 같은 모양·색) */
+  icon?: LucideIcon
+  tone?: 'navy' | 'rose' | 'teal'
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  //  포털 2차 — 「접수되었습니다」로 바뀌면 **맨 위부터** 보여 줍니다. 아래쪽
+  //  칸을 고르다 보낸 경우 스크롤이 그대로 남아 체크 표시가 위로 잘렸습니다.
+  useEffect(() => {
+    if (done) bodyRef.current?.scrollTo({ top: 0 })
+  }, [done])
 
   //  ⚠ 창이 열려 있는 동안 뒤 화면이 같이 스크롤되면, 창을 닫았을 때
   //    엉뚱한 자리에 와 있습니다.
@@ -165,6 +180,16 @@ export function PortalSheet({
           >
             {/*  머리 — 무슨 창인지. 스크롤해도 남습니다. */}
             <div className="flex shrink-0 items-start gap-3 border-b border-navy-100 bg-white px-5 py-4 sm:px-6">
+              {HeadIcon && (
+                <span
+                  aria-hidden="true"
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white ${
+                    tone === 'rose' ? 'bg-rose-600' : tone === 'teal' ? 'bg-teal-600' : 'bg-navy-800'
+                  }`}
+                >
+                  <HeadIcon size={22} strokeWidth={2.3} />
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <h2 className="t-card break-keep text-navy-900">{title}</h2>
                 {subtitle && <p className="t-muted mt-1 break-keep leading-snug">{subtitle}</p>}
@@ -181,7 +206,7 @@ export function PortalSheet({
             </div>
 
             {/*  본문 — 여기만 스크롤됩니다 */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+            <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
               {hero && !done && (
                 //  ⚠ 0098 — 높이를 고정(h-28)했더니 넓은 창에서 띠가 5:1 이
                 //    되어 **원본 4:3 의 세로를 네 배로 잘랐습니다.** 얼굴이
@@ -256,6 +281,13 @@ function DoneView({ done }: { done: SheetDone }) {
       </motion.span>
       <h3 className="mt-5 break-keep text-[1.45rem] font-extrabold leading-snug text-navy-900">{done.title}</h3>
       <p className="t-body mt-2 max-w-[26rem] break-keep leading-snug text-navy-600">{done.message}</p>
+      {done.steps && (
+        //  「다음에 무슨 일이 일어나나」 — 지금은 첫 칸(접수)입니다.
+        <div data-done-steps className="mt-6 w-full rounded-2xl bg-white px-4 py-4 text-left ring-1 ring-navy-100">
+          <p className="t-label mb-3 text-navy-600">진행 단계 · 바뀌면 알려 드립니다</p>
+          <StatusSteps status="접수" />
+        </div>
+      )}
       {done.lines && done.lines.length > 0 && (
         <ul data-done-lines className="mt-6 w-full divide-y divide-navy-50 rounded-2xl bg-white text-left ring-1 ring-navy-100">
           {done.lines.map((l) => (
@@ -284,17 +316,24 @@ export function SheetStep({
   title,
   hint,
   children,
+  done = false,
 }: {
   no: number
   title: string
   hint?: string
   children: ReactNode
+  /** 포털 2차 — 고르셨으면 번호 대신 체크. 어디까지 했는지 한눈에 보입니다 */
+  done?: boolean
 }) {
   return (
-    <section data-sheet-step={no} className="mb-5 last:mb-0">
+    <section data-sheet-step={no} data-step-done={done ? '1' : undefined} className="mb-6 last:mb-0">
       <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-navy-900 text-[0.9rem] font-black text-white">
-          {no}
+        <span
+          className={`flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-lg text-[0.9rem] font-black text-white transition-colors ${
+            done ? 'bg-teal-600' : 'bg-navy-900'
+          }`}
+        >
+          {done ? <Check size={15} strokeWidth={3.4} aria-label="고름" /> : no}
         </span>
         <h3 className="t-body min-w-0 break-keep font-extrabold text-navy-900">{title}</h3>
         {hint && <span className="t-muted break-keep">{hint}</span>}

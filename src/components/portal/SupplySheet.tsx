@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Minus, Package, Plus, Send, Truck } from 'lucide-react'
+import { Minus, Package, PackagePlus, Plus, Send, Truck } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid } from '../PortalSheet'
@@ -238,6 +238,8 @@ export function SupplySheet({
       open={open}
       onClose={onClose}
       done={done}
+      icon={PackagePlus}
+      tone="teal"
       title="자재·용기 요청"
       subtitle={
         //  ⚠ 어느 병원 것인지 **창 안에도** 적습니다. 대표님: 「병원 포털
@@ -299,7 +301,7 @@ export function SupplySheet({
            입력할 때 쓰는 것과 **같은 목록**입니다.
            ⚠ 받아 보신 것을 위로 올립니다. 그렇다고 나머지를 숨기지는
              않습니다 — 처음 필요해진 규격을 주문할 길이 없어집니다. */}
-      <SheetStep no={1} title="필요한 품목과 수량" hint="＋ 를 누르거나 빠른 수량을 고르세요">
+      <SheetStep no={1} title="필요한 품목과 수량" hint="＋ 를 누르거나 빠른 수량을 고르세요" done={pickedSpecs.length > 0}>
         {specs.length === 0 ? (
           <p data-supply-empty className="t-body break-keep rounded-2xl bg-navy-50 px-5 py-5 leading-snug text-navy-500">
             이 병원에 등록된 수거 품목이 없어 용기 목록을 만들 수 없습니다. 상담센터로 말씀해 주시면
@@ -396,7 +398,7 @@ export function SupplySheet({
 
       {/*  ── ② 따로 파는 상품 — **등록된 것이 있을 때만** ───────────────── */}
       {products.length > 0 && (
-        <SheetStep no={2} title="구매하실 물품" hint="정기 공급 외에 따로 사시는 물품입니다">
+        <SheetStep no={2} title="구매하실 물품" hint="정기 공급 외에 따로 사시는 물품입니다" done={picked.length > 0}>
           <ul className="grid gap-2.5">
             {products.map((p) => {
               const n = qty[p.id] ?? 0
@@ -482,7 +484,7 @@ export function SupplySheet({
         </SheetStep>
       )}
 
-      <SheetStep no={products.length > 0 ? 3 : 2} title="언제 필요하신가요?" hint="선택 — 안 고르시면 다음 수거 때 함께 갑니다">
+      <SheetStep no={products.length > 0 ? 3 : 2} title="언제 필요하신가요?" hint="선택 — 안 고르시면 다음 수거 때 함께 갑니다" done={need !== ''}>
         <ChoiceGrid
           name="need"
           items={[
@@ -498,7 +500,7 @@ export function SupplySheet({
         />
       </SheetStep>
 
-      <SheetStep no={products.length > 0 ? 4 : 3} title="어떤 이유이신가요?" hint="선택 — 안 고르셔도 됩니다">
+      <SheetStep no={products.length > 0 ? 4 : 3} title="어떤 이유이신가요?" hint="선택 — 안 고르셔도 됩니다" done={why !== '' || note.trim() !== ''}>
         <ChoiceGrid name="why" items={WHY} value={why} onPick={(v) => setWhy(v === why ? '' : v)} />
         <input
           data-supply-note

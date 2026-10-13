@@ -110,13 +110,9 @@ export function InquirySheet({
       open={open}
       onClose={onClose}
       done={done}
+      icon={MessageSquare}
       title="문의하기"
-      subtitle={
-        <span className="flex flex-wrap items-center gap-1.5">
-          <MessageSquare size={15} strokeWidth={2.5} className="shrink-0 text-teal-600" />
-          {client.name} · 자주 묻는 것을 고르시면 그대로 접수됩니다.
-        </span>
-      }
+      subtitle={`${client.name} · 자주 묻는 것을 고르시면 그대로 접수됩니다.`}
       footer={
         <div className="flex flex-wrap items-center gap-2.5">
           <p data-ask-summary className="t-muted min-w-0 flex-1 break-keep">
@@ -144,7 +140,7 @@ export function InquirySheet({
         />
       )}
 
-      <SheetStep no={1} title="무엇에 대한 문의인가요?">
+      <SheetStep no={1} title="무엇에 대한 문의인가요?" done={topic !== ''}>
         <ChoiceGrid
           name="topic"
           items={topicItems}
@@ -157,7 +153,7 @@ export function InquirySheet({
       </SheetStep>
 
       {topic && quickItems.length > 0 && (
-        <SheetStep no={2} title="이런 내용이신가요?" hint="고르시면 그대로 접수됩니다">
+        <SheetStep no={2} title="이런 내용이신가요?" hint="고르시면 그대로 접수됩니다" done={quick !== ''}>
           <ChoiceGrid
             name="quick"
             cols={1}
@@ -171,6 +167,7 @@ export function InquirySheet({
       {topic && (
         <SheetStep
           no={quickItems.length > 0 ? 3 : 2}
+          done={body.trim() !== ''}
           title="더 적으실 것이 있으신가요?"
           hint={quick ? '선택 — 안 적으셔도 됩니다' : '직접 적으셔도 됩니다'}
         >

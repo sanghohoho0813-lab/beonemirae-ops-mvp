@@ -27,7 +27,7 @@ export function PortalPreviewBar({ client, page }: { client: Client | null; page
   return (
     <div
       data-portal-preview
-      className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 lg:px-8"
+      className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:py-2.5 lg:px-8"
     >
       {/*  ⚠ 0088 — 폰에서 이 띠가 **979px** 이 됐습니다(390×844 실측).
            `flex-1` 은 basis 가 0 이라, 옆에 shrink-0 단추가 셋이 되자 글자칸이
@@ -72,7 +72,10 @@ export function PortalPreviewBar({ client, page }: { client: Client | null; page
           onClick={() => navigate('/')}
           className="flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-xl bg-navy-800 px-3.5 text-[1.02rem] font-extrabold text-white transition hover:bg-navy-900"
         >
-          <ArrowLeft size={17} strokeWidth={2.6} /> BUSINESS AX로 돌아가기
+          {/*  포털 2차 — 폰에서는 짧게. 긴 이름이 두 줄로 접혀 미리보기 띠가
+               커지면, 직원이 보는 병원 화면이 실제 병원 화면보다 아래로 밀립니다. */}
+          <ArrowLeft size={17} strokeWidth={2.6} /> <span className="sm:hidden">AX로 돌아가기</span>
+          <span className="hidden sm:inline">BUSINESS AX로 돌아가기</span>
         </button>
       </div>
     </div>

@@ -38,6 +38,8 @@ export function useSheetDone(open: boolean) {
           onClick: () => navigate(toPath(to)),
         },
         secondary: { label: '홈으로', onClick: () => navigate(toPath('')) },
+        //  요청이면 진행 단계를 보여 줍니다(문의는 단계가 다릅니다).
+        steps: to === 'requests',
       })
     },
     [navigate, toPath],

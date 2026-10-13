@@ -177,17 +177,10 @@ export function RequestSheet({
       open={open}
       onClose={onClose}
       done={done}
+      icon={urgent ? Siren : Truck}
+      tone={urgent ? 'rose' : 'navy'}
       title={urgent ? '긴급수거 요청' : '추가수거 요청'}
-      subtitle={
-        <span className="flex flex-wrap items-center gap-1.5">
-          {urgent ? (
-            <Siren size={15} strokeWidth={2.5} className="shrink-0 text-rose-500" />
-          ) : (
-            <Truck size={15} strokeWidth={2.5} className="shrink-0 text-teal-600" />
-          )}
-          {client.name} · {urgent ? '폐기물이 예상보다 빨리 찼을 때' : '정기 수거 외에 한 번 더 필요할 때'}
-        </span>
-      }
+      subtitle={`${client.name} · ${urgent ? '폐기물이 예상보다 빨리 찼을 때' : '정기 수거 외에 한 번 더 필요할 때'}`}
       footer={
         <div className="flex flex-wrap items-center gap-2.5">
           {/*  ⚠ 무엇이 보내지는지 단추 위에 적어 둡니다. 「보내기」만 있으면
@@ -227,7 +220,7 @@ export function RequestSheet({
         />
       )}
 
-      <SheetStep no={1} title="원하는 수거 시점">
+      <SheetStep no={1} title="원하는 수거 시점" done={day !== ''}>
         <ChoiceGrid name="day" items={dayItems} value={day} onPick={(v) => setDay(v === day ? '' : v)} />
         {/*  ⚠ 날짜를 직접 고르는 길도 남깁니다 — 「다음 주 화요일」 같은
              경우가 있습니다. 다만 **빠른 선택 아래**에 둡니다. */}
@@ -244,7 +237,7 @@ export function RequestSheet({
         </label>
       </SheetStep>
 
-      <SheetStep no={2} title="요청 내용" hint="여러 개 고르셔도 됩니다">
+      <SheetStep no={2} title="요청 내용" hint="여러 개 고르셔도 됩니다" done={reasons.length > 0}>
         <ChoiceGrid
           name="reason"
           multi
@@ -256,6 +249,7 @@ export function RequestSheet({
 
       <SheetStep
         no={3}
+        done={memo.trim() !== ''}
         title="특이사항"
         hint="선택 — 안 적으셔도 됩니다"
       >
@@ -278,7 +272,7 @@ export function RequestSheet({
       </p>
 
       {wasteItems.length > 0 && (
-        <SheetStep no={4} title="폐기물 종류" hint="선택 — 여러 개 고르셔도 됩니다">
+        <SheetStep no={4} title="폐기물 종류" hint="선택 — 여러 개 고르셔도 됩니다" done={wastes.length > 0}>
           <ChoiceGrid
             name="waste"
             multi
@@ -291,6 +285,7 @@ export function RequestSheet({
 
       <SheetStep
         no={wasteItems.length > 0 ? 5 : 4}
+        done={level != null}
         title="예상 배출량"
         hint={
           anchor.usual != null

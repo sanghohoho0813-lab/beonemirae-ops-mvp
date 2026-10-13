@@ -11,6 +11,7 @@ import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { portalTodos } from '../lib/portalActivity'
 import { collectionHistory } from '../lib/ops'
+import { weekStrip } from '../lib/portalWeek'
 import { prettyDate, today, weight, won } from '../lib/format'
 import { PortalHero, PortalActions } from '../components/PortalHero'
 import { PortalFooter } from '../components/PortalFooter'
@@ -72,6 +73,9 @@ export function PortalHome() {
     [data, client, s],
   )
 
+  //  앞으로 7일 (포털 2차) — 등록된 일정만 칠하고, 수거주기 예상은 따로 표시.
+  const week = useMemo(() => (client && s ? weekStrip(data, client, s, today()) : []), [data, client, s])
+
   //  최근 수거 — **실제로 끝난 것만**(무게가 적힌 것). 예정은 위 첫 칸이 말합니다.
   const recentPickups = useMemo(() => {
     if (!client) return []
@@ -106,7 +110,7 @@ export function PortalHome() {
       {/*  ⚠ 폰에서는 위아래로, 넓은 화면(xl)에서는 「다음 수거 | 요청하기」를
            나란히 둡니다 — PC 첫 화면에서 스크롤 없이 둘 다 보입니다. */}
       <div className="grid gap-3 sm:gap-4 xl:grid-cols-2 xl:gap-5">
-        <PortalHero client={client} s={s} />
+        <PortalHero client={client} s={s} week={week} />
         <PortalActions
           onUrgent={() => open('urgent')}
           onSupply={() => open('supply')}
@@ -182,14 +186,32 @@ export function PortalHome() {
             {recentPickups.length === 0 ? (
               <QuietEmpty>아직 수거 기록이 없습니다. 첫 수거가 끝나면 여기에 표시됩니다.</QuietEmpty>
             ) : (
-              <ul className="divide-y divide-navy-50">
-                {recentPickups.map((r) => (
-                  <li key={r.id} data-recent-pickup={r.id} className="px-5 py-4">
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
-                      <span className="t-body break-keep font-extrabold text-navy-900">{prettyDate(r.date)}</span>
-                      <span className="ml-auto">
+              //  포털 2차 — 시간 순서가 보이도록 **세로 줄로 이은 타임라인**.
+              <ol className="px-5 py-4">
+                {recentPickups.map((r, i) => (
+                  <li key={r.id} data-recent-pickup={r.id} className="relative flex gap-3.5 pb-5 last:pb-0">
+                    {i < recentPickups.length - 1 && (
+                      <span aria-hidden="true" className="absolute bottom-0 left-[15px] top-9 w-0.5 rounded-full bg-navy-100" />
+                    )}
+                    <span
+                      aria-hidden="true"
+                      className={`relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-white ${
+                        r.handedOver ? 'bg-emerald-100 text-emerald-700' : 'bg-navy-100 text-navy-600'
+                      }`}
+                    >
+                      <Check size={17} strokeWidth={3} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                        <span className="t-body break-keep font-extrabold text-navy-900">{prettyDate(r.date)}</span>
+                        <span className="ml-auto text-[1.15rem] font-extrabold tabular-nums text-navy-900">
+                          {weight(r.amountKg ?? 0)}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                        <span className="t-muted break-keep">{r.wasteType}</span>
                         <span
-                          className={`pill ring-1 ${
+                          className={`pill ml-auto ring-1 ${
                             r.handedOver
                               ? 'bg-emerald-50 text-emerald-800 ring-emerald-100'
                               : 'bg-navy-50 text-navy-700 ring-navy-100'
@@ -199,14 +221,11 @@ export function PortalHome() {
                                처리장에 **넘겼다**까지입니다. 수거 이력과 같은 말을 씁니다. */}
                           {r.handedOver ? '인계 완료' : '수거 완료'}
                         </span>
-                      </span>
+                      </div>
                     </div>
-                    <p className="t-muted mt-1 break-keep">
-                      {r.wasteType} · {weight(r.amountKg ?? 0)}
-                    </p>
                   </li>
                 ))}
-              </ul>
+              </ol>
             )}
           </section>
         </StaggerItem>
