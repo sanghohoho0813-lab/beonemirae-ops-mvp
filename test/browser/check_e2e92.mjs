@@ -162,7 +162,8 @@ async function openAs(role, path, clientId = null, w = 1440) {
   ok(r.kind === '소모품', '서버가 받는 값으로 나갔다', r.kind)
   ok(/63L 박스 10개/.test(r.content), '**고른 규격과 수량이 그대로 적혔다**', r.content)
   ok(/20L 합성수지 2개/.test(r.content), '두 번째 규격도 그대로')
-  ok((await p.locator('[data-toast]').count()) === 1, '접수되었다고 알려 준다')
+  //  포털 1차 고도화 — 창 안에 「요청이 접수되었습니다」(토스트 대신).
+  ok(/요청이 접수되었습니다/.test(flat(await p.locator('[data-sheet-done]').innerText().catch(() => ''))), '접수되었다고 알려 준다')
   await ctx.close()
 }
 

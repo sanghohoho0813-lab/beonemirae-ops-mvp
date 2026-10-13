@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useEscapeClose } from '../lib/useEscapeClose'
 import { Check, X } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { BrandImg } from './BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,6 +45,23 @@ function unlockScroll() {
 
 type SheetKind = 'form' | 'wide' | 'drawer'
 
+/**
+ * 보낸 뒤의 화면 (포털 1차 고도화).
+ *
+ *  ⚠ 예전에는 보내면 창이 닫히고 아래에 4초짜리 토스트만 떴습니다. 50~70대
+ *    담당자분들은 그 4초를 놓치면 「갔나 안 갔나」를 모른 채 다시 누르거나
+ *    전화를 거십니다. 보낸 창 **그 자리에서** 「접수되었습니다」를 크게
+ *    보여 주고, 다음에 갈 곳(요청 내역 · 홈)을 단추로 드립니다.
+ */
+export interface SheetDone {
+  title: string
+  message: string
+  /** 무엇이 접수됐는지 — 고르신 것 그대로 */
+  lines?: string[]
+  primary: { label: string; onClick: () => void }
+  secondary?: { label: string; onClick: () => void }
+}
+
 const BOX: Record<SheetKind, string> = {
   //  고르는 창 — 단추 두 줄이 편히 들어가는 폭
   form: 'sm:max-w-[34rem]',
@@ -64,6 +81,7 @@ export function PortalSheet({
   footer,
   name,
   hero,
+  done,
 }: {
   open: boolean
   title: string
@@ -80,6 +98,8 @@ export function PortalSheet({
    *  ⚠ 얇게(7rem) 고정합니다 — 사진이 크면 정작 고를 것이 밀립니다.
    */
   hero?: string
+  /** 보낸 뒤 — 있으면 본문과 아래 단추를 「접수되었습니다」로 바꿉니다 */
+  done?: SheetDone | null
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
 
@@ -162,21 +182,50 @@ export function PortalSheet({
 
             {/*  본문 — 여기만 스크롤됩니다 */}
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-              {hero && (
+              {hero && !done && (
                 //  ⚠ 0098 — 높이를 고정(h-28)했더니 넓은 창에서 띠가 5:1 이
                 //    되어 **원본 4:3 의 세로를 네 배로 잘랐습니다.** 얼굴이
                 //    통째로 밖으로 나가 뒤통수와 천장만 보였습니다.
                 //    비율로 잡아 어느 폭에서도 2.5:1 을 넘지 않게 하고,
                 //    남길 자리는 사진마다 정합니다(BrandImg).
-                <div data-sheet-hero className="mb-5 aspect-[5/2] w-full overflow-hidden rounded-2xl">
+                //  ⚠ 포털 1차 고도화 — **폰에서는 안 그립니다.** 폰에서 이 띠는
+                //    화면 높이의 1/5 을 먹고, 정작 고를 것을 아래로 밀었습니다.
+                //    무엇을 하는 창인지는 제목이 이미 말합니다.
+                <div data-sheet-hero className="mb-5 hidden aspect-[5/2] w-full overflow-hidden rounded-2xl sm:block">
                   <BrandImg src={hero} className="h-full w-full" />
                 </div>
               )}
-              {children}
+              {done ? <DoneView done={done} /> : children}
             </div>
 
             {/*  아래 CTA — 고정. 다 골라 놓고 보낼 방법을 못 찾으면 안 됩니다. */}
-            {footer && (
+            {done ? (
+              <div
+                className="shrink-0 border-t border-navy-100 bg-white px-5 py-4 sm:px-6"
+                style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+              >
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    data-done-primary
+                    onClick={done.primary.onClick}
+                    className="flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+                  >
+                    {done.primary.label}
+                  </button>
+                  {done.secondary && (
+                    <button
+                      type="button"
+                      data-done-home
+                      onClick={done.secondary.onClick}
+                      className="flex min-h-[3.25rem] items-center justify-center rounded-2xl bg-navy-50 px-5 text-[1.08rem] font-extrabold text-navy-800 transition hover:bg-navy-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+                    >
+                      {done.secondary.label}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : footer && (
               <div
                 className="shrink-0 border-t border-navy-100 bg-white px-5 py-4 sm:px-6"
                 style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
@@ -188,6 +237,35 @@ export function PortalSheet({
         </div>
       )}
     </AnimatePresence>
+  )
+}
+
+/** 「접수되었습니다」 — 체크 하나가 조용히 커지며 나타납니다 */
+function DoneView({ done }: { done: SheetDone }) {
+  const reduce = useReducedMotion()
+  return (
+    <div data-sheet-done role="status" aria-live="polite" className="flex flex-col items-center px-1 py-6 text-center sm:py-8">
+      <motion.span
+        initial={reduce ? false : { scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+        className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+        aria-hidden="true"
+      >
+        <Check size={34} strokeWidth={3} />
+      </motion.span>
+      <h3 className="mt-5 break-keep text-[1.45rem] font-extrabold leading-snug text-navy-900">{done.title}</h3>
+      <p className="t-body mt-2 max-w-[26rem] break-keep leading-snug text-navy-600">{done.message}</p>
+      {done.lines && done.lines.length > 0 && (
+        <ul data-done-lines className="mt-6 w-full divide-y divide-navy-50 rounded-2xl bg-white text-left ring-1 ring-navy-100">
+          {done.lines.map((l) => (
+            <li key={l} className="t-body break-keep px-4 py-3 font-bold leading-snug text-navy-800">
+              {l}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

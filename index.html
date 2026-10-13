@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0f1a2e" />
     <meta
@@ -14,9 +15,12 @@
       content="비원미래, 의료폐기물, 의료폐기물 수거, 의료폐기물 운반, 병원 폐기물, 요양병원 폐기물, 남양주 의료폐기물, 서울 경기 의료폐기물"
     />
 
-    <!-- PWA: 설치형 앱 설정 -->
+    <!-- PWA: 설치형 앱 설정
+         ⚠ 아이폰은 apple-touch-icon 에 SVG 를 못 씁니다 — 홈 화면에 추가하면
+           화면을 찍은 회색 썸네일이 아이콘이 됐습니다. 180px PNG 를 둡니다.
+         ⚠ 홈 화면 이름은 짧게 「비원미래」(manifest short_name 과 같게). -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

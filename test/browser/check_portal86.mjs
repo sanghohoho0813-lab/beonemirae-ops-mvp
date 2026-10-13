@@ -31,9 +31,12 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
 
 // ── ① 분석 칸은 **AI 라고 하지 않는다** ────────────────────────────────────
 {
-  const { ctx, p } = await open('/portal/c/c1', 'admin')
-  const panel = p.locator('[data-portal-insight]')
-  ok((await panel.count()) === 1, '병원 첫 화면에 「배출 분석」 칸이 있다')
+  //  포털 1차 고도화 — 「배출 분석」은 홈 첫 화면에서 **월간 배출 리포트 창 안**
+  //  으로 옮겼습니다(매일 보는 화면이 아니라 리포트를 펼쳤을 때 읽는 것).
+  //  계산 규칙·근거·「AI 아님」은 그대로 지킵니다.
+  const { ctx, p } = await open('/portal/c/c1?do=report', 'admin')
+  const panel = p.locator('[data-portal-sheet="report"] [data-portal-insight]')
+  ok((await panel.count()) === 1, '월간 배출 리포트 창에 「배출 분석」 칸이 있다')
 
   const t = flat(await panel.innerText())
   ok(/수거 기록으로 계산/.test(t), '무엇으로 계산했는지 제목 옆에 적혀 있다', t.slice(0, 60))
@@ -69,7 +72,7 @@ async function open(path, role, w = 1440, schemaVersion = 83) {
     access_token: 't', token_type: 'bearer', expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u,
   })), ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }])
-  await p.goto(`${W.BASE}/portal/c/c1`, { waitUntil: 'domcontentloaded' })
+  await p.goto(`${W.BASE}/portal/c/c1?do=report`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state); await p.waitForTimeout(800)
 
   const items = await p.locator('[data-insight]').count()
@@ -165,12 +168,14 @@ for (const w of [1920, 1440, 768, 390, 360]) {
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   ok(over === 0, `${w}px — 가로로 넘치지 않는다`, `${over}px`)
 
-  const ins = await p.locator('[data-portal-insight]').boundingBox()
+  //  포털 1차 고도화 — 넓은 화면에서는 「최근 요청 | 최근 수거」가 나란히,
+  //  좁은 화면에서는 위아래로 쌓입니다(예전 「요청 상태 | 분석」 자리).
+  const rq = await p.locator('[data-portal-requests]').boundingBox()
+  const rc = await p.locator('[data-portal-recent]').boundingBox()
   if (w >= 1440) {
-    //  ⚠ 시안에서 분석은 **오른쪽 옆**입니다. 위아래로 쌓이면 시안이 아닙니다.
-    ok(ins.x > w * 0.5, `${w}px — 분석 칸이 오른쪽 옆에 선다`, `x=${Math.round(ins.x)}`)
-  } else {
-    ok(ins.x < 40, `${w}px — 분석 칸이 아래로 쌓인다`, `x=${Math.round(ins.x)}`)
+    ok(rc.x > rq.x + rq.width - 2 && Math.abs(rc.y - rq.y) < 4, `${w}px — 최근 수거가 최근 요청 오른쪽 옆에 선다`, `x=${Math.round(rc.x)}`)
+  } else if (w < 1024) {
+    ok(rc.y > rq.y + rq.height - 2, `${w}px — 최근 수거가 최근 요청 아래로 쌓인다`, `y=${Math.round(rc.y)}`)
   }
   await ctx.close()
 }
@@ -179,16 +184,23 @@ for (const w of [1920, 1440, 768, 390, 360]) {
 //     ⚠ 새 칸을 넣을 때마다 이것이 밀립니다. 매번 다시 잽니다.
 {
   const { ctx, p } = await open('/portal/c/c1', 'admin', 390)
-  const box = await p.locator('[data-portal-cta="collect"]').boundingBox()
-  ok(box.y < 844, `폰 첫 화면 안에 「수거 요청」이 있다`, `y=${Math.round(box.y)}`)
+  //  포털 1차 고도화 — 큰 단추 둘이 **아래 메뉴에 가리지 않고** 다 보여야 합니다
+  //  (예전에는 y 만 쟀는데, 그래서 「긴급 수거」가 아래 메뉴에 반쯤 가려진 것을
+  //  못 잡았습니다). 아래 메뉴 윗선보다 위에서 끝나는지 잽니다.
+  const navTop = (await p.locator('nav.fixed.bottom-0').boundingBox())?.y ?? 844
+  const urg = await p.locator('[data-portal-cta="urgent"]').boundingBox()
+  ok(urg.y + urg.height <= navTop, `폰 첫 화면에 「긴급수거 요청」이 가림 없이 다 보인다`, `${Math.round(urg.y + urg.height)} ≤ ${Math.round(navTop)}`)
   const sup = await p.locator('[data-portal-cta="supplies"]').boundingBox()
-  ok(sup.y < 844, `폰 첫 화면 안에 「자재·용기 요청」이 있다`, `y=${Math.round(sup.y)}`)
+  ok(sup.y + sup.height <= navTop, `폰 첫 화면에 「자재·용기 요청」이 가림 없이 다 보인다`, `${Math.round(sup.y + sup.height)} ≤ ${Math.round(navTop)}`)
+  const box = await p.locator('[data-portal-cta="collect"]').boundingBox()
+  ok(box.y < 844, `폰 첫 화면 안에 「추가수거 요청」이 있다`, `y=${Math.round(box.y)}`)
 
-  //  ⚠ 폰에서는 「내 요청 진행 상태」가 분석 칸보다 **위**여야 합니다.
-  //    분석은 읽을거리고 요청 상태는 지금 기다리는 것입니다.
-  const insY = (await p.locator('[data-portal-insight]').boundingBox()).y
-  const reqY = (await p.locator('section:has-text("내 요청 진행 상태")').first().boundingBox()).y
-  ok(reqY < insY, '폰에서 「내 요청 진행 상태」가 분석 칸보다 위에 있다', `${Math.round(reqY)} < ${Math.round(insY)}`)
+  //  ⚠ 「최근 요청」이 「최근 수거」보다 위 — 지금 기다리는 것이 먼저입니다.
+  const reqY = (await p.locator('[data-portal-requests]').boundingBox()).y
+  const recY = (await p.locator('[data-portal-recent]').boundingBox()).y
+  ok(reqY < recY, '폰에서 「최근 요청」이 「최근 수거」보다 위에 있다', `${Math.round(reqY)} < ${Math.round(recY)}`)
+  //  배출 분석은 홈에 없습니다(리포트 창으로 옮김) — 홈이 다시 길어지지 않게.
+  ok((await p.locator('main [data-portal-insight]').count()) === 0, '홈에는 분석 칸이 없다 (리포트 창으로 옮김)')
   await ctx.close()
 }
 
@@ -276,7 +288,9 @@ for (const w of [1920, 1440, 768, 390, 360]) {
   //  ⚠ 고른 것이 **글로도** 남아야 합니다 — 배차가 읽는 것은 글입니다.
   ok(/예상 배출량 많음/.test(sent), '고른 단계가 요청 글에도 그대로 적힌다', sent.slice(0, 200))
   if (wastes.length > 0) ok(/waste_type/.test(sent), '고른 유형이 칸으로도 나간다')
-  ok((await p.locator('[data-toast]').count()) === 1, '접수되었다고 알려 준다')
+  //  포털 1차 고도화 — 4초 토스트 대신 창 안에 「요청이 접수되었습니다」.
+  const done = flat(await p.locator('[data-sheet-done]').innerText().catch(() => ''))
+  ok(/요청이 접수되었습니다/.test(done), '접수되었다고 알려 준다 (창 안 완료 화면)', done.slice(0, 60))
   await ctx.close()
 }
 

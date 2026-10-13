@@ -160,15 +160,18 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
   //  ⚠ **고른 것이 실제로 남아 있어야** 합니다.
   ok((await p.locator('[data-choice="reason"] [data-picked]').count()) === 1, '고른 사유가 그대로 남아 있다')
   ok((await p.locator('[data-choice="amount"] [data-picked]').count()) === 1, '고른 배출량도 남아 있다')
-  ok((await p.locator('[data-toast]').count()) === 0, '**성공했다고 말하지 않는다**')
+  ok((await p.locator('[data-toast]').count()) === 0 && (await p.locator('[data-sheet-done]').count()) === 0, '**성공했다고 말하지 않는다**')
+  //  포털 1차 고도화 — 실패 칸 안에 「다시 시도」가 있습니다.
+  ok((await p.locator('[data-req-error] [data-save-retry]').count()) === 1, '실패 칸 안에 「다시 시도」 단추가 있다')
 
   //  ── ③ 다시 누르면 — **같은 표**로 가서 한 건만 남는다 ─────────────────
-  await p.locator('[data-req-send]').click()
-  //  ⚠ 0098 — 닫힐 때까지 기다립니다 (시간 재기 금지).
-  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 12000 }).catch(() => {})
+  //  포털 1차 고도화 — 실패 칸의 「다시 시도」로 다시 보냅니다(아래 보내기와 같은 일).
+  await p.locator('[data-req-error] [data-save-retry]').click()
+  //  ⚠ 0098 — 시간 재기 금지. 이제 창은 닫히지 않고 「접수되었습니다」로 바뀝니다.
+  await p.locator('[data-sheet-done]').waitFor({ state: 'visible', timeout: 12000 }).catch(() => {})
   ok(srv.requests.length === 1, '**다시 눌렀을 때 한 건만 들어간다**', `${srv.requests.length}건`)
-  ok((await p.locator('[data-portal-sheet]').count()) === 0, '이번에는 창이 닫힌다')
-  ok((await p.locator('[data-toast]').count()) === 1, '접수되었다고 알려 준다')
+  ok((await p.locator('[data-req-error]').count()) === 0, '이번에는 실패 칸이 사라진다')
+  ok(/요청이 접수되었습니다/.test(flat(await p.locator('[data-sheet-done]').innerText().catch(() => ''))), '접수되었다고 알려 준다')
   await ctx.close()
 }
 
@@ -184,12 +187,16 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
   //    닫히는 데 1.5초를 넘길 때가 있어, 「아직 닫히는 중」을 「안 닫혔다」로
   //    적었습니다(전체 회귀에서 한 번 그렇게 빨갛게 떴습니다).
   //    **닫힐 때까지** 기다립니다 — 보장은 그대로고 재는 방법만 바꿉니다.
-  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {})
+  await p.locator('[data-sheet-done]').waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
   ok(srv.requests.length === 1, '긴급 요청이 한 건 들어갔다')
 
   //  같은 창을 다시 열어 같은 것을 또 보내면 — **새 표**라 새 요청입니다.
   //  (같은 표로 다시 가는 것은 ③ 에서 확인했습니다)
-  ok((await p.locator('[data-portal-sheet]').count()) === 0, '보낸 뒤 창이 닫혔다')
+  ok((await p.locator('[data-req-send]').count()) === 0, '보낸 뒤에는 보내기 단추가 사라진다 (두 번 못 보냄)')
+  //  「홈으로」 — 창이 닫히고 첫 화면.
+  await p.locator('[data-done-home]').click()
+  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {})
+  ok((await p.locator('[data-portal-sheet]').count()) === 0 && new URL(p.url()).pathname === '/portal', '「홈으로」를 누르면 창이 닫히고 홈', p.url())
   await ctx.close()
 }
 
@@ -233,11 +240,14 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
 {
   const srv = makeServer()
   const { ctx, p, errors } = await open(srv, '/portal')
+  //  포털 1차 고도화 — 홈의 단추 넷 + 메뉴·알림에서 여는 서랍 넷(?do=).
   for (const label of [
-    '수거 요청', '용기 · 봉투 주문', '긴급 수거 요청', '상담 · 문의',
-    '수거 이력', '월간 배출 리포트', '정산 현황', '증빙자료',
+    '추가수거 요청', '자재·용기 요청', '긴급수거 요청', '문의하기',
+    'history', 'report', 'billing', 'docs',
   ]) {
-    await p.locator(`[data-portal-action="${label}"]`).click()
+    if (/^[a-z]+$/.test(label)) {
+      await p.evaluate((q) => { history.pushState(null, '', `/portal?do=${q}`); dispatchEvent(new PopStateEvent('popstate')) }, label)
+    } else await p.locator(`[data-portal-action="${label}"]`).click()
     //  ⚠ **시간으로 기다리지 않습니다.** 닫히는 데 300~700ms 가 걸려서,
     //    500ms 로 재면 어떤 날은 통과하고 어떤 날은 실패합니다.
     //    실제로 이 검사가 그렇게 흔들렸습니다 — 요소가 사라질 때까지
@@ -246,7 +256,7 @@ async function open(srv, path, role = 'client', clientId = HOSP.id, w = 1440) {
     await p.keyboard.press('Escape')
     await p.locator('[data-portal-sheet]').first().waitFor({ state: 'detached', timeout: 5000 })
   }
-  ok(errors.length === 0, '**여덟 칸을 다 열고 닫아도 오류가 없다**', errors.slice(0, 2).join(' · '))
+  ok(errors.length === 0, '**여덟 창을 다 열고 닫아도 오류가 없다**', errors.slice(0, 2).join(' · '))
   ok((await p.locator('[data-portal-sheet]').count()) === 0, '마지막에 창이 다 닫혀 있다')
   //  ⚠ 뒤 화면 스크롤 잠금이 **풀려 있어야** 합니다. 안 풀리면 화면이
   //    굳은 것처럼 보입니다.
@@ -311,7 +321,7 @@ for (const page of ['', 'history', 'support', 'report', 'billing', 'supplies']) 
 {
   const srv = makeServer()
   const { ctx, p } = await open(srv, '/portal', 'client', HOSP.id)
-  await p.locator('[data-portal-action="증빙자료"]').click()
+  await p.evaluate(() => { history.pushState(null, '', '/portal?do=docs'); dispatchEvent(new PopStateEvent('popstate')) })
   await p.locator('[data-portal-sheet="docs"]').waitFor({ state: 'visible', timeout: 5000 })
   await p.locator('[data-docs-open="history"]').click()
   await p.locator('[data-portal-sheet="history"]').waitFor({ state: 'visible', timeout: 5000 })

@@ -3,6 +3,7 @@ import type { PortalPage } from './portalClient'
 import { today, prettyDate } from './format'
 import { portalSummary } from './portal'
 import { outstandingOf } from './selectors'
+import { portalKindLabel } from './portalLabels'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 알림 — **표를 만들지 않았습니다** (0083)
@@ -82,8 +83,10 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
         key: `req-ok-${r.id}`,
         tone: 'good',
         title: '요청이 일정에 반영되었습니다',
-        detail: `${r.type} · ${r.content.slice(0, 40)}${r.content.length > 40 ? '…' : ''}`,
-        to: '',
+        //  ⚠ 포털 1차 고도화 — 저장값(`소모품` 등)을 그대로 적고 있었습니다.
+        //    병원 말(「자재·용기 요청」)로 적고, 누르면 「요청 내역」으로 갑니다.
+        detail: `${portalKindLabel(r.type)} · ${r.content.slice(0, 40)}${r.content.length > 40 ? '…' : ''}`,
+        to: 'requests',
       })
     } else if (r.status === '처리 완료' && r.reply) {
       out.push({
@@ -91,7 +94,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
         tone: 'good',
         title: '요청 처리가 끝났습니다',
         detail: `회신: ${r.reply.slice(0, 50)}${r.reply.length > 50 ? '…' : ''}`,
-        to: '',
+        to: 'requests',
       })
     }
   }
@@ -119,7 +122,7 @@ export function portalNotices(data: AppData, client: Client, now = today()): Por
       key: 'owed',
       tone: 'warn',
       title: '납부하지 않은 청구가 있습니다',
-      detail: `${owed.toLocaleString('ko-KR')}원 — 자세한 내역은 정산 화면에서 보실 수 있습니다`,
+      detail: `${owed.toLocaleString('ko-KR')}원 — 자세한 내역은 「정산·증빙」에서 보실 수 있습니다`,
       to: 'billing',
     })
   }

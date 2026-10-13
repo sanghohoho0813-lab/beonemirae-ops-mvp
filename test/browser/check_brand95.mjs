@@ -72,36 +72,35 @@ async function loaded(p, sel) {
   ).catch(() => false)
 }
 
-// ── ① PC 병원 홈 — 머리 사진 · 신뢰 띠 · 회사 소개 ─────────────────────────
+// ── ① PC 병원 홈 — 업무 화면에는 장식 사진을 두지 않는다 (포털 1차 고도화) ──
+//    대표님 브리프: 「회사 소개 문구를 넣지 않는다 · 의미 없는 애니메이션 X ·
+//    보여주기용 과장 X」. 홈의 사진 띠(머리 사진 · 신뢰 띠 · 회사 소개 사진)를
+//    걷어내고 다음 수거와 요청 단추를 먼저 둡니다. 사진은 **창 머리**(PC)와
+//    **로그인 옆**(PC)에만 남깁니다 — 아래 ③ · check_motion 이 잽니다.
 {
   const { ctx, p, errors } = await open('/portal')
-  ok(await loaded(p, '[data-portal-hero] img'), '**머리 배경 사진이 실제로 실림** (hero_main)')
-  //  ⚠ 덮개 — 사진 위 흰 글자는 덮개가 없으면 하늘색 위에서 사라집니다.
-  const dim = await p.locator('[data-portal-hero] div[aria-hidden="true"]').count()
-  ok(dim >= 1, '머리 사진 위에 어두운 덮개가 있음')
-  //  머리 높이가 사진 때문에 폭주하지 않았는지 — 8개 카드가 밀리면 안 됩니다.
+  ok((await p.locator('[data-portal-hero] img').count()) === 0, '홈 머리 칸에 장식 사진이 없다 (다음 수거가 주인공)')
+  ok((await p.locator('[data-portal-trust]').count()) === 0, '신뢰 띠(사진)가 홈에 없다')
+  ok((await p.locator('[data-portal-footer] img').count()) === 0, '맨 아래 회사 소개 사진이 없다')
+  //  ⚠ 지어낸 숫자 금지 — 「무사고 1,248일」류가 어디에도 스며들지 않았는지
+  const body = flat(await p.locator('main').innerText())
+  ok(!/무사고|\d{3,}일째|24시간 365|99\.?\d?%/.test(body), '**홈에 지어낸 숫자가 없음**')
   const hero = await p.locator('[data-portal-hero]').boundingBox()
-  ok((hero?.height ?? 9999) <= 420, '머리가 사진 때문에 키가 크지 않음', `${Math.round(hero?.height ?? 0)}px`)
-
-  await p.evaluate(() => window.scrollTo(0, 999999)); await p.waitForTimeout(1200)
-  ok(await loaded(p, '[data-portal-trust] img'), '**신뢰 띠 사진이 실림** (trust_banner)')
-  const trust = flat(await p.locator('[data-portal-trust]').innerText())
-  ok(/기록으로 관리합니다/.test(trust), '신뢰 띠 문구가 보임')
-  //  ⚠ 지어낸 숫자 금지 — 「무사고 1,248일」류가 스며들지 않았는지
-  ok(!/무사고|\d{3,}일|24시간|99\.?\d?%/.test(trust), '**신뢰 띠에 지어낸 숫자가 없음**', trust.slice(0, 60))
-  ok(await loaded(p, '[data-portal-footer] img'), '회사 소개 사진이 실림 (brand_story)')
+  ok((hero?.height ?? 9999) <= 420, '머리 칸이 키가 크지 않음', `${Math.round(hero?.height ?? 0)}px`)
   ok(errors.length === 0, 'PC 병원 홈 콘솔 오류 0', errors.slice(0, 2).join(' | '))
   await ctx.close()
 }
 
-// ── ② 폰 병원 홈 — 사진 없이, 「수거 요청」이 첫 화면 안 ────────────────────
+// ── ② 폰 병원 홈 — 사진 없이, 큰 단추가 첫 화면 안 ──────────────────────────
 {
   const { ctx, p } = await open('/portal', { w: 390 })
-  const heroImg = await p.locator('[data-portal-hero] img').first()
-    .evaluate((el) => getComputedStyle(el).display).catch(() => 'none')
-  ok(heroImg === 'none', '**폰 머리에는 사진을 안 그림** (첫 화면을 지키기 위해)', heroImg)
-  const card = await p.locator('[data-portal-action="수거 요청"]').boundingBox()
-  ok(card != null && card.y < 844, '「수거 요청」이 여전히 첫 화면 안', `y=${Math.round(card?.y ?? 0)}`)
+  ok((await p.locator('[data-portal-hero] img').count()) === 0, '**폰 머리에는 사진을 안 그림** (첫 화면을 지키기 위해)')
+  const card = await p.locator('[data-portal-cta="urgent"]').boundingBox()
+  ok(card != null && card.y < 844, '「긴급수거 요청」이 첫 화면 안', `y=${Math.round(card?.y ?? 0)}`)
+  //  창 머리 사진도 폰에서는 안 그립니다 — 고를 것이 먼저입니다.
+  await p.goto(`${BASE}/portal?do=urgent`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(2200)
+  const shown = await p.locator('[data-portal-sheet="urgent"] [data-sheet-hero]').evaluate((el) => getComputedStyle(el).display).catch(() => 'none')
+  ok(shown === 'none', '폰에서는 창 머리 사진을 안 그림', shown)
   await ctx.close()
 }
 

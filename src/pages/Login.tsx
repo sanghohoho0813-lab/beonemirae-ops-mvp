@@ -128,28 +128,37 @@ export function Login() {
           data-login-brand
           className="relative hidden overflow-hidden rounded-3xl bg-navy-900 shadow-2xl lg:block lg:w-[22rem] lg:shrink-0"
         >
-          <BrandImg src={BRAND_IMG.mobileCard} eager className="img-drift absolute inset-0 h-full w-full" />
+          {/*  포털 1차 고도화 — 천천히 다가오던 움직임(img-drift)을 뺐습니다.
+               로그인 화면에서 사진이 움직일 이유가 없습니다. */}
+          <BrandImg src={BRAND_IMG.mobileCard} eager className="absolute inset-0 h-full w-full" />
           <div
             aria-hidden="true"
             className="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-navy-950/30 to-navy-950/10"
           />
           <div className="relative flex h-full flex-col justify-end p-7 text-white">
-            <p className="t-body font-bold text-teal-300">㈜비원미래 · BUSINESS AX</p>
+            <p className="t-body font-bold text-teal-300">㈜비원미래</p>
             <p className="mt-1.5 break-keep text-[1.35rem] font-extrabold leading-tight">{SYSTEM_TAGLINE}</p>
           </div>
         </aside>
 
         <div className="min-w-0 flex-1">
-        {/* 브랜드 */}
+        {/*  브랜드 — 포털 1차 고도화.
+             이 화면을 가장 많이 보는 사람은 **병원 담당자**입니다. 예전에는
+             「운영관리 시스템」·「회사에서 발급받은 계정」이라고 적혀 있어
+             병원 쪽에서 보면 남의 회사 내부 화면처럼 읽혔습니다.
+             ⚠ 직원도 같은 화면으로 들어옵니다. 그래서 아래에 한 줄 적어 둡니다. */}
         <div className="mb-8 flex items-center gap-3.5">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-500 text-[1.62rem] font-extrabold text-white">
             비
           </span>
           <div className="min-w-0">
-            <p className="t-section break-keep text-white">㈜비원미래 운영관리 시스템</p>
-            <p className="t-body mt-1 break-keep font-medium text-navy-400">{SYSTEM_TAGLINE}</p>
+            <p className="t-body break-keep font-bold text-teal-300">㈜비원미래</p>
+            <p className="t-section break-keep text-white">병원 고객 포털</p>
           </div>
         </div>
+        <p data-login-tagline className="t-body -mt-4 mb-7 break-keep text-navy-200">
+          의료폐기물 수거 일정과 요청을 간편하게 관리하세요.
+        </p>
 
         <div className="rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
           {!configured ? (
@@ -190,8 +199,8 @@ export function Login() {
             <form onSubmit={onSubmit} className="space-y-5">
               <div>
                 <h1 className="t-section text-navy-900">로그인</h1>
-                <p className="t-body mt-1.5 font-medium text-navy-400">
-                  회사에서 발급받은 계정으로 로그인해 주세요.
+                <p className="t-body mt-1.5 break-keep font-medium text-navy-500">
+                  비원미래에서 안내받은 이메일과 비밀번호를 입력해 주세요.
                 </p>
               </div>
 
@@ -208,7 +217,7 @@ export function Login() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@beonemirae.co.kr"
+                    placeholder="이메일 주소"
                     className="field-input w-full pl-12"
                   />
                 </div>
@@ -277,10 +286,13 @@ export function Login() {
               </Link>
 
               <div className="flex items-start gap-2.5 border-t border-navy-100 pt-4">
-                <ShieldCheck size={19} className="mt-0.5 shrink-0 text-navy-400" />
+                <ShieldCheck size={19} className="mt-0.5 shrink-0 text-navy-500" />
+                {/*  ⚠ 예전 문구 「비밀번호는 시스템에 저장되지 않습니다」는 사실과
+                     달랐습니다 — 로그인 서버(Supabase Auth)가 **암호화(해시)해서**
+                     보관합니다. 사실대로 적습니다. */}
                 <p className="t-muted min-w-0 break-keep">
-                  가입 신청은 관리자가 승인해야 사용할 수 있습니다. 승인 전에는 어떤 정보도 열리지 않으며,
-                  비밀번호는 시스템에 저장되지 않습니다.
+                  병원마다 자기 병원 자료만 보입니다. 비밀번호는 암호화되어 보관되며 비원미래 직원도 알 수
+                  없습니다. 비원미래 직원도 이 화면에서 로그인합니다.
                 </p>
               </div>
             </form>

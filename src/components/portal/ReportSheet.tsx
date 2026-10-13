@@ -6,6 +6,8 @@ import { MonthlyReportView } from '../MonthlyReport'
 import { clientMonthlyReport } from '../../lib/insights'
 import { thisMonth, weight } from '../../lib/format'
 import { clientSchedules } from '../../lib/ops'
+import { portalInsights } from '../../lib/portalInsight'
+import { PortalInsightPanel } from '../PortalInsightPanel'
 import type { Client } from '../../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,6 +83,11 @@ export function ReportSheet({
     }
   }, [single, range, data, client.id])
 
+  //  포털 1차 고도화 — 홈에 있던 「배출 분석」을 이 창으로 옮겼습니다.
+  //  매일 보는 첫 화면이 아니라, 리포트를 펼쳤을 때 함께 읽는 것입니다.
+  //  ⚠ 규칙 기반 계산이고 AI 가 아닙니다(lib/portalInsight.ts) — 꼬리표 그대로.
+  const insight = useMemo(() => portalInsights(data, client), [data, client])
+
   return (
     <PortalSheet
       name="report"
@@ -146,6 +153,10 @@ export function ReportSheet({
           </div>
         </div>
       )}
+
+      <div className="mt-5">
+        <PortalInsightPanel result={insight} />
+      </div>
     </PortalSheet>
   )
 }

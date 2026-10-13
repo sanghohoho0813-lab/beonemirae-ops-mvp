@@ -3,7 +3,8 @@ import { CalendarDays, Send, Siren, Truck } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid, type ChoiceItem } from '../PortalSheet'
-import { toast } from '../PortalToast'
+import { useSheetDone } from './useSheetDone'
+import { SaveError } from './PortalUi'
 import { BRAND_IMG } from '../../lib/brandAssets'
 import { useSchemaAtLeast } from '../../lib/schemaGate'
 import {
@@ -11,6 +12,7 @@ import {
   amountAnchor, amountHint, amountKgOf, buildRequestContent, dayChoices, wasteChoicesFor,
   type AmountLevel,
 } from '../../lib/portalRequestDraft'
+import { prettyDate } from '../../lib/format'
 import type { Client } from '../../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,6 +60,8 @@ export function RequestSheet({
   const [error, setError] = useState<string | null>(null)
   //  한 번의 「보내기」에 하나. 실패해도 바뀌지 않습니다 (0055).
   const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  //  보낸 뒤 「접수되었습니다」 (포털 1차 고도화)
+  const { done, finish } = useSheetDone(open)
 
   const anchor = useMemo(() => amountAnchor(data, client), [data, client])
   const wasteOpts = useMemo(() => wasteChoicesFor(client), [client])
@@ -111,9 +115,15 @@ export function RequestSheet({
     setError(null)
 
     const picked = wasteOpts.filter((w) => wastes.includes(w.value))
-    const content = buildRequestContent({
-      reasons, wastes: picked, level, anchor, memo, urgent,
-    })
+    //  ⚠ 포털 1차 고도화 — 「가능한 가장 빠르게」를 고르셔도 **어디에도 안
+    //    남고 있었습니다**(날짜 칸은 일부러 비우는데, 글에도 안 들어갔습니다).
+    //    배차 담당이 읽는 글 맨 앞에 그대로 적습니다.
+    const content = [
+      day === 'asap' ? '희망 시점: 가능한 가장 빠르게' : '',
+      buildRequestContent({ reasons, wastes: picked, level, anchor, memo, urgent }),
+    ]
+      .filter(Boolean)
+      .join('\n')
 
     //  ⚠ 유형이 **한 가지일 때만** 칸에 저장합니다. 의료폐기물과 기저귀를
     //    같이 고르셨으면 어느 쪽으로 셀지 저희가 정할 일이 아닙니다 —
@@ -140,13 +150,24 @@ export function RequestSheet({
     if (!res.ok) {
       //  ⚠ 고르신 것을 **지우지 않습니다.** 다시 보내면 됩니다.
       //    requestId 도 그대로라 두 번 눌러도 요청은 하나입니다.
-      setError(res.error ?? '요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      //  ⚠ 아래 「다시 시도」의 문장은 늘 같습니다. 서버가 준 자세한 까닭은
+      //    그 아래 작게 붙입니다(전화로 여쭐 때 읽어 주실 수 있게).
+      setError(res.error ?? '')
       return
     }
+    //  ⚠ 무엇이 접수됐는지 **지우기 전에** 적어 둡니다.
+    const when =
+      day === 'asap' ? '가능한 가장 빠르게' : day ? (days.find((d) => d.value === day)?.label ?? prettyDate(day)) : null
+    finish({
+      lines: [
+        urgent ? '긴급수거 요청' : '추가수거 요청',
+        when ? `원하는 시점 · ${when}` : null,
+        reasons.length > 0 ? `요청 내용 · ${reasons.join(', ')}` : null,
+        memo.trim() ? `특이사항 · ${memo.trim()}` : null,
+      ].filter((x): x is string => !!x),
+    })
     setRequestId(crypto.randomUUID())
     reset()
-    onClose()
-    toast(urgent ? '긴급 수거 요청이 접수되었습니다.' : '수거 요청이 접수되었습니다.')
   }
 
   return (
@@ -155,7 +176,8 @@ export function RequestSheet({
       hero={urgent ? BRAND_IMG.serviceUrgent : BRAND_IMG.servicePickup}
       open={open}
       onClose={onClose}
-      title={urgent ? '긴급 수거 요청' : '수거 요청'}
+      done={done}
+      title={urgent ? '긴급수거 요청' : '추가수거 요청'}
       subtitle={
         <span className="flex flex-wrap items-center gap-1.5">
           {urgent ? (
@@ -163,7 +185,7 @@ export function RequestSheet({
           ) : (
             <Truck size={15} strokeWidth={2.5} className="shrink-0 text-teal-600" />
           )}
-          {client.name} · 고르기만 하시면 됩니다. 적으실 것은 없습니다.
+          {client.name} · {urgent ? '폐기물이 예상보다 빨리 찼을 때' : '정기 수거 외에 한 번 더 필요할 때'}
         </span>
       }
       footer={
@@ -190,31 +212,22 @@ export function RequestSheet({
             }`}
           >
             <Send size={18} strokeWidth={2.5} />
-            {busy ? '보내는 중…' : urgent ? '긴급 수거 요청하기' : '수거 요청하기'}
+            {busy ? '보내는 중…' : urgent ? '긴급수거 요청하기' : '추가수거 요청하기'}
           </button>
         </div>
       }
     >
-      {error && (
-        <div data-req-error className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
-          <p className="t-body break-keep font-bold text-rose-700">{error}</p>
-          <p className="t-muted mt-1 break-keep">
-            고르신 것은 그대로 있습니다. 통신 상태를 확인한 뒤 다시 보내 주세요.
-          </p>
-        </div>
+      {error != null && (
+        <SaveError
+          data="data-req-error"
+          detail={error}
+          kept="고르신 것은 그대로 있습니다."
+          busy={busy}
+          onRetry={() => void send()}
+        />
       )}
 
-      <SheetStep no={1} title={urgent ? '어떤 상황이신가요?' : '어떤 요청이신가요?'} hint="여러 개 고르셔도 됩니다">
-        <ChoiceGrid
-          name="reason"
-          multi
-          items={reasonItems}
-          value={reasons}
-          onPick={(v) => setReasons((p) => toggle(p, v))}
-        />
-      </SheetStep>
-
-      <SheetStep no={2} title="언제 방문이 필요하신가요?">
+      <SheetStep no={1} title="원하는 수거 시점">
         <ChoiceGrid name="day" items={dayItems} value={day} onPick={(v) => setDay(v === day ? '' : v)} />
         {/*  ⚠ 날짜를 직접 고르는 길도 남깁니다 — 「다음 주 화요일」 같은
              경우가 있습니다. 다만 **빠른 선택 아래**에 둡니다. */}
@@ -231,8 +244,41 @@ export function RequestSheet({
         </label>
       </SheetStep>
 
+      <SheetStep no={2} title="요청 내용" hint="여러 개 고르셔도 됩니다">
+        <ChoiceGrid
+          name="reason"
+          multi
+          items={reasonItems}
+          value={reasons}
+          onPick={(v) => setReasons((p) => toggle(p, v))}
+        />
+      </SheetStep>
+
+      <SheetStep
+        no={3}
+        title="특이사항"
+        hint="선택 — 안 적으셔도 됩니다"
+      >
+        <textarea
+          data-req-memo
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          rows={2}
+          aria-label="특이사항"
+          placeholder="예: 경비실에 연락 후 후문으로 들어와 주세요"
+          className="field-input min-h-[3.25rem] w-full resize-y"
+        />
+      </SheetStep>
+
+      {/*  ⚠ 여기부터는 **안 고르셔도 됩니다.** 배차 담당이 차를 고르는 데
+           도움이 되는 것들이라 아래로 내렸습니다. 급한 병원은 위 세 칸만
+           보고 보내시면 됩니다. */}
+      <p className="t-muted mb-4 mt-6 border-t border-navy-100 pt-4 break-keep">
+        아래는 선택입니다. 알려 주시면 맞는 차량을 보내는 데 도움이 됩니다.
+      </p>
+
       {wasteItems.length > 0 && (
-        <SheetStep no={3} title="어떤 폐기물인가요?" hint="여러 개 고르셔도 됩니다">
+        <SheetStep no={4} title="폐기물 종류" hint="선택 — 여러 개 고르셔도 됩니다">
           <ChoiceGrid
             name="waste"
             multi
@@ -244,12 +290,12 @@ export function RequestSheet({
       )}
 
       <SheetStep
-        no={wasteItems.length > 0 ? 4 : 3}
+        no={wasteItems.length > 0 ? 5 : 4}
         title="예상 배출량"
         hint={
           anchor.usual != null
-            ? `최근 ${anchor.from}회 평균 ${anchor.usual}kg 기준입니다`
-            : '기록이 아직 적어 kg 으로는 환산하지 않습니다'
+            ? `선택 — 최근 ${anchor.from}회 평균 ${anchor.usual}kg 기준입니다`
+            : '선택 — 기록이 아직 적어 kg 으로는 환산하지 않습니다'
         }
       >
         <ChoiceGrid
@@ -266,20 +312,6 @@ export function RequestSheet({
         <p data-amount-note className="t-muted mt-2 break-keep leading-snug">
           어림잡은 값이면 됩니다. 차를 고르는 데만 씁니다 — 청구는 실제 수거량으로 합니다.
         </p>
-      </SheetStep>
-
-      <SheetStep
-        no={wasteItems.length > 0 ? 5 : 4}
-        title="더 알려 주실 것이 있으신가요?"
-        hint="선택 — 안 적으셔도 됩니다"
-      >
-        <input
-          data-req-memo
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-          placeholder="예: 경비실에 연락 후 후문으로 들어와 주세요"
-          className="field-input min-h-[3.25rem] w-full"
-        />
       </SheetStep>
     </PortalSheet>
   )

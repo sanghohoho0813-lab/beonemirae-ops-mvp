@@ -197,7 +197,7 @@ export function portalTodos(
       key: 'owed',
       tone: 'warn',
       title: '납부하지 않은 청구가 있습니다',
-      detail: `${won(owed)} — 자세한 내역은 정산 현황에서 보실 수 있습니다`,
+      detail: `${won(owed)} — 자세한 내역은 「정산·증빙」에서 보실 수 있습니다`,
       sheet: 'billing',
     })
   }

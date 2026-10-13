@@ -9,9 +9,10 @@ import * as W from './walk_lib.mjs'
 //  **과하지 않은지**(시간·크기), 그리고 **움직임 줄이기 설정을 지키는지**를
 //  잽니다. 움직임은 넣기는 쉽고 끄는 것을 잊기가 쉽습니다.
 //
-//   ① 병원 머리 사진이 아주 천천히(28초) 다가온다 — 줄이기 설정에서는 멈춘다
-//   ② 여덟 장 카드가 차례로 떠오르고, 0.9초 안에 다 떠 있다
-//   ③ 카드에 올리면 위 선·아이콘·화살표가 200ms 안에 살짝 움직인다
+//   ① (포털 1차 고도화) 병원 홈에는 **계속 움직이는 사진이 없다** — 대표님
+//      브리프 「의미 없는 애니메이션 X」. 예전 28초 드리프트를 뺐습니다.
+//   ② 「최근 요청 · 최근 수거」 두 칸이 차례로 떠오르고, 0.9초 안에 다 떠 있다
+//   ③ 큰 단추에 올리면 바탕·아이콘·화살표가 200ms 안에 살짝 움직인다
 //   ④ 위 탭·왼쪽 메뉴의 강조선이 **하나만** 있고, 다른 곳을 누르면 그리로 간다
 //   ⑤ 상품 카드에 올리면 사진이 살짝 다가온다
 //   ⑥ Esc 는 **맨 위 창 하나만** 닫는다 (내부 창도 이제 Esc 로 닫힌다)
@@ -20,7 +21,11 @@ import * as W from './walk_lib.mjs'
 
 let pass = 0
 let fail = 0
-const ok = (name, cond, detail = '') => {
+//  ⚠ 포털 1차 고도화 — 이 자리의 인자 순서가 **부르는 쪽과 반대**였습니다
+//    (정의 name, cond / 호출 cond, name). 그래서 조건 자리에 늘 글자(참)가
+//    들어가 이 스위트는 **무엇을 재든 통과**했습니다(출력이 「OK | false」).
+//    부르는 쪽(cond, name) 에 맞춥니다.
+const ok = (cond, name, detail = '') => {
   if (cond) pass += 1
   else fail += 1
   console.log(`${cond ? ' OK ' : 'FAIL'} | ${name}${detail && !cond ? ` — ${detail}` : ''}`)
@@ -52,48 +57,45 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
 {
   const { ctx, p } = await open('client', 1440, '/portal')
 
-  //  ① 머리 사진 드리프트
+  //  ① 계속 움직이는 사진이 없다
   const drift = await p.evaluate(() => {
-    const img = document.querySelector('[data-portal-hero] img.img-drift')
-    if (!img) return null
-    const a = img.getAnimations()
-    return { n: a.length, running: a.filter((x) => x.playState === 'running').length,
-      dur: a[0]?.effect?.getTiming?.().duration ?? 0, visible: img.getBoundingClientRect().width > 0 }
+    const imgs = [...document.querySelectorAll('main img')]
+    return imgs.filter((img) => img.getAnimations().some((a) => a.playState === 'running' && (a.effect?.getTiming?.().duration ?? 0) > 2000)).length
   })
-  ok(drift?.visible === true, '① 머리 사진이 PC 에서 보인다')
-  ok((drift?.running ?? 0) >= 1, '① 머리 사진이 천천히 움직이고 있다', JSON.stringify(drift))
-  ok((drift?.dur ?? 0) >= 20000, '① 아주 천천히 — 한 번에 20초 이상', `${drift?.dur}ms`)
+  ok(drift === 0, '① 홈에 계속 움직이는 사진이 없다 (의미 없는 움직임 금지)', `${drift}장`)
+  ok((await p.locator('[data-portal-hero] img').count()) === 0, '① 머리 칸에 장식 사진이 없다')
 
   //  ② 차례로 떠오른 뒤 0.9초 안에 전부 보인다
   await p.waitForTimeout(900)
-  const faded = await p.evaluate(() => [...document.querySelectorAll('[data-portal-actions] > div')]
+  const faded = await p.evaluate(() => [...document.querySelectorAll('[data-portal-cards] > div')]
     .filter((el) => Number(getComputedStyle(el).opacity) < 0.99).length)
-  const wrappers = await p.locator('[data-portal-actions] > div[style]').count()
-  ok(wrappers === 8, '② 여덟 장이 차례로 떠오르는 틀 안에 있다', `${wrappers}개`)
-  ok(faded === 0, '② 0.9초 안에 여덟 장이 전부 떠 있다', `${faded}개 아직 흐림`)
-  const heights = await p.evaluate(() => [...document.querySelectorAll('[data-portal-action]')].slice(0, 4)
+  const wrappers = await p.locator('[data-portal-cards] > div[style]').count()
+  ok(wrappers === 2, '② 두 칸이 차례로 떠오르는 틀 안에 있다', `${wrappers}개`)
+  ok(faded === 0, '② 0.9초 안에 두 칸이 전부 떠 있다', `${faded}개 아직 흐림`)
+  const heights = await p.evaluate(() => [...document.querySelectorAll('[data-card-tone]')]
     .map((el) => Math.round(el.getBoundingClientRect().height)))
-  ok(new Set(heights).size === 1, '② 한 줄의 카드 높이가 같다 (틀로 감싸도 줄이 안 흐트러짐)', heights.join('·'))
+  ok(heights.length === 2 && new Set(heights).size === 1, '② 큰 단추 둘의 높이가 같다', heights.join('·'))
 
   //  ③ 올리면 살짝 움직인다 — 200ms 안
   const card = '[data-portal-action]'
+  const bgOf = () => p.evaluate((s) => getComputedStyle(document.querySelector(s)).backgroundColor, card)
   await p.mouse.move(2, 2)
   await p.waitForTimeout(250)
   const before = {
     card: await tf(p, card), icon: await tf(p, `${card} [data-action-icon]`), arrow: await tf(p, `${card} [data-action-arrow]`),
-    line: await p.evaluate(() => document.querySelector('[data-portal-action] > span')?.getBoundingClientRect().height),
+    bg: await bgOf(),
   }
   const box = await p.locator(card).first().boundingBox()
   await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await p.waitForTimeout(320)
   const after = {
     card: await tf(p, card), icon: await tf(p, `${card} [data-action-icon]`), arrow: await tf(p, `${card} [data-action-arrow]`),
-    line: await p.evaluate(() => document.querySelector('[data-portal-action] > span')?.getBoundingClientRect().height),
+    bg: await bgOf(),
   }
-  ok(before.card !== after.card, '③ 올리면 카드가 뜬다')
+  ok(before.card !== after.card, '③ 올리면 단추가 살짝 뜬다')
   ok(before.icon !== after.icon, '③ 아이콘이 살짝 커진다', `${before.icon} → ${after.icon}`)
   ok(before.arrow !== after.arrow, '③ 화살표가 오른쪽으로 한 걸음 간다', `${before.arrow} → ${after.arrow}`)
-  ok((after.line ?? 0) > (before.line ?? 0), '③ 위 선이 조금 두꺼워진다', `${before.line} → ${after.line}`)
+  ok(before.bg !== after.bg, '③ 바탕이 옅게 물든다', `${before.bg} → ${after.bg}`)
   //  과하지 않은가 — 아이콘은 1.1배 미만, 화살표는 8px 미만
   const scale = Number((after.icon ?? '').match(/matrix\(([\d.]+)/)?.[1] ?? 1)
   const dx = Number((after.arrow ?? '').match(/matrix\([^)]*,\s*([-\d.]+),\s*[-\d.]+\)$/)?.[1] ?? 0)
@@ -164,14 +166,12 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
 // ── 움직임 줄이기 설정 — 전부 멈춘다 ───────────────────────────────────────
 {
   const { ctx, p } = await open('client', 1440, '/portal', { reduced: true })
-  const d = await p.evaluate(() => {
-    const img = document.querySelector('[data-portal-hero] img.img-drift')
-    return img ? img.getAnimations().filter((a) => a.playState === 'running' && (a.effect?.getTiming?.().duration ?? 0) > 50).length : -1
-  })
-  ok(d === 0, '줄이기 설정 — 머리 사진이 움직이지 않는다', `${d}`)
-  const faded = await p.evaluate(() => [...document.querySelectorAll('[data-portal-actions] > div')]
+  const d = await p.evaluate(() => [...document.querySelectorAll('main img')]
+    .filter((img) => img.getAnimations().some((a) => a.playState === 'running' && (a.effect?.getTiming?.().duration ?? 0) > 50)).length)
+  ok(d === 0, '줄이기 설정 — 움직이는 사진이 없다', `${d}`)
+  const faded = await p.evaluate(() => [...document.querySelectorAll('[data-portal-cards] > div')]
     .filter((el) => Number(getComputedStyle(el).opacity) < 0.99).length)
-  ok(faded === 0, '줄이기 설정 — 카드가 기다림 없이 바로 보인다', `${faded}개 흐림`)
+  ok(faded === 0, '줄이기 설정 — 칸이 기다림 없이 바로 보인다', `${faded}개 흐림`)
   await ctx.close()
 }
 
@@ -182,7 +182,9 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
   await p.locator('main [data-dev-request-open]').first().click()
   await p.locator('[role="dialog"]').first().waitFor({ state: 'visible', timeout: 5000 })
   await p.keyboard.press('Escape')
-  await p.waitForTimeout(500)
+  //  ⚠ 포털 1차 고도화(검사 바로잡기) — 닫히는 움직임이 0.8초쯤 걸립니다. 0.5초
+  //    고정으로 재면 「안 닫혔다」로 잘못 읽습니다. 사라질 때까지 기다립니다.
+  await p.locator('[role="dialog"]').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {})
   ok((await p.locator('[role="dialog"]').count()) === 0, '⑥ 내부 창이 Esc 로 닫힌다 (P2 였던 것)')
   await ctx.close()
 }
@@ -192,6 +194,14 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
   const { ctx, p } = await open('admin', 390, '/')
   await p.getByRole('button', { name: '더보기' }).first().click()
   await p.locator('[data-dev-request-more]').first().waitFor({ state: 'visible', timeout: 5000 })
+  //  ⚠ 0110 부터 「추가 개발 예정」이 든 묶음은 **접혀** 있습니다. 펴고 찾습니다.
+  if ((await p.locator('[data-more-planned-item]').count()) === 0) {
+    const toggles = p.locator('[data-more-toggle][aria-expanded="false"]')
+    for (let i = (await toggles.count()) - 1; i >= 0; i -= 1) {
+      await toggles.nth(i).click()
+      if ((await p.locator('[data-more-planned-item]').count()) > 0) break
+    }
+  }
   const planned = p.locator('[data-more-planned-item]').first()
   if ((await planned.count()) === 0) {
     ok(false, '⑥ 관리자 더보기에 「계획 중」 항목이 있다', '없음')
@@ -200,11 +210,11 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
     await planned.click()
     await p.locator('[data-planned-preview]').first().waitFor({ state: 'visible', timeout: 5000 })
     await p.keyboard.press('Escape')
-    await p.waitForTimeout(500)
+    await p.locator('[data-planned-preview]').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {})
     ok((await p.locator('[data-planned-preview]').count()) === 0, '⑥ Esc 한 번 — 위의 미리보기만 닫힌다')
     ok(await p.locator('[data-dev-request-more]').first().isVisible(), '⑥ 아래 더보기 시트는 그대로 남아 있다')
     await p.keyboard.press('Escape')
-    await p.waitForTimeout(500)
+    await p.locator('[data-dev-request-more]').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
     ok(!(await p.locator('[data-dev-request-more]').first().isVisible().catch(() => false)), '⑥ Esc 한 번 더 — 그제야 시트가 닫힌다')
   }
   await ctx.close()

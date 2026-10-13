@@ -1,26 +1,21 @@
 {
-  "name": "비원미래 운영관리",
+  "id": "/",
+  "name": "비원미래 고객 포털",
   "short_name": "비원미래",
-  "description": "㈜비원미래 의료폐기물 수거·운반 통합 운영관리 MVP",
+  "description": "의료폐기물 수거 일정과 요청을 간편하게 관리하는 ㈜비원미래 병원 고객 포털",
   "lang": "ko",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0f1a2e",
-  "background_color": "#eef2f7",
+  "background_color": "#0f1a2e",
+  "categories": ["business", "medical"],
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-maskable.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

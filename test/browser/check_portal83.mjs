@@ -91,7 +91,12 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
   const { ctx, p } = await open('/portal')
   ok((await p.locator('[data-portal-hero]').count()) === 1, '**병원 이름이 있는 머리 칸이 뜬다**')
   const hero = flat(await p.locator('[data-portal-hero]').innerText())
-  ok(/남양주백병원님, 환영합니다/.test(hero), '병원 이름으로 맞이한다', hero.slice(0, 40))
+  //  포털 1차 고도화 — 「…님, 환영합니다」 인사 대신 **병원 이름 + 다음 수거**.
+  //  대표님 브리프: 「상단에는 병원명과 현재 상태를 보여준다 · 회사 소개 문구를
+  //  넣지 않는다」. 이름은 머리띠에 보이고, 머리 칸 제목(h1)으로도 읽힙니다.
+  const h1 = flat(await p.locator('[data-portal-hero] h1').innerText().catch(() => ''))
+  const headName = flat(await p.locator('header p').first().innerText())
+  ok(h1.includes('남양주백병원') && headName.includes('남양주백병원'), '어느 병원인지 첫 줄에 있다 (머리띠 · 제목)', `${headName} / ${h1}`)
 
   //  ⚠ 제일 중요합니다 — 시안에 있던 **지어낸 숫자**가 들어가지 않았는지.
   ok(!/BWM-\d|무사고|\d+일째/.test(hero), '**지어낸 기관코드·무사고일수가 없다**', hero.slice(0, 90))
@@ -107,8 +112,11 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
 // ── ② 번호 카드가 실제로 눌리는가 ──────────────────────────────────────────
 {
   const { ctx, p } = await open('/portal')
-  const n = await p.locator('[data-portal-action]').count()
-  ok(n === 8, '**번호 카드 8개가 있다** (시안 배치)', `${n}개`)
+  //  포털 1차 고도화 — 같은 크기 카드 여덟 장 → **큰 단추 둘**(긴급수거 ·
+  //  자재·용기) + 작은 단추 둘(추가수거 · 문의). 이력·정산·증빙은 아래 메뉴로.
+  const labels = await p.locator('[data-portal-action]').evaluateAll((els) => els.map((e) => e.getAttribute('data-portal-action')))
+  ok(['긴급수거 요청', '자재·용기 요청', '추가수거 요청', '문의하기'].every((x) => labels.includes(x)),
+    '**요청 단추 넷이 있다** (긴급수거 · 자재·용기 · 추가수거 · 문의)', labels.join(', '))
   //  ⚠ 눌러도 아무 데도 안 가는 칸이 있으면 안 됩니다.
   const dead = await p.locator('[data-portal-action]').evaluateAll((els) =>
     els.filter((e) => e.tagName === 'A' && !e.getAttribute('href')).map((e) => e.getAttribute('data-portal-action')))
@@ -186,8 +194,11 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
   //    없어졌고, 아래 띠도 같은 셋을 씁니다.
   //    ⚠ 넷을 넘으면 안 되는 이유는 그대로입니다 — 여섯이면 한 칸이 65px 이
   //      되어 글자가 세로로 늘어집니다.
+  //  ⚠ 포털 1차 고도화 — 셋에서 **다섯**으로(요청 내역 · 정산·증빙 추가,
+  //    「이용 내역」→「수거 이력」). 여섯이면 글자가 세로로 늘어지던 문제는
+  //    아래 「세로 글자 없음」 검사와 check_scale · check_ux390 이 계속 잽니다.
   const tabs = await p.locator('nav.fixed.bottom-0 a').count()
-  ok(tabs === 3, '폰 아래 띠는 셋', `${tabs}개`)
+  ok(tabs === 5, '폰 아래 띠는 다섯', `${tabs}개`)
   const tabText = (await p.locator('nav.fixed.bottom-0 a').allInnerTexts()).map((x) => x.replace(/\s+/g, ''))
   ok(tabText.some((x) => x.includes('홈')), '아래 띠에 홈이 있다', tabText.join(','))
   const tiny = await p.evaluate(() => {

@@ -78,12 +78,14 @@ if (!WRITE) {
   //  ⚠ 실서버는 중계를 거쳐 느립니다. 정해진 시간만 기다렸다가 글자를
   //    훑으면 **아직 안 뜬 것을 「안 뜬다」로** 적게 됩니다. 띠가 뜰
   //    때까지 기다립니다 — 안 뜨면 그때 실패입니다.
-  const shown = await p.waitForSelector('[data-toast]', { timeout: 30000 }).then(() => true, () => false)
-  ok(shown, '**접수되었다고 화면이 말해 줌**', shown ? flat(await p.textContent('[data-toast]')).slice(0, 60) : '안 뜸')
+  //  포털 1차 고도화 — 토스트 대신 창 안에 「요청이 접수되었습니다」.
+  const shown = await p.waitForSelector('[data-sheet-done]', { timeout: 30000 }).then(() => true, () => false)
+  ok(shown, '**접수되었다고 화면이 말해 줌**', shown ? flat(await p.textContent('[data-sheet-done]')).slice(0, 60) : '안 뜸')
 
   console.log('── 4. 요청 상태 확인 ──')
-  await p.goto(`${BASE}/portal`, { waitUntil: 'domcontentloaded' })
-  await p.waitForFunction(() => /내 요청 진행 상태/.test(document.querySelector('main')?.textContent ?? ''), { timeout: 45000 }).catch(() => {})
+  //  포털 1차 고도화 — 보낸 요청의 진행 상태는 「요청 내역」에 모입니다.
+  await p.goto(`${BASE}/portal/requests`, { waitUntil: 'domcontentloaded' })
+  await p.waitForFunction(() => /요청 내역/.test(document.querySelector('main')?.textContent ?? ''), { timeout: 45000 }).catch(() => {})
   await p.waitForTimeout(1500)
   const t3 = flat(await p.textContent('main'))
   ok(/실증검증/.test(t3), '**보낸 요청이 목록에 보임**', (t3.match(/\[실증검증\][^·]{0,40}/) ?? [''])[0])

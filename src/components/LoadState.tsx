@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2, RotateCw } from 'lucide-react'
 import { useData } from '../context/DataContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,17 +56,20 @@ export function LoadingState({
         <Loader2 size={26} strokeWidth={2.2} className="animate-spin" />
       </span>
       <p className="t-card mt-3.5 break-keep text-navy-700">{title}</p>
-      <p className="t-body mt-1.5 max-w-md break-keep text-navy-400">{subtitle}</p>
+      <p className="t-body mt-1.5 max-w-md break-keep text-navy-500">{subtitle}</p>
     </div>
   )
 }
 
 /** 첫 읽기가 실패했습니다 — 위쪽 빨간 띠의 「다시 시도」로 안내합니다. */
 export function LoadFailedState({
-  subtitle = '화면 위의 「다시 시도」를 눌러 주세요. 계속 안 되면 잠시 후 다시 열어 주세요.',
+  subtitle = '인터넷 연결을 확인한 뒤 「다시 시도」를 눌러 주세요. 계속 안 되면 잠시 후 다시 열어 주세요.',
 }: {
   subtitle?: string
 }) {
+  //  포털 1차 고도화 — 「화면 위의 다시 시도」를 찾으러 올라가지 않게, 이 칸
+  //  안에도 같은 단추를 둡니다(위 띠와 같은 일을 합니다).
+  const { retry } = useData()
   return (
     <div
       data-load-state="failed"
@@ -76,7 +79,15 @@ export function LoadFailedState({
         <AlertTriangle size={26} strokeWidth={2.2} />
       </span>
       <p className="t-card mt-3.5 break-keep text-navy-700">자료를 불러오지 못했습니다</p>
-      <p className="t-body mt-1.5 max-w-md break-keep text-navy-400">{subtitle}</p>
+      <p className="t-body mt-1.5 max-w-md break-keep text-navy-500">{subtitle}</p>
+      <button
+        type="button"
+        data-load-retry
+        onClick={() => void retry()}
+        className="mt-4 inline-flex min-h-[2.75rem] items-center gap-2 rounded-2xl bg-navy-900 px-5 text-[1.05rem] font-extrabold text-white transition hover:bg-navy-800"
+      >
+        <RotateCw size={18} strokeWidth={2.5} aria-hidden="true" /> 다시 시도
+      </button>
     </div>
   )
 }

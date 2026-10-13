@@ -3,7 +3,9 @@ import { Minus, Package, Plus, Send, Truck } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid } from '../PortalSheet'
-import { toast } from '../PortalToast'
+import { useSheetDone } from './useSheetDone'
+import { SaveError } from './PortalUi'
+import { portalStatusLabel } from '../../lib/portalLabels'
 import { BRAND_IMG, productImageOf } from '../../lib/brandAssets'
 import { won, prettyDate } from '../../lib/format'
 import { supplyChoicesFor, buildSupplyContent } from '../../lib/portalSupply'
@@ -43,6 +45,12 @@ import type { Client } from '../../types'
 // ─────────────────────────────────────────────────────────────────────────────
 
 const QUICK = [5, 10, 20, 30]
+
+//  ⚠ 포털 1차 고도화 — 「언제 필요하신가요」. 예전에는 묻지 않고 늘 「다음
+//    방문 때」로 보냈습니다. 그런데 용기가 **지금** 모자란 병원은 그 다음
+//    방문까지 기다릴 수 없어서 결국 전화를 겁니다. 고르지 않으면 예전과 같이
+//    다음 방문 때 함께 갑니다.
+type Need = '' | 'next' | 'soon'
 
 const WHY = [
   { value: '정기 보충', label: '정기 보충' },
@@ -121,6 +129,8 @@ export function SupplySheet({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const [need, setNeed] = useState<Need>('')
+  const { done, finish } = useSheetDone(open)
 
   const picked = Object.entries(qty).filter(([, n]) => n > 0)
   const pickedSpecs = Object.entries(specQty)
@@ -153,8 +163,16 @@ export function SupplySheet({
       const res = await addRequest({
         clientId: client.id,
         kind: '소모품',
-        content: buildSupplyContent(pickedSpecs, why, note),
-        desiredDate: nextVisit?.date ?? null,
+        content: buildSupplyContent(
+          pickedSpecs,
+          [need === 'soon' ? '다음 방문 전에 필요' : need === 'next' ? '다음 수거 때 함께' : '', why]
+            .filter(Boolean)
+            .join(' · '),
+          note,
+        ),
+        //  ⚠ 「그 전에 필요」면 희망일을 다음 방문일로 적지 않습니다 —
+        //    그 날짜가 「그때 와도 된다」로 읽힙니다.
+        desiredDate: need === 'soon' ? null : (nextVisit?.date ?? null),
         urgent: false,
         source: 'portal',
         requesterName: profile?.name ?? '병원 담당자',
@@ -163,7 +181,7 @@ export function SupplySheet({
       if (!res.ok) {
         setBusy(false)
         //  ⚠ 고르신 것을 **지우지 않습니다.** 다시 보내면 됩니다.
-        setError(res.error ?? '요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        setError(res.error || '요청을 보내지 못했습니다.')
         return
       }
     }
@@ -183,19 +201,34 @@ export function SupplySheet({
       })
       if (!res.ok) {
         setBusy(false)
-        setError(res.error ?? '주문을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        setError(res.error || '주문을 보내지 못했습니다.')
         return
       }
     }
 
     setBusy(false)
+    //  ⚠ 무엇이 접수됐는지 **지우기 전에** 적어 둡니다.
+    finish({
+      lines: [
+        '자재·용기 요청',
+        ...pickedSpecs.map((x) => `${x.label} ${x.qty}${x.unit}`),
+        ...picked.map(([id, n]) => {
+          const pr = products.find((x) => x.id === id)
+          return `${pr?.name ?? '구매 품목'} ${n}${pr?.unit || '개'}`
+        }),
+        need === 'soon'
+          ? '필요한 시점 · 다음 방문 전에 필요'
+          : nextVisit
+            ? `필요한 시점 · 다음 수거 때 함께 (${prettyDate(nextVisit.date)})`
+            : '필요한 시점 · 다음 방문 일정이 잡히면 함께',
+      ],
+    })
     setRequestId(crypto.randomUUID())
     setQty({})
     setSpecQty({})
     setWhy('')
     setNote('')
-    onClose()
-    toast('용기·봉투 요청이 접수되었습니다.')
+    setNeed('')
   }
 
   return (
@@ -204,7 +237,8 @@ export function SupplySheet({
       hero={BRAND_IMG.serviceSupply}
       open={open}
       onClose={onClose}
-      title="용기 · 봉투 주문"
+      done={done}
+      title="자재·용기 요청"
       subtitle={
         //  ⚠ 어느 병원 것인지 **창 안에도** 적습니다. 대표님: 「병원 포털
         //    모든 화면에서 현재 어떤 병원의 데이터인지 확인 가능하게 한다」.
@@ -213,7 +247,7 @@ export function SupplySheet({
           <Truck size={15} strokeWidth={2.5} className="shrink-0 text-teal-600" />
           {client.name} ·{' '}
           {nextVisit
-            ? `다음 방문(${nextVisit.date}) 때 함께 가져다 드립니다 — 배송비가 따로 들지 않습니다.`
+            ? `다음 수거(${prettyDate(nextVisit.date)}) 때 함께 가져다 드립니다 — 배송비가 따로 들지 않습니다.`
             : '아직 다음 방문 일정이 잡히지 않았습니다 — 일정이 정해지면 그때 함께 가져다 드립니다.'}
         </span>
       }
@@ -245,15 +279,19 @@ export function SupplySheet({
             className="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-2xl bg-navy-900 px-5 text-[1.08rem] font-extrabold text-white transition hover:bg-navy-800 disabled:opacity-40"
           >
             <Send size={18} strokeWidth={2.5} />
-            {busy ? '보내는 중…' : '주문하기'}
+            {busy ? '보내는 중…' : '요청하기'}
           </button>
         </div>
       }
     >
       {error && (
-        <div data-supply-error className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
-          <p className="t-body break-keep font-bold text-rose-700">{error}</p>
-        </div>
+        <SaveError
+          data="data-supply-error"
+          detail={error}
+          kept="고르신 수량은 그대로 있습니다."
+          busy={busy}
+          onRetry={() => void send()}
+        />
       )}
 
       {/*  ── ① 정기 공급 용기·봉투 (0092) ────────────────────────────────
@@ -261,7 +299,7 @@ export function SupplySheet({
            입력할 때 쓰는 것과 **같은 목록**입니다.
            ⚠ 받아 보신 것을 위로 올립니다. 그렇다고 나머지를 숨기지는
              않습니다 — 처음 필요해진 규격을 주문할 길이 없어집니다. */}
-      <SheetStep no={1} title="어떤 용기가 필요하신가요?" hint="＋ 를 누르거나 빠른 수량을 고르세요">
+      <SheetStep no={1} title="필요한 품목과 수량" hint="＋ 를 누르거나 빠른 수량을 고르세요">
         {specs.length === 0 ? (
           <p data-supply-empty className="t-body break-keep rounded-2xl bg-navy-50 px-5 py-5 leading-snug text-navy-500">
             이 병원에 등록된 수거 품목이 없어 용기 목록을 만들 수 없습니다. 상담센터로 말씀해 주시면
@@ -444,7 +482,23 @@ export function SupplySheet({
         </SheetStep>
       )}
 
-      <SheetStep no={products.length > 0 ? 3 : 2} title="어떤 이유이신가요?" hint="선택 — 안 고르셔도 됩니다">
+      <SheetStep no={products.length > 0 ? 3 : 2} title="언제 필요하신가요?" hint="선택 — 안 고르시면 다음 수거 때 함께 갑니다">
+        <ChoiceGrid
+          name="need"
+          items={[
+            {
+              value: 'next',
+              label: '다음 수거 때 함께',
+              note: nextVisit ? `${prettyDate(nextVisit.date)} 방문 예정` : '방문 일정이 잡히면 함께',
+            },
+            { value: 'soon', label: '그 전에 필요합니다', note: '확인 후 따로 연락드립니다' },
+          ]}
+          value={need}
+          onPick={(v) => setNeed(v === need ? '' : (v as Need))}
+        />
+      </SheetStep>
+
+      <SheetStep no={products.length > 0 ? 4 : 3} title="어떤 이유이신가요?" hint="선택 — 안 고르셔도 됩니다">
         <ChoiceGrid name="why" items={WHY} value={why} onPick={(v) => setWhy(v === why ? '' : v)} />
         <input
           data-supply-note
@@ -480,7 +534,7 @@ export function SupplySheet({
                           : 'bg-amber-50 text-amber-700'
                     }`}
                   >
-                    {r.status}
+                    {portalStatusLabel(r.status)}
                   </span>
                 </div>
                 <p className="t-body mt-1 whitespace-pre-line break-keep leading-snug text-navy-800">

@@ -55,7 +55,9 @@ export const PORTAL_PREVIEW_PREFIX = `${PORTAL_PREFIX}/c`
 export const PORTAL_SELECT_PATH = `${PORTAL_PREFIX}/select`
 
 /** 포털 안의 화면들 — 빈 문자열이 첫 화면입니다 */
-export const PORTAL_PAGES = ['', 'supplies', 'report', 'history', 'billing', 'support'] as const
+//  ⚠ 포털 1차 고도화 — 「요청 내역」(requests)을 더했습니다. 보낸 요청이
+//    지금 어디까지 왔는지 모아 보는 자리가 홈의 다섯 줄뿐이었습니다.
+export const PORTAL_PAGES = ['', 'requests', 'supplies', 'report', 'history', 'billing', 'support'] as const
 export type PortalPage = (typeof PORTAL_PAGES)[number]
 
 /**

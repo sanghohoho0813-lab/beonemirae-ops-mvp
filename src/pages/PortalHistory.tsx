@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { CLIENT_TEL } from '../lib/brand'
-import { Hospital, ClipboardList, Search } from 'lucide-react'
+import { CalendarClock, FileBarChart, Hospital, ClipboardList, Search } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
-import { collectionHistory } from '../lib/ops'
+import { clientSchedules, collectionHistory } from '../lib/ops'
+import { isPending } from '../lib/scheduleLive'
+import { usePortalSheet } from '../lib/portalSheet'
+import { timeBand } from '../lib/portalLabels'
 import { prettyDate, weight, today } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,7 +35,18 @@ export function PortalHistory() {
 
   //  ⚠ 한도를 크게 잡습니다. 인증·실사는 **연 단위**로 묻습니다.
   //    주 2회 × 5년 = 520건 정도이므로 이 정도면 잘리지 않습니다.
+  const { open } = usePortalSheet()
   const rows = useMemo(() => (client ? collectionHistory(data, client.id, 2000) : []), [data, client])
+  //  포털 1차 고도화 — 「앞으로 언제 오나」도 같은 화면에서. **등록된 일정만**
+  //  적습니다(수거주기로 계산한 예상은 홈 첫 칸이 「예상」이라고 달고 말합니다).
+  const upcoming = useMemo(() => {
+    if (!client) return []
+    const t = today()
+    return clientSchedules(data, client.id)
+      .filter((x) => x.date >= t && isPending(x))
+      .sort((a, b) => (a.date + a.scheduledTime).localeCompare(b.date + b.scheduledTime))
+      .slice(0, 3)
+  }, [data, client])
   const all = useMemo(() => rows.filter((r) => r.amountKg != null), [rows])
 
   //  ── 고를 수 있는 기간 — **기록이 있는 해만** ──────────────────────────
@@ -85,12 +99,46 @@ export function PortalHistory() {
 
   return (
     <PageShell>
-      <div>
-        <h1 className="t-page text-navy-900">수거 이력</h1>
-        <p className="t-body mt-2.5 break-keep font-medium text-navy-400">
-          {client.name} · 인증·실사 자료로 그대로 쓰실 수 있습니다
-        </p>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="t-page text-navy-900">수거 이력</h1>
+          <p className="t-body mt-2.5 break-keep text-navy-500">
+            {client.name} · 인증·실사 자료로 그대로 쓰실 수 있습니다
+          </p>
+        </div>
+        {/*  ⚠ 폰에서는 목록 **아래**에 둡니다 — 여기 두면 첫 수거 기록이
+             첫 화면 밖으로 밀립니다(check_portal86 ⑧). */}
+        <button
+          type="button"
+          data-hist-report
+          onClick={() => open('report')}
+          className="hidden min-h-[3rem] shrink-0 items-center gap-2 rounded-2xl bg-white px-4 text-[1.05rem] font-bold text-navy-800 ring-1 ring-navy-200 transition hover:bg-navy-50 sm:flex"
+        >
+          <FileBarChart size={19} strokeWidth={2.3} aria-hidden="true" /> 월간 배출 리포트
+        </button>
       </div>
+
+      {/*  ── 예정된 수거 ── 있을 때만. 없으면 칸을 안 만듭니다. */}
+      {upcoming.length > 0 && (
+        <section data-hist-upcoming className="card overflow-hidden">
+          <div className="flex items-center gap-3 border-b border-navy-50 px-5 py-3.5">
+            <CalendarClock size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-navy-500" />
+            <h2 className="t-body font-extrabold text-navy-900">예정된 수거</h2>
+          </div>
+          <ul className="divide-y divide-navy-50">
+            {/*  ⚠ 폰에서는 가장 가까운 하나만 — 첫 수거 기록이 밀리지 않게. */}
+            {upcoming.map((x, i) => (
+              <li key={x.id} className={`${i > 0 ? 'hidden sm:flex' : 'flex'} flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3`}>
+                <b className="t-body break-keep text-navy-900">
+                  {prettyDate(x.date)}
+                  {timeBand(x.scheduledTime) && <span className="ml-1.5 font-bold">{timeBand(x.scheduledTime)}</span>}
+                </b>
+                <span className="pill ml-auto bg-teal-50 text-teal-800 ring-1 ring-teal-200">일정 확정</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/*  ── 기간 · 구분 · 찾기 (0086) ────────────────────────────────────────
            ⚠ 「전체」를 기본값으로 두지 않습니다. 5년치를 처음부터 그리면
@@ -110,7 +158,7 @@ export function PortalHistory() {
         {/*  폰 — 고르는 칸 */}
         <div className="flex flex-wrap gap-2.5 sm:hidden">
           <label className="min-w-0 flex-1">
-            <span className="t-label block text-navy-400">기간</span>
+            <span className="t-label block text-navy-500">기간</span>
             <select
               data-hist-period-select
               value={period}
@@ -126,7 +174,7 @@ export function PortalHistory() {
           </label>
           {types.length > 1 && (
             <label className="min-w-0 flex-1">
-              <span className="t-label block text-navy-400">구분</span>
+              <span className="t-label block text-navy-500">구분</span>
               <select
                 data-hist-type-select
                 value={type}
@@ -144,7 +192,7 @@ export function PortalHistory() {
 
         {/*  넓은 화면 — 단추 */}
         <div className="hidden flex-wrap items-center gap-2 sm:flex">
-          <span className="t-label shrink-0 text-navy-400">기간</span>
+          <span className="t-label shrink-0 text-navy-500">기간</span>
           {[{ v: 'recent', l: '최근 3개월' }, ...years.map((y) => ({ v: y, l: `${y}년` })), { v: 'all', l: '전체' }].map((o) => (
             <button
               key={o.v}
@@ -162,7 +210,7 @@ export function PortalHistory() {
 
         {types.length > 1 && (
           <div className="hidden flex-wrap items-center gap-2 sm:flex">
-            <span className="t-label shrink-0 text-navy-400">구분</span>
+            <span className="t-label shrink-0 text-navy-500">구분</span>
             {[{ v: 'all', l: '전부' }, ...types.map((t) => ({ v: t, l: t }))].map((o) => (
               <button
                 key={o.v}
@@ -257,7 +305,7 @@ export function PortalHistory() {
             <thead>
               <tr className="border-b border-navy-100">
                 {['수거일', '구분', '배출량', '용기', '처리장 인계'].map((h) => (
-                  <th key={h} className="t-label whitespace-nowrap px-4 py-3.5 text-navy-400">
+                  <th key={h} className="t-label whitespace-nowrap px-4 py-3.5 text-navy-500">
                     {h}
                   </th>
                 ))}
@@ -290,6 +338,14 @@ export function PortalHistory() {
         </div>
         </>
       )}
+
+      <button
+        type="button"
+        onClick={() => open('report')}
+        className="flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 text-[1.05rem] font-bold text-navy-800 ring-1 ring-navy-200 transition hover:bg-navy-50 sm:hidden"
+      >
+        <FileBarChart size={19} strokeWidth={2.3} aria-hidden="true" /> 월간 배출 리포트 보기
+      </button>
 
       <p className="t-muted break-keep">
         수거대장 PDF 자동 발급과 올바로 시스템 연동은 개발 예정입니다. 지금 필요하시면 담당자({CLIENT_TEL})에게

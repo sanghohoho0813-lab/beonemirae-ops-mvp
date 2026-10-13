@@ -1,8 +1,6 @@
 import { Building2, Headset, MapPin, Phone, ScrollText, User } from 'lucide-react'
 import { CLIENT_TEL, COMPANY, COMPANY_HOURS } from '../lib/brand'
-import { BRAND_IMG } from '../lib/brandAssets'
 import type { Client } from '../types'
-import { BrandImg } from './BrandImg'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 화면 맨 아래 칸 (0086)
@@ -32,7 +30,7 @@ function Cell({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex items-start gap-3 bg-white px-5 py-4">
+    <div className="flex min-w-0 flex-[1_1_20rem] items-start gap-3 bg-white px-5 py-4">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-navy-100 text-navy-600">
         <Icon size={18} strokeWidth={2.3} />
       </span>
@@ -55,18 +53,13 @@ export function PortalFooter({ client }: { client: Client }) {
 
   return (
     <footer data-portal-footer className="space-y-3">
-      {/*  0095 — 회사 소개 한 장 (준비 자산 brand_story_space).
-           연락처 표 위에서 「누구와 거래하고 있는지」가 눈에 남게 합니다. */}
-      <div className="card flex items-center gap-4 overflow-hidden p-0">
-        <BrandImg src={BRAND_IMG.brandStory} className="h-24 w-32 shrink-0 sm:h-28 sm:w-48" />
-        <div className="min-w-0 py-3 pr-4">
-          <p className="t-body break-keep font-extrabold text-navy-900">{COMPANY}</p>
-          <p className="t-muted mt-0.5 break-keep leading-snug">
-            의료폐기물 수거·운반 전문 — 수거부터 인계까지 기록으로 남겨 관리합니다.
-          </p>
-        </div>
-      </div>
-      <div className="card grid grid-cols-1 gap-px overflow-hidden bg-navy-100 sm:grid-cols-2 xl:grid-cols-3">
+      {/*  포털 1차 고도화 — 여기 있던 회사 소개 사진 칸을 뺐습니다. 매일 쓰는
+           업무 화면에서 회사 소개는 스크롤만 길게 합니다. 대신 이 칸이
+           무엇인지 제목을 답니다. */}
+      <h2 className="t-body px-1 font-extrabold text-navy-900">우리 병원 등록 정보</h2>
+      {/*  ⚠ 칸 수가 4·5개로 바뀝니다. 격자로 두면 마지막 줄에 회색 빈칸이
+           남았습니다. 줄마다 남는 자리를 칸들이 나눠 채우게 합니다. */}
+      <div className="card flex flex-wrap gap-px overflow-hidden bg-navy-100">
         <Cell icon={Headset} label="비원미래 고객상담">
           {/*  ⚠ 누를 수 있는 것은 **44px 이상**이어야 합니다. 처음에는 그냥
                밑줄 친 글자였는데 높이가 21px 이었습니다 — 요양병원

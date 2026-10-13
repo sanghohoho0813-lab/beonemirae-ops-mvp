@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { MonthlyReport } from '../lib/insights'
 import { REQUEST_KIND_LABEL, type RequestKind } from '../types'
+import { portalStatusLabel } from '../lib/portalLabels'
 import { weight } from '../lib/format'
 import { PlannedBadge, ExpandableSection } from './ui'
 
@@ -212,8 +213,10 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
                       {REQUEST_KIND_LABEL[r.kind as RequestKind] ?? r.kind}
                     </span>
                     {r.urgent && <span className="pill shrink-0 bg-rose-50 text-rose-600">긴급</span>}
-                    <span className="pill shrink-0 bg-white text-navy-500">{r.status}</span>
-                    <span className="ml-auto shrink-0 text-[1rem] tabular-nums text-navy-400">{r.on}</span>
+                    {/*  포털 1차 고도화 — 병원에 나가는 문서라 병원 말로 적습니다
+                         (저장값 「일정 반영」 → 「일정 확정」). */}
+                    <span className="pill shrink-0 bg-white text-navy-600">{portalStatusLabel(r.status)}</span>
+                    <span className="ml-auto shrink-0 text-[1rem] tabular-nums text-navy-500">{r.on}</span>
                   </div>
                   <p className="mt-1 whitespace-pre-line break-keep text-[1.07rem] leading-snug text-navy-700">
                     {r.content}
@@ -225,7 +228,7 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="pill shrink-0 bg-white text-navy-600">문의 · {q.topic}</span>
                     <span className="pill shrink-0 bg-white text-navy-500">{q.status}</span>
-                    <span className="ml-auto shrink-0 text-[1rem] tabular-nums text-navy-400">{q.on}</span>
+                    <span className="ml-auto shrink-0 text-[1rem] tabular-nums text-navy-500">{q.on}</span>
                   </div>
                   <p className="mt-1 break-keep text-[1.07rem] leading-snug text-navy-700">{q.subject}</p>
                 </li>

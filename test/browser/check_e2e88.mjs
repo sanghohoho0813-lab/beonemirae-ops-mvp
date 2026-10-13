@@ -206,7 +206,10 @@ const store = makeStore()
   await p.waitForTimeout(200)
   await p.locator('[data-req-send]').click(); await p.waitForTimeout(1600)
 
-  ok((await p.locator('[data-toast]').count()) === 1, '병원 화면에 「접수되었습니다」가 뜬다')
+  //  포털 1차 고도화 — 4초 토스트 대신 창 안에 「요청이 접수되었습니다」.
+  const done = flat(await p.locator('[data-sheet-done]').innerText().catch(() => ''))
+  ok(/요청이 접수되었습니다/.test(done), '병원 화면에 「요청이 접수되었습니다」가 뜬다', done.slice(0, 60))
+  ok(/격리환자/.test(done), '무엇이 접수됐는지 그 자리에서 다시 보여 준다 (특이사항)', done.slice(0, 120))
   //  ⚠ 화면 글자만 보지 않습니다 — **저장소에 실제로 들어갔는지** 봅니다.
   ok(store.requests.length === 1, '**서버에 요청이 실제로 남았다**', `${store.requests.length}건`)
   const saved = store.requests[0]
@@ -223,9 +226,11 @@ const store = makeStore()
     ok(/예상 배출량/.test(saved.content), '고른 단계가 요청 글에도 남았다', saved.content.slice(0, 60))
   }
 
-  //  올린 직후 병원 화면에 자기 요청이 보이는가
+  //  올린 직후 병원 화면에 자기 요청이 보이는가 — 「요청 내역 보기」로 갑니다.
+  ok((await p.locator('main [data-portal-requests] [data-req-row]').count()) >= 1, '홈 「최근 요청」에 바로 올라와 있다')
+  await p.locator('[data-done-primary]').click(); await p.waitForTimeout(1200)
   const body = flat(await p.locator('main').innerText())
-  ok(body.includes('격리환자'), '올린 요청이 병원 화면에 바로 보인다')
+  ok(new URL(p.url()).pathname === '/portal/requests' && body.includes('격리환자'), '올린 요청이 「요청 내역」에 바로 보인다', new URL(p.url()).pathname)
   await ctx.close()
 }
 
@@ -263,7 +268,10 @@ let reqId = null
 {
   const { ctx, p } = await openAs(store, 'client', '/portal', HOSP.id)
   const body = flat(await p.locator('main').innerText())
-  ok(/일정 반영/.test(body), '**병원 화면의 요청 상태가 「일정 반영」으로 바뀌었다**')
+  //  포털 1차 고도화 — 저장값 「일정 반영」은 병원에게 「일정 확정」으로 보입니다
+  //  (내부 상태값을 그대로 노출하지 않는다 — 대표님 브리프).
+  ok(/일정 확정/.test(body), '**병원 화면의 요청 상태가 「일정 확정」으로 바뀌었다**')
+  ok(!/일정 반영/.test(flat(await p.locator('main [data-portal-requests]').innerText())), '내부 상태값 「일정 반영」을 그대로 적지 않는다')
 
   //  알림에도 떠야 합니다 — 병원이 화면을 뒤지지 않아도 알 수 있게.
   const bell = p.locator('header [aria-label*="알림"], header button[title*="알림"]').first()
@@ -280,7 +288,8 @@ let reqId = null
   //  회신은 서버에만 넣고(직원 화면 조작은 ③에서 이미 확인), 병원이
   //  읽는지를 봅니다 — 같은 자료를 양쪽이 보고 있는지가 요점입니다.
   store.requests.find((x) => x.id === reqId).reply = '9월 3일 오전에 방문하겠습니다.'
-  const { ctx, p } = await openAs(store, 'client', '/portal', HOSP.id)
+  //  포털 1차 고도화 — 회신은 「요청 내역」에서 그 요청 아래에 보입니다.
+  const { ctx, p } = await openAs(store, 'client', '/portal/requests', HOSP.id)
   const body = flat(await p.locator('main').innerText())
   ok(/9월 3일 오전에 방문하겠습니다/.test(body), '**비원미래 회신이 병원 화면에 그대로 보인다**')
   ok(/비원미래 회신/.test(body), '누가 쓴 말인지 적혀 있다')

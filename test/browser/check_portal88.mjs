@@ -44,10 +44,15 @@ const path = (id, page = '') => (page ? `/portal/c/${id}/${page}` : `/portal/c/$
 //    이제 홈에서 창으로 엽니다(화면을 안 옮깁니다). 그래도 **화면(라우트)은
 //    살아 있어야** 합니다 — 예전에 받으신 링크가 죽으면 안 됩니다.
 //    그래서 메뉴로 도는 것과 주소로 직접 여는 것을 나눠서 봅니다.
+//  ⚠ 포털 1차 고도화 — 셋에서 다섯으로(요청 내역 · 정산·증빙 추가,
+//    「이용 내역」→「수거 이력」, 「우리 병원 홈」→「홈」). 병원을 잃지 않아야
+//    하는 것은 메뉴가 몇 개든 같습니다.
 const MENUS = [
-  ['이용 내역', 'history'],
+  ['수거 이력', 'history'],
   ['고객지원', 'support'],
-  ['우리 병원 홈', ''],
+  ['요청 내역', 'requests'],
+  ['정산·증빙', 'billing'],
+  ['홈', ''],
 ]
 
 /** 위 메뉴에서 뺐지만 주소로는 그대로 열리는 화면 */
@@ -94,11 +99,11 @@ const DIRECT = ['supplies', 'report', 'billing']
 // ── ③ 뒤로 / 앞으로 (브리프 6) ────────────────────────────────────────────
 {
   const { ctx, p } = await open(path(T.id), 'admin')
-  await p.locator('nav a:has-text("이용 내역")').first().click(); await p.waitForTimeout(800)
+  await p.locator('nav a:has-text("수거 이력")').first().click(); await p.waitForTimeout(800)
   await p.locator('nav a:has-text("고객지원")').first().click(); await p.waitForTimeout(800)
 
   await p.goBack(); await p.waitForTimeout(1000)
-  ok(new URL(p.url()).pathname === path(T.id, 'history'), '뒤로가기 — 이용 내역으로', new URL(p.url()).pathname)
+  ok(new URL(p.url()).pathname === path(T.id, 'history'), '뒤로가기 — 수거 이력으로', new URL(p.url()).pathname)
   ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, '뒤로가기 — 병원 그대로')
 
   await p.goForward(); await p.waitForTimeout(1000)
@@ -214,7 +219,7 @@ const DIRECT = ['supplies', 'report', 'billing']
 // ── ⑩ 폰에서도 같다 (브리프 27) ───────────────────────────────────────────
 {
   const { ctx, p } = await open(path(T.id), 'admin', 390)
-  for (const short of ['이용내역', '고객지원', '홈']) {
+  for (const short of ['수거 이력', '요청 내역', '정산·증빙', '고객지원', '홈']) {
     await p.locator(`nav a:has-text("${short}")`).last().click(); await p.waitForTimeout(900)
     ok((await p.locator('[data-portal-picker]').count()) === 0, `폰 ${short} — 병원을 다시 안 묻는다`)
     ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, `폰 ${short} — ${T.name} 그대로`)
@@ -227,8 +232,9 @@ const DIRECT = ['supplies', 'report', 'billing']
   await p.locator('nav a:has-text("홈")').last().click(); await p.waitForTimeout(900)
   const bar = await p.locator('[data-portal-preview]').boundingBox()
   ok(bar.height < 260, '미리보기 띠가 폰에서 두 줄을 안 넘는다', `${Math.round(bar.height)}px`)
-  const cta = await p.locator('[data-portal-cta="collect"]').boundingBox()
-  ok(cta.y < 844, '폰 첫 화면 안에 「수거 요청」이 남아 있다', `y=${Math.round(cta.y)}`)
+  //  포털 1차 고도화 — 첫 화면의 주인공은 「긴급수거 요청」입니다.
+  const cta = await p.locator('[data-portal-cta="urgent"]').boundingBox()
+  ok(cta.y < 844, '폰 첫 화면 안에 「긴급수거 요청」이 남아 있다', `y=${Math.round(cta.y)}`)
   await ctx.close()
 }
 
@@ -269,34 +275,38 @@ const DIRECT = ['supplies', 'report', 'billing']
 //       잃으면 0088 에서 고친 것이 도로 무너집니다.
 {
   const { ctx, p } = await open(path(T.id), 'admin')
+  //  포털 1차 고도화 — 홈의 단추는 넷(요청 창). 이력·리포트·정산·증빙 창은
+  //  메뉴 화면과 알림에서 열리고, 예전 링크(?do=)로도 그대로 열립니다.
   for (const [label, sheet] of [
-    ['수거 요청', 'pickup'],
-    ['긴급 수거 요청', 'urgent'],
-    ['용기 · 봉투 주문', 'supply'],
-    ['상담 · 문의', 'ask'],
-    ['수거 이력', 'history'],
-    ['월간 배출 리포트', 'report'],
-    ['정산 현황', 'billing'],
-    ['증빙자료', 'docs'],
+    ['추가수거 요청', 'pickup'],
+    ['긴급수거 요청', 'urgent'],
+    ['자재·용기 요청', 'supply'],
+    ['문의하기', 'ask'],
+    [null, 'history'],
+    [null, 'report'],
+    [null, 'billing'],
+    [null, 'docs'],
   ]) {
-    await p.locator(`[data-portal-action="${label}"]`).click()
-    await p.waitForTimeout(600)
-    ok((await p.locator(`[data-portal-sheet="${sheet}"]`).count()) === 1, `${label} — 창이 열린다`)
+    const name = label ?? `?do=${sheet}`
+    if (label) await p.locator(`[data-portal-action="${label}"]`).click()
+    else await p.goto(`${W.BASE}${path(T.id)}?do=${sheet}`, { waitUntil: 'domcontentloaded' })
+    await p.waitForTimeout(label ? 600 : 1500)
+    ok((await p.locator(`[data-portal-sheet="${sheet}"]`).count()) === 1, `${name} — 창이 열린다`)
     //  ⚠ 주소의 **경로는 그대로**여야 합니다. 창은 물음표 뒤에만 적힙니다.
     const url = new URL(p.url())
-    ok(url.pathname === path(T.id), `${label} — 화면을 옮기지 않는다`, url.pathname)
-    ok(url.searchParams.get('do') === sheet, `${label} — 무슨 창인지 주소에 남는다`, url.search)
+    ok(url.pathname === path(T.id), `${name} — 화면을 옮기지 않는다`, url.pathname)
+    ok(url.searchParams.get('do') === sheet, `${name} — 무슨 창인지 주소에 남는다`, url.search)
     //  ⚠ 창 안에도 어느 병원인지 적혀 있어야 합니다.
     const sheetText = flat(await p.locator(`[data-portal-sheet="${sheet}"]`).innerText())
-    ok(sheetText.includes(T.name), `${label} — 창 안에 ${T.name} 이라고 적혀 있다`)
+    ok(sheetText.includes(T.name), `${name} — 창 안에 ${T.name} 이라고 적혀 있다`)
 
     await p.locator('[data-sheet-close]').click()
     //  ⚠ 닫히는 데 애니메이션 시간이 듭니다(실측 ~400ms). 300ms 에서 재면
     //    아직 남아 있어서 「안 닫힌다」로 잘못 읽습니다.
     await p.waitForTimeout(900)
-    ok((await p.locator('[data-portal-sheet]').count()) === 0, `${label} — 닫힌다`)
-    ok(new URL(p.url()).pathname === path(T.id), `${label} — 닫아도 그 자리`, new URL(p.url()).pathname)
-    ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, `${label} — 닫아도 ${T.name}`)
+    ok((await p.locator('[data-portal-sheet]').count()) === 0, `${name} — 닫힌다`)
+    ok(new URL(p.url()).pathname === path(T.id), `${name} — 닫아도 그 자리`, new URL(p.url()).pathname)
+    ok(flat(await p.locator('[data-preview-name]').innerText()) === T.name, `${name} — 닫아도 ${T.name}`)
   }
   await ctx.close()
 }

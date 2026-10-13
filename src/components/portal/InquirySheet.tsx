@@ -3,7 +3,8 @@ import { MessageSquare, Send } from 'lucide-react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { PortalSheet, SheetStep, ChoiceGrid, type ChoiceItem } from '../PortalSheet'
-import { toast } from '../PortalToast'
+import { useSheetDone } from './useSheetDone'
+import { SaveError } from './PortalUi'
 import { BRAND_IMG } from '../../lib/brandAssets'
 import { INQUIRY_TOPICS, type InquiryTopic } from '../../types'
 import { prettyDate } from '../../lib/format'
@@ -53,6 +54,7 @@ export function InquirySheet({
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { done, finish } = useSheetDone(open)
 
   const mine = useMemo(
     () =>
@@ -87,14 +89,18 @@ export function InquirySheet({
     })
     setBusy(false)
     if (!res.ok) {
-      setError(res.error ?? '문의를 보내지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setError(res.error || '문의를 보내지 못했습니다.')
       return
     }
+    finish({
+      title: '문의가 접수되었습니다',
+      message: '비원미래 담당자가 확인하고 답변드리겠습니다. 답변은 고객지원 화면에 표시됩니다.',
+      lines: [`${topic} 문의`, subject],
+      to: 'support',
+    })
     setTopic('')
     setQuick('')
     setBody('')
-    onClose()
-    toast('문의가 접수되었습니다. 담당자가 확인하고 답변드리겠습니다.')
   }
 
   return (
@@ -103,7 +109,8 @@ export function InquirySheet({
       hero={BRAND_IMG.heroSecondary}
       open={open}
       onClose={onClose}
-      title="상담 · 문의"
+      done={done}
+      title="문의하기"
       subtitle={
         <span className="flex flex-wrap items-center gap-1.5">
           <MessageSquare size={15} strokeWidth={2.5} className="shrink-0 text-teal-600" />
@@ -128,10 +135,13 @@ export function InquirySheet({
       }
     >
       {error && (
-        <div data-ask-error className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
-          <p className="t-body break-keep font-bold text-rose-700">{error}</p>
-          <p className="t-muted mt-1 break-keep">고르신 것은 그대로 있습니다.</p>
-        </div>
+        <SaveError
+          data="data-ask-error"
+          detail={error}
+          kept="고르신 것과 적으신 내용은 그대로 있습니다."
+          busy={busy}
+          onRetry={() => void send()}
+        />
       )}
 
       <SheetStep no={1} title="무엇에 대한 문의인가요?">

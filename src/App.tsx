@@ -47,6 +47,7 @@ import { PortalBilling } from './pages/PortalBilling'
 import { PortalSupport } from './pages/PortalSupport'
 import { Supplies } from './pages/Supplies'
 import { PortalHistory } from './pages/PortalHistory'
+import { PortalRequests } from './pages/PortalRequests'
 import { PortalSelect } from './pages/PortalSelect'
 import { RequireAuth } from './components/RequireAuth'
 import { TourOverlay } from './components/TourOverlay'
@@ -110,6 +111,8 @@ export default function App() {
           }
         >
           <Route index element={<PortalHome />} />
+          {/*  포털 1차 고도화 — 보낸 요청의 진행 상태를 모아 보는 화면 */}
+          <Route path="requests" element={<PortalRequests />} />
           <Route path="report" element={<PortalReport />} />
           <Route path="history" element={<PortalHistory />} />
           <Route path="supplies" element={<PortalSupplies />} />
@@ -129,6 +132,8 @@ export default function App() {
           }
         >
           <Route index element={<PortalHome />} />
+          {/*  포털 1차 고도화 — 보낸 요청의 진행 상태를 모아 보는 화면 */}
+          <Route path="requests" element={<PortalRequests />} />
           <Route path="report" element={<PortalReport />} />
           <Route path="history" element={<PortalHistory />} />
           <Route path="supplies" element={<PortalSupplies />} />

@@ -98,7 +98,7 @@ async function open(ctx, path) {
 async function sendRequest(p) {
   //  창이 닫혀 있으면 첫 화면의 「수거 요청」 칸을 눌러 엽니다.
   if ((await p.locator('[data-req-send]').count()) === 0) {
-    await p.locator('[data-portal-action="수거 요청"]').first().click()
+    await p.locator('[data-portal-action="추가수거 요청"]').first().click()
     await p.waitForSelector('[data-req-send]', { timeout: 15000 })
   }
   //  하나라도 골라야 보낼 수 있습니다.
@@ -137,10 +137,13 @@ async function sendRequest(p) {
   //  실패 안내가 뜨고 적은 내용이 남아 있어야 합니다.
   ok(await seen(p, '[data-req-error]', 4000), '실패 안내 칸이 뜸')
   const afterFail = flat(await p.textContent('[data-req-error]'))
-  ok(/보내지 못했습니다|접수하지 못했습니다|연결하지 못했습니다/.test(afterFail),
+  //  포털 1차 고도화 — 대표님이 정해 주신 문장 「요청을 저장하지 못했습니다.
+  //  잠시 후 다시 시도해주세요.」
+  ok(/저장하지 못했습니다|보내지 못했습니다|접수하지 못했습니다|연결하지 못했습니다/.test(afterFail),
     '실패했다고 그 칸에 적음', afterFail.slice(0, 60))
   ok(/고르신 것은 그대로 있습니다/.test(afterFail), '고른 것이 남아 있다고 알려 줌')
-  ok((await p.locator('[data-toast]').count()) === 0, '**실패했는데 「접수되었습니다」를 띄우지 않음**')
+  ok((await p.locator('[data-toast]').count()) === 0 && (await p.locator('[data-sheet-done]').count()) === 0,
+    '**실패했는데 「접수되었습니다」를 띄우지 않음**')
 
   //  다시 보내기
   const send = p.locator('[data-req-send]')
@@ -162,9 +165,13 @@ async function sendRequest(p) {
   wire(ctx, { posts })
   const p = await open(ctx, '/portal')
   await sendRequest(p)
+  //  포털 1차 고도화 — 보내면 창이 「접수되었습니다」로 바뀝니다. 「홈으로」를
+  //  눌러 닫고 다시 엽니다.
+  await p.locator('[data-req-send]').waitFor({ state: 'detached', timeout: 8000 })
+  await p.locator('[data-done-home]').click()
   //  ⚠ 창이 **완전히 닫힌 뒤에** 다시 엽니다. 닫히는 동안(0.3~0.7초)에
   //    누르면 사라지는 창을 누르게 됩니다 — 시간 재기로 맞추면 가끔 틀립니다.
-  await p.locator('[data-req-send]').waitFor({ state: 'detached', timeout: 8000 })
+  await p.locator('[data-portal-sheet]').waitFor({ state: 'detached', timeout: 8000 })
   await sendRequest(p)
   ok(posts.length === 2, '두 번 보냄', `${posts.length}건`)
   const a = Array.isArray(posts[0]) ? posts[0][0] : posts[0]
@@ -186,9 +193,9 @@ async function sendRequest(p) {
   await sendRequest(p)
   ok((await p.locator('[data-req-error]').count()) === 0,
     '**「이미 저장됨」을 실패라고 하지 않음** — 이미 들어간 것을 또 보내게 만들면 안 됩니다')
-  ok(await seen(p, '[data-toast]', 4000), '접수되었다고 알려 줌')
-  const okBox = flat(await p.textContent('[data-toast]'))
-  ok(/접수되었습니다/.test(okBox), '접수 안내 문구가 띠에 있음', okBox.slice(0, 50))
+  ok(await seen(p, '[data-sheet-done]', 4000), '접수되었다고 알려 줌')
+  const okBox = flat(await p.textContent('[data-sheet-done]'))
+  ok(/접수되었습니다/.test(okBox), '접수 안내 문구가 완료 화면에 있음', okBox.slice(0, 50))
   await ctx.close()
 }
 

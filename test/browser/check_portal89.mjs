@@ -45,33 +45,41 @@ async function open(path, role, w = 1440, extra = {}) {
   const nav = (await p.locator('header nav a').allInnerTexts()).map(flat)
   //  ⚠ 대표님: 「상단 메뉴 최소화」. 여섯이면 병원 담당자는 어디를 눌러야
   //    할지 고르는 데 시간을 씁니다.
-  ok(nav.length <= 3, `위 메뉴가 세 개 이하다 (${nav.length}개)`, nav.join(' | '))
+  //  ⚠ 포털 1차 고도화 — 셋에서 **다섯**으로. 대표님 브리프: 「병원 직원이
+  //    바로 이해할 수 있는 이름으로 (예: 수거 일정 · 이용 내역 · 자재·용기 ·
+  //    요청 내역 · 정산·증빙)」. 그래도 다섯을 넘기지 않습니다.
+  ok(nav.length <= 5, `위 메뉴가 다섯 개 이하다 (${nav.length}개)`, nav.join(' | '))
   ok(nav[0].includes('홈'), '첫 메뉴는 홈이다', nav[0])
+  ok(['요청 내역', '수거 이력', '정산·증빙', '고객지원'].every((x) => nav.some((n) => n.includes(x))),
+    '병원 직원 말로 된 메뉴다 (요청 내역 · 수거 이력 · 정산·증빙 · 고객지원)', nav.join(' | '))
 
   //  ⚠ 자주 쓰는 일은 **메뉴가 아니라 카드**입니다.
   const joined = nav.join(' ')
   for (const gone of ['필요한 물품', '월간 리포트', '정산 내역']) {
-    ok(!joined.includes(gone), `「${gone}」은 위 메뉴에 없다 (카드에서 창으로 엽니다)`)
+    ok(!joined.includes(gone), `「${gone}」은 위 메뉴에 없다`)
   }
   await ctx.close()
 }
 
-// ── ② 여덟 칸이 있고, 색이 서로 다르다 ────────────────────────────────────
+// ── ② 큰 단추 둘 — 서로 구분되고, 바탕은 흰색 ──────────────────────────────
+//    포털 1차 고도화 — 대표님 브리프: 「가장 크게 보이는 주요 버튼은 긴급수거
+//    요청 · 자재·용기 요청 두 개 … 두 버튼은 명확히 구분되고 쉽게 누를 수
+//    있어야 한다」. 「카드 전체를 강한 색으로 칠하지 않는다」(0089)는 그대로.
 {
   const { ctx, p } = await open(HOME, 'admin')
-  const cards = p.locator('[data-portal-action]')
-  ok((await cards.count()) === 8, `주요 카드가 여덟 장이다 (${await cards.count()}장)`)
-
-  //  ⚠ 대표님: 「모든 카드가 거의 같은 흰색 카드로 보여 지나치게 단조로운
-  //    느낌이 들지 않도록 개선한다」 — 다만 「카드 전체를 강한 색으로
-  //    칠하지 않는다」.
-  const tones = await p.locator('[data-card-tone]').evaluateAll((els) => els.map((e) => e.dataset.cardTone))
-  ok(new Set(tones).size === 8, `여덟 장의 색이 서로 다르다 (${new Set(tones).size}가지)`, tones.join(','))
-
-  //  ⚠ 카드 바탕은 여전히 흰색이어야 합니다 — 색은 아이콘 자리와 위 선에만.
-  const bg = await cards.first().evaluate((el) => getComputedStyle(el).backgroundColor)
+  const big = p.locator('[data-card-tone]')
+  ok((await big.count()) === 2, `큰 단추가 둘이다 (${await big.count()}개)`)
+  const labels = await big.evaluateAll((els) => els.map((e) => e.getAttribute('data-portal-action')))
+  ok(labels[0] === '긴급수거 요청' && labels[1] === '자재·용기 요청', '긴급수거 요청 · 자재·용기 요청 순서', labels.join(','))
+  const tones = await big.evaluateAll((els) => els.map((e) => e.dataset.cardTone))
+  ok(new Set(tones).size === 2, `두 단추의 색이 서로 다르다`, tones.join(','))
+  const bg = await big.first().evaluate((el) => getComputedStyle(el).backgroundColor)
   const m = bg.match(/\d+/g).map(Number)
-  ok(m[0] > 240 && m[1] > 240 && m[2] > 240, '카드 바탕은 그대로 흰색이다 (색을 칠하지 않았다)', bg)
+  ok(m[0] > 240 && m[1] > 240 && m[2] > 240, '단추 바탕은 흰색이다 (색을 칠하지 않았다)', bg)
+  //  ⚠ 큰 단추는 정말 커야 합니다 — 작은 단추(추가수거 · 문의)보다 확실히.
+  const bh = (await big.first().boundingBox()).height
+  const sh = (await p.locator('[data-portal-action="문의하기"]').boundingBox()).height
+  ok(bh >= sh * 1.4, '큰 단추가 작은 단추보다 확실히 크다', `${Math.round(bh)} vs ${Math.round(sh)}px`)
   await ctx.close()
 }
 
@@ -79,8 +87,8 @@ async function open(path, role, w = 1440, extra = {}) {
 {
   const { ctx, p } = await open(HOME, 'admin')
   for (const [label, sheet] of [
-    ['수거 요청', 'pickup'], ['긴급 수거 요청', 'urgent'],
-    ['용기 · 봉투 주문', 'supply'], ['상담 · 문의', 'ask'],
+    ['추가수거 요청', 'pickup'], ['긴급수거 요청', 'urgent'],
+    ['자재·용기 요청', 'supply'], ['문의하기', 'ask'],
   ]) {
     await p.locator(`[data-portal-action="${label}"]`).click(); await p.waitForTimeout(600)
     ok(new URL(p.url()).pathname === HOME, `${label} — 경로가 그대로다`, new URL(p.url()).pathname)
@@ -143,10 +151,19 @@ async function open(path, role, w = 1440, extra = {}) {
   ok(/정기 일정 외 추가 수거/.test(body), '**고른 것이 요청 글에 그대로 들어간다**', body.slice(0, 180))
   ok(/"desired_date"\s*:\s*"20\d\d-\d\d-\d\d"/.test(body), '고른 날짜가 날짜 칸에 들어간다')
 
-  //  ⚠ 창이 닫히고, 알려 주고, 첫 화면이 바로 갱신됩니다 (브리프 26 · 27)
-  ok((await p.locator('[data-portal-sheet]').count()) === 0, '보내면 창이 닫힌다')
-  ok((await p.locator('[data-toast]').count()) === 1, '**접수되었다고 알려 준다**')
+  //  ⚠ 포털 1차 고도화 — 4초 토스트 대신 **창 안에서** 「요청이 접수되었습니다」
+  //    + 다음 갈 곳(요청 내역 보기 · 홈으로). 뒤 화면은 이미 갱신돼 있습니다.
+  const done = flat(await p.locator('[data-sheet-done]').innerText().catch(() => ''))
+  ok(/요청이 접수되었습니다/.test(done) && /비원미래에서 확인 후/.test(done), '**접수되었다고 크게 알려 준다**', done.slice(0, 70))
+  ok((await p.locator('[data-req-send]').count()) === 0, '보내기 단추는 사라진다 (두 번 보내지 않게)')
   ok(new URL(p.url()).pathname === HOME, '첫 화면 그대로', new URL(p.url()).pathname)
+  //  (뒤 화면에 바로 올라오는지는 서버가 저장까지 하는 check_e2e88 이 잽니다 —
+  //   이 검사의 가짜 서버는 받은 요청을 저장하지 않습니다.)
+  //  「요청 내역 보기」 — 그 병원을 달고 요청 내역으로 갑니다.
+  await p.locator('[data-done-primary]').click(); await p.waitForTimeout(900)
+  ok(new URL(p.url()).pathname === `${HOME}/requests`, '「요청 내역 보기」 → 그 병원의 요청 내역', new URL(p.url()).pathname)
+  ok((await p.locator('[data-portal-sheet]').count()) === 0, '옮기면서 창이 닫힌다')
+  ok((await p.locator('main h1').first().innerText()).includes('요청 내역'), '요청 내역 화면이 열린다')
   ok((await p.locator('[data-portal-picker]').count()) === 0, '**병원을 다시 묻지 않는다**')
   await ctx.close()
 }
@@ -172,7 +189,7 @@ async function open(path, role, w = 1440, extra = {}) {
 // ── ⑦ 물품 주문 — 수량을 **누르기만** 하면 된다 ──────────────────────────
 {
   const { ctx, p } = await open(HOME, 'admin')
-  await p.locator('[data-portal-action="용기 · 봉투 주문"]').click(); await p.waitForTimeout(700)
+  await p.locator('[data-portal-action="자재·용기 요청"]').click(); await p.waitForTimeout(700)
   ok((await p.locator('[data-portal-sheet="supply"]').count()) === 1, '주문 창이 열린다')
   const sheet = flat(await p.locator('[data-portal-sheet="supply"]').innerText())
   ok(sheet.includes(T.name), `창 안에 ${T.name} 이라고 적혀 있다`)
@@ -196,7 +213,7 @@ async function open(path, role, w = 1440, extra = {}) {
 // ── ⑧ 문의 — 고르면 그대로 접수된다 ───────────────────────────────────────
 {
   const { ctx, p } = await open(HOME, 'admin')
-  await p.locator('[data-portal-action="상담 · 문의"]').click(); await p.waitForTimeout(700)
+  await p.locator('[data-portal-action="문의하기"]').click(); await p.waitForTimeout(700)
   ok(await p.locator('[data-ask-send]').isDisabled(), '주제를 안 고르면 못 보낸다')
 
   await p.locator('[data-choice="topic"] [data-choice-item="정산"]').click(); await p.waitForTimeout(400)
@@ -213,7 +230,7 @@ async function open(path, role, w = 1440, extra = {}) {
 // ── ⑨ 정산 창에 **없는 결제 단추를 만들지 않았다** ────────────────────────
 {
   const { ctx, p } = await open(HOME, 'admin')
-  await p.locator('[data-portal-action="정산 현황"]').click(); await p.waitForTimeout(700)
+  await p.goto(`${W.BASE}${HOME}?do=billing`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1500)
   const t = flat(await p.locator('[data-portal-sheet="billing"]').innerText())
   ok(/결제하실 수 없습니다/.test(t), '**지금은 결제할 수 없다고 적어 둔다**')
   ok(!/결제하기|카드 결제|지금 결제/.test(t), '없는 결제 단추를 만들지 않았다')
@@ -223,7 +240,7 @@ async function open(path, role, w = 1440, extra = {}) {
 // ── ⑩ 증빙자료 — 되는 것만 답니다 ────────────────────────────────────────
 {
   const { ctx, p } = await open(HOME, 'admin')
-  await p.locator('[data-portal-action="증빙자료"]').click(); await p.waitForTimeout(700)
+  await p.goto(`${W.BASE}${HOME}?do=docs`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1500)
   const t = flat(await p.locator('[data-portal-sheet="docs"]').innerText())
   ok(/아직 준비되지 않은 자료/.test(t), '**아직 없는 자료를 없다고 적는다**')
   ok(!/다운로드|내려받기/.test(t), '되지 않는 다운로드 단추를 만들지 않았다')
@@ -236,12 +253,16 @@ async function open(path, role, w = 1440, extra = {}) {
   await ctx.close()
 }
 
-// ── ⑪ 최근 활동 · 지금 확인이 필요한 항목 ─────────────────────────────────
+// ── ⑪ 최근 요청 · 최근 수거 · 확인이 필요한 것 ─────────────────────────────
+//    포털 1차 고도화 — 「최근 활동」 한 칸을 「최근 요청」·「최근 수거」 둘로.
 {
   const { ctx, p } = await open(HOME, 'admin')
-  ok((await p.locator('[data-portal-activity]').count()) === 1, '최근 활동 칸이 있다')
-  const acts = await p.locator('[data-activity]').count()
-  ok(acts > 0 && acts <= 5, `최근 활동이 다섯 줄 이하로 나온다 (${acts}줄)`)
+  ok((await p.locator('[data-portal-requests]').count()) === 1, '최근 요청 칸이 있다')
+  ok((await p.locator('[data-portal-recent]').count()) === 1, '최근 수거 칸이 있다')
+  const reqs = await p.locator('[data-portal-requests] [data-req-row]').count()
+  ok(reqs <= 3, `최근 요청은 세 줄 이하 (${reqs}줄)`)
+  const picks = await p.locator('[data-recent-pickup]').count()
+  ok(picks > 0 && picks <= 3, `최근 수거가 세 줄 이하로 나온다 (${picks}줄)`)
 
   //  ⚠ 할 말이 없으면 이 칸은 **아예 없습니다.** 대표님: 「0건이면 영역을
   //    과도하게 크게 보여주지 않는다」.
@@ -267,7 +288,7 @@ async function open(path, role, w = 1440, extra = {}) {
 // ── ⑬ 폰 — 창이 아래에서 올라와 화면을 거의 채운다 (브리프 30 · 40) ───────
 for (const w of [390, 360]) {
   const { ctx, p } = await open(HOME, 'admin', w)
-  await p.locator('[data-portal-action="긴급 수거 요청"]').click(); await p.waitForTimeout(800)
+  await p.locator('[data-portal-action="긴급수거 요청"]').click(); await p.waitForTimeout(800)
 
   const box = await p.locator('[data-portal-sheet="urgent"] > div:nth-child(2)').boundingBox()
   ok(Math.round(box.width) === w, `${w}px — 창이 화면 폭을 다 쓴다`, `${Math.round(box.width)}px`)
@@ -295,9 +316,9 @@ for (const w of [1920, 1440, 768, 390, 360]) {
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   ok(over === 0, `${w}px — 첫 화면이 가로로 안 넘친다`, `${over}px`)
   if (w <= 390) {
-    //  ⚠ 첫 화면 안에 「수거 요청」이 남아 있어야 합니다.
-    const cta = await p.locator('[data-portal-cta="collect"]').boundingBox()
-    ok(cta.y < 844, `${w}px — 첫 화면 안에 「수거 요청」이 있다`, `y=${Math.round(cta.y)}`)
+    //  ⚠ 첫 화면 안에 큰 단추 둘이 남아 있어야 합니다.
+    const cta = await p.locator('[data-portal-cta="supplies"]').boundingBox()
+    ok(cta.y + cta.height <= 844, `${w}px — 첫 화면 안에 「자재·용기 요청」까지 있다`, `아래 ${Math.round(cta.y + cta.height)}`)
   }
   await ctx.close()
 }
@@ -312,10 +333,10 @@ for (const w of [1920, 1440, 768, 390, 360]) {
 //   ⚠ 그렇다고 무한정 늘리지 않습니다. 다 늘리면 2560px 에서 카드 한 장이
 //     600px 이 되고 요청 글 한 줄이 화면을 가로질러 눈이 줄을 잃습니다.
 //     그래서 **위아래 양쪽**을 잽니다 — 너무 좁지도, 너무 넓지도 않게.
-for (const [w, maxPad, minCard, maxCard] of [
-  [1920, 120, 380, 520],
-  [1680, 60, 350, 480],
-  [1440, 40, 300, 430],
+for (const [w, maxPad] of [
+  [1920, 120],
+  [1680, 60],
+  [1440, 40],
 ]) {
   const { ctx, p } = await open(HOME, 'admin', w)
   const main = await p.locator('main').boundingBox()
@@ -325,10 +346,14 @@ for (const [w, maxPad, minCard, maxCard] of [
   const right = w - (main.x + main.width)
   ok(Math.abs(right - main.x) <= 20, `${w}px — 가운데에 놓여 있다`, `왼 ${Math.round(main.x)} · 오른 ${Math.round(right)}`)
 
-  //  ⚠ 카드가 너무 커지지 않았는지 — 넉 장이 한 줄에 편한 폭인지.
+  //  포털 1차 고도화 — 넓은 화면에서는 「다음 수거 | 요청 단추」가 나란히,
+  //  각각 본문의 절반 이하(한 줄이 화면을 가로지르지 않게).
+  const hero = await p.locator('[data-portal-hero]').boundingBox()
   const card = await p.locator('[data-portal-action]').first().boundingBox()
-  ok(card.width >= minCard && card.width <= maxCard,
-    `${w}px — 카드 한 장이 ${minCard}~${maxCard}px 사이다`, `${Math.round(card.width)}px`)
+  ok(Math.abs(hero.y - card.y) < 4 && card.x > hero.x + hero.width - 2,
+    `${w}px — 다음 수거 옆에 요청 단추가 나란히 선다`, `hero ${Math.round(hero.x)},${Math.round(hero.y)} · 단추 ${Math.round(card.x)},${Math.round(card.y)}`)
+  ok(card.width <= main.width / 2 && hero.width <= main.width / 2,
+    `${w}px — 두 칸 모두 본문의 절반 이하`, `${Math.round(hero.width)} · ${Math.round(card.width)} / ${Math.round(main.width)}`)
 
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   ok(over === 0, `${w}px — 넓혀도 가로로 안 넘친다`, `${over}px`)

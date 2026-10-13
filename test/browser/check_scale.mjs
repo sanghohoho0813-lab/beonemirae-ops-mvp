@@ -132,6 +132,10 @@ async function layout(p) {
       if ((r.right > docW + 1 || r.left < -1) && !inScroller(el)) {
         out.push(`${el.tagName} [${Math.round(r.left)}..${Math.round(r.right)}] "${label}"`)
       }
+      //  ⚠ 포털 1차 고도화 — 화면 읽기 프로그램 전용 글자(sr-only: 1px 상자에
+      //    일부러 숨긴 제목)는 「잘린 글자」가 아닙니다. 눈에 보이라고 둔 글이
+      //    아니라서, 넣는 순간 이 검사가 거짓으로 빨개졌습니다.
+      if (el.classList.contains('sr-only')) continue
       const hid = s.overflowX === 'hidden' || s.overflow === 'hidden' || s.textOverflow === 'ellipsis'
       const has = [...el.childNodes].some((n) => n.nodeType === 3 && (n.textContent ?? '').trim())
       if (hid && has && el.scrollWidth > el.clientWidth + 1) clipped.push(`${el.scrollWidth}>${el.clientWidth} "${label}"`)
