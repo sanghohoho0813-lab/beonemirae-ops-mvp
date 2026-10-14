@@ -22,7 +22,10 @@ import * as F from './perf_fixtures.mjs'
 
 let pass = 0
 let fail = 0
-const ok = (name, cond, detail = '') => {
+//  ⚠ 인자 순서는 **(조건, 이름, 자세히)** — 아래 호출이 전부 이 순서입니다.
+//    예전에는 정의만 (이름, 조건) 이라 조건 자리에 이름(글자)이 들어가 **늘 통과**로
+//    찍혔습니다. 검사가 아무것도 안 보고 있었습니다.
+const ok = (cond, name, detail = '') => {
   if (cond) pass += 1
   else fail += 1
   console.log(`${cond ? ' OK ' : 'FAIL'} | ${name}${detail && !cond ? ` — ${detail}` : ''}`)
@@ -37,12 +40,22 @@ const C = (id, name, extra = {}) => ({
   payment_terms: '', payment_due_day: 20, pricing: { medical: { sale: 950, cost: 350 } },
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z', ...extra,
 })
-//  c1 주소·연락처·계약일 없음 · c2 단가 없음 · c3/c4 이름 겹침 · d1 시연용
+//  c1 주소·연락처·계약일 없음 · c2 단가 없음 · c3/c4 이름 겹침 · c5 깨끗 · d1 시연용
+//
+//  손으로 센 기대값 (lib/clientTidy.ts 의 규칙대로):
+//    실제 거래처 = c1 c2 c3 c4 c5 → 5곳 (d1 시연용은 세지 않음)
+//    건수 = c1 빈칸 3(주소·연락처·계약일) + c2 빈칸 1(단가) + c3↔c4 겹침 1쌍 = 5건
+//    손볼 곳 = c1 · c2 · c3 · c4 → 4곳
+//      ⚠ 겹침은 「의심」이라 어느 쪽이 원래 것인지 사람이 정하기 전까지는
+//        **두 곳 다** 손볼 곳입니다(clientTidy.ts: dirty.add(a) · dirty.add(b)).
+//    깨끗한 곳 = c5 → 1곳
+//  ⚠ c5 를 넣은 까닭: 깨끗한 곳이 0 이면 「깨끗한 곳을 세는가」를 시험하지 못합니다.
 const MESSY = [
   C('c1', '오남한양병원', { address: '', phone: '', contract_start: null }),
   C('c2', '카페인의원', { pricing: {} }),
   C('c3', '가나요양병원'),
   C('c4', '가나 요양병원'),
+  C('c5', '더원요양병원'),
   C('d1', '시연병원', { is_demo_generated: true, demo_session_id: 'demo' }),
 ]
 const CLEAN = [C('c9', '더원요양병원')]
@@ -89,7 +102,7 @@ async function open(role, path, { clients = null, width = 1440, stock = null, ma
   const t = flat(await p.textContent('[data-tidy-card]'))
   ok(/정리할 것/.test(t), '정리 도우미 카드가 뜬다')
   ok(flat(await p.textContent('[data-tidy-total]')) === '5건', '빈칸 4 + 겹침 1 = 5건', flat(await p.textContent('[data-tidy-total]')))
-  ok(/거래처 4곳 중 1곳은 깨끗/.test(t), '실제 4곳(시연용 제외) 중 깨끗한 곳 1(c... 아니, 3·4는 겹침)', t.slice(0, 120))
+  ok(/거래처 5곳 중 1곳은 깨끗/.test(t), '실제 5곳(시연용 제외) 중 깨끗한 곳은 c5 하나 (겹치는 c3·c4 는 둘 다 손볼 곳)', t.slice(0, 120))
   const groups = await p.locator('[data-tidy-group]').evaluateAll((els) => els.map((e) => e.getAttribute('data-tidy-group')))
   ok(groups.join(',') === '돈,매일,나중,겹침', '묶음 순서가 돈 → 매일 → 나중 → 겹침', groups.join(','))
   ok(/단가 없음/.test(t) && /주소 없음/.test(t) && /연락처 없음/.test(t) && /계약 시작일 없음/.test(t),
@@ -154,7 +167,7 @@ async function open(role, path, { clients = null, width = 1440, stock = null, ma
   await link.waitFor({ state: 'visible', timeout: 8000 })
   ok((await link.count()) === 1, '설정 「채워야 할 것」 카드에 거래처 정리 한 줄', `${await link.count()}개`)
   const eff = flat(await p.textContent('[data-setup-effect="clientTidy"]'))
-  ok(/거래처 4곳 중 3곳/.test(eff) && /5건/.test(eff), '몇 곳·몇 건인지 한 줄로', eff)
+  ok(/거래처 5곳 중 4곳/.test(eff) && /5건/.test(eff), '몇 곳·몇 건인지 한 줄로 (5곳 중 손볼 곳 4 · 5건)', eff)
   await link.click()
   await p.waitForTimeout(600)
   ok(/\/clients$/.test(p.url()), '누르면 거래처 화면으로', p.url())
