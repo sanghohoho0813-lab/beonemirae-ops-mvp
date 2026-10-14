@@ -516,7 +516,7 @@ export function Requests() {
         title="병원에 회신"
         onClose={() => { if (!replyBusy) { setReplyTo(null); setReplyErr(null) } }}
         footer={
-          <div className="flex flex-col gap-2">
+          <div className="flex w-full flex-col gap-2">
             {replyErr && <p data-reply-error className="t-caption break-keep font-bold text-rose-600">{replyErr}</p>}
             <div className="flex gap-2">
               <button onClick={() => { setReplyTo(null); setReplyErr(null) }} disabled={replyBusy} className="btn-ghost flex-1">
