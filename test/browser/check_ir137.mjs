@@ -248,6 +248,7 @@ const FULL = {
 {
   const { ctx, p } = await open('office', '/performance/ir', { routes: FULL })
   ok((await p.locator('[data-ir]').count()) === 1, '⑦ 사무실 계정도 열 수 있다 (/performance 와 같은 권한)')
+  ok((await p.locator('[data-ir-trial-scope]').count()) === 1, '⑦ 사무실 계정 — 재현시험은 본인 것만 보인다고 적는다')
   await ctx.close()
 }
 {
@@ -270,6 +271,13 @@ for (const w of [390, 1440]) {
     await p.screenshot({ path: `${process.env.IR_SHOTS}/ir_${w}.png`, fullPage: true })
     await p.screenshot({ path: `${process.env.IR_SHOTS}/ir_${w}_first.png` })
   }
+  //  글자 크기 — 다른 화면과 같은 기준(16px 미만 글자 없음, check_scale)
+  const small = await p.evaluate(() => [...document.querySelectorAll('[data-ir] *')]
+    .filter((el) => el.childNodes.length && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+    .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
+    .map((el) => ({ t: el.textContent.trim().slice(0, 16), px: parseFloat(getComputedStyle(el).fontSize) }))
+    .filter((x) => x.px < 16))
+  ok(small.length === 0, `${w}px ⑦ 16px 미만 글자 없음`, small.map((x) => `${x.t}:${x.px}`).join(' | '))
   //  첫 화면(5~10초)에 두 큰 숫자가 보인다
   ok(tx.y + 120 < (w < 640 ? 900 + 400 : 900), `${w}px ⑦ 두 큰 칸이 첫 화면 가까이에 있다`, `${Math.round(tx.y)}`)
   await ctx.close()
