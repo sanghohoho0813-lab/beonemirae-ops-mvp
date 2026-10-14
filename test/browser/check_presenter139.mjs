@@ -165,6 +165,11 @@ for (const role of ['field', 'office']) {
 {
   const { ctx, p } = await open('admin', '/presentation', { aiCalls: [{ id: 'a1', kind: 'request_triage', request_id: null, ok: true, error: '', ms: 1800, model: 'gpt-x', actor_name: '대표', edited: false, created_at: `${TODAY}T01:00:00Z` }] })
   ok((await p.locator('[data-ready="ai"]').getAttribute('data-ready-mark')) === 'ok' && /최근 성공/.test(flat(await p.locator('[data-ready="ai"]').innerText())), '① AI — 실제 성공 기록이 있으면 ✓ (최근 성공 시각 · 모델)')
+  //  ai_calls.created_at 은 UTC(01:00Z) — 화면은 한국 시각 10:00 으로
+  ok(flat(await p.locator('[data-ready="ai"]').innerText()).includes(`${TODAY.slice(5)} 10:00`), '① AI 최근 성공 시각은 한국 시각으로 (UTC 01:00 → 10:00)', flat(await p.locator('[data-ready="ai"]').innerText()))
+  await p.locator('[data-presenter-jump="7"]').click()
+  await p.waitForTimeout(800)
+  ok((await p.locator('[data-presenter-close]').count()) === 1 && (await p.locator('[data-close-ai-unverified]').count()) === 0, '① AI 성공 기록이 있으면 마무리에 「확인 전」 표시 없음')
   await ctx.close()
 }
 
@@ -292,6 +297,7 @@ for (const role of ['field', 'office']) {
   await shot(p, '11_close')
   const close = flat(await p.locator('[data-presenter-close]').innerText())
   ok(/구현됨/.test(close) && /실증 단계/.test(close) && /향후 계획/.test(close) && close.includes(CLOSING.message), '② 마무리 — 구현됨 · 실증 단계 · 향후 계획 + 마지막 문장')
+  ok((await p.locator('[data-close-ai-unverified]').count()) === 1, '② 마무리 — AI 성공 기록이 없으면 「AI 요청 분석」 옆에 「실제 호출 확인 전」')
   ok((await p.locator('[data-presenter-card]:visible [data-presenter-finish]').count()) === 1, '② 마지막 단계는 「발표 가이드 종료」')
   await p.locator('[data-presenter-card]:visible [data-presenter-finish]').click()
   await p.waitForTimeout(600)
@@ -319,6 +325,23 @@ for (const role of ['field', 'office']) {
   await p.locator('[data-presenter-card]:visible [data-presenter-go]').click()
   await p.waitForTimeout(1200)
   ok(new URL(p.url()).pathname === `/portal/c/${C0.id}`, '④ 거래처를 고르면 그 병원 화면으로', p.url())
+  await ctx.close()
+}
+
+// ── ③ ✕ 는 한 번 더 묻는다 — 잘못 눌러도 시연이 날아가지 않게 ─────────────────
+{
+  const { ctx, p } = await open('admin', '/presentation')
+  await p.locator('[data-presenter-jump="2"]').click()
+  await p.waitForTimeout(1200)
+  await p.locator('[data-presenter-card]:visible [data-presenter-stop]').click()
+  ok((await p.locator('[data-presenter-card]:visible [data-presenter-stop-ask]').count()) === 1 && (await card(p).count()) === 1, '③ ✕ → 「발표 가이드를 끝낼까요?」 (바로 끝나지 않음)')
+  await p.locator('[data-presenter-card]:visible [data-presenter-stop-no]').click()
+  ok((await p.locator('[data-presenter-stop-ask]').count()) === 0 && /STEP 2/.test(await stepNo(p)), '③ 「계속」 → 같은 단계 그대로')
+  await p.locator('[data-presenter-card]:visible [data-presenter-stop]').click()
+  await p.locator('[data-presenter-card]:visible [data-presenter-stop-yes]').click()
+  await p.waitForTimeout(500)
+  ok((await p.locator('[data-presenter-card]').count()) === 0 && (await p.locator('[data-presenter-spot]').count()) === 0 && new URL(p.url()).pathname === '/collection', '③ 「끝내기」 → 카드 · 강조 사라지고 지금 화면에 그대로 (평소 사용)')
+  ok(await p.evaluate(() => sessionStorage.getItem('beonemirae-ops:presenter') === null), '③ 「끝내기」 → 진행 기록도 지움')
   await ctx.close()
 }
 

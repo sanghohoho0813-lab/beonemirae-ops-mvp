@@ -53,6 +53,8 @@ export function PresenterCard() {
   const [compact, setCompact] = useState(false)
   const cardRef = useRef<HTMLElement | null>(null)
   const [copied, setCopied] = useState<'' | 'ok' | 'fail'>('')
+  //  ✕ 는 바로 끝내지 않고 한 번 더 묻습니다 — 긴장한 손이 「접기」 옆을 잘못 눌러도 시연이 날아가지 않게
+  const [askStop, setAskStop] = useState(false)
   const lastSpot = useRef<HTMLElement | null>(null)
   const scrolledFor = useRef<string>('')
 
@@ -72,7 +74,7 @@ export function PresenterCard() {
   }, [data.aiCalls])
 
   //  단계가 바뀌면 펼쳐서 보여 줍니다
-  useEffect(() => { setMin(false); setCopied(''); setSheet(false) }, [index])
+  useEffect(() => { setMin(false); setCopied(''); setSheet(false); setAskStop(false) }, [index])
 
   //  ── 강조 · 창 피하기 — 짧게 자주 확인합니다(창 · 시트가 열리고 닫히므로) ──────
   useEffect(() => {
@@ -162,12 +164,24 @@ export function PresenterCard() {
       <button
         type="button"
         data-presenter-stop
-        onClick={stop}
+        onClick={() => setAskStop(true)}
         aria-label="발표 가이드 종료"
         title="발표 가이드 종료"
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-navy-500 transition hover:bg-navy-50"
       >
         <X size={20} strokeWidth={2.6} />
+      </button>
+    </div>
+  )
+
+  const stopAsk = askStop && (
+    <div data-presenter-stop-ask role="alert" className="mt-3 flex flex-wrap items-center gap-2 rounded-[14px] bg-navy-50 px-3.5 py-2.5">
+      <p className="min-w-0 flex-1 break-keep text-[1.02rem] font-extrabold text-navy-900">발표 가이드를 끝낼까요?</p>
+      <button type="button" data-presenter-stop-yes onClick={stop} className="min-h-[2.75rem] rounded-full bg-navy-900 px-4 text-[1rem] font-extrabold text-white">
+        끝내기
+      </button>
+      <button type="button" data-presenter-stop-no onClick={() => setAskStop(false)} className="min-h-[2.75rem] rounded-full bg-white px-4 text-[1rem] font-extrabold text-navy-800 ring-1 ring-navy-200">
+        계속
       </button>
     </div>
   )
@@ -366,6 +380,7 @@ export function PresenterCard() {
             >
               <div className="shrink-0">
                 {head}
+                {stopAsk}
                 {progress}
               </div>
               <div data-presenter-body className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{body}</div>
@@ -418,6 +433,7 @@ export function PresenterCard() {
               >
                 <button type="button" onClick={() => setSheet(false)} aria-label="안내 접기" className="mx-auto mb-2 block h-1.5 w-12 rounded-full bg-navy-200" />
                 {head}
+                {stopAsk}
                 {progress}
                 {body}
                 {nav}

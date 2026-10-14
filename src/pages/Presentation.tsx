@@ -157,7 +157,13 @@ export function Presentation() {
                 <p className={`text-[1.05rem] font-extrabold ${col.tone}`}>{col.k}</p>
                 <ul className="mt-2 space-y-1.5">
                   {col.items.map((it) => (
-                    <li key={it} className="break-keep text-[1.05rem] leading-snug text-white">{it}</li>
+                    <li key={it} className="break-keep text-[1.05rem] leading-snug text-white">
+                      {it}
+                      {/*  AI 는 코드가 있어도 실제 호출 성공 기록이 있어야 「구현됨」만으로 둡니다 */}
+                      {col.k === '구현됨' && it.startsWith('AI') && !aiOk && (
+                        <span data-close-ai-unverified className="ml-1.5 whitespace-nowrap text-[0.98rem] font-bold text-amber-300">· 실제 호출 확인 전</span>
+                      )}
+                    </li>
                   ))}
                 </ul>
               </div>
