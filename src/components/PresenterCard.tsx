@@ -263,7 +263,7 @@ export function PresenterCard() {
               className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[0.98rem] font-extrabold text-white transition hover:bg-navy-800"
             >
               {copied === 'ok' ? <Check size={16} strokeWidth={2.8} /> : <Copy size={16} strokeWidth={2.4} />}{' '}
-              {copied === 'ok' ? '복사됨 — 특이사항 칸에 붙여 넣기' : copied === 'fail' ? '복사가 막혔습니다 — 아래 문장을 직접 입력' : '예시 문장 복사'}
+              {copied === 'ok' ? '복사됨 — 붙여 넣으세요' : copied === 'fail' ? '복사가 막혔습니다 — 아래 문장을 직접 입력' : '예시 문장 복사'}
             </button>
             <p data-presenter-sample className="mt-1.5 break-keep text-[0.98rem] leading-snug text-navy-700">{SAMPLE_REQUEST}</p>
           </div>
