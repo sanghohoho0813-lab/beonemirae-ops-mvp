@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight, Timer, Repeat, FileText, AlertTriangle, TrendingUp, Info, ChevronDown, ChevronRight,
-  Table2, ClipboardCheck, SlidersHorizontal, FlaskConical, ListChecks, Building2, type LucideIcon,
+  Table2, ClipboardCheck, SlidersHorizontal, FlaskConical, ListChecks, Building2, Presentation, type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -225,7 +225,22 @@ export function Performance() {
 
   return (
     <PageShell>
-      <PageHeader title="AX 도입 성과" subtitle="회사 현황 · AX 로 확인된 변화 · 다음 할 일" />
+      <PageHeader
+        title="AX 도입 성과"
+        subtitle="회사 현황 · AX 로 확인된 변화 · 다음 할 일"
+        //  0137 — 발표용 요약으로 가는 단추만 더했습니다. 이 화면의 요약 · 측정 근거 ·
+        //  설정은 그대로입니다(발표 화면의 「근거 보기」가 여기 측정 근거로 돌아옵니다).
+        action={
+          <button
+            type="button"
+            data-open-ir
+            onClick={() => navigate('/performance/ir')}
+            className="flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-full bg-navy-50 px-4 text-[1.02rem] font-extrabold text-navy-800 transition hover:bg-navy-100 print:hidden"
+          >
+            <Presentation size={18} strokeWidth={2.4} aria-hidden="true" /> 발표용 요약
+          </button>
+        }
+      />
 
       {/* ── 탭 ─────────────────────────────────────────────────────────────── */}
       <div role="tablist" className="grid grid-cols-3 gap-1 rounded-2xl bg-navy-50 p-1 print:hidden">

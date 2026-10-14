@@ -187,6 +187,21 @@ export function Presentation() {
         />
       </div>
 
+      {/*  0137 — 발표용 성과 요약. 「도입 전 → 같은 업무 → 실제 사용」 한 화면.
+           상세 근거 화면(/performance)은 그대로 두고, 발표 때는 이쪽을 엽니다. */}
+      <button
+        type="button"
+        data-open-ir
+        onClick={() => navigate('/performance/ir')}
+        className="mb-5 flex w-full items-center gap-3 rounded-2xl bg-teal-50 px-4 py-3.5 text-left transition hover:bg-teal-100"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[1.07rem] font-extrabold text-navy-900">발표용 성과 요약 열기</span>
+          <span className="mt-0.5 block text-[1rem] leading-snug text-navy-600">도입 전 업무부담 → 동일 업무 처리 → 실제 사용 — 확인된 것만 한 화면에</span>
+        </span>
+        <ChevronRight size={20} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-teal-700" />
+      </button>
+
       {/* 진행 도트 */}
       <div className="mb-5 flex gap-1.5">
         {steps.map((_, idx) => (

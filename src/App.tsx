@@ -28,6 +28,7 @@ import { Roadmap } from './pages/Roadmap'
 import { VisitVideo } from './pages/VisitVideo'
 import { CollectionHistory } from './pages/CollectionHistory'
 import { Presentation } from './pages/Presentation'
+import { PerformanceIr } from './pages/PerformanceIr'
 import { MobilePreview } from './pages/MobilePreview'
 import { CompanyHomePage } from './pages/CompanyHomePage'
 import { Login } from './pages/Login'
@@ -174,6 +175,8 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="why" element={<Purpose />} />
           <Route path="performance" element={<Performance />} />
+          {/*  0137 — 발표용 성과 요약. /performance(요약 · 측정 근거 · 설정)는 그대로 두고 따로 둡니다. */}
+          <Route path="performance/ir" element={<PerformanceIr />} />
           {/*  0108 — AX Coach. 성과 화면이 「결과」라면 이곳은 「지금 무엇을 할지」입니다. */}
           <Route path="ax-coach" element={<AxCoach />} />
           <Route path="audit" element={<AuditLog />} />
