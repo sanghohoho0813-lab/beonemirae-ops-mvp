@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -36,7 +36,7 @@ import { prettyDate, shiftDays, today } from '../lib/format'
 import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 import { AiButton } from '../components/AiAction'
-import { aiTriageRequest, markAiCallEdited } from '../lib/evidenceRepo'
+import { aiTriageRequest, markAiCallEdited, type TriageResult } from '../lib/evidenceRepo'
 import { Sparkles, Loader2 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +57,26 @@ const KIND_ICON: Record<RequestKind, typeof Siren> = {
 }
 
 const FLOW: RequestStatus[] = ['접수', '확인 중', '일정 반영', '처리 완료']
+
+/** 요청 하나에 대한 AI 분석 상태 (0138) */
+interface AiView {
+  busy: boolean
+  callId: string | null
+  result: TriageResult | null
+  ms: number | null
+  error: string | null
+  /** 서버가 호출 기록을 남겼는가 */
+  logged: boolean
+  /** 담당자가 「초안 사용」을 눌렀는가 */
+  usedDraft: boolean
+}
+const AI_EMPTY: AiView = { busy: false, callId: null, result: null, ms: null, error: null, logged: true, usedDraft: false }
+/** 긴급도 색 — 높음만 빨강 */
+const AI_URGENCY_TONE: Record<string, string> = {
+  높음: 'bg-rose-50 text-rose-700',
+  보통: 'bg-amber-50 text-amber-800',
+  낮음: 'bg-navy-100 text-navy-700',
+}
 
 type Filter = '진행 중' | '전체' | '병원 직접' | '긴급' | '내려 둔 것'
 
@@ -95,12 +115,16 @@ export function Requests() {
     data.schedules.some((x) => x.clientId === clientId && x.date >= today() && x.status !== '완료' && !x.canceledAt)
   const [replyBusy, setReplyBusy] = useState(false)
   const [replyErr, setReplyErr] = useState<string | null>(null)
-  //  0106 — AI 요청 정리 (서버 함수 ai-triage). 판 106 + 사무실·관리자 + 실운영에서만 단추가 있습니다.
-  //  키·배포가 없으면 서버가 503 을 돌려주고, 그 실패도 그대로 적습니다 — 가짜 초안을 만들지 않습니다.
+  //  0106 · 0138 — AI 요청 분석 (서버 함수 ai-triage). 판 106 + 사무실·관리자 + 실운영에서만 칸이 있습니다.
+  //  서버도 역할을 다시 확인합니다. 키·배포가 없으면 실패를 그대로 적습니다 — 가짜 초안을 만들지 않습니다.
+  //  ⚠ AI 결과는 **요청마다** 따로 둡니다. 창을 닫았다 다시 열면 같은 요청의 최근 결과를
+  //    다시 보여 주고(다시 부르지 않음 — 비용), 다른 요청의 결과가 섞이지 않습니다.
   const ready106 = useSchemaAtLeast(106) === true
-  const [ai, setAi] = useState<{ busy: boolean; callId: string | null; draft: string; kind: string; urgency: string; basis: string; ms: number | null; error: string | null }>({
-    busy: false, callId: null, draft: '', kind: '', urgency: '', basis: '', ms: null, error: null,
-  })
+  const [aiByReq, setAiByReq] = useState<Record<string, AiView>>({})
+  //  연타 방지 — 상태가 다음 그림에 반영되기 전 두 번째 누름도 막습니다.
+  const aiBusy = useRef<Set<string>>(new Set())
+  const ai: AiView = (replyTo && aiByReq[replyTo.id]) || AI_EMPTY
+  const setAiFor = (id: string, patch: Partial<AiView>) => setAiByReq((m) => ({ ...m, [id]: { ...(m[id] ?? AI_EMPTY), ...patch } }))
   const { profile } = useAuth()
   const canAi = ready106 && mode === 'live' && (role === 'admin' || role === 'office')
   const [newOpen, setNewOpen] = useState(false)
@@ -174,14 +198,21 @@ export function Requests() {
       setReplyErr(res.error ?? '회신을 저장하지 못했습니다. 다시 시도해 주세요.')
       return
     }
-    //  AI 초안을 고쳐 썼으면 그 사실을 남깁니다 — 「AI 결과가 그대로 쓰였나」의 근거.
-    if (ai.callId && ai.draft && ai.draft.trim() !== text) {
-      markAiCallEdited(ai.callId, text.slice(0, 300)).catch(() => { /* 기록 실패는 회신을 되돌리지 않습니다 */ })
+    //  AI 초안이 그대로 쓰이지 않았으면 그 사실을 남깁니다 — 「AI 결과가 그대로 쓰였나」의 근거.
+    //  고쳐 썼는지([수정]) · 초안을 안 썼는지([초안 미사용])를 메모 앞에 적습니다.
+    const view = aiByReq[replyTo.id]
+    if (view?.callId && view.result && view.result.draft.trim() !== text) {
+      markAiCallEdited(view.callId, `${view.usedDraft ? '[수정]' : '[초안 미사용]'} ${text}`.slice(0, 300))
+        .catch(() => { /* 기록 실패는 회신을 되돌리지 않습니다 */ })
     }
     setSaveMsg((m) => ({ ...m, [replyTo.id]: { ok: true, text: '회신 저장됨 — 병원 화면에 보입니다' } }))
+    setAiByReq((m) => {
+      const next = { ...m }
+      delete next[replyTo.id]
+      return next
+    })
     setReplyTo(null)
     setReplyText('')
-    setAi({ busy: false, callId: null, draft: '', kind: '', urgency: '', basis: '', ms: null, error: null })
   }
 
   const setStatus = async (r: RequestItem, st: RequestStatus) => {
@@ -192,14 +223,27 @@ export function Requests() {
 
   const runAi = async () => {
     if (!replyTo || !canAi) return
-    setAi((a) => ({ ...a, busy: true, error: null }))
-    const res = await aiTriageRequest({ requestId: replyTo.id, content: replyTo.content, actorName: profile?.name ?? '' })
-    if (res.ok) {
-      setAi({ busy: false, callId: res.callId, draft: res.result.draft, kind: res.result.kind, urgency: res.result.urgency, basis: res.result.basis, ms: res.ms, error: null })
-      if (!replyText.trim()) setReplyText(res.result.draft)
-    } else {
-      setAi({ busy: false, callId: res.callId, draft: '', kind: '', urgency: '', basis: '', ms: res.ms, error: res.error })
+    const id = replyTo.id
+    if (aiBusy.current.has(id)) return
+    aiBusy.current.add(id)
+    setAiFor(id, { busy: true, error: null })
+    //  시연 요청이면 서버에 닿지 못한 실패 기록도 시연으로 남깁니다 (운영 실적과 분리).
+    const src = data.requests.find((x) => x.id === id)
+    const demo = !!src?.demoSessionId || !!data.clients.find((c) => c.id === src?.clientId)?.isDemoGenerated
+    try {
+      const res = await aiTriageRequest({ requestId: id, actorName: profile?.name ?? '', demo })
+      if (res.ok) setAiFor(id, { busy: false, callId: res.callId, result: res.result, ms: res.ms, error: null, logged: res.logged, usedDraft: false })
+      else setAiFor(id, { busy: false, callId: res.callId, result: null, ms: res.ms, error: res.error })
+    } finally {
+      aiBusy.current.delete(id)
     }
+  }
+
+  //  「초안 사용」 — 사람이 눌러야 회신 칸에 들어갑니다(자동으로 넣지 않습니다).
+  const applyDraft = () => {
+    if (!replyTo || !ai.result) return
+    setReplyText(ai.result.draft)
+    setAiFor(replyTo.id, { usedDraft: true })
   }
 
   const submitNew = async () => {
@@ -492,27 +536,84 @@ export function Requests() {
         {replyTo?.content && (
           <p className="t-caption mb-3 whitespace-pre-wrap break-keep rounded-xl bg-navy-50 px-3 py-2 text-navy-600">{replyTo.content}</p>
         )}
-        {canAi && (
+        {canAi && replyTo && (
           <div data-ai-triage className="mb-3 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <Sparkles size={17} strokeWidth={2.4} className="shrink-0 text-violet-600" />
-              <p className="t-body min-w-0 flex-1 break-keep font-bold text-violet-900">AI 로 요청 정리 · 회신 초안</p>
-              <button data-ai-triage-run onClick={() => void runAi()} disabled={ai.busy} className="btn-ghost min-h-[2.5rem] border-violet-200 px-3 text-[0.98rem]">
-                {ai.busy ? <Loader2 size={16} className="animate-spin" /> : '초안 만들기'}
+              <p className="t-body min-w-0 flex-1 break-keep font-bold text-violet-900">AI 요청 분석 · 회신 초안</p>
+              <button
+                data-ai-triage-run
+                onClick={() => void runAi()}
+                disabled={ai.busy}
+                aria-busy={ai.busy}
+                className="btn-ghost min-h-[2.75rem] border-violet-200 px-3 text-[0.98rem] disabled:opacity-60"
+              >
+                {ai.busy ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> 분석 중…
+                  </>
+                ) : ai.error ? '다시 시도' : ai.result ? '다시 분석' : 'AI 분석 실행'}
               </button>
             </div>
-            {ai.error && (
-              <p data-ai-triage-error className="t-caption mt-2 break-keep font-bold text-rose-700">
-                AI 를 부르지 못했습니다 — {ai.error}. (호출 기록에 실패로 남았습니다. 회신은 직접 적어 주세요.)
-              </p>
+
+            {ai.busy && (
+              <p data-ai-triage-busy className="t-caption mt-2 break-keep text-violet-800">AI가 요청 글을 읽고 있습니다…</p>
             )}
-            {ai.draft && (
-              <p data-ai-triage-result className="t-caption mt-2 break-keep text-violet-900">
-                분류 <b>{ai.kind}</b> · 급함 <b>{ai.urgency}</b>{ai.ms != null && ` · ${(ai.ms / 1000).toFixed(1)}초`} — 초안을 아래에 넣었습니다. 고쳐 쓰시면 「수정됨」으로 남습니다.
-                {ai.basis && <span className="block text-violet-700">근거: {ai.basis}</span>}
-              </p>
+
+            {ai.error && !ai.busy && (
+              <div data-ai-triage-error role="status" className="mt-2">
+                <p className="t-caption break-keep font-bold text-rose-700">
+                  AI 분석을 불러오지 못했습니다. 요청 처리는 그대로 진행할 수 있습니다.
+                </p>
+                <p className="t-caption mt-0.5 break-keep text-navy-500">까닭: {ai.error}</p>
+              </div>
             )}
-            <p className="t-caption mt-1.5 break-keep text-violet-700">보내지 않습니다 · 상태를 바꾸지 않습니다 · 날짜·금액을 약속하지 않습니다.</p>
+
+            {ai.result && !ai.busy && (
+              <div data-ai-triage-result className="mt-2.5 space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span data-ai-kind={ai.result.kind} className="pill bg-white text-navy-800 ring-1 ring-violet-200">
+                    {REQUEST_KIND_LABEL[ai.result.kind as RequestKind] ?? ai.result.kind}
+                  </span>
+                  {ai.result.alsoKinds.map((k) => (
+                    <span key={k} data-ai-also={k} className="pill bg-white text-navy-700 ring-1 ring-violet-100">
+                      + {REQUEST_KIND_LABEL[k as RequestKind] ?? k}
+                    </span>
+                  ))}
+                  <span data-ai-urgency={ai.result.urgency} className={`pill ${AI_URGENCY_TONE[ai.result.urgency] ?? 'bg-navy-100 text-navy-700'}`}>
+                    긴급도 {ai.result.urgency}
+                  </span>
+                </div>
+                <p data-ai-summary className="t-body break-keep text-navy-900">{ai.result.summary}</p>
+                {ai.result.points.length > 0 && (
+                  <ul data-ai-points className="t-caption list-disc space-y-0.5 pl-5 text-navy-700">
+                    {ai.result.points.map((x) => <li key={x} className="break-keep">{x}</li>)}
+                  </ul>
+                )}
+                <p data-ai-basis className="t-caption break-keep text-navy-600">판단 근거: {ai.result.basis}</p>
+                <div className="rounded-xl bg-white px-3 py-2.5 ring-1 ring-violet-100">
+                  <p className="t-caption font-bold text-violet-800">회신 초안</p>
+                  <p data-ai-draft className="t-body mt-0.5 whitespace-pre-wrap break-keep text-navy-900">{ai.result.draft}</p>
+                  <button
+                    type="button"
+                    data-ai-use-draft
+                    onClick={applyDraft}
+                    className="btn-ghost mt-2 min-h-[2.75rem] border-violet-200 px-3 text-[0.98rem]"
+                  >
+                    초안 사용
+                  </button>
+                </div>
+                <p data-ai-meta className="t-caption break-keep text-navy-500">
+                  {ai.result.model ? `모델 ${ai.result.model}` : '모델 이름 없음'}
+                  {ai.ms != null && ` · ${(ai.ms / 1000).toFixed(1)}초`}
+                  {!ai.logged && ' · 호출 기록을 남기지 못했습니다'}
+                </p>
+              </div>
+            )}
+
+            <p data-ai-disclaimer className="t-caption mt-2 break-keep text-violet-800">
+              AI가 업무 확인을 돕기 위해 제안한 내용입니다. 최종 판단과 회신은 담당자가 확인합니다. AI는 요청 상태를 바꾸거나 병원에 보내지 않습니다.
+            </p>
           </div>
         )}
         <textarea

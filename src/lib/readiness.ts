@@ -219,7 +219,10 @@ export function readinessOf(data: AppData): ReadyItem[] {
   }
 
   // ── ⑧ AI — 개수는 목표가 아닙니다 ───────────────────────────────────────
-  const aiCalls = data.aiCalls
+  //  ⚠ 시연 요청에 대한 호출은 세지 않습니다 (0138) — 서버가 kind 를 'request_triage_demo' 로
+  //    남기고, 혹시 옛 기록이면 요청 쪽 시연 표시로 한 번 더 거릅니다.
+  const aiCalls = data.aiCalls == null ? null : realAiCalls(data)
+  const demoCalls = data.aiCalls == null || aiCalls == null ? 0 : data.aiCalls.length - aiCalls.length
   items.push({
     key: 'ai',
     group: 'system',
@@ -227,10 +230,10 @@ export function readinessOf(data: AppData): ReadyItem[] {
     state: aiCalls && aiCalls.length > 0 ? 'partial' : 'missing',
     value: aiCalls == null
       ? `호출 기록 표 없음 · 설계된 자리 ${AI_SPEC_ORDER.length}곳 중 연결 0곳`
-      : `호출 ${aiCalls.length}건 (성공 ${aiCalls.filter((c) => c.ok).length}) · 설계된 자리 ${AI_SPEC_ORDER.length}곳`,
+      : `실제 요청 호출 ${aiCalls.length}건 (성공 ${aiCalls.filter((c) => c.ok).length})${demoCalls > 0 ? ` · 시연 ${demoCalls}건 제외` : ''} · 설계된 자리 ${AI_SPEC_ORDER.length}곳`,
     why: '「어디가 AI입니까」에는 연결 개수가 아니라 **입력·결과·담당자 수정·실패·처리시간 기록**으로 답합니다. 개수를 목표로 삼지 않습니다.',
     where: { to: '/requests', label: '고객 요청 → AI 요청 정리' },
-    note: '요청 정리 1곳의 서버 함수와 화면 연결이 준비돼 있습니다. 키 발급·배포 전에는 화면이 「아직 연결 전」이라고 말하고, 가짜 결과를 만들지 않습니다.',
+    note: '「AI 요청 분석」 1곳이 실제 AI 를 부릅니다(서버 함수 ai-triage). 서버 함수 배포 · AI 키 등록 전에는 호출이 실패로 표시 · 기록되고, 가짜 결과를 만들지 않습니다.',
   })
 
   // ── 기업 증빙 — 사람이 서류로 확인 ────────────────────────────────────────
@@ -277,4 +280,24 @@ export function readinessOf(data: AppData): ReadyItem[] {
 export function readinessCounts(items: ReadyItem[]) {
   const n = (s: ReadyState) => items.filter((i) => i.state === s).length
   return { ok: n('ok'), partial: n('partial'), missing: n('missing'), manual: n('manual'), total: items.length }
+}
+
+/**
+ * 운영 실적으로 셀 AI 호출 (0138) — 시연 요청에 대한 호출을 뺍니다.
+ *  · 서버가 남긴 kind 'request_triage_demo'
+ *  · 또는 그 요청이 시연 세션 · 시연용 거래처의 것
+ *  ⚠ 요청을 찾을 수 없는 호출(시연 초기화로 지워진 요청 등)은 **세지 않습니다** —
+ *    실적을 부풀리는 쪽으로 틀리지 않게.
+ */
+export function realAiCalls(data: AppData): NonNullable<AppData['aiCalls']> {
+  const calls = data.aiCalls ?? []
+  const demoClients = new Set(data.clients.filter((c) => c.isDemoGenerated).map((c) => c.id))
+  const reqById = new Map((data.requests ?? []).map((r) => [r.id, r]))
+  return calls.filter((c) => {
+    if (c.kind.endsWith('_demo')) return false
+    if (!c.requestId) return true
+    const r = reqById.get(c.requestId)
+    if (!r) return false
+    return !r.demoSessionId && !demoClients.has(r.clientId)
+  })
 }

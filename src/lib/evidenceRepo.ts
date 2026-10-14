@@ -220,65 +220,126 @@ export function toAiCall(r: Row): AiCallRecord {
   }
 }
 
+/** 서버가 허용하는 값 — supabase/functions/ai-triage/triage.ts 와 같아야 합니다 */
+export const TRIAGE_KINDS = ['긴급수거', '추가수거', '소모품', '교육·자료', '기타'] as const
+export const TRIAGE_URGENCIES = ['높음', '보통', '낮음'] as const
+
 export interface TriageResult {
+  /** 요청 종류 — 시스템 RequestKind 값 */
   kind: string
+  /** 한 글에 함께 든 다른 종류 (예: 긴급수거 + 소모품) */
+  alsoKinds: string[]
+  /** 높음 · 보통 · 낮음 */
   urgency: string
+  summary: string
+  /** 핵심 요구사항 (최대 4) */
+  points: string[]
   draft: string
   basis: string
+  /** 실제로 답한 모델 이름 */
   model: string
 }
 
+export type TriageOutcome =
+  | { ok: true; result: TriageResult; ms: number; callId: string | null; logged: boolean }
+  | { ok: false; error: string; ms: number; callId: string | null }
+
+/** 서버가 돌려준 성공 결과를 한 번 더 확인합니다 — 형식이 틀리면 성공으로 치지 않습니다 */
+function asTriage(v: unknown): TriageResult | null {
+  const r = v as Partial<TriageResult> | null
+  if (!r || typeof r !== 'object') return null
+  const str = (x: unknown) => typeof x === 'string' && x.trim().length > 0
+  if (!str(r.kind) || !(TRIAGE_KINDS as readonly string[]).includes(r.kind as string)) return null
+  if (!str(r.urgency) || !(TRIAGE_URGENCIES as readonly string[]).includes(r.urgency as string)) return null
+  if (!str(r.summary) || !str(r.draft) || !str(r.basis)) return null
+  const arr = (x: unknown) => (Array.isArray(x) ? x.filter((y): y is string => typeof y === 'string') : [])
+  return {
+    kind: r.kind as string,
+    alsoKinds: arr(r.alsoKinds),
+    urgency: r.urgency as string,
+    summary: r.summary as string,
+    points: arr(r.points),
+    draft: r.draft as string,
+    basis: r.basis as string,
+    model: typeof r.model === 'string' ? r.model : '',
+  }
+}
+
 /**
- * 병원 요청 글 하나를 AI 로 정리합니다 (서버 함수 ai-triage).
+ * 병원 요청 하나를 AI 로 분석합니다 (서버 함수 ai-triage · 0138).
  *
- *  ⚠ 결과를 저장하거나 회신을 보내지 않습니다 — 초안을 담당자에게 보여 줄 뿐입니다.
- *  ⚠ 호출 한 건마다 입력·결과·성공/실패·처리시간을 ai_calls 에 남깁니다.
- *    함수가 아직 배포되지 않았거나 키가 없으면 그 실패도 그대로 남깁니다.
+ *  ⚠ 보내는 것은 **요청 번호뿐**입니다. 요청 글은 서버가 DB 에서 직접 읽습니다
+ *    — 아무 글이나 AI 에 보내는 통로가 되지 않게.
+ *  ⚠ 결과를 저장하거나 회신을 보내거나 상태를 바꾸지 않습니다. 초안을 보여 줄 뿐입니다.
+ *  ⚠ 호출 기록(ai_calls)은 **서버가** 남깁니다(성공 · 실패 모두). 서버에 닿지
+ *    못한 경우(함수 미배포 · 네트워크 · 시간 초과)만 여기서 실패를 한 줄 남깁니다.
  *    가짜 결과를 만들지 않습니다.
  */
 export async function aiTriageRequest(input: {
   requestId: string
-  content: string
   actorName: string
-}): Promise<{ ok: true; result: TriageResult; ms: number; callId: string | null } | { ok: false; error: string; ms: number; callId: string | null }> {
+  /** 시연 요청이면 true — 서버에 닿지 못한 실패 기록도 운영 실적과 섞이지 않게 */
+  demo?: boolean
+  /** 서버가 먼저 끝내도록 (서버의 모델 제한 20초) 넉넉히 — 기본 35초 */
+  timeoutMs?: number
+}): Promise<TriageOutcome> {
   const sb = need()
   const t0 = Date.now()
-  let result: TriageResult | null = null
   let errorMsg = ''
+  let callId: string | null = null
+  let reached = false
   try {
-    const { data, error } = await sb.functions.invoke('ai-triage', { body: { content: input.content } })
-    if (error) throw new Error(error.message || 'AI 함수 호출 실패')
-    const d = (data ?? {}) as Partial<TriageResult> & { error?: string }
+    const { data, error } = await sb.functions.invoke('ai-triage', {
+      body: { requestId: input.requestId },
+      timeout: input.timeoutMs ?? 35_000,
+    })
+    if (error) {
+      //  서버가 답은 했는데 실패(4xx·5xx) — 서버의 이유와 기록 번호를 읽습니다.
+      const ctx = (error as { context?: unknown }).context
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const b = (await (ctx as Response).clone().json().catch(() => null)) as { error?: string; message?: string; callId?: string | null } | null
+        if (b && 'callId' in b) {
+          reached = true
+          callId = b.callId ?? null
+        }
+        throw new Error(b?.error || b?.message || `서버 함수 오류 (${(ctx as Response).status})`)
+      }
+      throw new Error(error.message || 'AI 함수 호출 실패')
+    }
+    reached = true
+    const d = (data ?? {}) as { ok?: boolean; result?: unknown; callId?: string | null; logged?: boolean; error?: string }
+    callId = d.callId ?? null
     if (d.error) throw new Error(d.error)
-    if (!d.draft || !d.kind) throw new Error('AI 응답 형식이 맞지 않습니다')
-    result = { kind: d.kind, urgency: d.urgency ?? '판단 불가', draft: d.draft, basis: d.basis ?? '', model: d.model ?? '' }
+    const result = asTriage(d.result)
+    if (!result) throw new Error('AI 응답 형식이 맞지 않습니다')
+    return { ok: true, result, ms: Date.now() - t0, callId, logged: d.logged !== false && callId != null }
   } catch (e) {
     errorMsg = e instanceof Error ? e.message : '알 수 없는 오류'
   }
   const ms = Date.now() - t0
-  //  기록 — 기록에 실패해도 결과는 돌려줍니다 (표가 없는 서버).
-  let callId: string | null = null
-  try {
-    const { data } = await sb
-      .from('ai_calls')
-      .insert({
-        kind: 'request_triage',
-        request_id: input.requestId,
-        input: input.content.slice(0, 4000),
-        output: result,
-        model: result?.model ?? '',
-        ok: !!result,
-        error: errorMsg,
-        ms,
-        actor_name: input.actorName,
-      })
-      .select('id')
-      .maybeSingle()
-    callId = data ? String((data as Row).id) : null
-  } catch {
-    callId = null
+  //  서버에 닿지 못했으면 서버 기록이 없습니다 — 그 시도를 여기서 실패로 남깁니다.
+  if (!reached) {
+    try {
+      const { data } = await sb
+        .from('ai_calls')
+        .insert({
+          kind: input.demo ? 'request_triage_demo' : 'request_triage',
+          request_id: input.requestId,
+          input: '',
+          output: null,
+          model: '',
+          ok: false,
+          error: `서버 함수에 닿지 못했습니다 — ${errorMsg}`.slice(0, 500),
+          ms,
+          actor_name: input.actorName,
+        })
+        .select('id')
+        .maybeSingle()
+      callId = data ? String((data as Row).id) : null
+    } catch {
+      callId = null
+    }
   }
-  if (result) return { ok: true, result, ms, callId }
   return { ok: false, error: errorMsg, ms, callId }
 }
 

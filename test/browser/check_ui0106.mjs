@@ -346,8 +346,9 @@ console.log('── ⑥ 고객 요청 — 저장 결과 · AI 정리 ──')
   await p.locator('[data-ai-triage-run]').click()
   await p.waitForTimeout(2500)
   const err = flat(await p.textContent('[data-ai-triage]'))
-  ok('⑥ 함수가 없으면 실패를 그대로 적고 가짜 초안을 만들지 않는다', /AI 를 부르지 못했습니다/.test(err) && (await p.locator('[data-ai-triage-result]').count()) === 0, err.slice(0, 120))
-  ok('⑥ 보내지 않음 · 상태 안 바꿈 · 약속 안 함이 적혀 있다', /보내지 않습니다/.test(err) && /약속하지 않습니다/.test(err))
+  //  0138 — 실패 문구: 「AI 분석을 불러오지 못했습니다. 요청 처리는 그대로 진행할 수 있습니다.」
+  ok('⑥ 함수가 없으면 실패를 그대로 적고 가짜 초안을 만들지 않는다', /AI 분석을 불러오지 못했습니다/.test(err) && /요청 처리는 그대로 진행할 수 있습니다/.test(err) && (await p.locator('[data-ai-triage-result]').count()) === 0, err.slice(0, 160))
+  ok('⑥ 보내지 않음 · 상태 안 바꿈 · 최종 판단은 담당자가 적혀 있다', /병원에 보내지 않습니다/.test(err) && /상태를 바꾸거나/.test(err) && /최종 판단과 회신은 담당자/.test(err))
   await ctx.close()
 }
 

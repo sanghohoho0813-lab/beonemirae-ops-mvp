@@ -1,0 +1,103 @@
+# ai-triage — 병원 요청 AI 분석 (배포 · 설정 · 확인)
+
+고객 요청 화면의 회신 창 「AI 요청 분석 · 회신 초안」이 부르는 서버 함수입니다.
+병원 요청 **하나**를 외부 LLM 이 읽고 요청 종류 · 긴급도 · 요약 · 핵심 요구사항 ·
+회신 초안 · 판단 근거를 **제안**합니다. 최종 판단과 회신은 담당자가 합니다.
+
+> 지금 상태: **코드 완료 · 배포 전 · 실제 AI 호출 미검증.** 키(`AI_API_KEY`)를 서버에
+> 등록하고 함수를 배포하기 전에는 버튼을 눌러도 「AI 분석을 불러오지 못했습니다」가
+> 뜨고, 그 실패가 `ai_calls` 에 남습니다. 가짜 결과는 만들지 않습니다.
+
+## 파일
+
+| 파일 | 하는 일 |
+|---|---|
+| `index.ts` | Deno 진입점 — Supabase(로그인 사용자 토큰) · fetch 를 이어 줌 |
+| `handler.ts` | 흐름: 로그인 → 역할(관리자 · 사무실 · 사용 중) → DB 에서 요청 읽기 → 모델 → 검사 → `ai_calls` 기록 |
+| `triage.ts` | 시스템 프롬프트 · 개인정보 가림 · 엄격한 JSON 검사(지어낸 숫자 · 확정 약속 차단) |
+| `provider.ts` | 모델 호출 어댑터 (OpenAI 호환 Chat Completions · JSON 모드 · 20초 제한) |
+| `deno.json` | 저장소 맨 위 `package.json` 을 따라가지 않게 (`nodeModulesDir: none`) |
+
+## 배포 — 대표님 PC 에서 약 5분
+
+```bash
+# 0) Supabase CLI 설치 · 로그인 · 프로젝트 연결 (처음 한 번)
+#    설치: https://supabase.com/docs/guides/cli
+supabase login
+supabase link --project-ref <프로젝트 ref>      # 대시보드 주소 /project/<ref> 의 그 값
+
+# 1) 키 등록 — 서버에만 둡니다 (브라우저 · 저장소 · VITE_* 금지)
+supabase secrets set AI_API_KEY=<모델 회사에서 발급한 키>
+
+# 2) (선택) 모델 · 주소 바꾸기
+#    기본: AI_MODEL=gpt-4o-mini · AI_API_URL=https://api.openai.com/v1/chat/completions
+#    지금 계정에서 쓸 수 있는 모델 이름으로 맞춰 주세요. 이름이 틀리면 404 실패로 기록됩니다.
+supabase secrets set AI_MODEL=gpt-4o-mini
+#    temperature 를 받지 않는 모델이면 빈 값으로:  supabase secrets set AI_TEMPERATURE=
+
+# 3) 배포 (저장소 맨 위 폴더에서)
+supabase functions deploy ai-triage
+```
+
+`SUPABASE_URL` · `SUPABASE_ANON_KEY` 는 Supabase 가 함수에 자동으로 넣어 줍니다.
+`supabase/config.toml` 의 `[functions.ai-triage] verify_jwt = true` 로 로그인 토큰이 없는
+호출은 함수에 닿기 전에 막히고, 함수 안에서 역할을 다시 확인합니다.
+
+## 배포 후 확인 — 실제 호출이 되는지
+
+1. 관리자 또는 사무실 계정으로 로그인 → **고객 요청** → 요청 하나의 **회신 남기기**
+2. **AI 분석 실행** → 2~10초 안에 「긴급수거 · 긴급도 높음 · 요약 · 회신 초안」이 보이면 성공
+3. 실패하면 칸에 까닭이 그대로 나옵니다
+
+| 화면의 까닭 | 할 일 |
+|---|---|
+| `AI_API_KEY 가 서버에 등록되지 않았습니다` | 위 1) |
+| `AI 키가 올바르지 않습니다 (401)` | 키 다시 발급 · 등록 |
+| `AI 모델 이름을 찾지 못했습니다 (404)` | `AI_MODEL` 을 계정에서 쓸 수 있는 이름으로 |
+| `AI 사용량 한도에 걸렸습니다 (429)` | 모델 회사 결제 · 한도 확인 |
+| `서버 함수에 닿지 못했습니다 — …not found` | 위 3) 배포 |
+
+4. Supabase **SQL Editor** 에서 기록 확인 (읽기만):
+
+```sql
+-- 최근 AI 호출 20건 — 성공 · 실패 · 모델 · 처리시간
+select created_at at time zone 'Asia/Seoul' as 시각, kind, ok, model, ms, error, actor_name, edited
+from public.ai_calls order by created_at desc limit 20;
+
+-- 실제 운영 요청에 대한 호출 수 (시연 요청 제외)
+select count(*) filter (where ok) as 성공, count(*) filter (where not ok) as 실패
+from public.ai_calls where kind = 'request_triage';
+```
+
+## AI 가 읽는 것 · 하지 않는 것
+
+- **읽는 것(모델에 보내는 것 전부)**: 그 요청의 글(전화번호 · 주민번호 · 메일은 가림, 2,000자까지),
+  병원이 고른 요청 종류, 「급함」 표시, 희망일. 보낸 글은 `ai_calls.input` 에 그대로 남습니다.
+- **보내지 않는 것**: 병원명 · 요청자 이름 · 매출 · 미수 · 정산 · 다른 거래처 · 수거 이력.
+- **하지 않는 것**: 요청 상태 변경 · 회신 전송 · 일정 확정 · 배차 · 수거량 · 재고 · 정산 변경.
+  이 함수가 쓰는 곳은 `ai_calls`(호출 기록) 한 곳뿐입니다.
+- **결과 검사**: 종류는 `긴급수거 · 추가수거 · 소모품 · 교육·자료 · 기타`, 긴급도는
+  `높음 · 보통 · 낮음` 만. 빠지거나 범위 밖이거나 JSON 이 아니면 **실패**입니다.
+  회신 초안에 요청 글에 없는 숫자 · 시각(예: 「10시」)이 있거나 「방문하겠습니다 ·
+  배차되었습니다」 같은 확정 약속이 있으면 **실패**로 돌려 담당자가 다시 시도하거나 직접 씁니다
+  (고정 문구로 갈아끼우지 않습니다).
+
+## 시연 기록 분리
+
+시연 세션(`demo_session_id`) · 시연용 거래처의 요청에 대한 호출은 `kind = 'request_triage_demo'`
+로 남습니다. 준비도 화면의 「AI 실제 사용 기록」은 `request_triage` 만 셉니다(요청이 시연이거나
+지워졌으면 그것도 뺍니다).
+
+## 검사
+
+- `node test/browser/check_ai_triage_core.mjs` — 이 폴더의 코드를 그대로 불러 권한 · 검사 · 기록 시험
+- `test/browser/check_ai_triage_ui.mjs` — 화면 (전체 회귀 `test/browser/run.sh` 에 포함)
+- `DENO_BIN=… node supabase/test/ai_triage_e2e.mjs` — **이 함수 코드를 Deno 로 띄워** 병원 요청 →
+  AI 분석 → 회신 → 포털까지. 모델 자리는 시험용 응답이므로 「실제 외부 AI 응답」은 증명하지 않습니다.
+
+## 남은 일 (알고 있는 것)
+
+- `ai_calls` 는 지금 직원 계정이 브라우저에서도 넣을 수 있습니다(판 106 권한). 서버에 닿지 못한
+  실패를 브라우저가 기록하는 데 쓰고 있습니다. 기록 위조까지 막으려면 다음 판에서 브라우저
+  insert 를 막고 함수가 service role 로 쓰게 바꿉니다 — SQL 이 필요해 이번에는 하지 않았습니다.
+- 토큰 수는 `ai_calls.output.usage` 에만 남깁니다(성공 · 형식 실패). 비용 계산 칸은 만들지 않았습니다.

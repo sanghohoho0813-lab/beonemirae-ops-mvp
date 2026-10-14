@@ -412,3 +412,8 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# 병원 요청 AI 분석 (0138) — 로그인 토큰이 없으면 Supabase 가 함수에 닿기 전에 막습니다.
+# 함수 안에서도 관리자 · 사무실 역할을 다시 확인합니다 (supabase/functions/ai-triage/handler.ts).
+[functions.ai-triage]
+verify_jwt = true

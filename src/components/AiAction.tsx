@@ -62,14 +62,30 @@ export function AiSpecPanel({ spec }: { spec: AiSpec }) {
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-violet-600">
           <Sparkles size={18} strokeWidth={2.2} />
         </span>
-        <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 text-[1.08rem] font-extrabold text-navy-900">
-            아직 켜지지 않은 기능입니다 <StageBadge stage={spec.stage} />
-          </p>
-          <p data-ai-notyet className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
-            지금은 <b className="text-navy-800">이 안내 화면까지만</b> 만들어 두었습니다. {spec.notYet}
-          </p>
-        </div>
+        {spec.live ? (
+          //  0138 — 실제로 AI 를 부르는 자리. 어디서 · 무슨 조건에서 도는지를 먼저 말합니다.
+          <div data-ai-live className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 text-[1.08rem] font-extrabold text-navy-900">
+              실제 AI 를 부르는 업무 보조 기능입니다 <StageBadge stage="업무 보조" suffix={false} />
+            </p>
+            <p className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-700">
+              실행: <b className="text-navy-900">{spec.live.where}</b>
+            </p>
+            <p className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
+              {spec.live.requires} 가짜 결과는 만들지 않습니다. 최종 판단과 회신은 담당자가 합니다.
+            </p>
+            <p data-ai-notyet className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">{spec.notYet}</p>
+          </div>
+        ) : (
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 text-[1.08rem] font-extrabold text-navy-900">
+              아직 켜지지 않은 기능입니다 <StageBadge stage={spec.stage} />
+            </p>
+            <p data-ai-notyet className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
+              지금은 <b className="text-navy-800">이 안내 화면까지만</b> 만들어 두었습니다. {spec.notYet}
+            </p>
+          </div>
+        )}
       </div>
 
       <Block icon={Wrench} title="무엇을 위한 것인가">
@@ -197,7 +213,7 @@ export function AiButton({
         )}
         {/*  단추 위 딱지는 짧게 — 「준비 중」. 320px 폰 헤더에서 긴 딱지가 날짜 칸을 세로로 짓눌렀습니다.
              단계 번호와 「아직 안 켜짐」은 창 안에서 그대로 보입니다. */}
-        <StageBadge stage="준비 중" suffix={false} className="bg-white/80" />
+        <StageBadge stage={spec.live ? '회신 창에서' : '준비 중'} suffix={false} className="bg-white/80" />
       </button>
       <AiSpecModal id={id} open={open} onClose={() => setOpen(false)} />
     </>

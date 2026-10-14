@@ -102,13 +102,24 @@ async function open(path, { w = 1280 } = {}) {
  *    특히 「AI 가 정하지 않는 것」은 한 자리라도 빠지면 그 화면만 예외처럼
  *    읽힙니다 — 실사에서 제일 먼저 파고드는 자리입니다.
  */
+/** 실제로 AI 를 부르는 자리 (0138) — 나머지 열한 자리는 아직 안내까지만입니다 */
+const LIVE = new Set(['requestTriage'])
+
 async function checkPanel(p, id, where) {
   const panel = p.locator(`[data-ai-panel][data-ai-spec="${id}"]`)
   ok((await panel.count()) === 1, `${where}/${id} — 누르면 안내가 열린다 (빈 화면·오류 아님)`)
   if ((await panel.count()) !== 1) return
   const t = flat(await panel.innerText())
 
-  ok(/아직 켜지지 않은 기능입니다/.test(t), `${where}/${id} — **아직 안 되는 기능이라고 먼저 말한다**`)
+  //  0138 — 실제로 AI 를 부르는 자리(요청 분석)는 「아직 켜지지 않은」 대신 **어디서 · 무슨 조건에서
+  //  도는지**와 「가짜 결과 없음 · 최종 판단은 담당자」를 먼저 말해야 합니다. 나머지는 그대로.
+  if (LIVE.has(id)) {
+    ok(/실제 AI 를 부르는 업무 보조 기능입니다/.test(t) && /서버 함수 배포와 AI 키 등록이 끝나야 동작합니다/.test(t), `${where}/${id} — **실제 연결된 자리 · 동작 조건을 먼저 말한다**`, t.slice(0, 120))
+    ok(/가짜 결과는 만들지 않습니다/.test(t) && /최종 판단과 회신은 담당자가 합니다/.test(t), `${where}/${id} — 가짜 결과 없음 · 최종 판단은 담당자`)
+    ok(!/아직 켜지지 않은 기능입니다/.test(t), `${where}/${id} — 연결된 자리를 「아직 안 켜짐」이라고 하지 않는다`)
+  } else {
+    ok(/아직 켜지지 않은 기능입니다/.test(t), `${where}/${id} — **아직 안 되는 기능이라고 먼저 말한다**`)
+  }
   ok((await panel.locator('[data-ai-badge]').count()) >= 1, `${where}/${id} — 단계 딱지가 붙어 있다`)
 
   const why = flat(await panel.locator('[data-ai-why]').innerText())
