@@ -454,6 +454,7 @@ export function Requests() {
                   )
                 )}
                 <button
+                  data-presenter="reply-open"
                   onClick={() => {
                     setReplyTo(r)
                     setReplyText(r.reply)

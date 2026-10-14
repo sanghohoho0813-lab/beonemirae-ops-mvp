@@ -52,6 +52,7 @@ import { PortalRequests } from './pages/PortalRequests'
 import { PortalSelect } from './pages/PortalSelect'
 import { RequireAuth } from './components/RequireAuth'
 import { TourOverlay } from './components/TourOverlay'
+import { PresenterCard } from './components/PresenterCard'
 
 export default function App() {
   return (
@@ -61,6 +62,8 @@ export default function App() {
       <ScrollToTop />
       {/* 제품 투어 — 어느 화면에서든 실행되고, 단계마다 필요한 화면으로 이동합니다 */}
       <TourOverlay />
+      {/*  0139 — 심사 시연 안내 카드. 「심사 시연 시작」을 누른 탭에서만, 직원 화면 · 병원 포털 어디서나 따라다닙니다 */}
+      <PresenterCard />
       <Routes>
         {/*
           시연 전용 — Layout(사이드바/탭) 바깥의 독립 전체화면 라우트.

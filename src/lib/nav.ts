@@ -204,7 +204,7 @@ export const NAV_GROUPS: NavGroupDef[] = [
       { to: '/ax-coach', label: 'AX 코치', icon: Compass, desc: '오늘 할 일 · 실증 자료 준비도', tone: 'emerald' },
       { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · 확인된 변화 · 다음 할 일', tone: 'teal' },
       { to: '/readiness', label: '실증 준비 상태', icon: ClipboardCheck, desc: '준비 상태 · 증빙 · 브리핑 인쇄', tone: 'navy' },
-      { to: '/presentation', label: '심사 시연', icon: Presentation, desc: '60초 시연 투어 · 발표 순서', tone: 'navy' },
+      { to: '/presentation', label: '심사 시연', icon: Presentation, desc: '발표 가이드 · 시연 준비 · 60초 투어', tone: 'navy' },
       { to: '/why', label: '만든 이유', icon: Lightbulb, desc: '왜 만들었고 어디로 가는지', tone: 'amber' },
     ],
   },

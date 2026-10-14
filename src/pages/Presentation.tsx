@@ -1,199 +1,341 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import {
-  X,
-  ChevronRight,
-  ChevronLeft,
-  CalendarClock,
-  PenLine,
-  Hospital,
-  Inbox,
-  TrendingUp,
-  Workflow,
-  ArrowRight,
-  CheckCircle2,
-  BookOpen,
-} from 'lucide-react'
+import { X, ArrowRight, CheckCircle2, Circle, AlertTriangle, BookOpen, PlayCircle, ChevronRight, Presentation as PresentIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
-import { todaySummary } from '../lib/selectors'
-import { autoPerInput } from '../lib/performance'
-import { customerServiceStats } from '../lib/portal'
-import { weight } from '../lib/format'
+import { useAuth } from '../context/AuthContext'
+import { usePresenter } from '../context/PresenterContext'
+import { canAccess } from '../lib/access'
+import { today } from '../lib/format'
+import { CLOSING, FLOW, PRESENTER_CLIENT_KEY, PRESENTER_STEPS, kstStamp } from '../lib/presenter'
 import { DemoResetButton } from '../components/DemoControls'
 import { TourButton } from '../components/TourEntry'
 
-// 심사 시연 동선 (약 5분) — "무엇을 하는 회사인가 → 어떻게 돈을 버는가" 순서
-const DEMO_STEPS = [
-  { t: '대시보드 상단', l: '수거 회사에서 병원 폐기물 운영지원 서비스로 넘어가는 여섯 단계를 한 줄로 보여줍니다.' },
-  { t: '수거 완료 입력 1회', l: '현장에서 한 번 입력하면 일정·이력·자재·재고·통계·대장이 함께 갱신됩니다.' },
-  { t: '병원 포털', l: '병원이 직접 수거 현황을 보고 긴급수거·소모품·자료를 요청합니다.' },
-  { t: '병원 요청 처리', l: '요청 상태를 바꾸고 회신을 남기면 병원 화면에 그대로 보입니다.' },
-  { t: '다음 행동 추천', l: '쌓인 기록에서 거래처별 다음 제안을 뽑고, 근거와 함께 병원에 전달합니다.' },
-  { t: '병원 수락 → 추가 매출', l: '수락은 병원이 직접 누르고, 그 시점이 수거료 외 매출로 기록됩니다.' },
-  { t: '매출 구조·도입 성과', l: '수거료 외 매출 다섯 가지를 구현됨·실증 중·개발 예정으로 나눠 보여줍니다.' },
-  { t: '향후 계획·특허 매핑', l: '단계별 로드맵과 특허 구성요소가 현재 화면에 어떻게 연결되는지 확인합니다.' },
-  { t: '시연 종료', l: '시연 상태를 초기화하면 동일한 기준 상태로 되돌아갑니다.' },
-]
+// ─────────────────────────────────────────────────────────────────────────────
+// 심사 시연 (/presentation) — 0139 Presenter Mode 시작 화면
+//
+//  예전에는 슬라이드 6장 · 글 목록 9단계 · 60초 투어가 **서로 다른 순서**를 말했고,
+//  슬라이드에서 실제 화면으로 넘어가는 순간 안내가 사라졌습니다. 이제
+//
+//   · 「심사 시연 시작」 하나 → 화면을 옮겨도 따라다니는 안내 카드(PresenterCard)
+//   · 시연 준비 상태 — 화면이 확인할 수 있는 것만 자동 ✓, 나머지는 직접 체크
+//   · 0단계(전체 흐름) · 7단계(마무리)는 이 화면 위에 크게
+//   · 60초 투어는 「빠른 연습」으로 남김 (실제 기록 1건으로 한 바퀴)
+//
+//  ⚠ 숫자를 만들지 않습니다. 예전 화면 맨 아래 「105톤 규모」(출처 미확정)와
+//    「상세 시연 자료」(/demo — 49곳 · 105톤이 남아 있음) 연결은 뺐습니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SAY_DO = [
-  '현재 MVP 단계',
-  '규칙 기반 추천 (학습형 아님)',
-  '기존 거래처 시범 적용 예정',
-  '실제 운행데이터 기반 고도화 예정',
-  '병원 포털은 실증 단계',
-  '실증지표로 효과 검증 예정',
+  '구현됨 · 실증 단계 · 측정 중 · 개발 예정으로 나눠 말하기',
+  'AI 는 업무 보조 — 최종 판단과 회신은 담당자',
+  '병원 포털은 추가 채널 (전화 · 문자도 그대로)',
+  '성과는 측정한 것만, 나머지는 측정 예정',
 ]
 const SAY_DONT = [
-  '완성형 AI',
-  '자동 최적 경로 완성',
-  '올바로 자동 연동 완료',
-  '실시간 다중 사용자 연동 완료',
-  '확정 절감률',
-  '이미 병원에서 정식 사용 중',
+  'AI 가 자동으로 배차합니다',
+  'AI 가 수거량을 예측합니다',
+  '완전 자동화 · 전체 업무가 AI 로',
+  '병원 전체가 사용 중',
+  '생산성 00% 향상 · 처리시간 00% 감소',
 ]
-const PRE_CHECK = [
-  '인터넷 연결 확인',
-  '브라우저 새로고침',
-  '시연 상태 초기화',
-  '대시보드 여섯 단계 숫자 확인',
-  '수거 완료 입력 대상 확인',
-  '병원 포털 요청 1건 이상',
-  '처리 대기 요청 확인',
-  '전달할 제안 1건 이상',
-  '매출 구조·도입 성과 확인',
-]
+const MANUAL = ['인터넷 연결', '프로젝터 화면 · 글자 크기', '브라우저 새로고침 한 번']
+const MANUAL_KEY = 'beonemirae-ops:presenter-manual'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 심사 시연 — 5분 가이드 흐름 (요약 슬라이드 → 실제 화면 진입)
-// ─────────────────────────────────────────────────────────────────────────────
+type Mark = 'ok' | 'todo' | 'warn'
 
 export function Presentation() {
   const navigate = useNavigate()
   const { data } = useData()
-  const [i, setI] = useState(0)
+  const { role, mode } = useAuth()
+  const presenter = usePresenter()
 
-  const summary = todaySummary(data)
-  const auto = autoPerInput(data)
-  const cs = customerServiceStats(data)
+  //  시연 거래처 — 기기에 기억 (다음 연습 때 다시 고르지 않게)
+  const [clientId, setClientId] = useState<string>(() => {
+    try { return localStorage.getItem(PRESENTER_CLIENT_KEY) ?? '' } catch { return '' }
+  })
+  const clients = useMemo(
+    () => [...data.clients].sort((a, b) => Number(!!b.isDemoGenerated) - Number(!!a.isDemoGenerated) || a.name.localeCompare(b.name, 'ko')),
+    [data.clients],
+  )
+  const chosen = clients.find((c) => c.id === clientId) ?? null
+  //  처음이면 시연용 거래처를 먼저 제안 — 한 번만 (대표님이 비우면 다시 채우지 않음)
+  const suggested = useRef(false)
+  useEffect(() => {
+    if (suggested.current || clients.length === 0) return
+    suggested.current = true
+    if (!clientId) {
+      const demo = clients.find((c) => c.isDemoGenerated)
+      if (demo) setClientId(demo.id)
+    }
+  }, [clientId, clients])
+  useEffect(() => {
+    try { if (clientId) localStorage.setItem(PRESENTER_CLIENT_KEY, clientId) } catch { /* noop */ }
+    if (presenter.active && clientId && presenter.clientId !== clientId) presenter.setClient(clientId)
+  }, [clientId, presenter])
 
-  // 심사 5분 동선 — 내부 효율(1~2) → 병원 서비스(3~4) → 추가 매출(5) → 근거(6)
-  const steps = [
+  const [manual, setManual] = useState<string[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem(MANUAL_KEY) ?? '[]') as string[] } catch { return [] }
+  })
+  const toggleManual = (k: string) =>
+    setManual((m) => {
+      const next = m.includes(k) ? m.filter((x) => x !== k) : [...m, k]
+      try { sessionStorage.setItem(MANUAL_KEY, JSON.stringify(next)) } catch { /* noop */ }
+      return next
+    })
+
+  //  ── 시연 준비 상태 — 화면이 확인할 수 있는 것만 자동 ─────────────────────
+  const t = today()
+  const todayVisits = data.schedules.filter((s) => s.date === t && s.status !== '완료' && !s.canceledAt).length
+  const aiOk = (data.aiCalls ?? []).filter((c) => c.ok).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
+  const aiLastFail = (data.aiCalls ?? []).filter((c) => !c.ok).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
+  const checks: { key: string; label: string; mark: Mark; detail: string }[] = [
+    { key: 'admin', label: '관리자 계정', mark: role === 'admin' ? 'ok' : 'warn', detail: role === 'admin' ? '관리자로 로그인됨' : '관리자 계정으로 들어와야 모든 단계가 열립니다' },
+    { key: 'live', label: '운영 자료 연결', mark: mode === 'live' ? 'ok' : 'warn', detail: mode === 'live' ? '실제 운영 DB 와 연결됨' : '시연 모드 — 실제 운영 기록이 아닙니다' },
     {
-      icon: CalendarClock,
-      title: '오늘 운영 현황',
-      line: '오늘 수거 일정과 확인할 일을 한 화면에서 봅니다. 여기가 매일 여는 화면입니다.',
-      stats: [
-        { k: '오늘 수거 예정', v: `${summary.total}건` },
-        { k: '긴급·지연', v: `${summary.긴급 + summary.지연}건` },
-      ],
-      cta: '오늘 일정 보기',
-      to: '/today',
+      key: 'client', label: '시연 거래처',
+      mark: !chosen ? 'todo' : chosen.isDemoGenerated ? 'ok' : 'warn',
+      detail: !chosen
+        ? '아래에서 고르세요 — 병원 요청 · 회신 확인 단계에서 씁니다'
+        : chosen.isDemoGenerated
+          ? `${chosen.name} (시연용 — 운영 실적에서 빠짐)`
+          : `${chosen.name} — 실제 거래처입니다. 시연 요청 · 수거 기록이 이 병원 기록으로 남습니다`,
     },
+    { key: 'visit', label: '오늘 예정 방문', mark: todayVisits > 0 ? 'ok' : 'todo', detail: todayVisits > 0 ? `${todayVisits}건 — 수거 입력 단계에서 고를 수 있음` : '없음 — 수거 입력에서 직접 입력으로 저장합니다' },
+    { key: 'requests', label: '고객 요청 화면', mark: canAccess(role, '/requests') ? 'ok' : 'warn', detail: canAccess(role, '/requests') ? '열 수 있음' : '이 계정으로는 열 수 없습니다' },
     {
-      icon: PenLine,
-      title: '현장 1회 입력 → 자동 연결',
-      line: '현장에서 수거 완료를 한 번만 입력하면 일정·이력·자재·재고·통계·대장이 함께 갱신됩니다.',
-      stats: [
-        { k: '입력 1회당 자동 처리', v: auto.avg != null ? `${auto.avg}건` : '—' },
-        { k: '누적 자동 처리', v: `${auto.total}건` },
-      ],
-      cta: '수거 완료 입력 열기',
-      to: '/collection',
+      key: 'ai', label: 'AI 실제 호출',
+      mark: aiOk ? 'ok' : 'todo',
+      detail: data.aiCalls == null
+        ? '호출 기록 표를 읽지 못함 — 시연 전에 요청 하나로 직접 실행해 보세요'
+        : aiOk
+          ? `최근 성공 ${kstStamp(aiOk.createdAt)}${aiOk.model ? ` · ${aiOk.model}` : ''}`
+          : `아직 성공한 호출이 없습니다 — 키 등록 · 배포 뒤 요청 하나로 실행해 보세요${aiLastFail ? ` (최근 실패: ${aiLastFail.error.slice(0, 40)})` : ''}`,
     },
-    {
-      icon: Hospital,
-      title: '병원이 직접 확인하고 요청합니다',
-      line: '병원은 전화 대신 포털에서 수거 현황을 보고 긴급수거·소모품·자료를 요청합니다.',
-      stats: [
-        { k: '병원 요청', v: `${cs.requestsTotal}건` },
-        { k: '처리 대기', v: `${cs.requestsOpen}건` },
-      ],
-      cta: '병원 화면 그대로 보기',
-      to: '/portal',
-    },
-    {
-      icon: Inbox,
-      title: '요청 처리 → 병원에 회신',
-      line: '접수 → 확인 중 → 일정 반영 → 처리 완료. 바꾼 상태와 회신이 병원 화면에 그대로 보입니다.',
-      stats: [
-        { k: '처리 완료', v: `${cs.requestsDone}건` },
-        { k: '수거 완료 시', v: '요청 자동 종료' },
-      ],
-      cta: '병원 요청 처리 화면',
-      to: '/requests',
-    },
-    {
-      icon: TrendingUp,
-      title: '데이터 기반 제안 → 병원 수락 → 추가 매출',
-      line: '쌓인 기록에서 다음 제안을 뽑아 병원에 전달하고, 수락은 병원이 직접 누릅니다.',
-      stats: [
-        { k: '전달한 제안', v: `${cs.proposalsShared}건` },
-        { k: '병원 수락', v: `${cs.proposalsAccepted}건` },
-      ],
-      cta: '거래처당 매출 구조 보기',
-      to: '/performance',
-    },
-    {
-      icon: Workflow,
-      title: '근거 · 향후 계획',
-      line: '성과는 실제 입력에서만 계산하고, 아직 만들지 않은 것은 개발 예정으로 표시합니다.',
-      stats: [
-        { k: '특허출원', v: '10-2026-0101187' },
-        { k: '다음 단계', v: '소모품 주문 · 배출자 교육' },
-      ],
-      cta: '활용 계획·업무흐름도 보기',
-      to: '/roadmap',
-    },
+    { key: 'start', label: '실증 시작일', mark: data.experiment?.startDate ? 'ok' : 'todo', detail: data.experiment?.startDate ? `${data.experiment.startDate} — 성과 화면의 실증기간` : '설정에서 정하면 성과 화면에 실증기간이 나옵니다' },
   ]
 
-  const step = steps[i]
-  const Icon = step.icon
-  const last = i === steps.length - 1
+  const showFlow = !presenter.active || presenter.index === 0
+  const showClose = presenter.active && presenter.index === PRESENTER_STEPS.length - 1
+  const startAt = (index: number) => presenter.start({ clientId: chosen?.id ?? null, index })
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div data-presentation className="mx-auto w-full max-w-[1100px] space-y-6">
       {/* 상단 */}
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <p className="text-[1.03rem] font-bold text-teal-600">심사 시연 · 5분</p>
-          <h1 className="text-xl font-extrabold text-navy-900">단계별로 보기</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[1.05rem] font-extrabold text-teal-700">심사 시연</p>
+          <h1 className="t-page break-keep text-navy-900">발표 가이드</h1>
         </div>
         <button
-          onClick={() => navigate('/')}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-navy-400 shadow-card transition active:scale-95"
+          onClick={() => { if (presenter.active) presenter.stop(); navigate('/') }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-navy-500 shadow-card transition active:scale-95"
           aria-label="닫기"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
       </div>
 
-      {/*  60초 시연 투어 (0109) — 화면이 직접 데려갑니다.
+      {/* ── 마무리 (7단계) ─────────────────────────────────────────────── */}
+      {showClose && (
+        <section data-presenter-close className="rounded-[22px] bg-navy-900 px-6 py-7 text-white sm:px-9 sm:py-9">
+          <p className="text-[1.08rem] font-extrabold text-teal-300">마무리</p>
+          <ol className="mt-3 flex flex-wrap items-center gap-2 text-[1.3rem] font-black sm:text-[1.6rem]">
+            {CLOSING.flow.map((f, i) => (
+              <li key={f} className="flex items-center gap-2">
+                {i > 0 && <ArrowRight size={22} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
+                {f}
+              </li>
+            ))}
+          </ol>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {[
+              { k: '구현됨', items: CLOSING.built, tone: 'text-teal-300' },
+              { k: '실증 단계', items: CLOSING.piloting, tone: 'text-amber-300' },
+              { k: '향후 계획', items: CLOSING.planned, tone: 'text-navy-200' },
+            ].map((col) => (
+              <div key={col.k} data-close-col={col.k} className="rounded-[16px] bg-white/5 px-4 py-4">
+                <p className={`text-[1.05rem] font-extrabold ${col.tone}`}>{col.k}</p>
+                <ul className="mt-2 space-y-1.5">
+                  {col.items.map((it) => (
+                    <li key={it} className="break-keep text-[1.05rem] leading-snug text-white">{it}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p data-close-message className="mt-6 break-keep text-[1.2rem] font-bold leading-relaxed text-white sm:text-[1.35rem]">
+            {CLOSING.message}
+          </p>
+        </section>
+      )}
 
-           ⚠ 아래 「대표자 시연 가이드」의 5분 순서는 **읽는 대본**이고,
-             이것은 **실행되는 안내**입니다. ③④단계에서 대표님이 직접 누르고,
-             저장한 기록을 ⑥단계에서 AX 코치가 확인합니다. 그래서 저장은
-             **실제 기록**입니다 — 시연용 가짜 데이터를 만들지 않습니다.
-           ⚠ 접힌 칸 안에 두지 않습니다. 심사 자리에서 못 찾으면 없는 기능입니다. */}
-      <div data-demo-tour className="mb-5 rounded-2xl bg-navy-900 p-4 text-white">
-        <p className="text-[1.07rem] font-extrabold">60초 심사 시연 — 화면이 순서대로 안내합니다</p>
-        <p className="mt-1 text-[1rem] leading-snug text-white/75">
-          AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치. 다섯 단계입니다.
-          <b className="text-white"> ②③단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
-        </p>
-        <TourButton
-          tourId="demo"
-          className="btn-primary mt-3 w-full justify-center sm:w-auto"
-          label="60초 시연 투어 시작"
-        />
+      {/* ── 시작 · 전체 흐름 (0단계) ───────────────────────────────────── */}
+      {showFlow && (
+        <section className="rounded-[22px] bg-navy-900 px-6 py-7 text-white sm:px-9 sm:py-9">
+          <p className="text-[1.08rem] font-extrabold text-teal-300">비원미래 AX 운영시스템 — 실제 업무 흐름</p>
+          <p className="mt-2 break-keep text-[1.3rem] font-black leading-snug sm:text-[1.7rem]">
+            병원 요청부터 현장 수거, 내부 운영, AI 업무보조까지 하나의 데이터 흐름으로 연결합니다.
+          </p>
+          <ol data-presenter-flow className="mt-6 flex flex-wrap items-center gap-2">
+            {FLOW.map((f, i) => (
+              <li key={f} className="flex items-center gap-2">
+                {i > 0 && <ChevronRight size={20} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
+                <span className="rounded-full bg-white/10 px-4 py-2 text-[1.08rem] font-extrabold">{f}</span>
+              </li>
+            ))}
+          </ol>
+          {!presenter.active ? (
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button
+                type="button"
+                data-presenter-start
+                onClick={() => startAt(0)}
+                className="flex min-h-[3.5rem] items-center gap-2 rounded-[14px] bg-teal-500 px-6 text-[1.2rem] font-black text-white transition hover:bg-teal-600"
+              >
+                <PresentIcon size={22} strokeWidth={2.4} /> 심사 시연 시작
+              </button>
+            </div>
+          ) : (
+            <p className="mt-6 break-keep text-[1.05rem] font-bold text-navy-200">
+              안내 카드가 화면을 옮겨도 따라다닙니다. 「시연 시작」을 누르면 첫 화면으로 갑니다.
+            </p>
+          )}
+        </section>
+      )}
+
+      {presenter.active && !showFlow && !showClose && (
+        <div data-presenter-running className="flex flex-wrap items-center gap-3 rounded-[16px] bg-teal-50 px-5 py-4">
+          <p className="min-w-0 flex-1 break-keep text-[1.08rem] font-bold text-navy-900">
+            시연 진행 중 — STEP {presenter.index} 「{PRESENTER_STEPS[presenter.index].title}」
+          </p>
+          <button type="button" onClick={() => presenter.goTo(presenter.index)} className="flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white">
+            그 화면으로 <ArrowRight size={17} strokeWidth={2.6} />
+          </button>
+          <button type="button" data-presenter-end onClick={presenter.stop} className="flex min-h-[2.75rem] items-center rounded-full bg-white px-4 text-[1.02rem] font-extrabold text-navy-800">
+            발표 가이드 종료
+          </button>
+        </div>
+      )}
+
+      <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
+        {/* ── 시연 준비 상태 ───────────────────────────────────────────── */}
+        <section data-presenter-ready aria-label="시연 준비 상태">
+          <h2 className="p-title">시연 준비 상태</h2>
+          <p className="p-sub mt-0.5">화면이 확인할 수 있는 것만 자동으로 ✓ 합니다.</p>
+          <ul className="mt-3 divide-y divide-navy-100 border-y border-navy-100">
+            {checks.map((c) => (
+              <li key={c.key} data-ready={c.key} data-ready-mark={c.mark} className="flex items-start gap-3 py-3">
+                {c.mark === 'ok' ? (
+                  <CheckCircle2 size={22} strokeWidth={2.4} aria-label="확인됨" className="mt-0.5 shrink-0 text-teal-600" />
+                ) : c.mark === 'warn' ? (
+                  <AlertTriangle size={22} strokeWidth={2.4} aria-label="주의" className="mt-0.5 shrink-0 text-amber-600" />
+                ) : (
+                  <Circle size={22} strokeWidth={2.4} aria-label="확인 필요" className="mt-0.5 shrink-0 text-navy-300" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="p-body block font-extrabold">{c.label}</span>
+                  <span className="p-sub block break-keep">{c.detail}</span>
+                  {c.key === 'client' && (
+                    <select
+                      data-presenter-client
+                      value={clientId}
+                      onChange={(e) => setClientId(e.target.value)}
+                      className="field-input mt-2 rounded-[14px] py-3"
+                      aria-label="시연 거래처"
+                    >
+                      <option value="">시연 거래처 고르기</option>
+                      {clients.map((c2) => (
+                        <option key={c2.id} value={c2.id}>
+                          {c2.isDemoGenerated ? '[시연용] ' : ''}{c2.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </span>
+              </li>
+            ))}
+            {MANUAL.map((m) => (
+              <li key={m} className="py-1">
+                <label className="flex min-h-[3rem] cursor-pointer items-center gap-3">
+                  <input type="checkbox" data-ready-manual={m} checked={manual.includes(m)} onChange={() => toggleManual(m)} className="h-5 w-5 accent-teal-600" />
+                  <span className="p-body">{m} <span className="p-sub">(직접 확인)</span></span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ── 오늘 보여드릴 흐름 ─────────────────────────────────────────── */}
+        <section data-presenter-outline aria-label="시연 순서">
+          <h2 className="p-title">시연 순서 · 5~7분</h2>
+          <p className="p-sub mt-0.5">아무 단계나 눌러 그 단계부터 시작할 수 있습니다.</p>
+          <ol className="mt-3 divide-y divide-navy-100 border-y border-navy-100">
+            {PRESENTER_STEPS.map((s, i) => (
+              <li key={s.key}>
+                <button
+                  type="button"
+                  data-presenter-jump={i}
+                  onClick={() => startAt(i)}
+                  className={`-mx-2 flex w-[calc(100%+1rem)] items-start gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-navy-50 ${presenter.active && presenter.index === i ? 'bg-teal-50' : ''}`}
+                >
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[1rem] font-black text-white">{i}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="p-body block font-extrabold">{s.title}</span>
+                    <span className="p-sub block break-keep">{s.show}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
       </div>
 
-      {/*  0137 — 발표용 성과 요약. 「도입 전 → 같은 업무 → 실제 사용」 한 화면.
-           상세 근거 화면(/performance)은 그대로 두고, 발표 때는 이쪽을 엽니다. */}
+      {/*  빠른 연습 — 60초 시연 투어 (0109). 실제 기록 1건으로 한 바퀴. */}
+      <section data-demo-tour className="rounded-[16px] bg-navy-50 px-5 py-4">
+        <p className="flex items-center gap-2 text-[1.08rem] font-extrabold text-navy-900">
+          <PlayCircle size={20} strokeWidth={2.4} className="text-teal-700" /> 빠른 연습 — 60초 시연 투어
+        </p>
+        <p className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
+          AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치. 다섯 단계입니다.
+          <b className="text-navy-900"> ②③단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
+        </p>
+        <TourButton tourId="demo" className="btn-ghost mt-3 bg-white" label="60초 시연 투어 시작" />
+      </section>
+
+      {/*  발표 표현 · 시연 초기화 — 접어 둠 */}
+      <details className="rounded-[16px] bg-white px-5 py-4 ring-1 ring-navy-100">
+        <summary className="flex min-h-[2.75rem] cursor-pointer list-none items-center gap-2 text-[1.08rem] font-extrabold text-navy-800">
+          <BookOpen size={18} className="text-teal-600" /> 발표 표현 가이드
+          <span className="ml-auto text-[0.98rem] font-semibold text-navy-500">펼치기</span>
+        </summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div data-say-do className="rounded-[14px] bg-teal-50 p-4">
+            <p className="text-[1rem] font-extrabold text-teal-800">이렇게 말하기</p>
+            <ul className="mt-1.5 space-y-1 text-[1rem] leading-snug text-navy-700">
+              {SAY_DO.map((x) => <li key={x}>· {x}</li>)}
+            </ul>
+          </div>
+          <div data-say-dont className="rounded-[14px] bg-rose-50 p-4">
+            <p className="text-[1rem] font-extrabold text-rose-700">쓰지 않는 말</p>
+            <ul className="mt-1.5 space-y-1 text-[1rem] leading-snug text-navy-700">
+              {SAY_DONT.map((x) => <li key={x}>✕ {x}</li>)}
+            </ul>
+          </div>
+        </div>
+        {mode !== 'live' && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[14px] bg-navy-50 p-3">
+            <p className="text-[1rem] leading-snug text-navy-600">시연 모드에서 바꾼 것을 기준 상태로 되돌립니다.</p>
+            <DemoResetButton />
+          </div>
+        )}
+      </details>
+
+      {/*  발표용 성과 요약 — 바로 가기 (0137) */}
       <button
         type="button"
         data-open-ir
         onClick={() => navigate('/performance/ir')}
-        className="mb-5 flex w-full items-center gap-3 rounded-2xl bg-teal-50 px-4 py-3.5 text-left transition hover:bg-teal-100"
+        className="flex w-full items-center gap-3 rounded-[16px] bg-teal-50 px-5 py-4 text-left transition hover:bg-teal-100"
       >
         <span className="min-w-0 flex-1">
           <span className="block text-[1.07rem] font-extrabold text-navy-900">발표용 성과 요약 열기</span>
@@ -201,174 +343,6 @@ export function Presentation() {
         </span>
         <ChevronRight size={20} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-teal-700" />
       </button>
-
-      {/* 진행 도트 */}
-      <div className="mb-5 flex gap-1.5">
-        {steps.map((_, idx) => (
-          <span
-            key={idx}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${idx <= i ? 'bg-teal-500' : 'bg-navy-100'}`}
-          />
-        ))}
-      </div>
-
-      {/* 슬라이드 */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, x: 16 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -16 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="card p-6"
-        >
-          <div className="flex items-center gap-2 text-teal-600">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50">
-              <Icon size={18} strokeWidth={2.3} />
-            </span>
-            <span className="text-[1.08rem] font-bold">STEP {i + 1} / {steps.length}</span>
-          </div>
-          <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-navy-900">{step.title}</h2>
-          <p className="mt-2 text-[1.07rem] leading-relaxed text-navy-500">{step.line}</p>
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {step.stats.map((s) => (
-              <div key={s.k} className="rounded-2xl bg-navy-50 p-3.5">
-                <p className="text-[0.98rem] font-semibold text-navy-400">{s.k}</p>
-                <p className="mt-1 text-lg font-extrabold text-navy-900">{s.v}</p>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => navigate(step.to)}
-            className="btn-primary mt-4 w-full"
-          >
-            {step.cta} <ArrowRight size={17} strokeWidth={2.4} />
-          </button>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* 이전/다음 */}
-      <div className="mt-5 flex gap-2">
-        <button
-          className="btn-ghost flex-1 disabled:opacity-40"
-          onClick={() => setI((v) => Math.max(0, v - 1))}
-          disabled={i === 0}
-        >
-          <ChevronLeft size={17} /> 이전
-        </button>
-        {last ? (
-          <button className="btn-navy flex-1" onClick={() => navigate('/demo')}>
-            상세 시연 자료 →
-          </button>
-        ) : (
-          <button className="btn-navy flex-1" onClick={() => setI((v) => Math.min(steps.length - 1, v + 1))}>
-            다음 <ChevronRight size={17} />
-          </button>
-        )}
-      </div>
-
-      {/* 한 번 입력 → 자동 연결 (3단계 핵심) */}
-      <div className="mt-6 rounded-2xl bg-navy-900 p-4 text-white">
-        <p className="flex items-center gap-2 text-[1.07rem] font-extrabold">
-          <Workflow size={17} className="text-teal-300" /> 한 번 입력, 여러 화면 자동 연결
-        </p>
-        <p className="mt-1.5 text-[1.03rem] leading-relaxed text-navy-100">
-          현장 담당자가 수거정보를 한 번 입력하면 오늘 일정, 수거이력, 자재, 통계, 그리고 병원이 보는 화면까지 함께
-          갱신됩니다. 여러 엑셀·수기대장에 반복 입력할 필요가 없습니다.
-        </p>
-      </div>
-
-      {/* 업무가 어떻게 달라지는가 (Before / After) */}
-      <div className="mt-6">
-        <p className="mb-2 px-1 text-[1.07rem] font-extrabold text-navy-800">업무가 어떻게 달라지는가</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="card p-4">
-            <span className="rounded-full bg-navy-100 px-2.5 py-1 text-[0.95rem] font-bold text-navy-500">Before</span>
-            <ul className="mt-2.5 space-y-1.5 text-[1.03rem] leading-snug text-navy-600">
-              {['여러 개의 엑셀', '전화·카톡 요청', '수기대장', '담당자별 중복 입력', '자재·수거·정산 분산', '인증 직전 긴급 대응'].map((t) => (
-                <li key={t} className="flex gap-1.5"><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-navy-300" />{t}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="card p-4 ring-1 ring-teal-200">
-            <span className="rounded-full bg-teal-500 px-2.5 py-1 text-[0.95rem] font-bold text-white">After</span>
-            <ul className="mt-2.5 space-y-1.5 text-[1.03rem] leading-snug text-navy-700">
-              {['하나의 운영 시스템', 'PC·모바일 동일 데이터', '수거·자재·이력 통합', '병원이 직접 확인·요청', '요청 처리·회신 기록', '데이터 기반 제안 → 추가 매출'].map((t) => (
-                <li key={t} className="flex gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-teal-500" />{t}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <p className="mt-2 px-1 text-[0.98rem] text-navy-400">※ 소모품 주문·배출자 교육·리포트 자동 발송은 개발 예정입니다.</p>
-      </div>
-
-      {/* 대표자 시연 가이드 (기본 접힘) */}
-      <details className="card mt-6 p-0">
-        <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-[1.07rem] font-extrabold text-navy-800">
-          <BookOpen size={16} className="text-teal-500" /> 대표자 시연 가이드
-          <span className="ml-auto text-[0.98rem] font-semibold text-navy-400">펼치기</span>
-        </summary>
-        <div className="space-y-4 border-t border-navy-50 p-4">
-          {/* 5분 시연 순서 */}
-          <div>
-            <p className="mb-2 text-[1.03rem] font-bold text-navy-600">추천 시연 순서 (약 5분)</p>
-            <ol className="space-y-1.5">
-              {DEMO_STEPS.map((s, i) => (
-                <li key={s.t} className="flex gap-2 text-[1.03rem] leading-snug text-navy-700">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-navy-100 text-[0.9rem] font-extrabold text-navy-500">
-                    {i + 1}
-                  </span>
-                  <span>
-                    <b className="text-navy-900">{s.t}</b> — {s.l}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          {/* 표현 가이드 */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-teal-50 p-3">
-              <p className="text-[0.98rem] font-bold text-teal-700">권장 표현</p>
-              <ul className="mt-1.5 space-y-1 text-[0.98rem] leading-snug text-navy-600">
-                {SAY_DO.map((t) => (
-                  <li key={t} className="flex gap-1.5"><CheckCircle2 size={12} className="mt-0.5 shrink-0 text-teal-500" />{t}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl bg-rose-50 p-3">
-              <p className="text-[0.98rem] font-bold text-rose-600">피해야 할 표현</p>
-              <ul className="mt-1.5 space-y-1 text-[0.98rem] leading-snug text-navy-600">
-                {SAY_DONT.map((t) => (
-                  <li key={t} className="flex gap-1.5"><span className="mt-0.5 shrink-0 font-bold text-rose-400">✕</span>{t}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* 시연 전 확인 */}
-          <div>
-            <p className="mb-2 text-[1.03rem] font-bold text-navy-600">시연 전 확인</p>
-            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-              {PRE_CHECK.map((t) => (
-                <label key={t} className="flex items-center gap-2 text-[1.03rem] text-navy-600">
-                  <input type="checkbox" className="h-3.5 w-3.5 accent-teal-500" /> {t}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* 초기화 */}
-          <div className="flex items-center justify-between gap-2 rounded-2xl bg-navy-50 p-3">
-            <p className="text-[0.98rem] leading-snug text-navy-500">시연이 끝나면 기준 상태로 되돌립니다.</p>
-            <DemoResetButton />
-          </div>
-        </div>
-      </details>
-
-      <p className="mt-4 text-center text-[0.98rem] text-navy-400">{weight(105000)} 규모 · ㈜비원미래 운영관리 시연</p>
     </div>
   )
 }

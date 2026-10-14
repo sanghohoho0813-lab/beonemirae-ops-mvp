@@ -6,6 +6,7 @@ import { DataProvider } from './context/DataContext'
 import { SettingsProvider } from './context/SettingsContext'
 import { AuthProvider } from './context/AuthContext'
 import { TourProvider } from './context/TourContext'
+import { PresenterProvider } from './context/PresenterContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
 
@@ -20,7 +21,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <SettingsProvider>
           <DataProvider>
             <TourProvider>
-              <App />
+              {/*  0139 — 심사 시연 Presenter Mode (안내 레이어 · 업무 데이터 무관) */}
+              <PresenterProvider>
+                <App />
+              </PresenterProvider>
             </TourProvider>
           </DataProvider>
         </SettingsProvider>

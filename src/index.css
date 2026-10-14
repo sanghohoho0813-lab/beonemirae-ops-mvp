@@ -416,3 +416,17 @@
   transform-origin: 60% 60%;
   will-change: transform;
 }
+
+/*  0139 — 심사 시연 강조. 지금 단계에서 누를 요소 하나에 테두리만 씌웁니다.
+    ⚠ outline 이라 자리 · 크기가 바뀌지 않습니다 (화면 배치를 흔들지 않음). */
+[data-presenter-spot] {
+  outline: 3px solid rgb(var(--c-teal-400)) !important;
+  outline-offset: 4px;
+  animation: presenter-spot 1.4s ease-in-out 2;
+}
+@keyframes presenter-spot {
+  50% { outline-color: rgb(var(--c-teal-400) / 0.35); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-presenter-spot] { animation: none; }
+}
