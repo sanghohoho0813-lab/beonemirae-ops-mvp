@@ -309,6 +309,9 @@ for (const role of ['field', 'office']) {
   await p.waitForTimeout(1500)
   ok(new URL(p.url()).pathname === '/performance/ir' && /STEP 7/.test(await stepNo(p)) && (await p.locator('[data-ir]').count()) === 1, '② STEP 7 · 성과 화면')
   await shot(p, '10_ir')
+  //  마무리 실증 숫자가 이 성과 화면과 **같은 값**인지 대조하려고 적어 둡니다 (0141)
+  const irBeforeRange = (flat(await p.locator('[data-ir-before]').innerText()).match(/\d+(?:\.\d)?~\d+(?:\.\d)?/) ?? [''])[0]
+  const irTrialState = await p.locator('[data-ir-trial]').getAttribute('data-ir-trial')
 
   //  STEP 8 — AI 고도화 계획 (0141) — 지금 · 다음(개발 예정) · 그다음
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
@@ -326,6 +329,13 @@ for (const role of ['field', 'office']) {
   await shot(p, '11_close')
   const close = flat(await p.locator('[data-presenter-close]').innerText())
   ok(close.includes(CLOSING.message) && (await p.locator('[data-close-col]').count()) === 0, '② 마무리 — 큰 문장 하나 (작은 글씨 세 칸은 뺌 · 0141)')
+  //  실증 결과 — 큰 숫자 세 칸, 성과 화면과 같은 계산 (잰 것만 · 안 잰 칸은 「측정 중」)
+  const res = flat(await p.locator('[data-close-results]').innerText())
+  ok((await p.locator('[data-close-result]').count()) === 3 && /도입 전 하루 사무업무/.test(res) && /같은 업무 처리 시간/.test(res) && /실제 사용/.test(res), '② 마무리 — 실증 결과 세 칸 (도입 전 · 재현시험 · 실제 사용)', res.slice(0, 200))
+  ok(!!irBeforeRange && res.includes(irBeforeRange), '② 도입 전 업무부담 — 성과 화면과 같은 값', `성과 ${irBeforeRange} · 마무리 ${res.slice(0, 60)}`)
+  const closeTrial = await p.locator('[data-close-trial]').getAttribute('data-close-trial')
+  ok(closeTrial === irTrialState && (closeTrial === 'measured' ? /분/.test(res) : /측정 중/.test(res)), '② 재현시험 — 성과 화면과 같은 상태 · 잰 값이 없으면 「측정 중」', `${irTrialState} / ${closeTrial}`)
+  ok(!/%/.test(res), '② 실증 결과에 % 없음 (잰 값만 · 개선율을 만들지 않음)')
   ok(!/확인 전/.test(close), '② 마무리 — 「확인 전」 없음')
   ok((await p.locator('[data-presenter-card]:visible [data-presenter-finish]').count()) === 1, '② 마지막 단계는 「발표 가이드 종료」')
   await p.locator('[data-presenter-card]:visible [data-presenter-finish]').click()

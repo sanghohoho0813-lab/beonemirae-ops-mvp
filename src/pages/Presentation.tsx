@@ -10,6 +10,9 @@ import { AI_ORDER, CLOSING, FLOW, FULL_ORDER, PRESENTER_CLIENT_KEY, PRESENTER_ST
 import { usePrepareDemo } from '../context/usePrepareDemo'
 import { aiTriageRequest } from '../lib/evidenceRepo'
 import { DemoResetButton } from '../components/DemoControls'
+import { loadDevRequests, missingParts } from '../lib/repo'
+import { parseTrials, type Trial } from '../lib/trials'
+import { IR_WINDOW_DAYS, irSummary } from '../lib/irSummary'
 import { TourButton } from '../components/TourEntry'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +55,7 @@ const MANUAL_KEY = 'beonemirae-ops:presenter-manual'
 const PREP_KEY = 'beonemirae-ops:presenter-prep-open'
 
 type Mark = 'ok' | 'todo' | 'warn'
+const fmtNum = (v: number) => (Number.isInteger(v) ? `${v}` : v.toFixed(1))
 
 export function Presentation() {
   const navigate = useNavigate()
@@ -133,6 +137,24 @@ export function Presentation() {
 
   const showFlow = !presenter.active || step.key === 'intro'
   const showClose = presenter.active && step.key === 'close'
+
+  //  ── 실증 결과 (0141 · 마무리 화면) — 성과 화면(/performance/ir)과 **같은 계산**(irSummary).
+  //   실제로 잰 것만 숫자로: 도입 전 업무조사 · 재현시험(예전 방식 vs 시스템) · 최근 30일 실제 사용 기록.
+  //   안 잰 칸은 「측정 중」 — 예상치 · 목표치를 실적처럼 쓰지 않습니다.
+  const liveMode = mode === 'live'
+  const staffRole = role === 'admin' || role === 'office'
+  const [trials, setTrials] = useState<Trial[] | null | undefined>(undefined)
+  useEffect(() => {
+    if (!showClose) return
+    if (!staffRole || !liveMode) { setTrials(null); return }
+    let alive = true
+    loadDevRequests().then((rows) => alive && setTrials(parseTrials(rows))).catch(() => alive && setTrials(null))
+    return () => { alive = false }
+  }, [showClose, staffRole, liveMode])
+  const ir = useMemo(
+    () => irSummary(data, { live: liveMode, trials: trials ?? null, trialsReason: '재현시험 기록을 읽지 못했습니다', unreadable: missingParts.filter((m) => /고객 문의/.test(m)) }),
+    [data, liveMode, trials],
+  )
   const showRoadmap = presenter.active && step.key === 'roadmap'
   const startAt = (index: number) => presenter.start({ clientId: chosen?.id ?? null, order: FULL_ORDER, pos: index })
 
@@ -239,7 +261,59 @@ export function Presentation() {
               </li>
             ))}
           </ol>
-          <p data-close-message className="mt-8 break-keep text-[1.5rem] font-black leading-relaxed text-white sm:text-[1.9rem]">
+          {/*  실증 결과 — 큰 숫자 세 칸 (실제로 잰 것만) */}
+          <div data-close-results className="mt-7 grid gap-3.5 lg:grid-cols-3">
+            <div data-close-result="before" className="rounded-[18px] bg-white/10 px-5 py-5">
+              <p className="text-[1.05rem] font-extrabold text-navy-200">도입 전 하루 사무업무</p>
+              <p className="mt-2 whitespace-nowrap text-[2.6rem] font-black leading-none tabular-nums">
+                {fmtNum(ir.baseline.minH)}~{fmtNum(ir.baseline.maxH)}<span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">시간</span>
+              </p>
+              <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">운영이사 업무조사 ({ir.baseline.takenOn})</p>
+            </div>
+            <div data-close-result="trial" data-close-trial={ir.trial.state} className="rounded-[18px] bg-teal-500/20 px-5 py-5 ring-1 ring-teal-300/40">
+              <p className="text-[1.05rem] font-extrabold text-teal-200">같은 업무 처리 시간</p>
+              {ir.trial.state === 'measured' ? (
+                <>
+                  <p className="mt-2 flex items-center gap-2 whitespace-nowrap text-[2.6rem] font-black leading-none tabular-nums">
+                    {fmtNum(ir.trial.main.oldMedianMin)}<span className="text-[1.3rem] font-extrabold text-teal-100">분</span>
+                    <ArrowRight size={28} strokeWidth={2.8} aria-label="에서" className="text-teal-300" />
+                    {fmtNum(ir.trial.main.newMedianMin)}<span className="text-[1.3rem] font-extrabold text-teal-100">분</span>
+                  </p>
+                  <p className="mt-2.5 break-keep text-[0.98rem] text-teal-100">
+                    {ir.trial.main.label} · 재현시험 {ir.trial.main.n}회{ir.trial.main.n > 1 ? ' 중앙값' : ''} — 같은 자료로 예전 방식과 시스템을 실제로 잰 값
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-[2.2rem] font-black leading-none text-teal-100">측정 중</p>
+                  <p className="mt-2.5 break-keep text-[0.98rem] text-teal-100">
+                    {ir.trial.state === 'unavailable' ? ir.trial.reason : '업무 재현시험으로 잽니다'}
+                  </p>
+                </>
+              )}
+            </div>
+            <div data-close-result="usage" className="rounded-[18px] bg-white/10 px-5 py-5">
+              <p className="text-[1.05rem] font-extrabold text-navy-200">실제 사용 · 최근 {IR_WINDOW_DAYS}일</p>
+              {ir.usage.state === 'ok' ? (
+                <>
+                  <p className="mt-2 whitespace-nowrap text-[2.6rem] font-black leading-none tabular-nums">
+                    {ir.usage.records.toLocaleString('ko-KR')}<span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">건</span>
+                    <span className="ml-3 text-[1.9rem]">{ir.usage.users}</span><span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">명</span>
+                  </p>
+                  <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">
+                    수거 입력 {ir.usage.byKind.collections} · 병원 요청 {ir.usage.byKind.requests} · 문의 {ir.usage.byKind.inquiries} — 운영 DB 기록 · 시연 제외
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-[2.2rem] font-black leading-none text-navy-200">확인 전</p>
+                  <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">{ir.usage.reason}</p>
+                </>
+              )}
+            </div>
+          </div>
+          {!liveMode && <p data-close-demo className="mt-3 text-[1rem] font-bold text-amber-300">시연 모드 — 실제 운영 기록이 아닙니다</p>}
+          <p data-close-message className="mt-7 break-keep text-[1.3rem] font-black leading-relaxed text-white sm:text-[1.55rem]">
             {CLOSING.message}
           </p>
         </section>
