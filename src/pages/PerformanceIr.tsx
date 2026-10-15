@@ -8,6 +8,7 @@ import { LoadGate, useLoadState } from '../components/LoadState'
 import { loadDevRequests, missingParts } from '../lib/repo'
 import { parseTrials, type Trial } from '../lib/trials'
 import { IR_WINDOW_DAYS, irSummary, type IrNext } from '../lib/irSummary'
+import { AFTER_SURVEY } from '../lib/opsSurvey'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 발표용 성과 요약 (/performance/ir) — 0137
@@ -147,6 +148,12 @@ export function PerformanceIr() {
             <p className="mt-1 break-keep text-[1rem] leading-snug text-navy-200">
               {s.baseline.parts.map((p) => `${p.label} ${p.quote.replace(/^일요일(을)? 제외(하고)? /, '').replace(/ 소요$/, '')}`).join(' + ')}
               {' '}(일요일 제외 매일)
+            </p>
+            {/*  0141 — 도입 후 답변 (잰 값이 아니라 답변 — 누가 · 언제를 함께) */}
+            <p data-ir-after className="mt-4 break-keep rounded-[12px] bg-white/10 px-3.5 py-2.5 text-[1.05rem] font-bold text-white">
+              도입 후 — 하루 {AFTER_SURVEY.admin.afterMaxMin}분 이내 <span className="font-medium text-navy-200">({AFTER_SURVEY.admin.who} 답변 · {AFTER_SURVEY.takenOn})</span>
+              <br />
+              현장 퇴근 후 카톡 정리 {AFTER_SURVEY.field.beforeMinMin}분 이상 → 없어짐 <span className="font-medium text-navy-200">({AFTER_SURVEY.field.who} 답변)</span>
             </p>
             <p className="mt-auto pt-4 text-[0.98rem] text-navy-300">운영이사 업무조사 답변 ({s.baseline.takenOn})</p>
           </div>

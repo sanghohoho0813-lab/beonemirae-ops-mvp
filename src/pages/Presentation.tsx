@@ -13,6 +13,7 @@ import { DemoResetButton } from '../components/DemoControls'
 import { loadDevRequests, missingParts } from '../lib/repo'
 import { parseTrials, type Trial } from '../lib/trials'
 import { IR_WINDOW_DAYS, irSummary } from '../lib/irSummary'
+import { AFTER_SURVEY } from '../lib/opsSurvey'
 import { TourButton } from '../components/TourEntry'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,31 +263,50 @@ export function Presentation() {
             ))}
           </ol>
           {/*  실증 결과 — 큰 숫자 세 칸 (실제로 잰 것만) */}
-          <div data-close-results className="mt-7 grid gap-3.5 lg:grid-cols-3">
-            <div data-close-result="before" className="rounded-[18px] bg-white/10 px-5 py-5">
-              <p className="text-[1.05rem] font-extrabold text-navy-200">도입 전 하루 사무업무</p>
-              <p className="mt-2 whitespace-nowrap text-[2.6rem] font-black leading-none tabular-nums">
-                {fmtNum(ir.baseline.minH)}~{fmtNum(ir.baseline.maxH)}<span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">시간</span>
+          {/*  ① 도입 전 → 도입 후 (사용하신 분들의 답변 · 0141) — 가장 크게 */}
+          <div data-close-before-after className="mt-7 grid gap-3.5 lg:grid-cols-2">
+            <div data-close-result="admin" className="rounded-[18px] bg-teal-500/20 px-6 py-6 ring-1 ring-teal-300/40">
+              <p className="text-[1.15rem] font-extrabold text-teal-200">하루 사무업무</p>
+              <p className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[2.8rem] font-black leading-none tabular-nums sm:text-[3.2rem]">
+                <span className="whitespace-nowrap">{fmtNum(ir.baseline.minH)}~{fmtNum(ir.baseline.maxH)}<span className="ml-1 text-[1.4rem] font-extrabold text-teal-100">시간</span></span>
+                <ArrowRight size={32} strokeWidth={2.8} aria-label="에서" className="text-teal-300" />
+                <span className="whitespace-nowrap">{AFTER_SURVEY.admin.afterMaxMin}분<span className="ml-1 text-[1.4rem] font-extrabold text-teal-100">이내</span></span>
               </p>
-              <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">운영이사 업무조사 ({ir.baseline.takenOn})</p>
+              <p className="mt-3 break-keep text-[1rem] text-teal-100">
+                {AFTER_SURVEY.admin.who} 답변 — 도입 전 업무조사({ir.baseline.takenOn}) · 도입 후({AFTER_SURVEY.takenOn})
+              </p>
             </div>
-            <div data-close-result="trial" data-close-trial={ir.trial.state} className="rounded-[18px] bg-teal-500/20 px-5 py-5 ring-1 ring-teal-300/40">
-              <p className="text-[1.05rem] font-extrabold text-teal-200">같은 업무 처리 시간</p>
+            <div data-close-result="field" className="rounded-[18px] bg-teal-500/20 px-6 py-6 ring-1 ring-teal-300/40">
+              <p className="text-[1.15rem] font-extrabold text-teal-200">현장 기사 · 퇴근 후 카톡 정리</p>
+              <p className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[2.8rem] font-black leading-none tabular-nums sm:text-[3.2rem]">
+                <span className="whitespace-nowrap">{AFTER_SURVEY.field.beforeMinMin}분<span className="ml-1 text-[1.4rem] font-extrabold text-teal-100">이상</span></span>
+                <ArrowRight size={32} strokeWidth={2.8} aria-label="에서" className="text-teal-300" />
+                <span className="whitespace-nowrap">{AFTER_SURVEY.field.afterMin}분</span>
+              </p>
+              <p className="mt-3 break-keep text-[1rem] text-teal-100">
+                {AFTER_SURVEY.field.who} 답변 ({AFTER_SURVEY.takenOn}) — 현장에서 클릭 몇 번으로 바로 입력
+              </p>
+            </div>
+          </div>
+          {/*  ② 함께 보는 근거 — 재현시험 · 실제 사용 기록 */}
+          <div data-close-results className="mt-3.5 grid gap-3.5 lg:grid-cols-2">
+            <div data-close-result="trial" data-close-trial={ir.trial.state} className="rounded-[18px] bg-white/10 px-5 py-5">
+              <p className="text-[1.05rem] font-extrabold text-navy-200">같은 업무 처리 시간 · 재현시험</p>
               {ir.trial.state === 'measured' ? (
                 <>
-                  <p className="mt-2 flex items-center gap-2 whitespace-nowrap text-[2.6rem] font-black leading-none tabular-nums">
-                    {fmtNum(ir.trial.main.oldMedianMin)}<span className="text-[1.3rem] font-extrabold text-teal-100">분</span>
-                    <ArrowRight size={28} strokeWidth={2.8} aria-label="에서" className="text-teal-300" />
-                    {fmtNum(ir.trial.main.newMedianMin)}<span className="text-[1.3rem] font-extrabold text-teal-100">분</span>
+                  <p className="mt-2 flex items-center gap-2 whitespace-nowrap text-[2.2rem] font-black leading-none tabular-nums">
+                    {fmtNum(ir.trial.main.oldMedianMin)}<span className="text-[1.2rem] font-extrabold text-navy-200">분</span>
+                    <ArrowRight size={26} strokeWidth={2.8} aria-label="에서" className="text-teal-300" />
+                    {fmtNum(ir.trial.main.newMedianMin)}<span className="text-[1.2rem] font-extrabold text-navy-200">분</span>
                   </p>
-                  <p className="mt-2.5 break-keep text-[0.98rem] text-teal-100">
+                  <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">
                     {ir.trial.main.label} · 재현시험 {ir.trial.main.n}회{ir.trial.main.n > 1 ? ' 중앙값' : ''} — 같은 자료로 예전 방식과 시스템을 실제로 잰 값
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="mt-2 text-[2.2rem] font-black leading-none text-teal-100">측정 중</p>
-                  <p className="mt-2.5 break-keep text-[0.98rem] text-teal-100">
+                  <p className="mt-2 text-[2rem] font-black leading-none text-navy-200">측정 중</p>
+                  <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">
                     {ir.trial.state === 'unavailable' ? ir.trial.reason : '업무 재현시험으로 잽니다'}
                   </p>
                 </>
@@ -296,9 +316,9 @@ export function Presentation() {
               <p className="text-[1.05rem] font-extrabold text-navy-200">실제 사용 · 최근 {IR_WINDOW_DAYS}일</p>
               {ir.usage.state === 'ok' ? (
                 <>
-                  <p className="mt-2 whitespace-nowrap text-[2.6rem] font-black leading-none tabular-nums">
+                  <p className="mt-2 whitespace-nowrap text-[2.2rem] font-black leading-none tabular-nums">
                     {ir.usage.records.toLocaleString('ko-KR')}<span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">건</span>
-                    <span className="ml-3 text-[1.9rem]">{ir.usage.users}</span><span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">명</span>
+                    <span className="ml-3 text-[1.7rem]">{ir.usage.users}</span><span className="ml-1 text-[1.3rem] font-extrabold text-navy-200">명</span>
                   </p>
                   <p className="mt-2.5 break-keep text-[0.98rem] text-navy-200">
                     수거 입력 {ir.usage.byKind.collections} · 병원 요청 {ir.usage.byKind.requests} · 문의 {ir.usage.byKind.inquiries} — 운영 DB 기록 · 시연 제외
