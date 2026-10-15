@@ -120,9 +120,9 @@ console.log('── ⓐ 시연 화면에서 시작 ──')
 console.log('── ⓙ 작은 설명 상자 · 군더더기 감추기 ──')
 {
   const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
-  //  투어 전 — 오른쪽 위 도구 줄이 보입니다.
+  //  0140 — 발표 시작 화면(/presentation)은 프로젝터에 켜 두는 화면이라 도구 줄이 **처음부터** 숨어 있습니다.
   const helpBefore = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
-  ok('ⓙ 투어 전에는 오른쪽 위 도구 줄이 보인다', helpBefore)
+  ok('ⓙ 발표 시작 화면에서는 투어 전에도 오른쪽 위 도구 줄이 숨어 있다 (0140)', !helpBefore)
 
   await startDemo(p)
   const size = await p.evaluate(() => {
