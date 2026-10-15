@@ -144,14 +144,14 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     before: '전화·문자·카카오톡으로 들어온 긴 요청을 담당자가 직접 읽고, 급한 정도와 함께 들어온 요구사항을 일일이 판단해야 했습니다.',
     now: '요청이 시스템 데이터로 들어오면 AI가 먼저 구조화하고, 담당자가 결과를 확인해 실제 업무에 반영합니다.',
     effects: ['긴 요청 빠른 파악', '복합 요청 누락 방지', '고객 응대 문장 표준화', '담당자 판단시간 절감 가능'],
-    todo: '「회신 남기기」 → 「AI 분석 실행」 → 「초안 사용」',
+    todo: '「회신 남기기」 → 「AI 분석 실행」 → 결과 · 갈 수 있는 기사 짚기 → 「초안 사용」',
     note: 'AI가 업무를 대신하는 구조는 아닙니다. 병원 요청을 빠르게 읽고 정리해서 담당자의 판단과 회신을 돕는 방식이며, 최종 결정은 사람이 합니다.',
     status: '구현됨',
     ai: 'AI 요청 분석',
   },
   {
     key: 'reply',
-    title: '직원 회신 → 병원 확인',
+    title: '직원 회신 → 병원 확인 · 날짜 잡기',
     routes: (c) => ['/requests', ...(c.clientId ? [`/portal/c/${c.clientId}/requests`] : [])],
     //  시연 요청이 있으면 그 요청으로 (발표 중엔 그 요청만 보임 · 0140)
     go: (c) => (c.demoRequestId ? `/requests?focus=${c.demoRequestId}` : '/requests'),
@@ -179,20 +179,6 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     status: '구현됨',
     ai: 'AI 안내 문구',
     planned: ['입금 예정일 알림'],
-  },
-  {
-    key: 'ir',
-    title: '성과 화면',
-    routes: () => ['/performance/ir'],
-    go: () => '/performance/ir',
-    targets: ['[data-ir-before]'],
-    show: '도입 전 업무부담 · 같은 업무의 재현시험 · 실제 사용 기록 — 확인된 것만 보여 드립니다.',
-    before: 'AX 효과는 느낌이나 홍보 문구로 말하기 쉽습니다.',
-    now: '개발 완료와 성과 검증을 구분하고, 재지 않은 값은 「측정 전 · 측정 예정」으로 둡니다.',
-    effects: ['효과를 운영 데이터로 계속 측정', '목표값과 실적을 섞지 않음'],
-    todo: '세 칸을 차례로 짚기',
-    note: '비원미래는 개발 완료와 성과 검증 완료를 구분합니다. 지금 숫자는 실제 업무조사와 운영 기록에서만 나오고, 아직 재지 않은 것은 측정 예정으로 둡니다.',
-    status: '측정 중',
   },
   {
     key: 'roadmap',
@@ -241,10 +227,10 @@ export const FLOW = ['병원 요청', 'AI 분석', '담당자 판단', '수거 �
 
 // ── 시연 순서 두 가지 (0140) ─────────────────────────────────────────────────
 //  전체 흐름: 시작 → 오늘 운영 → 수거 입력 → 병원 포털 → AI → 회신 → 성과 → 마무리
-//  AI 먼저:   AI → 회신 · 병원 확인 → 오늘 운영(AI 브리핑) → 수거 입력(AI 메모) → 병원 포털 → 미수금(AI 문구) → 성과 → AI 고도화 계획 → 마무리 (0141 · 9단계)
+//  AI 먼저:   AI → 회신 · 병원 확인 → 오늘 운영(AI 브리핑) → 수거 입력(AI 메모) → 병원 포털 → 미수금(AI 문구) → AI 고도화 계획 → 마무리 · 실증 결과 (0141 · 8단계 — 성과 화면은 마무리와 겹쳐 뺌)
 //   ⚠ 단계 내용은 하나입니다(같은 카드). 보여 주는 차례만 다릅니다.
 export const FULL_ORDER: string[] = PRESENTER_STEPS.map((s) => s.key)
-export const AI_ORDER: string[] = ['triage', 'reply', 'today', 'collect', 'portal', 'receivables', 'ir', 'roadmap', 'close']
+export const AI_ORDER: string[] = ['triage', 'reply', 'today', 'collect', 'portal', 'receivables', 'roadmap', 'close']
 export const stepIndex = (key: string) => Math.max(0, PRESENTER_STEPS.findIndex((s) => s.key === key))
 /** 「STEP n / N」 — 시작 화면(intro)은 번호 없이 */
 export function stepLabel(order: string[], pos: number): string {

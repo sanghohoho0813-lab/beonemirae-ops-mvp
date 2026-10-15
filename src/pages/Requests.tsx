@@ -40,6 +40,7 @@ import { AiButton } from '../components/AiAction'
 import { aiTriageRequest, markAiCallEdited, type TriageResult } from '../lib/evidenceRepo'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { aiVendor } from '../lib/aiVendor'
+import { dispatchHint } from '../lib/dispatchHint'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 요청 (비원미래 담당자 화면)
@@ -522,7 +523,9 @@ export function Requests() {
           onClose={() => setBookFor(null)}
           client={data.clients.find((c) => c.id === bookFor.clientId)}
           requestId={bookFor.id}
-          desiredDate={bookFor.desiredDate}
+          //  0141 — 희망일이 없으면 요청 글의 「오늘 · 내일 · 모레」만 미리 (추측 날짜는 넣지 않음), 차량은 「누가 갈 수 있나」 후보
+          desiredDate={bookFor.desiredDate ?? (() => { const h = dispatchHint(data, bookFor); return h.why.startsWith('요청 글') ? h.date : null })()}
+          defaultVehicleId={dispatchHint(data, bookFor).pick?.vehicleId ?? null}
           defaultMemo={`${REQUEST_KIND_LABEL[bookFor.type]} 요청 — ${bookFor.content}`.slice(0, 120)}
         />
       )}
@@ -655,6 +658,40 @@ export function Requests() {
                     </button>
                   </div>
                 </AiRow>
+                {/*  0141 — 「누가 갈 수 있나」: 일정표에서 바로 계산 (AI 가 아님 · 확정은 담당자의 「날짜 잡기」) */}
+                {(() => {
+                  const h = dispatchHint(data, replyTo)
+                  if (h.loads.length === 0) return null
+                  return (
+                    <AiRow n={ai.result.points.length > 0 ? 6 : 5} label="갈 수 있는 기사 · 일정표 기준">
+                      <div data-dispatch-hint className="rounded-xl bg-white px-3.5 py-3 ring-1 ring-violet-100">
+                        <p className="break-keep text-[1.02rem] font-bold text-navy-800">
+                          {h.date.slice(5).replace('-', '월 ')}일 기준 <span className="font-medium text-navy-500">({h.why})</span>
+                        </p>
+                        {h.pick && (
+                          <p data-dispatch-pick className="mt-1.5 break-keep text-[1.12rem] font-black text-navy-950">
+                            추천 — {h.pick.vehicleName}{h.pick.driver ? ` · ${h.pick.driver}` : ''}
+                            <span className="ml-1.5 text-[1rem] font-bold text-violet-700">{h.pickWhy}</span>
+                          </p>
+                        )}
+                        <ul className="mt-2 flex flex-wrap gap-1.5">
+                          {h.loads.map((l) => (
+                            <li
+                              key={l.vehicleId}
+                              data-dispatch-load={l.vehicleId}
+                              className={`rounded-full px-3 py-1 text-[0.98rem] font-bold ${h.pick?.vehicleId === l.vehicleId ? 'bg-violet-600 text-white' : 'bg-navy-50 text-navy-700'}`}
+                            >
+                              {l.vehicleName} {l.visits}곳{l.regular ? ' · 늘 가던 차량' : ''}{l.alreadyThere ? ' · 이미 방문 예정' : ''}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 break-keep text-[0.95rem] text-navy-500">
+                          그날 차량별 방문 수 · 최근에 이 병원을 맡은 차량으로 계산 — 회신 저장 뒤 요청 카드의 「날짜 잡기」에 이 날짜 · 차량이 미리 들어갑니다(바꿀 수 있음).
+                        </p>
+                      </div>
+                    </AiRow>
+                  )
+                })()}
                 <li className="list-none pt-1">
                   <p data-ai-basis className="break-keep rounded-lg bg-white/70 px-3 py-2 text-[0.98rem] text-navy-700">판단 근거: {ai.result.basis}</p>
                   <p data-ai-meta className="mt-1.5 break-keep text-[0.95rem] font-semibold text-navy-500">

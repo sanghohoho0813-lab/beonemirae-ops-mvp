@@ -155,7 +155,7 @@ const FULL = {
   //  ② 재현시험: 거래명세서 2회 → 중앙값 28 → 10분 · 그 밖에 수거 정리 1회
   ok((await p.locator('[data-ir-trial="measured"]').count()) === 1, '② 재현시험이 있으면 실측값을 보인다')
   const trial = flat(await p.textContent('[data-ir-trial]'))
-  ok(/28\s*분\s*10\s*분/.test(trial), '② 거래명세서 중앙값 28분 → 10분 (손으로 센 값)', trial)
+  ok(/28\s*분\s*→?\s*10\s*분/.test(trial), '② 거래명세서 중앙값 28분 → 10분 (손으로 센 값)', trial)
   ok(/초기 재현시험 2회/.test(trial) && /중앙값/.test(trial) && /거래명세서 작성/.test(trial), '② 표본 N회 · 「초기 재현시험」 · 무슨 업무인지', trial)
   ok(/오류 1건 → 0건/.test(trial), '② 오류 건수도 그대로 (1 → 0)', trial)
   ok(/수거 건 입력·정리 1회 \(12→4분\)/.test(trial), '② 다른 과제는 작게 (수거 정리 1회 12→4분)', trial)
@@ -265,8 +265,9 @@ for (const w of [390, 1440]) {
   const over = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   ok(over <= 0, `${w}px ⑦ 가로로 안 밀린다`, `${over}px`)
   const bx = await p.locator('[data-ir-before]').boundingBox()
-  const tx = await p.locator('[data-ir-trial]').boundingBox()
-  if (w >= 1024) ok(Math.abs(bx.y - tx.y) < 4 && bx.x < tx.x, `${w}px ⑦ 도입 전 → 동일 업무 처리가 한 줄`)
+  //  0141 — 오른쪽 큰 칸 = 도입 후(답변 · 줄어든 양 · 그 안에 재현시험)
+  const tx = await p.locator('[data-ir-after]').boundingBox()
+  if (w >= 1024) ok(Math.abs(bx.y - tx.y) < 4 && bx.x < tx.x, `${w}px ⑦ 도입 전 → 도입 후가 한 줄`)
   else ok(tx.y > bx.y, `${w}px ⑦ 폰에서는 도입 전 아래에 동일 업무 처리`)
   //  눈으로 볼 캡처 — IR_SHOTS=폴더 를 주면 남깁니다 (검사 판정과 무관)
   if (process.env.IR_SHOTS) {

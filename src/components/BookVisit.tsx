@@ -41,6 +41,7 @@ export function BookVisitModal({
   desiredDate,
   /** 왜 잡는지 (요청 내용 등) — 기사님 화면에 그대로 보입니다 */
   defaultMemo,
+  defaultVehicleId,
   onDone,
 }: {
   open: boolean
@@ -50,6 +51,8 @@ export function BookVisitModal({
   requestId?: string | null
   desiredDate?: string | null
   defaultMemo?: string
+  /** 미리 고른 차량 (0141 — 요청 화면의 「누가 갈 수 있나」 후보) · 담당자가 바꿀 수 있음 */
+  defaultVehicleId?: string | null
   onDone?: () => void
 }) {
   const { bookVisit, data } = useData()
@@ -62,7 +65,7 @@ export function BookVisitModal({
   const [date, setDate] = useState(desiredDate ?? '')
   const [wasteType, setWasteType] = useState<WasteType>('의료폐기물')
   const [time, setTime] = useState('')
-  const [vehicleId, setVehicleId] = useState('')
+  const [vehicleId, setVehicleId] = useState(defaultVehicleId ?? '')
   const [memo, setMemo] = useState(defaultMemo ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')

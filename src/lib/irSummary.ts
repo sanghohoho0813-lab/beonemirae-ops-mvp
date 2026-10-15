@@ -1,6 +1,6 @@
 import type { AppData } from '../types'
 import { classifyEvent, daysInclusive, localDateOf } from './evidenceBase'
-import { SURVEY_TAKEN_ON, SURVEY_TASKS, surveyTotals } from './opsSurvey'
+import { AFTER_SURVEY, SURVEY_TAKEN_ON, SURVEY_TASKS, WEEKS_PER_MONTH, surveyTotals } from './opsSurvey'
 import { summarizeTrials, type Trial, type TrialSummary } from './trials'
 import { today } from './format'
 
@@ -84,9 +84,27 @@ export interface IrNext {
   note: string | null
 }
 
+/**
+ * 도입 후 답변 (0141) — 잰 값이 아니라 **답변**입니다. 줄어든 양은 두 답변에서 계산한 **최소치**만:
+ *   하루: 도입 전 최소(minH) − 도입 후 최대(30분)  ·  한 달: 하루 × 주 6일 × 4.345주
+ */
+export interface IrAfter {
+  takenOn: string
+  who: string
+  /** 도입 후 하루 사무업무 — 「○분 이내」 */
+  afterMaxMin: number
+  /** 하루 줄어든 시간 — 최소치(시간) */
+  cutMinH: number
+  /** 한 달 줄어든 시간 — 최소치(시간) · 계산식 */
+  monthCutMinH: number
+  daysPerWeek: number
+  field: { who: string; beforeMinMin: number; afterMin: number; quote: string }
+}
+
 export interface IrSummary {
   asOf: string
   baseline: IrBaseline
+  after: IrAfter
   trial: IrTrial
   usage: IrUsage
   /** 실증 기간 — 설정의 실증 시작일 ~ 오늘. 시작일이 없으면 days = null */
@@ -276,9 +294,24 @@ export function irSummary(data: AppData, input: IrInput): IrSummary {
     },
   ]
 
+  //  ── ①′ 도입 후 답변 (0141) — 최소치만 계산 ──────────────────────────────
+  const r1 = (n: number) => Math.round(n * 10) / 10
+  const cutMinH = Math.max(0, r1(baseline.minH - AFTER_SURVEY.admin.afterMaxMin / 60))
+  const daysPerWeek = Math.min(...SURVEY_TASKS.map((x) => x.daysPerWeek))
+  const after: IrAfter = {
+    takenOn: AFTER_SURVEY.takenOn,
+    who: AFTER_SURVEY.admin.who,
+    afterMaxMin: AFTER_SURVEY.admin.afterMaxMin,
+    cutMinH,
+    monthCutMinH: Math.floor(cutMinH * daysPerWeek * WEEKS_PER_MONTH),
+    daysPerWeek,
+    field: { ...AFTER_SURVEY.field },
+  }
+
   return {
     asOf,
     baseline,
+    after,
     trial,
     usage,
     pilot: { startDate, days: pilotDays },

@@ -272,8 +272,12 @@ export function Presentation() {
                 <ArrowRight size={32} strokeWidth={2.8} aria-label="에서" className="text-teal-300" />
                 <span className="whitespace-nowrap">{AFTER_SURVEY.admin.afterMaxMin}분<span className="ml-1 text-[1.4rem] font-extrabold text-teal-100">이내</span></span>
               </p>
-              <p className="mt-3 break-keep text-[1rem] text-teal-100">
-                {AFTER_SURVEY.admin.who} 답변 — 도입 전 업무조사({ir.baseline.takenOn}) · 도입 후({AFTER_SURVEY.takenOn})
+              <p data-close-cut className="mt-3.5 inline-block rounded-[12px] bg-teal-400 px-3.5 py-2 text-[1.3rem] font-black text-navy-950">
+                <span className="whitespace-nowrap">하루 {fmtNum(ir.after.cutMinH)}시간 이상 줄어듦</span>{' · '}
+                <span className="whitespace-nowrap">한 달 약 {ir.after.monthCutMinH}시간 이상</span>
+              </p>
+              <p className="mt-2.5 break-keep text-[1rem] text-teal-100">
+                {AFTER_SURVEY.admin.who} 답변 — 도입 전 업무조사({ir.baseline.takenOn}) · 도입 후({AFTER_SURVEY.takenOn}) · 줄어든 양은 두 답변으로 계산한 최소치
               </p>
             </div>
             <div data-close-result="field" className="rounded-[18px] bg-teal-500/20 px-6 py-6 ring-1 ring-teal-300/40">

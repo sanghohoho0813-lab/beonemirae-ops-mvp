@@ -2,6 +2,7 @@ import { chromium, EXEC } from './_pw.mjs'
 import * as W from './walk_lib.mjs'
 import * as F from './perf_fixtures.mjs'
 import { PRESENTER_STEPS, CLOSING, FLOW, ROADMAP, SAMPLE_REQUEST } from '../../src/lib/presenter.ts'
+import { surveyTotals } from '../../src/lib/opsSurvey.ts'
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  심사 시연 Presenter Mode (0139)
@@ -171,7 +172,7 @@ for (const role of ['field', 'office']) {
   ok((await p.locator('[data-ready="ai"]').getAttribute('data-ready-mark')) === 'ok' && /최근 성공/.test(flat(await p.locator('[data-ready="ai"]').innerText())), '① AI — 실제 성공 기록이 있으면 ✓ (최근 성공 시각 · 모델)')
   //  ai_calls.created_at 은 UTC(01:00Z) — 화면은 한국 시각 10:00 으로
   ok(flat(await p.locator('[data-ready="ai"]').innerText()).includes(`${TODAY.slice(5)} 10:00`), '① AI 최근 성공 시각은 한국 시각으로 (UTC 01:00 → 10:00)', flat(await p.locator('[data-ready="ai"]').innerText()))
-  await p.locator('[data-presenter-jump="9"]').click()
+  await p.locator('[data-presenter-jump="8"]').click()
   await p.waitForTimeout(800)
   ok((await p.locator('[data-presenter-close]').count()) === 1 && (await p.locator('[data-close-ai-unverified]').count()) === 0, '① AI 성공 기록이 있으면 마무리에 「확인 전」 표시 없음')
   await ctx.close()
@@ -193,7 +194,7 @@ for (const role of ['field', 'office']) {
   //  STEP 1 — 오늘 운영 화면
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
   await p.waitForTimeout(900)
-  ok(new URL(p.url()).pathname === '/' && /STEP 1 \/ 9/.test(await stepNo(p)), '② 「시연 시작」 → STEP 1 / 9 · 대시보드 (0141 · 9단계)', `${p.url()} ${await stepNo(p)}`)
+  ok(new URL(p.url()).pathname === '/' && /STEP 1 \/ 8/.test(await stepNo(p)), '② 「시연 시작」 → STEP 1 / 8 · 대시보드 (0141 · 8단계)', `${p.url()} ${await stepNo(p)}`)
   ok(/ai-assist-run|ai-briefing/.test((await waitSpot(p, /ai-assist-run|ai-briefing/)) ?? ''), '② STEP 1 — 「AI 브리핑 받기」 강조 (0141 · 실제 AI)')
   ok(/AI 오늘 브리핑/.test(flat(await p.locator('[data-presenter-card]:visible [data-presenter-ai-feature]').innerText())) && /개발 예정/.test(flat(await card(p).innerText())), '② STEP 1 — 카드에 「AI 오늘 브리핑」 · 「개발 예정」')
   await shot(p, '02_today')
@@ -204,7 +205,7 @@ for (const role of ['field', 'office']) {
   //  ③ 새로고침해도 그대로
   await p.reload({ waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(1500)
-  ok(/STEP 1 \/ 9/.test(await stepNo(p)), '③ 새로고침해도 STEP 1 그대로')
+  ok(/STEP 1 \/ 8/.test(await stepNo(p)), '③ 새로고침해도 STEP 1 그대로')
 
   //  STEP 2 — 수거 입력
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
@@ -304,41 +305,40 @@ for (const role of ['field', 'office']) {
   ok(new URL(p.url()).pathname === '/receivables' && /STEP 6/.test(await stepNo(p)) && (await p.locator('[data-receivables-presenting]').count()) === 1, '② STEP 6 · 미수금 (발표 중엔 독촉 대상 칸만)', `${p.url()} ${await stepNo(p)}`)
   ok(/AI 안내 문구/.test(flat(await card(p).innerText())), '② STEP 6 — 카드에 「AI 안내 문구」')
 
-  //  STEP 7 — 성과
-  await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
-  await p.waitForTimeout(1500)
-  ok(new URL(p.url()).pathname === '/performance/ir' && /STEP 7/.test(await stepNo(p)) && (await p.locator('[data-ir]').count()) === 1, '② STEP 7 · 성과 화면')
-  await shot(p, '10_ir')
-  //  마무리 실증 숫자가 이 성과 화면과 **같은 값**인지 대조하려고 적어 둡니다 (0141)
-  const irBeforeRange = (flat(await p.locator('[data-ir-before]').innerText()).match(/\d+(?:\.\d)?~\d+(?:\.\d)?/) ?? [''])[0]
-  const irTrialState = await p.locator('[data-ir-trial]').getAttribute('data-ir-trial')
-
-  //  STEP 8 — AI 고도화 계획 (0141) — 지금 · 다음(개발 예정) · 그다음
+  //  STEP 7 — AI 고도화 계획 (0141) — 지금 · 다음(개발 예정) · 그다음 (성과 화면 단계는 마무리와 겹쳐 뺌)
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
   await p.waitForTimeout(1200)
-  ok(new URL(p.url()).pathname === '/presentation' && /STEP 8/.test(await stepNo(p)), '② STEP 8 · AI 고도화 계획 (/presentation)')
+  ok(new URL(p.url()).pathname === '/presentation' && /STEP 7/.test(await stepNo(p)), '② STEP 7 · AI 고도화 계획 (/presentation)')
   await shot(p, '10b_roadmap')
   const road = flat(await p.locator('[data-presenter-roadmap]').innerText())
-  ok((await p.locator('[data-roadmap-col]').count()) === 3 && /지금 · 실제 사용 중/.test(road) && /다음 · 개발 예정/.test(road) && /데이터 축적 후/.test(road), '② STEP 8 — 세 칸 (지금 · 개발 예정 · 데이터 축적 후)', road.slice(0, 160))
-  ok(ROADMAP.now.every((x) => road.includes(x)) && ROADMAP.next.every((x) => road.includes(x)), '② STEP 8 — 지금 쓰는 AI 와 개발 예정이 칸을 나눠 그대로')
+  ok((await p.locator('[data-roadmap-col]').count()) === 3 && /지금 · 실제 사용 중/.test(road) && /다음 · 개발 예정/.test(road) && /데이터 축적 후/.test(road), '② STEP 7 — 세 칸 (지금 · 개발 예정 · 데이터 축적 후)', road.slice(0, 160))
+  ok(ROADMAP.now.every((x) => road.includes(x)) && ROADMAP.next.every((x) => road.includes(x)), '② STEP 7 — 지금 쓰는 AI 와 개발 예정이 칸을 나눠 그대로')
 
-  //  STEP 9 — 마무리 (큰 문장 하나)
+  //  STEP 8 — 마무리 (실증 결과 + 큰 문장)
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
   await p.waitForTimeout(1200)
-  ok(new URL(p.url()).pathname === '/presentation' && /STEP 9/.test(await stepNo(p)), '② STEP 9 · 마무리 (/presentation)')
+  ok(new URL(p.url()).pathname === '/presentation' && /STEP 8/.test(await stepNo(p)), '② STEP 8 · 마무리 (/presentation)')
   await shot(p, '11_close')
   const close = flat(await p.locator('[data-presenter-close]').innerText())
   ok(close.includes(CLOSING.message) && (await p.locator('[data-close-col]').count()) === 0, '② 마무리 — 큰 문장 하나 (작은 글씨 세 칸은 뺌 · 0141)')
+  //  도입 전 값 — 업무조사(opsSurvey) 그대로 (성과 화면과 같은 출처)
+  const st = surveyTotals()
+  const f1 = (v) => (Number.isInteger(v) ? `${v}` : v.toFixed(1))
+  const irBeforeRange = `${f1(st.dailyAdminMinH)}~${f1(st.dailyAdminMaxH)}`
   //  실증 결과 — 큰 숫자 세 칸, 성과 화면과 같은 계산 (잰 것만 · 안 잰 칸은 「측정 중」)
   const res = flat(await p.locator('[data-close-results]').innerText())
   const ba = flat(await p.locator('[data-close-before-after]').innerText())
-  ok(/하루 사무업무/.test(ba) && /30분 이내/.test(ba) && /운영이사 답변/.test(ba), '② 마무리 — 하루 사무업무 도입 전 → 30분 이내 (운영이사 답변이라고 출처)', ba.slice(0, 160))
-  ok(/퇴근 후 카톡 정리/.test(ba) && /20분 이상/.test(ba) && /0분/.test(ba) && /현장 직원 \(일부\) 답변/.test(ba), '② 마무리 — 현장 퇴근 후 정리 20분 이상 → 0분 (일부 직원 답변이라고 출처)', ba.slice(0, 220))
-  ok(!!irBeforeRange && ba.includes(irBeforeRange), '② 도입 전 업무부담 — 성과 화면과 같은 값', `성과 ${irBeforeRange} · 마무리 ${ba.slice(0, 60)}`)
+  ok(/하루 사무업무/.test(ba) && /30분\s*이내/.test(ba) && /운영이사 답변/.test(ba), '② 마무리 — 하루 사무업무 도입 전 → 30분 이내 (운영이사 답변이라고 출처)', ba.slice(0, 160))
+  //  줄어든 양 — 두 답변의 최소치: 도입 전 최소 − 30분, 한 달 = 하루 × 주 6일 × 4.345주 (내림)
+  const cut = Math.round((Number(irBeforeRange.split('~')[0]) - 0.5) * 10) / 10
+  const monthCut = Math.floor(cut * 6 * 4.345)
+  ok(ba.includes(`하루 ${Number.isInteger(cut) ? cut : cut.toFixed(1)}시간 이상 줄어듦`) && ba.includes(`한 달 약 ${monthCut}시간 이상`), '② 줄어든 양 — 하루 · 한 달 (최소치 계산이 맞음)', `${cut}h · ${monthCut}h / ${ba.slice(0, 200)}`)
+  ok(/퇴근 후 카톡 정리/.test(ba) && /20분\s*이상/.test(ba) && /0분/.test(ba) && /현장 직원 \(일부\) 답변/.test(ba), '② 마무리 — 현장 퇴근 후 정리 20분 이상 → 0분 (일부 직원 답변이라고 출처)', ba.slice(0, 220))
+  ok(!!irBeforeRange && ba.includes(irBeforeRange), '② 도입 전 업무부담 — 업무조사 값 그대로 (성과 화면과 같은 출처)', `성과 ${irBeforeRange} · 마무리 ${ba.slice(0, 60)}`)
   ok(/같은 업무 처리 시간/.test(res) && /실제 사용/.test(res), '② 근거 두 칸 — 재현시험 · 실제 사용 기록', res.slice(0, 160))
   ok(!/%/.test(ba), '② 도입 전 → 후에도 % 없음 (답변 그대로)')
   const closeTrial = await p.locator('[data-close-trial]').getAttribute('data-close-trial')
-  ok(closeTrial === irTrialState && (closeTrial === 'measured' ? /분/.test(res) : /측정 중/.test(res)), '② 재현시험 — 성과 화면과 같은 상태 · 잰 값이 없으면 「측정 중」', `${irTrialState} / ${closeTrial}`)
+  ok(closeTrial === 'measured' ? /분/.test(res) : /측정 중/.test(res), '② 재현시험 — 잰 값이 없으면 「측정 중」', closeTrial)
   ok(!/%/.test(res), '② 실증 결과에 % 없음 (잰 값만 · 개선율을 만들지 않음)')
   ok(!/확인 전/.test(close), '② 마무리 — 「확인 전」 없음')
   ok((await p.locator('[data-presenter-card]:visible [data-presenter-finish]').count()) === 1, '② 마지막 단계는 「발표 가이드 종료」')

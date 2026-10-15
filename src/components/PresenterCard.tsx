@@ -38,7 +38,7 @@ const visible = (el: Element | null): el is HTMLElement => {
 type Bubble = { x: number; top: number; bottom: number; right: number; mid: number; side: boolean; press: boolean }
 
 export function PresenterCard() {
-  const { active, index, pos, order, clientId, demoRequestId, next, prev, stop, goTo, continueFull } = usePresenter()
+  const { active, index, pos, order, clientId, demoRequestId, next, prev, stop, goTo } = usePresenter()
   const { role } = useAuth()
   const tour = useTour()
   const { pathname, search } = useLocation()
@@ -60,9 +60,6 @@ export function PresenterCard() {
   const here = show && onStepRoute(step, pathname, ctx)
   const last = pos === order.length - 1
   const label = stepLabel(order, pos)
-  //  AI 먼저 보여 주는 중 — AI · 회신 단계에서 「전체 운영 흐름 계속 보기」 (0140)
-  const aiFirst = order[0] === 'triage'
-  const canContinue = aiFirst && (step.key === 'triage' || step.key === 'reply')
   const look = LOOK_STEPS.has(step.key)
 
   //  단계가 바뀌면 처음 상태로
@@ -286,18 +283,6 @@ export function PresenterCard() {
 
   const nav = (dark: boolean) => (
     <div>
-      {canContinue && (
-        <button
-          type="button"
-          data-presenter-continue
-          onClick={continueFull}
-          className={`mb-2.5 flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] px-3 text-[1.05rem] font-extrabold transition ${
-            dark ? 'bg-white/10 text-white ring-1 ring-white/25 hover:bg-white/15' : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100'
-          }`}
-        >
-          전체 운영 흐름 계속 보기 <ArrowRight size={18} strokeWidth={2.6} />
-        </button>
-      )}
       <div className="flex gap-2">
         <button
           type="button"
