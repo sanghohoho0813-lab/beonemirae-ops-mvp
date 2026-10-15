@@ -185,8 +185,8 @@ const S = makeShared()
   ok(F.clients.every((c) => !S.patches.some((x) => x.id === c.id)), '⑤ 실제 거래처 자료는 고치지 않음')
   await shot(p, '02_requests_focus')
   ok((await p.locator('[data-req-focus]').count()) === 1, '⑥ 그 요청 카드가 테두리로 표시됨')
-  ok(/STEP 1 \/ 8/.test(await stepNo(p)) && /AI가 병원 요청을 읽고 업무 판단을 보조합니다/.test(flat(await p.locator('[data-presenter-card]:visible [data-presenter-title]').innerText())),
-    '⑧ 안내 카드 — STEP 1 / 8 「AI가 병원 요청을 읽고 업무 판단을 보조합니다」', await stepNo(p))
+  ok(/STEP 1 \/ 9/.test(await stepNo(p)) && /AI가 병원 요청을 읽고 업무 판단을 보조합니다/.test(flat(await p.locator('[data-presenter-card]:visible [data-presenter-title]').innerText())),
+    '⑧ 안내 카드 — STEP 1 / 9 「AI가 병원 요청을 읽고 업무 판단을 보조합니다」', await stepNo(p))
   ok(/in-focus/.test((await waitSpot(p, /reply-open/)) ?? ''), '⑥ 강조 — 그 시연 요청의 「회신 남기기」')
   const cardText = flat(await p.locator('[data-presenter-card]:visible').innerText())
   const tri0 = PRESENTER_STEPS.find((x) => x.key === 'triage')
@@ -238,10 +238,10 @@ const S = makeShared()
   ok((await p.locator('[data-presenter-continue]').count()) === 0, '⑨ 「전체 운영 흐름 계속 보기」 단추 없음 (다음만)')
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
   await p.waitForTimeout(1000)
-  ok(/STEP 2 \/ 8/.test(await stepNo(p)), '⑨ 다음 → STEP 2 (회신 · 날짜 잡기)', await stepNo(p))
+  ok(/STEP 2 \/ 9/.test(await stepNo(p)), '⑨ 다음 → STEP 2 (회신 · 날짜 잡기)', await stepNo(p))
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
   await p.waitForTimeout(1200)
-  ok(new URL(p.url()).pathname === '/' && /STEP 3 \/ 8/.test(await stepNo(p)) && /오늘 운영 화면/.test(flat(await p.locator('[data-presenter-card]:visible [data-presenter-title]').innerText())),
+  ok(new URL(p.url()).pathname === '/' && /STEP 3 \/ 9/.test(await stepNo(p)) && /오늘 운영 화면/.test(flat(await p.locator('[data-presenter-card]:visible [data-presenter-title]').innerText())),
     '⑨ → 대시보드(오늘 운영 화면)부터 전체 흐름 이어감', `${p.url()} ${await stepNo(p)}`)
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
   await p.waitForTimeout(1000)

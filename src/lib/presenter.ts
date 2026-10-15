@@ -182,6 +182,20 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     planned: ['입금 예정일 알림'],
   },
   {
+    key: 'ir',
+    title: '성과 화면',
+    routes: () => ['/performance/ir'],
+    go: () => '/performance/ir',
+    targets: ['[data-ir-before]'],
+    show: '도입 전 업무부담 · 같은 업무의 재현시험 · 실제 사용 기록 — 확인된 것만 보여 드립니다.',
+    before: 'AX 효과는 느낌이나 홍보 문구로 말하기 쉽습니다.',
+    now: '개발 완료와 성과 검증을 구분하고, 재지 않은 값은 「측정 전 · 측정 예정」으로 둡니다.',
+    effects: ['효과를 운영 데이터로 계속 측정', '목표값과 실적을 섞지 않음'],
+    todo: '세 칸을 차례로 짚기',
+    note: '비원미래는 개발 완료와 성과 검증 완료를 구분합니다. 지금 숫자는 실제 업무조사와 운영 기록에서만 나오고, 아직 재지 않은 것은 측정 예정으로 둡니다.',
+    status: '측정 중',
+  },
+  {
     key: 'roadmap',
     title: 'AI 고도화 계획',
     routes: () => ['/presentation'],
@@ -228,10 +242,11 @@ export const FLOW = ['병원 요청', 'AI 분석', '담당자 판단', '수거 �
 
 // ── 시연 순서 두 가지 (0140) ─────────────────────────────────────────────────
 //  전체 흐름: 시작 → 오늘 운영 → 수거 입력 → 병원 포털 → AI → 회신 → 성과 → 마무리
-//  AI 먼저:   AI → 회신 · 병원 확인 → 오늘 운영(AI 브리핑) → 수거 입력(AI 메모) → 병원 포털 → 미수금(AI 문구) → AI 고도화 계획 → 마무리 · 실증 결과 (0141 · 8단계 — 성과 화면은 마무리와 겹쳐 뺌)
+//  AI 먼저:   AI → 회신 · 병원 확인 → 오늘 운영(AI 브리핑) → 수거 입력(AI 메모) → 병원 포털 → 미수금(AI 문구) → 성과 → AI 고도화 계획 → 마무리 (9단계)
+//   0142 — 성과 화면을 잠깐 뺐다가(8단계) 대표님 말씀으로 되돌림: 「둘 다 두면 되겠다」
 //   ⚠ 단계 내용은 하나입니다(같은 카드). 보여 주는 차례만 다릅니다.
 export const FULL_ORDER: string[] = PRESENTER_STEPS.map((s) => s.key)
-export const AI_ORDER: string[] = ['triage', 'reply', 'today', 'collect', 'portal', 'receivables', 'roadmap', 'close']
+export const AI_ORDER: string[] = ['triage', 'reply', 'today', 'collect', 'portal', 'receivables', 'ir', 'roadmap', 'close']
 export const stepIndex = (key: string) => Math.max(0, PRESENTER_STEPS.findIndex((s) => s.key === key))
 /** 「STEP n / N」 — 시작 화면(intro)은 번호 없이 */
 export function stepLabel(order: string[], pos: number): string {
