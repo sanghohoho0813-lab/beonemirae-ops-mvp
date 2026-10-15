@@ -120,7 +120,7 @@ export function Presentation() {
         ? '호출 기록 표를 읽지 못함 — 시연 전에 요청 하나로 직접 실행해 보세요'
         : aiOk
           ? `최근 성공 ${kstStamp(aiOk.createdAt)}${aiOk.model ? ` · ${aiOk.model}` : ''}`
-          : `아직 성공한 호출이 없습니다 — 키 등록 · 배포 뒤 요청 하나로 실행해 보세요${aiLastFail ? ` (최근 실패: ${aiLastFail.error.slice(0, 40)})` : ''}`,
+          : `아직 성공한 호출이 없습니다 — 키 등록 · 배포 뒤 요청 하나로 실행해 보세요${aiLastFail ? ` (최근 실패: ${aiLastFail.error.slice(0, 60)})` : ''}`,
     },
     { key: 'start', label: '실증 시작일', mark: data.experiment?.startDate ? 'ok' : 'todo', detail: data.experiment?.startDate ? `${data.experiment.startDate} — 성과 화면의 실증기간` : '설정에서 정하면 성과 화면에 실증기간이 나옵니다' },
   ]

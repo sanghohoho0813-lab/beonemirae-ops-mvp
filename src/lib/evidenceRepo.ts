@@ -266,6 +266,27 @@ function asTriage(v: unknown): TriageResult | null {
 }
 
 /**
+ * 서버 함수가 답을 주지 않았을 때(응답 본문 없음) 무엇을 하면 되는지 한 줄로.
+ *
+ *  supabase-js 는 브라우저가 요청을 보내지도 못하면 「Failed to send a request to the
+ *  Edge Function」(FunctionsFetchError) 하나만 줍니다. 함수가 배포되지 않았거나 시작에
+ *  실패하면 Supabase 의 404 · 503 응답에 CORS 머리글이 없어 브라우저가 이렇게 막습니다.
+ *  화면은 앞 40자만 보여 주므로 할 일을 앞에 적고, 원래 문구는 뒤에 붙입니다.
+ */
+function unreachableReason(error: { name?: string; message?: string; context?: unknown }, timeoutMs: number): string {
+  const raw = error.message || 'AI 함수 호출 실패'
+  if (error.name === 'FunctionsFetchError') {
+    const cause = error.context as { name?: string; message?: string } | undefined
+    if (cause?.name === 'AbortError' || cause?.name === 'TimeoutError') {
+      return `${Math.round(timeoutMs / 1000)}초 안에 서버 함수가 답하지 않았습니다 — 다시 한 번 실행해 보세요 (${raw})`
+    }
+    return `ai-triage 함수 배포 확인 필요 — 함수가 없거나 시작하지 못했습니다 (${raw}${cause?.message ? ` · ${cause.message}` : ''})`
+  }
+  if (error.name === 'FunctionsRelayError') return `Supabase 중계 오류 — 잠시 뒤 다시 실행해 보세요 (${raw})`
+  return raw
+}
+
+/**
  * 병원 요청 하나를 AI 로 분석합니다 (서버 함수 ai-triage · 0138).
  *
  *  ⚠ 보내는 것은 **요청 번호뿐**입니다. 요청 글은 서버가 DB 에서 직접 읽습니다
@@ -304,7 +325,7 @@ export async function aiTriageRequest(input: {
         }
         throw new Error(b?.error || b?.message || `서버 함수 오류 (${(ctx as Response).status})`)
       }
-      throw new Error(error.message || 'AI 함수 호출 실패')
+      throw new Error(unreachableReason(error, input.timeoutMs ?? 35_000))
     }
     reached = true
     const d = (data ?? {}) as { ok?: boolean; result?: unknown; callId?: string | null; logged?: boolean; error?: string }
