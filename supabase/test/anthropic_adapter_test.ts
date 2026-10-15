@@ -5,7 +5,7 @@
 //   헤더 · 본문 · 오류 분류가 배포될 때와 같습니다. 이 검사는 「외부 AI 가 실제로 답했다」를
 //   증명하지 않습니다 — 그것은 키 등록 · 배포 뒤 발표 가이드의 「AI 연결 확인」으로 합니다.
 //
-//  실행: deno test --allow-net --allow-env --allow-read supabase/test/anthropic_adapter_test.ts
+//  실행(저장소 맨 위에서): deno test --config supabase/functions/ai-triage/deno.json --allow-net --allow-env --allow-read supabase/test/anthropic_adapter_test.ts
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { claudeJson } from '../functions/ai-triage/anthropic.ts'

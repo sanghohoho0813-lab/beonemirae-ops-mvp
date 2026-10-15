@@ -33,10 +33,14 @@
 ```bash
 supabase login
 supabase link --project-ref <프로젝트 ref>
-supabase secrets set AI_API_KEY=<키>          # sk-ant-… 이면 Claude, 그 밖은 OpenAI 호환으로 자동
-# (선택) supabase secrets set AI_MODEL=<계정에서 쓸 수 있는 모델 이름>
+supabase secrets set AI_API_KEY=<Gemini 키>   # AIza… 이면 Gemini 로 자동 (sk-ant-… = Claude · 그 밖 = OpenAI 호환)
+# (선택) supabase secrets set AI_MODEL=gemini-3.8-flash   # 기본은 gemini-3.5-flash-lite (안정 · 가장 빠름)
 supabase functions deploy ai-triage
 ```
+
+- Gemini 는 Google 의 OpenAI 호환 주소로 부릅니다(`gemini.ts`). 키가 `AIza…` 로 시작하면 다른 설정 없이 됩니다.
+- 키는 CLI 대신 Supabase 대시보드 › Edge Functions › Secrets 에 이름 `AI_API_KEY` 로 넣어도 같습니다.
+  **함수 배포(`functions deploy`)는 CLI 로 한 번 해야 합니다** — 새 파일(`gemini.ts`)이 서버에 올라가야 합니다.
 
 - 키는 서버 Secret 에만. 채팅 · 저장소 · `VITE_*` · 브라우저에 넣지 않습니다.
 - 앱(Vercel)이 이 브랜치의 최신 커밋을 배포하고 있는지 확인 — 아니면 병합하거나 그 배포를 운영으로 올립니다.
@@ -53,6 +57,7 @@ supabase functions deploy ai-triage
 | 곳 | 바뀐 것 |
 |---|---|
 | `supabase/functions/ai-triage/anthropic.ts`(신규) · `index.ts` | Claude 공식 SDK 어댑터 추가 — 키 모양 또는 `AI_PROVIDER` 로 고름. OpenAI 호환 길(`provider.ts`)은 그대로 |
+| `supabase/functions/ai-triage/gemini.ts`(신규) · `provider.ts` | **Google Gemini** — `AIza…` 키면 자동 · Google 의 OpenAI 호환 주소 · 결과 모양 스키마 · Gemini 오류(400 키 · 403 · 503)를 까닭대로 · 오류 문구에서 키 가림 |
 | `src/lib/nav.ts` · `Layout.tsx` · `MoreMenu.tsx` | 「오늘 업무」에 **신보 발표 시연**(`발표용`) · AX·심사의 「심사 시연」은 뺌(같은 주소 한 자리) · 폰 더보기 맨 위 |
 | `src/pages/Presentation.tsx` | 첫 화면: 라벨 · 제목 · 한 줄 설명 · **AI 요청 분석 시연 시작**(가장 큼) · 전체 운영 흐름 시연 · 흐름 한 줄 · 현재 시스템 상태 · **지금 AI 연결 확인** |
 | `src/lib/presenter.ts` · `PresenterContext.tsx` · `PresenterCard.tsx` | 「AI 먼저」 차례(같은 단계 · 다른 순서) · AI 단계 문구 · 「전체 운영 흐름 계속 보기」 |
@@ -63,5 +68,6 @@ supabase functions deploy ai-triage
 
 `check_shinbo140`(위 순서 그대로 · 두 번 눌러도 하나 · 연결 확인 성공/실패 · 기존 화면 · 폰) ·
 `supabase/test/anthropic_adapter_test.ts`(Claude SDK 헤더 · 본문 · 오류 분류, `deno test`) ·
+`supabase/test/gemini_adapter_test.ts`(키 모양으로 고르기 · Bearer · 스키마 · 거절 시 한 번만 다시 · 오류 문구 · 키 가림) ·
 `check_presenter139` · `check_ai_triage_ui` · `check_nav` · `ai_triage_e2e`.
 여기서 AI 자리는 시험용 응답입니다 — 실제 호출은 위 「지금 AI 연결 확인」으로만 증명됩니다.

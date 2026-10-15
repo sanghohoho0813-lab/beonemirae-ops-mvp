@@ -15,7 +15,8 @@
 | `index.ts` | Deno 진입점 — Supabase(로그인 사용자 토큰) · fetch 를 이어 줌 |
 | `handler.ts` | 흐름: 로그인 → 역할(관리자 · 사무실 · 사용 중) → DB 에서 요청 읽기 → 모델 → 검사 → `ai_calls` 기록 |
 | `triage.ts` | 시스템 프롬프트 · 개인정보 가림 · 엄격한 JSON 검사(지어낸 숫자 · 확정 약속 차단) |
-| `provider.ts` | 모델 호출 어댑터 — OpenAI 호환 Chat Completions · JSON 모드 · 20초 제한 |
+| `provider.ts` | 모델 호출 어댑터 — OpenAI 호환 Chat Completions · JSON 모드 · 20초 제한 (OpenAI · Gemini 가 같이 씀) |
+| `gemini.ts` | Google Gemini 설정 — Google 의 OpenAI 호환 주소 · 기본 `gemini-3.5-flash-lite`(안정 · 가장 빠름) · 결과 모양 스키마(json_schema, 거절되면 한 번만 json_object) · `reasoning_effort: low` · 키 모양으로 회사 고르기(`pickAi`) |
 | `anthropic.ts` | 모델 호출 어댑터 — Claude (Anthropic 공식 SDK `npm:@anthropic-ai/sdk@0.130.0`) · 기본 `claude-opus-5-5` · effort low · 거절 시 권장 모델로 한 번 더(`fallbacks: "default"`) · 20초 제한 |
 | `deno.json` | 저장소 맨 위 `package.json` 을 따라가지 않게 (`nodeModulesDir: none`) |
 
@@ -29,16 +30,18 @@ supabase link --project-ref <프로젝트 ref>      # 대시보드 주소 /proje
 
 # 1) 키 등록 — 서버에만 둡니다 (브라우저 · 저장소 · VITE_* 금지)
 #    어느 회사 키든 하나만 넣으면 됩니다. 키 모양으로 고릅니다:
-#      sk-ant-… → Claude(Anthropic)     그 밖 → OpenAI 호환
+#      AIza… → Google Gemini     sk-ant-… → Claude(Anthropic)     그 밖 → OpenAI 호환
+#    (CLI 대신 Supabase 대시보드 › Edge Functions › Secrets 에서 이름 AI_API_KEY 로 넣어도 같습니다)
 supabase secrets set AI_API_KEY=<모델 회사에서 발급한 키>
 
 # 2) (선택) 회사 · 모델 · 주소를 직접 정하기
-#    AI_PROVIDER=anthropic | openai   (비우면 위처럼 키 모양으로)
-#    기본 모델: anthropic → claude-opus-5-5 · openai → gpt-4o-mini
+#    AI_PROVIDER=gemini | anthropic | openai   (비우면 위처럼 키 모양으로)
+#    기본 모델: gemini → gemini-3.5-flash-lite · anthropic → claude-opus-5-5 · openai → gpt-4o-mini
+#    (Gemini 에서 더 좋은 글을 원하면 AI_MODEL=gemini-3.8-flash — 둘 다 Google 모델 목록의 「안정」)
 #    OpenAI 호환 다른 회사면 AI_API_URL 에 그 회사의 chat/completions 주소를 넣습니다.
 #    지금 계정에서 쓸 수 있는 모델 이름으로 맞춰 주세요. 이름이 틀리면 404 실패로 기록됩니다.
 supabase secrets set AI_MODEL=<쓸 모델 이름>
-#    (openai 만) temperature 를 받지 않는 모델이면 빈 값으로:  supabase secrets set AI_TEMPERATURE=
+#    (gemini · openai) temperature 를 받지 않는 모델이면 빈 값으로:  supabase secrets set AI_TEMPERATURE=
 
 # 3) 배포 (저장소 맨 위 폴더에서)
 supabase functions deploy ai-triage
@@ -64,9 +67,11 @@ supabase functions deploy ai-triage
 | 화면의 까닭 | 할 일 |
 |---|---|
 | `AI_API_KEY 가 서버에 등록되지 않았습니다` | 위 1) |
-| `AI 키가 올바르지 않습니다 (401)` | 키 다시 발급 · 등록 |
+| `AI 키가 올바르지 않습니다 (401)` · Gemini 는 `(400)` | 키 다시 발급 · 등록 (앞뒤 빈칸 · 따옴표 없이) |
+| `AI 키에 이 모델을 쓸 권한이 없습니다 (403)` | Gemini: AI Studio 에서 키를 만든 프로젝트 · 키 제한(API 제한) 확인 |
 | `AI 모델 이름을 찾지 못했습니다 (404)` | `AI_MODEL` 을 계정에서 쓸 수 있는 이름으로 |
-| `AI 사용량 한도에 걸렸습니다 (429)` | 모델 회사 결제 · 한도 확인 |
+| `AI 사용량 한도에 걸렸습니다 (429)` | 모델 회사 결제 · 한도 확인 (Gemini 무료 등급은 분당 횟수가 작음 — 연달아 누르지 않기) |
+| `AI 서버가 바쁩니다 (503)` | 잠시 뒤 다시 · 계속이면 `AI_MODEL` 을 다른 안정 모델로 |
 | `서버 함수에 닿지 못했습니다 — …not found` | 위 3) 배포 |
 
 4. Supabase **SQL Editor** 에서 기록 확인 (읽기만):
