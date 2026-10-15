@@ -28,8 +28,8 @@ const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? `
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const SRC = '/media/sinbo_visit_v31_tall.mp4'
 const SRC_W = '/media/sinbo_visit_v31_wide.mp4'
-const G_SRC = '/media/gangnam_present_v44_tall.mp4'
-const G_SRC_W = '/media/gangnam_present_v44_wide.mp4'
+const G_SRC = '/media/gangnam_present_v45_tall.mp4'
+const G_SRC_W = '/media/gangnam_present_v45_wide.mp4'
 const K = '[data-video-block="kodit"]'
 const G = '[data-video-block="gangnam"]'
 //  재생 시험용 — 기본은 같은 영상을 2.5초·108×192 VP9 로 자른 조각(24KB)
@@ -44,7 +44,7 @@ async function open(role, { w = 1440, h = 900, path = '/', media = 'real' } = {}
   W.wire(ctx, state)
   //  예전(Storage 서명 주소) 길이 남아 있지 않은지 셉니다
   await ctx.route('**/storage/v1/**', (r) => { state.storage += 1; return r.fulfill({ status: 400, body: '{}' }) })
-  await ctx.route(/\/media\/(sinbo_visit_v31|gangnam_present_v44)_(tall|wide)\.mp4$/, async (r) => {
+  await ctx.route(/\/media\/(sinbo_visit_v31|gangnam_present_v45)_(tall|wide)\.mp4$/, async (r) => {
     state.media += 1
     const FILE = r.request().url().includes('_wide') ? FILE_W : FILE_T
     if (media === 'missing') return r.fulfill({ status: 404, body: '' })
@@ -180,6 +180,7 @@ for (const role of ['field', 'client']) {
     src: document.querySelector(`${G} [data-visit-video]`)?.getAttribute('src'),
     chapters: document.querySelectorAll(`${G} [data-visit-chapters] li`).length,
     numbers: document.querySelectorAll(`${G} [data-visit-numbers]`).length,
+    numText: (document.querySelector(`${G} [data-visit-numbers]`)?.textContent ?? '').replace(/\s+/g, ' '),
     tips: document.querySelector(`${G} [data-visit-tips]`)?.textContent ?? '',
     versions: [...document.querySelectorAll(`${G} [data-visit-version]`)].map((x) => x.dataset.visitVersion + (x.getAttribute('aria-pressed') === 'true' ? '●' : '')),
     dl: [...document.querySelectorAll(`${G} [data-visit-download]`)].map((a) => ({ id: a.dataset.visitDownload, href: a.getAttribute('href'), name: a.getAttribute('download'), text: a.textContent.trim() })),
@@ -187,7 +188,9 @@ for (const role of ['field', 'client']) {
   ok(g.src === G_SRC, '강남 — 앱 안의 영상 파일 (세로 기본)', g.src)
   ok(g.versions.join(',') === 'tall●,wide', '강남 — 세로 ↔ 가로 단추', g.versions.join(' · '))
   ok(g.chapters >= 8, '강남 — 영상 흐름 (누르면 그 장면부터)', `${g.chapters}장`)
-  ok(g.numbers === 0, '강남 — 숫자를 말하지 않는 영상 → 「말하는 숫자」 칸 없음')
+  //  0140 — 대본에 연도별 매출이 들어갔습니다. 말한 그대로(약 …) 세 개만 · 올해 숫자 · 예상치 없음
+  ok(g.numbers === 1 && ['약 1억 2천만 원', '약 3억 6천만 원', '약 5억 8천만 원'].every((v) => g.numText.includes(v)) && !/전망|예상/.test(g.numText),
+    '강남 — 「말하는 숫자」 = 영상에서 말한 연도별 매출 그대로 (예상치 없음)', g.numText)
   ok(/준비 중/.test(g.tips) && /예시 데이터/.test(g.tips), '강남 — 보여드리기 전 메모', g.tips.slice(0, 40))
   ok(g.dl.length === 2 && g.dl.find((x) => x.id === 'tall')?.href === G_SRC && g.dl.find((x) => x.id === 'wide')?.href === G_SRC_W,
     '강남 — **내려받기 둘 (세로 · 가로)**', g.dl.map((x) => x.text).join(' · '))
@@ -383,7 +386,7 @@ for (const [w, h] of [[1440, 900], [1024, 800], [390, 844]]) {
 
 // ── ⑧ 영상 파일 두 개 — 앱 안에 있고, 폰에서 받자마자 재생되게 ───────────────
 for (const [id, name, rw, rh] of [['tall', 'sinbo_visit_v31_tall.mp4', 1080, 1920], ['wide', 'sinbo_visit_v31_wide.mp4', 1920, 1080],
-  ['강남 tall', 'gangnam_present_v44_tall.mp4', 1080, 1920], ['강남 wide', 'gangnam_present_v44_wide.mp4', 1920, 1080]]) {
+  ['강남 tall', 'gangnam_present_v45_tall.mp4', 1080, 1920], ['강남 wide', 'gangnam_present_v45_wide.mp4', 1920, 1080]]) {
   const f = join(ROOT, 'public', 'media', name)
   ok(existsSync(f), `public/media/${name} 있음`)
   if (existsSync(f)) {
@@ -403,5 +406,6 @@ for (const [id, name, rw, rh] of [['tall', 'sinbo_visit_v31_tall.mp4', 1080, 192
 }
 ok(!existsSync(join(ROOT, 'public', 'media', 'sinbo_visit_v3.mp4')), '지난 판(v3) 파일은 치움 — 옛 영상이 섞여 나가지 않게')
 for (const v of ['tall', 'wide']) ok(!existsSync(join(ROOT, 'public', 'media', `gangnam_present_v43_${v}.mp4`)), `강남 ${v} — 싱크가 어긋났던 v43 파일은 치움 (새 이름 v44 라 폰에 남은 옛 파일도 안 섞임)`)
+for (const v of ['tall', 'wide']) ok(!existsSync(join(ROOT, 'public', 'media', `gangnam_present_v44_${v}.mp4`)), `강남 ${v} — 대본이 바뀌기 전 v44 파일은 치움 (새 이름 v45 — 폰에 남은 옛 파일과 안 섞임)`)
 
 await b.close()
