@@ -48,6 +48,14 @@ supabase functions deploy ai-triage
 `supabase/config.toml` 의 `[functions.ai-triage] verify_jwt = true` 로 로그인 토큰이 없는
 호출은 함수에 닿기 전에 막히고, 함수 안에서 역할을 다시 확인합니다.
 
+## 배포 — CLI 없이 GitHub 버튼으로 (권장)
+
+1. Supabase 대시보드 → 오른쪽 위 계정 → **Access Tokens** → 새 토큰 발급
+2. GitHub 저장소 → Settings → Secrets and variables → Actions → **New repository secret**
+   - `SUPABASE_ACCESS_TOKEN` = 1)의 토큰
+   - `AI_API_KEY` = 모델 회사 키 (또는 Supabase 대시보드 Edge Functions → Secrets 에 직접 등록)
+3. GitHub → Actions → **AI 함수 배포 (ai-triage)** → Run workflow (`.github/workflows/deploy-ai-triage.yml`)
+
 ## 배포 후 확인 — 실제 호출이 되는지
 
 **가장 빠른 길 (0140):** 관리자 계정 → 사이드바 **신보 발표 시연** → 「시연 준비 상태」의
@@ -67,7 +75,8 @@ supabase functions deploy ai-triage
 | `AI 키가 올바르지 않습니다 (401)` | 키 다시 발급 · 등록 |
 | `AI 모델 이름을 찾지 못했습니다 (404)` | `AI_MODEL` 을 계정에서 쓸 수 있는 이름으로 |
 | `AI 사용량 한도에 걸렸습니다 (429)` | 모델 회사 결제 · 한도 확인 |
-| `서버 함수에 닿지 못했습니다 — …not found` | 위 3) 배포 |
+| `ai-triage 함수 배포 확인 필요 — 함수가 없거나 시작하지 못했습니다 (Failed to send a request…)` | 위 3) 배포 — 화면이 함수에 요청조차 못 보낸 경우입니다(미배포 · 시작 실패). 배포했는데도 같으면 대시보드 Edge Functions → ai-triage → Logs |
+| `35초 안에 서버 함수가 답하지 않았습니다` | 한 번 더 실행 (첫 호출은 함수가 깨어나느라 느릴 수 있음) |
 
 4. Supabase **SQL Editor** 에서 기록 확인 (읽기만):
 
