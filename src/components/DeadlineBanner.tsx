@@ -60,6 +60,12 @@ function Row({ item }: { item: OverdueItem }) {
   )
 }
 
+/**
+ *  0141 — 대표님: 「어떤 기능인지 잘 모르겠어 — 잠깐 안 보이게, 나중에 생각나면 되살리기」.
+ *  대시보드 · 오늘 일정에서 잠시 숨깁니다. 되살리려면 이 값을 true 로 (계산 · 기록은 그대로).
+ */
+export const DEADLINE_BANNER_ON = false
+
 export function DeadlineBanner({ className = '' }: { className?: string } = {}) {
   const { data } = useData()
   const { role } = useAuth()

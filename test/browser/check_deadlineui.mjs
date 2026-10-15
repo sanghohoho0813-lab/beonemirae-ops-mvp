@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { chromium, EXEC } from './_pw.mjs'
 
 //  밀린 마감 띠 — 화면.
@@ -95,6 +96,23 @@ async function open(ctx, path = '/') {
 const BEHIND = {
   scheds: [mkSched('s1', M3), mkSched('s2', M1)],
   pays: [mkPay('p1', M3, 1000000), mkPay('p2', M1, 800000)],
+}
+
+// ── 0141 — 대표님 요청으로 띠를 **잠시 숨김** (DEADLINE_BANNER_ON = false) ─────────
+//   숨겨 둔 동안에는 「밀린 달이 있어도 대시보드 · 오늘 일정에 띠가 없다」만 봅니다.
+//   계산(lib/deadlines)은 check_deadlines 가 그대로 지킵니다. 되살리면(true) 아래 검사가 다시 돕니다.
+const BANNER_ON = /DEADLINE_BANNER_ON\s*=\s*true/.test(readFileSync(new URL('../../src/components/DeadlineBanner.tsx', import.meta.url), 'utf8'))
+if (!BANNER_ON) {
+  for (const path of ['/', '/today']) {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 1600 } })
+    wire(ctx, BEHIND)
+    const p = await open(ctx, path)
+    const main = flat(await p.textContent('main').catch(() => ''))
+    ok((await p.locator('[data-deadlines]').count()) === 0 && main.length > 80, `0141 잠시 숨김 — 밀린 달이 있어도 ${path} 에 「아직 안 끝난 달」 띠 없음 (화면은 정상)`)
+    await ctx.close()
+  }
+  await b.close()
+  process.exit(process.exitCode ?? 0)
 }
 
 // ── 1. 밀린 것이 없으면 아무것도 안 그린다 ──────────────────────────────────

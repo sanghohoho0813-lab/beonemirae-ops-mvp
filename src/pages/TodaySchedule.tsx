@@ -13,7 +13,7 @@ import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
 
 import { LoadGate } from '../components/LoadState'
-import { DeadlineBanner } from '../components/DeadlineBanner'
+import { DEADLINE_BANNER_ON, DeadlineBanner } from '../components/DeadlineBanner'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { BookVisitModal } from '../components/BookVisit'
 import { MoveVisitModal } from '../components/MoveVisit'
@@ -293,7 +293,8 @@ export function TodaySchedule() {
 
       {/*  밀린 마감 — 사무실이 하루에 제일 많이 여는 화면입니다.
            밀린 것이 없으면 이 자리는 아예 없습니다(현장에는 안 뜹니다). */}
-      <DeadlineBanner className="mb-4" />
+      {/*  0141 — 잠시 숨김 (DEADLINE_BANNER_ON) */}
+      {DEADLINE_BANNER_ON && <DeadlineBanner className="mb-4" />}
 
       {/*  현장에서 온 일정 의견 (0062) — 사무실이 하루에 제일 많이 여는
            화면입니다. 안 온 날에는 자리가 아예 없습니다. */}

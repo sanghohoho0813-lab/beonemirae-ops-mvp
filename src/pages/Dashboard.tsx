@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
-import { DeadlineBanner } from '../components/DeadlineBanner'
+import { DEADLINE_BANNER_ON, DeadlineBanner } from '../components/DeadlineBanner'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { SetupGapsLine } from '../components/SetupGapsCard'
 import { ExcelCheckLine } from '../components/ExcelCheckLine'
@@ -162,7 +162,8 @@ export function Dashboard() {
       {/*  밀린 마감 — 인사 바로 아래. 오늘 할 일보다 위입니다.
            지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.
            밀린 것이 없으면 이 자리는 아예 없습니다. */}
-      <DeadlineBanner />
+      {/*  0141 — 잠시 숨김 (DEADLINE_BANNER_ON) */}
+      {DEADLINE_BANNER_ON && <DeadlineBanner />}
 
       {/*  급한 요청이 반복되는데 앞이 비어 있는 곳 — **긴급 전화가 오기 전에**
            보여 주는 자리입니다. 지금 손댈 곳이 없으면 이 자리는 아예 없습니다.
@@ -179,14 +180,6 @@ export function Dashboard() {
       {/*  현장에서 온 일정 의견 (0062) — 안 온 날에는 자리가 아예 없습니다. */}
       <ScheduleFeedbackCard />
 
-      {/*
-        경영 매출 — 대표가 화면을 열자마자 보는 네 숫자.
-
-         올해 누적 · 월평균 · 예상 연매출 · 미수금. 예전에는 이 숫자가
-         어디에도 없어서 대표님이 엑셀을 다시 열어야 했습니다.
-         현장 담당자에게는 열리지 않습니다(access.ts).
-      */}
-      {canSeeMoney && <RevenueKpis />}
 
       {/*
         가입 승인 대기.
@@ -343,6 +336,18 @@ export function Dashboard() {
           <ReportHighlight reports={reports} />
         </div>
       </section>
+
+      {/*
+        경영 매출 — 올해 누적 · 월평균 · 예상 연매출 · 미수금.
+         ⚠ 0141 — 대표님: 「제일 중요한 건 오늘 현장 · 오늘 처리할 업무 · 이번 달 경영현황 ·
+           거래처 운영상태를 쭉 보여 주는 것」 → 맨 위에서 거래처 운영상태 **아래**로 내렸습니다.
+         현장 담당자에게는 열리지 않습니다(access.ts).
+      */}
+      {canSeeMoney && (
+        <div data-revenue-kpis-below className="mt-6">
+          <RevenueKpis />
+        </div>
+      )}
 
       <AreaDivider />
 
