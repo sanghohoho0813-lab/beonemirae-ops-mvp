@@ -30,6 +30,21 @@
 
 ## 발표 전에 대표님이 할 것 (AI 연결)
 
+### 명령어 없이 — Supabase 대시보드에서 붙여 넣기 (권장)
+
+1. Edge Functions › Secrets › `AI_API_KEY` = Gemini 키(`AQ.…`) — 넣었으면 건너뜀
+2. GitHub 에서 [`docs/deploy/ai-triage-dashboard.ts`](deploy/ai-triage-dashboard.ts) 열기 → 오른쪽 위 **Copy raw file**(복사 아이콘)
+3. Supabase 대시보드 › **Edge Functions**
+   - 목록에 `ai-triage` 가 **있으면**: 눌러서 **Code** → 전체 지우고 붙여 넣기 → **Deploy updates**
+   - **없으면**: **Deploy a new function › Via Editor** → 이름 `ai-triage`(정확히) → 전체 지우고 붙여 넣기 → **Deploy function**
+4. 앱 › 신보 발표 시연 › 발표 준비 › **지금 AI 연결 확인**
+   - `Invalid JWT` 가 나오면: 함수 화면 **Details** 의 JWT 확인(Verify JWT) 끄기 → Save. 함수가 로그인 · 역할을 스스로 다시 확인합니다.
+
+이 파일은 `python3 scripts/bundle_ai_triage.py` 로 원본에서 만듭니다(내용 그대로 · 같은 폴더 import 만 뺌 · Claude 연결 제외).
+검사: `deno run --config supabase/functions/ai-triage/deno.json -A supabase/test/dashboard_bundle_smoke.ts`
+
+### CLI 로 (개발 PC)
+
 ```bash
 supabase login
 supabase link --project-ref <프로젝트 ref>
