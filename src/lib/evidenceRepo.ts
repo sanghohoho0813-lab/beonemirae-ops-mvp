@@ -343,6 +343,49 @@ export async function aiTriageRequest(input: {
   return { ok: false, error: errorMsg, ms, callId }
 }
 
+// ── 업무 보조 AI 세 가지 (0141) — 같은 서버 함수 ai-triage · task 로 고름 ──────────
+//   briefing 오늘 브리핑 · field_note 현장 메모 정리 · dunning 독촉 문자 초안
+//   ⚠ 결과는 서버가 엄격하게 검사한 뒤에만 옵니다. 여기서 만들어 내는 것은 없습니다.
+export type AssistTask = 'briefing' | 'field_note' | 'dunning'
+export const ASSIST_KIND: Record<AssistTask, string> = { briefing: 'today_briefing', field_note: 'field_note', dunning: 'dunning_draft' }
+export type AssistOutcome<T> =
+  | { ok: true; result: T & { model: string }; ms: number; callId: string | null; logged: boolean }
+  | { ok: false; error: string; ms: number }
+
+export async function aiAssist<T>(task: AssistTask, input: unknown, actorName = '', timeoutMs = 35_000): Promise<AssistOutcome<T>> {
+  const sb = need()
+  const t0 = Date.now()
+  let reached = false
+  let errorMsg = ''
+  try {
+    const { data, error } = await sb.functions.invoke('ai-triage', { body: { task, input }, timeout: timeoutMs })
+    if (error) {
+      const ctx = (error as { context?: unknown }).context
+      if (ctx && typeof (ctx as Response).json === 'function') {
+        const b = (await (ctx as Response).clone().json().catch(() => null)) as { error?: string; message?: string; callId?: string | null } | null
+        if (b && 'callId' in b) reached = true
+        throw new Error(b?.error || b?.message || `서버 함수 오류 (${(ctx as Response).status})`)
+      }
+      throw new Error(error.message || 'AI 함수 호출 실패')
+    }
+    reached = true
+    const d = (data ?? {}) as { ok?: boolean; task?: string; result?: unknown; callId?: string | null; logged?: boolean; error?: string }
+    if (d.error) throw new Error(d.error)
+    //  옛 서버(요청 분석만 있는 판)는 task 를 모릅니다 — 그대로 실패로 알립니다
+    if (d.task !== task || !d.result || typeof d.result !== 'object') throw new Error('서버가 이 AI 기능을 모릅니다 — 서버 코드를 새 판으로 바꿔 주세요 (docs/deploy/ai-triage-dashboard.ts)')
+    return { ok: true, result: d.result as T & { model: string }, ms: Date.now() - t0, callId: d.callId ?? null, logged: d.logged !== false && d.callId != null }
+  } catch (e) {
+    errorMsg = e instanceof Error ? e.message : '알 수 없는 오류'
+  }
+  const ms = Date.now() - t0
+  if (!reached) {
+    try {
+      await sb.from('ai_calls').insert({ kind: ASSIST_KIND[task], request_id: null, input: '', output: null, model: '', ok: false, error: `서버 함수에 닿지 못했습니다 — ${errorMsg}`.slice(0, 500), ms, actor_name: actorName })
+    } catch { /* 기록도 못 하면 화면의 실패 안내만 */ }
+  }
+  return { ok: false, error: errorMsg, ms }
+}
+
 /** 담당자가 AI 초안을 고쳐 썼다는 표시 */
 export async function markAiCallEdited(callId: string, note: string): Promise<void> {
   const sb = need()

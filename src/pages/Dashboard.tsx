@@ -15,6 +15,7 @@ import {
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle, AreaHeader, AreaDivider, ExpandableSection } from '../components/ui'
 import { DEADLINE_BANNER_ON, DeadlineBanner } from '../components/DeadlineBanner'
+import { AiBriefingCard } from '../components/AiAssist'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { SetupGapsLine } from '../components/SetupGapsCard'
 import { ExcelCheckLine } from '../components/ExcelCheckLine'
@@ -210,6 +211,8 @@ export function Dashboard() {
         <div data-hide-presenting className="hidden lg:block">
           <StartHere data={data} />
         </div>
+        {/*  0141 — AI 오늘 브리핑 (실제 AI · 숫자만 보냄 · 관리자 · 사무실 · 운영 연결에서만) */}
+        <AiBriefingCard />
         <TodayFocus data={data} />
         <TodayBoard data={data} />
         {/*  한 줄만 — 비어 있는 것이 없으면 이 자리도 없습니다.

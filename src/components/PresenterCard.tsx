@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Copy, Check, Megaphone, MousePointerClick, Smartphone, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Copy, Check, Megaphone, MousePointerClick, Smartphone, Sparkles, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { usePresenter } from '../context/PresenterContext'
 import { useTour } from '../context/TourContext'
-import { LOOK_STEPS, PRESENTER_STEPS, SAMPLE_REQUEST, onStepRoute, stepLabel } from '../lib/presenter'
+import { LOOK_STEPS, PRESENTER_STEPS, SAMPLE_MEMO, SAMPLE_REQUEST, onStepRoute, stepLabel } from '../lib/presenter'
 import { openPortalPhoneView } from './PortalViewSwitch'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ const visible = (el: Element | null): el is HTMLElement => {
   return st.visibility !== 'hidden' && st.display !== 'none'
 }
 
-type Bubble = { x: number; top: number; bottom: number; right: number; mid: number; side: boolean }
+type Bubble = { x: number; top: number; bottom: number; right: number; mid: number; side: boolean; press: boolean }
 
 export function PresenterCard() {
   const { active, index, pos, order, clientId, demoRequestId, next, prev, stop, goTo, continueFull } = usePresenter()
@@ -64,14 +64,6 @@ export function PresenterCard() {
   const aiFirst = order[0] === 'triage'
   const canContinue = aiFirst && (step.key === 'triage' || step.key === 'reply')
   const look = LOOK_STEPS.has(step.key)
-
-  //  안내판이 떠 있는 동안 — 본문을 안내판 폭만큼 비켜 세웁니다 (index.css · html[data-presenter-panel])
-  useEffect(() => {
-    const el = document.documentElement
-    if (show) el.setAttribute('data-presenter-panel', '1')
-    else el.removeAttribute('data-presenter-panel')
-    return () => el.removeAttribute('data-presenter-panel')
-  }, [show])
 
   //  단계가 바뀌면 처음 상태로
   useEffect(() => { setCopied(''); setSheet(false); setAskStop(false) }, [index])
@@ -107,9 +99,13 @@ export function PresenterCard() {
         const r = target.getBoundingClientRect()
         //  창 안의 작은 단추는 **오른쪽 옆**에 (위에 두면 바로 위 글 — 예: 회신 초안 — 을 가림)
         const side = !!target.closest('[role="dialog"]') && r.width < 420 && r.right + 250 < window.innerWidth
+        //  단추면 「여기를 누르세요」, 결과 · 칸이면 「여기를 보세요」 (0141)
+        const press = target.matches('button, a, [role="button"], input, select, textarea, summary')
+        //  화면 큰 덩어리(흐름 띠 · 고도화 계획 칸 등)는 테두리만 — 말풍선이 그 위 제목 글을 가리지 않게
+        if (!press && r.width > 640 && r.height > 220) { setBubble(null); return }
         setBubble((b) => {
-          const n = { x: Math.round(r.left + Math.min(r.width, 360) / 2), top: Math.round(r.top), bottom: Math.round(r.bottom), right: Math.round(r.right), mid: Math.round(r.top + r.height / 2), side }
-          return b && b.x === n.x && b.top === n.top && b.bottom === n.bottom && b.right === n.right && b.side === n.side ? b : n
+          const n = { x: Math.round(r.left + Math.min(r.width, 360) / 2), top: Math.round(r.top), bottom: Math.round(r.bottom), right: Math.round(r.right), mid: Math.round(r.top + r.height / 2), side, press }
+          return b && b.x === n.x && b.top === n.top && b.bottom === n.bottom && b.right === n.right && b.side === n.side && b.press === n.press ? b : n
         })
       } else setBubble(null)
     }
@@ -147,9 +143,9 @@ export function PresenterCard() {
 
   if (!show) return null
 
-  const copySample = async () => {
+  const copySample = async (text = SAMPLE_REQUEST) => {
     try {
-      await navigator.clipboard.writeText(SAMPLE_REQUEST)
+      await navigator.clipboard.writeText(text)
       setCopied('ok')
     } catch {
       setCopied('fail')   //  복사가 막힌 브라우저 — 문장은 아래에 그대로 보입니다
@@ -210,6 +206,20 @@ export function PresenterCard() {
           <p data-presenter-sample className="mt-1.5 break-keep text-[0.98rem] leading-snug text-navy-700">{SAMPLE_REQUEST}</p>
         </div>
       )}
+      {step.key === 'collect' && (
+        <div className="mt-3 rounded-xl bg-white px-3 py-2.5">
+          <button
+            type="button"
+            data-presenter-copy-memo
+            onClick={() => void copySample(SAMPLE_MEMO)}
+            className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[0.98rem] font-extrabold text-white transition hover:bg-navy-800"
+          >
+            {copied === 'ok' ? <Check size={16} strokeWidth={2.8} /> : <Copy size={16} strokeWidth={2.4} />}{' '}
+            {copied === 'ok' ? '복사됨 — 특이사항에 붙여 넣으세요' : copied === 'fail' ? '복사가 막혔습니다 — 아래 메모를 직접 입력' : '예시 메모 복사'}
+          </button>
+          <p data-presenter-sample-memo className="mt-1.5 break-keep text-[0.98rem] leading-snug text-navy-700">{SAMPLE_MEMO}</p>
+        </div>
+      )}
       {step.key === 'reply' && clientId && (
         <button
           type="button"
@@ -233,12 +243,32 @@ export function PresenterCard() {
     </>
   )
 
+  //  이 단계의 실제 AI 기능 (0141) — 「AI · 오늘 브리핑」처럼 한눈에
+  const aiChip = step.ai ? (
+    <p data-presenter-ai-feature className="inline-flex items-center gap-1.5 rounded-full bg-violet-500 px-3.5 py-1.5 text-[1rem] font-black text-white shadow">
+      <Sparkles size={17} strokeWidth={2.6} aria-hidden="true" /> {step.ai}
+    </p>
+  ) : null
+
+  //  이 영역의 개발 예정 AI (0141) — 아직 없는 것, 「개발 예정」으로만
+  const planned = (dark: boolean) =>
+    step.planned?.length ? (
+      <section data-presenter-planned className={`rounded-[14px] px-4 py-3 ${dark ? 'bg-white/5 ring-1 ring-white/10' : 'bg-violet-50'}`}>
+        <p className={`text-[0.95rem] font-extrabold ${dark ? 'text-violet-200' : 'text-violet-800'}`}>개발 예정</p>
+        <ul className="mt-1 space-y-0.5">
+          {step.planned.map((x) => (
+            <li key={x} className={`break-keep text-[1rem] font-bold ${dark ? 'text-white/85' : 'text-navy-800'}`}>· {x}</li>
+          ))}
+        </ul>
+      </section>
+    ) : null
+
   const say = (dark: boolean) => (
     <section data-presenter-say>
       <p className={`flex items-center gap-1.5 text-[1rem] font-extrabold ${dark ? 'text-navy-200' : 'text-navy-500'}`}>
         <Megaphone size={17} strokeWidth={2.4} aria-hidden="true" /> 설명
       </p>
-      <p data-presenter-show className={`mt-1.5 break-keep font-semibold leading-relaxed ${dark ? 'text-[1.22rem] text-white' : 'text-[1.12rem] text-navy-900'}`}>
+      <p data-presenter-show className={`mt-1.5 break-keep font-semibold leading-relaxed ${dark ? 'text-[1.12rem] text-white' : 'text-[1.12rem] text-navy-900'}`}>
         {step.note}
       </p>
     </section>
@@ -249,7 +279,7 @@ export function PresenterCard() {
       <p className={`flex items-center gap-1.5 text-[1rem] font-black ${dark ? '' : 'text-teal-800'}`}>
         <MousePointerClick size={18} strokeWidth={2.6} aria-hidden="true" /> 누를 곳
       </p>
-      <p className="mt-1 break-keep text-[1.18rem] font-extrabold leading-snug">{step.todo}</p>
+      <p className="mt-1 break-keep text-[1.1rem] font-extrabold leading-snug">{step.todo}</p>
       {extras}
     </section>
   )
@@ -320,22 +350,22 @@ export function PresenterCard() {
     </button>
   )
 
-  //  말풍선 — 안내판(왼쪽) 위로는 가지 않게, 화면 위쪽에 붙은 대상이면 아래에
-  const panelW = typeof window !== 'undefined' && window.innerWidth >= 1536 ? 384 : 352
+  //  말풍선 — 왼쪽 메뉴(안내 카드가 그 위에 있음) 위로는 가지 않게, 화면 위쪽에 붙은 대상이면 아래에
+  const panelW = typeof window !== 'undefined' && window.innerWidth >= 1280 ? 392 : 336
   const bubbleBelow = !!bubble && !bubble.side && bubble.top < 96
   const bubbleX = bubble ? Math.min(Math.max(bubble.x, panelW + 110), (typeof window !== 'undefined' ? window.innerWidth : 1440) - 110) : 0
 
   return (
     <>
-      {/* ── 넓은 화면 — 왼쪽 안내판 (메뉴 자리) ── */}
+      {/* ── 넓은 화면 — 왼쪽 메뉴 아래쪽 위에 뜨는 안내 카드 (0141 · 원래 AX 화면 그대로, 본문을 가리지 않음) ── */}
       <aside
         data-presenter-card
         data-presenter-panel
         data-presenter-side="left"
         aria-label="발표 진행 안내"
-        className="fixed inset-y-0 left-0 z-[80] hidden w-[22rem] flex-col bg-navy-950 text-white shadow-2xl lg:flex 2xl:w-[24rem]"
+        className="fixed bottom-3 left-3 z-[80] hidden max-h-[calc(100dvh-8.5rem)] w-[312px] flex-col rounded-[20px] bg-navy-900 text-white shadow-2xl ring-2 ring-teal-400/40 lg:flex xl:w-[368px]"
       >
-        <div className="shrink-0 px-6 pt-6">
+        <div className="shrink-0 px-5 pt-5">
           <div className="flex items-center gap-2">
             <p data-presenter-stepno className="min-w-0 flex-1 text-[1.05rem] font-extrabold tracking-wide text-teal-300">
               {label}
@@ -344,22 +374,24 @@ export function PresenterCard() {
           </div>
           {stopAsk(true)}
           {progress(true)}
-          <h2 data-presenter-title className="mt-4 break-keep text-[1.65rem] font-black leading-tight tracking-tight text-white">
+          <h2 data-presenter-title className="mt-3 break-keep text-[1.4rem] font-black leading-tight tracking-tight text-white">
             {step.title}
           </h2>
+          {aiChip && <div className="mt-2.5">{aiChip}</div>}
         </div>
-        <div data-presenter-body className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-4 pt-5">
+        <div data-presenter-body className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-3 pt-4">
           {offroute}
           {say(true)}
           {todo(true)}
+          {planned(true)}
         </div>
-        <div className="shrink-0 border-t border-white/10 px-6 pb-6 pt-4">{nav(true)}</div>
+        <div className="shrink-0 border-t border-white/10 px-5 pb-5 pt-3.5">{nav(true)}</div>
       </aside>
 
       {/* ── 「여기를 누르세요」 말풍선 (넓은 화면) ── */}
       {bubble && here && (
         <div
-          data-presenter-bubble={look ? 'look' : 'press'}
+          data-presenter-bubble={look || !bubble.press ? 'look' : 'press'}
           aria-hidden="true"
           className="pointer-events-none fixed z-[95] hidden lg:block"
           style={
@@ -370,7 +402,7 @@ export function PresenterCard() {
         >
           <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-500 px-4 py-2 text-[1.05rem] font-black text-white shadow-xl ring-4 ring-white">
             {bubble.side ? <ArrowLeft size={18} strokeWidth={3} /> : bubbleBelow ? <ArrowUp size={18} strokeWidth={3} /> : <ArrowDown size={18} strokeWidth={3} />}
-            {look ? '여기를 보세요' : '여기를 누르세요'}
+            {look || !bubble.press ? '여기를 보세요' : '여기를 누르세요'}
           </div>
         </div>
       )}
@@ -426,10 +458,12 @@ export function PresenterCard() {
                 </div>
                 {stopAsk(false)}
                 {progress(false)}
+                {aiChip && <div className="mt-2.5">{aiChip}</div>}
                 <div className="mt-4 space-y-3">
                   {offroute}
                   {say(false)}
                   {todo(false)}
+                  {planned(false)}
                 </div>
                 <div className="pt-4">{nav(false)}</div>
               </motion.aside>

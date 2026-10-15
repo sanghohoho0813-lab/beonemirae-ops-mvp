@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePresenter } from '../context/PresenterContext'
 import { canAccess } from '../lib/access'
 import { today } from '../lib/format'
-import { AI_ORDER, CLOSING, FLOW, FULL_ORDER, PRESENTER_CLIENT_KEY, PRESENTER_STEPS, kstStamp } from '../lib/presenter'
+import { AI_ORDER, CLOSING, FLOW, FULL_ORDER, PRESENTER_CLIENT_KEY, PRESENTER_STEPS, ROADMAP, kstStamp } from '../lib/presenter'
 import { usePrepareDemo } from '../context/usePrepareDemo'
 import { aiTriageRequest } from '../lib/evidenceRepo'
 import { DemoResetButton } from '../components/DemoControls'
@@ -133,6 +133,7 @@ export function Presentation() {
 
   const showFlow = !presenter.active || step.key === 'intro'
   const showClose = presenter.active && step.key === 'close'
+  const showRoadmap = presenter.active && step.key === 'roadmap'
   const startAt = (index: number) => presenter.start({ clientId: chosen?.id ?? null, order: FULL_ORDER, pos: index })
 
   //  AI 먼저 — 시연 요청을 준비하고(있으면 그대로) 요청함의 그 요청으로 바로 (60~90초)
@@ -195,29 +196,25 @@ export function Presentation() {
         </button>
       </div>
 
-      {/* ── 마무리 (7단계) ─────────────────────────────────────────────── */}
-      {showClose && (
-        <section data-presenter-close className="rounded-[22px] bg-navy-900 px-6 py-7 text-white sm:px-9 sm:py-9">
-          <p className="text-[1.08rem] font-extrabold text-teal-300">마무리</p>
-          <ol className="mt-3 flex flex-wrap items-center gap-2 text-[1.3rem] font-black sm:text-[1.6rem]">
-            {CLOSING.flow.map((f, i) => (
-              <li key={f} className="flex items-center gap-2">
-                {i > 0 && <ArrowRight size={22} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
-                {f}
-              </li>
-            ))}
-          </ol>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      {/* ── AI 고도화 계획 (0141) — 지금 쓰는 AI · 다음 · 그다음, 큰 글씨 세 칸 ──────────── */}
+      {showRoadmap && (
+        <section data-presenter-roadmap className="rounded-[22px] bg-navy-900 px-6 py-7 text-white sm:px-9 sm:py-9">
+          <p className="text-[1.1rem] font-extrabold text-teal-300">AI 고도화 계획</p>
+          <h2 className="mt-1.5 break-keep text-[1.7rem] font-black leading-tight sm:text-[2.1rem]">
+            지금 쓰는 AI에서 시작해, 쌓이는 데이터로 넓혀 갑니다
+          </h2>
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
             {[
-              { k: '구현됨', items: CLOSING.built, tone: 'text-teal-300' },
-              { k: '실증 단계', items: CLOSING.piloting, tone: 'text-amber-300' },
-              { k: '향후 계획', items: CLOSING.planned, tone: 'text-navy-200' },
+              { k: 'now', title: '지금 · 실제 사용 중', items: ROADMAP.now, box: 'bg-teal-500/15 ring-1 ring-teal-300/40', tone: 'text-teal-300', mark: '✓' },
+              { k: 'next', title: '다음 · 개발 예정', items: ROADMAP.next, box: 'bg-violet-500/15 ring-1 ring-violet-300/40', tone: 'text-violet-200', mark: '→' },
+              { k: 'later', title: '그다음 · 데이터 축적 후', items: ROADMAP.later, box: 'bg-white/5 ring-1 ring-white/15', tone: 'text-navy-200', mark: '○' },
             ].map((col) => (
-              <div key={col.k} data-close-col={col.k} className="rounded-[16px] bg-white/5 px-4 py-4">
-                <p className={`text-[1.05rem] font-extrabold ${col.tone}`}>{col.k}</p>
-                <ul className="mt-2 space-y-1.5">
+              <div key={col.k} data-roadmap-col={col.k} className={`rounded-[18px] px-5 py-5 ${col.box}`}>
+                <p className={`text-[1.15rem] font-black ${col.tone}`}>{col.title}</p>
+                <ul className="mt-3 space-y-2.5">
                   {col.items.map((it) => (
-                    <li key={it} className="break-keep text-[1.05rem] leading-snug text-white">
+                    <li key={it} className="flex items-start gap-2.5 break-keep text-[1.2rem] font-bold leading-snug text-white">
+                      <span aria-hidden="true" className={`shrink-0 ${col.tone}`}>{col.mark}</span>
                       {it}
                     </li>
                   ))}
@@ -225,7 +222,24 @@ export function Presentation() {
               </div>
             ))}
           </div>
-          <p data-close-message className="mt-6 break-keep text-[1.2rem] font-bold leading-relaxed text-white sm:text-[1.35rem]">
+          <p className="mt-5 break-keep text-[1.05rem] font-semibold text-navy-200">
+            「개발 예정」 · 「데이터 축적 후」 칸은 아직 없는 기능입니다. AI는 계속 제안만 하고, 확정은 담당자가 합니다.
+          </p>
+        </section>
+      )}
+
+      {/* ── 마무리 — 큰 문장 하나 (0141 · 작은 글씨 세 칸은 뺌) ─────────────── */}
+      {showClose && (
+        <section data-presenter-close className="rounded-[22px] bg-navy-900 px-6 py-9 text-white sm:px-10 sm:py-12">
+          <ol className="flex flex-wrap items-center gap-2.5 text-[1.4rem] font-black sm:text-[1.8rem]">
+            {CLOSING.flow.map((f, i) => (
+              <li key={f} className="flex items-center gap-2.5">
+                {i > 0 && <ArrowRight size={24} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
+                {f}
+              </li>
+            ))}
+          </ol>
+          <p data-close-message className="mt-8 break-keep text-[1.5rem] font-black leading-relaxed text-white sm:text-[1.9rem]">
             {CLOSING.message}
           </p>
         </section>
@@ -288,7 +302,7 @@ export function Presentation() {
         </section>
       )}
 
-      {presenter.active && !showFlow && !showClose && (
+      {presenter.active && !showFlow && !showClose && !showRoadmap && (
         <div data-presenter-running className="flex flex-wrap items-center gap-3 rounded-[16px] bg-teal-50 px-5 py-4">
           <p className="min-w-0 flex-1 break-keep text-[1.08rem] font-bold text-navy-900">
             시연 진행 중 — 「{step.title}」

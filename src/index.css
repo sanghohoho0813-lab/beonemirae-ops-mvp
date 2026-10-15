@@ -434,14 +434,3 @@
 /*  발표 중 숨김 (0140) — 심사위원이 보면 애매한 준비용 안내 · 내부용 단추.
     PresenterContext 가 발표 중일 때만 <html data-presenting> 을 붙입니다. */
 html[data-presenting] [data-hide-presenting] { display: none !important; }
-
-/*  발표 안내판 (0140) — 왼쪽 메뉴 자리를 안내판(22rem · 큰 화면 24rem)이 씁니다.
-    본문은 그 폭만큼 비켜 서서 가려지는 곳이 없습니다. PresenterCard 가 떠 있을 때만. */
-@media (min-width: 1024px) {
-  html[data-presenter-panel] body,
-  html[data-presenter-panel] [role="dialog"][aria-modal="true"] { padding-left: 22rem; }
-}
-@media (min-width: 1536px) {
-  html[data-presenter-panel] body,
-  html[data-presenter-panel] [role="dialog"][aria-modal="true"] { padding-left: 24rem; }
-}

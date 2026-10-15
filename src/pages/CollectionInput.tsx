@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AiFieldNote } from '../components/AiAssist'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -1441,6 +1442,8 @@ export function CollectionInput() {
             onChange={(e) => setMemo(e.target.value)}
             placeholder="현장 특이사항을 입력하세요 (선택)"
           />
+          {/*  0141 — AI 메모 정리 (실제 AI · 제안만 · 「정리본으로 바꾸기」를 눌러야 칸이 바뀜 · 저장은 그대로 아래 단추) */}
+          <AiFieldNote memo={memo} onApply={setMemo} />
         </Section>
 
 

@@ -15,6 +15,7 @@ import { strandedReceipts } from '../lib/moneyGuard'
 import { num, won, today } from '../lib/format'
 import type { PaymentStatus } from '../types'
 import { AiButton } from '../components/AiAction'
+import { usePresenter } from '../context/PresenterContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 미수금 관리 — 거래처별 청구금액 / 입금상태 / 미수금 합계 / 입금완료 처리
@@ -23,6 +24,7 @@ import { AiButton } from '../components/AiAction'
 const FILTERS: Array<PaymentStatus | '전체'> = ['전체', '미수금', '확인필요', '입금완료', '취소']
 
 export function Receivables() {
+  const presenting = usePresenter().active
   const { data, clientById, markPaid, updatePayment } = useData()
   const [filter, setFilter] = useState<PaymentStatus | '전체'>('미수금')
   const [error, setError] = useState<string | null>(null)
@@ -106,6 +108,17 @@ export function Receivables() {
   //  위 세 숫자 어디에도 안 잡히는 돈이 있는지 — 취소한 청구에 달린 입금.
   const stranded = useMemo(() => strandedReceipts(data), [data])
   const strandedSum = stranded.reduce((s, r) => s + r.paid, 0)
+
+  //  0141 발표 중 — 실제 거래처의 청구 · 입금 목록이 프로젝터에 비치지 않게 **독촉 대상 칸만**
+  //  (그 안의 병원 이름은 가리고 연락처는 숨김 — DunningPanel). 발표 안내를 끝내면 원래 화면 그대로.
+  if (presenting) {
+    return (
+      <div data-receivables-presenting>
+        <PageHeader title="미수금 관리" subtitle="지난달 이전 청구가 남은 거래처 — 오래 밀린 곳부터" />
+        <DunningPanel />
+      </div>
+    )
+  }
 
   return (
     <div>

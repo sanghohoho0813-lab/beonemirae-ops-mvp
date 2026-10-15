@@ -39,6 +39,7 @@ import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus
 import { AiButton } from '../components/AiAction'
 import { aiTriageRequest, markAiCallEdited, type TriageResult } from '../lib/evidenceRepo'
 import { Sparkles, Loader2 } from 'lucide-react'
+import { aiVendor } from '../lib/aiVendor'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 요청 (비원미래 담당자 화면)
@@ -863,13 +864,4 @@ function AiRow({ n, label, children }: { n: number; label: string; children: Rea
       </div>
     </li>
   )
-}
-
-/** 응답에 적힌 모델 이름으로 회사 이름 — 화면 표시용 (모르면 빈 글) */
-function aiVendor(model: string | null | undefined): string {
-  const m = (model ?? '').toLowerCase()
-  if (m.startsWith('gemini')) return 'Google Gemini'
-  if (m.startsWith('claude')) return 'Anthropic Claude'
-  if (m.startsWith('gpt') || /^o\d/.test(m)) return 'OpenAI'
-  return ''
 }

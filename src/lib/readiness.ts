@@ -295,6 +295,8 @@ export function realAiCalls(data: AppData): NonNullable<AppData['aiCalls']> {
   const reqById = new Map((data.requests ?? []).map((r) => [r.id, r]))
   return calls.filter((c) => {
     if (c.kind.endsWith('_demo')) return false
+    //  0141 — 업무 보조 AI(today_briefing · field_note · dunning_draft)는 「병원 요청 분석」 실적이 아닙니다
+    if (c.kind !== 'request_triage') return false
     if (!c.requestId) return true
     const r = reqById.get(c.requestId)
     if (!r) return false

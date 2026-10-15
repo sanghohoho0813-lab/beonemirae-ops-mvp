@@ -4,6 +4,8 @@ import { Modal } from './Modal'
 import { useData } from '../context/DataContext'
 import { won } from '../lib/format'
 import { ageLabel, dunningMessage, dunningSummary, type DunningRow } from '../lib/dunning'
+import { AiDunningBox } from './AiAssist'
+import { usePresenter } from '../context/PresenterContext'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 독촉 대상
@@ -23,16 +25,28 @@ const TONE: Record<string, string> = {
   이번달: 'bg-navy-100 text-navy-500',
 }
 
+/** 발표 중 병원 이름 가리기 — 「가나요양병원」 → 「가○○요양병원」 (0141) */
+export function maskClientName(name: string): string {
+  const suf = ['요양병원', '병원', '의원', '재단', '치과', '한의원', '센터'].find((x) => name.endsWith(x) && name.length > x.length)
+  const head = suf ? name.slice(0, -suf.length) : name
+  return head.slice(0, 1) + '○'.repeat(Math.max(1, Math.min(4, head.length - 1))) + (suf ?? '')
+}
+
 export function DunningPanel() {
   const { data } = useData()
+  //  0141 — 발표 중에는 실제 병원 이름을 가리고 연락처를 숨깁니다 (프로젝터)
+  const presenting = usePresenter().active
+  const nm = (n: string) => (presenting ? maskClientName(n) : n)
   const sum = useMemo(() => dunningSummary(data), [data])
   const [open, setOpen] = useState<DunningRow | null>(null)
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  //  0141 — AI 가 다시 쓴 문구 (없으면 기본 문구)
+  const [aiText, setAiText] = useState<string | null>(null)
 
   if (sum.rows.length === 0) return null
 
-  const text = open ? dunningMessage(open) : ''
+  const text = open ? aiText ?? dunningMessage(open) : ''
 
   async function copy() {
     try {
@@ -76,7 +90,7 @@ export function DunningPanel() {
           {sum.rows.map((r) => (
             <li key={r.clientId} data-dunning-row={r.clientId} className="rounded-xl bg-white/90 p-3.5 shadow-sm">
               <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 flex-1 font-extrabold text-navy-900">{r.clientName}</span>
+                <span className="min-w-0 flex-1 font-extrabold text-navy-900">{nm(r.clientName)}</span>
                 <span className={`pill shrink-0 ${TONE[r.bucket] ?? ''}`}>{ageLabel(r)}</span>
               </div>
               <div className="mt-1.5 flex items-end justify-between gap-3">
@@ -97,7 +111,7 @@ export function DunningPanel() {
                       {[...r.bills].map((b) => b.billingMonth).sort().slice(-1)[0]} (달마다 보기)
                     </button>
                   )}
-                  {r.manager || r.phone ? (
+                  {!presenting && (r.manager || r.phone) ? (
                     <span className="ml-1 text-navy-400">
                       {' / '}
                       {[r.manager, r.phone].filter(Boolean).join(' ')}
@@ -107,7 +121,7 @@ export function DunningPanel() {
                 <p className="shrink-0 text-right text-lg font-extrabold text-rose-600">{won(r.total)}</p>
               </div>
               <div className="mt-2.5 flex justify-end gap-2">
-                {r.phone && (
+                {r.phone && !presenting && (
                   <a
                     href={`tel:${r.phone.replace(/[^0-9+]/g, '')}`}
                     className="flex items-center gap-1.5 rounded-full bg-navy-50 px-4 py-2 text-[1.05rem] font-bold text-navy-600 transition active:scale-95"
@@ -121,6 +135,7 @@ export function DunningPanel() {
                   className="flex items-center gap-1.5 rounded-full bg-navy-800 px-4 py-2 text-[1.05rem] font-bold text-white transition active:scale-95"
                   onClick={() => {
                     setCopied(false)
+                    setAiText(null)
                     setOpen(r)
                   }}
                 >
@@ -135,7 +150,7 @@ export function DunningPanel() {
 
       <Modal
         open={open != null}
-        title={`${open?.clientName ?? ''} 독촉 문구`}
+        title={`${open ? nm(open.clientName) : ''} 독촉 문구`}
         onClose={() => setOpen(null)}
         footer={
           <>
@@ -151,6 +166,17 @@ export function DunningPanel() {
         <p className="t-muted break-keep">
           문자·카톡에 붙여 넣어 보내시면 됩니다. 자동으로 보내지 않습니다 — 보낼지 말지는 대표님이 정하십니다.
         </p>
+        {open && (
+          <div className="mt-3">
+            <AiDunningBox
+              key={open.clientId}
+              months={open.bills.length}
+              oldestMonth={[...open.bills].map((b) => b.billingMonth).sort()[0]?.slice(0, 7) ?? ''}
+              fill={{ name: nm(open.clientName), amount: won(open.total) }}
+              onText={setAiText}
+            />
+          </div>
+        )}
         <textarea
           data-dunning-text
           readOnly

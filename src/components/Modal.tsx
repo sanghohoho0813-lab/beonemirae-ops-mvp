@@ -75,7 +75,7 @@ export function Modal({ open, title, onClose, children, footer, printable = fals
             onClick={onClose}
           />
           <motion.div
-            className={`relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-2xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} sm:rounded-3xl${
+            className={`relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-2xl ${wide ? 'sm:max-w-xl' : 'sm:max-w-lg'} sm:rounded-3xl${
               layout === 'sticky' ? '' : ' overflow-y-auto'
             } p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5${
               printable

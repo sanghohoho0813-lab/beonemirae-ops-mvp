@@ -66,6 +66,7 @@ import {
 } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 import { BrandLogo } from './BrandLogo'
+import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
 //  아닌 모든 업무 화면입니다. 빠지면 그 화면에 있는 동안 아래 탭 어디에도
@@ -358,8 +359,7 @@ function Sidebar() {
   const showMobilePreview = !configured || canAccess(profile?.role ?? null, '/mobile-preview')
 
   return (
-    //  ⚠ 0140 — 발표 중(data-presenting)에는 메뉴 전체를 숨깁니다. 그 자리는 발표 안내판이 씁니다.
-    <aside data-hide-presenting className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
@@ -755,6 +755,8 @@ export function Layout() {
   // 새로고침하면 언제나 모바일 화면으로 돌아옵니다.
   const [pcView, setPcView] = useState(false)
   usePcViewport(pcView)
+  //  화면 폭 3단계 (0141) — 기본 「보통」, 이 기기에 기억
+  const [contentWidth, setContentWidth] = useState<ContentWidth>(() => loadWidth())
   //  지금 켜져 있는 사용 안내 (0069)
   const store = useMemo(() => guideStore(), [])
   const guideOn = useSyncExternalStore(store.subscribe, store.get, store.get)
@@ -781,7 +783,8 @@ export function Layout() {
                  줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
                  (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
                  같은 이유로 안전합니다. */}
-            <div data-hide-presenting className={`mb-3 flex-wrap items-center justify-end gap-1.5 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
+            <div className={`mx-auto w-full ${WIDTH_CLASS[contentWidth]}`}>
+            <div className={`mb-3 flex-wrap items-center justify-end gap-1.5 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
               {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
                    설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
                    설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
@@ -802,6 +805,8 @@ export function Layout() {
                      (0129 「화면 색 옆으로」 — check_clock 이 지킵니다).
                    ⚠ 이 줄에서 유일하게 **진한 색** 알약입니다 — 상담 자리에서 바로
                      찾아 눌러야 하는 단추라서입니다. */}
+              {/*  화면 폭 3단계 (0141) — 줄 맨 앞. 시계와 「화면 색」은 붙어 있어야 합니다(check_clock). */}
+              <WidthToggle value={contentWidth} onChange={setContentWidth} />
               {showVisitVideo && (
                 <button
                   type="button"
@@ -859,6 +864,7 @@ export function Layout() {
                 <Outlet />
               </PageMotion>
             </ErrorBoundary>
+            </div>
           </main>
         </div>
       </div>
