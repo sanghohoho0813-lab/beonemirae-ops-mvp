@@ -93,7 +93,8 @@ export function PresenterCard() {
             scrolledAt.current = Date.now()
             userMoved.current = false
             const r = target.getBoundingClientRect()
-            if (r.top < 90 || r.bottom > window.innerHeight - 40) target.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
+            //  0143 — 창 안에서는 필요한 만큼만(nearest) — 가운데로 끌어오면 창 위쪽 제목(「AI 제안 → 담당자 최종 확인」)이 밀려 올라감
+            if (r.top < 90 || r.bottom > window.innerHeight - 40) target.scrollIntoView({ block: target.closest('[role="dialog"]') ? 'nearest' : 'center', behavior: reduce ? 'auto' : 'smooth' })
           }
         }
       }
@@ -101,7 +102,7 @@ export function PresenterCard() {
       //    사람이 직접 스크롤 · 휠 · 터치 · 키를 썼으면 따라가지 않습니다(대표님이 움직인 것과 싸우지 않게).
       if (target && !userMoved.current && Date.now() - scrolledAt.current < 2500) {
         const r = target.getBoundingClientRect()
-        if (r.bottom > window.innerHeight - 20 || r.top < 60) target.scrollIntoView({ block: 'center', behavior: 'auto' })
+        if (r.bottom > window.innerHeight - 20 || r.top < 60) target.scrollIntoView({ block: target.closest('[role="dialog"]') ? 'nearest' : 'center', behavior: 'auto' })
       }
       if (target) {
         const r = target.getBoundingClientRect()
@@ -110,7 +111,8 @@ export function PresenterCard() {
         //  단추면 「여기를 누르세요」, 결과 · 칸이면 「여기를 보세요」 (0141)
         const press = target.matches('button, a, [role="button"], input, select, textarea, summary')
         //  화면 큰 덩어리(흐름 띠 · 고도화 계획 칸 등)는 테두리만 — 말풍선이 그 위 제목 글을 가리지 않게
-        if (!press && r.width > 640 && r.height > 220) { setBubble(null); return }
+        //  0143 — 화면 높이의 절반이 넘는 칸(성과 화면 세로 칸 등)도 테두리만 — 말풍선이 화면 밖으로 나가던 것
+        if (!press && ((r.width > 640 && r.height > 220) || r.height > window.innerHeight * 0.45)) { setBubble(null); return }
         setBubble((b) => {
           const n = { x: Math.round(r.left + Math.min(r.width, 360) / 2), top: Math.round(r.top), bottom: Math.round(r.bottom), right: Math.round(r.right), mid: Math.round(r.top + r.height / 2), side, press }
           return b && b.x === n.x && b.top === n.top && b.bottom === n.bottom && b.right === n.right && b.side === n.side && b.press === n.press ? b : n
@@ -158,6 +160,15 @@ export function PresenterCard() {
     raf = requestAnimationFrame(follow)
     return () => cancelAnimationFrame(raf)
   }, [show, here])
+
+  //  0143 — 안내 카드가 떠 있는 동안 창(모달)은 카드 오른쪽 자리에 뜨게 (index.css · 1024 폭에서 카드가 창을 가리던 것)
+  //  ⚠ 훅은 아래 `if (!show) return null` 보다 위에 있어야 합니다.
+  useEffect(() => {
+    if (!show) return
+    const el = document.documentElement
+    el.setAttribute('data-presenter-card-on', '1')
+    return () => el.removeAttribute('data-presenter-card-on')
+  }, [show])
 
   if (!show) return null
 
@@ -360,6 +371,12 @@ export function PresenterCard() {
   const panelW = typeof window !== 'undefined' && window.innerWidth >= 1280 ? 392 : 336
   const bubbleBelow = !!bubble && !bubble.side && bubble.top < 96
   const bubbleX = bubble ? Math.min(Math.max(bubble.x, panelW + 110), (typeof window !== 'undefined' ? window.innerWidth : 1440) - 110) : 0
+  //  0143 — 말풍선은 늘 화면 안 (위 · 아래로 넘치면 화면 끝에 붙임 · 낮은 프로젝터 1280×720 · 1024×768)
+  const BUBBLE_H = 48
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 900
+  const bubbleTop = bubble
+    ? Math.max(8, Math.min(vh - BUBBLE_H - 8, bubble.side ? bubble.mid - BUBBLE_H / 2 : bubbleBelow ? bubble.bottom + 12 : bubble.top - 12 - BUBBLE_H))
+    : 0
 
   return (
     <>
@@ -402,8 +419,8 @@ export function PresenterCard() {
           className="pointer-events-none fixed z-[95] hidden lg:block"
           style={
             bubble.side
-              ? { left: bubble.right + 14, top: bubble.mid, transform: 'translate(0, -50%)' }
-              : { left: bubbleX, top: bubbleBelow ? bubble.bottom + 12 : bubble.top - 12, transform: `translate(-50%, ${bubbleBelow ? '0' : '-100%'})` }
+              ? { left: bubble.right + 14, top: bubbleTop }
+              : { left: bubbleX, top: bubbleTop, transform: 'translate(-50%, 0)' }
           }
         >
           <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-500 px-4 py-2 text-[1.05rem] font-black text-white shadow-xl ring-4 ring-white">
