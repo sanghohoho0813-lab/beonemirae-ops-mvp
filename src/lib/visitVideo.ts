@@ -40,10 +40,13 @@ export interface VideoDef {
   storageKey: string
 }
 
-//  강남 스타트업 지점 발표 — 발표를 시작하기 전에 트는 오프닝 (4분 53초 · v45)
+//  강남 스타트업 지점 발표 — 회사 소개 영상 (4분 46초 · v46)
 //  ⚠ 0140 — 대표님 수정 대본: 연도별 매출 · 「내부 직원이 실제 업무에 사용 중」 · AI 요청 분석
 //    (성격 · 긴급도 · 핵심 · 회신 초안 → 담당자 확인, 활용 범위는 단계적으로 — 계획) 이 들어갔고,
 //    배경 음악이 아주 작게 깔립니다.
+//  ⚠ v46 — 대표님 새 TTS: 「사업이 성장하고 … 새로운 문제를 발견했습니다」 한 문장(돋보기 장면)을 빼고,
+//    마지막 말이 「그럼 지금부터 발표를 시작하겠습니다」 → 「감사합니다」. 병원 포털 장면은 **지금 화면**(3차 디자인)으로
+//    다시 찍음. 나머지 장면 · 글자는 v45 그대로.
 //  ⚠ 말하는 숫자는 연도별 매출 세 개뿐 — **영상에서 말한 그대로**(약 …) 적습니다. 올해 숫자 ·
 //    예상치는 영상에도 여기에도 없습니다(「올해도 성장세」만). 새 사업장 운송 구조는 「준비 중」,
 //    소모품 · 동종업계 솔루션은 「계획」, B2B 플랫폼은 「장기 목표」로 영상 안에 표시돼 있습니다.
@@ -51,28 +54,28 @@ export const GANGNAM_VIDEO: VideoDef = {
   id: 'gangnam',
   eyebrow: '강남 스타트업 지점 발표용',
   title: '강남 스타트업 지점 발표용 영상',
-  summary: '㈜비원미래 발표 오프닝 영상',
-  lengthLabel: '4분 53초',
+  summary: '㈜비원미래 발표 소개 영상',
+  lengthLabel: '4분 46초',
   versions: [
-    { id: 'tall', label: '세로 · 릴스 (9:16)', short: '세로 9:16', src: '/media/gangnam_present_v45_tall.mp4',
-      file: 'BeoneMirae_Gangnam_startup_presentation_vertical_9x16.mp4', ratio: [9, 16], sizeMB: 32 },
-    { id: 'wide', label: '가로 · 화면용 (16:9)', short: '가로 16:9', src: '/media/gangnam_present_v45_wide.mp4',
+    { id: 'tall', label: '세로 · 릴스 (9:16)', short: '세로 9:16', src: '/media/gangnam_present_v46_tall.mp4',
+      file: 'BeoneMirae_Gangnam_startup_presentation_vertical_9x16.mp4', ratio: [9, 16], sizeMB: 31 },
+    { id: 'wide', label: '가로 · 화면용 (16:9)', short: '가로 16:9', src: '/media/gangnam_present_v46_wide.mp4',
       file: 'BeoneMirae_Gangnam_startup_presentation_horizontal_16x9.mp4', ratio: [16, 9], sizeMB: 31 },
   ],
   chapters: [
     { at: 0, title: '인사 · 비원미래 소개' },
     { at: 11, title: '수집·운반의 역할 · 진입장벽' },
-    { at: 34, title: '성장 과정 · 실제 매출' },
+    { at: 33, title: '성장 과정 · 실제 매출' },
     { at: 56, title: '지금의 팀' },
-    { at: 71, title: '성장하며 발견한 문제' },
-    { at: 123, title: '문제 정리 · AX 운영 시스템' },
-    { at: 147, title: '실제 사용 · 병원 포털' },
-    { at: 158, title: 'AI 요청 분석 · 단계적 확대' },
-    { at: 178, title: '전화 · 문자도 하나의 데이터' },
-    { at: 187, title: '운송 방식의 변화' },
-    { at: 206, title: '줄어드는 것 · 성장 구조' },
-    { at: 236, title: '앞으로의 방향' },
-    { at: 259, title: '다짐 · 발표 시작' },
+    { at: 68, title: '반복 수요 · 새로운 문제' },
+    { at: 114, title: '문제 정리 · AX 운영 시스템' },
+    { at: 139, title: '실제 사용 · 병원 포털' },
+    { at: 150, title: 'AI 요청 분석 · 단계적 확대' },
+    { at: 169, title: '전화 · 문자도 하나의 데이터' },
+    { at: 178, title: '운송 방식의 변화' },
+    { at: 199, title: '줄어드는 것 · 성장 구조' },
+    { at: 228, title: '앞으로의 방향' },
+    { at: 251, title: '다짐 · 감사 인사' },
   ],
   //  영상 음성에서 말한 그대로 — 1원이라도 바꾸지 않습니다
   numbers: [
@@ -82,7 +85,7 @@ export const GANGNAM_VIDEO: VideoDef = {
   ],
   tips: [
     '소리를 켜 주세요 — 자막도 영상 안에 들어 있어 소리 없이도 읽힙니다. 배경 음악은 아주 작게 깔려 있습니다.',
-    '발표 바로 앞에 트는 오프닝입니다 — 마지막 말이 「그럼 지금부터 발표를 시작하겠습니다」입니다.',
+    '발표에서 트는 회사 소개 영상입니다 — 마지막 말이 「감사합니다」입니다.',
     '영상 속 앱 화면의 병원·사람 이름과 AI 요청 예시는 예시 데이터입니다.',
     '매출은 영상에서 말한 그대로(약 1억 2천만 · 3억 6천만 · 5억 8천만 원) — 올해 숫자 · 예상치는 넣지 않았습니다.',
     'AI 는 「담당자 확인」 · 「계획 · 단계적 확대」로, 새 사업장 운송 구조는 「준비 중」으로 나옵니다 — 실적처럼 말하지 않습니다.',
