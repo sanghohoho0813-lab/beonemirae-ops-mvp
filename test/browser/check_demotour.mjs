@@ -121,7 +121,8 @@ console.log('── ⓙ 작은 설명 상자 · 군더더기 감추기 ──')
 {
   const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
   //  0141 — 원래 AX 화면 그대로(대표님) — 투어 전에는 오른쪽 위 도구 줄이 보입니다.
-  const helpBefore = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
+  //  0142 — 「사용 방법」 단추는 설정으로 옮겼습니다(대표 계정) — 도구 줄은 시계로 봅니다.
+  const helpBefore = await p.locator('[data-clock-top]').first().isVisible().catch(() => false)
   ok('ⓙ 투어 전에는 오른쪽 위 도구 줄이 보인다', helpBefore)
 
   await startDemo(p)
@@ -154,7 +155,7 @@ console.log('── ⓙ 작은 설명 상자 · 군더더기 감추기 ──')
   ok('ⓙ 설명 상자가 강조한 자리를 덮지 않는다', overlap === 0, `${overlap}px²`)
 
   //  시연 중에는 도구 줄이 사라집니다.
-  const helpDuring = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
+  const helpDuring = await p.locator('[data-clock-top]').first().isVisible().catch(() => false)
   ok('ⓙ **시연 중에는 오른쪽 위 도구 줄이 감춰진다**', !helpDuring)
   const feedback = await p.locator('button:has-text("사용 후기")').first().isVisible().catch(() => false)
   ok('ⓙ 시연 중에는 「사용 후기」 단추도 감춰진다', !feedback)
@@ -166,7 +167,7 @@ console.log('── ⓙ 작은 설명 상자 · 군더더기 감추기 ──')
   //  끝내면 도구 줄이 돌아옵니다.
   await p.locator('[data-tour-card] button[title="종료"]').click()
   await p.waitForTimeout(700)
-  const helpAfter = await p.locator('button:has-text("사용 방법")').first().isVisible().catch(() => false)
+  const helpAfter = await p.locator('[data-clock-top]').first().isVisible().catch(() => false)
   ok('ⓙ 투어를 끝내면 도구 줄이 돌아온다', helpAfter)
   await ctx.close()
 }

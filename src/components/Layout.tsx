@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { Fragment, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import { motion } from 'framer-motion'
@@ -61,6 +61,9 @@ import {
   writeNavOpen,
   BOTTOM_NAV_STAFF,
   BOTTOM_NAV_FIELD,
+  PLANNED,
+  PLANNED_ICON,
+  PLANNED_SHOWCASE,
   type NavItem,
   type NavGroupDef,
 } from '../lib/nav'
@@ -339,6 +342,42 @@ function NavGroup({
   )
 }
 
+/**
+ * 「추가 개발 예정」 펼쳐 보이기 (0142 · 신보 발표 기간 임시 — nav.ts PLANNED_SHOWCASE)
+ *
+ *  「오늘 업무」와 「현장·운영」 사이에 일곱 줄을 늘 펼쳐 둡니다. 아이콘 타일은 **한 가지 색**.
+ *  ⚠ 여전히 메뉴가 아닙니다 — 누르면 「계획 중 · 지금은 이렇게」 미리보기만 열립니다(0095).
+ */
+function PlannedShowcase({ onPlanned }: { onPlanned: (label: string) => void }) {
+  return (
+    <div data-nav-planned-showcase className="space-y-0.5">
+      <p className="mt-6 flex items-center gap-2 px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-200">
+        <span className="min-w-0 flex-1 break-keep leading-snug">추가 개발 예정</span>
+        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.85rem] font-bold text-navy-200">계획중</span>
+      </p>
+      {PLANNED.map((label) => {
+        const Icon = PLANNED_ICON[label] ?? Lock
+        return (
+          <button
+            key={label}
+            type="button"
+            data-nav-planned={label}
+            onClick={() => onPlanned(label)}
+            title="계획 중인 기능입니다 — 누르면 무엇을 검토 중인지 나옵니다"
+            className="flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-3 text-left text-[1rem] font-semibold text-white transition hover:bg-white/10"
+          >
+            <span data-planned-icon className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-300/15 text-amber-300 ring-1 ring-amber-300/30">
+              <Icon size={18} strokeWidth={2.3} />
+            </span>
+            <span className="min-w-0 flex-1 break-keep leading-snug">{label}</span>
+            <span className="sr-only">계획중</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 //  ⚠ 0086 — 사이드바 글자는 **테마와 무관하게 항상 밝습니다.**
 //    메뉴 이름은 흰색, 나머지 보조 글자는 navy-200(#d7dde6, near-white)
 //    입니다. navy-300 으로 두면 어두운 바탕에서 「회색빛으로 흐리다」는
@@ -397,16 +436,19 @@ function Sidebar() {
 
       <nav className="flex-1 px-3">
         {groups.map((g) => (
-          <NavGroup
-            key={g.id}
-            id={g.id}
-            title={g.title}
-            items={g.items}
-            defaultOpen={g.defaultOpen}
-            prominent={g.defaultOpen}
-            planned={g.planned && showPlanned ? g.planned : []}
-            onPlanned={setPlannedOpen}
-          />
+          <Fragment key={g.id}>
+            <NavGroup
+              id={g.id}
+              title={g.title}
+              items={g.items}
+              defaultOpen={g.defaultOpen}
+              prominent={g.defaultOpen}
+              planned={g.planned && showPlanned && !PLANNED_SHOWCASE ? g.planned : []}
+              onPlanned={setPlannedOpen}
+            />
+            {/*  0142 — 발표 기간 임시: 「오늘 업무」 바로 아래에 추가 개발 예정을 펼쳐 둠 */}
+            {g.id === 'today' && PLANNED_SHOWCASE && showPlanned && <PlannedShowcase onPlanned={setPlannedOpen} />}
+          </Fragment>
         ))}
       </nav>
 
@@ -743,6 +785,10 @@ export function Layout() {
   const minimal = !!runningTour?.compact
   //  시연 모드(설정 없음)에서는 기존과 동일하게 전부 보입니다.
   const showWhy = !configured || canAccess(role, '/why')
+  //  0142 — 대표님: 「이 시스템을 만든 이유 · 화면 색 · 사용 방법 — 설정 안에 넣어 버려 줘. 상단에서 안 보여도 될 듯.」
+  //    설정을 여는 계정(대표)은 위 줄에서 빼고 설정 맨 위 「도움말 · 화면 색」 칸에서 씁니다.
+  //    ⚠ 설정을 못 여는 계정(사무실 · 현장)은 그대로 둡니다 — 빼면 「사용 방법」 들어갈 문이 없어집니다.
+  const helpInSettings = !configured || canAccess(role, '/settings')
   //  신용보증기금 방문용 영상 (0130) — 대표·이사님(사무실)만. 매출 숫자가 든 상담 영상입니다.
   //  ⚠ 시연 모드(설정 없음)에서도 띄우지 않습니다 — 영상 파일이 실제 계정으로만 열립니다.
   const showVisitVideo = configured && canAccess(role, '/visit-video')
@@ -827,15 +873,19 @@ export function Layout() {
                      단추가 찌그러집니다. 시·분·초는 그대로 둡니다. */}
                 <LiveClock compact />
               </p>
-              <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900" />
-              {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
-              {showWhy && (
-                <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+              {!helpInSettings && (
+                <>
+                  <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900" />
+                  {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
+                  {showWhy && (
+                    <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+                  )}
+                  <TourButton
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
+                    label="사용 방법"
+                  />
+                </>
               )}
-              <TourButton
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
-                label="사용 방법"
-              />
               {/*  사용 후기 남기기 — 왼쪽 목차에서 여기로 올렸습니다.
                    같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈립니다.
                    **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고

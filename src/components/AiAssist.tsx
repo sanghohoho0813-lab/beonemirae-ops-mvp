@@ -66,7 +66,8 @@ function AiShell({
     <section data-ai-assist={attr} className="rounded-2xl border-2 border-violet-200 bg-violet-50 px-4 py-4">
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles size={20} strokeWidth={2.4} className="shrink-0 text-violet-600" />
-        <div className="min-w-0 flex-1">
+        {/*  0142 — 칸이 좁으면(수거 입력 왼쪽 칸) 단추가 글 아래로 내려갑니다. 글이 세로로 좁게 눌리지 않게. */}
+        <div className="min-w-0 flex-1 basis-[16rem]">
           <p className="break-keep text-[1.12rem] font-black text-violet-950">
             {title}
             <span className="ml-2 inline-block rounded-full bg-white px-2.5 py-0.5 align-middle text-[0.88rem] font-extrabold text-violet-800 ring-1 ring-violet-200">
@@ -81,7 +82,7 @@ function AiShell({
           onClick={onRun}
           disabled={busy || disabled}
           aria-busy={busy}
-          className={`inline-flex min-h-[3rem] items-center gap-1.5 rounded-full px-5 text-[1.02rem] font-extrabold transition disabled:opacity-50 ${
+          className={`inline-flex min-h-[3rem] shrink-0 items-center gap-1.5 rounded-full px-5 text-[1.02rem] font-extrabold transition disabled:opacity-50 ${
             hasResult && !busy ? 'bg-white text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100' : 'bg-violet-600 text-white shadow-md hover:bg-violet-700'
           }`}
         >

@@ -100,8 +100,28 @@ for (const role of ['field', 'office', 'admin', 'client']) {
 //    ① 처음 — 왼쪽 계정 카드 아래 (끝까지 내려야 보임)
 //    ② 다음 — 사이드바 맨 위 고정 (「현재 위치 너무 별로」)
 //    ③ 지금 — **오른쪽 위 도구 줄, 「화면 색」 옆 · 간격 띄워서**
+//   ⑤ 0142 — 대표 계정은 「화면 색 · 만든 이유 · 사용 방법」을 설정 안으로 옮겼습니다(대표님).
+//      그 셋은 위 줄에 없고 설정 맨 위 칸에 있습니다. 설정을 못 여는 사무실 계정은 예전 그대로
+//      「화면 색」 옆에 시계가 있습니다 — 아래 자리 검사는 사무실 계정으로 합니다.
 {
   const s = await open('admin', 1440, 900)
+  const top = await s.p.evaluate(() => {
+    const row = document.querySelector('[data-clock-top]')?.parentElement
+    return { clock: !!row, theme: !!row?.querySelector('[data-theme-open]'), why: !!row?.querySelector('[data-tour-why]'), tour: !!row?.querySelector('[data-tour-start]') }
+  })
+  ok(top.clock && !top.theme && !top.why && !top.tour, '대표 — 위 줄에 시계만 (화면 색 · 만든 이유 · 사용 방법은 설정으로)', JSON.stringify(top))
+  await s.p.goto(`${W.BASE}/settings`, { waitUntil: 'domcontentloaded' })
+  await s.p.waitForTimeout(1500)
+  const box = s.p.locator('[data-settings-help]')
+  ok((await box.locator('[data-theme-open]').count()) === 1 && (await box.locator('[data-tour-why]').count()) === 1 && (await box.locator('[data-tour-start]').count()) === 1,
+    '대표 — 설정 맨 위 칸에 세 단추가 함께')
+  await box.locator('[data-theme-open]').click()
+  await s.p.waitForTimeout(500)
+  ok((await s.p.locator('text=화면 색 고르기').count()) >= 1, '대표 — 설정의 「화면 색」을 누르면 고르는 창이 열림')
+  await s.ctx.close()
+}
+{
+  const s = await open('office', 1440, 900)
   const r = await s.p.evaluate(() => {
     const clock = document.querySelector('[data-clock-top]')
     if (!clock) return null

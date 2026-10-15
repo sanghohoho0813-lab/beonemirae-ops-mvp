@@ -94,6 +94,7 @@ const btnBox = (p) => p.evaluate(() => {
     gapToClock: c ? Math.round(c.left - a.right) : -1,
     clockThemeGap: c && t ? Math.round(t.left - c.right) : -1,
     clockThemeRow: c && t ? Math.abs(mid(c) - mid(t)) <= 12 : false,
+    hasTheme: !!t,
     h: Math.round(a.height), w: Math.round(a.width), right: Math.round(c?.right ?? 0),
     hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
   }
@@ -109,8 +110,13 @@ for (const role of ['admin', 'office']) {
       ok(r.text === '신용보증기금 방문용 영상', `${role} · ${w}px — 글자 그대로`, r.text)
       ok(r.sameRowClock && r.leftOfClock, `${role} · ${w}px — **오늘 날짜·현재 시각 바로 옆(왼쪽)**`, `간격 ${r.gapToClock}px`)
       ok(r.gapToClock >= 4 && r.gapToClock <= 40, `${role} · ${w}px — 시계와 붙어 있음`, `${r.gapToClock}px`)
-      //  0129 의 자리를 깨지 않음 — 시계는 여전히 「화면 색」 옆
-      ok(r.clockThemeRow && r.clockThemeGap >= 12 && r.clockThemeGap <= 80, `${role} · ${w}px — 시계 ↔ 「화면 색」은 그대로 붙어 있음`, `${r.clockThemeGap}px`)
+      //  0129 의 자리 — 시계는 「화면 색」 옆.
+      //  ⚠ 0142 — 대표 계정은 「화면 색」을 설정 안으로 옮겼습니다(위 줄에 없음).
+      //  ⚠ 0141 화면 폭 단추가 줄 맨 앞에 들어와, 사무실 계정 1280px 에서는 「화면 색」이 둘째 줄로
+      //    내려갑니다(줄 바꿈). 같은 줄일 때만 간격을 잽니다.
+      if (role === 'admin') ok(!r.hasTheme, `${role} · ${w}px — 「화면 색」은 위 줄에 없음 (설정 안으로)`)
+      else if (w >= 1440) ok(r.clockThemeRow && r.clockThemeGap >= 12 && r.clockThemeGap <= 80, `${role} · ${w}px — 시계 ↔ 「화면 색」은 그대로 붙어 있음`, `${r.clockThemeGap}px`)
+      else ok(r.hasTheme, `${role} · ${w}px — 「화면 색」은 위쪽 도구에 그대로 (좁으면 둘째 줄)`)
       ok(r.h >= 44 && r.h < 60, `${role} · ${w}px — 한 줄 · 누를 만한 높이`, `${r.h}px`)
     }
     await s.ctx.close()

@@ -7,6 +7,7 @@ import { SettingsProvider } from './context/SettingsContext'
 import { AuthProvider } from './context/AuthContext'
 import { TourProvider } from './context/TourContext'
 import { PresenterProvider } from './context/PresenterContext'
+import { DemoScope } from './context/DemoScope'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
 
@@ -23,7 +24,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <TourProvider>
               {/*  0139 — 심사 시연 Presenter Mode (안내 레이어 · 업무 데이터 무관) */}
               <PresenterProvider>
-                <App />
+                {/*  0142 — 시연을 끈 업무 화면에는 「시연용 병원」 기록을 거른 자료 */}
+                <DemoScope>
+                  <App />
+                </DemoScope>
               </PresenterProvider>
             </TourProvider>
           </DataProvider>

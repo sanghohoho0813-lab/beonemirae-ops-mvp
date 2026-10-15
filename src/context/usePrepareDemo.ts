@@ -3,6 +3,7 @@ import { useData } from './DataContext'
 import { emptyClientForm } from '../components/ClientForm'
 import { SAMPLE_REQUEST } from '../lib/presenter'
 import type { AppData, Client, ClientRequest } from '../types'
+import { DEMO_CLIENT_NAME, isPresenterDemoClient } from '../lib/demoScope'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 신보 발표 — AI 시연에 쓸 「시연 요청」 준비 (0140)
@@ -20,14 +21,16 @@ import type { AppData, Client, ClientRequest } from '../types'
 //   · 실제 거래처 자료는 읽기만 합니다. 고치거나 그 이름으로 요청을 넣지 않습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const DEMO_CLIENT_NAME = '시연용 병원'
+export { DEMO_CLIENT_NAME }
 /** 시연용 거래처 만들기 시도 표 — 늘 같은 값이라 두 번 만들어지지 않습니다 */
 const DEMO_CLIENT_REQ = '5b0e0140-0000-4000-8000-000000000001'
 const REQ_KEY = 'beonemirae-ops:presenter-demo-req'
 
 export function findDemoClient(data: AppData): Client | null {
   const demo = data.clients.filter((c) => c.isDemoGenerated)
-  return demo.find((c) => c.name === DEMO_CLIENT_NAME) ?? demo[0] ?? null
+  //  0142 — 「시연용 병원 (신보 발표)」처럼 예전 이름으로 만든 것도 같은 시연 거래처로 봅니다
+  //    (시연을 끈 업무 화면에서 거르는 거래처와 같은 기준 — lib/demoScope)
+  return demo.find((c) => c.name === DEMO_CLIENT_NAME) ?? demo.find(isPresenterDemoClient) ?? demo[0] ?? null
 }
 
 export function findDemoRequest(data: AppData, clientId: string): ClientRequest | null {

@@ -104,7 +104,8 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     key: 'collect',
     title: '현장 수거 입력 · AI 메모 정리',
     routes: () => ['/collection'],
-    go: () => '/collection',
+    //  0142 — 시연 거래처를 미리 골라 둡니다 (실제 병원에 시연 기록이 남지 않게 · 시연을 끄면 안 보임)
+    go: (c) => (c.clientId ? `/collection?client=${c.clientId}` : '/collection'),
     targets: ['[data-ai-field-apply]', '[data-ai-assist-run="field_note"]', '[data-tour="collect-done"]', '[data-tour="collect-save"]'],
     show: '현장 직원이 수거 완료 1건을 입력합니다.',
     before: '현장 수기 대장 → 카톡 사진 → 사무실 엑셀로 같은 내용을 여러 번 옮겨 적었습니다.',

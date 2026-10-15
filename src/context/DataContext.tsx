@@ -426,7 +426,8 @@ interface DataContextValue {
   clearSyncError: () => void
 }
 
-const DataContext = createContext<DataContextValue | null>(null)
+// eslint-disable-next-line react-refresh/only-export-components
+export const DataContext = createContext<DataContextValue | null>(null)
 
 /** 사무실 재고 4칸의 화면 이름 (감사기록에 그대로 적습니다) */
 

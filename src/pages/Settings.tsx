@@ -35,7 +35,7 @@ import { PageShell } from '../components/ui'
 import { SetupGapsCard } from '../components/SetupGapsCard'
 import { PageHeader } from '../components/PageHeader'
 import { FontSizeControl } from '../components/FontSizeControl'
-import { ThemePicker } from '../components/ThemePicker'
+import { ThemeButton, ThemePicker } from '../components/ThemePicker'
 import { Modal } from '../components/Modal'
 import { exportData, parseImportFile } from '../lib/backup'
 import { exportTables, downloadCsv } from '../lib/exportData'
@@ -302,21 +302,24 @@ export function Settings() {
            대표님이 여기서 한 번에 훑고 채우실 수 있어야 합니다. */}
       <SetupGapsCard />
 
-      {/* 사용 방법 — 언제든 다시 실행 */}
-      <section className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6">
+      {/* 사용 방법 — 언제든 다시 실행
+          0142 — 위 줄의 「화면 색 · 이 시스템을 만든 이유 · 사용 방법」 세 단추를 여기로 모았습니다 (PC 위 줄에서는 뺌). */}
+      <section data-settings-help className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
           <PlayCircle size={22} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="t-card break-keep text-navy-900">도움말</h2>
+          <h2 className="t-card break-keep text-navy-900">도움말 · 화면 색</h2>
           <p className="t-muted mt-1 break-keep">
             「사용 방법」은 화면을 하나씩 짚어 어디에 무엇을 입력하는지 역할에 맞게 안내합니다.
             「이 시스템을 만든 이유」는 왜 시작했고 회사가 어디로 가려는지 읽는 글입니다 — 목적이 다릅니다.
+            「화면 색」은 시스템 전체 색만 바꿉니다.
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-          <TourWhyButton className="btn-ghost" />
           <TourButton className="btn-primary" label="사용 방법 보기" />
+          <TourWhyButton className="btn-ghost" />
+          <ThemeButton className="btn-ghost" showLabel />
         </div>
       </section>
 

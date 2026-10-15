@@ -28,6 +28,13 @@ import {
   UserCog,
   FileSpreadsheet,
   TrendingUp,
+  Route,
+  ShoppingCart,
+  GraduationCap,
+  Mail,
+  Link2,
+  Users,
+  Cloud,
   type LucideIcon,
 } from 'lucide-react'
 import type { Tone } from './tone'
@@ -109,6 +116,25 @@ export const PLANNED: string[] = [
   '병원 다중 담당자 계정',
   'SaaS 서비스 확장',
 ]
+
+/**
+ * ⚠ 신용보증기금 발표 기간 임시 (0142) — 「추가 개발 예정」을 PC 사이드바의
+ *   「오늘 업무」(신보 발표 시연) 바로 아래에 늘 펼쳐 둡니다. 아이콘은 한 가지 색.
+ *   발표가 끝나면 false 로 — 예전처럼 「관리」 묶음 맨 아래(자물쇠 줄)로 돌아갑니다.
+ *   폰 「더보기」는 그대로 「관리」 안에 둡니다.
+ */
+export const PLANNED_SHOWCASE = true
+
+/** 펼쳐 보여 줄 때의 아이콘 (색은 한 가지 — Layout 의 PlannedShowcase) */
+export const PLANNED_ICON: Record<string, LucideIcon> = {
+  'AI 배차·경로 고도화': Route,
+  '소모품 주문·결제': ShoppingCart,
+  '배출자 교육 이력 관리': GraduationCap,
+  '리포트 자동 발송(PDF·메일)': Mail,
+  '올바로 API 연동': Link2,
+  '병원 다중 담당자 계정': Users,
+  'SaaS 서비스 확장': Cloud,
+}
 
 /**
  * 목차 한 묶음.

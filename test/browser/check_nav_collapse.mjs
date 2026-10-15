@@ -103,13 +103,22 @@ ok(toolBadge === (await tools.locator('a').count()), '배지 숫자가 실제 �
 await adminBtn.click()
 await p.waitForTimeout(350)
 ok((await asideText()).includes('감사로그'), '펼치면 「감사로그」가 보임')
-//  ⚠ 0110 — 「추가 개발 예정」은 「활용 계획」과 같은 자리(관리)로 옮겼습니다.
+//  ⚠ 0142 — 신보 발표 기간 임시: 「추가 개발 예정」은 「오늘 업무」 바로 아래에 늘 펼쳐 둡니다
+//    (nav.ts PLANNED_SHOWCASE). 「관리」 안에는 예정 줄이 없고, 배지는 쓸 수 있는 줄 수.
 const usable = await admin.locator('a').count()
 const planned = await admin.locator('[data-nav-planned]').count()
-ok(planned > 0, '「추가 개발 예정」이 관리 안에 함께 들어 있음', `${planned}가지`)
+const show = p.locator('[data-nav-planned-showcase]')
+ok(planned === 0 && (await show.locator('[data-nav-planned]').count()) === 7, '「추가 개발 예정」 7가지는 오늘 업무 아래에 (관리 안에는 없음)', `관리 ${planned} · 펼침 ${await show.locator('[data-nav-planned]').count()}`)
 ok((await asideText()).includes('추가 개발 예정'), '예정 줄에 소제목이 붙음')
-ok(adminBadge === usable + planned, '관리 배지도 실제 줄 수와 같음',
-  `배지 ${adminBadge} = 쓸 수 있는 것 ${usable} + 예정 ${planned}`)
+ok(adminBadge === usable, '관리 배지도 실제 줄 수와 같음', `배지 ${adminBadge} = 쓸 수 있는 것 ${usable}`)
+const order = await p.locator('aside nav').evaluate((nav) => {
+  const t = nav.querySelector('[data-nav-group="today"]'), s = nav.querySelector('[data-nav-planned-showcase]'), o = nav.querySelector('[data-nav-group-header="현장·운영"]')
+  const before = (a, b) => !!(a && b && a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+  return before(t, s) && before(s, o)
+})
+ok(order, '자리 — 오늘 업무(신보 발표 시연) → 추가 개발 예정 → 현장·운영')
+const tiles = await show.locator('[data-planned-icon]').evaluateAll((els) => [...new Set(els.map((e) => getComputedStyle(e).color + '|' + getComputedStyle(e).backgroundColor))])
+ok(tiles.length === 1, '아이콘 색은 한 가지', tiles.join(' / '))
 const h1 = await aside.evaluate((el) => el.scrollHeight)
 ok(h1 > h0, '펼치면 메뉴가 길어짐', `${h0}px → ${h1}px`)
 await p.screenshot({ path: `${SHOT}/nav-expanded.png`, fullPage: false })
@@ -147,18 +156,16 @@ ok((await p.locator('[data-nav-group="admin"]').count()) === 0, '상관없는 �
 //    남아 있으면 같은 것이 두 군데 보입니다.
 ok((await p.locator('[data-nav-group-header="추가 개발 예정"]').count()) === 0,
   '「추가 개발 예정」은 따로 있는 묶음이 아님')
-//    접힌 상태에서는 예정 항목도 같이 숨습니다.
+//    0142 — 발표 기간에는 예정 항목을 늘 펼쳐 둡니다 (묶음을 접어도 보임)
 await p.evaluate(() => window.localStorage.removeItem('beonemirae-ops:nav-open'))
 await p.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
 await p.waitForTimeout(2000)
-ok(!(await asideText()).includes('올바로 API 연동'), '접으면 예정 항목도 같이 숨음')
+ok((await asideText()).includes('올바로 API 연동'), '발표 기간 — 예정 항목이 처음부터 펼쳐져 보임')
 
 // 7) 예정 항목 — 화면으로 데려가지 않고, 정직한 미리보기만 엽니다 (0095)
 //    ⚠ 재는 자리를 옮겼습니다. 예전 보장은 「눌러도 아무 일이 없다」였는데,
 //      대표님 지시로 누르면 「계획 중」 미리보기가 열립니다. 지키는 것은
 //      그대로입니다 — 링크가 아니고, 화면을 옮기지 않고, 되는 척하지 않습니다.
-await p.locator('[data-nav-group-header="관리"]').click()
-await p.waitForTimeout(350)
 const lock = p.locator('[data-nav-planned]').first()
 const label = (await lock.textContent()) ?? ''
 ok((await lock.evaluate((e) => e.tagName)) !== 'A', '예정 항목은 링크가 아님', label.replace(/\s+/g, ' '))

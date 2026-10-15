@@ -117,8 +117,13 @@ async function startTour(p, width) {
     await p.click('[data-help-open]')
     await p.waitForTimeout(700)
     await p.click('[data-help-sheet] [data-tour-start]')
+  } else if (await p.locator('[data-tour-start]:visible').count()) {
+    await p.locator('[data-tour-start]:visible').first().click()
   } else {
-    await p.click('[data-tour-start]')
+    //  0142 — 대표 계정은 「사용 방법」이 설정 맨 위 칸에 있습니다 (위 줄에서 뺌)
+    await p.goto(`${W.BASE}/settings`, { waitUntil: 'domcontentloaded' })
+    await p.waitForTimeout(1500)
+    await p.click('[data-settings-help] [data-tour-start]')
   }
   await p.locator('[data-tour-card]').first().waitFor({ state: 'visible', timeout: 8000 })
   await p.waitForTimeout(500)
