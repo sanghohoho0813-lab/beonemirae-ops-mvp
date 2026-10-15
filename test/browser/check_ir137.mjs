@@ -239,6 +239,8 @@ const FULL = {
 // ── ⑦ 들어오는 길 · 권한 · 폰 ───────────────────────────────────────────────
 {
   const { ctx, p } = await open('admin', '/presentation', { routes: FULL })
+  await p.locator('[data-presenter-prep]').waitFor({ timeout: 10000 })
+  await p.evaluate(() => { const d = document.querySelector('[data-presenter-prep]'); if (d && !d.open) d.open = true })  //  0140 — 「발표 준비」 칸 펼치기
   await p.locator('[data-open-ir]').waitFor({ state: 'visible', timeout: 10000 })
   await p.locator('[data-open-ir]').click()
   await p.locator('[data-ir]').waitFor({ state: 'visible', timeout: 8000 })

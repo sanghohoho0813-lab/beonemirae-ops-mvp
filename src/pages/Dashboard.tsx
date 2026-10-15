@@ -209,9 +209,12 @@ export function Dashboard() {
              0108 에는 이 구역 맨 아래에 두었는데 페이지 절반 아래라 아무도
              못 봤습니다. 오늘 할 일 목록보다 뒤에 있을 이유가 없어 맨 위로
              올립니다 — 여전히 한 줄이라 아래 일정을 크게 밀지 않습니다. */}
-        <CoachLine className="mb-2.5" />
+        {/*  0140 — 발표 중에는 숨김(준비용 안내 · data-hide-presenting) */}
+        <div data-hide-presenting className="contents">
+          <CoachLine className="mb-2.5" />
+        </div>
         {/* 실제 운영 전환 직후 — 무엇부터 해야 하는지 (다 끝나면 사라집니다) */}
-        <div className="hidden lg:block">
+        <div data-hide-presenting className="hidden lg:block">
           <StartHere data={data} />
         </div>
         <TodayFocus data={data} />
@@ -223,17 +226,23 @@ export function Dashboard() {
                오늘 할 일이 y=497 까지 밀려(검사가 잡았습니다) 첫 화면에서
                사라졌습니다 — 대표님이 이 화면을 여는 이유가 그것입니다.
                채워야 할 값은 오늘 나갈 차보다 급하지 않습니다. */}
-        <SetupGapsLine />
+        <div data-hide-presenting className="contents">
+          <SetupGapsLine />
+        </div>
         {/*  0106 — 하루 한 줄: 「오늘 엑셀·카톡에 다시 적은 것이 있었나」.
              답하지 않아도 아무것도 막지 않고, 답하면 그날은 사라집니다. */}
-        <ExcelCheckLine />
+        <div data-hide-presenting className="contents">
+          <ExcelCheckLine />
+        </div>
         {/*  0108 — AX 코치 한 줄. 오늘 할 일이 없으면 이 줄도 없습니다.
              자세한 것은 /ax-coach 에 있고, 여기서는 「몇 개인지」만 알립니다. */}
       </section>
 
       {/* 사용법 안내는 오늘 할 일 다음입니다.
           처음 오신 분께도 오늘 처리할 일이 먼저 보여야 합니다. */}
-      <TourBanner />
+      <div data-hide-presenting className="contents">
+        <TourBanner />
+      </div>
 
       <AreaDivider />
 

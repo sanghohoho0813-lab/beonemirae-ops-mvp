@@ -162,6 +162,11 @@ const S = makeShared()
   ok((await p.locator('[data-presenter-prep]').count()) === 1 && !(await p.locator('[data-presenter-prep]').evaluate((d) => d.open)), '③ 「발표 준비」 칸은 기본 접힘')
   ok(!/시연 준비 상태|쓰지 않는 말|빠른 연습|확인 전|미검증|가짜|실제 거래처입니다|직접 확인/.test(head), '③ 보이는 화면에 준비용 문구 없음 (점검표 · 표현 가이드 · 연습 · 「확인 전」)', head.slice(0, 200))
   ok((await p.locator('[data-prep-ai-dot]').count()) === 1, '③ AI 호출 성공 기록이 없으면 「발표 준비」 옆에 작은 점 (대표님만 알아봄)')
+  //  발표 중에는 내부용 단추 · 준비용 안내를 숨김 (data-presenting) — 업무 화면에서는 그대로
+  const hidden = await p.evaluate(() => document.documentElement.hasAttribute('data-presenting')
+    && [...document.querySelectorAll('[data-hide-presenting]')].length > 0
+    && [...document.querySelectorAll('[data-hide-presenting]')].every((e) => getComputedStyle(e).display === 'none'))
+  ok(hidden && !/사용 후기 남기기/.test(flat(await p.locator('body').innerText())), '③ 발표 화면 — 「사용 후기 남기기」 · AX 코치 같은 내부용 칸 숨김')
   ok(!/자동\s*배차|수거량을? 예측|완전 자동/.test(flat(await p.textContent('main'))) || /쓰지 않는 말/.test(flat(await p.textContent('main'))), '③ 금지 표현은 「쓰지 않는 말」 목록에만')
 
   //  ⑤ AI 시연 시작 — 두 번 눌러도 시연 거래처 하나 · 시연 요청 하나
@@ -275,6 +280,11 @@ for (const path of ['/', '/today', '/collection', '/clients']) {
   const { ctx, p, errors } = await open('admin', path)
   const main = flat(await p.textContent('main').catch(() => ''))
   ok(main.length > 80 && errors.length === 0 && (await p.locator('[data-presenter-card]').count()) === 0, `⑪ ${path} — 정상 · 안내 카드 없음`, errors.join(' | ') || main.slice(0, 60))
+  if (path === '/') {
+    const back = await p.evaluate(() => !document.documentElement.hasAttribute('data-presenting')
+      && [...document.querySelectorAll('[data-hide-presenting]')].some((e) => getComputedStyle(e).display !== 'none'))
+    ok(back && /사용 후기 남기기/.test(flat(await p.locator('body').innerText())), '⑪ 발표가 아닐 때는 AX 코치 · 사용 후기 단추 그대로')
+  }
   await ctx.close()
 }
 {

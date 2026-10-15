@@ -90,6 +90,7 @@ const stepInfo = async (p) => ({
 
 /** 시연 투어를 켜고 ①단계가 뜰 때까지 */
 async function startDemo(p) {
+  await p.evaluate(() => { const d = document.querySelector('[data-presenter-prep]'); if (d && !d.open) d.open = true })  //  0140 — 「발표 준비」 칸 펼치기
   await p.locator('[data-demo-tour] [data-tour-start]').click()
   await p.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 10000 })
   await p.waitForTimeout(400)
@@ -315,6 +316,7 @@ console.log('── ⓘ 단계 전환이 기다리지 않는다 ──')
 {
   const { ctx, p } = await open('/presentation', { routes: { ax_coach_missions: [] } })
   //  ① 은 화면까지 바뀝니다 (/presentation → /ax-coach). 그래도 기다리는 느낌이 없어야 합니다.
+  await p.evaluate(() => { const d = document.querySelector('[data-presenter-prep]'); if (d && !d.open) d.open = true })  //  0140 — 「발표 준비」 칸 펼치기
   const t0 = Date.now()
   await p.locator('[data-demo-tour] [data-tour-start]').click()
   await p.locator('[data-tour-title]:has-text("무엇이 비어 있는가")').waitFor({ state: 'visible', timeout: 8000 })

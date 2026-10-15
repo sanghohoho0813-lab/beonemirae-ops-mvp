@@ -390,7 +390,9 @@ function Sidebar() {
       {/*  ⚠ 0121 — 묶음 **밖**입니다. 0110 에서 「AX·심사」가 접힌 채로 시작하게
            되면서 AX 코치로 들어가는 단추가 첫 화면에서 사라졌습니다. 여섯
            묶음 구조는 그대로 두고, 오늘 상태를 이고 있는 자리 하나만 더합니다. */}
-      <CoachPin />
+      <div data-hide-presenting className="contents">
+        <CoachPin />
+      </div>
 
       <nav className="flex-1 px-3">
         {groups.map((g) => (
@@ -832,6 +834,7 @@ export function Layout() {
                    같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈립니다.
                    **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고
                    이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
+              <span data-hide-presenting className="contents">
               <FeedbackButton
                 className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
                 /*  PC 는 한 줄짜리 알약이라 아래에 붙일 자리가 없습니다 —
@@ -839,6 +842,7 @@ export function Layout() {
                     들어갑니다(그쪽은 두 줄짜리 칸이라). */
                 label="사용 후기 남기기 (개발자에게 요청)"
               />
+              </span>
             </div>
             {/*
               안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어

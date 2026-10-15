@@ -430,3 +430,7 @@
 @media (prefers-reduced-motion: reduce) {
   [data-presenter-spot] { animation: none; }
 }
+
+/*  발표 중 숨김 (0140) — 심사위원이 보면 애매한 준비용 안내 · 내부용 단추.
+    PresenterContext 가 발표 중일 때만 <html data-presenting> 을 붙입니다. */
+html[data-presenting] [data-hide-presenting] { display: none !important; }

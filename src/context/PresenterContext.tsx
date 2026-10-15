@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FULL_ORDER, PRESENTER_STEPS, clearRun, loadRun, saveRun, stepIndex, type PresenterRun } from '../lib/presenter'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,19 @@ const Ctx = createContext<PresenterValue | null>(null)
 
 export function PresenterProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [run, setRun] = useState<PresenterRun | null>(() => loadRun())
+
+  //  발표 중(안내 카드가 켜져 있거나 발표 시작 화면)에는 화면에 「발표 중」 표시 —
+  //  index.css 가 [data-hide-presenting] 칸(AX 코치 · 설정 안내 · 하루 질문 · 사용 후기 단추)을 숨깁니다.
+  //  업무 데이터 · 기능은 그대로입니다. 끝내면 바로 원래대로.
+  const presenting = !!run || pathname === '/presentation'
+  useEffect(() => {
+    const el = document.documentElement
+    if (presenting) el.setAttribute('data-presenting', '1')
+    else el.removeAttribute('data-presenting')
+    return () => el.removeAttribute('data-presenting')
+  }, [presenting])
 
   useEffect(() => {
     if (run) saveRun({ order: run.order, pos: run.pos, clientId: run.clientId, demoRequestId: run.demoRequestId })
