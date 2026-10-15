@@ -11,7 +11,7 @@ import type { AppData, Client, ClientRequest } from '../types'
 //  시연용 거래처의 시연 요청 하나를 바로 엽니다.
 //
 //   · 시연용 거래처(isDemoGenerated) 가 있으면 그것을 씁니다. 없으면 하나만 만듭니다
-//     — 이름 「시연용 병원 (신보 발표)」, 주소 · 연락처 · 사업자 정보 **비움**(지어내지 않음).
+//     — 이름 「시연용 병원」, 주소 · 연락처 · 사업자 정보 **비움**(지어내지 않음).
 //     시연용 거래처는 성과 · 실증 · IR · 준비도 숫자에서 이미 빠지고(isDemoGenerated),
 //     그 요청의 AI 호출은 「시연 호출」(request_triage_demo)로 따로 기록됩니다.
 //   · 같은 시연 요청(같은 글 · 처리 완료 전)이 있으면 그것을 씁니다. 없으면 하나만 넣습니다.
@@ -20,7 +20,7 @@ import type { AppData, Client, ClientRequest } from '../types'
 //   · 실제 거래처 자료는 읽기만 합니다. 고치거나 그 이름으로 요청을 넣지 않습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const DEMO_CLIENT_NAME = '시연용 병원 (신보 발표)'
+export const DEMO_CLIENT_NAME = '시연용 병원'
 /** 시연용 거래처 만들기 시도 표 — 늘 같은 값이라 두 번 만들어지지 않습니다 */
 const DEMO_CLIENT_REQ = '5b0e0140-0000-4000-8000-000000000001'
 const REQ_KEY = 'beonemirae-ops:presenter-demo-req'
@@ -60,7 +60,7 @@ export function usePrepareDemo() {
       let createdClient = false
       if (!client) {
         const made = await addClient(
-          { ...emptyClientForm, name: DEMO_CLIENT_NAME, isDemoGenerated: true, note: '신보 발표 AI 시연용 — 실적 · 성과에서 빠짐. 주소 · 연락처는 비워 둠' },
+          { ...emptyClientForm, name: DEMO_CLIENT_NAME, isDemoGenerated: true, note: 'AI 시연용 — 실적 · 성과에서 빠짐. 주소 · 연락처는 비워 둠' },
           { requestId: DEMO_CLIENT_REQ },
         )
         if (!made) throw new Error('시연용 거래처를 만들지 못했습니다 — 화면 위쪽 저장 오류 안내를 확인해 주세요.')

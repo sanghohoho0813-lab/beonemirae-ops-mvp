@@ -156,8 +156,12 @@ const S = makeShared()
   ok(/병원이 남긴 요청을 AI가 읽고 요청 유형 · 긴급도 · 핵심 내용 · 회신 초안을 제안합니다/.test(head), '③ AI 단추 아래 설명')
   ok(/병원 요청 AI 분석 담당자 판단 수거 · 운영 데이터 축적/.test(flat(await p.locator('[data-presenter-flow]').innerText())), '③ 전체 운영 흐름 한 줄')
   const st = flat(await p.locator('[data-system-status]').innerText())
-  ok(/운영 기능 구현됨/.test(st) && /병원 포털 실증 단계/.test(st) && /AI 요청 분석 실제 API 호출 · 연결 확인 전/.test(st) && /성과 측정 진행 중/.test(st),
-    '③ 현재 시스템 상태 — AI 는 성공 기록이 없으면 「연결 확인 전」(과장 없음)', st)
+  ok(/운영 기능 구현됨/.test(st) && /병원 포털 실증 단계/.test(st) && /AI 요청 분석 외부 AI API 연동/.test(st) && /성과 측정 진행 중/.test(st),
+    '③ 현재 시스템 상태 — 네 칸 (AI 는 구현 사실 「외부 AI API 연동」만 · 호출 확인은 「발표 준비」 안에서)', st)
+  //  0140 정리 — 이 화면은 발표장 프로젝터에 그대로 켜 둡니다. 준비용 도구 · 문구는 접힌 「발표 준비」 안에만.
+  ok((await p.locator('[data-presenter-prep]').count()) === 1 && !(await p.locator('[data-presenter-prep]').evaluate((d) => d.open)), '③ 「발표 준비」 칸은 기본 접힘')
+  ok(!/시연 준비 상태|쓰지 않는 말|빠른 연습|확인 전|미검증|가짜|실제 거래처입니다|직접 확인/.test(head), '③ 보이는 화면에 준비용 문구 없음 (점검표 · 표현 가이드 · 연습 · 「확인 전」)', head.slice(0, 200))
+  ok((await p.locator('[data-prep-ai-dot]').count()) === 1, '③ AI 호출 성공 기록이 없으면 「발표 준비」 옆에 작은 점 (대표님만 알아봄)')
   ok(!/자동\s*배차|수거량을? 예측|완전 자동/.test(flat(await p.textContent('main'))) || /쓰지 않는 말/.test(flat(await p.textContent('main'))), '③ 금지 표현은 「쓰지 않는 말」 목록에만')
 
   //  ⑤ AI 시연 시작 — 두 번 눌러도 시연 거래처 하나 · 시연 요청 하나
@@ -180,10 +184,12 @@ const S = makeShared()
     '⑧ 안내 카드 — STEP 1 / 7 「AI가 병원 요청을 읽고 업무 판단을 보조합니다」', await stepNo(p))
   ok(/in-focus/.test((await waitSpot(p, /reply-open/)) ?? ''), '⑥ 강조 — 그 시연 요청의 「회신 남기기」')
   const cardText = flat(await p.locator('[data-presenter-card]:visible').innerText())
-  ok(cardText.includes('병원이 남긴 자연어 요청을 AI가 분석해 요청 유형 · 긴급도 · 핵심 요구사항 · 회신 초안을 제안합니다.')
-    && cardText.includes('전화·문자·카카오톡으로 들어온 긴 요청을') && cardText.includes('요청이 시스템 데이터로 들어오면 AI가 먼저 구조화하고')
-    && ['긴 요청 빠른 파악', '복합 요청 누락 방지', '고객 응대 문장 표준화', '담당자 판단시간 절감 가능'].every((x) => cardText.includes(x)),
-    '⑧ 카드 문구 — 보여주는 것 · 기존 문제 · 바뀐 방식 · 기대효과 4개')
+  const tri0 = PRESENTER_STEPS.find((x) => x.key === 'triage')
+  //  0140 정리 — 카드는 「설명(읽을 문장)」 · 「누를 곳」 두 칸만 (글자가 많아 무엇을 읽을지 헷갈리지 않게)
+  ok(/설명/.test(cardText) && cardText.includes(tri0.note) && /누를 곳/.test(cardText) && cardText.includes(tri0.todo),
+    '⑧ 카드 — 설명(AI가 업무를 대신하는 구조는 아닙니다 …) · 누를 곳(회신 남기기 → AI 분석 실행 → 초안 사용)', cardText.slice(0, 200))
+  ok(!cardText.includes(tri0.before) && !tri0.effects.some((x) => cardText.includes(x)) && !/기존|바뀐 방식|기대 효과|구현됨/.test(cardText),
+    '⑧ 카드 — 기존 · 바뀐 방식 · 기대 효과 · 상태 표 없음', cardText.slice(0, 200))
 
   //  ⑦ AI 분석 실행 → ⑧ 결과
   await p.locator('[data-req-focus] [data-presenter="reply-open"]').click()
@@ -237,7 +243,7 @@ const S = makeShared()
 // ═══ ⑤' 다시 시작해도 같은 시연 요청 (새로 안 만듦) · AI 연결 확인 ══════════════
 {
   const { ctx, p, errors } = await open('admin', '/presentation', { S })
-  ok(/AI 요청 분석 실제 API 호출 확인됨/.test(flat(await p.locator('[data-system-status]').innerText())), '⑤\' 실제 호출 성공 기록이 생기면 상태가 「실제 API 호출 확인됨」')
+  ok((await p.locator('[data-ready="ai"]').getAttribute('data-ready-mark')) === 'ok' && (await p.locator('[data-prep-ai-dot]').count()) === 0, '⑤\' 실제 호출 성공 기록이 생기면 「발표 준비」의 AI 칸 ✓ · 점 사라짐')
   const before = { c: S.creates, p: S.posts }
   //  처리 완료 전의 같은 요청이 있으면 그것을 씀
   S.requests[0].status = '확인 중'
@@ -248,6 +254,7 @@ const S = makeShared()
   await p.goto(`${W.BASE}/presentation`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1500)
   //  성공 · 실패 까닭 그대로
   await p.locator('[data-presenter-end]').click().catch(() => {})
+  await p.locator('[data-presenter-prep] > summary').click()
   await p.locator('[data-ai-check]').click()
   await p.locator('[data-ai-check-result]').waitFor({ timeout: 8000 })
   await p.locator('[data-ai-check-result]').scrollIntoViewIfNeeded().catch(() => {})

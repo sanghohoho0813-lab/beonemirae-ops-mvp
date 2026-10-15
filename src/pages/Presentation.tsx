@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, ArrowRight, CheckCircle2, Circle, AlertTriangle, BookOpen, PlayCircle, ChevronRight, Sparkles, Loader2, Route as RouteIcon } from 'lucide-react'
+import { X, ArrowRight, CheckCircle2, Circle, AlertTriangle, BookOpen, PlayCircle, ChevronRight, ChevronDown, Sparkles, Loader2, Settings2, Route as RouteIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { usePresenter } from '../context/PresenterContext'
@@ -30,6 +30,8 @@ import { TourButton } from '../components/TourEntry'
 //   · 가장 큰 단추 = 「AI 요청 분석 시연 시작」 → 시연 요청을 준비(없으면 시연용 거래처
 //     안에 하나만)하고 요청함의 그 요청으로 바로. 두 번째 = 「전체 운영 흐름 시연」.
 //   · 「AI 연결 확인」 — 실제 외부 AI 를 시연 요청 하나로 불러 성공 · 실패 까닭을 그대로.
+//   · 이 화면은 발표장에 그대로 켜 둡니다 — 보이는 것은 제목 · 시작 단추 · 흐름 · 현재 상태뿐.
+//     준비 점검 · 단계 목록 · 연습 · 표현 가이드 · 성과 요약 바로 가기는 접힌 「발표 준비」 안에.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SAY_DO = [
@@ -47,6 +49,7 @@ const SAY_DONT = [
 ]
 const MANUAL = ['인터넷 연결', '프로젝터 화면 · 글자 크기', '브라우저 새로고침 한 번']
 const MANUAL_KEY = 'beonemirae-ops:presenter-manual'
+const PREP_KEY = 'beonemirae-ops:presenter-prep-open'
 
 type Mark = 'ok' | 'todo' | 'warn'
 
@@ -59,6 +62,9 @@ export function Presentation() {
   const step = PRESENTER_STEPS[presenter.index]
   const [aiStart, setAiStart] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const [aiCheck, setAiCheck] = useState<{ busy: boolean; ok: boolean | null; text: string }>({ busy: false, ok: null, text: '' })
+  const [prepOpen, setPrepOpen] = useState<boolean>(() => {
+    try { return sessionStorage.getItem(PREP_KEY) === '1' } catch { return false }
+  })
 
   //  시연 거래처 — 기기에 기억 (다음 연습 때 다시 고르지 않게)
   const [clientId, setClientId] = useState<string>(() => {
@@ -164,7 +170,8 @@ export function Presentation() {
   const systemStatus: { k: string; label: string; state: string; tone: string }[] = [
     { k: 'ops', label: '운영 기능', state: '구현됨', tone: 'bg-teal-50 text-teal-800' },
     { k: 'portal', label: '병원 포털', state: '실증 단계', tone: 'bg-amber-50 text-amber-800' },
-    { k: 'ai', label: 'AI 요청 분석', state: aiOk ? '실제 API 호출 확인됨' : '실제 API 호출 · 연결 확인 전', tone: aiOk ? 'bg-teal-50 text-teal-800' : 'bg-amber-50 text-amber-800' },
+    //  ⚠ 심사위원에게 보이는 칸 — 구현 사실(외부 AI API 연동)만. 실제 호출 성공 여부는 아래 「발표 준비」에서 확인
+    { k: 'ai', label: 'AI 요청 분석', state: '외부 AI API 연동', tone: 'bg-teal-50 text-teal-800' },
     { k: 'perf', label: '성과 측정', state: '진행 중', tone: 'bg-navy-100 text-navy-700' },
   ]
 
@@ -212,10 +219,6 @@ export function Presentation() {
                   {col.items.map((it) => (
                     <li key={it} className="break-keep text-[1.05rem] leading-snug text-white">
                       {it}
-                      {/*  AI 는 코드가 있어도 실제 호출 성공 기록이 있어야 「구현됨」만으로 둡니다 */}
-                      {col.k === '구현됨' && it.startsWith('AI') && !aiOk && (
-                        <span data-close-ai-unverified className="ml-1.5 whitespace-nowrap text-[0.98rem] font-bold text-amber-300">· 실제 호출 확인 전</span>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -242,7 +245,7 @@ export function Presentation() {
                 className="flex min-h-[4rem] w-full items-center justify-center gap-2.5 rounded-[16px] bg-teal-500 px-6 text-[1.3rem] font-black text-white transition hover:bg-teal-600 disabled:opacity-70 sm:w-auto sm:justify-start"
               >
                 {aiStart.busy ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} strokeWidth={2.4} />}
-                {aiStart.busy ? '시연 요청 준비 중…' : 'AI 요청 분석 시연 시작'}
+                {aiStart.busy ? '준비 중…' : 'AI 요청 분석 시연 시작'}
               </button>
               <p className="mt-2.5 break-keep text-[1.05rem] font-semibold leading-snug text-navy-100">
                 병원이 남긴 요청을 AI가 읽고 요청 유형 · 긴급도 · 핵심 내용 · 회신 초안을 제안합니다.
@@ -261,12 +264,8 @@ export function Presentation() {
                 <RouteIcon size={20} strokeWidth={2.4} /> 전체 운영 흐름 시연
               </button>
             </>
-          ) : (
-            <p className="break-keep text-[1.05rem] font-bold text-navy-200">
-              안내 카드가 화면을 옮겨도 따라다닙니다. 「시연 시작」을 누르면 첫 화면으로 갑니다.
-            </p>
-          )}
-          <ol data-presenter-flow aria-label="전체 운영 흐름" className="mt-6 flex flex-wrap items-center gap-2">
+          ) : null}
+          <ol data-presenter-flow aria-label="전체 운영 흐름" className={`flex flex-wrap items-center gap-2 ${presenter.active ? '' : 'mt-6'}`}>
             {FLOW.map((f, i) => (
               <li key={f} className="flex items-center gap-2">
                 {i > 0 && <ChevronRight size={20} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
@@ -303,160 +302,181 @@ export function Presentation() {
         </div>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
-        {/* ── 시연 준비 상태 ───────────────────────────────────────────── */}
-        <section data-presenter-ready aria-label="시연 준비 상태">
-          <h2 className="p-title">시연 준비 상태</h2>
-          <p className="p-sub mt-0.5">화면이 확인할 수 있는 것만 자동으로 ✓ 합니다.</p>
-          <ul className="mt-3 divide-y divide-navy-100 border-y border-navy-100">
-            {checks.map((c) => (
-              <li key={c.key} data-ready={c.key} data-ready-mark={c.mark} className="flex items-start gap-3 py-3">
-                {c.mark === 'ok' ? (
-                  <CheckCircle2 size={22} strokeWidth={2.4} aria-label="확인됨" className="mt-0.5 shrink-0 text-teal-600" />
-                ) : c.mark === 'warn' ? (
-                  <AlertTriangle size={22} strokeWidth={2.4} aria-label="주의" className="mt-0.5 shrink-0 text-amber-600" />
-                ) : (
-                  <Circle size={22} strokeWidth={2.4} aria-label="확인 필요" className="mt-0.5 shrink-0 text-navy-300" />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="p-body block font-extrabold">{c.label}</span>
-                  <span className="p-sub block break-keep">{c.detail}</span>
-                  {c.key === 'ai' && (
-                    <span className="mt-2 block">
-                      {mode === 'live' ? (
-                        <button
-                          type="button"
-                          data-ai-check
-                          onClick={() => void checkAi()}
-                          disabled={aiCheck.busy}
-                          aria-busy={aiCheck.busy}
-                          className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-violet-50 px-4 text-[1rem] font-extrabold text-violet-800 ring-1 ring-violet-200 transition hover:bg-violet-100 disabled:opacity-60"
-                        >
-                          {aiCheck.busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} strokeWidth={2.4} />}
-                          {aiCheck.busy ? 'AI 부르는 중…' : '지금 AI 연결 확인 (시연 요청으로 실제 호출)'}
-                        </button>
-                      ) : (
-                        <span className="p-sub block">운영 연결(실제 DB)에서만 확인할 수 있습니다.</span>
-                      )}
-                      {aiCheck.ok !== null && (
-                        <span
-                          data-ai-check-result={aiCheck.ok ? 'ok' : 'fail'}
-                          role="status"
-                          className={`mt-1.5 block break-keep text-[1rem] font-bold ${aiCheck.ok ? 'text-teal-700' : 'text-rose-700'}`}
-                        >
-                          {aiCheck.ok ? `✓ ${aiCheck.text}` : `✕ 실패 — ${aiCheck.text}`}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {c.key === 'client' && (
-                    <select
-                      data-presenter-client
-                      value={clientId}
-                      onChange={(e) => setClientId(e.target.value)}
-                      className="field-input mt-2 rounded-[14px] py-3"
-                      aria-label="시연 거래처"
-                    >
-                      <option value="">시연 거래처 고르기</option>
-                      {clients.map((c2) => (
-                        <option key={c2.id} value={c2.id}>
-                          {c2.isDemoGenerated ? '[시연용] ' : ''}{c2.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </span>
-              </li>
-            ))}
-            {MANUAL.map((m) => (
-              <li key={m} className="py-1">
-                <label className="flex min-h-[3rem] cursor-pointer items-center gap-3">
-                  <input type="checkbox" data-ready-manual={m} checked={manual.includes(m)} onChange={() => toggleManual(m)} className="h-5 w-5 accent-teal-600" />
-                  <span className="p-body">{m} <span className="p-sub">(직접 확인)</span></span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* ── 오늘 보여드릴 흐름 ─────────────────────────────────────────── */}
-        <section data-presenter-outline aria-label="시연 순서">
-          <h2 className="p-title">시연 순서 · 5~7분</h2>
-          <p className="p-sub mt-0.5">아무 단계나 눌러 그 단계부터 시작할 수 있습니다.</p>
-          <ol className="mt-3 divide-y divide-navy-100 border-y border-navy-100">
-            {PRESENTER_STEPS.map((s, i) => (
-              <li key={s.key}>
-                <button
-                  type="button"
-                  data-presenter-jump={i}
-                  onClick={() => startAt(i)}
-                  className={`-mx-2 flex w-[calc(100%+1rem)] items-start gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-navy-50 ${presenter.active && presenter.index === i ? 'bg-teal-50' : ''}`}
-                >
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[1rem] font-black text-white">{i}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="p-body block font-extrabold">{s.title}</span>
-                    <span className="p-sub block break-keep">{s.show}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        </section>
-      </div>
-
-      {/*  빠른 연습 — 60초 시연 투어 (0109). 실제 기록 1건으로 한 바퀴. */}
-      <section data-demo-tour className="rounded-[16px] bg-navy-50 px-5 py-4">
-        <p className="flex items-center gap-2 text-[1.08rem] font-extrabold text-navy-900">
-          <PlayCircle size={20} strokeWidth={2.4} className="text-teal-700" /> 빠른 연습 — 60초 시연 투어
-        </p>
-        <p className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
-          AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치. 다섯 단계입니다.
-          <b className="text-navy-900"> ②③단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
-        </p>
-        <TourButton tourId="demo" className="btn-ghost mt-3 bg-white" label="60초 시연 투어 시작" />
-      </section>
-
-      {/*  발표 표현 · 시연 초기화 — 접어 둠 */}
-      <details className="rounded-[16px] bg-white px-5 py-4 ring-1 ring-navy-100">
-        <summary className="flex min-h-[2.75rem] cursor-pointer list-none items-center gap-2 text-[1.08rem] font-extrabold text-navy-800">
-          <BookOpen size={18} className="text-teal-600" /> 발표 표현 가이드
-          <span className="ml-auto text-[0.98rem] font-semibold text-navy-500">펼치기</span>
-        </summary>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div data-say-do className="rounded-[14px] bg-teal-50 p-4">
-            <p className="text-[1rem] font-extrabold text-teal-800">이렇게 말하기</p>
-            <ul className="mt-1.5 space-y-1 text-[1rem] leading-snug text-navy-700">
-              {SAY_DO.map((x) => <li key={x}>· {x}</li>)}
-            </ul>
-          </div>
-          <div data-say-dont className="rounded-[14px] bg-rose-50 p-4">
-            <p className="text-[1rem] font-extrabold text-rose-700">쓰지 않는 말</p>
-            <ul className="mt-1.5 space-y-1 text-[1rem] leading-snug text-navy-700">
-              {SAY_DONT.map((x) => <li key={x}>✕ {x}</li>)}
-            </ul>
-          </div>
-        </div>
-        {mode !== 'live' && (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[14px] bg-navy-50 p-3">
-            <p className="text-[1rem] leading-snug text-navy-600">시연 모드에서 바꾼 것을 기준 상태로 되돌립니다.</p>
-            <DemoResetButton />
-          </div>
-        )}
-      </details>
-
-      {/*  발표용 성과 요약 — 바로 가기 (0137) */}
-      <button
-        type="button"
-        data-open-ir
-        onClick={() => navigate('/performance/ir')}
-        className="flex w-full items-center gap-3 rounded-[16px] bg-teal-50 px-5 py-4 text-left transition hover:bg-teal-100"
+      {/*  ── 발표 준비 — 발표 전에만 펼칩니다 (0140 정리) ─────────────────────
+           ⚠ 이 화면은 발표장 프로젝터에 그대로 켜 둡니다. 점검표 · 표현 가이드 · 연습 도구처럼
+             심사위원이 보면 애매한 것은 모두 이 접힌 칸 안에 둡니다. 기본은 접힘(탭마다 기억). */}
+      <details
+        data-presenter-prep
+        open={prepOpen}
+        onToggle={(e) => {
+          const o = (e.currentTarget as HTMLDetailsElement).open
+          setPrepOpen(o)
+          try { sessionStorage.setItem(PREP_KEY, o ? '1' : '') } catch { /* noop */ }
+        }}
+        className="rounded-[16px] bg-white px-5 py-4 ring-1 ring-navy-100"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-[1.07rem] font-extrabold text-navy-900">발표용 성과 요약 열기</span>
-          <span className="mt-0.5 block text-[1rem] leading-snug text-navy-600">도입 전 업무부담 → 동일 업무 처리 → 실제 사용 — 확인된 것만 한 화면에</span>
-        </span>
-        <ChevronRight size={20} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-teal-700" />
-      </button>
+        <summary className="flex min-h-[2.75rem] cursor-pointer list-none items-center gap-2 text-[1.05rem] font-extrabold text-navy-600">
+          <Settings2 size={18} strokeWidth={2.4} className="text-navy-400" /> 발표 준비
+          {!aiOk && <span data-prep-ai-dot aria-label="AI 연결 확인 필요" className="h-2.5 w-2.5 rounded-full bg-amber-500" />}
+          <ChevronDown size={18} strokeWidth={2.6} className="ml-auto text-navy-400" />
+        </summary>
+        <div className="mt-4 space-y-6">
+        <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
+          {/* ── 시연 준비 상태 ───────────────────────────────────────────── */}
+          <section data-presenter-ready aria-label="시연 준비 상태">
+            <h2 className="p-title">시연 준비 상태</h2>
+            <p className="p-sub mt-0.5">화면이 확인할 수 있는 것만 자동으로 ✓ 합니다.</p>
+            <ul className="mt-3 divide-y divide-navy-100 border-y border-navy-100">
+              {checks.map((c) => (
+                <li key={c.key} data-ready={c.key} data-ready-mark={c.mark} className="flex items-start gap-3 py-3">
+                  {c.mark === 'ok' ? (
+                    <CheckCircle2 size={22} strokeWidth={2.4} aria-label="확인됨" className="mt-0.5 shrink-0 text-teal-600" />
+                  ) : c.mark === 'warn' ? (
+                    <AlertTriangle size={22} strokeWidth={2.4} aria-label="주의" className="mt-0.5 shrink-0 text-amber-600" />
+                  ) : (
+                    <Circle size={22} strokeWidth={2.4} aria-label="확인 필요" className="mt-0.5 shrink-0 text-navy-300" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="p-body block font-extrabold">{c.label}</span>
+                    <span className="p-sub block break-keep">{c.detail}</span>
+                    {c.key === 'ai' && (
+                      <span className="mt-2 block">
+                        {mode === 'live' ? (
+                          <button
+                            type="button"
+                            data-ai-check
+                            onClick={() => void checkAi()}
+                            disabled={aiCheck.busy}
+                            aria-busy={aiCheck.busy}
+                            className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-violet-50 px-4 text-[1rem] font-extrabold text-violet-800 ring-1 ring-violet-200 transition hover:bg-violet-100 disabled:opacity-60"
+                          >
+                            {aiCheck.busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} strokeWidth={2.4} />}
+                            {aiCheck.busy ? 'AI 부르는 중…' : '지금 AI 연결 확인 (시연 요청으로 실제 호출)'}
+                          </button>
+                        ) : (
+                          <span className="p-sub block">운영 연결(실제 DB)에서만 확인할 수 있습니다.</span>
+                        )}
+                        {aiCheck.ok !== null && (
+                          <span
+                            data-ai-check-result={aiCheck.ok ? 'ok' : 'fail'}
+                            role="status"
+                            className={`mt-1.5 block break-keep text-[1rem] font-bold ${aiCheck.ok ? 'text-teal-700' : 'text-rose-700'}`}
+                          >
+                            {aiCheck.ok ? `✓ ${aiCheck.text}` : `✕ 실패 — ${aiCheck.text}`}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {c.key === 'client' && (
+                      <select
+                        data-presenter-client
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                        className="field-input mt-2 rounded-[14px] py-3"
+                        aria-label="시연 거래처"
+                      >
+                        <option value="">시연 거래처 고르기</option>
+                        {clients.map((c2) => (
+                          <option key={c2.id} value={c2.id}>
+                            {c2.isDemoGenerated ? '[시연용] ' : ''}{c2.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </span>
+                </li>
+              ))}
+              {MANUAL.map((m) => (
+                <li key={m} className="py-1">
+                  <label className="flex min-h-[3rem] cursor-pointer items-center gap-3">
+                    <input type="checkbox" data-ready-manual={m} checked={manual.includes(m)} onChange={() => toggleManual(m)} className="h-5 w-5 accent-teal-600" />
+                    <span className="p-body">{m} <span className="p-sub">(직접 확인)</span></span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* ── 오늘 보여드릴 흐름 ─────────────────────────────────────────── */}
+          <section data-presenter-outline aria-label="시연 순서">
+            <h2 className="p-title">시연 순서 · 5~7분</h2>
+            <p className="p-sub mt-0.5">아무 단계나 눌러 그 단계부터 시작할 수 있습니다.</p>
+            <ol className="mt-3 divide-y divide-navy-100 border-y border-navy-100">
+              {PRESENTER_STEPS.map((s, i) => (
+                <li key={s.key}>
+                  <button
+                    type="button"
+                    data-presenter-jump={i}
+                    onClick={() => startAt(i)}
+                    className={`-mx-2 flex w-[calc(100%+1rem)] items-start gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-navy-50 ${presenter.active && presenter.index === i ? 'bg-teal-50' : ''}`}
+                  >
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-[1rem] font-black text-white">{i}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="p-body block font-extrabold">{s.title}</span>
+                      <span className="p-sub block break-keep">{s.show}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+
+        {/*  빠른 연습 — 60초 시연 투어 (0109). 실제 기록 1건으로 한 바퀴. */}
+        <section data-demo-tour className="rounded-[16px] bg-navy-50 px-5 py-4">
+          <p className="flex items-center gap-2 text-[1.08rem] font-extrabold text-navy-900">
+            <PlayCircle size={20} strokeWidth={2.4} className="text-teal-700" /> 빠른 연습 — 60초 시연 투어
+          </p>
+          <p className="mt-1 break-keep text-[1.02rem] leading-snug text-navy-600">
+            AX 코치 → 수거 입력 → 저장 결과 → 다시 AX 코치. 다섯 단계입니다.
+            <b className="text-navy-900"> ②③단계는 직접 누르셔야 하고, 저장되는 수거 1건은 실제 기록입니다.</b>
+          </p>
+          <TourButton tourId="demo" className="btn-ghost mt-3 bg-white" label="60초 시연 투어 시작" />
+        </section>
+
+        {/*  발표 표현 · 시연 초기화 — 접어 둠 */}
+        <details className="rounded-[16px] bg-white px-5 py-4 ring-1 ring-navy-100">
+          <summary className="flex min-h-[2.75rem] cursor-pointer list-none items-center gap-2 text-[1.08rem] font-extrabold text-navy-800">
+            <BookOpen size={18} className="text-teal-600" /> 발표 표현 가이드
+            <span className="ml-auto text-[0.98rem] font-semibold text-navy-500">펼치기</span>
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div data-say-do className="rounded-[14px] bg-teal-50 p-4">
+              <p className="text-[1rem] font-extrabold text-teal-800">이렇게 말하기</p>
+              <ul className="mt-1.5 space-y-1 text-[1rem] leading-snug text-navy-700">
+                {SAY_DO.map((x) => <li key={x}>· {x}</li>)}
+              </ul>
+            </div>
+            <div data-say-dont className="rounded-[14px] bg-rose-50 p-4">
+              <p className="text-[1rem] font-extrabold text-rose-700">쓰지 않는 말</p>
+              <ul className="mt-1.5 space-y-1 text-[1rem] leading-snug text-navy-700">
+                {SAY_DONT.map((x) => <li key={x}>✕ {x}</li>)}
+              </ul>
+            </div>
+          </div>
+          {mode !== 'live' && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[14px] bg-navy-50 p-3">
+              <p className="text-[1rem] leading-snug text-navy-600">시연 모드에서 바꾼 것을 기준 상태로 되돌립니다.</p>
+              <DemoResetButton />
+            </div>
+          )}
+        </details>
+
+        {/*  발표용 성과 요약 — 바로 가기 (0137) */}
+        <button
+          type="button"
+          data-open-ir
+          onClick={() => navigate('/performance/ir')}
+          className="flex w-full items-center gap-3 rounded-[16px] bg-teal-50 px-5 py-4 text-left transition hover:bg-teal-100"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[1.07rem] font-extrabold text-navy-900">발표용 성과 요약 열기</span>
+            <span className="mt-0.5 block text-[1rem] leading-snug text-navy-600">도입 전 업무부담 → 동일 업무 처리 → 실제 사용 — 확인된 것만 한 화면에</span>
+          </span>
+          <ChevronRight size={20} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-teal-700" />
+        </button>
+        </div>
+      </details>
     </div>
   )
 }

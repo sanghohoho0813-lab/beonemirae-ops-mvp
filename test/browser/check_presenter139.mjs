@@ -38,7 +38,8 @@ const RESULT = {
   basis: '「빨리 찼다」는 표현이 있어 높음으로 봄.', model: 'test-model',
 }
 
-async function open(role, path, { width = 1440, aiCalls = [], clientPick = true, shared = null } = {}) {
+//  0140 정리 — 시작 화면의 준비 도구는 접힌 「발표 준비」 안에 있습니다. 이 검사는 펼친 채로 봅니다(prep).
+async function open(role, path, { width = 1440, aiCalls = [], clientPick = true, shared = null, prep = true } = {}) {
   const prof = { ...W.profileFor(role), font_scale: 'normal' }
   const state = { profile: prof, reqs: 0, writes: [], schemaVersion: 106 }
   const ctx = await b.newContext({ viewport: { width, height: width < 700 ? 844 : 900 }, isMobile: width < 700, hasTouch: width < 700, timezoneId: 'Asia/Seoul' })
@@ -68,11 +69,12 @@ async function open(role, path, { width = 1440, aiCalls = [], clientPick = true,
   const p = await ctx.newPage()
   const errors = []
   p.on('pageerror', (e) => errors.push(String(e)))
-  await p.addInitScript(([k, u, cid, pick]) => {
+  await p.addInitScript(([k, u, cid, pick, prepOpen]) => {
     window.localStorage.setItem(k, JSON.stringify({ access_token: 't', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u }))
     window.localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client,demo')
     if (pick) window.localStorage.setItem('beonemirae-ops:presenter-client', cid)
-  }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }, C0.id, clientPick])
+    if (prepOpen && !window.sessionStorage.getItem('beonemirae-ops:presenter-prep-open')) window.sessionStorage.setItem('beonemirae-ops:presenter-prep-open', '1')
+  }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }, C0.id, clientPick, prep])
   await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)
   await p.waitForTimeout(500)
@@ -184,8 +186,9 @@ for (const role of ['field', 'office']) {
   ok(/시작/.test(await stepNo(p)) && /실제 업무 흐름/.test(flat(await p.locator('[data-presenter-card]:visible [data-presenter-title]').innerText())), '② 시작 → 안내 카드 (시작 · 실제 업무 흐름)')
   ok(/data-presenter-flow/.test((await waitSpot(p, /presenter-flow/)) ?? ''), '② 0단계 — 흐름 띠를 강조')
   const cardText = flat(await card(p).innerText())
-  ok(/지금 보여드리는 것/.test(cardText) && /지금 할 일/.test(cardText) && /발표자 메모/.test(cardText), '② 카드 — 지금 보여드리는 것 · 지금 할 일 · 발표자 메모')
-  ok(!(await p.locator('[data-presenter-note]').evaluate((d) => d.open)), '② 발표자 메모는 기본 접힘')
+  //  0140 정리 — 카드는 프로젝터에 같이 보입니다. 「설명(읽을 문장)」과 「누를 곳」 두 칸만.
+  ok(/설명/.test(cardText) && /누를 곳/.test(cardText) && cardText.includes(PRESENTER_STEPS[0].note), '② 카드 — 설명(읽을 문장) · 누를 곳 두 칸', cardText.slice(0, 120))
+  ok(!/발표자 메모|지금 보여드리는 것|지금 할 일/.test(cardText) && (await p.locator('[data-presenter-note]').count()) === 0, '② 카드 — 예전 칸(발표자 메모 등) 없음')
 
   //  STEP 1 — 오늘 운영 화면
   await p.locator('[data-presenter-card]:visible [data-presenter-next]').click()
@@ -194,7 +197,8 @@ for (const role of ['field', 'office']) {
   ok(/today-focus|today-board/.test((await waitSpot(p, /today-/)) ?? ''), '② STEP 1 — 오늘 할 일 칸 강조')
   await shot(p, '02_today')
   const c1 = flat(await card(p).innerText())
-  ok(/기존/.test(c1) && /바뀐 방식/.test(c1) && /기대 효과/.test(c1) && /구현됨/.test(c1), '② 카드 — 기존 · 바뀐 방식 · 기대 효과 · 상태(구현됨)')
+  ok(!/기존|바뀐 방식|기대 효과|구현됨|실증 단계|측정 중/.test(c1), '② 카드 — 기존 · 바뀐 방식 · 기대 효과 · 상태 표 없음 (글자 줄임)', c1.slice(0, 160))
+  ok(c1.includes(PRESENTER_STEPS[1].note) && c1.includes(PRESENTER_STEPS[1].todo), '② 카드 — 그 단계의 설명 · 누를 곳 그대로', c1.slice(0, 160))
 
   //  ③ 새로고침해도 그대로
   await p.reload({ waitUntil: 'domcontentloaded' })
@@ -232,7 +236,7 @@ for (const role of ['field', 'office']) {
   ok(/portal-cta=urgent/.test((await waitSpot(p, /portal-cta/)) ?? ''), '② STEP 3 — 「긴급수거 요청」 강조')
   await shot(p, '05_portal')
   ok(flat(await p.locator('[data-presenter-card]:visible [data-presenter-sample]').innerText()) === SAMPLE_REQUEST, '② STEP 3 — 예시 문장 + 복사 단추')
-  ok(/추가 채널/.test(flat(await card(p).innerText())), '② STEP 3 — 포털은 추가 채널 (전화 · 문자도 그대로)')
+  ok(/추가 채널/.test(flat(await card(p).innerText())), '② STEP 3 — 설명에 「포털은 추가 채널 (전화 · 문자도 그대로)」')
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: W.BASE })
   await p.locator('[data-presenter-card]:visible [data-presenter-copy]').click()
   await p.waitForTimeout(300)
@@ -258,7 +262,8 @@ for (const role of ['field', 'office']) {
   await p.waitForTimeout(1500)
   ok(new URL(p.url()).pathname === '/requests' && /STEP 4/.test(await stepNo(p)), '② STEP 4 · /requests')
   ok(/presenter=reply-open/.test((await waitSpot(p, /reply-open/)) ?? ''), '② STEP 4 — 「회신 남기기」 강조')
-  ok((await p.locator('[data-presenter-card]:visible [data-presenter-ai]').getAttribute('data-presenter-ai')) === 'unverified', '② STEP 4 — AI 성공 기록이 없으면 「실제 호출 확인 필요」')
+  const c4 = flat(await card(p).innerText())
+  ok((await p.locator('[data-presenter-card]:visible [data-presenter-ai]').count()) === 0 && !/가짜|확인 필요|미검증/.test(c4), '② STEP 4 — 카드에 「확인 필요 · 가짜」 같은 준비용 문구 없음 (프로젝터에 보임)', c4.slice(0, 160))
   await p.locator('[data-presenter="reply-open"]').first().click()
   ok(/ai-triage-run/.test((await waitSpot(p, /ai-triage-run/)) ?? ''), '② 회신 창이 열리면 「AI 분석 실행」 강조')
   await p.locator('[data-ai-triage-run]').click()
@@ -299,7 +304,7 @@ for (const role of ['field', 'office']) {
   await shot(p, '11_close')
   const close = flat(await p.locator('[data-presenter-close]').innerText())
   ok(/구현됨/.test(close) && /실증 단계/.test(close) && /향후 계획/.test(close) && close.includes(CLOSING.message), '② 마무리 — 구현됨 · 실증 단계 · 향후 계획 + 마지막 문장')
-  ok((await p.locator('[data-close-ai-unverified]').count()) === 1, '② 마무리 — AI 성공 기록이 없으면 「AI 요청 분석」 옆에 「실제 호출 확인 전」')
+  ok((await p.locator('[data-close-ai-unverified]').count()) === 0 && !/확인 전/.test(close), '② 마무리 — 심사위원에게 보이는 칸에 「확인 전」 없음 (AI 확인은 「발표 준비」 안에서)')
   ok((await p.locator('[data-presenter-card]:visible [data-presenter-finish]').count()) === 1, '② 마지막 단계는 「발표 가이드 종료」')
   await p.locator('[data-presenter-card]:visible [data-presenter-finish]').click()
   await p.waitForTimeout(600)
@@ -320,10 +325,10 @@ for (const role of ['field', 'office']) {
   await p.locator('[data-presenter-jump="3"]').click()
   await p.waitForTimeout(900)
   const t = flat(await card(p).innerText())
-  ok(/시연 거래처를 먼저 고르세요/.test(t) && new URL(p.url()).pathname === '/presentation', '④ 거래처 없이 병원 단계 → 「시연 거래처를 먼저 고르세요」 (엉뚱한 병원으로 가지 않음)', t.slice(0, 80))
+  ok(/병원을 먼저 고르기/.test(t) && new URL(p.url()).pathname === '/presentation', '④ 거래처 없이 병원 단계 → 「병원을 먼저 고르기」 (엉뚱한 병원으로 가지 않음)', t.slice(0, 80))
   await p.locator('[data-presenter-client]').selectOption(C0.id)
   await p.waitForTimeout(400)
-  ok(/이 단계 화면이 아닙니다/.test(flat(await card(p).innerText())), '④ 거래처를 고르면 안내가 「이 단계 화면으로」로 바뀐다')
+  ok(/이 단계 화면으로 돌아가기/.test(flat(await card(p).innerText())), '④ 거래처를 고르면 안내가 「이 단계 화면으로 돌아가기」로 바뀐다')
   await p.locator('[data-presenter-card]:visible [data-presenter-go]').click()
   await p.waitForTimeout(1200)
   ok(new URL(p.url()).pathname === `/portal/c/${C0.id}`, '④ 거래처를 고르면 그 병원 화면으로', p.url())
@@ -370,7 +375,7 @@ for (const role of ['field', 'office']) {
   await p.locator('[data-presenter-sheet]').waitFor({ state: 'visible', timeout: 4000 })
   await p.waitForTimeout(300)
   await shot(p, '21_m_sheet')
-  ok(/지금 보여드리는 것/.test(flat(await p.locator('[data-presenter-sheet]').innerText())), '⑦ 폰 — 펼치면 아래 시트에 전체 안내')
+  ok(/설명/.test(flat(await p.locator('[data-presenter-sheet]').innerText())) && /누를 곳/.test(flat(await p.locator('[data-presenter-sheet]').innerText())), '⑦ 폰 — 펼치면 아래 시트에 설명 · 누를 곳')
   await p.locator('[data-presenter-sheet] [data-presenter-next]').click()
   await p.waitForTimeout(1000)
   ok(new URL(p.url()).pathname === '/' && (await p.locator('[data-presenter-sheet]').count()) === 0 && (await p.locator('[data-presenter-bar]:visible').count()) === 1, '⑦ 폰 — 다음을 누르면 화면 이동 · 시트는 접힘')

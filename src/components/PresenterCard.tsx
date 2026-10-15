@@ -3,10 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Check, Minus, Smartphone, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { useData } from '../context/DataContext'
 import { usePresenter } from '../context/PresenterContext'
 import { useTour } from '../context/TourContext'
-import { PRESENTER_STEPS, SAMPLE_REQUEST, kstStamp, onStepRoute, stepLabel, type PresenterStatus } from '../lib/presenter'
+import { PRESENTER_STEPS, SAMPLE_REQUEST, onStepRoute, stepLabel } from '../lib/presenter'
 import { openPortalPhoneView } from './PortalViewSwitch'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,12 +23,6 @@ import { openPortalPhoneView } from './PortalViewSwitch'
 //  ⚠ 일반 업무 중에는 나타나지 않습니다 — 「심사 시연 시작」을 누른 탭에서만.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STATUS_TONE: Record<PresenterStatus, string> = {
-  구현됨: 'bg-teal-50 text-teal-800',
-  '실증 단계': 'bg-amber-50 text-amber-800',
-  '측정 중': 'bg-navy-100 text-navy-700',
-}
-
 /** 화면에 실제로 보이는가 (크기 0 · 숨김 제외) */
 const visible = (el: Element | null): el is HTMLElement => {
   if (!el) return false
@@ -42,7 +35,6 @@ const visible = (el: Element | null): el is HTMLElement => {
 export function PresenterCard() {
   const { active, index, pos, order, clientId, demoRequestId, next, prev, stop, goTo, continueFull } = usePresenter()
   const { role } = useAuth()
-  const { data } = useData()
   const tour = useTour()
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
@@ -69,12 +61,6 @@ export function PresenterCard() {
   //  AI 먼저 보여 주는 중 — AI · 회신 단계에서 「전체 운영 흐름 계속 보기」 (0140)
   const aiFirst = order[0] === 'triage'
   const canContinue = aiFirst && (step.key === 'triage' || step.key === 'reply')
-
-  //  AI 실제 호출이 한 번이라도 성공했는가 — 화면이 알 수 있는 유일한 근거(ai_calls)
-  const aiOk = useMemo(() => {
-    const ok = (data.aiCalls ?? []).filter((c) => c.ok)
-    return ok.length ? ok.reduce((a, c) => (c.createdAt > a.createdAt ? c : a)) : null
-  }, [data.aiCalls])
 
   //  단계가 바뀌면 펼쳐서 보여 줍니다
   useEffect(() => { setMin(false); setCopied(''); setSheet(false); setAskStop(false) }, [index])
@@ -197,65 +183,34 @@ export function PresenterCard() {
     </div>
   )
 
+  //  ⚠ 카드는 프로젝터에 같이 보입니다 — 「설명(읽을 것)」과 「누를 곳」 두 칸만. (0140 정리)
   const body = (
     <div className="mt-4 space-y-3">
-      {/*  이 단계 화면이 아니면 — 돌아가는 길을 먼저 */}
+      {/*  이 단계 화면이 아니면 — 돌아가는 단추 하나 */}
       {!here && (
-        <div data-presenter-offroute role="status" className="rounded-[14px] bg-amber-50 px-4 py-3">
-          <p className="break-keep text-[1.02rem] font-bold text-amber-900">
-            {needsClient ? '시연 거래처를 먼저 고르세요.' : '지금 화면은 이 단계 화면이 아닙니다.'}
-          </p>
-          <button
-            type="button"
-            data-presenter-go
-            onClick={() => (needsClient ? navigate('/presentation') : goTo(pos))}
-            className="mt-2 inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white transition hover:bg-navy-800"
-          >
-            {needsClient ? '시연 준비 화면으로' : `「${step.title}」 화면으로`} <ArrowRight size={17} strokeWidth={2.6} />
-          </button>
-        </div>
+        <button
+          type="button"
+          data-presenter-offroute
+          data-presenter-go
+          onClick={() => (needsClient ? navigate('/presentation') : goTo(pos))}
+          className="flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] bg-amber-50 px-4 text-[1.05rem] font-extrabold text-amber-900 ring-1 ring-amber-200 transition hover:bg-amber-100"
+        >
+          {needsClient ? '병원을 먼저 고르기' : '이 단계 화면으로 돌아가기'} <ArrowRight size={17} strokeWidth={2.6} />
+        </button>
       )}
 
-      {!compact && (<>
-      <section>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[0.98rem] font-extrabold text-navy-500">지금 보여드리는 것</p>
-          {step.status && <span data-presenter-status className={`pill ${STATUS_TONE[step.status]}`}>{step.status}</span>}
-        </div>
-        <p data-presenter-show className="mt-1 break-keep text-[1.12rem] font-bold leading-snug text-navy-900">{step.show}</p>
-      </section>
-
-      {(step.before || step.now) && (
-        <section className="space-y-2">
-          {step.before && (
-            <p data-presenter-before className="break-keep text-[1.02rem] leading-snug text-navy-600">
-              <b className="mr-1.5 text-navy-500">기존</b>{step.before}
-            </p>
-          )}
-          {step.now && (
-            <p data-presenter-now className="break-keep text-[1.02rem] leading-snug text-navy-800">
-              <b className="mr-1.5 text-teal-700">바뀐 방식</b>{step.now}
-            </p>
-          )}
+      {/*  ① 설명 — 대표님이 읽을 문장 */}
+      {!compact && (
+        <section data-presenter-say>
+          <p className="text-[0.98rem] font-extrabold text-navy-500">설명</p>
+          <p data-presenter-show className="mt-1 break-keep text-[1.2rem] font-bold leading-relaxed text-navy-900">{step.note}</p>
         </section>
       )}
 
-      {step.effects && step.effects.length > 0 && (
-        <section>
-          <p className="text-[0.98rem] font-extrabold text-navy-500">기대 효과</p>
-          <ul data-presenter-effects className="mt-0.5 break-keep text-[1.02rem] font-bold leading-snug text-navy-800">
-            {step.effects.map((e, i) => (
-              <li key={e} className="inline">{i > 0 && <span aria-hidden="true" className="mx-1.5 text-teal-500">·</span>}{e}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-      </>)}
-
-      {/*  ▶ 지금 할 일 — 이 카드의 주인공 */}
+      {/*  ② 누를 곳 */}
       <section data-presenter-todo className="rounded-[14px] bg-teal-50 px-4 py-3">
-        <p className="text-[0.98rem] font-extrabold text-teal-800">▶ 지금 할 일</p>
-        <p className="mt-1 break-keep text-[1.08rem] font-extrabold leading-snug text-navy-900">{step.todo}</p>
+        <p className="text-[0.98rem] font-extrabold text-teal-800">▶ 누를 곳</p>
+        <p className="mt-1 break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">{step.todo}</p>
 
         {step.key === 'portal' && (
           <div className="mt-2.5 rounded-xl bg-white px-3 py-2.5">
@@ -270,14 +225,6 @@ export function PresenterCard() {
             </button>
             <p data-presenter-sample className="mt-1.5 break-keep text-[0.98rem] leading-snug text-navy-700">{SAMPLE_REQUEST}</p>
           </div>
-        )}
-
-        {step.key === 'triage' && (
-          <p data-presenter-ai={aiOk ? 'ok' : 'unverified'} className={`mt-2 break-keep text-[0.98rem] font-bold leading-snug ${aiOk ? 'text-teal-800' : 'text-amber-800'}`}>
-            {aiOk
-              ? `AI 실제 호출 확인됨 · 최근 성공 ${kstStamp(aiOk.createdAt)}`
-              : 'AI 실제 호출 확인 필요 — 시연 전에 한 번 실행해 보세요. 안 되면 화면에 실패로 나오고, 가짜 결과는 만들지 않습니다.'}
-          </p>
         )}
 
         {step.key === 'reply' && clientId && (
@@ -302,17 +249,6 @@ export function PresenterCard() {
           </button>
         )}
       </section>
-
-      {step.aside && !compact && <p data-presenter-aside className="break-keep text-[0.98rem] leading-snug text-navy-500">{step.aside}</p>}
-
-      {/*  발표자 메모 — 기본은 접힘. 두세 문장. */}
-      <details data-presenter-note className="group rounded-[14px] bg-navy-50 px-4 py-2.5">
-        <summary className="flex min-h-[2.5rem] cursor-pointer list-none items-center justify-between gap-2 text-[1rem] font-extrabold text-navy-700">
-          발표자 메모 — 이렇게 설명하세요
-          <ChevronDown size={18} strokeWidth={2.6} className="shrink-0 transition-transform group-open:rotate-180" />
-        </summary>
-        <p className="mt-1 break-keep pb-1 text-[1.04rem] leading-relaxed text-navy-800">{step.note}</p>
-      </details>
     </div>
   )
 
@@ -354,7 +290,7 @@ export function PresenterCard() {
           onClick={next}
           className="flex min-h-[3rem] flex-[1.6] items-center justify-center gap-1.5 rounded-[14px] bg-navy-900 px-3 text-[1.05rem] font-extrabold text-white transition hover:bg-navy-800"
         >
-          {pos === 0 && order[0] === 'intro' ? '시연 시작' : '다음 단계'} <ArrowRight size={18} strokeWidth={2.6} />
+          {pos === 0 && order[0] === 'intro' ? '시연 시작' : '다음'} <ArrowRight size={18} strokeWidth={2.6} />
         </button>
       )}
     </div>
