@@ -12,7 +12,7 @@ import re
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / 'supabase/functions/ai-triage'
 OUT = ROOT / 'docs/deploy/ai-triage-dashboard.ts'
-ORDER = ['provider.ts', 'triage.ts', 'gemini.ts', 'handler.ts', 'index.ts']
+ORDER = ['provider.ts', 'triage.ts', 'gemini.ts', 'assist.ts', 'handler.ts', 'index.ts']
 LOCAL_IMPORT = re.compile(r"^import [^\n]* from '\./[a-z]+\.ts'\n", re.M)
 
 head = '''// ═══════════════════════════════════════════════════════════════════════════

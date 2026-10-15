@@ -20,6 +20,7 @@
 
 import { SYSTEM_PROMPT, buildUserMessage, parseTriage, type TriageOutput } from './triage.ts'
 import { ProviderError, type ModelReply } from './provider.ts'
+import { ASSIST_KIND, ASSIST_TASKS, planAssist, type AssistTask } from './assist.ts'
 
 export const KIND_REAL = 'request_triage'
 export const KIND_DEMO = 'request_triage_demo'
@@ -36,7 +37,7 @@ export interface StoredRequest {
 
 export interface AiCallRow {
   kind: string
-  request_id: string
+  request_id: string | null
   input: string
   output: unknown
   model: string
@@ -138,4 +139,58 @@ export async function handleTriage(body: unknown, d: TriageDeps): Promise<Triage
   const result: TriageOutput & { model: string } = { ...parsed.result, model: reply.model }
   const callId = await log({ output: { ...parsed.result, usage: reply.usage }, model: reply.model, ok: true, error: '' })
   return { status: 200, body: { ok: true, result, callId, logged: callId != null, ms: d.now() - t0, demo: req.demo } }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  업무 보조 AI 세 가지 (0141) — 오늘 브리핑 · 현장 메모 정리 · 독촉 문자 초안
+//   body: { task: 'briefing' | 'field_note' | 'dunning', input: {...} }
+//   · 권한 · 키 · 기록 규칙은 위(요청 분석)와 같습니다. 기록 kind 만 다릅니다(assist.ts ASSIST_KIND).
+//   · 입력은 assist.ts 가 모양을 엄격하게 봅니다 — 브리핑은 숫자만, 독촉은 병원 이름 · 금액 없이.
+//   · 이 흐름에도 저장 · 전송 · 상태를 바꾸는 코드가 없습니다.
+// ═══════════════════════════════════════════════════════════════════════════
+export async function handleAssist(body: unknown, d: Omit<TriageDeps, 'getRequest'>): Promise<TriageResponse> {
+  const user = await d.getUser()
+  if (!user) return { status: 401, body: { error: '로그인이 필요합니다' } }
+  const me = await d.getProfile(user.id)
+  if (!me || !me.active || !STAFF.includes(me.role)) {
+    return { status: 403, body: { error: '비원미래 내부 담당자(관리자 · 사무실)만 쓸 수 있습니다' } }
+  }
+  const b = (body ?? {}) as { task?: unknown; input?: unknown }
+  const task = b.task as AssistTask
+  if (!(ASSIST_TASKS as readonly string[]).includes(task as string)) {
+    return { status: 400, body: { error: `모르는 AI 작업입니다: ${String(b.task).slice(0, 20)}` } }
+  }
+  const plan = planAssist(task, b.input)
+  if (!plan.ok) return { status: 400, body: { error: plan.error } }
+  const { system, message, parse } = plan.value
+
+  const t0 = d.now()
+  const log = async (row: Omit<AiCallRow, 'kind' | 'request_id' | 'input' | 'ms' | 'actor_id' | 'actor_name'>) => {
+    try {
+      return await d.insertCall({ kind: ASSIST_KIND[task], request_id: null, input: message, ms: d.now() - t0, actor_id: user.id, actor_name: me.name, ...row })
+    } catch {
+      return null
+    }
+  }
+  if (!d.hasKey) {
+    const error = 'AI_API_KEY 가 서버에 등록되지 않았습니다 (연결 전)'
+    const callId = await log({ output: null, model: '', ok: false, error })
+    return { status: 503, body: { error, callId, ms: d.now() - t0 } }
+  }
+  let reply: ModelReply
+  try {
+    reply = await d.callModel(system, message)
+  } catch (e) {
+    const error = e instanceof ProviderError ? e.message : `AI 호출 실패 (${String(e).slice(0, 120)})`
+    const status = e instanceof ProviderError && e.code === 'timeout' ? 504 : 502
+    const callId = await log({ output: null, model: d.model, ok: false, error })
+    return { status, body: { error, callId, ms: d.now() - t0 } }
+  }
+  const parsed = parse(reply.text)
+  if (!parsed.ok) {
+    const callId = await log({ output: { raw: reply.text.slice(0, 2000), usage: reply.usage }, model: reply.model, ok: false, error: parsed.error })
+    return { status: 502, body: { error: parsed.error, callId, ms: d.now() - t0 } }
+  }
+  const callId = await log({ output: { ...(parsed.value as object), usage: reply.usage }, model: reply.model, ok: true, error: '' })
+  return { status: 200, body: { ok: true, task, result: { ...(parsed.value as object), model: reply.model }, callId, logged: callId != null, ms: d.now() - t0 } }
 }

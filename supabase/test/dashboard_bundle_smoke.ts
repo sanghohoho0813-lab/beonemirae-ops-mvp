@@ -35,6 +35,7 @@ const sb = Deno.serve({ port: 0, hostname: '127.0.0.1', onListen() {} }, async (
 const gm = Deno.serve({ port: 0, hostname: '127.0.0.1', onListen() {} }, async (req) => {
   await req.json()
   geminiSeen = { path: new URL(req.url).pathname, key: req.headers.get('x-goog-api-key') }
+  if (geminiMode === 'brief') return j({ candidates: [{ content: { parts: [{ text: '{"headline":"오늘은 긴급 요청 1건부터","items":[{"title":"긴급 요청 1건","detail":"처리 전 3건 중 긴급 1건"}],"note":""}' }] }, finishReason: 'STOP' }], modelVersion: 'gemini-2.5-flash-lite' })
   if (geminiMode === 'badkey') return j({ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }, 400)
   return j({ candidates: [{ content: { parts: [{ text: GOOD }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 600, candidatesTokenCount: 120 }, modelVersion: 'gemini-2.5-flash-lite' })
 })
@@ -73,6 +74,12 @@ async function runBundle(env: Record<string, string>, port: number) {
   const bad = await call()
   ok(bad.status >= 400 && /AI 키가 올바르지 않습니다 \(400\)/.test(String(bad.body.error)) && !String(bad.body.error).includes(KEY), '② 키 오류 — 까닭 그대로 · 키 조각 없음', JSON.stringify(bad.body).slice(0, 160))
   ok(inserts.length === 2 && inserts[1].ok === false, '② 실패도 ai_calls 에 기록')
+  //  ④ 업무 보조 AI (0141) — 같은 함수 · task 로 고름
+  geminiMode = 'brief'
+  const rb = await fetch(`http://127.0.0.1:18741/`, { method: 'POST', headers: { Authorization: 'Bearer user-token', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task: 'briefing', input: { date: '2026-10-16', visitsPlanned: 5, visitsDone: 2, openRequests: 3, urgentRequests: 1, requestKinds: { 긴급수거: 1 }, unscheduledClients: 18, overdueClients: 2, overdueAmount: 118714572 } }) })
+  const bb = await rb.json() as Record<string, unknown>
+  ok(rb.status === 200 && bb.task === 'briefing' && inserts[inserts.length - 1].kind === 'today_briefing', '④ 오늘 브리핑 — 200 · today_briefing 기록', JSON.stringify(bb).slice(0, 200))
   child.kill(); await child.status
 }
 {

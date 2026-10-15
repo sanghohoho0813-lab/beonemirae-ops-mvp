@@ -124,9 +124,9 @@ export function buildUserMessage(r: TriageRequest): string {
 }
 
 /** 회사 확정 약속처럼 읽히는 표현 — 초안에 있으면 쓰지 않습니다 */
-const PROMISE = /(확정|배차|배정|예약|접수\s*완료)\s*(되었|됐|했|하였)습니다|(방문|수거|도착|출발)(하겠습니다|해\s*드리겠습니다|드리겠습니다)|(가져다|갖다|보내|준비해)\s*드리겠습니다/
+export const PROMISE = /(확정|배차|배정|예약|접수\s*완료)\s*(되었|됐|했|하였)습니다|(방문|수거|도착|출발)(하겠습니다|해\s*드리겠습니다|드리겠습니다)|(가져다|갖다|보내|준비해)\s*드리겠습니다/
 
-const numbersIn = (s: string): string[] => (s.match(/\d+(?:[.,]\d+)*/g) ?? []).map((x) => x.replace(/,/g, ''))
+export const numbersIn = (s: string): string[] => (s.match(/\d+(?:[.,]\d+)*/g) ?? []).map((x) => x.replace(/,/g, ''))
 
 /**
  * 숫자 + 단위 (「10시」 · 「10개」 · 「63L」).
@@ -134,10 +134,10 @@ const numbersIn = (s: string): string[] => (s.match(/\d+(?:[.,]\d+)*/g) ?? []).m
  *    「요청에 있던 말」입니다.
  */
 const UNIT = /(\d+(?:[.,]\d+)*)\s*(시|분|월|일|만\s*원|원|개|kg|킬로|톤|L|ℓ|리터|박스|봉투|회|번|차례|대|명|곳|%)/g
-const unitTokens = (s: string): string[] =>
+export const unitTokens = (s: string): string[] =>
   [...s.matchAll(UNIT)].map((m) => `${Number(m[1].replace(/,/g, ''))}${m[2].replace(/\s+/g, '')}`)
 
-const isStr = (v: unknown): v is string => typeof v === 'string'
+export const isStr = (v: unknown): v is string => typeof v === 'string'
 
 export type ParseResult =
   | { ok: true; result: TriageOutput }

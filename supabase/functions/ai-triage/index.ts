@@ -3,6 +3,8 @@
 //
 //  고객 요청 화면 「AI 요청 분석」이 부릅니다:
 //    supabase.functions.invoke('ai-triage', { body: { requestId } })
+//  0141 — 업무 보조 AI 도 같은 함수입니다(배포 한 번):
+//    { task: 'briefing' | 'field_note' | 'dunning', input: {...} }  → handler.ts handleAssist · assist.ts
 //
 //  처리 흐름 · 권한 · 기록 규칙은 handler.ts, 프롬프트 · 결과 검사는 triage.ts,
 //  모델 호출은 gemini.ts(Google) · anthropic.ts(Claude) · provider.ts(OpenAI 호환) 에 있습니다. 이 파일은 Supabase 와 fetch 를 이어 줄 뿐입니다.
@@ -24,7 +26,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { handleTriage } from './handler.ts'
+import { handleAssist, handleTriage, type TriageDeps } from './handler.ts'
 import { chatJson } from './provider.ts'
 import { claudeJson } from './anthropic.ts'
 import { GEMINI_DEFAULT_MODEL, GEMINI_FALLBACK_MODEL, geminiJson, pickAi } from './gemini.ts'
@@ -68,7 +70,7 @@ Deno.serve(async (req) => {
     }
     const key = KEY0
 
-    const res = await handleTriage(body, {
+    const deps: TriageDeps = {
       getUser: async () => {
         if (!token) return null
         const { data } = await sb.auth.getUser(token)
@@ -121,7 +123,10 @@ Deno.serve(async (req) => {
       hasKey: key.length > 0,
       model: MODEL,
       now: () => Date.now(),
-    })
+    }
+    //  0141 — task 가 있으면 업무 보조 AI(오늘 브리핑 · 현장 메모 · 독촉 문자), 없으면 병원 요청 분석
+    const task = (body as { task?: unknown } | null)?.task
+    const res = typeof task === 'string' && task !== 'triage' ? await handleAssist(body, deps) : await handleTriage(body, deps)
     return json(res.body, res.status)
   } catch (e) {
     return json({ error: `처리 실패: ${String(e).slice(0, 200)}` }, 500)
