@@ -1079,6 +1079,9 @@ const clientRow = (c: Partial<Client>) => ({
   collect_time: c.collectTime,
   disposal_site: c.disposalSite,
   diaper_cycle: c.diaperCycle,
+  //  0140 — 시연용 거래처(신보 발표 AI 시연)를 만들 때만 보냅니다. 평소 등록 · 수정에는
+  //    이 칸을 아예 넣지 않아(undefined → clean 이 뺌) 지금까지와 똑같이 동작합니다.
+  is_demo_generated: c.isDemoGenerated === true ? true : undefined,
 })
 
 const clean = (o: Record<string, unknown>) =>

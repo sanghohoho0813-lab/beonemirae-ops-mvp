@@ -15,7 +15,8 @@
 | `index.ts` | Deno 진입점 — Supabase(로그인 사용자 토큰) · fetch 를 이어 줌 |
 | `handler.ts` | 흐름: 로그인 → 역할(관리자 · 사무실 · 사용 중) → DB 에서 요청 읽기 → 모델 → 검사 → `ai_calls` 기록 |
 | `triage.ts` | 시스템 프롬프트 · 개인정보 가림 · 엄격한 JSON 검사(지어낸 숫자 · 확정 약속 차단) |
-| `provider.ts` | 모델 호출 어댑터 (OpenAI 호환 Chat Completions · JSON 모드 · 20초 제한) |
+| `provider.ts` | 모델 호출 어댑터 — OpenAI 호환 Chat Completions · JSON 모드 · 20초 제한 |
+| `anthropic.ts` | 모델 호출 어댑터 — Claude (Anthropic 공식 SDK `npm:@anthropic-ai/sdk@0.130.0`) · 기본 `claude-opus-5-5` · effort low · 거절 시 권장 모델로 한 번 더(`fallbacks: "default"`) · 20초 제한 |
 | `deno.json` | 저장소 맨 위 `package.json` 을 따라가지 않게 (`nodeModulesDir: none`) |
 
 ## 배포 — 대표님 PC 에서 약 5분
@@ -27,13 +28,17 @@ supabase login
 supabase link --project-ref <프로젝트 ref>      # 대시보드 주소 /project/<ref> 의 그 값
 
 # 1) 키 등록 — 서버에만 둡니다 (브라우저 · 저장소 · VITE_* 금지)
+#    어느 회사 키든 하나만 넣으면 됩니다. 키 모양으로 고릅니다:
+#      sk-ant-… → Claude(Anthropic)     그 밖 → OpenAI 호환
 supabase secrets set AI_API_KEY=<모델 회사에서 발급한 키>
 
-# 2) (선택) 모델 · 주소 바꾸기
-#    기본: AI_MODEL=gpt-4o-mini · AI_API_URL=https://api.openai.com/v1/chat/completions
+# 2) (선택) 회사 · 모델 · 주소를 직접 정하기
+#    AI_PROVIDER=anthropic | openai   (비우면 위처럼 키 모양으로)
+#    기본 모델: anthropic → claude-opus-5-5 · openai → gpt-4o-mini
+#    OpenAI 호환 다른 회사면 AI_API_URL 에 그 회사의 chat/completions 주소를 넣습니다.
 #    지금 계정에서 쓸 수 있는 모델 이름으로 맞춰 주세요. 이름이 틀리면 404 실패로 기록됩니다.
-supabase secrets set AI_MODEL=gpt-4o-mini
-#    temperature 를 받지 않는 모델이면 빈 값으로:  supabase secrets set AI_TEMPERATURE=
+supabase secrets set AI_MODEL=<쓸 모델 이름>
+#    (openai 만) temperature 를 받지 않는 모델이면 빈 값으로:  supabase secrets set AI_TEMPERATURE=
 
 # 3) 배포 (저장소 맨 위 폴더에서)
 supabase functions deploy ai-triage
@@ -44,6 +49,13 @@ supabase functions deploy ai-triage
 호출은 함수에 닿기 전에 막히고, 함수 안에서 역할을 다시 확인합니다.
 
 ## 배포 후 확인 — 실제 호출이 되는지
+
+**가장 빠른 길 (0140):** 관리자 계정 → 사이드바 **신보 발표 시연** → 「시연 준비 상태」의
+**「지금 AI 연결 확인」** — 시연용 거래처의 시연 요청 하나로 실제 외부 AI 를 부르고,
+`✓ 성공 · 모델 · 초 · 「긴급수거 · 긴급도 높음」` 또는 `✕ 실패 — 까닭` 을 그대로 보여 줍니다.
+(시연용 거래처 · 시연 요청이 없으면 하나만 만듭니다 — 주소 · 연락처는 비움, 실적에서 빠짐.)
+
+또는 직접:
 
 1. 관리자 또는 사무실 계정으로 로그인 → **고객 요청** → 요청 하나의 **회신 남기기**
 2. **AI 분석 실행** → 2~10초 안에 「긴급수거 · 긴급도 높음 · 요약 · 회신 초안」이 보이면 성공

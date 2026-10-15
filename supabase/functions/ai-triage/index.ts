@@ -9,9 +9,11 @@
 //
 //  ── Secret (supabase secrets set …) ───────────────────────────────────
 //   AI_API_KEY      필수. 모델 회사 API 키 — 서버에만 둡니다(브라우저 · 저장소 금지)
-//   AI_MODEL        선택. 기본 gpt-4o-mini
-//   AI_API_URL      선택. 기본 https://api.openai.com/v1/chat/completions (OpenAI 호환 주소)
-//   AI_TEMPERATURE  선택. 기본 0.2 · 빈 값이면 보내지 않음 (temperature 를 안 받는 모델)
+//   AI_PROVIDER     선택. anthropic | openai — 비우면 키 모양으로 고름 (sk-ant-… = anthropic)
+//   AI_MODEL        선택. 기본 anthropic=claude-opus-5-5 · openai=gpt-4o-mini
+//   AI_API_URL      선택. openai: 기본 https://api.openai.com/v1/chat/completions (OpenAI 호환 주소면 무엇이든)
+//                         anthropic: 비우면 Anthropic 기본 주소 (시험 때만 바꿈)
+//   AI_TEMPERATURE  선택. openai 만 · 기본 0.2 · 빈 값이면 보내지 않음 (temperature 를 안 받는 모델)
 //   SUPABASE_URL · SUPABASE_ANON_KEY 는 Supabase 가 자동으로 넣어 줍니다.
 //
 //  ⚠ 사용자의 로그인 토큰으로 DB 를 읽고 씁니다(관리자 권한 키를 쓰지 않음) —
@@ -22,9 +24,12 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { handleTriage } from './handler.ts'
 import { chatJson } from './provider.ts'
+import { claudeJson } from './anthropic.ts'
 
-const MODEL = Deno.env.get('AI_MODEL') || 'gpt-4o-mini'
-const API_URL = Deno.env.get('AI_API_URL') || 'https://api.openai.com/v1/chat/completions'
+const KEY0 = Deno.env.get('AI_API_KEY') ?? ''
+const PROVIDER = (Deno.env.get('AI_PROVIDER') || (KEY0.startsWith('sk-ant-') ? 'anthropic' : 'openai')).trim().toLowerCase() === 'anthropic' ? 'anthropic' : 'openai'
+const MODEL = Deno.env.get('AI_MODEL') || (PROVIDER === 'anthropic' ? 'claude-opus-5-5' : 'gpt-4o-mini')
+const API_URL = Deno.env.get('AI_API_URL') || (PROVIDER === 'anthropic' ? '' : 'https://api.openai.com/v1/chat/completions')
 const TEMP_RAW = Deno.env.get('AI_TEMPERATURE')
 const TEMPERATURE = TEMP_RAW === '' ? null : Number.isFinite(Number(TEMP_RAW ?? '0.2')) ? Number(TEMP_RAW ?? '0.2') : 0.2
 //  화면은 35초까지 기다립니다 — 서버가 먼저 끝내고 실패를 기록하도록 20초.
@@ -98,7 +103,9 @@ Deno.serve(async (req) => {
         return data ? String(data.id) : null
       },
       callModel: (system, user) =>
-        chatJson({ apiKey: key, url: API_URL, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS, temperature: TEMPERATURE }),
+        PROVIDER === 'anthropic'
+          ? claudeJson({ apiKey: key, baseURL: API_URL || undefined, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS })
+          : chatJson({ apiKey: key, url: API_URL, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS, temperature: TEMPERATURE }),
       hasKey: key.length > 0,
       model: MODEL,
       now: () => Date.now(),

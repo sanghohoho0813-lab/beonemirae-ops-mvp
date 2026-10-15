@@ -167,7 +167,15 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
         </span>
       )}
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="block break-keep">{item.label}</span>
+        <span className="flex items-center gap-2 break-keep">
+          {item.label}
+          {/*  임시로 올린 메뉴(신보 발표 시연)만 — 작은 글자 표 하나. 색 · 그림은 다른 메뉴와 같게. */}
+          {item.badge && (
+            <span data-nav-badge className="shrink-0 rounded-md bg-teal-400/20 px-1.5 py-0.5 text-[0.78rem] font-extrabold tracking-wide text-teal-200 ring-1 ring-teal-300/40">
+              {item.badge}
+            </span>
+          )}
+        </span>
         {/* 설명은 사이드바가 넉넉해지는 xl 이상에서만 — 좁은 폭에서는 메뉴명만 보여 줍니다.
             ⚠ 0082 — 여기에 navy-400 이 걸려 있었습니다. 그 색의 **일**은
               「밝은 바탕의 캡션」이라 0080 에서 일부러 어둡게 내린 색입니다.

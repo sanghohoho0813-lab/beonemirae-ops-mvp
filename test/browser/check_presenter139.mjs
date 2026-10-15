@@ -147,9 +147,11 @@ for (const role of ['field', 'office']) {
 {
   const { ctx, p, errors } = await open('admin', '/presentation', { aiCalls: [] })
   await shot(p, '00_start')
-  ok((await p.locator('[data-presenter-start]').count()) === 1 && /심사 시연 시작/.test(flat(await p.locator('[data-presenter-start]').innerText())), '① 「심사 시연 시작」 단추')
+  //  0140 — 첫 화면 단추 둘: 가장 큰 「AI 요청 분석 시연 시작」 + 「전체 운영 흐름 시연」
+  ok((await p.locator('[data-presenter-start]').count()) === 1 && /전체 운영 흐름 시연/.test(flat(await p.locator('[data-presenter-start]').innerText())), '① 「전체 운영 흐름 시연」 단추')
+  ok((await p.locator('[data-presenter-ai-start]').count()) === 1 && /AI 요청 분석 시연 시작/.test(flat(await p.locator('[data-presenter-ai-start]').innerText())), '① 「AI 요청 분석 시연 시작」 단추')
   const flow = flat(await p.locator('[data-presenter-flow]').innerText())
-  ok(FLOW.every((f) => flow.includes(f)), '① 오늘 보여드릴 흐름 — 병원 → 요청 → 직원 확인 → AI 업무보조 → 현장 처리 → 운영 데이터 축적', flow)
+  ok(FLOW.every((f) => flow.includes(f)), '① 전체 흐름 — 병원 요청 → AI 분석 → 담당자 판단 → 수거 · 운영 → 데이터 축적', flow)
   const mark = async (k) => p.locator(`[data-ready="${k}"]`).getAttribute('data-ready-mark')
   ok((await mark('admin')) === 'ok' && (await mark('live')) === 'ok' && (await mark('requests')) === 'ok', '① 준비 상태 — 관리자 · 운영 연결 · 요청 화면은 자동 ✓')
   ok((await mark('ai')) === 'todo' && /아직 성공한 호출이 없습니다/.test(flat(await p.locator('[data-ready="ai"]').innerText())), '① AI — 성공 기록이 없으면 ✓ 하지 않는다 (확인 필요)')

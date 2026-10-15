@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, ArrowRight, CheckCircle2, Circle, AlertTriangle, BookOpen, PlayCircle, ChevronRight, Presentation as PresentIcon } from 'lucide-react'
+import { X, ArrowRight, CheckCircle2, Circle, AlertTriangle, BookOpen, PlayCircle, ChevronRight, Sparkles, Loader2, Route as RouteIcon } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { usePresenter } from '../context/PresenterContext'
 import { canAccess } from '../lib/access'
 import { today } from '../lib/format'
-import { CLOSING, FLOW, PRESENTER_CLIENT_KEY, PRESENTER_STEPS, kstStamp } from '../lib/presenter'
+import { AI_ORDER, CLOSING, FLOW, FULL_ORDER, PRESENTER_CLIENT_KEY, PRESENTER_STEPS, kstStamp } from '../lib/presenter'
+import { usePrepareDemo } from '../context/usePrepareDemo'
+import { aiTriageRequest } from '../lib/evidenceRepo'
 import { DemoResetButton } from '../components/DemoControls'
 import { TourButton } from '../components/TourEntry'
 
@@ -23,6 +25,11 @@ import { TourButton } from '../components/TourEntry'
 //
 //  ⚠ 숫자를 만들지 않습니다. 예전 화면 맨 아래 「105톤 규모」(출처 미확정)와
 //    「상세 시연 자료」(/demo — 49곳 · 105톤이 남아 있음) 연결은 뺐습니다.
+//
+//  0140 신보 발표 — 첫 화면 우선순위만 바꿨습니다(기능은 그대로 아래에).
+//   · 가장 큰 단추 = 「AI 요청 분석 시연 시작」 → 시연 요청을 준비(없으면 시연용 거래처
+//     안에 하나만)하고 요청함의 그 요청으로 바로. 두 번째 = 「전체 운영 흐름 시연」.
+//   · 「AI 연결 확인」 — 실제 외부 AI 를 시연 요청 하나로 불러 성공 · 실패 까닭을 그대로.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SAY_DO = [
@@ -45,9 +52,13 @@ type Mark = 'ok' | 'todo' | 'warn'
 
 export function Presentation() {
   const navigate = useNavigate()
-  const { data } = useData()
-  const { role, mode } = useAuth()
+  const { data, reload } = useData()
+  const { role, mode, profile } = useAuth()
   const presenter = usePresenter()
+  const { prepare } = usePrepareDemo()
+  const step = PRESENTER_STEPS[presenter.index]
+  const [aiStart, setAiStart] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
+  const [aiCheck, setAiCheck] = useState<{ busy: boolean; ok: boolean | null; text: string }>({ busy: false, ok: null, text: '' })
 
   //  시연 거래처 — 기기에 기억 (다음 연습 때 다시 고르지 않게)
   const [clientId, setClientId] = useState<string>(() => {
@@ -114,17 +125,59 @@ export function Presentation() {
     { key: 'start', label: '실증 시작일', mark: data.experiment?.startDate ? 'ok' : 'todo', detail: data.experiment?.startDate ? `${data.experiment.startDate} — 성과 화면의 실증기간` : '설정에서 정하면 성과 화면에 실증기간이 나옵니다' },
   ]
 
-  const showFlow = !presenter.active || presenter.index === 0
-  const showClose = presenter.active && presenter.index === PRESENTER_STEPS.length - 1
-  const startAt = (index: number) => presenter.start({ clientId: chosen?.id ?? null, index })
+  const showFlow = !presenter.active || step.key === 'intro'
+  const showClose = presenter.active && step.key === 'close'
+  const startAt = (index: number) => presenter.start({ clientId: chosen?.id ?? null, order: FULL_ORDER, pos: index })
+
+  //  AI 먼저 — 시연 요청을 준비하고(있으면 그대로) 요청함의 그 요청으로 바로 (60~90초)
+  const startAi = async () => {
+    if (aiStart.busy) return
+    setAiStart({ busy: true, error: null })
+    try {
+      const prep = await prepare()
+      setClientId(prep.clientId)
+      presenter.start({ order: AI_ORDER, pos: 0, clientId: prep.clientId, demoRequestId: prep.requestId })
+      setAiStart({ busy: false, error: null })
+    } catch (e) {
+      setAiStart({ busy: false, error: e instanceof Error ? e.message : '시연 요청을 준비하지 못했습니다.' })
+    }
+  }
+
+  //  실제 외부 AI 를 시연 요청 하나로 불러 봅니다 — 성공 · 실패 까닭을 그대로 (서버가 ai_calls 에 기록)
+  const checkAi = async () => {
+    if (aiCheck.busy) return
+    setAiCheck({ busy: true, ok: null, text: '' })
+    try {
+      const prep = await prepare()
+      const r = await aiTriageRequest({ requestId: prep.requestId, actorName: profile?.name ?? '', demo: true })
+      if (r.ok) {
+        setAiCheck({ busy: false, ok: true, text: `성공 · ${r.result.model || '모델 이름 없음'} · ${(r.ms / 1000).toFixed(1)}초 · 「${r.result.kind} · 긴급도 ${r.result.urgency}」` })
+      } else {
+        setAiCheck({ busy: false, ok: false, text: r.error })
+      }
+    } catch (e) {
+      setAiCheck({ busy: false, ok: false, text: e instanceof Error ? e.message : '확인하지 못했습니다.' })
+    }
+    void reload()
+  }
+
+  const systemStatus: { k: string; label: string; state: string; tone: string }[] = [
+    { k: 'ops', label: '운영 기능', state: '구현됨', tone: 'bg-teal-50 text-teal-800' },
+    { k: 'portal', label: '병원 포털', state: '실증 단계', tone: 'bg-amber-50 text-amber-800' },
+    { k: 'ai', label: 'AI 요청 분석', state: aiOk ? '실제 API 호출 확인됨' : '실제 API 호출 · 연결 확인 전', tone: aiOk ? 'bg-teal-50 text-teal-800' : 'bg-amber-50 text-amber-800' },
+    { k: 'perf', label: '성과 측정', state: '진행 중', tone: 'bg-navy-100 text-navy-700' },
+  ]
 
   return (
     <div data-presentation className="mx-auto w-full max-w-[1100px] space-y-6">
       {/* 상단 */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[1.05rem] font-extrabold text-teal-700">심사 시연</p>
-          <h1 className="t-page break-keep text-navy-900">발표 가이드</h1>
+          <p data-presenter-eyebrow className="text-[1.05rem] font-extrabold text-teal-700">신용보증기금 발표 시연</p>
+          <h1 className="t-page break-keep text-navy-900">비원미래 AX 운영시스템</h1>
+          <p className="mt-1.5 break-keep text-[1.12rem] font-semibold leading-snug text-navy-600">
+            현장의 업무 데이터를 하나로 연결하고, AI가 담당자의 판단과 고객 대응을 보조합니다.
+          </p>
         </div>
         <button
           onClick={() => { if (presenter.active) presenter.stop(); navigate('/') }}
@@ -175,46 +228,73 @@ export function Presentation() {
         </section>
       )}
 
-      {/* ── 시작 · 전체 흐름 (0단계) ───────────────────────────────────── */}
+      {/* ── 시작 — AI 먼저 · 전체 흐름 (0140) ───────────────────────────── */}
       {showFlow && (
-        <section className="rounded-[22px] bg-navy-900 px-6 py-7 text-white sm:px-9 sm:py-9">
-          <p className="text-[1.08rem] font-extrabold text-teal-300">비원미래 AX 운영시스템 — 실제 업무 흐름</p>
-          <p className="mt-2 break-keep text-[1.3rem] font-black leading-snug sm:text-[1.7rem]">
-            병원 요청부터 현장 수거, 내부 운영, AI 업무보조까지 하나의 데이터 흐름으로 연결합니다.
-          </p>
-          <ol data-presenter-flow className="mt-6 flex flex-wrap items-center gap-2">
-            {FLOW.map((f, i) => (
-              <li key={f} className="flex items-center gap-2">
-                {i > 0 && <ChevronRight size={20} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
-                <span className="rounded-full bg-white/10 px-4 py-2 text-[1.08rem] font-extrabold">{f}</span>
-              </li>
-            ))}
-          </ol>
+        <section data-presenter-hero className="rounded-[22px] bg-navy-900 px-6 py-7 text-white sm:px-9 sm:py-8">
           {!presenter.active ? (
-            <div className="mt-7 flex flex-wrap gap-3">
+            <>
+              <button
+                type="button"
+                data-presenter-ai-start
+                onClick={() => void startAi()}
+                disabled={aiStart.busy}
+                aria-busy={aiStart.busy}
+                className="flex min-h-[4rem] w-full items-center justify-center gap-2.5 rounded-[16px] bg-teal-500 px-6 text-[1.3rem] font-black text-white transition hover:bg-teal-600 disabled:opacity-70 sm:w-auto sm:justify-start"
+              >
+                {aiStart.busy ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} strokeWidth={2.4} />}
+                {aiStart.busy ? '시연 요청 준비 중…' : 'AI 요청 분석 시연 시작'}
+              </button>
+              <p className="mt-2.5 break-keep text-[1.05rem] font-semibold leading-snug text-navy-100">
+                병원이 남긴 요청을 AI가 읽고 요청 유형 · 긴급도 · 핵심 내용 · 회신 초안을 제안합니다.
+              </p>
+              {aiStart.error && (
+                <p data-presenter-ai-start-error role="alert" className="mt-2 break-keep rounded-xl bg-rose-500/15 px-3 py-2 text-[1.02rem] font-bold text-rose-100">
+                  {aiStart.error}
+                </p>
+              )}
               <button
                 type="button"
                 data-presenter-start
                 onClick={() => startAt(0)}
-                className="flex min-h-[3.5rem] items-center gap-2 rounded-[14px] bg-teal-500 px-6 text-[1.2rem] font-black text-white transition hover:bg-teal-600"
+                className="mt-5 flex min-h-[3.25rem] items-center gap-2 rounded-[14px] bg-white/10 px-5 text-[1.1rem] font-extrabold text-white ring-1 ring-white/20 transition hover:bg-white/15"
               >
-                <PresentIcon size={22} strokeWidth={2.4} /> 심사 시연 시작
+                <RouteIcon size={20} strokeWidth={2.4} /> 전체 운영 흐름 시연
               </button>
-            </div>
+            </>
           ) : (
-            <p className="mt-6 break-keep text-[1.05rem] font-bold text-navy-200">
+            <p className="break-keep text-[1.05rem] font-bold text-navy-200">
               안내 카드가 화면을 옮겨도 따라다닙니다. 「시연 시작」을 누르면 첫 화면으로 갑니다.
             </p>
           )}
+          <ol data-presenter-flow aria-label="전체 운영 흐름" className="mt-6 flex flex-wrap items-center gap-2">
+            {FLOW.map((f, i) => (
+              <li key={f} className="flex items-center gap-2">
+                {i > 0 && <ChevronRight size={20} strokeWidth={2.8} aria-hidden="true" className="text-teal-300" />}
+                <span className="rounded-full bg-white/10 px-4 py-2 text-[1.05rem] font-extrabold">{f}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* ── 현재 시스템 상태 — 과장 없이 (AI 는 실제 성공 기록이 있어야 「확인됨」) ── */}
+      {showFlow && (
+        <section data-system-status aria-label="현재 시스템 상태" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {systemStatus.map((x) => (
+            <div key={x.k} data-system-item={x.k} className="rounded-[16px] bg-white px-4 py-3.5 ring-1 ring-navy-100">
+              <p className="text-[1rem] font-extrabold text-navy-600">{x.label}</p>
+              <p className={`mt-1.5 inline-block break-keep rounded-full px-3 py-1 text-[0.98rem] font-extrabold ${x.tone}`}>{x.state}</p>
+            </div>
+          ))}
         </section>
       )}
 
       {presenter.active && !showFlow && !showClose && (
         <div data-presenter-running className="flex flex-wrap items-center gap-3 rounded-[16px] bg-teal-50 px-5 py-4">
           <p className="min-w-0 flex-1 break-keep text-[1.08rem] font-bold text-navy-900">
-            시연 진행 중 — STEP {presenter.index} 「{PRESENTER_STEPS[presenter.index].title}」
+            시연 진행 중 — 「{step.title}」
           </p>
-          <button type="button" onClick={() => presenter.goTo(presenter.index)} className="flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white">
+          <button type="button" onClick={() => presenter.goTo(presenter.pos)} className="flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white">
             그 화면으로 <ArrowRight size={17} strokeWidth={2.6} />
           </button>
           <button type="button" data-presenter-end onClick={presenter.stop} className="flex min-h-[2.75rem] items-center rounded-full bg-white px-4 text-[1.02rem] font-extrabold text-navy-800">
@@ -241,6 +321,34 @@ export function Presentation() {
                 <span className="min-w-0 flex-1">
                   <span className="p-body block font-extrabold">{c.label}</span>
                   <span className="p-sub block break-keep">{c.detail}</span>
+                  {c.key === 'ai' && (
+                    <span className="mt-2 block">
+                      {mode === 'live' ? (
+                        <button
+                          type="button"
+                          data-ai-check
+                          onClick={() => void checkAi()}
+                          disabled={aiCheck.busy}
+                          aria-busy={aiCheck.busy}
+                          className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-violet-50 px-4 text-[1rem] font-extrabold text-violet-800 ring-1 ring-violet-200 transition hover:bg-violet-100 disabled:opacity-60"
+                        >
+                          {aiCheck.busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} strokeWidth={2.4} />}
+                          {aiCheck.busy ? 'AI 부르는 중…' : '지금 AI 연결 확인 (시연 요청으로 실제 호출)'}
+                        </button>
+                      ) : (
+                        <span className="p-sub block">운영 연결(실제 DB)에서만 확인할 수 있습니다.</span>
+                      )}
+                      {aiCheck.ok !== null && (
+                        <span
+                          data-ai-check-result={aiCheck.ok ? 'ok' : 'fail'}
+                          role="status"
+                          className={`mt-1.5 block break-keep text-[1rem] font-bold ${aiCheck.ok ? 'text-teal-700' : 'text-rose-700'}`}
+                        >
+                          {aiCheck.ok ? `✓ ${aiCheck.text}` : `✕ 실패 — ${aiCheck.text}`}
+                        </span>
+                      )}
+                    </span>
+                  )}
                   {c.key === 'client' && (
                     <select
                       data-presenter-client

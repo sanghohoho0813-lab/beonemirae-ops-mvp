@@ -21,7 +21,7 @@ import {
   MessageSquarePlus,
   Gauge,
   ClipboardCheck,
-  Presentation,
+  Sparkles,
   Lightbulb,
   Compass,
   Inbox,
@@ -50,6 +50,11 @@ export interface NavItem {
   /** 한 줄 설명 — 무엇을 하는 메뉴인지 목차에서 바로 읽히게 */
   desc: string
   tone: Tone
+  /**
+   *  작은 표 (예: 「발표용」) — 임시로 눈에 띄게 둔 메뉴만. 다른 메뉴와 같은 모양에
+   *  글자 표 하나만 더합니다(색 · 그림 과하게 바꾸지 않음).
+   */
+  badge?: string
 }
 
 /**
@@ -148,6 +153,10 @@ export const NAV_GROUPS: NavGroupDef[] = [
       { to: '/today', label: '오늘 일정', icon: CalendarClock, desc: '방문 · 완료 · 입력 대기', tone: 'sky' },
       { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '한 번 입력 → 자동 연결', tone: 'emerald' },
       { to: '/clients', label: '거래처', icon: Building2, desc: '병원별 이력 · 메모 · 추천', tone: 'navy' },
+      //  ⚠ 신용보증기금 발표 기간 임시 — 발표 가이드(/presentation)를 맨 위 묶음으로 올림.
+      //    같은 주소가 두 자리에 보이지 않게 「AX·심사」의 「심사 시연」은 뺐습니다.
+      //    발표가 끝나면 이 줄을 지우고 AX·심사에 「심사 시연」을 되돌리면 됩니다.
+      { to: '/presentation', label: '신보 발표 시연', icon: Sparkles, desc: 'AI 요청 분석 · 실제 운영 흐름', tone: 'violet', badge: '발표용' },
     ],
   },
   {
@@ -204,7 +213,6 @@ export const NAV_GROUPS: NavGroupDef[] = [
       { to: '/ax-coach', label: 'AX 코치', icon: Compass, desc: '오늘 할 일 · 실증 자료 준비도', tone: 'emerald' },
       { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · 확인된 변화 · 다음 할 일', tone: 'teal' },
       { to: '/readiness', label: '실증 준비 상태', icon: ClipboardCheck, desc: '준비 상태 · 증빙 · 브리핑 인쇄', tone: 'navy' },
-      { to: '/presentation', label: '심사 시연', icon: Presentation, desc: '발표 가이드 · 시연 준비 · 60초 투어', tone: 'navy' },
       { to: '/why', label: '만든 이유', icon: Lightbulb, desc: '왜 만들었고 어디로 가는지', tone: 'amber' },
     ],
   },

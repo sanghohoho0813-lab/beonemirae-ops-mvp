@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle,
   Building2,
@@ -163,6 +163,22 @@ export function Requests() {
     if (filter === '긴급') return r.urgent && r.status !== '처리 완료'
     return true
   })
+
+  //  ── ?focus=<요청 id> — 발표 가이드의 AI 시연이 그 요청으로 바로 데려옵니다 (0140) ──
+  //   목록에서 찾지 않게 그 카드로 내려 주고 테두리를 둡니다. 거르기 때문에 안 보이면 「전체」로.
+  const [sp] = useSearchParams()
+  const focusId = sp.get('focus')
+  const focusInAll = !!focusId && all.some((r) => r.id === focusId)
+  const focusShown = !!focusId && rows.some((r) => r.id === focusId)
+  useEffect(() => {
+    if (focusInAll && !focusShown) setFilter('전체')
+  }, [focusInAll, focusShown])
+  const focusScrolled = useRef('')
+  useEffect(() => {
+    if (!focusId || !focusShown || focusScrolled.current === focusId) return
+    focusScrolled.current = focusId
+    requestAnimationFrame(() => document.querySelector('[data-req-focus]')?.scrollIntoView({ block: 'center' }))
+  }, [focusId, focusShown])
 
   async function doSnooze() {
     if (!snoozeFor) return
@@ -328,7 +344,11 @@ export function Requests() {
       ) : (
         <div className="space-y-3">
           {rows.map((r, ri) => (
-            <div key={r.id} className="card p-5">
+            <div
+              key={r.id}
+              data-req-focus={r.id === focusId ? '' : undefined}
+              className={`card p-5 ${r.id === focusId ? 'ring-2 ring-violet-300' : ''}`}
+            >
               <div className="flex flex-wrap items-center gap-2.5">
                 {(() => {
                   const Icon = KIND_ICON[r.type]
@@ -541,7 +561,13 @@ export function Requests() {
           <div data-ai-triage className="mb-3 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <Sparkles size={17} strokeWidth={2.4} className="shrink-0 text-violet-600" />
-              <p className="t-body min-w-0 flex-1 break-keep font-bold text-violet-900">AI 요청 분석 · 회신 초안</p>
+              <p className="t-body min-w-0 flex-1 break-keep font-extrabold text-violet-900">
+                AI 요청 분석
+                {/*  창이 길어도 늘 보이는 자리 — AI 는 제안, 결정은 담당자 (0140 발표) */}
+                <span data-ai-human-badge className="ml-2 inline-block rounded-full bg-white px-2.5 py-0.5 align-middle text-[0.9rem] font-extrabold text-violet-800 ring-1 ring-violet-200">
+                  AI 제안 → 담당자 최종 확인
+                </span>
+              </p>
               <button
                 data-ai-triage-run
                 onClick={() => void runAi()}
@@ -571,9 +597,10 @@ export function Requests() {
             )}
 
             {ai.result && !ai.busy && (
-              <div data-ai-triage-result className="mt-2.5 space-y-2">
+              <div data-ai-triage-result className="mt-3 space-y-3">
+                {/*  핵심 표 — 요청 유형 · 함께 든 요청 · 긴급도 (0140 발표 때 한눈에) */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span data-ai-kind={ai.result.kind} className="pill bg-white text-navy-800 ring-1 ring-violet-200">
+                  <span data-ai-kind={ai.result.kind} className="pill bg-white text-[1rem] font-extrabold text-navy-900 ring-1 ring-violet-200">
                     {REQUEST_KIND_LABEL[ai.result.kind as RequestKind] ?? ai.result.kind}
                   </span>
                   {ai.result.alsoKinds.map((k) => (
@@ -581,19 +608,24 @@ export function Requests() {
                       + {REQUEST_KIND_LABEL[k as RequestKind] ?? k}
                     </span>
                   ))}
-                  <span data-ai-urgency={ai.result.urgency} className={`pill ${AI_URGENCY_TONE[ai.result.urgency] ?? 'bg-navy-100 text-navy-700'}`}>
+                  <span data-ai-urgency={ai.result.urgency} className={`pill text-[1rem] font-extrabold ${AI_URGENCY_TONE[ai.result.urgency] ?? 'bg-navy-100 text-navy-700'}`}>
                     긴급도 {ai.result.urgency}
                   </span>
                 </div>
-                <p data-ai-summary className="t-body break-keep text-navy-900">{ai.result.summary}</p>
+                <div>
+                  <p className="t-caption font-extrabold text-violet-800">AI 요약</p>
+                  <p data-ai-summary className="t-body mt-0.5 break-keep font-semibold text-navy-900">{ai.result.summary}</p>
+                </div>
                 {ai.result.points.length > 0 && (
-                  <ul data-ai-points className="t-caption list-disc space-y-0.5 pl-5 text-navy-700">
-                    {ai.result.points.map((x) => <li key={x} className="break-keep">{x}</li>)}
-                  </ul>
+                  <div>
+                    <p className="t-caption font-extrabold text-violet-800">핵심 요구사항</p>
+                    <ul data-ai-points className="t-body mt-0.5 list-disc space-y-0.5 pl-5 text-navy-800">
+                      {ai.result.points.map((x) => <li key={x} className="break-keep">{x}</li>)}
+                    </ul>
+                  </div>
                 )}
-                <p data-ai-basis className="t-caption break-keep text-navy-600">판단 근거: {ai.result.basis}</p>
                 <div className="rounded-xl bg-white px-3 py-2.5 ring-1 ring-violet-100">
-                  <p className="t-caption font-bold text-violet-800">회신 초안</p>
+                  <p className="t-caption font-extrabold text-violet-800">AI 회신 초안</p>
                   <p data-ai-draft className="t-body mt-0.5 whitespace-pre-wrap break-keep text-navy-900">{ai.result.draft}</p>
                   <button
                     type="button"
@@ -601,9 +633,10 @@ export function Requests() {
                     onClick={applyDraft}
                     className="btn-ghost mt-2 min-h-[2.75rem] border-violet-200 px-3 text-[0.98rem]"
                   >
-                    초안 사용
+                    초안 사용 — 아래 칸에서 고쳐 저장
                   </button>
                 </div>
+                <p data-ai-basis className="t-caption break-keep rounded-lg bg-white/60 px-2.5 py-1.5 text-navy-600">판단 근거: {ai.result.basis}</p>
                 <p data-ai-meta className="t-caption break-keep text-navy-500">
                   {ai.result.model ? `모델 ${ai.result.model}` : '모델 이름 없음'}
                   {ai.ms != null && ` · ${(ai.ms / 1000).toFixed(1)}초`}
@@ -612,9 +645,13 @@ export function Requests() {
               </div>
             )}
 
-            <p data-ai-disclaimer className="t-caption mt-2 break-keep text-violet-800">
-              AI가 업무 확인을 돕기 위해 제안한 내용입니다. 최종 판단과 회신은 담당자가 확인합니다. AI는 요청 상태를 바꾸거나 병원에 보내지 않습니다.
-            </p>
+            {/*  AI 는 제안만 — 발표 화면에서 반드시 보이게 (심사위원이 「AI 가 자동 확정」으로 오해하지 않게) */}
+            <div data-ai-disclaimer className="mt-3 rounded-xl bg-violet-100/70 px-3 py-2.5">
+              <p data-ai-human-check className="t-body break-keep font-extrabold text-violet-900">AI 제안 → 담당자 최종 확인</p>
+              <p className="t-caption mt-0.5 break-keep text-violet-900">
+                AI는 초안을 제안하며, 최종 판단과 회신은 담당자가 수행합니다. AI는 요청 상태를 바꾸거나 일정을 확정하거나 병원에 보내지 않습니다.
+              </p>
+            </div>
           </div>
         )}
         <textarea

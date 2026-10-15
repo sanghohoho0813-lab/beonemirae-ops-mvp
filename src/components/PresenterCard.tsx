@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { usePresenter } from '../context/PresenterContext'
 import { useTour } from '../context/TourContext'
-import { PRESENTER_STEPS, SAMPLE_REQUEST, kstStamp, onStepRoute, type PresenterStatus } from '../lib/presenter'
+import { PRESENTER_STEPS, SAMPLE_REQUEST, kstStamp, onStepRoute, stepLabel, type PresenterStatus } from '../lib/presenter'
 import { openPortalPhoneView } from './PortalViewSwitch'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ const visible = (el: Element | null): el is HTMLElement => {
 }
 
 export function PresenterCard() {
-  const { active, index, clientId, next, prev, stop, goTo } = usePresenter()
+  const { active, index, pos, order, clientId, demoRequestId, next, prev, stop, goTo, continueFull } = usePresenter()
   const { role } = useAuth()
   const { data } = useData()
   const tour = useTour()
@@ -62,10 +62,13 @@ export function PresenterCard() {
   const staff = role === 'admin' || role === 'office'
   const show = active && staff && !inFrame && !tour.active && pathname !== '/login'
   const step = PRESENTER_STEPS[index]
-  const ctx = useMemo(() => ({ clientId }), [clientId])
+  const ctx = useMemo(() => ({ clientId, demoRequestId }), [clientId, demoRequestId])
   const here = show && onStepRoute(step, pathname, ctx)
-  const total = PRESENTER_STEPS.length - 1
-  const last = index === PRESENTER_STEPS.length - 1
+  const last = pos === order.length - 1
+  const label = stepLabel(order, pos)
+  //  AI 먼저 보여 주는 중 — AI · 회신 단계에서 「전체 운영 흐름 계속 보기」 (0140)
+  const aiFirst = order[0] === 'triage'
+  const canContinue = aiFirst && (step.key === 'triage' || step.key === 'reply')
 
   //  AI 실제 호출이 한 번이라도 성공했는가 — 화면이 알 수 있는 유일한 근거(ai_calls)
   const aiOk = useMemo(() => {
@@ -146,7 +149,7 @@ export function PresenterCard() {
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">
         <p data-presenter-stepno className="text-[1rem] font-extrabold tracking-wide text-teal-700">
-          {index === 0 ? '시작' : `STEP ${index} / ${total}`}
+          {label}
         </p>
         <h2 data-presenter-title className="mt-0.5 break-keep text-[1.4rem] font-black leading-tight tracking-tight text-navy-900">
           {step.title}
@@ -188,8 +191,8 @@ export function PresenterCard() {
 
   const progress = (
     <div aria-hidden="true" className="mt-3 flex gap-1">
-      {PRESENTER_STEPS.map((s, i) => (
-        <span key={s.key} className={`h-1.5 flex-1 rounded-full ${i <= index ? 'bg-teal-500' : 'bg-navy-100'}`} />
+      {order.map((k, i) => (
+        <span key={k} className={`h-1.5 flex-1 rounded-full ${i <= pos ? 'bg-teal-500' : 'bg-navy-100'}`} />
       ))}
     </div>
   )
@@ -205,7 +208,7 @@ export function PresenterCard() {
           <button
             type="button"
             data-presenter-go
-            onClick={() => (needsClient ? navigate('/presentation') : goTo(index))}
+            onClick={() => (needsClient ? navigate('/presentation') : goTo(pos))}
             className="mt-2 inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white transition hover:bg-navy-800"
           >
             {needsClient ? '시연 준비 화면으로' : `「${step.title}」 화면으로`} <ArrowRight size={17} strokeWidth={2.6} />
@@ -314,7 +317,18 @@ export function PresenterCard() {
   )
 
   const nav = (
-    <div className="flex gap-2 pt-4">
+    <div className="pt-4">
+      {canContinue && (
+        <button
+          type="button"
+          data-presenter-continue
+          onClick={continueFull}
+          className="mb-2 flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] bg-teal-50 px-3 text-[1.05rem] font-extrabold text-teal-800 ring-1 ring-teal-200 transition hover:bg-teal-100"
+        >
+          전체 운영 흐름 계속 보기 <ArrowRight size={18} strokeWidth={2.6} />
+        </button>
+      )}
+    <div className="flex gap-2">
       <button
         type="button"
         data-presenter-prev
@@ -340,9 +354,10 @@ export function PresenterCard() {
           onClick={next}
           className="flex min-h-[3rem] flex-[1.6] items-center justify-center gap-1.5 rounded-[14px] bg-navy-900 px-3 text-[1.05rem] font-extrabold text-white transition hover:bg-navy-800"
         >
-          {index === 0 ? '시연 시작' : '다음 단계'} <ArrowRight size={18} strokeWidth={2.6} />
+          {pos === 0 && order[0] === 'intro' ? '시연 시작' : '다음 단계'} <ArrowRight size={18} strokeWidth={2.6} />
         </button>
       )}
+    </div>
     </div>
   )
 
@@ -363,7 +378,7 @@ export function PresenterCard() {
               {...fade}
               className={`pointer-events-auto absolute bottom-3 flex min-h-[3.25rem] items-center gap-2.5 rounded-full bg-navy-900 px-5 text-[1.05rem] font-extrabold text-white shadow-2xl ${side === 'left' ? 'left-3' : 'right-3'}`}
             >
-              {index === 0 ? '시작' : `STEP ${index}/${total}`} · {step.title} <ChevronUp size={18} strokeWidth={2.6} />
+              {label} · {step.title} <ChevronUp size={18} strokeWidth={2.6} />
             </motion.button>
           ) : (
             <motion.aside
@@ -401,7 +416,7 @@ export function PresenterCard() {
           >
             <button type="button" onClick={() => setSheet(true)} className="min-w-0 flex-1 text-left">
               <span className="block truncate text-[0.98rem] font-extrabold text-teal-300">
-                {index === 0 ? '시작' : `STEP ${index}/${total}`} · {step.title}
+                {label} · {step.title}
               </span>
               <span className="block truncate text-[1rem] font-bold">{here ? step.todo : '이 단계 화면이 아닙니다 — 눌러서 이동'}</span>
             </button>

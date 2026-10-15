@@ -130,7 +130,8 @@ const okFn = (delay = 0) => async (r) => {
   ok(flat(await dlg.locator('[data-ai-draft]').innerText()) === RESULT.draft, '① 회신 초안 = 서버가 돌려준 그대로')
   ok(/모델 gpt-4o-mini-2024-07-18/.test(flat(await dlg.locator('[data-ai-meta]').innerText())), '① 실제 모델 이름 · 처리 시간 표시')
   const disc = flat(await dlg.locator('[data-ai-disclaimer]').innerText())
-  ok(/AI가 업무 확인을 돕기 위해 제안한 내용입니다/.test(disc) && /최종 판단과 회신은 담당자가 확인합니다/.test(disc), '① 안내 — 제안일 뿐, 최종 판단 · 회신은 담당자', disc)
+  //  0140 — 발표 화면에서 반드시 보이게: 「AI 제안 → 담당자 최종 확인」 + 자동 확정 · 전송 없음
+  ok(/AI 제안 → 담당자 최종 확인/.test(disc) && /AI는 초안을 제안하며, 최종 판단과 회신은 담당자가 수행합니다/.test(disc) && /병원에 보내지 않습니다/.test(disc), '① 안내 — AI 제안 → 담당자 최종 확인 (자동 확정 · 전송 없음)', disc)
   ok((await p.locator('#reply-text').inputValue()) === '', '① 회신 칸에 자동으로 넣지 않는다 (사람이 「초안 사용」을 눌러야)')
   ok(seen.reqWrites.length === 0, '① AI 실행만으로 요청 상태 · 회신이 바뀌지 않는다 (쓰기 0건)', JSON.stringify(seen.reqWrites))
   ok(seen.aiInsert.length === 0, '① 기록은 서버가 남긴다 — 브라우저가 중복 기록하지 않는다')

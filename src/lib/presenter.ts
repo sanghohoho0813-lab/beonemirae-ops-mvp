@@ -20,6 +20,8 @@ export type PresenterStatus = '구현됨' | '실증 단계' | '측정 중'
 export interface PresenterCtx {
   /** 시연에 쓸 병원(거래처) id — 병원 화면 · 회신 확인 단계에서 씁니다 */
   clientId: string | null
+  /** AI 시연에 쓸 시연 요청 id — 요청함에서 그 요청으로 바로 데려갑니다 (0140) */
+  demoRequestId?: string | null
 }
 
 export interface PresenterStep {
@@ -117,16 +119,17 @@ export const PRESENTER_STEPS: PresenterStep[] = [
   },
   {
     key: 'triage',
-    title: '직원 요청함 + AI 업무보조',
+    title: 'AI가 병원 요청을 읽고 업무 판단을 보조합니다',
     routes: () => ['/requests'],
-    go: () => '/requests',
-    targets: ['[data-ai-use-draft]', '[data-ai-triage-run]', '[data-presenter="reply-open"]'],
-    show: '병원이 방금 보낸 요청이 직원 요청함에 들어와 있습니다.',
-    before: '긴 요청 글을 담당자가 매번 읽고, 종류 · 급한 정도 · 함께 들어온 요청(예: 용기)을 머리로 정리했습니다.',
-    now: 'AI 가 요청 글을 읽고 종류 · 긴급도 · 요약 · 핵심 요구사항 · 회신 초안 · 판단 근거를 제안합니다. 일정 확정 · 상태 변경 · 회신 전송은 하지 않습니다.',
-    effects: ['긴 요청의 빠른 파악', '복합 요청(수거 + 용기) 누락 방지', '회신 초안 작성 보조', '응대 문장 표준화'],
-    todo: '「회신 남기기」 → 「AI 분석 실행」 → 결과를 짚은 뒤 「초안 사용」',
-    note: 'AI 가 결정을 대신하는 것이 아니라, 병원 요청을 빠르게 읽고 정리해 담당자의 판단과 회신을 돕습니다. 최종 판단은 담당자가 합니다.',
+    //  시연 요청이 준비돼 있으면 그 요청으로 바로 — 발표 중에 목록을 뒤지지 않게 (0140)
+    go: (c) => (c.demoRequestId ? `/requests?focus=${c.demoRequestId}` : '/requests'),
+    targets: ['[data-ai-use-draft]', '[data-ai-triage-run]', '[data-req-focus] [data-presenter="reply-open"]', '[data-presenter="reply-open"]'],
+    show: '병원이 남긴 자연어 요청을 AI가 분석해 요청 유형 · 긴급도 · 핵심 요구사항 · 회신 초안을 제안합니다.',
+    before: '전화·문자·카카오톡으로 들어온 긴 요청을 담당자가 직접 읽고, 급한 정도와 함께 들어온 요구사항을 일일이 판단해야 했습니다.',
+    now: '요청이 시스템 데이터로 들어오면 AI가 먼저 구조화하고, 담당자가 결과를 확인해 실제 업무에 반영합니다.',
+    effects: ['긴 요청 빠른 파악', '복합 요청 누락 방지', '고객 응대 문장 표준화', '담당자 판단시간 절감 가능'],
+    todo: '시연 요청의 「회신 남기기」 → 「AI 분석 실행」 → 결과를 짚은 뒤 「초안 사용」',
+    note: 'AI가 업무를 대신하는 구조는 아닙니다. 병원 요청을 빠르게 읽고 정리해서 담당자의 판단과 회신을 돕는 방식이며, 최종 결정은 사람이 합니다.',
     status: '구현됨',
   },
   {
@@ -179,8 +182,21 @@ export const CLOSING = {
     'AI 자체가 목적이 아니라, 기존 의료폐기물 사업의 운영 Capacity 를 높여 같은 인력과 차량으로 더 많은 병원을 안정적으로 관리할 수 있는 운영 구조를 만드는 것이 첫 번째 목표입니다.',
 }
 
-/** 시작 화면 — 오늘 보여드릴 흐름 */
-export const FLOW = ['병원', '요청', '직원 확인', 'AI 업무보조', '현장 처리', '운영 데이터 축적']
+/** 시작 화면 — 오늘 보여드릴 흐름 (0140 신보 발표 — AI 를 앞에) */
+export const FLOW = ['병원 요청', 'AI 분석', '담당자 판단', '수거 · 운영', '데이터 축적']
+
+// ── 시연 순서 두 가지 (0140) ─────────────────────────────────────────────────
+//  전체 흐름: 시작 → 오늘 운영 → 수거 입력 → 병원 포털 → AI → 회신 → 성과 → 마무리
+//  AI 먼저:   AI → 회신 · 병원 확인 → 오늘 운영 → 수거 입력 → 병원 포털 → 성과 → 마무리
+//   ⚠ 단계 내용은 하나입니다(같은 카드). 보여 주는 차례만 다릅니다.
+export const FULL_ORDER: string[] = PRESENTER_STEPS.map((s) => s.key)
+export const AI_ORDER: string[] = ['triage', 'reply', 'today', 'collect', 'portal', 'ir', 'close']
+export const stepIndex = (key: string) => Math.max(0, PRESENTER_STEPS.findIndex((s) => s.key === key))
+/** 「STEP n / N」 — 시작 화면(intro)은 번호 없이 */
+export function stepLabel(order: string[], pos: number): string {
+  if (order[0] === 'intro') return pos === 0 ? '시작' : `STEP ${pos} / ${order.length - 1}`
+  return `STEP ${pos + 1} / ${order.length}`
+}
 
 /** ISO 시각 → 한국 시각 「MM-DD HH:mm」 (AI 최근 성공 표시용) */
 export function kstStamp(iso: string): string {
@@ -202,8 +218,12 @@ export const PRESENTER_KEY = 'beonemirae-ops:presenter'
 const MAX_MS = 3 * 60 * 60 * 1000
 
 export interface PresenterRun {
-  index: number
+  /** 보여 주는 차례 (단계 key) — 없으면 전체 흐름 */
+  order: string[]
+  /** 그 차례에서 몇 번째 */
+  pos: number
   clientId: string | null
+  demoRequestId: string | null
   at: number
 }
 
@@ -211,9 +231,13 @@ export function loadRun(now = Date.now()): PresenterRun | null {
   try {
     const raw = sessionStorage.getItem(PRESENTER_KEY)
     if (!raw) return null
-    const r = JSON.parse(raw) as PresenterRun
-    if (typeof r.index !== 'number' || now - (r.at ?? 0) > MAX_MS) return null
-    return { index: Math.max(0, Math.min(PRESENTER_STEPS.length - 1, r.index)), clientId: r.clientId ?? null, at: r.at }
+    const r = JSON.parse(raw) as Partial<PresenterRun> & { index?: number }
+    if (now - (r.at ?? 0) > MAX_MS) return null
+    const known = new Set(FULL_ORDER)
+    const order = Array.isArray(r.order) && r.order.length && r.order.every((k) => known.has(k)) ? r.order : FULL_ORDER
+    const pos0 = typeof r.pos === 'number' ? r.pos : typeof r.index === 'number' ? r.index : NaN
+    if (!Number.isFinite(pos0)) return null
+    return { order, pos: Math.max(0, Math.min(order.length - 1, pos0)), clientId: r.clientId ?? null, demoRequestId: r.demoRequestId ?? null, at: r.at ?? now }
   } catch {
     return null
   }

@@ -191,6 +191,9 @@ export function MoreMenu({
   //  ⚠ 0110 — PC 사이드바와 **같은 목록**을 읽습니다 (lib/nav.ts).
   //    첫 묶음(오늘 업무)만 뺍니다 — 그 넷은 아래 고정 탭이 맡고 있어서,
   //    여기에 또 넣으면 같은 것이 두 자리에 생깁니다.
+  //  ⚠ 신보 발표 기간 임시 — 「오늘 업무」에 올린 발표용 메뉴(표가 붙은 것)만은 폰에서도
+  //    보이게 맨 위에 한 줄로 둡니다(아래 고정 탭에는 없으므로 두 자리가 되지 않습니다).
+  const pinned = visible(NAV_GROUPS.find((g) => g.id === 'today')?.items.filter((i) => i.badge) ?? [])
   const groups = NAV_GROUPS.filter((g) => g.id !== 'today')
     .map((g) => ({ ...g, items: visible(g.items) }))
     .filter((g) => g.items.length > 0)
@@ -207,6 +210,28 @@ export function MoreMenu({
 
   return (
     <div className="space-y-5">
+      {pinned.length > 0 && (
+        <section data-more-section="more-today" className="space-y-2">
+          {pinned.map((i) => (
+            <button
+              key={i.to}
+              type="button"
+              data-more-item={i.to}
+              onClick={() => go(i.to)}
+              className="card flex w-full items-center gap-3 p-3.5 text-left ring-1 ring-violet-200"
+            >
+              <IconChip icon={i.icon} tone="teal" />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2 break-keep font-bold text-navy-900">
+                  {i.label}
+                  {i.badge && <span data-nav-badge className="pill bg-violet-50 text-violet-700">{i.badge}</span>}
+                </span>
+                <span className="mt-0.5 block break-keep text-[0.96rem] leading-snug text-navy-400">{i.desc}</span>
+              </span>
+            </button>
+          ))}
+        </section>
+      )}
       {/* 도움말 — 두 갈래를 맨 위에 둡니다.
           아래로 내려두면 폰에서는 있는 줄도 모릅니다.
           네 가지 설명 화면의 역할이 겹치지 않게 한 줄로 구분해 둡니다.
