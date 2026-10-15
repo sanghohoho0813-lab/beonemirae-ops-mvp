@@ -37,7 +37,9 @@ import { prettyDate, shiftDays, today } from '../lib/format'
 import { REQUEST_REVENUE, REQUEST_TONE, STATUS_TONE, TONE } from '../lib/tone'
 import { REQUEST_KINDS, REQUEST_KIND_LABEL, type RequestKind, type RequestStatus } from '../types'
 import { AiButton } from '../components/AiAction'
-import { aiTriageRequest, markAiCallEdited, type TriageResult } from '../lib/evidenceRepo'
+import { aiAssist, aiTriageRequest, markAiCallEdited, type TriageResult } from '../lib/evidenceRepo'
+import { planInput, type PlanResult } from '../lib/requestPlan'
+import { AiRequestPlan, PLAN_EMPTY, type PlanView } from '../components/AiRequestPlan'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { aiVendor } from '../lib/aiVendor'
 import { dispatchHint } from '../lib/dispatchHint'
@@ -128,6 +130,11 @@ export function Requests() {
   const aiBusy = useRef<Set<string>>(new Set())
   const ai: AiView = (replyTo && aiByReq[replyTo.id]) || AI_EMPTY
   const setAiFor = (id: string, patch: Partial<AiView>) => setAiByReq((m) => ({ ...m, [id]: { ...(m[id] ?? AI_EMPTY), ...patch } }))
+  //  0142 — AI 처리 계획 (요청 분석과 **같이** 부름 · 요청마다 따로)
+  const [planByReq, setPlanByReq] = useState<Record<string, PlanView & { used: boolean }>>({})
+  const plan = (replyTo && planByReq[replyTo.id]) || { ...PLAN_EMPTY, used: false }
+  const setPlanFor = (id: string, patch: Partial<PlanView & { used: boolean }>) =>
+    setPlanByReq((m) => ({ ...m, [id]: { ...PLAN_EMPTY, ...(m[id] ?? { used: false }), ...patch } }))
   const { profile } = useAuth()
   const canAi = ready106 && mode === 'live' && (role === 'admin' || role === 'office')
   const [newOpen, setNewOpen] = useState(false)
@@ -254,10 +261,18 @@ export function Requests() {
     //  시연 요청이면 서버에 닿지 못한 실패 기록도 시연으로 남깁니다 (운영 실적과 분리).
     const src = data.requests.find((x) => x.id === id)
     const demo = !!src?.demoSessionId || !!data.clients.find((c) => c.id === src?.clientId)?.isDemoGenerated
+    //  0142 — 처리 계획은 따로 기다립니다(분석 결과는 먼저 보이고, 계획은 이어서 채워짐)
+    setPlanFor(id, { busy: true, error: '', result: null, used: false })
+    const planRun = (async () => {
+      const r = await aiAssist<PlanResult>('request_plan', planInput(data, replyTo), profile?.name ?? '')
+      if (r.ok) setPlanFor(id, { busy: false, error: '', result: r.result, ms: r.ms, logged: r.logged })
+      else setPlanFor(id, { busy: false, error: r.error, result: null, ms: r.ms })
+    })()
     try {
       const res = await aiTriageRequest({ requestId: id, actorName: profile?.name ?? '', demo })
       if (res.ok) setAiFor(id, { busy: false, callId: res.callId, result: res.result, ms: res.ms, error: null, logged: res.logged, usedDraft: false })
       else setAiFor(id, { busy: false, callId: res.callId, result: null, ms: res.ms, error: res.error })
+      await planRun
     } finally {
       aiBusy.current.delete(id)
     }
@@ -701,6 +716,18 @@ export function Requests() {
                   </p>
                 </li>
               </ol>
+            )}
+
+            {/*  0142 — AI 처리 계획: 원하는 것 · 시스템이 다시 확인(차량 · 재고 · 이력) · 처리 순서 · 주의 · 구체 회신 */}
+            {(plan.busy || plan.error || plan.result) && (
+              <AiRequestPlan
+                data={data}
+                clientId={replyTo.clientId}
+                hint={dispatchHint(data, replyTo)}
+                plan={plan}
+                usedReply={plan.used}
+                onUseReply={(t) => { setReplyText(t); setPlanFor(replyTo.id, { used: true }) }}
+              />
             )}
 
             {/*  AI 는 제안만 — 발표 화면에서 반드시 보이게 (심사위원이 「AI 가 자동 확정」으로 오해하지 않게) */}

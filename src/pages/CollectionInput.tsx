@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AiFieldNote } from '../components/AiAssist'
+import { AiFieldNote, type FieldFill } from '../components/AiAssist'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -769,6 +769,40 @@ export function CollectionInput() {
     setDraft(null)
   }
 
+  //  ── 0142 · AI 메모 → 칸 채우기 ────────────────────────────────────────
+  //   서버가 「메모에 있는 숫자 · 정해진 칸 이름 · 화면의 규격 목록」으로 검사한 값만 옵니다.
+  //   담당자가 「수거 입력 칸에 채우기」를 눌렀을 때만 칸이 바뀌고, 저장은 아래 「수거 완료 저장」입니다.
+  //   ⚠ 채운 칸은 펼쳐서 보이게 합니다 — 접힌 채로 값이 바뀌면 모르고 저장합니다.
+  const applyAiFill = (f: FieldFill) => {
+    if (f.amountKg != null) setAmount(String(f.amountKg))
+    if (f.containers.length) {
+      setContainers((c) => {
+        const next = { ...c }
+        for (const x of f.containers) {
+          const k = CONTAINER_KEYS.find((y) => y.label === x.label)?.key
+          if (k) next[k] = x.qty
+        }
+        return next
+      })
+      setOpenContainers(true)
+    }
+    if (f.supplied.length) {
+      setSuppliedItems((cur) => {
+        const next = { ...cur }
+        for (const x of f.supplied) {
+          const k = SUPPLY_ITEMS.find((y) => y.label === x.item)?.key
+          if (k) next[k as ItemKey] = x.qty
+        }
+        return next
+      })
+      setOpenSupply(true)
+    }
+    if (f.handover && (HANDOVERS as string[]).includes(f.handover)) {
+      setHandover(f.handover as HandoverStatus)
+      setOpenHandover(true)
+    }
+  }
+
   //  값이 기본과 다르면 저절로 펼칩니다 (위 ⚠ ② 참고)
   const timeOpen = openTime || visitDate !== today()
   const containersOpen = openContainers ?? containerSum > 0
@@ -1438,7 +1472,7 @@ export function CollectionInput() {
             placeholder="현장 특이사항을 입력하세요 (선택)"
           />
           {/*  0141 — AI 메모 정리 (실제 AI · 제안만 · 「정리본으로 바꾸기」를 눌러야 칸이 바뀜 · 저장은 그대로 아래 단추) */}
-          <AiFieldNote memo={memo} onApply={setMemo} />
+          <AiFieldNote memo={memo} onApply={setMemo} items={SUPPLY_ITEMS.map((i) => i.label)} onFill={applyAiFill} />
         </Section>
 
 

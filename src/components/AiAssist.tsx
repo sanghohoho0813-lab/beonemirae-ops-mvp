@@ -9,6 +9,9 @@ import { openRequests, todayProgress } from '../lib/ops'
 import { planGaps } from '../lib/planGap'
 import { dunningSummary } from '../lib/dunning'
 import { today } from '../lib/format'
+import { schedulesOn } from '../lib/selectors'
+import { isPending } from '../lib/scheduleLive'
+import { useNavigate } from 'react-router-dom'
 import { REQUEST_KINDS } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -109,7 +112,22 @@ function AiShell({
 
 // ── ① AI 오늘 브리핑 ─────────────────────────────────────────────────────────
 
-type Briefing = { headline: string; items: { title: string; detail: string }[]; note: string }
+type Briefing = { headline: string; items: { title: string; detail: string; when?: string | null; go?: string | null }[]; note: string }
+
+/** 브리핑 「어느 화면」 → 실제 주소 (서버 BRIEF_GO 와 같은 이름) */
+export const BRIEF_GO_PATH: Record<string, string> = {
+  요청함: '/requests',
+  '오늘 일정': '/today',
+  '수거 입력': '/collection',
+  '방문 계획': '/plan',
+  미수금: '/receivables',
+}
+
+/** 'YYYY-MM-DD HH:mm'(한국 시각) → 지금까지 몇 시간 */
+const hoursSince = (when: string, nowMs: number) => {
+  const t = Date.parse(`${when.trim().replace(' ', 'T')}:00+09:00`)
+  return Number.isFinite(t) ? Math.max(0, Math.floor((nowMs - t) / 3_600_000)) : null
+}
 
 /** 브리핑에 보내는 것 — 숫자뿐 (거래처 이름 · 요청 글 · 연락처는 보내지 않음) */
 export function briefingInput(data: ReturnType<typeof useData>['data']) {
@@ -118,7 +136,20 @@ export function briefingInput(data: ReturnType<typeof useData>['data']) {
   const kinds: Record<string, number> = {}
   for (const r of open) if ((REQUEST_KINDS as string[]).includes(r.type)) kinds[r.type] = (kinds[r.type] ?? 0) + 1
   const dun = dunningSummary(data)
+  //  0142 — 차량별 오늘 남은 방문 (차량 이름 · 곳 수만 — 기사 이름 · 병원 이름은 보내지 않음)
+  const left = new Map<string, number>()
+  for (const s of schedulesOn(data, today()).filter(isPending)) if (s.vehicleId) left.set(s.vehicleId, (left.get(s.vehicleId) ?? 0) + 1)
+  const vehicles = [...left]
+    .map(([id, n]) => ({ label: data.vehicles.find((v) => v.id === id)?.name ?? '차량', left: n }))
+    .sort((a, b) => b.left - a.left)
+    .slice(0, 12)
+  //  처리 전 요청이 얼마나 기다렸나 — 가장 오래 · 하루 넘은 건수
+  const nowMs = Date.now()
+  const ages = open.map((r) => hoursSince(r.when, nowMs)).filter((h): h is number => h != null)
   return {
+    vehicles,
+    oldestOpenHours: ages.length ? Math.max(...ages) : null,
+    staleRequests: ages.filter((h) => h >= 24).length,
     date: today(),
     visitsPlanned: p.planned,
     visitsDone: p.done,
@@ -134,6 +165,7 @@ export function briefingInput(data: ReturnType<typeof useData>['data']) {
 export function AiBriefingCard() {
   const can = useCanAi()
   const { data } = useData()
+  const navigate = useNavigate()
   const { st, run } = useAssist<Briefing>('briefing')
   if (!can) return null
   const r = st.result
@@ -142,7 +174,7 @@ export function AiBriefingCard() {
       <AiShell
         attr="briefing"
         title="AI 오늘 브리핑"
-        desc="오늘 숫자(방문 · 요청 · 미수)만 AI에 보내 「먼저 챙길 일」을 정리합니다. 거래처 이름은 보내지 않습니다."
+        desc="오늘 숫자(차량별 남은 방문 · 기다린 요청 · 미수)만 AI에 보내 할 일을 언제 · 어느 화면에서 할지까지 정리합니다. 거래처 이름은 보내지 않습니다."
         runLabel="AI 브리핑 받기"
         onRun={() => void run(briefingInput(data))}
         busy={st.busy}
@@ -158,9 +190,22 @@ export function AiBriefingCard() {
                 <li key={i} data-ai-briefing-item className="flex items-start gap-3">
                   <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[0.95rem] font-black text-white">{i + 1}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block break-keep text-[1.08rem] font-extrabold text-navy-900">{it.title}</span>
+                    <span className="flex flex-wrap items-center gap-1.5 break-keep text-[1.08rem] font-extrabold text-navy-900">
+                      {it.when && <span data-ai-briefing-when className="rounded-full bg-navy-900 px-2.5 py-0.5 text-[0.88rem] font-extrabold text-white">{it.when}</span>}
+                      {it.title}
+                    </span>
                     {it.detail && <span className="block break-keep text-[1rem] text-navy-700">{it.detail}</span>}
                   </span>
+                  {it.go && BRIEF_GO_PATH[it.go] && (
+                    <button
+                      type="button"
+                      data-ai-briefing-go={it.go}
+                      onClick={() => navigate(BRIEF_GO_PATH[it.go!])}
+                      className="shrink-0 self-center rounded-full bg-violet-50 px-3.5 py-2 text-[0.98rem] font-extrabold text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100"
+                    >
+                      {it.go} ›
+                    </button>
+                  )}
                 </li>
               ))}
             </ol>
@@ -174,23 +219,43 @@ export function AiBriefingCard() {
 
 // ── ② AI 현장 메모 정리 ──────────────────────────────────────────────────────
 
-type FieldNote = { summary: string; issues: string[]; followups: { kind: string; text: string }[]; cleaned: string }
+/** 0142 — 메모에서 뽑은 「수거 입력 칸 채우기」 제안 (서버가 메모 숫자 · 정해진 목록으로 검사한 값) */
+export type FieldFill = {
+  amountKg: number | null
+  containers: { label: string; qty: number }[]
+  supplied: { item: string; qty: number }[]
+  handover: string | null
+}
+type FieldNote = { summary: string; issues: string[]; followups: { kind: string; text: string }[]; cleaned: string; fill?: FieldFill }
 
-export function AiFieldNote({ memo, onApply }: { memo: string; onApply: (text: string) => void }) {
+const fillCount = (f?: FieldFill) => (f ? (f.amountKg != null ? 1 : 0) + f.containers.length + f.supplied.length + (f.handover ? 1 : 0) : 0)
+
+export function AiFieldNote({
+  memo, onApply, items = [], onFill,
+}: {
+  memo: string
+  onApply: (text: string) => void
+  /** 「주고 온 자재」 규격 이름 — AI 가 이 목록에서만 고릅니다 */
+  items?: string[]
+  /** 「수거 입력 칸에 채우기」 — 담당자가 눌러야 칸이 바뀜(저장 아님) */
+  onFill?: (fill: FieldFill) => void
+}) {
   const can = useCanAi()
   const { st, run } = useAssist<FieldNote>('field_note')
   const [applied, setApplied] = useState(false)
+  const [filled, setFilled] = useState(false)
   if (!can) return null
   const r = st.result
   const short = memo.trim().length < 4
+  const fill = r?.fill
   return (
     <div className="mt-3">
       <AiShell
         attr="field_note"
-        title="AI 메모 정리"
-        desc="급하게 적은 메모를 사무실이 바로 쓸 수 있게 정리하고, 후속 조치를 제안합니다."
+        title="AI 메모 정리 · 칸 채우기"
+        desc="급하게 적은 메모에서 수거량 · 가져온 용기 · 주고 온 자재 · 인계 상태를 뽑아 칸을 채우고, 특이사항 정리와 후속 조치를 제안합니다."
         runLabel="AI로 메모 정리"
-        onRun={() => { setApplied(false); void run({ memo }) }}
+        onRun={() => { setApplied(false); setFilled(false); void run({ memo, items }) }}
         busy={st.busy}
         hasResult={!!r}
         error={st.error}
@@ -200,6 +265,26 @@ export function AiFieldNote({ memo, onApply }: { memo: string; onApply: (text: s
       >
         {r && (
           <div data-ai-field-note className="mt-3 space-y-2.5 rounded-xl bg-white px-4 py-3.5 ring-1 ring-violet-100">
+            {/*  0142 — 메모 → 수거 입력 칸 (맨 위 · 가장 크게) */}
+            {onFill && fillCount(fill) > 0 && fill && (
+              <div data-ai-field-fill className="rounded-xl bg-violet-600 px-3.5 py-3 text-white">
+                <p className="text-[1.02rem] font-black">메모에서 뽑은 칸 {fillCount(fill)}개</p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {fill.amountKg != null && <li data-ai-fill="amount" className="rounded-full bg-white/15 px-3 py-1 text-[1rem] font-extrabold ring-1 ring-white/30">수거량 {fill.amountKg}kg</li>}
+                  {fill.containers.map((c) => <li key={c.label} data-ai-fill="container" className="rounded-full bg-white/15 px-3 py-1 text-[1rem] font-extrabold ring-1 ring-white/30">가져온 {c.label} {c.qty}개</li>)}
+                  {fill.supplied.map((c) => <li key={c.item} data-ai-fill="supplied" className="rounded-full bg-white/15 px-3 py-1 text-[1rem] font-extrabold ring-1 ring-white/30">주고 온 {c.item} {c.qty}개</li>)}
+                  {fill.handover && <li data-ai-fill="handover" className="rounded-full bg-white/15 px-3 py-1 text-[1rem] font-extrabold ring-1 ring-white/30">인계 — {fill.handover}</li>}
+                </ul>
+                <button
+                  type="button"
+                  data-ai-field-fill-apply
+                  onClick={() => { onFill(fill); setFilled(true) }}
+                  className="mt-2.5 inline-flex min-h-[2.75rem] items-center rounded-full bg-white px-4 text-[1rem] font-extrabold text-violet-800 hover:bg-violet-50"
+                >
+                  {filled ? '칸에 채웠습니다 — 확인하고 「수거 완료 저장」' : '수거 입력 칸에 채우기'}
+                </button>
+              </div>
+            )}
             <div>
               <p className="text-[0.98rem] font-extrabold text-violet-800">요약</p>
               <p data-ai-field-summary className="break-keep text-[1.08rem] font-bold text-navy-950">{r.summary}</p>

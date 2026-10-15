@@ -53,6 +53,14 @@ const RESULT = {
   basis: '보관 공간이 찼다는 표현과 내일 수거 요청이 있어 높음으로 봄.',
   model: 'gpt-4o-mini-2024-07-18',
 }
+//  0142 — AI 처리 계획 (시험용 정해진 답 — 실제 Gemini 증명 아님)
+const PLAN = {
+  asks: [{ what: '빠른 수거', qty: null, item: null }, { what: '63L 박스', qty: 10, item: '63L 박스' }],
+  when: '내일 오전',
+  steps: [{ title: '방문일 정하기', detail: '그날 차량별 방문 수를 보고 가장 여유 있는 차량' }, { title: '63L 박스 10개 챙기기', detail: '사무실 재고 확인' }, { title: '회신', detail: '확정 뒤 안내' }],
+  watch: ['다음 방문이 잡혀 있지 않음'],
+  reply: '요청 확인했습니다. 내일 오전 수거가 가능하도록 일정을 확인하고 있으며, 63L 박스 10개도 함께 준비할 수 있는지 확인하고 있습니다. 확정되면 다시 안내드리겠습니다.',
+}
 const json = (r, v, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(v) })
 
 /**
@@ -63,7 +71,7 @@ async function open(role, path, { routes = {}, fn = null, width = 1440 } = {}) {
   const state = { profile: prof, reqs: 0, writes: [], schemaVersion: 106 }
   const ctx = await b.newContext({ viewport: { width, height: 900 }, isMobile: width < 640, hasTouch: width < 640, timezoneId: 'Asia/Seoul' })
   W.wire(ctx, state)
-  const seen = { fn: [], aiInsert: [], aiPatch: [], reqWrites: [] }
+  const seen = { fn: [], plan: [], aiInsert: [], aiPatch: [], reqWrites: [] }
   await ctx.route('**/rest/v1/client_requests*', (r) => {
     const m = r.request().method()
     if (m !== 'GET') { seen.reqWrites.push({ method: m, url: r.request().url(), body: r.request().postData() }); return json(r, [{ ...REQS[0] }]) }
@@ -82,6 +90,11 @@ async function open(role, path, { routes = {}, fn = null, width = 1440 } = {}) {
   await ctx.route('**/functions/v1/ai-triage', async (r) => {
     if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 200, body: 'ok' })
     const body = JSON.parse(r.request().postData() ?? '{}')
+    //  0142 — 「AI 처리 계획」은 같은 함수의 다른 작업입니다(요청 분석과 같이 불림). 따로 셉니다.
+    if (body.task === 'request_plan') {
+      seen.plan.push({ body, auth: r.request().headers()['authorization'] ?? '' })
+      return json(r, { ok: true, task: 'request_plan', result: { ...PLAN, model: 'gemini-3.1-flash-lite' }, callId: 'p1', logged: true, ms: 1400 })
+    }
     seen.fn.push({ body, auth: r.request().headers()['authorization'] ?? '' })
     if (!fn) return json(r, { error: 'not mocked' }, 500)
     return fn(r, body)
@@ -125,6 +138,27 @@ const okFn = (delay = 0) => async (r) => {
   ok((await dlg.locator('[data-ai-also="소모품"]').count()) === 1 && /\+ 자재·용기/.test(res), '① 함께 든 종류 — + 자재·용기 (병원 말)')
   ok((await dlg.locator('[data-ai-urgency="높음"]').count()) === 1 && /긴급도 높음/.test(res), '① 긴급도 높음')
   ok(flat(await dlg.locator('[data-ai-summary]').innerText()) === RESULT.summary, '① 요약 = 서버가 돌려준 그대로')
+  //  ── 0142 · AI 처리 계획 — 분석과 같이 불림 · 시스템 자료로 다시 확인 · 구체 회신 ──
+  await dlg.locator('[data-ai-plan-result]').waitFor({ state: 'visible', timeout: 8000 })
+  const pb = seen.plan[0]?.body
+  ok(seen.plan.length === 1 && pb?.task === 'request_plan' && pb.input?.request === CONTENT, '① 처리 계획 — 같은 클릭에 한 번 · 요청 글 · 작업 이름', JSON.stringify(pb ?? {}).slice(0, 160))
+  const sentPlan = JSON.stringify(pb?.input ?? {})
+  ok(!sentPlan.includes(F.clients[0].name) && !F.vehicles.some((v) => v.driver && sentPlan.includes(v.driver)), '① 처리 계획 — 병원 이름 · 기사 이름은 보내지 않음 (차량 이름 · 숫자만)', sentPlan.slice(0, 200))
+  ok(Array.isArray(pb?.input?.vehicles) && Array.isArray(pb?.input?.stock) && pb.input.stock.length === 4 && typeof pb?.input?.history?.urgent90 === 'number' && /^\d{4}-\d{2}-\d{2}$/.test(pb?.input?.target?.date ?? ''),
+    '① 처리 계획 — 그날 차량별 방문 · 사무실 재고 4칸 · 이 병원 이력 · 방문 날짜 후보를 함께 보냄')
+  const planTxt = flat(await dlg.locator('[data-ai-plan]').innerText())
+  ok(/요청에서 뽑은 것/.test(planTxt) && /다시 확인한 것/.test(planTxt) && /처리 순서/.test(planTxt) && /구체 회신/.test(planTxt), '① 처리 계획 — 뽑은 것 · 다시 확인 · 처리 순서 · 구체 회신', planTxt.slice(0, 200))
+  ok((await dlg.locator('[data-ai-plan-step]').count()) === PLAN.steps.length && (await dlg.locator('[data-ai-plan-watch]').count()) === 1, '① 처리 순서 · 주의 = 서버가 돌려준 그대로')
+  //  재고 충분/부족은 화면이 직접 셈 — 보이는 재고 숫자와 판정이 맞는가
+  const st = dlg.locator('[data-ai-plan-stock="63L 박스"]')
+  const stTxt = flat(await st.innerText().catch(() => ''))
+  const have = Number((stTxt.match(/재고 (\d+)개/) ?? [])[1])
+  const enough = await st.getAttribute('data-enough').catch(() => null)
+  ok(/골판지 전용박스/.test(stTxt) && Number.isFinite(have) && enough === (have >= 10 ? 'yes' : 'no'), '① 재고 — 63L 박스 → 골판지 전용박스 칸 · 충분/부족을 화면이 셈', `${stTxt} / ${enough}`)
+  ok((await dlg.locator('[data-ai-plan-check-history]').count()) === 1 && (await dlg.locator('[data-ai-plan-check-dispatch]').count()) === 1, '① 다시 확인 — 그날 차량 · 이 병원 이력')
+  await dlg.locator('[data-ai-plan-use-reply]').click()
+  ok((await p.locator('#reply-text').inputValue()) === PLAN.reply && seen.reqWrites.length === 0, '① 「이 회신 쓰기」 → 회신 칸에만 (저장 안 함)')
+  await p.locator('#reply-text').fill('')
   ok((await dlg.locator('[data-ai-points] li').count()) === 2, '① 핵심 요구사항 2개')
   ok(/판단 근거: 보관 공간이 찼다는/.test(flat(await dlg.locator('[data-ai-basis]').innerText())), '① 판단 근거')
   ok(flat(await dlg.locator('[data-ai-draft]').innerText()) === RESULT.draft, '① 회신 초안 = 서버가 돌려준 그대로')

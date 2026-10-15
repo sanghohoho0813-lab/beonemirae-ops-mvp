@@ -346,8 +346,8 @@ export async function aiTriageRequest(input: {
 // ── 업무 보조 AI 세 가지 (0141) — 같은 서버 함수 ai-triage · task 로 고름 ──────────
 //   briefing 오늘 브리핑 · field_note 현장 메모 정리 · dunning 독촉 문자 초안
 //   ⚠ 결과는 서버가 엄격하게 검사한 뒤에만 옵니다. 여기서 만들어 내는 것은 없습니다.
-export type AssistTask = 'briefing' | 'field_note' | 'dunning'
-export const ASSIST_KIND: Record<AssistTask, string> = { briefing: 'today_briefing', field_note: 'field_note', dunning: 'dunning_draft' }
+export type AssistTask = 'briefing' | 'field_note' | 'dunning' | 'request_plan'
+export const ASSIST_KIND: Record<AssistTask, string> = { briefing: 'today_briefing', field_note: 'field_note', dunning: 'dunning_draft', request_plan: 'request_plan' }
 export type AssistOutcome<T> =
   | { ok: true; result: T & { model: string }; ms: number; callId: string | null; logged: boolean }
   | { ok: false; error: string; ms: number }

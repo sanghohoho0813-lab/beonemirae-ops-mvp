@@ -40,6 +40,14 @@ const RESULT = {
   basis: '「빨리 찼다」는 표현이 있어 높음으로 봄.', model: 'test-model',
 }
 
+const PLAN = {
+  asks: [{ what: '빠른 수거', qty: null, item: null }, { what: '63L 용기', qty: 10, item: '63L 박스' }],
+  when: '내일 오전',
+  steps: [{ title: '방문일 정하기', detail: '그날 차량별 방문 수를 보고 가장 여유 있는 차량' }, { title: '63L 박스 10개 챙기기', detail: '사무실 재고 확인' }, { title: '회신', detail: '확정 뒤 안내' }],
+  watch: [],
+  reply: '요청 확인했습니다. 내일 오전 수거가 가능하도록 일정을 확인하고 있으며, 63L 용기 10개도 함께 준비할 수 있는지 확인하고 있습니다. 확정되면 다시 안내드리겠습니다.',
+}
+
 function makeShared() {
   return { clients: [...F.clients], requests: [], creates: 0, posts: 0, patches: [], aiMode: 'ok', aiCalls: [] }
 }
@@ -99,6 +107,11 @@ async function open(role, path, { width = 1440, S = makeShared() } = {}) {
   await ctx.route('**/functions/v1/ai-triage', async (r) => {
     if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 200, body: 'ok' })
     const body = JSON.parse(r.request().postData() ?? '{}')
+    //  0142 — 「AI 처리 계획」은 같은 함수의 다른 작업 (요청 분석과 같이 불림)
+    if (body.task === 'request_plan') {
+      S.planBodies = [...(S.planBodies ?? []), body]
+      return json(r, { ok: true, task: 'request_plan', result: { ...PLAN, model: 'test-model' }, callId: 'p1', logged: true, ms: 1400 })
+    }
     S.lastAiBody = body
     if (S.aiMode === 'fail') return json(r, { ok: false, error: 'AI 키가 올바르지 않습니다 (401) — invalid x-api-key', callId: 'c-fail' }, 502)
     S.aiCalls.push({ id: `a${S.aiCalls.length + 1}`, kind: 'request_triage_demo', request_id: body.requestId, ok: true, error: '', ms: 1800, model: 'test-model', actor_name: '대표', edited: false, created_at: new Date().toISOString() })
@@ -221,8 +234,17 @@ const S = makeShared()
   ok(hb && hb.y > 0 && hb.y + hb.height < 900 && /AI 제안 → 담당자 최종 확인/.test(flat(await p.locator('[role="dialog"] [data-ai-human-badge]').innerText())),
     '⑧ 창을 내리지 않아도 제목 옆에 「AI 제안 → 담당자 최종 확인」', JSON.stringify(hb))
   ok(S.patches.length === 0, '⑧ AI 결과만으로는 요청 상태 · 회신이 바뀌지 않음 (자동 확정 없음)')
-  ok(/ai-use-draft/.test((await waitSpot(p, /ai-use-draft/)) ?? ''), '⑧ 강조가 「초안 사용」으로')
+  //  0142 — 처리 계획이 나오면 강조는 「이 회신 쓰기」(일정 · 재고 반영 회신)로
+  ok(/ai-plan-use-reply/.test((await waitSpot(p, /ai-plan-use-reply/)) ?? ''), '⑧ 강조가 처리 계획의 「이 회신 쓰기」로')
+  //  0142 — AI 처리 계획: 같은 클릭에 이어서 · 차량 · 재고 · 이력 · 처리 순서 · 구체 회신
+  await p.locator('[role="dialog"] [data-ai-plan-result]').waitFor({ state: 'visible', timeout: 8000 })
+  const planIn = (S.planBodies ?? [])[0]?.input
+  ok(!!planIn && planIn.request === SAMPLE_REQUEST && !JSON.stringify(planIn).includes('시연용 병원'), '⑧ AI 처리 계획 — 요청 글 · 시스템 자료만 (병원 이름 없음)', JSON.stringify(planIn ?? {}).slice(0, 120))
+  ok((await p.locator('[role="dialog"] [data-ai-plan-stock="63L 박스"]').count()) === 1 && (await p.locator('[role="dialog"] [data-ai-plan-use-reply]').count()) === 1,
+    '⑧ AI 처리 계획 — 63L 박스 재고를 화면이 다시 확인 · 「이 회신 쓰기」')
   await shot(p, '03_ai_result')
+  await p.locator('[role="dialog"] [data-ai-plan]').scrollIntoViewIfNeeded().catch(() => {})
+  await shot(p, '03b_ai_plan')
 
   //  ⑨ 초안 사용 → ⑩ 담당자가 고쳐 저장
   await p.locator('[data-ai-use-draft]').click()

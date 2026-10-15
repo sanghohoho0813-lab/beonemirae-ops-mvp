@@ -66,7 +66,13 @@ async function open(role, path, { width = 1440, aiCalls = [], clientPick = true,
   })
   await ctx.route('**/rest/v1/ai_calls*', (r) => (r.request().method() === 'GET' ? json(r, aiCalls) : json(r, [])))
   await ctx.route('**/rest/v1/experiment_settings*', (r) => json(r, { id: 1, start_date: TODAY }))
-  await ctx.route('**/functions/v1/ai-triage', (r) => (r.request().method() === 'OPTIONS' ? r.fulfill({ status: 200, body: 'ok' }) : json(r, { ok: true, result: RESULT, callId: 'c1', logged: true, ms: 1500 })))
+  await ctx.route('**/functions/v1/ai-triage', (r) => {
+    if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 200, body: 'ok' })
+    //  0142 — 「AI 처리 계획」(같은 함수 · 다른 작업)
+    const body = JSON.parse(r.request().postData() ?? '{}')
+    if (body.task === 'request_plan') return json(r, { ok: true, task: 'request_plan', result: { asks: [{ what: '빠른 수거', qty: null, item: null }], when: '오늘', steps: [{ title: '방문일 정하기', detail: '그날 차량별 방문 수' }, { title: '회신', detail: '확정 뒤 안내' }], watch: [], reply: '요청 확인했습니다. 일정을 확인하고 있습니다. 확정되면 다시 안내드리겠습니다.', model: 'test-model' }, callId: 'p1', logged: true, ms: 1200 })
+    return json(r, { ok: true, result: RESULT, callId: 'c1', logged: true, ms: 1500 })
+  })
   const p = await ctx.newPage()
   const errors = []
   p.on('pageerror', (e) => errors.push(String(e)))
@@ -277,7 +283,8 @@ for (const role of ['field', 'office']) {
   await p.locator('[data-ai-triage-run]').click()
   await p.locator('[data-ai-triage-result]').waitFor({ state: 'visible', timeout: 8000 })
   await shot(p, '07_ai_result')
-  ok(/ai-use-draft/.test((await waitSpot(p, /ai-use-draft/)) ?? ''), '② AI 결과가 나오면 「초안 사용」 강조')
+  //  0142 — 처리 계획까지 나오면 「이 회신 쓰기」를 짚음 (일정 · 재고 반영 회신)
+  ok(/ai-plan-use-reply/.test((await waitSpot(p, /ai-plan-use-reply/)) ?? ''), '② AI 결과 · 처리 계획이 나오면 「이 회신 쓰기」 강조')
   await p.locator('[data-ai-use-draft]').click()
 
   //  STEP 5 — 회신 → 병원 확인

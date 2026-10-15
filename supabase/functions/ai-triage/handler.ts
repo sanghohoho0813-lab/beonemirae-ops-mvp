@@ -177,20 +177,30 @@ export async function handleAssist(body: unknown, d: Omit<TriageDeps, 'getReques
     const callId = await log({ output: null, model: '', ok: false, error })
     return { status: 503, body: { error, callId, ms: d.now() - t0 } }
   }
-  let reply: ModelReply
-  try {
-    reply = await d.callModel(system, message)
-  } catch (e) {
-    const error = e instanceof ProviderError ? e.message : `AI 호출 실패 (${String(e).slice(0, 120)})`
-    const status = e instanceof ProviderError && e.code === 'timeout' ? 504 : 502
-    const callId = await log({ output: null, model: d.model, ok: false, error })
-    return { status, body: { error, callId, ms: d.now() - t0 } }
+  //  0142 — 결과 검사에 걸리면 **한 번만** 다시 묻습니다. 걸린 까닭을 그대로 알려 주고 같은 규칙으로.
+  //   ⚠ 고쳐 주거나 고정 문구로 바꾸지 않습니다 — 두 번째도 걸리면 실패를 그대로 돌려보냅니다.
+  //   ⚠ 두 번 다 기록합니다(첫 번째는 실패로).
+  let ask = message
+  for (let attempt = 1; ; attempt++) {
+    let reply: ModelReply
+    try {
+      reply = await d.callModel(system, ask)
+    } catch (e) {
+      const error = e instanceof ProviderError ? e.message : `AI 호출 실패 (${String(e).slice(0, 120)})`
+      const status = e instanceof ProviderError && e.code === 'timeout' ? 504 : 502
+      const callId = await log({ output: null, model: d.model, ok: false, error })
+      return { status, body: { error, callId, ms: d.now() - t0 } }
+    }
+    const parsed = parse(reply.text)
+    if (!parsed.ok) {
+      const callId = await log({ output: { raw: reply.text.slice(0, 2000), usage: reply.usage, attempt }, model: reply.model, ok: false, error: parsed.error })
+      if (attempt < 2) {
+        ask = `${message}\n\n[앞의 답은 쓰이지 못했습니다 — 까닭: ${parsed.error}]\n같은 규칙을 지켜 처음부터 다시 답한다. 숫자는 위에 있는 것만 쓴다.`
+        continue
+      }
+      return { status: 502, body: { error: parsed.error, callId, ms: d.now() - t0 } }
+    }
+    const callId = await log({ output: { ...(parsed.value as object), usage: reply.usage, attempt }, model: reply.model, ok: true, error: '' })
+    return { status: 200, body: { ok: true, task, result: { ...(parsed.value as object), model: reply.model }, callId, logged: callId != null, ms: d.now() - t0 } }
   }
-  const parsed = parse(reply.text)
-  if (!parsed.ok) {
-    const callId = await log({ output: { raw: reply.text.slice(0, 2000), usage: reply.usage }, model: reply.model, ok: false, error: parsed.error })
-    return { status: 502, body: { error: parsed.error, callId, ms: d.now() - t0 } }
-  }
-  const callId = await log({ output: { ...(parsed.value as object), usage: reply.usage }, model: reply.model, ok: true, error: '' })
-  return { status: 200, body: { ok: true, task, result: { ...(parsed.value as object), model: reply.model }, callId, logged: callId != null, ms: d.now() - t0 } }
 }

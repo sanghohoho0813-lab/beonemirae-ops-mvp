@@ -67,7 +67,8 @@ export const SAMPLE_REQUEST =
   '폐기물이 예상보다 빨리 찼습니다. 가능하면 내일 오전 수거 부탁드리고 63L 용기도 10개 부탁드립니다.'
 
 /** 수거 입력 단계에서 특이사항 칸에 붙여 넣을 예시 메모 (AI 메모 정리 시연용 · 0141) */
-export const SAMPLE_MEMO = '용기 2개 깨져서 교체 필요. 원무과에서 다음주 추가수거 원함. 63L 5개 더 달라고 함'
+//  0142 — 칸 채우기까지 보이게: 수거량 · 가져온 용기 · 두고 온 자재 · 인계 상태 · 특이사항이 섞인 실제 말투
+export const SAMPLE_MEMO = '오늘 85kg 수거함. 합성수지 용기 6개랑 골판지 박스 4개 가져옴. 63L 박스 5개 두고 옴. 용기 2개 깨져서 교체 필요. 원무과에서 다음주 추가수거 원함. 처리장 인계는 내일'
 
 const portalHome = (c: PresenterCtx) => (c.clientId ? `/portal/c/${c.clientId}` : '/presentation')
 
@@ -102,17 +103,17 @@ export const PRESENTER_STEPS: PresenterStep[] = [
   },
   {
     key: 'collect',
-    title: '현장 수거 입력 · AI 메모 정리',
+    title: '현장 수거 입력 · AI 메모 → 칸 채우기',
     routes: () => ['/collection'],
     //  0142 — 시연 거래처를 미리 골라 둡니다 (실제 병원에 시연 기록이 남지 않게 · 시연을 끄면 안 보임)
     go: (c) => (c.clientId ? `/collection?client=${c.clientId}` : '/collection'),
-    targets: ['[data-ai-field-apply]', '[data-ai-assist-run="field_note"]', '[data-tour="collect-done"]', '[data-tour="collect-save"]'],
+    targets: ['[data-ai-field-fill-apply]', '[data-ai-field-apply]', '[data-ai-assist-run="field_note"]', '[data-tour="collect-done"]', '[data-tour="collect-save"]'],
     show: '현장 직원이 수거 완료 1건을 입력합니다.',
     before: '현장 수기 대장 → 카톡 사진 → 사무실 엑셀로 같은 내용을 여러 번 옮겨 적었습니다.',
     now: '한 번 저장하면 오늘 일정 · 수거이력 · 거래처 기록에 함께 반영됩니다. 같이 준 자재가 있으면 자재 이력 · 사무실 재고도 반영됩니다.',
     effects: ['중복 입력 감소', '사무실 재입력 부담 감소', '현장 기록이 바로 운영 데이터가 됨'],
-    todo: '특이사항 펼치기 → 예시 메모 붙여넣기 → 「AI로 메모 정리」 → 「정리본으로 바꾸기」',
-    note: '현장에서 한 번만 입력하면 일정 · 이력 · 거래처 기록에 함께 반영됩니다. 기사님이 급하게 적은 메모는 AI가 정리하고 추가수거 · 자재 같은 후속 조치를 제안합니다. 저장은 담당자가 합니다.',
+    todo: '특이사항 펼치기 → 예시 메모 붙여넣기 → 「AI로 메모 정리」 → 「수거 입력 칸에 채우기」 → 「정리본으로 바꾸기」',
+    note: '현장에서 한 번만 입력하면 일정 · 이력 · 거래처 기록에 함께 반영됩니다. 기사님이 급하게 적은 메모 한 줄에서 AI가 수거량 · 가져온 용기 · 두고 온 자재 · 인계 상태를 뽑아 칸을 채우고, 추가수거 같은 후속 조치를 제안합니다. 저장은 담당자가 합니다.',
     status: '구현됨',
     ai: 'AI 현장 메모 정리',
     planned: ['말로 남기는 현장 메모', '사진으로 용기 수량 확인'],
@@ -140,12 +141,13 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     routes: () => ['/requests'],
     //  시연 요청이 준비돼 있으면 그 요청으로 바로 — 발표 중에 목록을 뒤지지 않게 (0140)
     go: (c) => (c.demoRequestId ? `/requests?focus=${c.demoRequestId}` : '/requests'),
-    targets: ['[data-ai-use-draft]', '[data-ai-triage-run]', '[data-req-focus] [data-presenter="reply-open"]', '[data-presenter="reply-open"]'],
-    show: '병원이 남긴 자연어 요청을 AI가 분석해 요청 유형 · 긴급도 · 핵심 요구사항 · 회신 초안을 제안합니다.',
+    //  0142 — 처리 계획의 「이 회신 쓰기」가 나오면 그것을 먼저 짚습니다
+    targets: ['[data-ai-plan-use-reply]', '[data-ai-use-draft]', '[data-ai-triage-run]', '[data-req-focus] [data-presenter="reply-open"]', '[data-presenter="reply-open"]'],
+    show: '병원이 남긴 자연어 요청을 AI가 분석해 요청 유형 · 긴급도 · 핵심 요구사항 · 회신 초안을 제안하고, 그날 차량 · 사무실 재고 · 이 병원 이력까지 맞춰 처리 계획과 구체 회신을 세웁니다.',
     before: '전화·문자·카카오톡으로 들어온 긴 요청을 담당자가 직접 읽고, 급한 정도와 함께 들어온 요구사항을 일일이 판단해야 했습니다.',
     now: '요청이 시스템 데이터로 들어오면 AI가 먼저 구조화하고, 담당자가 결과를 확인해 실제 업무에 반영합니다.',
     effects: ['긴 요청 빠른 파악', '복합 요청 누락 방지', '고객 응대 문장 표준화', '담당자 판단시간 절감 가능'],
-    todo: '「회신 남기기」 → 「AI 분석 실행」 → 결과 · 갈 수 있는 기사 짚기 → 「초안 사용」',
+    todo: '「회신 남기기」 → 「AI 분석 실행」 → 분석 결과 → AI 처리 계획(차량 · 재고 · 이력 · 처리 순서) 짚기 → 「이 회신 쓰기」',
     note: 'AI가 업무를 대신하는 구조는 아닙니다. 병원 요청을 빠르게 읽고 정리해서 담당자의 판단과 회신을 돕는 방식이며, 최종 결정은 사람이 합니다.',
     status: '구현됨',
     ai: 'AI 요청 분석',
@@ -232,7 +234,7 @@ export const CLOSING = {
  *  ⚠ now 는 실제로 서버 AI 를 부르는 기능만. next · later 는 아직 없는 것 — 화면에 「개발 예정」으로만.
  */
 export const ROADMAP = {
-  now: ['AI 요청 분석 · 긴급도', 'AI 회신 초안', 'AI 오늘 브리핑', 'AI 현장 메모 정리', 'AI 미수금 안내 문구'],
+  now: ['AI 요청 분석 · 긴급도', 'AI 처리 계획 (차량 · 재고 · 이력)', 'AI 구체 회신', 'AI 오늘 브리핑', 'AI 메모 → 수거 입력 칸 채우기', 'AI 미수금 안내 문구'],
   next: ['병원용 AI 요청 도우미', '말로 남기는 현장 메모', 'AI 배차 · 동선 추천 (담당자 확정)', '입금 예정일 알림'],
   later: ['수거 주기 · 물량 예측 (데이터 축적 후)', '거래처별 자재 수요 예측', '동종업계 운영 솔루션'],
 }

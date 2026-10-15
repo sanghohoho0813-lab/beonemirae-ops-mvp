@@ -36,6 +36,7 @@ const gm = Deno.serve({ port: 0, hostname: '127.0.0.1', onListen() {} }, async (
   await req.json()
   geminiSeen = { path: new URL(req.url).pathname, key: req.headers.get('x-goog-api-key') }
   if (geminiMode === 'brief') return j({ candidates: [{ content: { parts: [{ text: '{"headline":"오늘은 긴급 요청 1건부터","items":[{"title":"긴급 요청 1건","detail":"처리 전 3건 중 긴급 1건"}],"note":""}' }] }, finishReason: 'STOP' }], modelVersion: 'gemini-2.5-flash-lite' })
+  if (geminiMode === 'plan') return j({ candidates: [{ content: { parts: [{ text: '{\"asks\":[{\"what\":\"63L 용기\",\"qty\":10,\"item\":\"63L 박스\"}],\"when\":\"내일 오전\",\"steps\":[{\"title\":\"방문일 정하기\",\"detail\":\"10월 17일 — 그날 의료폐기물 1톤 B 방문 2곳\"},{\"title\":\"63L 박스 10개 챙기기\",\"detail\":\"골판지 전용박스 재고 480개\"}],\"watch\":[],\"reply\":\"요청 확인했습니다. 내일(10월 17일) 오전 수거가 가능하도록 일정을 확인하고 있습니다. 확정되면 다시 안내드리겠습니다.\"}' }] }, finishReason: 'STOP' }], modelVersion: 'gemini-2.5-flash-lite' })
   if (geminiMode === 'badkey') return j({ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }, 400)
   return j({ candidates: [{ content: { parts: [{ text: GOOD }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 600, candidatesTokenCount: 120 }, modelVersion: 'gemini-2.5-flash-lite' })
 })
@@ -80,6 +81,16 @@ async function runBundle(env: Record<string, string>, port: number) {
     body: JSON.stringify({ task: 'briefing', input: { date: '2026-10-16', visitsPlanned: 5, visitsDone: 2, openRequests: 3, urgentRequests: 1, requestKinds: { 긴급수거: 1 }, unscheduledClients: 18, overdueClients: 2, overdueAmount: 118714572 } }) })
   const bb = await rb.json() as Record<string, unknown>
   ok(rb.status === 200 && bb.task === 'briefing' && inserts[inserts.length - 1].kind === 'today_briefing', '④ 오늘 브리핑 — 200 · today_briefing 기록', JSON.stringify(bb).slice(0, 200))
+  //  ⑤ 요청 처리 계획 (0142)
+  geminiMode = 'plan'
+  const rp = await fetch(`http://127.0.0.1:18741/`, { method: 'POST', headers: { Authorization: 'Bearer user-token', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task: 'request_plan', input: {
+      request: '폐기물이 예상보다 빨리 찼습니다. 가능하면 내일 오전 수거 부탁드리고 63L 용기도 10개 부탁드립니다.', kind: '긴급수거', urgent: true, today: '2026-10-16',
+      target: { date: '2026-10-17', why: '요청 글의 「내일」' }, vehicles: [{ label: '의료폐기물 1톤 B', visits: 2, regular: true, alreadyThere: false }], pick: '의료폐기물 1톤 B',
+      stock: [{ name: '골판지 전용박스', qty: 480 }], items: [{ name: '63L 박스', stock: '골판지 전용박스' }],
+      history: { lastVisit: '2026-10-09', nextVisit: null, visits90: 12, urgent90: 3, overdueMonths: 0 } } }) })
+  const bp = await rp.json() as Record<string, unknown>
+  ok(rp.status === 200 && bp.task === 'request_plan' && inserts[inserts.length - 1].kind === 'request_plan', '⑤ 요청 처리 계획 — 200 · request_plan 기록', JSON.stringify(bp).slice(0, 200))
   child.kill(); await child.status
 }
 {
