@@ -69,6 +69,18 @@ export interface TriageResponse {
 const STAFF = ['admin', 'office']
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/**
+ * 결과 검사에 걸렸을 때 한 번 더 물어도 되는 시간 (0142 · 안정화).
+ *  ⚠ 첫 답이 이보다 오래 걸렸으면 다시 묻지 않습니다 — 모델 한 번이 최대 20초라, 다시 물으면
+ *    화면이 기다리는 시간(45초)을 넘길 수 있습니다. 넘기면 화면은 「시간 초과」인데 서버는 성공을
+ *    기록하는, 서로 다른 말을 하게 됩니다.
+ */
+export const RETRY_BUDGET_MS = 12_000
+
+/** 다시 물을 때 덧붙이는 말 — 걸린 까닭을 그대로 알려 줍니다 */
+export const retryNote = (message: string, why: string) =>
+  `${message}\n\n[앞의 답은 쓰이지 못했습니다 — 까닭: ${why}]\n같은 규칙을 지켜 처음부터 다시 답한다. 숫자는 위에 있는 것만 쓴다.`
+
 export async function handleTriage(body: unknown, d: TriageDeps): Promise<TriageResponse> {
   //  ── 1. 누구인가 — 로그인 · 역할 · 사용 중 ─────────────────────────────
   const user = await d.getUser()
@@ -113,32 +125,39 @@ export async function handleTriage(body: unknown, d: TriageDeps): Promise<Triage
     return { status: 503, body: { error, callId, ms: d.now() - t0 } }
   }
 
-  //  ── 4. 모델 호출 ─────────────────────────────────────────────────────
-  let reply: ModelReply
-  try {
-    reply = await d.callModel(SYSTEM_PROMPT, input)
-  } catch (e) {
-    const error = e instanceof ProviderError ? e.message : `AI 호출 실패 (${String(e).slice(0, 120)})`
-    const status = e instanceof ProviderError && e.code === 'timeout' ? 504 : 502
-    const callId = await log({ output: null, model: d.model, ok: false, error })
-    return { status, body: { error, callId, ms: d.now() - t0 } }
+  //  ── 4. 모델 호출 · 5. 결과 검사 ──────────────────────────────────────
+  //   0142 안정화 — 검사에 걸리면(지어낸 숫자 · 확정 약속 · 빠진 칸) 까닭을 알려 주고 **한 번만** 다시
+  //   묻습니다(시간이 남았을 때만 · RETRY_BUDGET_MS). 둘째도 걸리면 실패 그대로 — 고쳐 주지 않습니다.
+  //   첫 번째 실패도 기록합니다.
+  let ask = input
+  for (let attempt = 1; ; attempt++) {
+    let reply: ModelReply
+    try {
+      reply = await d.callModel(SYSTEM_PROMPT, ask)
+    } catch (e) {
+      const error = e instanceof ProviderError ? e.message : `AI 호출 실패 (${String(e).slice(0, 120)})`
+      const status = e instanceof ProviderError && e.code === 'timeout' ? 504 : 502
+      const callId = await log({ output: null, model: d.model, ok: false, error })
+      return { status, body: { error, callId, ms: d.now() - t0 } }
+    }
+    const parsed = parseTriage(reply.text, source)
+    if (!parsed.ok) {
+      const callId = await log({
+        output: { raw: reply.text.slice(0, 2000), usage: reply.usage, attempt },
+        model: reply.model,
+        ok: false,
+        error: parsed.error,
+      })
+      if (attempt < 2 && d.now() - t0 <= RETRY_BUDGET_MS) {
+        ask = retryNote(input, parsed.error)
+        continue
+      }
+      return { status: 502, body: { error: parsed.error, callId, ms: d.now() - t0 } }
+    }
+    const result: TriageOutput & { model: string } = { ...parsed.result, model: reply.model }
+    const callId = await log({ output: { ...parsed.result, usage: reply.usage, attempt }, model: reply.model, ok: true, error: '' })
+    return { status: 200, body: { ok: true, result, callId, logged: callId != null, ms: d.now() - t0, demo: req.demo } }
   }
-
-  //  ── 5. 결과 검사 — 깨졌거나 빠졌으면 실패 ───────────────────────────────
-  const parsed = parseTriage(reply.text, source)
-  if (!parsed.ok) {
-    const callId = await log({
-      output: { raw: reply.text.slice(0, 2000), usage: reply.usage },
-      model: reply.model,
-      ok: false,
-      error: parsed.error,
-    })
-    return { status: 502, body: { error: parsed.error, callId, ms: d.now() - t0 } }
-  }
-
-  const result: TriageOutput & { model: string } = { ...parsed.result, model: reply.model }
-  const callId = await log({ output: { ...parsed.result, usage: reply.usage }, model: reply.model, ok: true, error: '' })
-  return { status: 200, body: { ok: true, result, callId, logged: callId != null, ms: d.now() - t0, demo: req.demo } }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -194,8 +213,8 @@ export async function handleAssist(body: unknown, d: Omit<TriageDeps, 'getReques
     const parsed = parse(reply.text)
     if (!parsed.ok) {
       const callId = await log({ output: { raw: reply.text.slice(0, 2000), usage: reply.usage, attempt }, model: reply.model, ok: false, error: parsed.error })
-      if (attempt < 2) {
-        ask = `${message}\n\n[앞의 답은 쓰이지 못했습니다 — 까닭: ${parsed.error}]\n같은 규칙을 지켜 처음부터 다시 답한다. 숫자는 위에 있는 것만 쓴다.`
+      if (attempt < 2 && d.now() - t0 <= RETRY_BUDGET_MS) {
+        ask = retryNote(message, parsed.error)
         continue
       }
       return { status: 502, body: { error: parsed.error, callId, ms: d.now() - t0 } }

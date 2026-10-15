@@ -39,8 +39,11 @@ function Head({ n, icon: Icon, children, sub }: { n: string; icon: typeof Sparkl
   )
 }
 
+/** 서버가 아직 옛 판이라 이 작업을 모를 때 (서버 · 화면 두 쪽 문구 모두) */
+export const isOldServerError = (e: string) => /모르는 AI 작업|서버가 이 AI 기능을 모릅니다/.test(e)
+
 export function AiRequestPlan({
-  data, clientId, hint, plan, onUseReply, usedReply,
+  data, clientId, hint, plan, onUseReply, usedReply, hideOldServer = false,
 }: {
   data: AppData
   clientId: string
@@ -48,10 +51,21 @@ export function AiRequestPlan({
   plan: PlanView
   onUseReply: (text: string) => void
   usedReply: boolean
+  /** 발표 중에는 「서버가 옛 판」 안내를 아예 숨김 (빨간 실패 칸이 발표 화면에 뜨지 않게 · 0143) */
+  hideOldServer?: boolean
 }) {
   const hist = clientHistory(data, clientId)
   const r = plan.result
   const stock = r ? stockCheck(data, r.asks) : []
+  //  ⚠ 0143 — 서버를 아직 새 판으로 안 바꿨으면 빨간 「실패」가 아니라 회색 한 줄 안내 (발표 중엔 숨김)
+  if (!plan.busy && !r && plan.error && isOldServerError(plan.error)) {
+    if (hideOldServer) return null
+    return (
+      <p data-ai-plan-old className="mt-4 break-keep rounded-xl bg-navy-50 px-3.5 py-3 text-[0.98rem] text-navy-600">
+        「AI 처리 계획」(차량 · 재고 · 이력 · 구체 회신)은 서버 코드를 새 판으로 바꾸면 나옵니다 — 위 분석 · 초안은 그대로 쓰시면 됩니다.
+      </p>
+    )
+  }
   return (
     <section data-ai-plan className="mt-4 rounded-2xl bg-white px-4 py-4 ring-2 ring-violet-300">
       <div className="flex flex-wrap items-center gap-2">

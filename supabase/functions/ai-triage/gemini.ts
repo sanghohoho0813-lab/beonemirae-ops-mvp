@@ -70,6 +70,18 @@ type GeminiBody = {
   error?: { code?: number; message?: string; status?: string }
 }
 
+/**
+ * 0142 안정화 — 이 계정에 없다고(404) 확인된 모델. 같은 서버가 살아 있는 동안 기억해 두고
+ *  다음 호출은 바로 대신 모델로 갑니다(매번 404 를 한 번씩 치르지 않게).
+ */
+const MISSING_MODELS = new Set<string>()
+/** 검사용 — 기억을 비웁니다 */
+export const resetGeminiMemo = () => MISSING_MODELS.clear()
+
+/** 「잠깐 바쁨」으로 보는 응답 — 한 번만 다시 보냅니다 (같은 시간 한도 안에서) */
+const TRANSIENT = new Set([500, 503])
+const TRANSIENT_WAIT_MS = 700
+
 export async function geminiJson(o: GeminiOptions): Promise<ModelReply> {
   const f = o.fetchImpl ?? fetch
   const ctl = new AbortController()
@@ -107,14 +119,21 @@ export async function geminiJson(o: GeminiOptions): Promise<ModelReply> {
     return { res, body }
   }
 
-  let used = o.model
+  const canFallback = !!o.fallbackModel && o.fallbackModel !== o.model
+  let used = canFallback && MISSING_MODELS.has(o.model) ? o.fallbackModel! : o.model
   let res: Response
   let body: GeminiBody | null
   try {
     ;({ res, body } = await send(used))
-    if (res.status === 404 && o.fallbackModel && o.fallbackModel !== used) {
-      used = o.fallbackModel
+    if (res.status === 404 && canFallback && used === o.model) {
+      MISSING_MODELS.add(o.model)
+      used = o.fallbackModel!
       ;({ res, body } = await send(used))
+    }
+    //  Gemini 무료 사용량에서 가끔 오는 「잠깐 바쁨(503)」— 짧게 쉬고 한 번만 다시 (시간 한도 그대로)
+    if (TRANSIENT.has(res.status) && !ctl.signal.aborted) {
+      await new Promise((r) => setTimeout(r, TRANSIENT_WAIT_MS))
+      if (!ctl.signal.aborted) ({ res, body } = await send(used))
     }
   } finally {
     clearTimeout(timer)

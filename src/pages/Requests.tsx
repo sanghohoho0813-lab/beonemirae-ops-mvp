@@ -278,11 +278,28 @@ export function Requests() {
     }
   }
 
+  //  ⚠ 0143 — 대표님: 「초안 사용 눌러도 반응이 없다」. 실제로는 넣었는데, 회신 칸이 창 맨 아래(AI 칸 밑)에
+  //    있어 눈에 안 보였습니다. 넣은 뒤 회신 칸으로 화면을 옮기고 잠깐 테두리를 밝힙니다.
+  //    (손가락 화면에서는 글자판이 튀어나오지 않게 포커스는 주지 않습니다)
+  const replyBox = useRef<HTMLTextAreaElement>(null)
+  const [replyFlash, setReplyFlash] = useState(false)
+  const showReplyBox = () => {
+    requestAnimationFrame(() => {
+      const el = replyBox.current
+      if (!el) return
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      try { if (!window.matchMedia('(pointer: coarse)').matches) el.focus({ preventScroll: true }) } catch { /* noop */ }
+      setReplyFlash(true)
+      window.setTimeout(() => setReplyFlash(false), 1800)
+    })
+  }
+
   //  「초안 사용」 — 사람이 눌러야 회신 칸에 들어갑니다(자동으로 넣지 않습니다).
   const applyDraft = () => {
     if (!replyTo || !ai.result) return
     setReplyText(ai.result.draft)
     setAiFor(replyTo.id, { usedDraft: true })
+    showReplyBox()
   }
 
   const submitNew = async () => {
@@ -669,7 +686,7 @@ export function Requests() {
                       onClick={applyDraft}
                       className="mt-2.5 inline-flex min-h-[3rem] items-center gap-1.5 rounded-full bg-violet-600 px-5 text-[1.02rem] font-extrabold text-white shadow-md transition hover:bg-violet-700"
                     >
-                      초안 사용 — 아래 칸에서 고쳐 저장
+                      {ai.usedDraft ? '회신 칸에 넣었습니다 ↓ 아래에서 고쳐 「회신 저장」' : '초안 사용 — 아래 칸에서 고쳐 저장'}
                     </button>
                   </div>
                 </AiRow>
@@ -719,14 +736,17 @@ export function Requests() {
             )}
 
             {/*  0142 — AI 처리 계획: 원하는 것 · 시스템이 다시 확인(차량 · 재고 · 이력) · 처리 순서 · 주의 · 구체 회신 */}
-            {(plan.busy || plan.error || plan.result) && (
+            {/*  ⚠ 0143 안정화 — 분석이 끝난 뒤에만 그립니다. 처리 계획이 먼저 오면 그 아래 단추로 화면을 내렸다가
+                 분석 결과가 위에 끼어들며 단추가 화면 밖으로 밀려났습니다(어느 쪽이 먼저 올지는 정해져 있지 않음). */}
+            {!ai.busy && (plan.busy || plan.error || plan.result) && (
               <AiRequestPlan
                 data={data}
                 clientId={replyTo.clientId}
                 hint={dispatchHint(data, replyTo)}
                 plan={plan}
                 usedReply={plan.used}
-                onUseReply={(t) => { setReplyText(t); setPlanFor(replyTo.id, { used: true }) }}
+                onUseReply={(t) => { setReplyText(t); setPlanFor(replyTo.id, { used: true }); showReplyBox() }}
+                hideOldServer={presenter.active}
               />
             )}
 
@@ -739,13 +759,16 @@ export function Requests() {
             </div>
           </div>
         )}
+        <label htmlFor="reply-text" className="mb-1.5 block break-keep text-[1rem] font-extrabold text-navy-800">회신 — 병원 화면에 그대로 보입니다</label>
         <textarea
           id="reply-text"
+          ref={replyBox}
           rows={4}
           value={replyText}
           onChange={(e) => setReplyText(e.target.value)}
           placeholder="예: 내일 오전 방문 일정에 반영했습니다. 전용용기 10개 함께 가져가겠습니다."
-          className="field-input w-full resize-none"
+          data-reply-flash={replyFlash ? '1' : undefined}
+          className={`field-input w-full resize-none transition-shadow ${replyFlash ? 'ring-4 ring-violet-400' : ''}`}
         />
       </Modal>
 

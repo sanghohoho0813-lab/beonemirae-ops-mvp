@@ -172,6 +172,9 @@ const okFn = (delay = 0) => async (r) => {
   if (process.env.AI_SHOTS) await dlg.screenshot({ path: `${process.env.AI_SHOTS}/ai_result.png` })
   await dlg.locator('[data-ai-use-draft]').click()
   ok((await p.locator('#reply-text').inputValue()) === RESULT.draft, '① 「초안 사용」 → 회신 칸에 초안')
+  await p.waitForTimeout(800)
+  const rb = await p.locator('#reply-text').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
+  ok(rb, '① 「초안 사용」 → 회신 칸이 화면에 보이게 옮겨짐 (0143 — 「반응 없다」)')
   ok(/다시 분석/.test(flat(await dlg.locator('[data-ai-triage-run]').innerText())), '① 결과가 있으면 단추는 「다시 분석」 (명시적으로만 다시 부름)')
   ok(errors.length === 0, '① 화면 오류 0', errors.join(' | '))
 

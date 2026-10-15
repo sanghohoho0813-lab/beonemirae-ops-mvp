@@ -234,8 +234,7 @@ const S = makeShared()
   ok(hb && hb.y > 0 && hb.y + hb.height < 900 && /AI 제안 → 담당자 최종 확인/.test(flat(await p.locator('[role="dialog"] [data-ai-human-badge]').innerText())),
     '⑧ 창을 내리지 않아도 제목 옆에 「AI 제안 → 담당자 최종 확인」', JSON.stringify(hb))
   ok(S.patches.length === 0, '⑧ AI 결과만으로는 요청 상태 · 회신이 바뀌지 않음 (자동 확정 없음)')
-  //  0142 — 처리 계획이 나오면 강조는 「이 회신 쓰기」(일정 · 재고 반영 회신)로
-  ok(/ai-plan-use-reply/.test((await waitSpot(p, /ai-plan-use-reply/)) ?? ''), '⑧ 강조가 처리 계획의 「이 회신 쓰기」로')
+  ok(/ai-use-draft/.test((await waitSpot(p, /ai-use-draft/)) ?? ''), '⑧ 강조가 「초안 사용」으로 (분석 결과가 화면에 그대로)')
   //  0142 — AI 처리 계획: 같은 클릭에 이어서 · 차량 · 재고 · 이력 · 처리 순서 · 구체 회신
   await p.locator('[role="dialog"] [data-ai-plan-result]').waitFor({ state: 'visible', timeout: 8000 })
   const planIn = (S.planBodies ?? [])[0]?.input

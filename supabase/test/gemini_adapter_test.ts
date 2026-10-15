@@ -8,7 +8,7 @@
 //  실행(저장소 맨 위에서): deno test --config supabase/functions/ai-triage/deno.json --allow-net --allow-env --allow-read supabase/test/gemini_adapter_test.ts
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { GEMINI_BASE, GEMINI_DEFAULT_MODEL, GEMINI_FALLBACK_MODEL, geminiJson, pickAi } from '../functions/ai-triage/gemini.ts'
+import { GEMINI_BASE, GEMINI_DEFAULT_MODEL, GEMINI_FALLBACK_MODEL, geminiJson, pickAi, resetGeminiMemo } from '../functions/ai-triage/gemini.ts'
 import { ProviderError } from '../functions/ai-triage/provider.ts'
 import { parseTriage } from '../functions/ai-triage/triage.ts'
 
@@ -34,6 +34,7 @@ const server = Deno.serve({ port: 0, hostname: '127.0.0.1', onListen() {} }, asy
   }
   if (mode === '429') return gErr(429, 'RESOURCE_EXHAUSTED', 'Resource has been exhausted (e.g. check quota).')
   if (mode === '503') return gErr(503, 'UNAVAILABLE', 'The model is overloaded. Please try again later.')
+  if (mode === '503-once' && seen.length === 1) return gErr(503, 'UNAVAILABLE', 'The model is overloaded. Please try again later.')
   if (mode === 'blocked') return j(200, { promptFeedback: { blockReason: 'SAFETY' }, usageMetadata: { promptTokenCount: 10 } })
   if (mode === 'empty') return j(200, { candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }] })
   if (mode === 'slow') await new Promise((r) => setTimeout(r, 1500))
@@ -57,6 +58,7 @@ const assert = (c: unknown, m: string) => { if (!c) throw new Error(m) }
 const fail = async (m: string): Promise<ProviderError> => {
   mode = m
   seen = []
+  resetGeminiMemo()
   try { await call(m === 'slow' ? 300 : 5000) } catch (e) {
     assert(e instanceof ProviderError, String(e))
     assert(!String((e as Error).message).includes(KEY), `키가 문구에 없음: ${(e as Error).message}`)
@@ -105,12 +107,26 @@ Deno.test('옛 키(AIza…)도 같은 헤더로', async () => {
 })
 
 Deno.test('기본 모델이 없어졌으면(404) — 같은 시간 안에서 한 번만 안정 모델로', async () => {
+  resetGeminiMemo()
   mode = '404-first'
   seen = []
   const r = await call()
   assert(seen.length === 2, `두 번 부름 (${seen.length})`)
   assert(seen[1].path === `/v1beta/models/${GEMINI_FALLBACK_MODEL}:generateContent`, seen[1].path)
   assert(r.model === GEMINI_FALLBACK_MODEL && r.text === GOOD, '실제로 답한 모델 이름을 그대로')
+  //  0142 안정화 — 한 번 404 를 확인했으면 다음 호출은 바로 안정 모델로 (매번 404 를 치르지 않음)
+  seen = []
+  const r2 = await call()
+  assert(seen.length === 1 && seen[0].path.includes(GEMINI_FALLBACK_MODEL) && r2.model === GEMINI_FALLBACK_MODEL, `다음 호출은 한 번에 (${seen.map((x) => x.path).join(', ')})`)
+  resetGeminiMemo()
+})
+
+Deno.test('잠깐 바쁨(503) — 짧게 쉬고 한 번만 다시 · 둘째에 되면 성공', async () => {
+  resetGeminiMemo()
+  mode = '503-once'
+  seen = []
+  const r = await call()
+  assert(seen.length === 2 && r.text === GOOD, `두 번 부름 (${seen.length})`)
 })
 
 Deno.test('둘 다 404 면 그대로 실패 (세 번째는 없음)', async () => {
@@ -125,10 +141,10 @@ for (const [m, code, re] of [
   ['429', 429, /사용량 한도/],
   ['503', 503, /바쁩니다/],
 ] as const) {
-  Deno.test(`실패 ${m} — 까닭을 그대로 · 키 조각 없음 · 다시 보내지 않음`, async () => {
+  Deno.test(`실패 ${m} — 까닭을 그대로 · 키 조각 없음 · ${m === '503' ? '한 번만 다시(둘째도 503 이면 실패)' : '다시 보내지 않음'}`, async () => {
     const e = await fail(m)
     assert(e.code === 'http' && e.status === code && re.test(e.message), e.message)
-    assert(seen.length === 1, '한 번만')
+    assert(seen.length === (m === '503' ? 2 : 1), `보낸 횟수 ${seen.length}`)
   })
 }
 

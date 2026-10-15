@@ -141,13 +141,14 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     routes: () => ['/requests'],
     //  시연 요청이 준비돼 있으면 그 요청으로 바로 — 발표 중에 목록을 뒤지지 않게 (0140)
     go: (c) => (c.demoRequestId ? `/requests?focus=${c.demoRequestId}` : '/requests'),
-    //  0142 — 처리 계획의 「이 회신 쓰기」가 나오면 그것을 먼저 짚습니다
-    targets: ['[data-ai-plan-use-reply]', '[data-ai-use-draft]', '[data-ai-triage-run]', '[data-req-focus] [data-presenter="reply-open"]', '[data-presenter="reply-open"]'],
+    //  ⚠ 0143 — 결과가 나오면 「초안 사용」(분석 결과 바로 아래)을 짚습니다. 처리 계획의 「이 회신 쓰기」를 먼저 짚었더니
+    //    창이 맨 아래로 내려가 분석 결과가 화면 밖으로 밀렸습니다. 처리 계획은 그 아래에서 손으로 짚습니다.
+    targets: ['[data-ai-use-draft]', '[data-ai-plan-use-reply]', '[data-ai-triage-run]', '[data-req-focus] [data-presenter="reply-open"]', '[data-presenter="reply-open"]'],
     show: '병원이 남긴 자연어 요청을 AI가 분석해 요청 유형 · 긴급도 · 핵심 요구사항 · 회신 초안을 제안하고, 그날 차량 · 사무실 재고 · 이 병원 이력까지 맞춰 처리 계획과 구체 회신을 세웁니다.',
     before: '전화·문자·카카오톡으로 들어온 긴 요청을 담당자가 직접 읽고, 급한 정도와 함께 들어온 요구사항을 일일이 판단해야 했습니다.',
     now: '요청이 시스템 데이터로 들어오면 AI가 먼저 구조화하고, 담당자가 결과를 확인해 실제 업무에 반영합니다.',
     effects: ['긴 요청 빠른 파악', '복합 요청 누락 방지', '고객 응대 문장 표준화', '담당자 판단시간 절감 가능'],
-    todo: '「회신 남기기」 → 「AI 분석 실행」 → 분석 결과 → AI 처리 계획(차량 · 재고 · 이력 · 처리 순서) 짚기 → 「이 회신 쓰기」',
+    todo: '「회신 남기기」 → 「AI 분석 실행」 → 분석 결과 → 「초안 사용」 → 아래 AI 처리 계획(차량 · 재고 · 이력 · 처리 순서) 짚기',
     note: 'AI가 업무를 대신하는 구조는 아닙니다. 병원 요청을 빠르게 읽고 정리해서 담당자의 판단과 회신을 돕는 방식이며, 최종 결정은 사람이 합니다.',
     status: '구현됨',
     ai: 'AI 요청 분석',

@@ -291,7 +291,8 @@ export async function aiTriageRequest(input: {
   try {
     const { data, error } = await sb.functions.invoke('ai-triage', {
       body: { requestId: input.requestId },
-      timeout: input.timeoutMs ?? 35_000,
+      //  0142 안정화 — 서버가 한 번 다시 물을 수 있어(최대 12초 + 20초) 넉넉히
+      timeout: input.timeoutMs ?? 45_000,
     })
     if (error) {
       //  서버가 답은 했는데 실패(4xx·5xx) — 서버의 이유와 기록 번호를 읽습니다.
@@ -352,7 +353,7 @@ export type AssistOutcome<T> =
   | { ok: true; result: T & { model: string }; ms: number; callId: string | null; logged: boolean }
   | { ok: false; error: string; ms: number }
 
-export async function aiAssist<T>(task: AssistTask, input: unknown, actorName = '', timeoutMs = 35_000): Promise<AssistOutcome<T>> {
+export async function aiAssist<T>(task: AssistTask, input: unknown, actorName = '', timeoutMs = 45_000): Promise<AssistOutcome<T>> {
   const sb = need()
   const t0 = Date.now()
   let reached = false

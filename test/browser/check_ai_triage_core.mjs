@@ -97,7 +97,32 @@ const src = { content: CONTENT, kind: '긴급수거', urgent: true, desiredDate:
   const { d, calls } = deps({ reply: { text: J({ ...GOOD, urgency: undefined }), model: 'm', usage: { input: 1, output: 1 } } })
   const r = await handleTriage({ requestId: REQ_ID }, d)
   ok(r.status === 502 && !r.body.ok && /빠진 항목: urgency/.test(r.body.error), '② 긴급도 누락 → 502 실패', J(r.body))
-  ok(calls.insert.length === 1 && calls.insert[0].ok === false && /urgency/.test(calls.insert[0].error) && typeof calls.insert[0].output.raw === 'string', '② 실패도 기록 (원문 보관)')
+  //  0142 안정화 — 둘째 답이 맞으면 성공 · 걸린 까닭을 알려 주고 다시 물음
+  {
+    const seq = deps()
+    let n = 0
+    seq.d.callModel = async (system, userMsg) => {
+      seq.calls.model.push({ system, user: userMsg })
+      n += 1
+      return { text: n === 1 ? J({ ...GOOD, urgency: undefined }) : J(GOOD), model: 'm', usage: { input: 1, output: 1 } }
+    }
+    const rs = await handleTriage({ requestId: REQ_ID }, seq.d)
+    ok(rs.status === 200 && seq.calls.model.length === 2 && /앞의 답은 쓰이지 못했습니다 — 까닭: .*urgency/.test(seq.calls.model[1].user),
+      '② 첫 답이 검사에 걸리면 까닭을 알려 주고 한 번만 다시 — 둘째가 맞으면 성공', J(rs.body).slice(0, 160))
+    ok(seq.calls.insert.length === 2 && seq.calls.insert[0].ok === false && seq.calls.insert[1].ok === true, '② 다시 물은 것도 기록 (첫 번째는 실패로)')
+  }
+  //  첫 답이 이미 오래 걸렸으면(12초 넘게) 다시 묻지 않음 — 화면이 기다리는 시간을 넘기지 않게
+  {
+    const slow = deps({ reply: { text: J({ ...GOOD, urgency: undefined }), model: 'm', usage: { input: 1, output: 1 } } })
+    const orig = slow.d.callModel
+    let t = 1000
+    slow.d.now = () => t
+    slow.d.callModel = async (a, b) => { t += 15_000; return orig(a, b) }
+    const rs = await handleTriage({ requestId: REQ_ID }, slow.d)
+    ok(rs.status === 502 && slow.calls.model.length === 1, '② 첫 답이 12초를 넘겼으면 다시 묻지 않고 실패 그대로', String(slow.calls.model.length))
+  }
+  //  검사에 걸리면 한 번만 다시 묻습니다(같은 답이면 둘 다 실패로 기록)
+  ok(calls.insert.length === 2 && calls.insert.every((x) => x.ok === false && /urgency/.test(x.error) && typeof x.output.raw === 'string'), '② 실패도 기록 (원문 보관 · 한 번 다시 물은 것까지)')
   const { d: d2, calls: c2 } = deps({ reply: { text: 'not json', model: 'm', usage: { input: 1, output: 1 } } })
   const r2 = await handleTriage({ requestId: REQ_ID }, d2)
   ok(r2.status === 502 && /JSON 이 아닙니다/.test(r2.body.error) && c2.insert[0]?.ok === false, '② 잘못된 JSON → 502 실패 + 기록')

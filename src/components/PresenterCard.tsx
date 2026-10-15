@@ -51,6 +51,9 @@ export function PresenterCard() {
   const [bubble, setBubble] = useState<Bubble | null>(null)
   const lastSpot = useRef<HTMLElement | null>(null)
   const scrolledFor = useRef<string>('')
+  //  0143 안정화 — 강조한 단추로 화면을 옮긴 시각 · 그 뒤 사람이 직접 움직였는지
+  const scrolledAt = useRef(0)
+  const userMoved = useRef(false)
 
   const inFrame = new URLSearchParams(search).get('frame') === '1'
   const staff = role === 'admin' || role === 'office'
@@ -87,10 +90,18 @@ export function PresenterCard() {
           const key = `${index}:${step.targets.find((s) => target!.matches(s)) ?? ''}`
           if (scrolledFor.current !== key) {
             scrolledFor.current = key
+            scrolledAt.current = Date.now()
+            userMoved.current = false
             const r = target.getBoundingClientRect()
             if (r.top < 90 || r.bottom > window.innerHeight - 40) target.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
           }
         }
+      }
+      //  ⚠ 0143 — 옮긴 직후(2.5초 안) 위에 결과가 끼어들어 단추가 다시 화면 밖으로 밀리면 한 번 더 따라갑니다.
+      //    사람이 직접 스크롤 · 휠 · 터치 · 키를 썼으면 따라가지 않습니다(대표님이 움직인 것과 싸우지 않게).
+      if (target && !userMoved.current && Date.now() - scrolledAt.current < 2500) {
+        const r = target.getBoundingClientRect()
+        if (r.bottom > window.innerHeight - 20 || r.top < 60) target.scrollIntoView({ block: 'center', behavior: 'auto' })
       }
       if (target) {
         const r = target.getBoundingClientRect()
@@ -106,14 +117,24 @@ export function PresenterCard() {
         })
       } else setBubble(null)
     }
+    const moved = () => { userMoved.current = true }
     tick()
     const t = window.setInterval(tick, 300)
     window.addEventListener('scroll', tick, true)
     window.addEventListener('resize', tick)
+    window.addEventListener('wheel', moved, { passive: true })
+    window.addEventListener('touchmove', moved, { passive: true })
+    window.addEventListener('keydown', moved)
+    //  누르기(마우스 · 손가락)도 사람이 움직인 것 — 예: 「초안 사용」이 회신 칸으로 화면을 옮김
+    window.addEventListener('pointerdown', moved, { passive: true })
     return () => {
       window.clearInterval(t)
       window.removeEventListener('scroll', tick, true)
       window.removeEventListener('resize', tick)
+      window.removeEventListener('wheel', moved)
+      window.removeEventListener('touchmove', moved)
+      window.removeEventListener('keydown', moved)
+      window.removeEventListener('pointerdown', moved)
       clear()
     }
   }, [show, here, step, index, reduce])

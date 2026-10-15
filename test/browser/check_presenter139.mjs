@@ -283,8 +283,7 @@ for (const role of ['field', 'office']) {
   await p.locator('[data-ai-triage-run]').click()
   await p.locator('[data-ai-triage-result]').waitFor({ state: 'visible', timeout: 8000 })
   await shot(p, '07_ai_result')
-  //  0142 — 처리 계획까지 나오면 「이 회신 쓰기」를 짚음 (일정 · 재고 반영 회신)
-  ok(/ai-plan-use-reply/.test((await waitSpot(p, /ai-plan-use-reply/)) ?? ''), '② AI 결과 · 처리 계획이 나오면 「이 회신 쓰기」 강조')
+  ok(/ai-use-draft/.test((await waitSpot(p, /ai-use-draft/)) ?? ''), '② AI 결과가 나오면 「초안 사용」 강조')
   await p.locator('[data-ai-use-draft]').click()
 
   //  STEP 5 — 회신 → 병원 확인
