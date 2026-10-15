@@ -55,6 +55,9 @@ export interface PresenterStep {
   aside?: string
 }
 
+/** 강조한 곳 위 말풍선 — 눌러야 하는 단계는 「여기를 누르세요」, 보여 주기만 하는 단계는 「여기를 보세요」 */
+export const LOOK_STEPS = new Set(['intro', 'today', 'ir', 'close'])
+
 /** 병원 요청 단계에서 붙여 넣을 예시 문장 */
 export const SAMPLE_REQUEST =
   '폐기물이 예상보다 빨리 찼습니다. 가능하면 내일 오전 수거 부탁드리고 63L 용기도 10개 부탁드립니다.'
@@ -137,7 +140,8 @@ export const PRESENTER_STEPS: PresenterStep[] = [
     key: 'reply',
     title: '직원 회신 → 병원 확인',
     routes: (c) => ['/requests', ...(c.clientId ? [`/portal/c/${c.clientId}/requests`] : [])],
-    go: () => '/requests',
+    //  시연 요청이 있으면 그 요청으로 (발표 중엔 그 요청만 보임 · 0140)
+    go: (c) => (c.demoRequestId ? `/requests?focus=${c.demoRequestId}` : '/requests'),
     targets: ['[data-req-reply]', '[data-reply-save]', '[data-req-list] [data-req-open]'],
     show: '담당자가 문장을 확인 · 수정해 회신을 저장하면, 병원 포털 요청 내역의 「담당자 안내」에 그대로 보입니다.',
     before: '회신이 통화로 끝나 누가 무엇을 안내했는지 남지 않았습니다.',

@@ -40,13 +40,15 @@ export interface VideoDef {
   storageKey: string
 }
 
-//  강남 스타트업 지점 발표 — 회사 소개 영상 (4분 46초 · v46)
+//  강남 스타트업 지점 발표 — 회사 소개 영상 (4분 46초 · v47)
 //  ⚠ 0140 — 대표님 수정 대본: 연도별 매출 · 「내부 직원이 실제 업무에 사용 중」 · AI 요청 분석
 //    (성격 · 긴급도 · 핵심 · 회신 초안 → 담당자 확인, 활용 범위는 단계적으로 — 계획) 이 들어갔고,
 //    배경 음악이 아주 작게 깔립니다.
 //  ⚠ v46 — 대표님 새 TTS: 「사업이 성장하고 … 새로운 문제를 발견했습니다」 한 문장(돋보기 장면)을 빼고,
 //    마지막 말이 「그럼 지금부터 발표를 시작하겠습니다」 → 「감사합니다」. 병원 포털 장면은 **지금 화면**(3차 디자인)으로
 //    다시 찍음. 나머지 장면 · 글자는 v45 그대로.
+//  ⚠ v47 — 대표님 정정: 운송 차량은 **4.5톤**. 목소리는 「3.5톤」 그대로 두고 **표기만** 바꿈
+//    (트럭 이름표 · 자막 「4.5톤 차량」). 그 장면(188.5~200.6초)만 다시 그려 끼움 — 나머지 화면 · 소리는 v46 그대로.
 //  ⚠ 말하는 숫자는 연도별 매출 세 개뿐 — **영상에서 말한 그대로**(약 …) 적습니다. 올해 숫자 ·
 //    예상치는 영상에도 여기에도 없습니다(「올해도 성장세」만). 새 사업장 운송 구조는 「준비 중」,
 //    소모품 · 동종업계 솔루션은 「계획」, B2B 플랫폼은 「장기 목표」로 영상 안에 표시돼 있습니다.
@@ -57,10 +59,10 @@ export const GANGNAM_VIDEO: VideoDef = {
   summary: '㈜비원미래 발표 소개 영상',
   lengthLabel: '4분 46초',
   versions: [
-    { id: 'tall', label: '세로 · 릴스 (9:16)', short: '세로 9:16', src: '/media/gangnam_present_v46_tall.mp4',
-      file: 'BeoneMirae_Gangnam_startup_presentation_vertical_9x16.mp4', ratio: [9, 16], sizeMB: 31 },
-    { id: 'wide', label: '가로 · 화면용 (16:9)', short: '가로 16:9', src: '/media/gangnam_present_v46_wide.mp4',
-      file: 'BeoneMirae_Gangnam_startup_presentation_horizontal_16x9.mp4', ratio: [16, 9], sizeMB: 31 },
+    { id: 'tall', label: '세로 · 릴스 (9:16)', short: '세로 9:16', src: '/media/gangnam_present_v47_tall.mp4',
+      file: 'BeoneMirae_Gangnam_startup_presentation_vertical_9x16.mp4', ratio: [9, 16], sizeMB: 30 },
+    { id: 'wide', label: '가로 · 화면용 (16:9)', short: '가로 16:9', src: '/media/gangnam_present_v47_wide.mp4',
+      file: 'BeoneMirae_Gangnam_startup_presentation_horizontal_16x9.mp4', ratio: [16, 9], sizeMB: 30 },
   ],
   chapters: [
     { at: 0, title: '인사 · 비원미래 소개' },

@@ -34,9 +34,11 @@ interface ModalProps {
    *   글 쓰는 칸을 **가리지 않습니다.**
    */
   layout?: 'scroll' | 'sticky'
+  /** 넓은 창 (PC 42rem) — 발표 중 회신 창처럼 글을 크게 보여 줄 때 (0140) */
+  wide?: boolean
 }
 
-export function Modal({ open, title, onClose, children, footer, printable = false, layout = 'scroll' }: ModalProps) {
+export function Modal({ open, title, onClose, children, footer, printable = false, layout = 'scroll', wide = false }: ModalProps) {
   // 뒤로 가기(기기/브라우저)로 모달이 닫힙니다.
   useHistoryDismiss(open, onClose)
   //  ⚠ 0103 — 병원 화면의 창은 Esc 로 닫히는데 내부 창은 안 닫혔습니다.
@@ -73,7 +75,7 @@ export function Modal({ open, title, onClose, children, footer, printable = fals
             onClick={onClose}
           />
           <motion.div
-            className={`relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl${
+            className={`relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-2xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} sm:rounded-3xl${
               layout === 'sticky' ? '' : ' overflow-y-auto'
             } p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5${
               printable

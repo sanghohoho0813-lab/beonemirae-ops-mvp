@@ -247,8 +247,14 @@ for (const role of ['field', 'office']) {
   await p.locator('[data-portal-sheet="urgent"]').waitFor({ state: 'visible', timeout: 8000 })
   ok(/req-send/.test((await waitSpot(p, /req-send/)) ?? ''), '② 시트가 열리면 강조가 「요청하기」로 옮겨 간다')
   await shot(p, '06_portal_sheet')
-  const side = await card(p).evaluate((el) => el.getBoundingClientRect().left)
-  ok(side < 400 && (await card(p).getAttribute('data-presenter-compact')) === '1', '② 시트가 열리면 카드가 짧아져 왼쪽으로 비킨다 (단계 · 지금 할 일 · 이전/다음만)', `${Math.round(side)}px`)
+  //  0140 집중 화면 — 안내판은 왼쪽 메뉴 자리에 그대로, 창(시트)은 안내판 오른쪽에서 열림 (겹치지 않음)
+  const geo = await p.evaluate(() => {
+    const panel = document.querySelector('aside[data-presenter-panel]')?.getBoundingClientRect()
+    //  창 틀(fixed inset-0) 안의 실제 창 상자
+    const sheet = document.querySelector('[data-portal-sheet="urgent"] > div.relative')?.getBoundingClientRect()
+    return { pl: Math.round(panel?.left ?? -1), pr: Math.round(panel?.right ?? -1), sl: Math.round(sheet?.left ?? -1) }
+  })
+  ok(geo.pl === 0 && geo.sl >= geo.pr, '② 시트가 열려도 안내판은 왼쪽 그대로 · 시트는 안내판 오른쪽 (겹치지 않음)', JSON.stringify(geo))
   const navBox = await p.locator('[data-presenter-card]:visible [data-presenter-next]').boundingBox()
   ok(navBox && navBox.y + navBox.height <= 900, '② 「다음 단계」는 늘 화면 안에 보인다', JSON.stringify(navBox))
   await p.locator('[data-choice="reason"] [data-choice-item]').first().click()

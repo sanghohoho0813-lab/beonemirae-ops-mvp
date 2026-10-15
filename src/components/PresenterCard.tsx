@@ -1,26 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Copy, Check, Minus, Smartphone, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Copy, Check, Megaphone, MousePointerClick, Smartphone, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { usePresenter } from '../context/PresenterContext'
 import { useTour } from '../context/TourContext'
-import { PRESENTER_STEPS, SAMPLE_REQUEST, onStepRoute, stepLabel } from '../lib/presenter'
+import { LOOK_STEPS, PRESENTER_STEPS, SAMPLE_REQUEST, onStepRoute, stepLabel } from '../lib/presenter'
 import { openPortalPhoneView } from './PortalViewSwitch'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 심사 시연 안내 카드 (0139) — 화면을 옮겨도 따라다니는 작은 발표 가이드
+// 발표 안내판 (0139 → 0140 집중 화면)
 //
-//   넓은 화면  직원 화면은 **왼쪽 메뉴 자리 위**(시연 중엔 메뉴 대신 카드로 이동),
-//             병원 화면은 강조한 버튼을 **가리지 않는 쪽**에. 창(회신 · 요청 시트)이
-//             열리면 짧은 카드(단계 · 지금 할 일 · 이전/다음)로 줄어 왼쪽에 붙습니다.
-//             「이전 · 다음」은 늘 카드 맨 아래에 보입니다. 「접기」로 한 줄까지.
-//   좁은 화면  위쪽 한 줄 막대(단계 · 지금 할 일 · 다음). 펼치면 아래에서 시트.
+//   대표님: 「시연이 시작되면 왼쪽 메뉴는 다 안 보이게 — 시연에만 집중할 수 있게.
+//            뭐가 뭔지, 뭘 읽어야 하는지 엄청 직관적으로.」
+//
+//   넓은 화면  왼쪽 메뉴 자리를 **남색 안내판 하나**가 차지합니다(메뉴 · 위쪽 도구는 숨김).
+//             안내판에는 세 가지뿐 — 「설명」(읽을 문장) · 「누를 곳」 · 이전/다음.
+//             화면 본문은 안내판 폭만큼 오른쪽으로 비켜 서서(body padding) 가려지는 곳이 없습니다.
+//             눌러야 할 버튼 위에는 「여기를 누르세요」 말풍선이 뜹니다.
+//   좁은 화면  위쪽 한 줄 막대(단계 · 누를 곳 · 다음). 펼치면 아래에서 시트.
 //
 //  ⚠ 안내만 합니다. 누르는 것은 실제 화면의 실제 버튼이고, 저장되는 것은 실제 기록입니다.
-//  ⚠ 강조는 지금 단계에서 눌러야 할 요소 **하나**에 테두리만 씌웁니다(data-presenter-spot).
+//  ⚠ 강조는 지금 단계 요소 **하나**에 테두리 + 말풍선(data-presenter-spot · data-presenter-bubble).
 //    대상이 없으면 아무것도 안 합니다 — 화면 구조를 바꾸지 않습니다.
-//  ⚠ 일반 업무 중에는 나타나지 않습니다 — 「심사 시연 시작」을 누른 탭에서만.
+//  ⚠ 일반 업무 중에는 나타나지 않습니다 — 발표 시작 단추를 누른 탭에서만.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 화면에 실제로 보이는가 (크기 0 · 숨김 제외) */
@@ -32,6 +35,8 @@ const visible = (el: Element | null): el is HTMLElement => {
   return st.visibility !== 'hidden' && st.display !== 'none'
 }
 
+type Bubble = { x: number; top: number; bottom: number; right: number; mid: number; side: boolean }
+
 export function PresenterCard() {
   const { active, index, pos, order, clientId, demoRequestId, next, prev, stop, goTo, continueFull } = usePresenter()
   const { role } = useAuth()
@@ -39,14 +44,11 @@ export function PresenterCard() {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const reduce = useReducedMotion()
-  const [min, setMin] = useState(false)
   const [sheet, setSheet] = useState(false)
-  const [side, setSide] = useState<'right' | 'left'>('left')
-  const [compact, setCompact] = useState(false)
-  const cardRef = useRef<HTMLElement | null>(null)
   const [copied, setCopied] = useState<'' | 'ok' | 'fail'>('')
-  //  ✕ 는 바로 끝내지 않고 한 번 더 묻습니다 — 긴장한 손이 「접기」 옆을 잘못 눌러도 시연이 날아가지 않게
+  //  ✕ 는 바로 끝내지 않고 한 번 더 묻습니다 — 긴장한 손이 잘못 눌러도 시연이 날아가지 않게
   const [askStop, setAskStop] = useState(false)
+  const [bubble, setBubble] = useState<Bubble | null>(null)
   const lastSpot = useRef<HTMLElement | null>(null)
   const scrolledFor = useRef<string>('')
 
@@ -61,40 +63,32 @@ export function PresenterCard() {
   //  AI 먼저 보여 주는 중 — AI · 회신 단계에서 「전체 운영 흐름 계속 보기」 (0140)
   const aiFirst = order[0] === 'triage'
   const canContinue = aiFirst && (step.key === 'triage' || step.key === 'reply')
+  const look = LOOK_STEPS.has(step.key)
 
-  //  단계가 바뀌면 펼쳐서 보여 줍니다
-  useEffect(() => { setMin(false); setCopied(''); setSheet(false); setAskStop(false) }, [index])
+  //  안내판이 떠 있는 동안 — 본문을 안내판 폭만큼 비켜 세웁니다 (index.css · html[data-presenter-panel])
+  useEffect(() => {
+    const el = document.documentElement
+    if (show) el.setAttribute('data-presenter-panel', '1')
+    else el.removeAttribute('data-presenter-panel')
+    return () => el.removeAttribute('data-presenter-panel')
+  }, [show])
 
-  //  ── 강조 · 창 피하기 — 짧게 자주 확인합니다(창 · 시트가 열리고 닫히므로) ──────
+  //  단계가 바뀌면 처음 상태로
+  useEffect(() => { setCopied(''); setSheet(false); setAskStop(false) }, [index])
+
+  //  ── 강조 · 말풍선 — 짧게 자주 확인합니다(창 · 시트가 열리고 닫히므로) ──────
   useEffect(() => {
     const clear = () => {
       lastSpot.current?.removeAttribute('data-presenter-spot')
       lastSpot.current = null
     }
-    if (!show) { clear(); return }
-    const portal = pathname.startsWith('/portal')
+    if (!show || !here) { clear(); setBubble(null); return }
     const tick = () => {
-      const dialogOpen = [...document.querySelectorAll('[role="dialog"], [data-portal-sheet]')].some((d) => visible(d) && !d.closest('[data-presenter-card]'))
-      setCompact(dialogOpen)
       let target: HTMLElement | null = null
-      if (here) {
-        for (const sel of step.targets) {
-          const found = [...document.querySelectorAll(sel)].find((el) => visible(el) && !el.closest('[data-presenter-card]'))
-          if (found) { target = found as HTMLElement; break }
-        }
+      for (const sel of step.targets) {
+        const found = [...document.querySelectorAll(sel)].find((el) => visible(el) && !el.closest('[data-presenter-card]'))
+        if (found) { target = found as HTMLElement; break }
       }
-      //  자리 — 창이 열리면 왼쪽(창은 가운데). 직원 화면은 왼쪽 메뉴 자리.
-      //  병원 화면은 오른쪽이 기본이되, 강조한 버튼과 더 많이 겹치면 반대쪽으로.
-      if (dialogOpen || !portal) setSide('left')
-      else {
-        const w = (cardRef.current?.getBoundingClientRect().width ?? 400) + 24
-        const r = target?.getBoundingClientRect()
-        const overlap = (x0: number, x1: number) => (r ? Math.max(0, Math.min(r.right, x1) - Math.max(r.left, x0)) : 0)
-        const right = overlap(window.innerWidth - w, window.innerWidth)
-        const left = overlap(0, w)
-        setSide(right > left ? 'left' : 'right')
-      }
-      if (!here) { clear(); return }
       if (target !== lastSpot.current) {
         clear()
         if (target) {
@@ -105,15 +99,51 @@ export function PresenterCard() {
           if (scrolledFor.current !== key) {
             scrolledFor.current = key
             const r = target.getBoundingClientRect()
-            if (r.top < 70 || r.bottom > window.innerHeight - 40) target.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
+            if (r.top < 90 || r.bottom > window.innerHeight - 40) target.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' })
           }
         }
       }
+      if (target) {
+        const r = target.getBoundingClientRect()
+        //  창 안의 작은 단추는 **오른쪽 옆**에 (위에 두면 바로 위 글 — 예: 회신 초안 — 을 가림)
+        const side = !!target.closest('[role="dialog"]') && r.width < 420 && r.right + 250 < window.innerWidth
+        setBubble((b) => {
+          const n = { x: Math.round(r.left + Math.min(r.width, 360) / 2), top: Math.round(r.top), bottom: Math.round(r.bottom), right: Math.round(r.right), mid: Math.round(r.top + r.height / 2), side }
+          return b && b.x === n.x && b.top === n.top && b.bottom === n.bottom && b.right === n.right && b.side === n.side ? b : n
+        })
+      } else setBubble(null)
     }
     tick()
-    const t = window.setInterval(tick, 350)
-    return () => { window.clearInterval(t); clear() }
-  }, [show, here, step, index, reduce, pathname])
+    const t = window.setInterval(tick, 300)
+    window.addEventListener('scroll', tick, true)
+    window.addEventListener('resize', tick)
+    return () => {
+      window.clearInterval(t)
+      window.removeEventListener('scroll', tick, true)
+      window.removeEventListener('resize', tick)
+      clear()
+    }
+  }, [show, here, step, index, reduce])
+
+  //  말풍선이 단추를 바로 따라가게 — 창 안 스크롤 · 부드러운 이동 중에도 (매 화면 그리기마다 위치만 다시 읽음)
+  useEffect(() => {
+    if (!show || !here) return
+    let raf = 0
+    const follow = () => {
+      const el = lastSpot.current
+      if (el && el.isConnected) {
+        const r = el.getBoundingClientRect()
+        setBubble((b) => {
+          if (!b) return b
+          const x = Math.round(r.left + Math.min(r.width, 360) / 2), top = Math.round(r.top), bottom = Math.round(r.bottom), right = Math.round(r.right)
+          return b.x === x && b.top === top && b.bottom === bottom && b.right === right ? b : { ...b, x, top, bottom, right, mid: Math.round(r.top + r.height / 2) }
+        })
+      }
+      raf = requestAnimationFrame(follow)
+    }
+    raf = requestAnimationFrame(follow)
+    return () => cancelAnimationFrame(raf)
+  }, [show, here])
 
   if (!show) return null
 
@@ -130,216 +160,220 @@ export function PresenterCard() {
   const onPortalStep = step.key === 'portal' && here
   const onRequests = pathname === '/requests'
 
-  // ── 공통 조각 ──────────────────────────────────────────────────────────────
-  const head = (
-    <div className="flex items-start gap-3">
-      <div className="min-w-0 flex-1">
-        <p data-presenter-stepno className="text-[1rem] font-extrabold tracking-wide text-teal-700">
-          {label}
-        </p>
-        <h2 data-presenter-title className="mt-0.5 break-keep text-[1.4rem] font-black leading-tight tracking-tight text-navy-900">
-          {step.title}
-        </h2>
-      </div>
-      <button
-        type="button"
-        data-presenter-min
-        onClick={() => setMin(true)}
-        aria-label="안내 카드 접기"
-        className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-navy-500 transition hover:bg-navy-50 lg:flex"
-      >
-        <Minus size={20} strokeWidth={2.6} />
-      </button>
-      <button
-        type="button"
-        data-presenter-stop
-        onClick={() => setAskStop(true)}
-        aria-label="발표 가이드 종료"
-        title="발표 가이드 종료"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-navy-500 transition hover:bg-navy-50"
-      >
-        <X size={20} strokeWidth={2.6} />
-      </button>
-    </div>
-  )
-
-  const stopAsk = askStop && (
-    <div data-presenter-stop-ask role="alert" className="mt-3 flex flex-wrap items-center gap-2 rounded-[14px] bg-navy-50 px-3.5 py-2.5">
-      <p className="min-w-0 flex-1 break-keep text-[1.02rem] font-extrabold text-navy-900">발표 가이드를 끝낼까요?</p>
-      <button type="button" data-presenter-stop-yes onClick={stop} className="min-h-[2.75rem] rounded-full bg-navy-900 px-4 text-[1rem] font-extrabold text-white">
+  // ── 조각 — dark: 넓은 화면 안내판(남색) · light: 폰 시트 ────────────────────
+  const stopAsk = (dark: boolean) => askStop && (
+    <div data-presenter-stop-ask role="alert" className={`mt-3 flex flex-wrap items-center gap-2 rounded-[14px] px-3.5 py-2.5 ${dark ? 'bg-white/10' : 'bg-navy-50'}`}>
+      <p className={`min-w-0 flex-1 break-keep text-[1.02rem] font-extrabold ${dark ? 'text-white' : 'text-navy-900'}`}>발표 안내를 끝낼까요?</p>
+      <button type="button" data-presenter-stop-yes onClick={stop} className="min-h-[2.75rem] rounded-full bg-rose-500 px-4 text-[1rem] font-extrabold text-white">
         끝내기
       </button>
-      <button type="button" data-presenter-stop-no onClick={() => setAskStop(false)} className="min-h-[2.75rem] rounded-full bg-white px-4 text-[1rem] font-extrabold text-navy-800 ring-1 ring-navy-200">
+      <button type="button" data-presenter-stop-no onClick={() => setAskStop(false)} className={`min-h-[2.75rem] rounded-full px-4 text-[1rem] font-extrabold ${dark ? 'bg-white text-navy-900' : 'bg-white text-navy-800 ring-1 ring-navy-200'}`}>
         계속
       </button>
     </div>
   )
 
-  const progress = (
+  const progress = (dark: boolean) => (
     <div aria-hidden="true" className="mt-3 flex gap-1">
       {order.map((k, i) => (
-        <span key={k} className={`h-1.5 flex-1 rounded-full ${i <= pos ? 'bg-teal-500' : 'bg-navy-100'}`} />
+        <span key={k} className={`h-1.5 flex-1 rounded-full ${i <= pos ? (dark ? 'bg-teal-400' : 'bg-teal-500') : dark ? 'bg-white/15' : 'bg-navy-100'}`} />
       ))}
     </div>
   )
 
-  //  ⚠ 카드는 프로젝터에 같이 보입니다 — 「설명(읽을 것)」과 「누를 곳」 두 칸만. (0140 정리)
-  const body = (
-    <div className="mt-4 space-y-3">
-      {/*  이 단계 화면이 아니면 — 돌아가는 단추 하나 */}
-      {!here && (
-        <button
-          type="button"
-          data-presenter-offroute
-          data-presenter-go
-          onClick={() => (needsClient ? navigate('/presentation') : goTo(pos))}
-          className="flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] bg-amber-50 px-4 text-[1.05rem] font-extrabold text-amber-900 ring-1 ring-amber-200 transition hover:bg-amber-100"
-        >
-          {needsClient ? '병원을 먼저 고르기' : '이 단계 화면으로 돌아가기'} <ArrowRight size={17} strokeWidth={2.6} />
-        </button>
-      )}
-
-      {/*  ① 설명 — 대표님이 읽을 문장 */}
-      {!compact && (
-        <section data-presenter-say>
-          <p className="text-[0.98rem] font-extrabold text-navy-500">설명</p>
-          <p data-presenter-show className="mt-1 break-keep text-[1.2rem] font-bold leading-relaxed text-navy-900">{step.note}</p>
-        </section>
-      )}
-
-      {/*  ② 누를 곳 */}
-      <section data-presenter-todo className="rounded-[14px] bg-teal-50 px-4 py-3">
-        <p className="text-[0.98rem] font-extrabold text-teal-800">▶ 누를 곳</p>
-        <p className="mt-1 break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">{step.todo}</p>
-
-        {step.key === 'portal' && (
-          <div className="mt-2.5 rounded-xl bg-white px-3 py-2.5">
-            <button
-              type="button"
-              data-presenter-copy
-              onClick={() => void copySample()}
-              className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[0.98rem] font-extrabold text-white transition hover:bg-navy-800"
-            >
-              {copied === 'ok' ? <Check size={16} strokeWidth={2.8} /> : <Copy size={16} strokeWidth={2.4} />}{' '}
-              {copied === 'ok' ? '복사됨 — 붙여 넣으세요' : copied === 'fail' ? '복사가 막혔습니다 — 아래 문장을 직접 입력' : '예시 문장 복사'}
-            </button>
-            <p data-presenter-sample className="mt-1.5 break-keep text-[0.98rem] leading-snug text-navy-700">{SAMPLE_REQUEST}</p>
-          </div>
-        )}
-
-        {step.key === 'reply' && clientId && (
-          <button
-            type="button"
-            data-presenter-portal-check={onRequests ? 'portal' : 'staff'}
-            onClick={() => navigate(onRequests ? `/portal/c/${clientId}/requests` : '/requests')}
-            className="mt-2.5 inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white transition hover:bg-navy-800"
-          >
-            {onRequests ? '병원 화면에서 확인' : '직원 요청함으로'} <ArrowRight size={17} strokeWidth={2.6} />
-          </button>
-        )}
-
-        {onPortalStep && (
-          <button
-            type="button"
-            data-presenter-phone
-            onClick={() => openPortalPhoneView()}
-            className="mt-2.5 hidden min-h-[2.75rem] items-center gap-1.5 rounded-full bg-white px-3.5 text-[0.98rem] font-extrabold text-navy-800 transition hover:bg-navy-50 lg:inline-flex"
-          >
-            <Smartphone size={16} strokeWidth={2.4} /> 휴대폰 화면으로 보기
-          </button>
-        )}
-      </section>
-    </div>
+  const offroute = !here && (
+    <button
+      type="button"
+      data-presenter-offroute
+      data-presenter-go
+      onClick={() => (needsClient ? navigate('/presentation') : goTo(pos))}
+      className="flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] bg-amber-400 px-4 text-[1.05rem] font-extrabold text-navy-950 transition hover:bg-amber-300"
+    >
+      {needsClient ? '병원을 먼저 고르기' : '이 단계 화면으로 돌아가기'} <ArrowRight size={17} strokeWidth={2.6} />
+    </button>
   )
 
-  const nav = (
-    <div className="pt-4">
+  //  누를 곳 안의 보조 단추 (예시 문장 복사 · 병원 화면에서 확인 · 휴대폰 화면)
+  const extras = (
+    <>
+      {step.key === 'portal' && (
+        <div className="mt-3 rounded-xl bg-white px-3 py-2.5">
+          <button
+            type="button"
+            data-presenter-copy
+            onClick={() => void copySample()}
+            className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[0.98rem] font-extrabold text-white transition hover:bg-navy-800"
+          >
+            {copied === 'ok' ? <Check size={16} strokeWidth={2.8} /> : <Copy size={16} strokeWidth={2.4} />}{' '}
+            {copied === 'ok' ? '복사됨 — 붙여 넣으세요' : copied === 'fail' ? '복사가 막혔습니다 — 아래 문장을 직접 입력' : '예시 문장 복사'}
+          </button>
+          <p data-presenter-sample className="mt-1.5 break-keep text-[0.98rem] leading-snug text-navy-700">{SAMPLE_REQUEST}</p>
+        </div>
+      )}
+      {step.key === 'reply' && clientId && (
+        <button
+          type="button"
+          data-presenter-portal-check={onRequests ? 'portal' : 'staff'}
+          onClick={() => navigate(onRequests ? `/portal/c/${clientId}/requests` : demoRequestId ? `/requests?focus=${demoRequestId}` : '/requests')}
+          className="mt-3 inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-full bg-navy-900 px-4 text-[1.02rem] font-extrabold text-white transition hover:bg-navy-800"
+        >
+          {onRequests ? '병원 화면에서 확인' : '직원 요청함으로'} <ArrowRight size={17} strokeWidth={2.6} />
+        </button>
+      )}
+      {onPortalStep && (
+        <button
+          type="button"
+          data-presenter-phone
+          onClick={() => openPortalPhoneView()}
+          className="mt-3 hidden min-h-[2.75rem] items-center gap-1.5 rounded-full bg-white px-3.5 text-[0.98rem] font-extrabold text-navy-800 transition hover:bg-navy-50 lg:inline-flex"
+        >
+          <Smartphone size={16} strokeWidth={2.4} /> 휴대폰 화면으로 보기
+        </button>
+      )}
+    </>
+  )
+
+  const say = (dark: boolean) => (
+    <section data-presenter-say>
+      <p className={`flex items-center gap-1.5 text-[1rem] font-extrabold ${dark ? 'text-navy-200' : 'text-navy-500'}`}>
+        <Megaphone size={17} strokeWidth={2.4} aria-hidden="true" /> 설명
+      </p>
+      <p data-presenter-show className={`mt-1.5 break-keep font-semibold leading-relaxed ${dark ? 'text-[1.22rem] text-white' : 'text-[1.12rem] text-navy-900'}`}>
+        {step.note}
+      </p>
+    </section>
+  )
+
+  const todo = (dark: boolean) => (
+    <section data-presenter-todo className={`rounded-[16px] px-4 py-3.5 ${dark ? 'bg-teal-400 text-navy-950' : 'bg-teal-50 text-navy-900'}`}>
+      <p className={`flex items-center gap-1.5 text-[1rem] font-black ${dark ? '' : 'text-teal-800'}`}>
+        <MousePointerClick size={18} strokeWidth={2.6} aria-hidden="true" /> 누를 곳
+      </p>
+      <p className="mt-1 break-keep text-[1.18rem] font-extrabold leading-snug">{step.todo}</p>
+      {extras}
+    </section>
+  )
+
+  const nav = (dark: boolean) => (
+    <div>
       {canContinue && (
         <button
           type="button"
           data-presenter-continue
           onClick={continueFull}
-          className="mb-2 flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] bg-teal-50 px-3 text-[1.05rem] font-extrabold text-teal-800 ring-1 ring-teal-200 transition hover:bg-teal-100"
+          className={`mb-2.5 flex min-h-[3rem] w-full items-center justify-center gap-1.5 rounded-[14px] px-3 text-[1.05rem] font-extrabold transition ${
+            dark ? 'bg-white/10 text-white ring-1 ring-white/25 hover:bg-white/15' : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100'
+          }`}
         >
           전체 운영 흐름 계속 보기 <ArrowRight size={18} strokeWidth={2.6} />
         </button>
       )}
-    <div className="flex gap-2">
-      <button
-        type="button"
-        data-presenter-prev
-        onClick={prev}
-        disabled={index === 0}
-        className="flex min-h-[3rem] flex-1 items-center justify-center gap-1.5 rounded-[14px] bg-navy-50 px-3 text-[1.05rem] font-extrabold text-navy-800 transition hover:bg-navy-100 disabled:opacity-40"
-      >
-        <ArrowLeft size={18} strokeWidth={2.6} /> 이전
-      </button>
-      {last ? (
+      <div className="flex gap-2">
         <button
           type="button"
-          data-presenter-finish
-          onClick={stop}
-          className="flex min-h-[3rem] flex-[1.6] items-center justify-center gap-1.5 rounded-[14px] bg-navy-900 px-3 text-[1.05rem] font-extrabold text-white transition hover:bg-navy-800"
+          data-presenter-prev
+          onClick={prev}
+          disabled={pos === 0}
+          className={`flex min-h-[3.5rem] flex-1 items-center justify-center gap-1.5 rounded-[14px] px-3 text-[1.08rem] font-extrabold transition disabled:opacity-35 ${
+            dark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-navy-50 text-navy-800 hover:bg-navy-100'
+          }`}
         >
-          발표 가이드 종료
+          <ArrowLeft size={19} strokeWidth={2.6} /> 이전
         </button>
-      ) : (
-        <button
-          type="button"
-          data-presenter-next
-          onClick={next}
-          className="flex min-h-[3rem] flex-[1.6] items-center justify-center gap-1.5 rounded-[14px] bg-navy-900 px-3 text-[1.05rem] font-extrabold text-white transition hover:bg-navy-800"
-        >
-          {pos === 0 && order[0] === 'intro' ? '시연 시작' : '다음'} <ArrowRight size={18} strokeWidth={2.6} />
-        </button>
-      )}
-    </div>
+        {last ? (
+          <button
+            type="button"
+            data-presenter-finish
+            onClick={stop}
+            className={`flex min-h-[3.5rem] flex-[1.8] items-center justify-center gap-1.5 rounded-[14px] px-3 text-[1.15rem] font-black transition ${
+              dark ? 'bg-white text-navy-950 hover:bg-navy-50' : 'bg-navy-900 text-white hover:bg-navy-800'
+            }`}
+          >
+            발표 안내 끝내기
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-presenter-next
+            onClick={next}
+            className={`flex min-h-[3.5rem] flex-[1.8] items-center justify-center gap-1.5 rounded-[14px] px-3 text-[1.15rem] font-black transition ${
+              dark ? 'bg-white text-navy-950 hover:bg-navy-50' : 'bg-navy-900 text-white hover:bg-navy-800'
+            }`}
+          >
+            {pos === 0 && order[0] === 'intro' ? '시연 시작' : '다음'} <ArrowRight size={20} strokeWidth={2.8} />
+          </button>
+        )}
+      </div>
     </div>
   )
 
-  const fade = reduce ? {} : { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 12 }, transition: { duration: 0.2 } }
+  const stopBtn = (dark: boolean) => (
+    <button
+      type="button"
+      data-presenter-stop
+      onClick={() => setAskStop(true)}
+      aria-label="발표 안내 끝내기"
+      title="발표 안내 끝내기"
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${dark ? 'text-navy-300 hover:bg-white/10 hover:text-white' : 'text-navy-500 hover:bg-navy-50'}`}
+    >
+      <X size={20} strokeWidth={2.6} />
+    </button>
+  )
+
+  //  말풍선 — 안내판(왼쪽) 위로는 가지 않게, 화면 위쪽에 붙은 대상이면 아래에
+  const panelW = typeof window !== 'undefined' && window.innerWidth >= 1536 ? 384 : 352
+  const bubbleBelow = !!bubble && !bubble.side && bubble.top < 96
+  const bubbleX = bubble ? Math.min(Math.max(bubble.x, panelW + 110), (typeof window !== 'undefined' ? window.innerWidth : 1440) - 110) : 0
 
   return (
     <>
-      {/* ── 넓은 화면 ── */}
-      <div className="pointer-events-none fixed inset-0 z-[80] hidden lg:block">
-        <AnimatePresence mode="wait">
-          {min ? (
-            <motion.button
-              key="pill"
-              type="button"
-              data-presenter-card
-              data-presenter-pill
-              onClick={() => setMin(false)}
-              {...fade}
-              className={`pointer-events-auto absolute bottom-3 flex min-h-[3.25rem] items-center gap-2.5 rounded-full bg-navy-900 px-5 text-[1.05rem] font-extrabold text-white shadow-2xl ${side === 'left' ? 'left-3' : 'right-3'}`}
-            >
-              {label} · {step.title} <ChevronUp size={18} strokeWidth={2.6} />
-            </motion.button>
-          ) : (
-            <motion.aside
-              key={`card-${index}`}
-              ref={cardRef}
-              data-presenter-card
-              data-presenter-side={side}
-              data-presenter-compact={compact ? '1' : undefined}
-              aria-label="심사 시연 안내"
-              {...fade}
-              className={`pointer-events-auto absolute bottom-3 flex max-h-[calc(100dvh-1.5rem)] flex-col rounded-[20px] bg-white p-5 shadow-2xl ring-1 ring-navy-100 ${
-                compact ? 'w-[min(20rem,calc(100vw-1.5rem))]' : 'w-[min(19.5rem,calc(100vw-1.5rem))] xl:w-[min(23rem,calc(100vw-1.5rem))]'
-              } ${side === 'left' ? 'left-3' : 'right-3'}`}
-            >
-              <div className="shrink-0">
-                {head}
-                {stopAsk}
-                {progress}
-              </div>
-              <div data-presenter-body className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{body}</div>
-              <div className="shrink-0">{nav}</div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* ── 넓은 화면 — 왼쪽 안내판 (메뉴 자리) ── */}
+      <aside
+        data-presenter-card
+        data-presenter-panel
+        data-presenter-side="left"
+        aria-label="발표 진행 안내"
+        className="fixed inset-y-0 left-0 z-[80] hidden w-[22rem] flex-col bg-navy-950 text-white shadow-2xl lg:flex 2xl:w-[24rem]"
+      >
+        <div className="shrink-0 px-6 pt-6">
+          <div className="flex items-center gap-2">
+            <p data-presenter-stepno className="min-w-0 flex-1 text-[1.05rem] font-extrabold tracking-wide text-teal-300">
+              {label}
+            </p>
+            {stopBtn(true)}
+          </div>
+          {stopAsk(true)}
+          {progress(true)}
+          <h2 data-presenter-title className="mt-4 break-keep text-[1.65rem] font-black leading-tight tracking-tight text-white">
+            {step.title}
+          </h2>
+        </div>
+        <div data-presenter-body className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-4 pt-5">
+          {offroute}
+          {say(true)}
+          {todo(true)}
+        </div>
+        <div className="shrink-0 border-t border-white/10 px-6 pb-6 pt-4">{nav(true)}</div>
+      </aside>
+
+      {/* ── 「여기를 누르세요」 말풍선 (넓은 화면) ── */}
+      {bubble && here && (
+        <div
+          data-presenter-bubble={look ? 'look' : 'press'}
+          aria-hidden="true"
+          className="pointer-events-none fixed z-[95] hidden lg:block"
+          style={
+            bubble.side
+              ? { left: bubble.right + 14, top: bubble.mid, transform: 'translate(0, -50%)' }
+              : { left: bubbleX, top: bubbleBelow ? bubble.bottom + 12 : bubble.top - 12, transform: `translate(-50%, ${bubbleBelow ? '0' : '-100%'})` }
+          }
+        >
+          <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-500 px-4 py-2 text-[1.05rem] font-black text-white shadow-xl ring-4 ring-white">
+            {bubble.side ? <ArrowLeft size={18} strokeWidth={3} /> : bubbleBelow ? <ArrowUp size={18} strokeWidth={3} /> : <ArrowDown size={18} strokeWidth={3} />}
+            {look ? '여기를 보세요' : '여기를 누르세요'}
+          </div>
+        </div>
+      )}
 
       {/* ── 좁은 화면 — 위 한 줄 막대 + 펼치면 아래 시트 ── */}
       <div className="lg:hidden">
@@ -360,7 +394,7 @@ export function PresenterCard() {
               <ChevronDown size={20} strokeWidth={2.6} />
             </button>
             {!last && (
-              <button type="button" data-presenter-next onClick={next} aria-label="다음 단계" className="flex h-11 min-w-[2.75rem] shrink-0 items-center justify-center rounded-xl bg-teal-500 px-3 font-extrabold">
+              <button type="button" data-presenter-next onClick={next} aria-label="다음" className="flex h-11 min-w-[2.75rem] shrink-0 items-center justify-center rounded-xl bg-teal-500 px-3 font-extrabold">
                 <ArrowRight size={20} strokeWidth={2.6} />
               </button>
             )}
@@ -374,7 +408,7 @@ export function PresenterCard() {
                 key="sheet"
                 data-presenter-card
                 data-presenter-sheet
-                aria-label="심사 시연 안내"
+                aria-label="발표 진행 안내"
                 initial={reduce ? false : { y: '100%' }}
                 animate={{ y: 0 }}
                 exit={reduce ? undefined : { y: '100%' }}
@@ -383,11 +417,21 @@ export function PresenterCard() {
                 style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
               >
                 <button type="button" onClick={() => setSheet(false)} aria-label="안내 접기" className="mx-auto mb-2 block h-1.5 w-12 rounded-full bg-navy-200" />
-                {head}
-                {stopAsk}
-                {progress}
-                {body}
-                {nav}
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p data-presenter-stepno className="text-[1rem] font-extrabold tracking-wide text-teal-700">{label}</p>
+                    <h2 data-presenter-title className="mt-0.5 break-keep text-[1.4rem] font-black leading-tight tracking-tight text-navy-900">{step.title}</h2>
+                  </div>
+                  {stopBtn(false)}
+                </div>
+                {stopAsk(false)}
+                {progress(false)}
+                <div className="mt-4 space-y-3">
+                  {offroute}
+                  {say(false)}
+                  {todo(false)}
+                </div>
+                <div className="pt-4">{nav(false)}</div>
               </motion.aside>
             </>
           )}

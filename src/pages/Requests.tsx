@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -20,6 +20,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
+import { usePresenter } from '../context/PresenterContext'
 import { useAuth } from '../context/AuthContext'
 import { canSeeMoney } from '../lib/access'
 import { PageShell, SectionTitle, EmptyState, FilterChip, KpiCard } from '../components/ui'
@@ -173,6 +174,11 @@ export function Requests() {
   useEffect(() => {
     if (focusInAll && !focusShown) setFilter('전체')
   }, [focusInAll, focusShown])
+  //  발표 중(0140) — 시연 요청으로 왔으면 **그 요청만** 보입니다. 프로젝터에 다른 병원(실제 거래처)의
+  //  요청 글 · 이름이 비치지 않게. 발표 가이드를 끝내면 원래 목록 그대로.
+  const presenter = usePresenter()
+  const demoOnly = presenter.active && focusInAll
+  const listRows = demoOnly ? all.filter((r) => r.id === focusId) : rows
   const focusScrolled = useRef('')
   useEffect(() => {
     if (!focusId || !focusShown || focusScrolled.current === focusId) return
@@ -293,7 +299,7 @@ export function Requests() {
         action={
           //  ⚠ 실제 업무 단추(전화 요청 접수)가 **먼저**입니다. AI 자리는
           //    그 옆에 섭니다 — 아직 안 되는 것이 되는 것보다 앞에 오면 안 됩니다.
-          <div className="flex flex-wrap items-center gap-2">
+          <div data-hide-presenting className="flex flex-wrap items-center gap-2">
             <button onClick={() => { setNewError(null); setNewOpen(true) }} className="btn-primary">
               <PlusCircle size={19} strokeWidth={2.4} /> 전화 요청 접수
             </button>
@@ -303,7 +309,7 @@ export function Requests() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">
+      <div data-hide-presenting className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">
         <KpiCard icon={AlertTriangle} label="처리 대기" value={stats.requestsOpen} unit="건" tone="rose" />
         <KpiCard icon={CheckCircle2} label="처리 완료" value={stats.requestsDone} unit="건" tone="teal" />
         <KpiCard
@@ -316,7 +322,7 @@ export function Requests() {
         <KpiCard icon={Building2} label="요청한 병원" value={stats.activeClients} unit="곳" tone="navy" />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div data-hide-presenting className="flex flex-wrap gap-2">
         {/*  ⚠ 「내려 둔 것」은 **있을 때만** 칩을 그립니다. 늘 있으면 그것도
              또 하나의 늘 떠 있는 것이 됩니다. */}
         {([
@@ -330,7 +336,7 @@ export function Requests() {
         ))}
       </div>
 
-      {rows.length === 0 ? (
+      {listRows.length === 0 ? (
         <LoadGate
           loadingTitle="요청을 불러오는 중입니다"
           empty={
@@ -343,7 +349,7 @@ export function Requests() {
         />
       ) : (
         <div className="space-y-3">
-          {rows.map((r, ri) => (
+          {listRows.map((r, ri) => (
             <div
               key={r.id}
               data-req-focus={r.id === focusId ? '' : undefined}
@@ -520,7 +526,7 @@ export function Requests() {
         />
       )}
 
-      <section>
+      <section data-hide-presenting>
         <SectionTitle>자동 처리 규칙</SectionTitle>
         <div className="card p-5">
           <p className="t-body break-keep leading-snug text-navy-600">
@@ -534,6 +540,7 @@ export function Requests() {
       {/* 회신 */}
       <Modal
         open={!!replyTo}
+        wide={presenter.active}
         title="병원에 회신"
         onClose={() => { if (!replyBusy) { setReplyTo(null); setReplyErr(null) } }}
         footer={
@@ -558,10 +565,11 @@ export function Requests() {
           <p className="t-caption mb-3 whitespace-pre-wrap break-keep rounded-xl bg-navy-50 px-3 py-2 text-navy-600">{replyTo.content}</p>
         )}
         {canAi && replyTo && (
-          <div data-ai-triage className="mb-3 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3">
+          //  0140 — 발표 화면에서 한눈에: 번호 순서(① 종류 ② 긴급도 ③ 요약 ④ 요구사항 ⑤ 회신 초안) · 큰 글씨
+          <div data-ai-triage className="mb-3 rounded-2xl border-2 border-violet-200 bg-violet-50 px-4 py-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Sparkles size={17} strokeWidth={2.4} className="shrink-0 text-violet-600" />
-              <p className="t-body min-w-0 flex-1 break-keep font-extrabold text-violet-900">
+              <Sparkles size={20} strokeWidth={2.4} className="shrink-0 text-violet-600" />
+              <p className="min-w-0 flex-1 break-keep text-[1.15rem] font-black text-violet-950">
                 AI 요청 분석
                 {/*  창이 길어도 늘 보이는 자리 — AI 는 제안, 결정은 담당자 (0140 발표) */}
                 <span data-ai-human-badge className="ml-2 inline-block rounded-full bg-white px-2.5 py-0.5 align-middle text-[0.9rem] font-extrabold text-violet-800 ring-1 ring-violet-200">
@@ -573,23 +581,31 @@ export function Requests() {
                 onClick={() => void runAi()}
                 disabled={ai.busy}
                 aria-busy={ai.busy}
-                className="btn-ghost min-h-[2.75rem] border-violet-200 px-3 text-[0.98rem] disabled:opacity-60"
+                className={`inline-flex min-h-[3rem] items-center gap-1.5 rounded-full px-5 text-[1.05rem] font-extrabold transition disabled:opacity-60 ${
+                  ai.result && !ai.busy ? 'bg-white text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100' : 'bg-violet-600 text-white shadow-md hover:bg-violet-700'
+                }`}
               >
                 {ai.busy ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" /> 분석 중…
+                    <Loader2 size={18} className="animate-spin" /> 분석 중…
                   </>
-                ) : ai.error ? '다시 시도' : ai.result ? '다시 분석' : 'AI 분석 실행'}
+                ) : ai.error ? '다시 시도' : ai.result ? '다시 분석' : (
+                  <>
+                    <Sparkles size={18} strokeWidth={2.4} /> AI 분석 실행
+                  </>
+                )}
               </button>
             </div>
 
             {ai.busy && (
-              <p data-ai-triage-busy className="t-caption mt-2 break-keep text-violet-800">AI가 요청 글을 읽고 있습니다…</p>
+              <p data-ai-triage-busy className="mt-3 flex items-center gap-2 break-keep rounded-xl bg-white px-3.5 py-3 text-[1.08rem] font-bold text-violet-900">
+                <Loader2 size={20} className="shrink-0 animate-spin text-violet-600" /> AI가 요청 글을 읽고 있습니다… (보통 3~5초)
+              </p>
             )}
 
             {ai.error && !ai.busy && (
-              <div data-ai-triage-error role="status" className="mt-2">
-                <p className="t-caption break-keep font-bold text-rose-700">
+              <div data-ai-triage-error role="status" className="mt-3 rounded-xl bg-white px-3.5 py-3">
+                <p className="break-keep text-[1.02rem] font-bold text-rose-700">
                   AI 분석을 불러오지 못했습니다. 요청 처리는 그대로 진행할 수 있습니다.
                 </p>
                 <p className="t-caption mt-0.5 break-keep text-navy-500">까닭: {ai.error}</p>
@@ -597,58 +613,62 @@ export function Requests() {
             )}
 
             {ai.result && !ai.busy && (
-              <div data-ai-triage-result className="mt-3 space-y-3">
-                {/*  핵심 표 — 요청 유형 · 함께 든 요청 · 긴급도 (0140 발표 때 한눈에) */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span data-ai-kind={ai.result.kind} className="pill bg-white text-[1rem] font-extrabold text-navy-900 ring-1 ring-violet-200">
-                    {REQUEST_KIND_LABEL[ai.result.kind as RequestKind] ?? ai.result.kind}
-                  </span>
-                  {ai.result.alsoKinds.map((k) => (
-                    <span key={k} data-ai-also={k} className="pill bg-white text-navy-700 ring-1 ring-violet-100">
-                      + {REQUEST_KIND_LABEL[k as RequestKind] ?? k}
+              <ol data-ai-triage-result className="mt-4 space-y-2.5">
+                <AiRow n={1} label="요청 종류">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span data-ai-kind={ai.result.kind} className="rounded-full bg-navy-900 px-3.5 py-1 text-[1.1rem] font-extrabold text-white">
+                      {REQUEST_KIND_LABEL[ai.result.kind as RequestKind] ?? ai.result.kind}
                     </span>
-                  ))}
-                  <span data-ai-urgency={ai.result.urgency} className={`pill text-[1rem] font-extrabold ${AI_URGENCY_TONE[ai.result.urgency] ?? 'bg-navy-100 text-navy-700'}`}>
-                    긴급도 {ai.result.urgency}
+                    {ai.result.alsoKinds.map((k) => (
+                      <span key={k} data-ai-also={k} className="rounded-full bg-white px-3 py-1 text-[1.02rem] font-bold text-navy-800 ring-1 ring-navy-200">
+                        + {REQUEST_KIND_LABEL[k as RequestKind] ?? k}
+                      </span>
+                    ))}
                   </span>
-                </div>
-                <div>
-                  <p className="t-caption font-extrabold text-violet-800">AI 요약</p>
-                  <p data-ai-summary className="t-body mt-0.5 break-keep font-semibold text-navy-900">{ai.result.summary}</p>
-                </div>
+                </AiRow>
+                <AiRow n={2} label="긴급도">
+                  <span data-ai-urgency={ai.result.urgency} className={`inline-block rounded-full px-3.5 py-1 text-[1.1rem] font-black ${AI_URGENCY_TONE[ai.result.urgency] ?? 'bg-navy-100 text-navy-700'}`}>
+                    {ai.result.urgency}
+                  </span>
+                </AiRow>
+                <AiRow n={3} label="AI 요약">
+                  <p data-ai-summary className="break-keep text-[1.12rem] font-bold leading-snug text-navy-950">{ai.result.summary}</p>
+                </AiRow>
                 {ai.result.points.length > 0 && (
-                  <div>
-                    <p className="t-caption font-extrabold text-violet-800">핵심 요구사항</p>
-                    <ul data-ai-points className="t-body mt-0.5 list-disc space-y-0.5 pl-5 text-navy-800">
+                  <AiRow n={4} label="핵심 요구사항">
+                    <ul data-ai-points className="list-disc space-y-0.5 pl-5 text-[1.08rem] font-semibold text-navy-900">
                       {ai.result.points.map((x) => <li key={x} className="break-keep">{x}</li>)}
                     </ul>
-                  </div>
+                  </AiRow>
                 )}
-                <div className="rounded-xl bg-white px-3 py-2.5 ring-1 ring-violet-100">
-                  <p className="t-caption font-extrabold text-violet-800">AI 회신 초안</p>
-                  <p data-ai-draft className="t-body mt-0.5 whitespace-pre-wrap break-keep text-navy-900">{ai.result.draft}</p>
-                  <button
-                    type="button"
-                    data-ai-use-draft
-                    onClick={applyDraft}
-                    className="btn-ghost mt-2 min-h-[2.75rem] border-violet-200 px-3 text-[0.98rem]"
-                  >
-                    초안 사용 — 아래 칸에서 고쳐 저장
-                  </button>
-                </div>
-                <p data-ai-basis className="t-caption break-keep rounded-lg bg-white/60 px-2.5 py-1.5 text-navy-600">판단 근거: {ai.result.basis}</p>
-                <p data-ai-meta className="t-caption break-keep text-navy-500">
-                  {ai.result.model ? `모델 ${ai.result.model}` : '모델 이름 없음'}
-                  {ai.ms != null && ` · ${(ai.ms / 1000).toFixed(1)}초`}
-                  {!ai.logged && ' · 호출 기록을 남기지 못했습니다'}
-                </p>
-              </div>
+                <AiRow n={ai.result.points.length > 0 ? 5 : 4} label="AI 회신 초안">
+                  <div className="rounded-xl bg-white px-3.5 py-3 ring-2 ring-violet-200">
+                    <p data-ai-draft className="whitespace-pre-wrap break-keep text-[1.08rem] leading-relaxed text-navy-950">{ai.result.draft}</p>
+                    <button
+                      type="button"
+                      data-ai-use-draft
+                      onClick={applyDraft}
+                      className="mt-2.5 inline-flex min-h-[3rem] items-center gap-1.5 rounded-full bg-violet-600 px-5 text-[1.02rem] font-extrabold text-white shadow-md transition hover:bg-violet-700"
+                    >
+                      초안 사용 — 아래 칸에서 고쳐 저장
+                    </button>
+                  </div>
+                </AiRow>
+                <li className="list-none pt-1">
+                  <p data-ai-basis className="break-keep rounded-lg bg-white/70 px-3 py-2 text-[0.98rem] text-navy-700">판단 근거: {ai.result.basis}</p>
+                  <p data-ai-meta className="mt-1.5 break-keep text-[0.95rem] font-semibold text-navy-500">
+                    실제 AI 응답{aiVendor(ai.result.model) && ` · ${aiVendor(ai.result.model)}`} · {ai.result.model ? `모델 ${ai.result.model}` : '모델 이름 없음'}
+                    {ai.ms != null && ` · ${(ai.ms / 1000).toFixed(1)}초`}
+                    {!ai.logged && ' · 호출 기록을 남기지 못했습니다'}
+                  </p>
+                </li>
+              </ol>
             )}
 
             {/*  AI 는 제안만 — 발표 화면에서 반드시 보이게 (심사위원이 「AI 가 자동 확정」으로 오해하지 않게) */}
-            <div data-ai-disclaimer className="mt-3 rounded-xl bg-violet-100/70 px-3 py-2.5">
-              <p data-ai-human-check className="t-body break-keep font-extrabold text-violet-900">AI 제안 → 담당자 최종 확인</p>
-              <p className="t-caption mt-0.5 break-keep text-violet-900">
+            <div data-ai-disclaimer className="mt-3 rounded-xl bg-violet-100/70 px-3.5 py-3">
+              <p data-ai-human-check className="break-keep text-[1.05rem] font-extrabold text-violet-900">AI 제안 → 담당자 최종 확인</p>
+              <p className="mt-0.5 break-keep text-[0.98rem] text-violet-900">
                 AI는 초안을 제안하며, 최종 판단과 회신은 담당자가 수행합니다. AI는 요청 상태를 바꾸거나 일정을 확정하거나 병원에 보내지 않습니다.
               </p>
             </div>
@@ -826,8 +846,30 @@ export function Requests() {
            섞으면 요청함에 질문이 쌓여 정작 오늘 나갈 수거가 묻힙니다.
            ⚠ 판 82 이하이면 아예 안 그립니다 — 표가 없는데 화면만 있으면
              눌러도 안 되는 단추가 됩니다. */}
-      {schema83 && <InquiryInbox />}
+      {schema83 && <div data-hide-presenting className="contents"><InquiryInbox /></div>}
 
     </PageShell>
   )
+}
+
+/** AI 결과 한 줄 — 번호 · 이름 · 값 (0140 발표 화면에서 한눈에) */
+function AiRow({ n, label, children }: { n: number; label: string; children: ReactNode }) {
+  return (
+    <li className="flex list-none items-start gap-3">
+      <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[0.95rem] font-black text-white">{n}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[0.98rem] font-extrabold text-violet-800">{label}</p>
+        <div className="mt-0.5">{children}</div>
+      </div>
+    </li>
+  )
+}
+
+/** 응답에 적힌 모델 이름으로 회사 이름 — 화면 표시용 (모르면 빈 글) */
+function aiVendor(model: string | null | undefined): string {
+  const m = (model ?? '').toLowerCase()
+  if (m.startsWith('gemini')) return 'Google Gemini'
+  if (m.startsWith('claude')) return 'Anthropic Claude'
+  if (m.startsWith('gpt') || /^o\d/.test(m)) return 'OpenAI'
+  return ''
 }

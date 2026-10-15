@@ -204,8 +204,12 @@ const S = makeShared()
   ok(S.lastAiBody?.requestId === S.requests[0].id && Object.keys(S.lastAiBody ?? {}).join(',') === 'requestId', '⑦ 서버 함수로는 요청 번호만 (글 · 시연 여부는 서버가 DB 에서)', JSON.stringify(S.lastAiBody))
   const ys = await p.evaluate(() => ['[data-ai-kind]', '[data-ai-urgency]', '[data-ai-summary]', '[data-ai-points]', '[data-ai-draft]', '[data-ai-basis]', '[data-ai-human-check]']
     .map((sel) => Math.round(document.querySelector(`[role="dialog"] ${sel}`)?.getBoundingClientRect().top ?? -1)))
-  ok(ys.every((y) => y >= 0) && ys[0] === ys[1] && ys.slice(1).every((y, i) => i === 0 || y > ys[i]),
-    '⑧ 순서 — 유형 · 긴급도 표 → AI 요약 → 핵심 요구사항 → AI 회신 초안 → 판단 근거 → 「AI 제안 → 담당자 최종 확인」', ys.join(' < '))
+  //  0140 — 번호 순서로 한 줄씩: ① 요청 종류 ② 긴급도 ③ AI 요약 ④ 핵심 요구사항 ⑤ AI 회신 초안 → 판단 근거 → 담당자 최종 확인
+  ok(ys.every((y) => y >= 0) && ys.every((y, i) => i === 0 || y > ys[i - 1]),
+    '⑧ 순서 — ① 요청 종류 → ② 긴급도 → ③ AI 요약 → ④ 핵심 요구사항 → ⑤ AI 회신 초안 → 판단 근거 → 「AI 제안 → 담당자 최종 확인」', ys.join(' < '))
+  const meta = flat(await p.locator('[role="dialog"] [data-ai-meta]').innerText())
+  ok(/^실제 AI 응답/.test(meta) && /모델 test-model/.test(meta), '⑧ 아래 줄 — 「실제 AI 응답 · 모델 · 초」', meta)
+  ok((await p.locator('[data-presenter-bubble]').count()) === 1, '⑧ 눌러야 할 곳 위에 「여기를 누르세요」 말풍선')
   const res = flat(await p.locator('[role="dialog"] [data-ai-triage]').innerText())
   ok(/^AI 요청 분석/.test(res) && /긴급수거/.test(res) && /긴급도 높음/.test(res) && /AI 요약/.test(res) && /핵심 요구사항/.test(res) && /AI 회신 초안/.test(res) && /판단 근거:/.test(res),
     '⑧ 제목 「AI 요청 분석」 · 표 「긴급수거」 「긴급도 높음」 · 칸 이름', res.slice(0, 120))

@@ -358,7 +358,8 @@ function Sidebar() {
   const showMobilePreview = !configured || canAccess(profile?.role ?? null, '/mobile-preview')
 
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
+    //  ⚠ 0140 — 발표 중(data-presenting)에는 메뉴 전체를 숨깁니다. 그 자리는 발표 안내판이 씁니다.
+    <aside data-hide-presenting className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
@@ -780,7 +781,7 @@ export function Layout() {
                  줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
                  (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
                  같은 이유로 안전합니다. */}
-            <div className={`mb-3 flex-wrap items-center justify-end gap-1.5 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
+            <div data-hide-presenting className={`mb-3 flex-wrap items-center justify-end gap-1.5 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
               {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
                    설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
                    설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
