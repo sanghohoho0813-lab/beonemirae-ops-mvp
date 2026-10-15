@@ -5,14 +5,14 @@
 //    supabase.functions.invoke('ai-triage', { body: { requestId } })
 //
 //  처리 흐름 · 권한 · 기록 규칙은 handler.ts, 프롬프트 · 결과 검사는 triage.ts,
-//  모델 호출은 provider.ts(OpenAI 호환 · Gemini) · anthropic.ts(Claude) 에 있습니다. 이 파일은 Supabase 와 fetch 를 이어 줄 뿐입니다.
+//  모델 호출은 gemini.ts(Google) · anthropic.ts(Claude) · provider.ts(OpenAI 호환) 에 있습니다. 이 파일은 Supabase 와 fetch 를 이어 줄 뿐입니다.
 //
 //  ── Secret (supabase secrets set …) ───────────────────────────────────
 //   AI_API_KEY      필수. 모델 회사 API 키 — 서버에만 둡니다(브라우저 · 저장소 금지)
 //   AI_PROVIDER     선택. gemini | anthropic | openai — 비우면 키 모양으로 고름
-//                         (AIza… = gemini · sk-ant-… = anthropic · 그 밖 = openai)
-//   AI_MODEL        선택. 기본 gemini=gemini-3.5-flash-lite · anthropic=claude-opus-5-5 · openai=gpt-4o-mini
-//   AI_API_URL      선택. gemini: 기본 Google 의 OpenAI 호환 주소 (gemini.ts)
+//                         (AQ.… · AIza… = gemini · sk-ant-… = anthropic · 그 밖 = openai)
+//   AI_MODEL        선택. 기본 gemini=gemini-2.5-flash-lite · anthropic=claude-opus-5-5 · openai=gpt-4o-mini
+//   AI_API_URL      선택. gemini: 기본 https://generativelanguage.googleapis.com/v1beta (시험 때만 바꿈)
 //                         openai: 기본 https://api.openai.com/v1/chat/completions (OpenAI 호환 주소면 무엇이든)
 //                         anthropic: 비우면 Anthropic 기본 주소 (시험 때만 바꿈)
 //   AI_TEMPERATURE  선택. gemini · openai · 기본 0.2 · 빈 값이면 보내지 않음 (temperature 를 안 받는 모델)
@@ -27,7 +27,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { handleTriage } from './handler.ts'
 import { chatJson } from './provider.ts'
 import { claudeJson } from './anthropic.ts'
-import { TRIAGE_RESPONSE_FORMAT, pickAi } from './gemini.ts'
+import { GEMINI_DEFAULT_MODEL, GEMINI_FALLBACK_MODEL, geminiJson, pickAi } from './gemini.ts'
 
 const KEY0 = (Deno.env.get('AI_API_KEY') ?? '').trim()
 const { provider: PROVIDER, model: MODEL, url: API_URL } = pickAi({
@@ -112,13 +112,10 @@ Deno.serve(async (req) => {
         PROVIDER === 'anthropic'
           ? claudeJson({ apiKey: key, baseURL: API_URL || undefined, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS })
           : PROVIDER === 'gemini'
-          ? chatJson({
-              apiKey: key, url: API_URL, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS, temperature: TEMPERATURE,
-              //  문서의 구조화 출력(json_schema) — 거절되면 같은 시간 안에서 한 번만 json_object 로
-              responseFormat: TRIAGE_RESPONSE_FORMAT,
-              fallbackFormat: { type: 'json_object' },
-              //  발표 중 기다림을 줄이려고 생각을 짧게 (Google 문서의 reasoning_effort)
-              extra: { reasoning_effort: 'low' },
+          ? geminiJson({
+              apiKey: key, base: API_URL, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS, temperature: TEMPERATURE,
+              //  기본 모델을 Google 이 내렸을 때(404)만 한 번 — AI_MODEL 을 직접 정했으면 그대로
+              fallbackModel: MODEL === GEMINI_DEFAULT_MODEL ? GEMINI_FALLBACK_MODEL : null,
             })
           : chatJson({ apiKey: key, url: API_URL, model: MODEL, system, user, timeoutMs: MODEL_TIMEOUT_MS, temperature: TEMPERATURE }),
       hasKey: key.length > 0,

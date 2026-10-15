@@ -238,7 +238,7 @@ export const AI_SPECS: Record<AiSpecId, AiSpec> = {
       MONEY_NEVER,
     ],
     needs: '서버 함수(ai-triage) 배포와 AI 키 등록 — 대표님 실행. 절차서가 저장소에 있습니다.',
-    api: '서버에 등록한 키로 고름 — Google Gemini(기본 gemini-3.5-flash-lite) · Claude(기본 claude-opus-5-5) · OpenAI 호환(기본 gpt-4o-mini). 서버 설정으로 바꿀 수 있습니다.',
+    api: '서버에 등록한 키로 고름 — Google Gemini(기본 gemini-2.5-flash-lite) · Claude(기본 claude-opus-5-5) · OpenAI 호환(기본 gpt-4o-mini). 서버 설정으로 바꿀 수 있습니다.',
     live: {
       where: '고객 요청 → 요청의 「회신」 → 「AI 요청 분석」',
       requires: '서버 함수 배포와 AI 키 등록이 끝나야 동작합니다. 그 전에는 실패로 표시되고 기록됩니다.',
