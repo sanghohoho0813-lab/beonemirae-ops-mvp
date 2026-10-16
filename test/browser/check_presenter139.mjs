@@ -136,7 +136,7 @@ for (const [role, path] of [['admin', '/'], ['admin', '/requests'], ['office', '
 }
 for (const role of ['field', 'office']) {
   const { ctx, p } = await open(role, '/')
-  await p.evaluate(() => sessionStorage.setItem('beonemirae-ops:presenter', JSON.stringify({ index: 1, clientId: null, at: Date.now() })))
+  await p.evaluate(() => sessionStorage.setItem('beonemirae-ops:presenter', JSON.stringify({ index: 1, clientId: null, since: new Date().toISOString(), at: Date.now() })))
   await p.reload({ waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(1500)
   const n = await p.locator('[data-presenter-card]:visible').count()

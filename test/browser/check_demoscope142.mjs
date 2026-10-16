@@ -59,7 +59,7 @@ async function open(path, { presenting = false } = {}) {
   await p.addInitScript(([k, u, pres, cid]) => {
     localStorage.setItem(k, JSON.stringify({ access_token: 't', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u }))
     localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client,demo')
-    if (pres) sessionStorage.setItem('beonemirae-ops:presenter', JSON.stringify({ order: ['triage'], pos: 0, clientId: cid, demoRequestId: null, at: Date.now() }))
+    if (pres) sessionStorage.setItem('beonemirae-ops:presenter', JSON.stringify({ order: ['triage'], pos: 0, clientId: cid, demoRequestId: null, since: pres === 'old' ? undefined : new Date(Date.now() - 30 * 86400000).toISOString(), at: Date.now() }))
   }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }, presenting, DEMO_ID])
   await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)
@@ -90,6 +90,15 @@ for (const path of ['/requests', '/clients', '/today']) {
   if (path === '/requests') ok(t.includes('실제 거래처 긴급 요청'), '② 요청함 — 실제 거래처 요청은 그대로')
   if (path === '/clients') ok(t.includes(REAL.name), '② 거래처 — 실제 거래처는 그대로')
   ok(errors.length === 0, `② ${path} 화면 오류 0`, errors.join(' | '))
+  await ctx.close()
+}
+
+// ── ③' 이 판 이전에 시작한 진행 기록(시작 시각 없음)은 버림 — 지난 연습 요청 · 회신이 이어지지 않게 (0143) ──
+{
+  const { ctx, p } = await open('/requests', { presenting: 'old' })
+  ok((await p.locator('[data-presenter-card]:visible').count()) === 0, "③' 시작 시각 없는 옛 진행 기록 → 안내 카드 없음 (발표 시작부터 다시)")
+  const t = await body(p)
+  ok(!t.includes('시연용 병원') && !t.includes('시연 긴급'), "③' 옛 진행 기록을 버리면 시연 병원 흔적도 안 보임")
   await ctx.close()
 }
 

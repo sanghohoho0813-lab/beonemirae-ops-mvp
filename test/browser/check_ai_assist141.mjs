@@ -45,7 +45,7 @@ async function open(role, path, { fail = false, presenting = false } = {}) {
   await p.addInitScript(([k, u, pres]) => {
     localStorage.setItem(k, JSON.stringify({ access_token: 't', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u }))
     localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client,demo')
-    if (pres) sessionStorage.setItem('beonemirae-ops:presenter', JSON.stringify({ order: ['receivables'], pos: 0, clientId: null, demoRequestId: null, at: Date.now() }))
+    if (pres) sessionStorage.setItem('beonemirae-ops:presenter', JSON.stringify({ order: ['receivables'], pos: 0, clientId: null, demoRequestId: null, since: new Date().toISOString(), at: Date.now() }))
   }, ['beonemirae-ops:auth', { id: prof.id, aud: 'authenticated', email: prof.email, app_metadata: {}, user_metadata: {} }, presenting])
   await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)

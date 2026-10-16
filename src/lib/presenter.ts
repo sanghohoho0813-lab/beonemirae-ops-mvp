@@ -298,11 +298,14 @@ export function loadRun(now = Date.now()): PresenterRun | null {
     if (!raw) return null
     const r = JSON.parse(raw) as Partial<PresenterRun> & { index?: number }
     if (now - (r.at ?? 0) > MAX_MS) return null
+    //  ⚠ 0143 — 시작 시각(since)이 없는 진행 기록은 이 판 이전에 시작한 시연입니다. 그대로 이으면 지난 연습의
+    //    시연 요청(이미 회신한 것)과 포털 연습 요청이 그대로 보입니다 → 버리고 「발표 시작」부터 다시 (새 시연 요청).
+    if (typeof r.since !== 'string' || !r.since) return null
     const known = new Set(FULL_ORDER)
     const order = Array.isArray(r.order) && r.order.length && r.order.every((k) => known.has(k)) ? r.order : FULL_ORDER
     const pos0 = typeof r.pos === 'number' ? r.pos : typeof r.index === 'number' ? r.index : NaN
     if (!Number.isFinite(pos0)) return null
-    return { order, pos: Math.max(0, Math.min(order.length - 1, pos0)), clientId: r.clientId ?? null, demoRequestId: r.demoRequestId ?? null, since: typeof r.since === 'string' ? r.since : '', at: r.at ?? now }
+    return { order, pos: Math.max(0, Math.min(order.length - 1, pos0)), clientId: r.clientId ?? null, demoRequestId: r.demoRequestId ?? null, since: r.since, at: r.at ?? now }
   } catch {
     return null
   }
