@@ -409,6 +409,44 @@ for (const [mode, planMode, expect] of [
   await ctx.close()
 }
 
+// ═══ ⑧ 지난 연습 흔적 — 다음 시연 중에도 안 보이고, 끝내면 이번 것도 안 보임 (0143) ═════════
+{
+  const S = makeShared()
+  const DEMO = '0e140000-0000-4000-8000-0000000000d0'
+  const ago = (h) => new Date(Date.now() - h * 3600_000).toISOString()
+  S.clients.push({ ...F.clients[0], id: DEMO, name: '시연용 병원 (신보 발표)', address: '', phone: '', is_demo_generated: true, note: 'AI 시연용', active: true })
+  //  지난 연습: 포털에서 넣어 본 긴급수거 · 회신까지 한 시연 요청
+  S.requests.push({ id: 'dddddddd-4444-4444-8444-000000000081', client_id: DEMO, kind: '긴급수거', content: '희망 시점: 가능한 가장 빠르게 (지난 연습)', urgent: true, status: '접수', source: 'portal', reply: '', created_at: ago(8) })
+  S.requests.push({ id: 'dddddddd-4444-4444-8444-000000000082', client_id: DEMO, kind: '긴급수거', content: SAMPLE_REQUEST, urgent: true, status: '확인 중', source: 'portal', reply: '지난 연습 회신', created_at: ago(12) })
+  const { ctx, p, errors } = await open('admin', '/presentation', { S })
+  await p.evaluate(([cid]) => localStorage.setItem('beonemirae-ops:collect-draft:test', JSON.stringify({ v: 1, clientId: cid, amount: '85', memo: '지난 연습 메모' })), [DEMO])
+  await p.locator('[data-presenter-ai-start]').click()
+  await p.waitForURL(/\/requests/, { timeout: 10000 }).catch(() => {})
+  await p.waitForTimeout(1200)
+  const draftGone = await p.evaluate(() => localStorage.getItem('beonemirae-ops:collect-draft:test') === null)
+  ok(draftGone, '⑧ 시작하면 시연 병원의 적다 만 수거 입력(이 기기)도 지움')
+  //  병원 화면(포털) — 지난 연습 요청 · 회신 없이 이번 시연 요청만
+  await p.goto(`${W.BASE}/portal/c/${DEMO}/requests`, { waitUntil: 'domcontentloaded' })
+  await p.waitForTimeout(1500)
+  const portal = flat(await p.locator('main').innerText().catch(() => ''))
+  ok(!/지난 연습/.test(portal) && portal.includes(SAMPLE_REQUEST.slice(0, 12)), '⑧ 시연 중 병원 화면 — 지난 연습 요청 · 회신 없이 이번 시연 요청만', portal.slice(0, 200))
+  //  이번 시연에서 포털로 하나 넣은 것처럼 (지금 시각)
+  S.requests.push({ id: 'dddddddd-4444-4444-8444-000000000083', client_id: DEMO, kind: '긴급수거', content: '이번 시연에서 넣은 요청', urgent: true, status: '접수', source: 'portal', reply: '', created_at: new Date().toISOString() })
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await p.waitForTimeout(1500)
+  ok(/이번 시연에서 넣은 요청/.test(flat(await p.locator('main').innerText().catch(() => ''))), '⑧ 이번 시연에서 한 것은 시연 중에 그대로 보임')
+  //  끝내면 — 업무 화면 어디에도 없음
+  await p.goto(`${W.BASE}/requests`, { waitUntil: 'domcontentloaded' })
+  await p.waitForTimeout(1200)
+  await p.locator(`${CARD} [data-presenter-stop]`).click()
+  await p.locator(`${CARD} [data-presenter-stop-yes]`).click()
+  await p.waitForTimeout(800)
+  const after = flat(await p.locator('main').innerText().catch(() => ''))
+  ok(!/이번 시연에서 넣은 요청|지난 연습|시연용 병원/.test(after) && !after.includes(SAMPLE_REQUEST.slice(0, 12)), '⑧ 시연을 끝내면 이번 시연 기록까지 업무 화면에서 사라짐', after.slice(0, 200))
+  ok(errors.length === 0, '⑧ 화면 오류 0', errors.slice(0, 3).join(' | '))
+  await ctx.close()
+}
+
 // ═══ ⑥ 중간에 끝내고 다시 시작 ═══════════════════════════════════════════════
 {
   const S = makeShared()
@@ -428,7 +466,7 @@ for (const [mode, planMode, expect] of [
   await p.waitForURL(/\/requests/, { timeout: 10000 }).catch(() => {})
   await p.waitForTimeout(1000)
   ok(/STEP 1 \/ 9/.test(await stepNo(p)) && (await p.locator('[data-presenter-card]:visible').count()) === 1, '⑥ 다시 시작하면 STEP 1 부터 · 카드 하나', await stepNo(p))
-  ok(S.posts === 1, '⑥ 다시 시작해도 시연 요청은 하나 (처리 전 요청을 다시 씀)', String(S.posts))
+  ok(S.posts === 2, '⑥ 다시 시작하면 새 시연 요청 (지난 시연 흔적 없이 · 0143)', String(S.posts))
   //  전체 흐름으로도 시작 → 대시보드부터
   await p.locator(`${CARD} [data-presenter-stop]`).click()
   await p.locator(`${CARD} [data-presenter-stop-yes]`).click()

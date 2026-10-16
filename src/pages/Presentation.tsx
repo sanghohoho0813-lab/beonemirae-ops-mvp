@@ -166,7 +166,7 @@ export function Presentation() {
     try {
       const prep = await prepare()
       setClientId(prep.clientId)
-      presenter.start({ order: AI_ORDER, pos: 0, clientId: prep.clientId, demoRequestId: prep.requestId })
+      presenter.start({ order: AI_ORDER, pos: 0, clientId: prep.clientId, demoRequestId: prep.requestId, since: prep.since })
       setAiStart({ busy: false, error: null })
     } catch (e) {
       setAiStart({ busy: false, error: e instanceof Error ? e.message : '시연 요청을 준비하지 못했습니다.' })

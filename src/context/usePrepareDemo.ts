@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { useData } from './DataContext'
+import { useRawData } from './DemoScope'
 import { emptyClientForm } from '../components/ClientForm'
 import { SAMPLE_REQUEST } from '../lib/presenter'
 import type { AppData, Client, ClientRequest } from '../types'
@@ -45,12 +45,15 @@ export interface DemoPrep {
   requestId: string
   createdClient: boolean
   createdRequest: boolean
+  /** 0143 — 이번 시연 시작 시각(ISO · 서버가 이 시연 요청을 만든 시각 − 1초). 이보다 앞선 연습 기록은 시연 중에도 안 보임 */
+  since: string
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export function usePrepareDemo() {
-  const { data, addClient, addRequest, reload } = useData()
+  //  ⚠ 0143 — 거르지 않은 자료로 (시연 중 거른 자료에서는 방금 넣은 요청을 못 찾을 수 있음)
+  const { data, addClient, addRequest, reload } = useRawData()
   //  넣은 뒤 다시 읽은 자료에서 찾아야 해서 — 늘 최신 자료를 봅니다
   const latest = useRef(data)
   latest.current = data
@@ -74,9 +77,16 @@ export function usePrepareDemo() {
         client = made
         createdClient = true
       }
-      let req = findDemoRequest(latest.current, client.id)
+      //  ⚠ 0143 — 대표님: 「예시로 눌러 봤던 흔적이 남는다」. 시연을 시작할 때마다 **새 시연 요청 하나**를 만들고,
+      //    그 요청이 만들어진 시각(서버) 뒤의 기록만 시연 중에 보이게 합니다(DemoScope). 지난 연습에서 회신 · 상태를
+      //    바꿔 둔 요청을 다시 쓰지 않습니다.
+      const cid = client.id
+      const sample = (d: AppData) => d.requests.filter((r) => r.clientId === cid && r.content.trim() === SAMPLE_REQUEST)
+      const before = new Set(sample(latest.current).map((r) => r.id))
+      const fresh = () => sample(latest.current).filter((r) => !before.has(r.id)).sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0] ?? null
+      let req: ClientRequest | null = null
       let createdRequest = false
-      if (!req) {
+      {
         let key: string | null = null
         try { key = sessionStorage.getItem(REQ_KEY) } catch { /* noop */ }
         if (!key) {
@@ -96,19 +106,23 @@ export function usePrepareDemo() {
         createdRequest = true
         for (let i = 0; i < 20 && !req; i++) {
           await sleep(150)
-          req = findDemoRequest(latest.current, client.id)
+          req = fresh()
         }
         if (!req) {
           await reload()
           for (let i = 0; i < 10 && !req; i++) {
             await sleep(150)
-            req = findDemoRequest(latest.current, client.id)
+            req = fresh()
           }
         }
+        //  같은 시도 표로 이미 들어가 있던 경우(앞선 시도가 중간에 끊김) — 처리 전 시연 요청 중 가장 새것
+        if (!req) req = findDemoRequest(latest.current, cid)
         if (!req) throw new Error('시연 요청을 넣었지만 목록에서 찾지 못했습니다 — 새로고침 뒤 다시 눌러 주세요.')
         try { sessionStorage.removeItem(REQ_KEY) } catch { /* noop */ }
       }
-      return { clientId: client.id, requestId: req.id, createdClient, createdRequest }
+      const t = Date.parse(req.createdAt ?? '')
+      const since = Number.isFinite(t) ? new Date(t - 1000).toISOString() : ''
+      return { clientId: client.id, requestId: req.id, createdClient, createdRequest, since }
     })()
     inflight.current = run
     run.finally(() => { inflight.current = null }).catch(() => { /* 부른 쪽이 받습니다 */ })

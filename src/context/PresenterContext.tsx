@@ -21,6 +21,8 @@ interface StartOpts {
   /** 그 차례의 몇 번째부터 */
   pos?: number
   demoRequestId?: string | null
+  /** 이 시연의 시작 시각(ISO) — 시연 요청의 서버 시각을 넘기면 기기 시계와 무관 · 없으면 지금 */
+  since?: string | null
 }
 
 interface PresenterValue {
@@ -32,6 +34,8 @@ interface PresenterValue {
   order: string[]
   clientId: string | null
   demoRequestId: string | null
+  /** 0143 — 이 시연이 시작된 시각 (DemoScope 가 지난 연습 기록을 거르는 기준) */
+  since: string
   start: (opts?: StartOpts) => void
   /** 지금 차례의 pos 번째로 */
   goTo: (pos: number) => void
@@ -44,6 +48,23 @@ interface PresenterValue {
 }
 
 const Ctx = createContext<PresenterValue | null>(null)
+
+/**
+ * 0143 — 시연에서 적다 만 것(이 기기에만 저장되는 수거 입력 임시 글)을 시연 시작 · 끝에 지웁니다.
+ *  대표님: 「시연이 끝나면 그 모든 기록은 그냥 없어지는 걸로」. 서버 기록은 DemoScope 가 가립니다.
+ */
+function clearDemoDrafts(clientId: string | null) {
+  if (!clientId) return
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i)
+      if (!k || !k.startsWith('beonemirae-ops:collect-draft:')) continue
+      //  ⚠ 시연 병원의 것만 — 같은 기기에서 직원이 적다 만 실제 수거 입력은 그대로 둡니다
+      const d = JSON.parse(localStorage.getItem(k) ?? 'null') as { clientId?: string } | null
+      if (d?.clientId === clientId) localStorage.removeItem(k)
+    }
+  } catch { /* noop */ }
+}
 
 export function PresenterProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -62,7 +83,7 @@ export function PresenterProvider({ children }: { children: ReactNode }) {
   }, [presenting])
 
   useEffect(() => {
-    if (run) saveRun({ order: run.order, pos: run.pos, clientId: run.clientId, demoRequestId: run.demoRequestId })
+    if (run) saveRun({ order: run.order, pos: run.pos, clientId: run.clientId, demoRequestId: run.demoRequestId, since: run.since })
     else clearRun()
   }, [run])
 
@@ -94,20 +115,24 @@ export function PresenterProvider({ children }: { children: ReactNode }) {
       order,
       clientId: run?.clientId ?? null,
       demoRequestId: run?.demoRequestId ?? null,
+      since: run?.since ?? '',
       start: (opts) => {
         const o = opts?.order?.length ? opts.order : FULL_ORDER
+        clearDemoDrafts(opts?.clientId ?? null)
         show({
           order: o,
           pos: Math.max(0, Math.min(o.length - 1, opts?.pos ?? 0)),
           clientId: opts?.clientId ?? null,
           demoRequestId: opts?.demoRequestId ?? null,
+          //  서버 시각을 못 받았으면 지금(기기 시계)에서 1분 앞 — 기기 시계가 조금 빨라도 이번 기록이 빠지지 않게
+          since: opts?.since || new Date(Date.now() - 60_000).toISOString(),
           at: Date.now(),
         })
       },
       goTo,
       next: () => goTo(pos + 1),
       prev: () => goTo(pos - 1),
-      stop: () => setRun(null),
+      stop: () => { clearDemoDrafts(run?.clientId ?? null); setRun(null) },
       setClient: (clientId) => setRun((r) => (r ? { ...r, clientId, at: Date.now() } : r)),
       continueFull: () => {
         const k = order.indexOf('today')

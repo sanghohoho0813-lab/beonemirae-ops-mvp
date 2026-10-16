@@ -275,17 +275,22 @@ const S = makeShared()
   await ctx.close()
 }
 
-// ═══ ⑤' 다시 시작해도 같은 시연 요청 (새로 안 만듦) · AI 연결 확인 ══════════════
+// ═══ ⑤' 다시 시작하면 새 시연 요청 하나 (지난 연습 흔적 없이 · 0143) · AI 연결 확인 ══════════════
 {
   const { ctx, p, errors } = await open('admin', '/presentation', { S })
   ok((await p.locator('[data-ready="ai"]').getAttribute('data-ready-mark')) === 'ok' && (await p.locator('[data-prep-ai-dot]').count()) === 0, '⑤\' 실제 호출 성공 기록이 생기면 「발표 준비」의 AI 칸 ✓ · 점 사라짐')
   const before = { c: S.creates, p: S.posts }
-  //  처리 완료 전의 같은 요청이 있으면 그것을 씀
+  //  0143 — 대표님: 「예시로 눌러 봤던 흔적이 남는다 — 시연이 끝나면 다 없어지게」.
+  //   지난 연습에서 회신까지 한 요청을 다시 쓰지 않고, 시작할 때마다 새 시연 요청 하나 · 거래처는 그대로
   S.requests[0].status = '확인 중'
+  S.requests[0].created_at = new Date(Date.now() - 3600_000).toISOString()
   await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1500)
   await p.locator('[data-presenter-ai-start]').click()
   await p.waitForURL(/\/requests\?focus=/, { timeout: 15000 }).catch(() => {})
-  ok(S.creates === before.c && S.posts === before.p && new URL(p.url()).searchParams.get('focus') === S.requests[0].id, '⑤\' 다시 눌러도 있던 시연 요청을 씀 (새로 만들지 않음)', `${S.creates}/${S.posts}`)
+  await p.waitForTimeout(800)
+  const focus2 = new URL(p.url()).searchParams.get('focus')
+  ok(S.creates === before.c && S.posts === before.p + 1 && focus2 && focus2 !== S.requests[0].id, '⑤\' 다시 시작하면 새 시연 요청 하나 (거래처는 그대로 · 지난 요청은 다시 안 씀)', `${S.creates}/${S.posts} · ${focus2}`)
+  ok((await p.locator('[data-req-focus]').count()) === 1 && (await p.locator('text=지난 연습').count()) === 0, '⑤\' 요청함에는 이번 시연 요청만')
   await p.goto(`${W.BASE}/presentation`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(1500)
   //  성공 · 실패 까닭 그대로
   await p.locator('[data-presenter-end]').click().catch(() => {})

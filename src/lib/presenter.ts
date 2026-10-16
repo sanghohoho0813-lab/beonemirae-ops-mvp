@@ -283,6 +283,12 @@ export interface PresenterRun {
   pos: number
   clientId: string | null
   demoRequestId: string | null
+  /**
+   * 0143 — 이 시연이 시작된 시각(ISO · 가능하면 서버 시각 = 시연 요청이 만들어진 시각).
+   *  시연 중에는 시연 병원의 기록 중 이 시각 **뒤의 것만** 보입니다(지난 연습 흔적 없음).
+   *  '' 이면 거르지 않음(예전에 저장된 진행 기록).
+   */
+  since: string
   at: number
 }
 
@@ -296,7 +302,7 @@ export function loadRun(now = Date.now()): PresenterRun | null {
     const order = Array.isArray(r.order) && r.order.length && r.order.every((k) => known.has(k)) ? r.order : FULL_ORDER
     const pos0 = typeof r.pos === 'number' ? r.pos : typeof r.index === 'number' ? r.index : NaN
     if (!Number.isFinite(pos0)) return null
-    return { order, pos: Math.max(0, Math.min(order.length - 1, pos0)), clientId: r.clientId ?? null, demoRequestId: r.demoRequestId ?? null, at: r.at ?? now }
+    return { order, pos: Math.max(0, Math.min(order.length - 1, pos0)), clientId: r.clientId ?? null, demoRequestId: r.demoRequestId ?? null, since: typeof r.since === 'string' ? r.since : '', at: r.at ?? now }
   } catch {
     return null
   }
