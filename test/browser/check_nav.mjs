@@ -143,7 +143,8 @@ async function open(role, width = 390, height = 900) {
     money: ['/billing', '/receivables', '/pricing', '/bank', '/revenue', '/stats'],
     //  0110 — 「심사 시연」·「만든 이유」가 **처음으로** 목차에 올라왔습니다.
     //  0140 — 신보 발표 기간: 「심사 시연」(/presentation)은 맨 위 「오늘 업무」의 「신보 발표 시연」으로 옮김
-    ax: ['/ax-coach', '/performance', '/readiness', '/why'],
+    //  발표 뒤 — 대표님: 「이제 필요없으니 목록에서 내려 다른 목차로」 → AX·심사 맨 아래로 돌아옴
+    ax: ['/ax-coach', '/performance', '/readiness', '/why', '/presentation'],
     admin: ['/settings', '/users', '/dev-requests', '/import', '/audit', '/roadmap'],
   }
   for (const [id, list] of Object.entries(want)) {
@@ -175,9 +176,9 @@ async function open(role, width = 390, height = 900) {
     (els) => els.slice(0, 2).map((e) => Math.round(e.getBoundingClientRect().top)))
   ok(boxes.length === 2 && boxes[0] === boxes[1], '두 칸 격자 — 첫 두 개가 같은 줄', String(boxes))
 
-  //  0140 — 발표용으로 올린 「신보 발표 시연」만은 폰 더보기 맨 위에 (아래 고정 탭에는 없으므로)
+  //  발표 뒤 — 「신보 발표 시연」은 맨 위 고정 칸에서 내려와 AX·심사 묶음 안 한 자리에만
   const pinned = await p.locator('[data-more-section="more-today"] [data-more-item]').evaluateAll((els) => els.map((e) => e.getAttribute('data-more-item')))
-  ok(pinned.join(',') === '/presentation' && !all.includes('/presentation'), '폰 더보기 — 「신보 발표 시연」은 맨 위 한 자리에만', pinned.join(','))
+  ok(pinned.length === 0 && all.filter((x) => x === '/presentation').length === 1, '폰 더보기 — 「신보 발표 시연」은 맨 위가 아니라 AX·심사 안 한 자리', `맨 위 ${pinned.join(',') || '없음'}`)
 
   //  오늘 업무 넷은 하단 고정 메뉴가 맡으므로 더보기에 또 넣지 않습니다
   ok((await p.locator('[data-more-item="/collection"]').count()) === 0,

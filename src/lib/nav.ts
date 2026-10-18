@@ -179,10 +179,8 @@ export const NAV_GROUPS: NavGroupDef[] = [
       { to: '/today', label: '오늘 일정', icon: CalendarClock, desc: '방문 · 완료 · 입력 대기', tone: 'sky' },
       { to: '/collection', label: '수거 입력', icon: PlusCircle, desc: '한 번 입력 → 자동 연결', tone: 'emerald' },
       { to: '/clients', label: '거래처', icon: Building2, desc: '병원별 이력 · 메모 · 추천', tone: 'navy' },
-      //  ⚠ 신용보증기금 발표 기간 임시 — 발표 가이드(/presentation)를 맨 위 묶음으로 올림.
-      //    같은 주소가 두 자리에 보이지 않게 「AX·심사」의 「심사 시연」은 뺐습니다.
-      //    발표가 끝나면 이 줄을 지우고 AX·심사에 「심사 시연」을 되돌리면 됩니다.
-      { to: '/presentation', label: '신보 발표 시연', icon: Sparkles, desc: 'AI 요청 분석 · 실제 운영 흐름', tone: 'violet', badge: '발표용' },
+      //  ⚠ 신보 발표 기간에는 여기에 「신보 발표 시연」(발표용 표)을 올려 두었습니다.
+      //    대표님(발표 뒤): 「이제 필요없으니 목록에서 내려 다른 목차로」 → AX·심사 맨 아래로 옮김.
     ],
   },
   {
@@ -240,6 +238,8 @@ export const NAV_GROUPS: NavGroupDef[] = [
       { to: '/performance', label: 'AX 도입 성과', icon: Gauge, desc: '회사 현황 · 확인된 변화 · 다음 할 일', tone: 'teal' },
       { to: '/readiness', label: '실증 준비 상태', icon: ClipboardCheck, desc: '준비 상태 · 증빙 · 브리핑 인쇄', tone: 'navy' },
       { to: '/why', label: '만든 이유', icon: Lightbulb, desc: '왜 만들었고 어디로 가는지', tone: 'amber' },
+      //  신보 발표가 끝나 「오늘 업무」에서 내려왔습니다(발표용 표도 뗌). 화면 · 주소는 그대로.
+      { to: '/presentation', label: '신보 발표 시연', icon: Sparkles, desc: 'AI 요청 분석 · 실제 운영 흐름', tone: 'violet' },
     ],
   },
   {

@@ -116,7 +116,41 @@ function useVisibleGroups(): NavGroupDef[] {
  * "무엇을 하는 메뉴인지"와 "어떤 영역인지"가 바로 구분되게 합니다.
  * (색은 아이콘 타일에만 — 줄 전체를 칠하지 않습니다)
  */
-function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }) {
+/**
+ *  묶음별 아이콘 칸 색 — 대표님: 「병원 서비스 · 정산 매출 · AX 심사 안의 기능들도 아이콘에 색을 넣어 줘.
+ *  같은 목차 안은 같은 색으로 묶되 톤만 다르게」.
+ *   병원 서비스 = 보라 · 정산·매출 = 초록 · AX·심사 = 주황 (「추가 개발 예정」의 노랑과 겹치지 않게).
+ *   줄 순서대로 옅은 톤 → 짙은 톤. 지금 보는 줄은 다른 묶음과 같게 강조색으로 채웁니다.
+ *  ⚠ Tailwind 가 글자 그대로 찾아 쓰므로 클래스 이름을 통째로 적습니다(조립 금지).
+ *  ⚠ 아이콘은 늘 **색이 보이는** 밝은 단계(200~300)로 — 50 · 100 은 어두운 바탕에서 회색처럼 보였습니다.
+ *    톤 차이는 칸 바탕의 짙기(300/20 → 700/60)로 냅니다.
+ */
+const GROUP_SHADES: Record<string, string[]> = {
+  //  보라는 이 팔레트에서 200 이 거의 흰색이라(채도 0.16) 300 · 400 만 씁니다
+  service: [
+    'bg-violet-300/20 text-violet-300 ring-violet-200/40',
+    'bg-violet-400/25 text-violet-400 ring-violet-300/40',
+    'bg-violet-500/35 text-violet-300 ring-violet-400/45',
+    'bg-violet-600/45 text-violet-400 ring-violet-500/50',
+  ],
+  money: [
+    'bg-emerald-300/20 text-emerald-200 ring-emerald-200/40',
+    'bg-emerald-400/25 text-emerald-300 ring-emerald-300/40',
+    'bg-emerald-500/30 text-emerald-300 ring-emerald-400/45',
+    'bg-emerald-500/45 text-emerald-200 ring-emerald-400/50',
+    'bg-emerald-600/50 text-emerald-200 ring-emerald-500/55',
+    'bg-emerald-700/60 text-emerald-300 ring-emerald-500/60',
+  ],
+  ax: [
+    'bg-orange-300/20 text-orange-200 ring-orange-200/40',
+    'bg-orange-400/25 text-orange-300 ring-orange-300/40',
+    'bg-orange-500/30 text-orange-300 ring-orange-400/45',
+    'bg-orange-500/45 text-orange-200 ring-orange-400/50',
+    'bg-orange-600/50 text-orange-200 ring-orange-500/55',
+  ],
+}
+
+function SidebarLink({ item, muted = false, shade }: { item: NavItem; muted?: boolean; shade?: string }) {
   const Icon = item.icon
   return (
     <NavLink
@@ -170,7 +204,17 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
              이 타일이 아니라 **글자가 뿌옇던 것**이었습니다(0084 에서
              글자를 무채색으로 바꿔 해결했습니다). 원인을 잘못 짚어
              멀쩡한 것을 건드렸던 셈입니다. */}
-      {muted ? (
+      {muted && shade ? (
+        //  묶음 색 칸 (GROUP_SHADES) — 크기 · 모양은 「오늘 업무」 칸과 같게
+        <span
+          data-nav-shade
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+            isActive ? 'bg-teal-600 text-white' : `ring-1 ring-inset ${shade}`
+          }`}
+        >
+          <Icon size={16} strokeWidth={2.4} />
+        </span>
+      ) : muted ? (
         <Icon size={18} strokeWidth={2.2} className="ml-1 shrink-0" />
       ) : (
         //  AX 디자인 2차 — 색조는 그대로, **어두운 바탕용 칸**(반투명 + 밝은 아이콘)으로.
@@ -307,9 +351,10 @@ function NavGroup({
       />
       {open && (
         <div data-nav-group={id} className="space-y-0.5">
-          {items.map((item) => (
-            <SidebarLink key={item.to} item={item} muted={!prominent} />
-          ))}
+          {items.map((item, i) => {
+            const shades = GROUP_SHADES[id]
+            return <SidebarLink key={item.to} item={item} muted={!prominent} shade={shades?.[i % shades.length]} />
+          })}
           {planned.length > 0 && (
             /*  ⚠ 0110 — navy-500 은 **밝은 바탕용** 색입니다. 어두운 사이드바에
                  얹으니 3.0:1 밖에 안 나왔습니다(기준 4.5). 예전에는 이 묶음이

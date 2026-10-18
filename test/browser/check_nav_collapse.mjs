@@ -116,7 +116,7 @@ const order = await p.locator('aside nav').evaluate((nav) => {
   const before = (a, b) => !!(a && b && a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
   return before(t, s) && before(s, o)
 })
-ok(order, '자리 — 오늘 업무(신보 발표 시연) → 추가 개발 예정 → 현장·운영')
+ok(order, '자리 — 오늘 업무 → 추가 개발 예정 → 현장·운영')
 const tiles = await show.locator('[data-planned-icon]').evaluateAll((els) => [...new Set(els.map((e) => getComputedStyle(e).color + '|' + getComputedStyle(e).backgroundColor))])
 ok(tiles.length === 1, '아이콘 색은 한 가지', tiles.join(' / '))
 const h1 = await aside.evaluate((el) => el.scrollHeight)
@@ -177,6 +177,41 @@ ok(p.url() === before, '**눌러도 화면이 안 바뀜** (미리보기만 열�
 ok((await p.locator('[data-planned-preview]').count()) === 1, '「계획 중」 미리보기가 열림')
 ok(/아직 없는 기능입니다/.test((await p.textContent('[data-planned-preview]')) ?? ''),
   '되는 척하지 않음 — 첫 줄이 「계획 중」')
+
+// ── 묶음별 아이콘 색 ─────────────────────────────────────────────────────────
+//  대표님: 「병원 서비스 · 정산 매출 · AX 심사 안의 기능들도 아이콘에 색을 — 같은 목차 안은 같은 색,
+//  톤만 다르게」. 색 이름이 아니라 **실제로 칠해진 색**의 색상(hue)으로 잽니다.
+await p.keyboard.press('Escape').catch(() => {})
+await p.goto(`${BASE}/settings`, { waitUntil: 'domcontentloaded' })
+await p.waitForTimeout(1200)
+const hueOf = (rgb) => {
+  const [r, g, bb] = (rgb.match(/[\d.]+/g) ?? []).slice(0, 3).map((x) => Number(x) / 255)
+  const mx = Math.max(r, g, bb), mn = Math.min(r, g, bb), d = mx - mn
+  if (d === 0) return 0
+  const h = mx === r ? ((g - bb) / d) % 6 : mx === g ? (bb - r) / d + 2 : (r - g) / d + 4
+  return Math.round((h * 60 + 360) % 360)
+}
+const groupHue = {}
+for (const [id, title] of [['service', '병원 서비스'], ['money', '정산·매출'], ['ax', 'AX·심사']]) {
+  if ((await p.locator(`[data-nav-group="${id}"]`).count()) === 0) await p.locator(`[data-nav-group-header="${title}"]`).click()
+  await p.waitForTimeout(250)
+  const cols = await p.locator(`[data-nav-group="${id}"] a:not([aria-current="page"]) [data-nav-shade]`).evaluateAll((els) => els.map((e) => getComputedStyle(e).color))
+  const looks = await p.locator(`[data-nav-group="${id}"] a:not([aria-current="page"]) [data-nav-shade]`).evaluateAll((els) => els.map((e) => getComputedStyle(e).color + '|' + getComputedStyle(e).backgroundColor))
+  const n = await p.locator(`[data-nav-group="${id}"] a`).count()
+  ok(n > 0 && (await p.locator(`[data-nav-group="${id}"] [data-nav-shade]`).count()) === n, `「${title}」 — 줄마다 색 칸이 있다`, `${n}줄`)
+  const hues = cols.map(hueOf)
+  const spread = Math.max(...hues) - Math.min(...hues)
+  ok(spread <= 25, `「${title}」 — 같은 색 계열로 묶임`, `색상 ${hues.join('·')}°`)
+  //  톤 = 칸 바탕 짙기 + 아이콘 색. 둘을 함께 봅니다.
+  ok(new Set(looks).size === looks.length, `「${title}」 — 줄마다 톤이 다르다`, looks.join(' / '))
+  //  회색처럼 보이면 안 됩니다 — 아이콘 색의 채도
+  const sat = cols.map((c) => { const [r, g, bb] = (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number); const mx = Math.max(r, g, bb), mn = Math.min(r, g, bb); return mx ? (mx - mn) / mx : 0 })
+  ok(sat.every((x) => x >= 0.25), `「${title}」 — 아이콘이 회색이 아니라 색으로 보인다`, sat.map((x) => x.toFixed(2)).join('·'))
+  groupHue[id] = hues.reduce((x, y) => x + y, 0) / hues.length
+}
+const hs = Object.values(groupHue)
+const far = hs.every((h, i) => hs.every((k, j) => i === j || Math.min(Math.abs(h - k), 360 - Math.abs(h - k)) >= 40))
+ok(far, '세 묶음은 서로 다른 색 (보라 · 초록 · 주황)', JSON.stringify(groupHue))
 
 console.log('')
 console.log(`총 ${out.length}건 · 실패 ${out.filter((v) => !v).length}건`)
