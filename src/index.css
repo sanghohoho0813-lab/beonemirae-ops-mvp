@@ -199,9 +199,11 @@
         실선 한 겹을 답니다 — 테마를 따라가는 색이고, 흰 카드 위에서
         눈에 보이는 세기입니다(흰 바탕 대비 약 1.4:1). */
     /*  AX 디자인 2차 — 모서리 24 → 18px, 그림자는 한 단계 옅게.
-        테두리 한 겹이 경계를 맡고 그림자는 살짝 뜬 느낌만 냅니다(ERP 화면 방식). */
+        테두리 한 겹이 경계를 맡고 그림자는 살짝 뜬 느낌만 냅니다(ERP 화면 방식).
+        ⚠ 그림자 색은 테마의 가장 짙은 색(navy-950)으로 — 0082 「카드 그림자가 테마를 따름」.
+          예전 shadow-card 는 --c-shadow(아홉 테마 모두 같은 남색)였습니다. */
     @apply rounded-[18px] border border-cardline bg-white;
-    box-shadow: 0 1px 2px rgb(var(--c-shadow) / 0.04), 0 4px 14px -8px rgb(var(--c-shadow) / 0.1);
+    box-shadow: 0 1px 2px rgb(var(--c-navy-950) / 0.05), 0 4px 14px -8px rgb(var(--c-navy-950) / 0.12);
   }
   .pressable {
     @apply transition-[transform,box-shadow] duration-200 active:scale-[0.98];
