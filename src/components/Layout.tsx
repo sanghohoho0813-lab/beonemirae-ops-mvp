@@ -401,7 +401,7 @@ function Sidebar() {
   return (
     /*  AX 3차 — 폭 336/392 → 288/304px. 메뉴가 한 줄이 되어 넓을 이유가 없어졌고,
         그만큼 본문(표)이 넓어집니다. */
-    <aside className="side-bg sticky top-0 hidden h-[100dvh] w-[288px] shrink-0 flex-col overflow-y-auto border-r border-white/[0.06] lg:flex">
+    <aside data-app-sidebar className="side-bg sticky top-0 hidden h-[100dvh] w-[288px] shrink-0 flex-col overflow-y-auto border-r border-white/[0.06] lg:flex">
       {/* 브랜드 */}
       <div className="px-4 pb-3 pt-4">
         <div className="flex items-center gap-2.5">

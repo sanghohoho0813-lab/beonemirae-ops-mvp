@@ -309,8 +309,9 @@ export function RequestCard({ r, onOpen }: { r: RequestItem; onOpen: () => void 
 export function PortalPageHead({ title, sub, children }: { title: string; sub?: ReactNode; children?: ReactNode }) {
   return (
     //  ⚠ 폰에서 흰 띠를 화면 끝까지 — 음수 여백(-mx-4)으로 늘이면 본문이 **가로로 18px 밀렸습니다**
-    //    (check_flow390 「칸 안에서도 가로로 안 밀림」). 옆은 그림자로 칠합니다 — 자리를 차지하지 않습니다.
-    <div data-portal-page-head className="-mt-5 bg-white pb-4 pt-1 shadow-[-1rem_0_0_white,1rem_0_0_white] sm:mt-0 sm:rounded-[20px] sm:px-5 sm:pb-5 sm:pt-4 sm:shadow-none">
+    //    (check_flow390 「칸 안에서도 가로로 안 밀림」). 그림자로 칠하면 「그림자는 옅게」(check_portal134 ⑬)에
+    //    걸립니다. 옆 16px 은 border-image 의 바깥 칠(outset)로 — 자리도 그림자도 아닙니다.
+    <div data-portal-page-head className="-mt-5 bg-white pb-4 pt-1 [border-image:linear-gradient(#fff,#fff)_0_fill/0/0_1rem] sm:mt-0 sm:rounded-[20px] sm:px-5 sm:pb-5 sm:pt-4 sm:[border-image:none]">
       <h1 className="break-keep text-[1.6rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[1.9rem]">{title}</h1>
       {sub && <p className="p-sub mt-1 break-keep">{sub}</p>}
       {children && <div className="mt-3.5">{children}</div>}

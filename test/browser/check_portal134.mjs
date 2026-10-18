@@ -143,11 +143,15 @@ for (const w of [390, 412, 360]) {
   ok(/다음 수거|오늘 수거 예정/.test(hero) && /\d+월 \d+일/.test(hero) && /일정 확정|예상/.test(hero),
     `${w}px ① 다음 수거 날짜와 확정·예상이 한 칸에`, hero.slice(0, 60))
   const navTop = (await p.locator('nav.fixed.bottom-0').boundingBox()).y
-  for (const [cta, label, when] of [['urgent', '긴급수거 요청', '폐기물이 예상보다 빨리 찼을 때'], ['supplies', '자재·용기 요청', '용기·봉투·바늘통']]) {
+  //  ⚠ 포털 3차 **시안 적용**(대표님 승인) — 큰 카드 둘(이름 + 언제 누르는지)이 아이콘 8칸 한 판이 되어
+  //    칸에는 **짧은 이름**만 적힙니다. 온전한 이름은 화면 읽기용 이름(aria-label)으로 잽니다.
+  //    「언제 누르는지」 글은 누르면 뜨는 요청 창의 첫 줄에 있습니다(RequestSheet · SupplySheet).
+  for (const [cta, label, short] of [['urgent', '긴급수거 요청', '긴급수거'], ['supplies', '자재·용기 요청', '자재·용기']]) {
     const el = p.locator(`[data-portal-cta="${cta}"]`)
     const box = await el.boundingBox()
     const t = flat(await el.innerText())
-    ok(t.includes(label) && t.includes(when), `${w}px ① 「${label}」 + 언제 누르는지`, t)
+    const name = await el.getAttribute('aria-label')
+    ok(t.includes(short) && name === label, `${w}px ① 「${label}」 — 칸에 짧은 이름 · 화면 읽기 이름은 온전히`, `${t} / ${name}`)
     ok(box.y + box.height <= navTop, `${w}px ① 「${label}」이 아래 메뉴에 가리지 않고 첫 화면에`, `${Math.round(box.y + box.height)} > ${Math.round(navTop)}`)
     ok(box.height >= 64, `${w}px ① 「${label}」은 큰 단추 (64px 이상)`, `${Math.round(box.height)}px`)
   }
