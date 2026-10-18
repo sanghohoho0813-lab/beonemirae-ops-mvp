@@ -75,15 +75,17 @@ export function PortalSwitchButton({
         data-portal-switch
         data-portal-switch-side
         to={to}
+        //  설명 줄(「고객 포털 열기」)은 한 줄로 줄이면서 화면 읽기 이름으로만 둡니다.
+        //  ⚠ 숨긴 글(sr-only)로 두면 대비 검사(check_theme)가 남색 위 남색으로 읽습니다.
+        aria-label={`${label ?? '병원이 보는 화면'} — 고객 포털 열기`}
         //  AX 3차 — 한 줄짜리(설명 줄은 화면 읽기용으로만)
         className={`group mx-2.5 mb-1.5 flex min-h-[44px] items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-1.5 ring-1 ring-inset ring-white/15 transition hover:bg-white/10 hover:ring-teal-300/50 ${className}`}
       >
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white">
           <Building2 size={16} strokeWidth={2.4} />
         </span>
-        <span className="min-w-0 flex-1 leading-tight">
-          <span className="block whitespace-nowrap text-[0.871rem] font-extrabold text-white">{label ?? '병원이 보는 화면'}</span>
-          <span className="sr-only">고객 포털 열기</span>
+        <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[0.871rem] font-extrabold leading-tight text-white">
+          {label ?? '병원이 보는 화면'}
         </span>
         <ArrowUpRight size={17} strokeWidth={2.6} className="shrink-0 text-teal-300 transition group-hover:text-white" />
       </Link>
