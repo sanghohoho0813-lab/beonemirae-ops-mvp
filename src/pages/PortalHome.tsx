@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CLIENT_TEL } from '../lib/brand'
-import { Check, CheckCircle2, Hospital, Sparkles } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, ChevronRight, Hospital, Info, Sparkles } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { usePortalSheet, useRequestDetail } from '../lib/portalSheet'
@@ -38,10 +38,11 @@ import { Stagger, StaggerItem } from '../components/motion'
 //  ⚠ 「이 병원 것만」은 그대로 — 서버(RLS)가 이 병원 것만 주고 화면은 고를 뿐.
 // ─────────────────────────────────────────────────────────────────────────────
 
+//  포털 4차 — 띠 배너 색. 색만으로 말하지 않도록 아이콘도 다릅니다.
 const TODO_TONE = {
-  info: 'bg-teal-500',
-  good: 'bg-emerald-500',
-  warn: 'bg-rose-500',
+  info: { box: 'bg-teal-50 hover:bg-teal-100', ink: 'text-teal-700', icon: Info },
+  good: { box: 'bg-emerald-50 hover:bg-emerald-100', ink: 'text-emerald-700', icon: CheckCircle2 },
+  warn: { box: 'bg-rose-50 hover:bg-rose-100', ink: 'text-rose-600', icon: AlertTriangle },
 } as const
 
 //  위 두 칸과 아래 두 칸이 **같은 세로선**에 서도록 같은 틀을 씁니다.
@@ -93,30 +94,37 @@ export function PortalHome() {
   }
 
   return (
-    <div className="space-y-9 sm:space-y-10">
-      <div className={`${COLS} gap-y-4`}>
+    <div className="space-y-5 sm:space-y-6">
+      <div className={`${COLS} gap-y-3`}>
         <PortalHero client={client} s={s} />
         <PortalActions
           onUrgent={() => open('urgent')}
           onSupply={() => open('supply')}
           onPickup={() => open('pickup')}
           onAsk={() => open('ask')}
+          onReport={() => open('report')}
+          onDocs={() => open('docs')}
         />
       </div>
 
       {/*  ── 확인이 필요한 것 ── 없으면 **이 칸 자체가 없습니다**(0089). */}
       {todos.length > 0 && (
-        <section data-portal-todos>
-          <SectionHead title="확인이 필요한 것" />
-          <ul className="p-list">
+        //  포털 4차 — 띠 배너(옅은 색 면 + 동그란 아이콘 + 한 줄). 누르면 그 창이 열립니다.
+        <section data-portal-todos aria-label="확인이 필요한 것">
+          <ul className="space-y-2.5">
             {todos.slice(0, 3).map((t) => {
+              const look = TODO_TONE[t.tone]
+              const Icon = look.icon
               const Row = (
                 <>
-                  <span aria-hidden="true" className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${TODO_TONE[t.tone]}`} />
+                  <span aria-hidden="true" className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white ${look.ink}`}>
+                    <Icon size={21} strokeWidth={2.3} />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="p-body block font-extrabold">{t.title}</span>
                     <span className="p-sub mt-0.5 block">{t.detail}</span>
                   </span>
+                  {t.sheet && <ChevronRight size={19} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-navy-400" />}
                 </>
               )
               return (
@@ -124,12 +132,12 @@ export function PortalHome() {
                   {t.sheet ? (
                     <button
                       onClick={() => open(t.sheet!)}
-                      className="-mx-2 flex w-[calc(100%+1rem)] items-start gap-3 rounded-xl px-2 py-3.5 text-left transition hover:bg-navy-50"
+                      className={`flex w-full items-center gap-3.5 rounded-[18px] px-4 py-3.5 text-left transition ${look.box}`}
                     >
                       {Row}
                     </button>
                   ) : (
-                    <div className="flex items-start gap-3 py-3.5">{Row}</div>
+                    <div className={`flex items-center gap-3.5 rounded-[18px] px-4 py-3.5 ${look.box}`}>{Row}</div>
                   )}
                 </li>
               )
@@ -140,9 +148,9 @@ export function PortalHome() {
 
       {/*  ── 최근 요청 · 최근 수거 ── 상자 없이, 제목과 구분선으로.
            0103 — 두 칸이 차례로 떠오릅니다(움직임 줄이기 설정에서는 꺼짐). */}
-      <Stagger data-portal-cards className={`${COLS} items-start gap-y-9`}>
+      <Stagger data-portal-cards className={`${COLS} items-start gap-y-5`}>
         <StaggerItem>
-          <section data-portal-requests data-tour="portal-requests" className="scroll-mt-4">
+          <section data-portal-requests data-tour="portal-requests" className="p-card scroll-mt-4 pb-2 sm:pb-3">
             <SectionHead
               title="최근 요청"
               more={{ label: '전체 보기', onClick: () => navigate(path('requests')), data: 'requests' }}
@@ -159,7 +167,7 @@ export function PortalHome() {
           </section>
         </StaggerItem>
         <StaggerItem>
-          <section data-portal-recent data-tour="portal-report">
+          <section data-portal-recent data-tour="portal-report" className="p-card pb-2 sm:pb-3">
             <SectionHead
               title="최근 수거"
               more={{ label: '수거 이력', onClick: () => navigate(path('history')), data: 'history' }}
@@ -174,11 +182,11 @@ export function PortalHome() {
                   <li key={r.id} data-recent-pickup={r.id} className="flex items-center gap-3.5 py-3.5">
                     <span
                       aria-hidden="true"
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                         r.handedOver ? 'bg-emerald-50 text-emerald-700' : 'bg-navy-50 text-navy-500'
                       }`}
                     >
-                      <Check size={17} strokeWidth={3} />
+                      <Check size={19} strokeWidth={3} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="p-body block font-extrabold">{prettyDate(r.date)}</span>
@@ -216,14 +224,14 @@ export function PortalHome() {
 function ProposalList({ s }: { s: ReturnType<typeof portalSummary> }) {
   const { respondProposal } = useData()
   return (
-    <section data-portal-proposals>
+    <section data-portal-proposals className="p-card">
       <SectionHead title="비원미래가 제안드립니다" />
       <p className="p-sub -mt-1 mb-3">우리 병원 데이터 기준</p>
       {/*  ⚠ 답을 기다리는 제안만 면 하나로 강조합니다(누르면 바로 반영되는 일).
            수락한 것은 목록 한 줄입니다. */}
       <div className="space-y-3">
         {s.pendingProposals.map((l) => (
-          <div key={l.id} className="rounded-[18px] bg-navy-50 p-5">
+          <div key={l.id} className="rounded-[18px] bg-teal-50 p-5">
             <div className="flex flex-wrap items-center gap-3">
               <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-teal-700">
                 <Sparkles size={20} strokeWidth={2.3} />

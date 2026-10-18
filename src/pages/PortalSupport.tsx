@@ -111,7 +111,7 @@ export function PortalSupport() {
       <a
         href={`tel:${CLIENT_TEL}`}
         data-support-call
-        className="-mx-2 flex items-center gap-4 rounded-[16px] px-2 py-2 transition hover:bg-navy-50"
+        className="p-card flex items-center gap-4 transition hover:bg-teal-50"
       >
         <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white">
           <Headset size={24} strokeWidth={2.3} />
@@ -122,10 +122,12 @@ export function PortalSupport() {
           </span>
           <span className="p-sub mt-0.5 block break-keep">급하시면 전화가 빠릅니다 · {COMPANY_HOURS}</span>
         </span>
-        <Phone size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-teal-700" />
+        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+          <Phone size={20} strokeWidth={2.4} />
+        </span>
       </a>
 
-      <section className="border-t border-navy-100 pt-5">
+      <section className="p-card">
         <SectionHead title="새 문의" />
 
         <label className="field-label mt-2 transition-colors hover:text-navy-900" htmlFor="inq-topic">무엇에 대한 문의인가요?</label>
@@ -136,9 +138,7 @@ export function PortalSupport() {
               data-inq-topic={t}
               onClick={() => setTopic(t)}
               aria-pressed={topic === t}
-              className={`min-h-[44px] rounded-full px-4 text-[1.05rem] font-bold transition ${
-                topic === t ? 'bg-navy-900 text-white hover:bg-navy-800' : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
-              }`}
+              className={`p-chip ${topic === t ? 'p-chip-on' : ''}`}
             >
               {t}
             </button>
@@ -187,7 +187,7 @@ export function PortalSupport() {
         </button>
       </section>
 
-      <section>
+      <section className="p-card pb-2 sm:pb-3">
         <SectionHead title="보낸 문의" />
         {mine.length === 0 ? (
           <LoadGate

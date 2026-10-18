@@ -128,6 +128,9 @@ export function PortalLayout() {
   const client = target.client
   const clientName = client?.name ?? ''
   const onSelectPage = pathname === PORTAL_SELECT_PATH
+  //  포털 4차 — 첫 화면만 머리띠가 **브랜드 파랑**입니다(흔한 생활 앱 첫 화면).
+  //  다른 화면은 흰 머리띠 그대로 — 어느 화면에 있는지 헷갈리지 않게.
+  const isHome = !!client && target.page === '' && !onSelectPage
 
   //  ⚠ 알림은 저장하지 않고 지금 자료로 만듭니다 (0083).
   const notices = useMemo(
@@ -197,7 +200,10 @@ export function PortalLayout() {
     //  포털 3차 — 바탕을 **흰 한 장**으로. 회색 바탕 위에 흰 카드를 띄우던 것이
     //  「웹 대시보드」처럼 보이게 한 첫째 원인이었습니다. 칸은 여백 · 제목 ·
     //  구분선으로 나눕니다.
-    <div data-portal-app className="min-h-[100dvh] bg-white">
+    //  ⚠ 포털 4차 — 바탕을 다시 **옅은 회색(bg-app)** 으로, 그 위에 흰 둥근 카드.
+    //    3차의 「흰 한 장」은 칸이 바탕에 녹아 어디까지가 한 덩어리인지 흐렸습니다.
+    //    대표님이 고르신 2차 시안(흔한 생활 앱)은 회색 바탕 + 흰 카드입니다.
+    <div data-portal-app data-portal-home={isHome ? '' : undefined} className="min-h-[100dvh] bg-app">
       {/* 상단 바 — 병원 이름이 가장 먼저 보이게 합니다 */}
       {/*  ⚠ 포털 1차 고도화 — 아이폰 「홈 화면에 추가」로 열면 상태 막대가
            투명(black-translucent)이라 머리띠가 시계·배터리 **밑으로** 들어갔습니다.
@@ -205,7 +211,11 @@ export function PortalLayout() {
       {/*  ⚠ 포털 2차 — 머리띠를 **밝게** 바꿨습니다. 예전에는 화면에서 가장 짙은
            것이 머리띠라 눈이 병원 이름·시계에 먼저 갔습니다. 이제 가장 짙은 칸은
            「다음 수거」입니다 — 병원 직원이 제일 먼저 봐야 할 것입니다. */}
-      <header className="border-b border-navy-100 bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <header
+        data-portal-header={isHome ? 'brand' : 'plain'}
+        className={isHome ? 'bg-teal-600 text-white' : 'border-b border-navy-100 bg-white'}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         {/*  ── 포털 3차 — 머리띠는 「어디 · 누구」와 단추 둘(알림 · 내 정보)뿐 ──
              대표님 브리프: 「상단은 최대한 단순하게 — 비원미래 고객포털 / 병원명 ·
              알림 · 프로필 또는 더보기」. 사용 방법 · 글자 크기 · 화면 색 · 화면 보기
@@ -219,23 +229,30 @@ export function PortalLayout() {
           <div className="min-w-0 flex-1 leading-tight">
             {/*  ⚠ 0086 — 「고객 포털」 이름표: 직원은 내부 화면과 이 화면을 오가므로
                  어느 쪽인지 한눈에 갈라야 합니다. */}
-            <span className="hidden text-[0.95rem] font-bold text-navy-500 sm:block">
-              비원미래 <span data-portal-badge className="text-teal-700">고객 포털</span>
+            <span className={`hidden text-[0.95rem] font-bold sm:block ${isHome ? 'text-white/80' : 'text-navy-500'}`}>
+              비원미래 <span data-portal-badge className={isHome ? 'text-white' : 'text-teal-700'}>고객 포털</span>
             </span>
-            <p className="line-clamp-3 break-keep text-[1.15rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:line-clamp-2 sm:text-[1.35rem] sm:leading-snug">
+            <p
+              className={`line-clamp-3 break-keep text-[1.15rem] font-extrabold leading-tight tracking-tight sm:line-clamp-2 sm:text-[1.35rem] sm:leading-snug ${
+                isHome ? 'text-white' : 'text-navy-900'
+              }`}
+            >
               {clientName || '우리 병원'}
             </p>
           </div>
           <a
             href={`tel:${CLIENT_TEL}`}
-            className="hidden min-h-[2.75rem] shrink-0 items-center gap-2 rounded-xl px-3 text-teal-700 transition hover:bg-teal-50 lg:flex"
+            className={`hidden min-h-[2.75rem] shrink-0 items-center gap-2 rounded-xl px-3 transition lg:flex ${
+              isHome ? 'text-white hover:bg-white/10' : 'text-teal-700 hover:bg-teal-50'
+            }`}
           >
             <Headset size={18} strokeWidth={2.4} aria-hidden="true" />
             <span className="t-btn whitespace-nowrap">전화 상담 {CLIENT_TEL}</span>
           </a>
           {/*  0083 — 알림. 표를 만들지 않고 **지금 자료로** 만듭니다. */}
-          <PortalNoticeBell notices={notices} />
+          <PortalNoticeBell notices={notices} onBrand={isHome} />
           <PortalMenu
+            onBrand={isHome}
             clientName={clientName}
             profileName={profile?.name}
             onLogout={() => {
@@ -250,7 +267,11 @@ export function PortalLayout() {
 
         {/*  ⚠ 시계는 남깁니다 — 「어느 계정이든 오늘 날짜와 지금 시각」(UIUX_0080).
              폰에서는 이름 아래 한 줄(짧은 날짜), 넓은 화면(lg)에서는 메뉴 줄 오른쪽. */}
-        <p className="mx-auto -mt-1 w-full max-w-[1240px] break-keep px-4 pb-2.5 text-[0.95rem] font-bold text-navy-500 lg:hidden">
+        <p
+          className={`mx-auto -mt-1 w-full max-w-[1240px] break-keep px-4 pb-2.5 text-[0.95rem] font-bold lg:hidden ${
+            isHome ? 'text-white/85' : 'text-navy-500'
+          }`}
+        >
           <LiveClock compact className="sm:hidden" />
           <LiveClock className="hidden sm:inline" />
         </p>
@@ -266,7 +287,13 @@ export function PortalLayout() {
                 end={n.page === ''}
                 className={({ isActive }) =>
                   `t-nav relative flex flex-1 shrink-0 items-center justify-center gap-2 rounded-t-xl px-3 py-3.5 transition sm:flex-none sm:justify-start sm:px-4 ${
-                    isActive ? 'text-navy-900' : 'text-navy-500 hover:bg-navy-50 hover:text-navy-900'
+                    isHome
+                      ? isActive
+                        ? 'text-white'
+                        : 'text-white/75 hover:bg-white/10 hover:text-white'
+                      : isActive
+                        ? 'text-navy-900'
+                        : 'text-navy-500 hover:bg-navy-50 hover:text-navy-900'
                   }`
                 }
               >
@@ -281,7 +308,7 @@ export function PortalLayout() {
                         layoutId="portal-nav-accent"
                         data-nav-accent
                         aria-hidden="true"
-                        className="absolute inset-x-3 bottom-0 h-[3px] rounded-t-full bg-teal-500"
+                        className={`absolute inset-x-3 bottom-0 h-[3px] rounded-t-full ${isHome ? 'bg-white' : 'bg-teal-500'}`}
                         transition={{ type: 'spring', stiffness: 520, damping: 42 }}
                       />
                     )}
@@ -295,11 +322,19 @@ export function PortalLayout() {
           })}
           {/*  오늘 날짜 · 지금 시각 (0078) — 병원 담당자도 봅니다. 넓은 화면에서는
                메뉴 줄 오른쪽 빈자리에 둡니다(포털 2차). */}
-          <span className="ml-auto hidden shrink-0 items-center pl-4 text-[1rem] font-bold text-navy-500 lg:flex">
+          <span className={`ml-auto hidden shrink-0 items-center pl-4 text-[1rem] font-bold lg:flex ${isHome ? 'text-white/85' : 'text-navy-500'}`}>
             <LiveClock />
           </span>
         </nav>
       </header>
+
+      {/*  포털 4차 — 첫 화면은 파란 머리가 아래로 조금 더 내려와 둥글게 끝나고,
+           「다음 수거」 카드가 그 위에 겹쳐 올라앉습니다(흔한 생활 앱 첫 화면). */}
+      {/*  ⚠ 직원 미리보기에서는 띠를 안 그립니다 — 미리보기 줄이 사이에 끼어 카드가 띠에
+           올라앉지 못하고, 띠 높이만큼 「긴급수거 요청」이 아래 메뉴 쪽으로 밀립니다(check_portal86 ⑦). */}
+      {isHome && !target.isPreview && (
+        <div data-portal-band aria-hidden="true" className="h-16 rounded-b-[28px] bg-teal-600 sm:h-20" />
+      )}
 
       {/*  0085 — 직원이 보고 있으면 **그렇다고 말합니다.** 이 띠가 없으면
            대표님이 병원 화면을 보시면서 「우리 미수금이 왜 이것뿐이지」로
@@ -337,7 +372,11 @@ export function PortalLayout() {
 
            아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로
            스크롤할 수 없어 사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
-      <main className="mx-auto w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] px-4 pb-[40vh] pt-5 lg:px-8 lg:pt-8">
+      <main
+        className={`relative mx-auto w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] px-4 pb-[40vh] lg:px-8 ${
+          isHome && !target.isPreview ? '-mt-12 pt-0 sm:-mt-14' : 'pt-5 lg:pt-8'
+        }`}
+      >
         {/*  ⚠ 0088 — 여기에 있던 「병원 고르기」 목록을 걷어냈습니다.
              본문 자리에 끼워 넣으면 **메뉴를 누를 때마다** 튀어나옵니다.
              고르는 일은 자기 주소(/portal/select)를 가진 화면이 합니다. */}
@@ -389,7 +428,7 @@ export function PortalLayout() {
 
       {/* 폰 전용 하단 탭 — 화면이 셋뿐이라 접거나 숨기지 않습니다 */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex bg-white/95 shadow-nav backdrop-blur-lg sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-navy-100 bg-white/95 shadow-nav backdrop-blur-lg sm:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/*  ⚠ 0083 — 여섯 개를 다 넣으면 폰에서 한 칸이 65px 이 되어 글자가
@@ -407,13 +446,13 @@ export function PortalLayout() {
               end={n.page === ''}
               className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5"
             >
-              {active && <span className="absolute inset-x-2 inset-y-1 rounded-2xl bg-teal-50" />}
+              {/*  포털 4차 — 고른 칸은 짙은 글자 + 굵은 아이콘(흔한 앱 아래 띠). 색 면은 깔지 않습니다. */}
               <Icon
                 size={22}
-                strokeWidth={active ? 2.4 : 2}
-                className={`relative z-10 ${active ? 'text-teal-600' : 'text-navy-400'}`}
+                strokeWidth={active ? 2.6 : 2}
+                className={`relative z-10 ${active ? 'text-navy-900' : 'text-navy-400'}`}
               />
-              <span className={`t-tab relative z-10 whitespace-nowrap ${active ? 'text-teal-700' : 'text-navy-400'}`}>
+              <span className={`t-tab relative z-10 whitespace-nowrap ${active ? 'font-extrabold text-navy-900' : 'text-navy-500'}`}>
                 {n.short}
               </span>
             </NavLink>

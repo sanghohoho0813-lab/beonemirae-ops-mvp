@@ -18,7 +18,7 @@ import * as F from './perf_fixtures.mjs'
 //     ⑦ 요청 내역 · 정산·증빙 · 수거 이력(예정된 수거)
 //     ⑧ 로그인 · PWA(아이콘 · 이름)
 //     ⑨ 지어낸 것 없음 · 내부 말(소모품 · 일정 반영) 없음 · 남의 병원 없음
-//     ⑬ 포털 3차 — 카드를 걷었다(그림자 상자 0 · 면은 다음 수거 · 빠른 요청 · 정산 상태만),
+//     ⑬ 포털 4차 — 회색 바탕 위 흰 카드 · 옅은 그림자 · 카드 안에 카드 없음,
 //        모서리 위계(다음 수거 20~24 · 빠른 요청 16~20 · 입력 12~14 · 칩 알약),
 //        PC 두 줄(왼쪽 다음 수거 + 최근 요청 · 오른쪽 빠른 요청 + 최근 수거)
 
@@ -388,7 +388,9 @@ for (const w of [390, 1280]) {
   await ctx.close()
 }
 
-// ── ⑩ 포털 2차 — 밝은 머리띠 · 짙은 「다음 수거」 · 앞으로 7일 ────────────────
+// ── ⑩ 포털 4차 — 첫 화면은 파란 머리 + 그 위에 겹친 흰 「다음 수거」 카드 ──────────
+//    대표님이 고르신 2차 시안(흔한 생활 앱 첫 화면). 3차의 「밝은 머리띠 · 짙은 다음 수거」를
+//    바꿨습니다. 다른 화면의 머리띠는 그대로 흰색입니다(아래에서 함께 잽니다).
 {
   const srv = makeServer()
   const { ctx, p } = await open(srv, '/portal', { w: 390 })
@@ -398,8 +400,19 @@ for (const w of [390, 1280]) {
   }
   const headBg = await p.locator('header').evaluate((el) => getComputedStyle(el).backgroundColor)
   const heroBg = await p.locator('[data-portal-hero]').evaluate((el) => getComputedStyle(el).backgroundColor)
-  ok(lum(headBg) > 240, '⑩ 머리띠는 밝다 (눈이 먼저 「다음 수거」로 가게)', headBg)
-  ok(lum(heroBg) < 60, '⑩ 「다음 수거」가 화면에서 가장 짙은 칸', heroBg)
+  const blue = (rgb) => {
+    const [r, g, bl] = (rgb.match(/\d+/g) ?? []).map(Number)
+    return bl > 180 && bl > r + 80 && bl > g + 40
+  }
+  ok(blue(headBg), '⑩ 첫 화면 머리띠는 브랜드 파랑', headBg)
+  ok(lum(heroBg) > 240, '⑩ 「다음 수거」는 흰 카드', heroBg)
+  const band = await p.locator('[data-portal-band]').boundingBox()
+  const heroBox = await p.locator('[data-portal-hero]').boundingBox()
+  ok(band && heroBox && heroBox.y < band.y + band.height - 8, '⑩ 「다음 수거」 카드가 파란 띠 위에 겹쳐 올라앉는다', `${Math.round(heroBox?.y ?? 0)} / ${Math.round((band?.y ?? 0) + (band?.height ?? 0))}`)
+  await p.goto(`${W.BASE}/portal/requests`, { waitUntil: 'domcontentloaded' }); await W.settle(p, srv); await p.waitForTimeout(400)
+  const subHead = await p.locator('header').evaluate((el) => getComputedStyle(el).backgroundColor)
+  ok(lum(subHead) > 240 && (await p.locator('[data-portal-band]').count()) === 0, '⑩ 다른 화면의 머리띠는 흰색 · 파란 띠 없음', subHead)
+  await p.goto(`${W.BASE}/portal`, { waitUntil: 'domcontentloaded' }); await W.settle(p, srv); await p.waitForTimeout(400)
   //  포털 3차 — 「다음 수거」 칸에는 날짜 하나만 크게. 작은 메뉴 · 7일 줄이 없다.
   ok((await p.locator('[data-week-day]').count()) === 0, '⑩ 「다음 수거」 칸에 7일 줄 · 작은 정보가 겹치지 않는다')
   ok((await p.locator('[data-portal-hero] button, [data-portal-hero] a').count()) === 0, '⑩ 「다음 수거」 칸에 작은 단추가 없다')
@@ -464,45 +477,39 @@ for (const w of [390, 1280]) {
   await ctx.close()
 }
 
-// ── ⑬ 포털 3차 — 카드 줄이기 · 모서리 위계 · PC 두 줄 ─────────────────────────
-//  ⚠ 「상자」 = 둥근 모서리 + (색 면 · 보이는 그림자 · 테두리). 바깥 상자만 셉니다.
-//    대표님 브리프: 「카드는 다음 수거 Hero · Primary Action · 강조가 필요한 상태에만」.
+// ── ⑬ 포털 4차 — 회색 바탕 위 흰 카드 · 옅은 그림자 · 카드 안에 카드 없음 ──────────
+//    대표님이 고르신 2차 시안(흔한 생활 앱)은 회색 바탕 위에 흰 둥근 카드를 놓습니다.
+//    3차의 「면은 셋 이하 · 그림자 0」 대신 지킬 것:
+//     · 그림자는 옅게 — 바깥 그림자의 투명도 0.15 이하 (떠 있는 창 · 아래 메뉴는 제외)
+//     · 카드(.p-card) 안에 또 카드를 넣지 않는다 — 상자가 겹치면 다시 「대시보드」가 됩니다
+//     · 바탕은 회색(흰 카드와 구분되는 색)
 {
-  const LIMIT = { home: 3, requests: 0, history: 0, billing: 1, support: 0 }
   for (const w of [390, 1440]) {
     for (const [name, path] of [['home', '/portal'], ['requests', '/portal/requests'], ['history', '/portal/history'], ['billing', '/portal/billing'], ['support', '/portal/support']]) {
       const srv = makeServer()
       const { ctx, p } = await open(srv, path, { w })
       const m = await p.evaluate(() => {
-        const seen = (sh) => (sh && sh !== 'none' ? sh.split(/,(?![^()]*\))/) : []).some((one) => {
-          const alpha = one.match(/rgba\([^)]*,\s*([\d.]+)\)/)
-          if (alpha && Number(alpha[1]) === 0) return false
-          const nums = (one.replace(/rgba?\([^)]*\)/, '').match(/-?[\d.]+px/g) ?? []).map(parseFloat)
-          return nums.some((n) => n !== 0)
-        })
-        const isBox = (el) => {
-          const s = getComputedStyle(el); const r = el.getBoundingClientRect()
-          if (r.width < 150 || r.height < 64 || s.display === 'none' || s.visibility === 'hidden') return false
-          const rad = parseFloat(s.borderTopLeftRadius) || 0
-          const bg = s.backgroundColor
-          const filled = bg !== 'rgba(0, 0, 0, 0)' && bg !== 'rgb(255, 255, 255)'
-          const bd = (parseFloat(s.borderTopWidth) || 0) > 0 && (parseFloat(s.borderBottomWidth) || 0) > 0
-          return rad >= 12 && (filled || seen(s.boxShadow) || bd) && el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT'
-        }
-        let shadows = 0, surfaces = 0
-        const list = []
+        const heavy = []
         for (const el of document.querySelectorAll('main *')) {
-          const r = el.getBoundingClientRect()
-          if (r.width > 0 && seen(getComputedStyle(el).boxShadow)) { shadows++; list.push(`그림자:${el.tagName}.${String(el.className).slice(0, 40)}`) }
-          if (!isBox(el)) continue
-          let a = el.parentElement, inside = false
-          while (a && a.tagName !== 'MAIN') { if (isBox(a)) { inside = true; break } a = a.parentElement }
-          if (!inside) { surfaces++; list.push((el.getAttribute('data-portal-hero') != null ? 'hero' : el.getAttribute('data-portal-cta') ?? el.getAttribute('data-pb-summary') ?? el.tagName)) }
+          const sh = getComputedStyle(el).boxShadow
+          if (!sh || sh === 'none') continue
+          for (const one of sh.split(/,(?![^()]*\))/)) {
+            if (/inset/.test(one)) continue
+            const a = one.match(/rgba\([^)]*,\s*([\d.]+)\)/)
+            const alpha = a ? Number(a[1]) : 1
+            //  x · y · 흐림 중 하나라도 0 이 아니어야 「그림자」입니다. 넓이(spread)만 있는 것은
+            //  테두리 고리(ring) — 그림자가 아닙니다.
+            const nums = (one.replace(/rgba?\([^)]*\)/, '').match(/-?[\d.]+px/g) ?? []).map(parseFloat)
+            if (nums.slice(0, 3).some((n) => n !== 0) && alpha > 0.15) heavy.push(`${el.tagName}.${String(el.className).slice(0, 30)} ${alpha}`)
+          }
         }
-        return { shadows, surfaces, list }
+        const nested = [...document.querySelectorAll('main .p-card .p-card')].map((el) => String(el.className).slice(0, 40))
+        const bg = getComputedStyle(document.querySelector('[data-portal-app]')).backgroundColor
+        return { heavy, nested, bg }
       })
-      ok(m.shadows === 0, `${w}px ⑬ ${name} — 그림자 상자 0 (그림자는 떠 있는 창에만)`, `${m.shadows}개 ${m.list.join(',')}`)
-      ok(m.surfaces <= LIMIT[name], `${w}px ⑬ ${name} — 면(카드) ${LIMIT[name]}개 이하`, `${m.surfaces}: ${m.list.join(',')}`)
+      ok(m.heavy.length === 0, `${w}px ⑬ ${name} — 그림자는 옅게 (투명도 0.15 이하)`, m.heavy.join(' | '))
+      ok(m.nested.length === 0, `${w}px ⑬ ${name} — 카드 안에 카드가 없다`, m.nested.join(' | '))
+      ok(m.bg !== 'rgb(255, 255, 255)' && m.bg !== 'rgba(0, 0, 0, 0)', `${w}px ⑬ ${name} — 바탕은 회색 (흰 카드와 구분)`, m.bg)
       await ctx.close()
     }
   }

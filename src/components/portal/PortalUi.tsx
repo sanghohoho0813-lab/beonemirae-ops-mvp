@@ -43,23 +43,41 @@ export function StatusChip({ status }: { status: string }) {
 /**
  * 접수 → 확인 중 → 일정 확정 → 처리 완료 — 가로 한 줄 (접수 완료 화면용).
  *  화면 읽기 프로그램에는 「4단계 중 2단계 확인 중」으로 읽힙니다.
+ *  포털 4차 — 흔한 배달 앱의 주문 추적처럼 **동그라미 + 잇는 선**. 지난 단계는 체크,
+ *  지금 단계는 둘레가 퍼진 동그라미입니다.
  */
 export function StatusSteps({ status }: { status: string }) {
   const at = portalStepIndex(status)
+  const last = PORTAL_STEPS.length - 1
   return (
     <ol
       data-status-steps
       aria-label={`${PORTAL_STEPS.length}단계 중 ${at + 1}단계 ${portalStatusLabel(status)}`}
-      className="grid grid-cols-4 gap-1"
+      className="flex items-start"
     >
       {PORTAL_STEPS.map((x, i) => {
         const now = i === at
+        const done = i < at
         return (
-          <li key={x.status} aria-current={now ? 'step' : undefined} className="min-w-0">
-            <span aria-hidden="true" className={`block h-1.5 rounded-full ${i <= at ? 'bg-teal-500' : 'bg-navy-100'}`} />
+          <li key={x.status} aria-current={now ? 'step' : undefined} className="flex min-w-0 flex-1 flex-col items-center">
+            <span aria-hidden="true" className="flex w-full items-center">
+              <span className={`h-1 flex-1 rounded-full ${i === 0 ? 'invisible' : i <= at ? 'bg-teal-600' : 'bg-navy-100'}`} />
+              <span
+                className={`flex shrink-0 items-center justify-center rounded-full text-[0.9rem] font-black ${
+                  now
+                    ? 'h-9 w-9 bg-teal-600 text-white ring-4 ring-teal-100'
+                    : done
+                      ? 'h-7 w-7 bg-teal-600 text-white'
+                      : 'h-7 w-7 bg-navy-100 text-navy-500'
+                }`}
+              >
+                {done ? <Check size={15} strokeWidth={3.2} /> : i + 1}
+              </span>
+              <span className={`h-1 flex-1 rounded-full ${i === last ? 'invisible' : i < at ? 'bg-teal-600' : 'bg-navy-100'}`} />
+            </span>
             <span
-              className={`mt-1.5 block break-keep text-[0.95rem] leading-tight ${
-                now ? 'font-extrabold text-navy-900' : i < at ? 'font-bold text-navy-700' : 'font-medium text-navy-500'
+              className={`mt-1.5 block break-keep text-center text-[0.92rem] leading-tight ${
+                now ? 'font-extrabold text-teal-700' : done ? 'font-bold text-navy-700' : 'font-medium text-navy-500'
               }`}
             >
               {x.label}
@@ -100,7 +118,7 @@ export function StatusTimeline({ status }: { status: string }) {
                 done
                   ? 'bg-teal-600 text-white'
                   : now
-                    ? 'bg-white text-teal-700 ring-[3px] ring-teal-600'
+                    ? 'bg-teal-600 text-white ring-4 ring-teal-100'
                     : 'bg-navy-100 text-navy-500'
               }`}
             >

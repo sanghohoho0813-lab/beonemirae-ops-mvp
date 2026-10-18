@@ -33,7 +33,7 @@ const SHEET_OF: Partial<Record<string, SheetName>> = {
   report: 'report',
 }
 
-export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
+export function PortalNoticeBell({ notices, onBrand = false }: { notices: PortalNotice[]; /** 파란 머리띠 위 (포털 4차 첫 화면) */ onBrand?: boolean }) {
   const [open, setOpen] = useState(false)
   //  ⚠ 0088 — 지금 보고 있는 병원을 달고 갑니다. 알림을 눌렀는데 병원이
   //    지워지면 「어느 병원을 보시겠습니까」로 튕깁니다.
@@ -48,13 +48,15 @@ export function PortalNoticeBell({ notices }: { notices: PortalNotice[] }) {
         data-portal-bell
         aria-label={n > 0 ? `알림 ${n}건` : '알림'}
         onClick={() => setOpen(true)}
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-700 transition hover:bg-navy-100"
+        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
+          onBrand ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
+        }`}
       >
         <Bell size={20} strokeWidth={2.3} />
         {n > 0 && (
           <span
             data-portal-bell-count
-            className="absolute -right-1 -top-1 flex h-[1.35rem] min-w-[1.35rem] items-center justify-center rounded-full bg-teal-500 px-1 text-[0.9rem] font-black text-white ring-2 ring-white"
+            className="absolute -right-1 -top-1 flex h-[1.35rem] min-w-[1.35rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[0.9rem] font-black text-white ring-2 ring-white"
           >
             {n}
           </span>

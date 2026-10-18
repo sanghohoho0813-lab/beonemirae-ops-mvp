@@ -270,6 +270,29 @@
   .p-list {
     @apply divide-y divide-navy-100;
   }
+
+  /* ───────────────────────────────────────────────────────────────────────
+     병원 포털 4차 (2차 시안) — 「흔히 쓰는 생활 앱」 화면 단위
+     대표님: 「배민 · talabat 처럼 흔하게 많이 본 듯한 디자인으로」.
+     회색 바탕(bg-app) 위에 **흰 둥근 카드**를 놓고, 카드끼리는 여백으로 가릅니다.
+     그림자는 아주 옅게 — 카드가 바탕에서 살짝 떠 보일 정도만.
+     ⚠ 글자 크기 토큰(p-title · p-body · p-sub)은 그대로 씁니다 — 노안 배려 기준.
+     ─────────────────────────────────────────────────────────────────────── */
+  .p-card {
+    @apply rounded-[20px] bg-white p-4 sm:p-5;
+    box-shadow: 0 1px 2px rgb(var(--c-shadow) / 0.05), 0 6px 20px -10px rgb(var(--c-shadow) / 0.12);
+  }
+  /* 칩 — 거르기 · 고르기 (알약). 고른 것은 짙은 면 */
+  .p-chip {
+    @apply inline-flex min-h-[2.6rem] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-4 text-[1rem] font-bold text-navy-600 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50;
+  }
+  .p-chip-on {
+    @apply bg-navy-900 text-white ring-navy-900 hover:bg-navy-900;
+  }
+  /* 아이콘 메뉴 한 칸 — 옅은 색 둥근 네모 아이콘 + 짧은 이름 */
+  .p-tile {
+    @apply flex min-h-[5.5rem] flex-col items-center justify-start gap-2 rounded-2xl px-1 py-2 text-center text-[0.95rem] font-bold leading-tight text-navy-700 transition hover:bg-navy-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

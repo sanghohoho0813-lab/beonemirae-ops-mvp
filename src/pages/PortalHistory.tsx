@@ -148,7 +148,7 @@ export function PortalHistory() {
           type="button"
           data-hist-report
           onClick={() => open('report')}
-          className="hidden min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-navy-50 px-5 text-[1.05rem] font-bold text-navy-800 transition hover:bg-navy-100 sm:flex"
+          className="hidden min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-white px-5 text-[1.05rem] font-bold text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 sm:flex"
         >
           <FileBarChart size={19} strokeWidth={2.3} aria-hidden="true" /> 월간 배출 리포트
         </button>
@@ -156,7 +156,7 @@ export function PortalHistory() {
 
       {/*  ── 요약 (넓은 화면) ── 폰에서는 아래 목록의 달 머리가 같은 말을 합니다. */}
       {all.length > 0 && (
-        <div data-hist-summary className="hidden border-y border-navy-100 py-4 sm:grid sm:grid-cols-3 sm:divide-x sm:divide-navy-100">
+        <div data-hist-summary className="p-card hidden sm:grid sm:grid-cols-3 sm:divide-x sm:divide-navy-100">
           {[
             { k: '이번 달', v: `${summary.thisM.n}회`, sub: weight(summary.thisM.kg) },
             { k: '지난 달', v: `${summary.lastM.n}회`, sub: weight(summary.lastM.kg) },
@@ -175,7 +175,7 @@ export function PortalHistory() {
 
       {/*  ── 예정된 수거 ── 있을 때만. 없으면 칸을 안 만듭니다. */}
       {upcoming.length > 0 && (
-        <section data-hist-upcoming>
+        <section data-hist-upcoming className="p-card py-2 sm:py-3">
           {/*  폰에서는 제목 줄을 접습니다 — 「일정 확정」 칩과 날짜가 스스로 말합니다.
                이 한 줄 때문에 첫 수거 기록이 첫 화면 밖으로 밀렸습니다. */}
           <h2 className="sr-only sm:not-sr-only sm:p-title sm:mb-1">예정된 수거</h2>
@@ -183,12 +183,14 @@ export function PortalHistory() {
             {/*  ⚠ 폰에서는 가장 가까운 하나만 — 첫 수거 기록이 밀리지 않게. */}
             {upcoming.map((x, i) => (
               <li key={x.id} className={`${i > 0 ? 'hidden sm:flex' : 'flex'} flex-wrap items-center gap-x-3 gap-y-1.5 py-3`}>
-                <CalendarClock size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-teal-700" />
+                <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+                  <CalendarClock size={20} strokeWidth={2.4} />
+                </span>
                 <b className="p-body break-keep">
                   {prettyDate(x.date)}
                   {timeBand(x.scheduledTime) && <span className="ml-1.5 font-bold">{timeBand(x.scheduledTime)}</span>}
                 </b>
-                <span className="pill ml-auto bg-teal-100 text-teal-900">일정 확정</span>
+                <span className="pill ml-auto bg-emerald-50 text-emerald-800">일정 확정</span>
               </li>
             ))}
           </ul>
@@ -218,7 +220,7 @@ export function PortalHistory() {
               data-hist-period-select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="field-input rounded-[14px] mt-1 w-full"
+              className="field-input rounded-[14px] mt-1 w-full bg-white ring-navy-200"
             >
               <option value="recent">최근 3개월</option>
               {years.map((y) => (
@@ -234,7 +236,7 @@ export function PortalHistory() {
                 data-hist-type-select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="field-input rounded-[14px] mt-1 w-full"
+                className="field-input rounded-[14px] mt-1 w-full bg-white ring-navy-200"
               >
                 <option value="all">전부</option>
                 {types.map((t) => (
@@ -254,9 +256,7 @@ export function PortalHistory() {
               data-hist-period={o.v}
               onClick={() => setPeriod(o.v)}
               aria-pressed={period === o.v}
-              className={`min-h-[2.75rem] shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[1.02rem] font-bold transition ${
-                period === o.v ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
-              }`}
+              className={`p-chip ${period === o.v ? 'p-chip-on' : ''}`}
             >
               {o.l}
             </button>
@@ -272,9 +272,7 @@ export function PortalHistory() {
                 data-hist-type={o.v}
                 onClick={() => setType(o.v)}
                 aria-pressed={type === o.v}
-                className={`min-h-[2.75rem] shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[1.02rem] font-bold transition ${
-                  type === o.v ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
-                }`}
+                className={`p-chip ${type === o.v ? 'p-chip-on' : ''}`}
               >
                 {o.l}
               </button>
@@ -287,7 +285,7 @@ export function PortalHistory() {
                label 에만 padding 을 줬는데 정작 눌리는 곳(input)은 26px 이라
                커서를 놓치면 옆을 눌러 놓고 왜 안 써지나 하게 됩니다.
                (check_ux390 이 「보통」과 「큰 글씨」 두 곳에서 잡았습니다) */}
-          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[14px] bg-navy-50 px-3.5">
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[14px] bg-white px-3.5 ring-1 ring-inset ring-navy-200">
             <Search size={18} className="shrink-0 text-navy-400" strokeWidth={2.4} />
             <input
               data-hist-search
@@ -305,6 +303,7 @@ export function PortalHistory() {
       </div>
 
       {done.length === 0 ? (
+        <div className="p-card">
         <LoadGate
           loadingTitle="수거 이력을 불러오는 중입니다"
           empty={
@@ -319,6 +318,7 @@ export function PortalHistory() {
             />
           }
         />
+        </div>
       ) : (
         <>
         {/*  ── 폰에서는 표 대신 카드 ───────────────────────────────────────
@@ -328,9 +328,9 @@ export function PortalHistory() {
              안 보이면 결국 전화를 겁니다.
              넓은 화면은 표 그대로입니다 — 여러 줄을 한눈에 견주는 데는 표가
              낫습니다. */}
-        <div data-portal-hist-cards className="space-y-5 sm:hidden">
+        <div data-portal-hist-cards className="space-y-3 sm:hidden">
           {byMonth.map((g) => (
-            <div key={g.month}>
+            <div key={g.month} className="p-card pb-1.5">
               <div data-hist-month={g.month} className="flex items-center justify-between gap-3 border-b border-navy-100 pb-2">
                 <b className="p-title break-keep">{monthLabel(g.month)}</b>
                 <span className="p-sub shrink-0 font-bold tabular-nums">
@@ -365,7 +365,7 @@ export function PortalHistory() {
           ))}
         </div>
 
-        <div className="hidden overflow-x-auto sm:block">
+        <div className="p-card hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="border-b border-navy-100">
@@ -405,12 +405,12 @@ export function PortalHistory() {
       <button
         type="button"
         onClick={() => open('report')}
-        className="flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full bg-navy-50 px-4 text-[1.05rem] font-bold text-navy-800 transition hover:bg-navy-100 sm:hidden"
+        className="flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-[1.05rem] font-bold text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 sm:hidden"
       >
         <FileBarChart size={19} strokeWidth={2.3} aria-hidden="true" /> 월간 배출 리포트 보기
       </button>
 
-      <p className="p-sub break-keep">
+      <p className="p-sub break-keep px-1">
         수거대장 PDF 자동 발급과 올바로 시스템 연동은 개발 예정입니다. 지금 필요하시면 담당자({CLIENT_TEL})에게
         요청해 주세요.
       </p>

@@ -19,7 +19,7 @@ import type { Client } from '../types'
 //                     대표님이 금지한 「작동하지 않는 버튼」입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-//  포털 3차 — 칸(카드) 격자 대신 **이름 · 값 두 줄 목록**입니다. 앱의 「내 정보」
+//  포털 4차 — 흰 카드 한 장 안에 **이름 · 값 두 줄 목록**입니다. 앱의 「내 정보」
 //    화면처럼 구분선으로만 나눕니다. 아이콘 상자도 뺐습니다.
 function Cell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -44,6 +44,7 @@ export function PortalFooter({ client }: { client: Client }) {
       {/*  포털 1차 고도화 — 여기 있던 회사 소개 사진 칸을 뺐습니다. 매일 쓰는
            업무 화면에서 회사 소개는 스크롤만 길게 합니다. 대신 이 칸이
            무엇인지 제목을 답니다. */}
+      <div className="p-card pb-1 sm:pb-2">
       <h2 className="p-title flex min-h-[2.75rem] items-center">우리 병원 등록 정보</h2>
       <div className="p-list border-t border-navy-100">
         <Cell label="비원미래 고객상담">
@@ -85,10 +86,11 @@ export function PortalFooter({ client }: { client: Client }) {
           </Cell>
         )}
       </div>
+      </div>
 
       {/*  ⚠ 「이 화면에 없는 것」을 여기서 말해 둡니다. 화면에 없는 것을
            찾다가 전화하는 일이 실제로 있습니다. */}
-      <p className="p-sub mt-4 break-keep">
+      <p className="p-sub mt-4 break-keep px-1">
         {COMPANY} · 이 화면에는 <b>우리 병원 자료만</b> 표시됩니다. 화면의 값이 실제와 다르면 상담센터
         {' '}({CLIENT_TEL})로 알려 주시면 바로잡겠습니다.
       </p>

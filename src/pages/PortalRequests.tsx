@@ -90,12 +90,8 @@ export function PortalRequests() {
       {/*  요청이 하나도 없으면 거르기 단추를 안 둡니다 — 「0건」 셋은 소음입니다.
            포털 2차 — 한 덩어리 「나눔 단추」. 셋 중 하나만 켜진다는 것이 모양으로 보입니다. */}
       {all.length > 0 && (
-      <div
-        role="group"
-        aria-label="요청 상태로 보기"
-        data-req-filters
-        className="grid grid-cols-3 gap-1 rounded-full bg-navy-50 p-1 sm:inline-grid sm:min-w-[26rem]"
-      >
+      //  포털 4차 — 흔한 앱의 거르기 칩(알약 셋). 고른 것은 짙은 면입니다.
+      <div role="group" aria-label="요청 상태로 보기" data-req-filters className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
             key={f.v}
@@ -103,14 +99,12 @@ export function PortalRequests() {
             data-req-filter={f.v}
             aria-pressed={filter === f.v}
             onClick={() => setFilter(f.v)}
-            className={`flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-full px-2 text-[1.02rem] font-bold transition ${
-              filter === f.v ? 'bg-navy-900 text-white' : 'text-navy-700 hover:bg-navy-100'
-            }`}
+            className={`p-chip ${filter === f.v ? 'p-chip-on' : ''}`}
           >
             <span className="break-keep">{f.l}</span>
             <span
               className={`min-w-[1.6rem] rounded-full px-1.5 text-center tabular-nums ${
-                filter === f.v ? 'bg-white/15 text-white' : 'bg-white text-navy-700'
+                filter === f.v ? 'bg-white/15 text-white' : 'bg-navy-100 text-navy-700'
               }`}
             >
               {f.n}
@@ -121,6 +115,7 @@ export function PortalRequests() {
       )}
 
       {rows.length === 0 ? (
+        <div className="p-card">
         <LoadGate
           loadingTitle="요청 내역을 불러오는 중입니다"
           empty={
@@ -141,8 +136,9 @@ export function PortalRequests() {
             />
           }
         />
+        </div>
       ) : (
-        <ul data-req-list className="p-list">
+        <ul data-req-list className="p-list p-card py-1 sm:py-2">
           {rows.map((r) => (
             <FeedRow key={r.id} r={r} preview onOpen={() => detail.open(r.id)} />
           ))}

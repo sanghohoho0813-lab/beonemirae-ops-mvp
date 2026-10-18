@@ -33,10 +33,13 @@ export function PortalMenu({
   clientName,
   profileName,
   onLogout,
+  onBrand = false,
 }: {
   clientName: string
   profileName?: string
   onLogout: () => void
+  /** 파란 머리띠 위 (포털 4차 첫 화면) */
+  onBrand?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const inFrame = useInPhoneFrame()
@@ -57,7 +60,9 @@ export function PortalMenu({
         aria-expanded={open}
         aria-label="내 정보 · 설정"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-11 min-w-[2.75rem] items-center justify-center gap-1.5 rounded-xl bg-navy-50 px-2.5 text-navy-700 transition hover:bg-navy-100 sm:px-3.5"
+        className={`flex h-11 min-w-[2.75rem] items-center justify-center gap-1.5 rounded-xl px-2.5 transition sm:px-3.5 ${
+          onBrand ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
+        }`}
       >
         <UserRound size={20} strokeWidth={2.3} aria-hidden="true" />
         <span className="t-btn hidden whitespace-nowrap sm:inline">내 정보</span>

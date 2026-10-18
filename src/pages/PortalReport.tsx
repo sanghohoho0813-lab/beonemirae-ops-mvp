@@ -61,7 +61,7 @@ export function PortalReport() {
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             onClick={() => setMonth((m) => shiftMonth(m, -1))}
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-navy-500 shadow-sm transition hover:text-navy-900"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-navy-500 ring-1 ring-inset ring-navy-200 transition hover:text-navy-900"
             title="이전 달"
           >
             <ChevronLeft size={20} strokeWidth={2.4} />
@@ -72,7 +72,7 @@ export function PortalReport() {
           <button
             onClick={() => setMonth((m) => (m >= current ? m : shiftMonth(m, 1)))}
             disabled={month >= current}
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-navy-500 shadow-sm transition hover:text-navy-900 disabled:opacity-40"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-navy-500 ring-1 ring-inset ring-navy-200 transition hover:text-navy-900 disabled:opacity-40"
             title="다음 달"
           >
             <ChevronRight size={20} strokeWidth={2.4} />
@@ -80,7 +80,10 @@ export function PortalReport() {
         </div>
       </div>
 
-      <MonthlyReportView report={report} />
+      {/*  포털 4차 — 회색 바탕 위 흰 카드 한 장 안에 리포트를 둡니다(안쪽 칸이 바탕에 묻히지 않게). */}
+      <div className="p-card">
+        <MonthlyReportView report={report} />
+      </div>
     </PageShell>
   )
 }

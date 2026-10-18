@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, ClipboardList, FileBarChart, Headset, ReceiptText, ScrollText } from 'lucide-react'
+import { CheckCircle2, ChevronRight, ClipboardList, FileBarChart, Headset, Info, ReceiptText, ScrollText } from 'lucide-react'
 import { CLIENT_TEL } from '../lib/brand'
 import { usePortalSheet } from '../lib/portalSheet'
 import { useData } from '../context/DataContext'
@@ -78,39 +78,28 @@ export function PortalBilling() {
            원무·행정 담당이 이 화면에서 제일 먼저 묻는 것은 「낼 돈이 남았나」
            하나입니다. 그것을 크게, 색과 **글자**로 함께 말합니다. */}
       {rows.length > 0 && (
-        <section
-          data-pb-summary
-          className={`overflow-hidden rounded-[20px] ${owed > 0 ? 'bg-rose-50' : 'bg-emerald-50'}`}
-        >
-          <div className="flex items-start gap-4 px-5 py-5 sm:px-6">
-            <span
-              aria-hidden="true"
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white ${
-                owed > 0 ? 'bg-rose-600' : 'bg-emerald-600'
-              }`}
-            >
-              {owed > 0 ? <ReceiptText size={24} strokeWidth={2.3} /> : <CheckCircle2 size={24} strokeWidth={2.3} />}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className={`t-label ${owed > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
-                {owed > 0 ? '아직 안 내신 금액' : '미납 없음'}
-              </p>
-              <p
-                data-pb-owed
-                className={`mt-1 break-keep text-[1.75rem] font-extrabold leading-tight tabular-nums ${
-                  owed > 0 ? 'text-rose-700' : 'text-emerald-800'
-                }`}
-              >
-                {owed > 0 ? won(owed) : '모두 입금 확인되었습니다'}
-              </p>
-            </div>
-          </div>
-          <div className={`grid grid-cols-2 divide-x border-t ${owed > 0 ? 'divide-rose-100 border-rose-100' : 'divide-emerald-100 border-emerald-100'}`}>
-            <div className="px-5 py-3.5 sm:px-6">
+        //  포털 4차 — 은행 앱 청구서처럼 **흰 카드에 금액 하나를 크게**. 상태는 알약(색 + 글자).
+        <section data-pb-summary className="p-card px-5 py-5 sm:px-6 sm:py-6">
+          <span
+            className={`pill ${owed > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800'}`}
+          >
+            {owed > 0 ? <ReceiptText size={15} strokeWidth={2.6} aria-hidden="true" /> : <CheckCircle2 size={15} strokeWidth={2.6} aria-hidden="true" />}
+            {owed > 0 ? '아직 안 내신 금액' : '미납 없음'}
+          </span>
+          <p
+            data-pb-owed
+            className={`mt-3 break-keep text-[2rem] font-extrabold leading-tight tracking-tight tabular-nums sm:text-[2.3rem] ${
+              owed > 0 ? 'text-rose-700' : 'text-navy-900'
+            }`}
+          >
+            {owed > 0 ? won(owed) : '모두 입금 확인되었습니다'}
+          </p>
+          <div className="mt-4 grid grid-cols-2 divide-x divide-navy-100 border-t border-navy-100 pt-3.5">
+            <div className="pr-4">
               <p className="p-sub break-keep">청구 건수</p>
               <p data-pb-count className="t-body mt-0.5 font-extrabold tabular-nums text-navy-900">{rows.length}건</p>
             </div>
-            <div className="px-5 py-3.5 sm:px-6">
+            <div className="pl-4">
               <p className="p-sub break-keep">누적 청구액</p>
               <p data-pb-billed className="t-body mt-0.5 break-keep font-extrabold tabular-nums text-navy-900">{won(billed)}</p>
             </div>
@@ -118,7 +107,7 @@ export function PortalBilling() {
         </section>
       )}
 
-      <section>
+      <section className="p-card pb-2 sm:pb-3">
         <SectionHead title="정산 내역" />
         {rows.length === 0 ? (
           <LoadGate
@@ -138,15 +127,28 @@ export function PortalBilling() {
               .filter((r, i) => showAll || i < 6 || r.rest > 0)
               .map(({ p, paid, rest, label }) => (
               <li key={p.id} data-pb-row={p.billingMonth} className="py-4">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                  <p className="p-body min-w-0 break-keep font-extrabold">
-                    {/^\d{4}-\d{2}$/.test(p.billingMonth)
-                      ? `${Number(p.billingMonth.slice(0, 4))}년 ${Number(p.billingMonth.slice(5, 7))}월`
-                      : p.billingMonth}{' '}
-                    청구
-                  </p>
-                  {rest > 0 && <span className={`pill ${OWED_PILL}`}>{label}</span>}
-                  <p className="ml-auto shrink-0 text-[1.2rem] font-extrabold tabular-nums text-navy-900">
+                {/*  포털 4차 — 왼쪽에 달 · 상태 알약, 오른쪽에 금액(흔한 앱 청구 목록). */}
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="p-body break-keep font-extrabold">
+                      {/^\d{4}-\d{2}$/.test(p.billingMonth)
+                        ? `${Number(p.billingMonth.slice(0, 4))}년 ${Number(p.billingMonth.slice(5, 7))}월`
+                        : p.billingMonth}{' '}
+                      청구
+                    </p>
+                    <div className="mt-1.5">
+                      {rest > 0 ? (
+                        <span className={`pill ${OWED_PILL}`}>{label}</span>
+                      ) : (
+                        //  다 낸 달도 알약 하나(흔한 앱의 「입금 완료」). 색 + 체크 + 글자.
+                        <span data-pb-paid className="pill bg-emerald-50 text-emerald-800">
+                          <CheckCircle2 size={14} strokeWidth={2.6} aria-hidden="true" />
+                          입금 완료
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="shrink-0 text-[1.2rem] font-extrabold tabular-nums text-navy-900">
                     {won(p.amount)}
                   </p>
                 </div>
@@ -161,12 +163,8 @@ export function PortalBilling() {
                       </p>
                     </>
                   ) : (
-                    //  다 낸 달 — 체크 하나와 글자. 입금액이 청구액과 다를 때만 그 금액을 적습니다.
-                    <p className="p-sub inline-flex items-center gap-1 break-keep">
-                      <CheckCircle2 size={16} strokeWidth={2.6} aria-hidden="true" className="shrink-0 text-emerald-600" />
-                      {label}
-                      {paid !== p.amount && ` · 입금 ${won(paid)}`}
-                    </p>
+                    //  다 낸 달 — 상태는 위 알약이 말합니다. 입금액이 청구액과 다를 때만 그 금액을 적습니다.
+                    paid !== p.amount ? <p className="p-sub break-keep">입금 {won(paid)}</p> : null
                   )}
                   {p.paidAt && <p className="p-sub break-keep">납부일 {prettyDate(p.paidAt)}</p>}
                 </div>
@@ -178,7 +176,7 @@ export function PortalBilling() {
               type="button"
               data-pb-more
               onClick={() => setShowAll(true)}
-              className="mt-2 flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full bg-navy-50 px-4 text-[1.05rem] font-bold text-navy-700 transition hover:bg-navy-100"
+              className="mb-2 mt-1 flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full bg-navy-50 px-4 text-[1.05rem] font-bold text-navy-700 transition hover:bg-navy-100"
             >
               이전 내역 더 보기 ({rows.filter((r, i) => !(i < 6 || r.rest > 0)).length}건)
             </button>
@@ -189,14 +187,17 @@ export function PortalBilling() {
 
       {/*  ⚠ 결제 수단이 아직 없다는 것을 **분명히** 적습니다. 없는 기능을
            있는 것처럼 두면 병원이 여기서 결제를 기다립니다. */}
-      <p data-pb-nopay className="p-sub break-keep">
+      <p data-pb-nopay className="p-sub flex items-start gap-2 break-keep px-1">
+        <Info size={17} strokeWidth={2.4} aria-hidden="true" className="mt-0.5 shrink-0 text-navy-400" />
         지금은 이 화면에서 결제하실 수 없습니다. 입금은 기존과 같이 계좌이체로 진행되며,
+        <span>
         여기서는 청구·입금 상태만 확인하실 수 있습니다.
+        </span>
       </p>
 
       {/*  ── 증빙자료 ── 예전에는 홈의 「증빙자료」 카드(서랍)였습니다. 같은
            내용을 여기로 모았습니다. 서랍(?do=docs)은 예전 링크를 위해 남겨 둡니다. */}
-      <section data-pb-docs>
+      <section data-pb-docs className="p-card">
         <SectionHead title="증빙자료" />
         <ul className="p-list border-t border-navy-100">
           {[
@@ -224,7 +225,7 @@ export function PortalBilling() {
                   onClick={x.onClick}
                   className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-xl px-2 py-3.5 text-left transition hover:bg-navy-50"
                 >
-                  <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-50 text-navy-600">
+                  <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-teal-50 text-teal-700">
                     <Icon size={21} strokeWidth={2.2} />
                   </span>
                   <span className="min-w-0 flex-1">
