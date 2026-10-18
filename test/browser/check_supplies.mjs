@@ -263,7 +263,9 @@ if (!skipIfHidden('supplies', '5. 사무실 소모품 주문 → 매출')) {
   wire(ctx, { role: 'admin', calls, orders })
   const p = await open(ctx, '/supplies')
   //  첫 화면은 「상품」입니다(6-f). 주문 처리는 칩을 눌러 들어갑니다.
-  await p.click('button:has-text("주문")')
+  //  ⚠ 0142 부터 왼쪽 메뉴에 「소모품 주문·결제」(추가 개발 예정) 단추가 먼저 있습니다 —
+  //    글자로 찾으면 그쪽을 누릅니다. 화면 안의 「주문」 칩을 콕 집어 누릅니다.
+  await p.click('main button:has([data-supply-tab="주문"])')
   await p.waitForSelector('[data-order="o1"]', { timeout: 20000 })
   const row = flat(await p.textContent('[data-order="o1"]'))
   ok(/가나요양병원/.test(row), '어느 병원인지')
@@ -456,7 +458,7 @@ if (!skipIfHidden('supplies', '사무실 소모품 화면 검사 4')) {
   const reddish = rgb.length === 3 && rgb[0] > 150 && rgb[0] > rgb[1] * 1.8 && rgb[0] > rgb[2] * 1.8
   ok(reddish, '**처리할 주문이 있으면 눈에 띄게** (붉은 배지)', bg)
   //  실제로 그 칸으로 갈 수 있는가.
-  await p.click('button:has-text("주문")')
+  await p.click('main button:has([data-supply-tab="주문"])')
   await p.waitForSelector('[data-order="o1"]', { timeout: 20000 })
   ok(true, '칩을 누르면 주문 처리 화면으로 들어감')
   await ctx.close()
