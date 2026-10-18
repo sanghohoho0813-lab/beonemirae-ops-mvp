@@ -271,13 +271,15 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
   //  ⚠ 자리가 화면 폭에 따라 다릅니다 — PC 는 인사 줄 오른쪽, 폰은 오늘
   //    할 일 아래(폰에서 위에 두면 오늘 할 일이 첫 화면에서 밀립니다).
   //    그래서 **보이는 것**을 셉니다. DOM 에 몇 개 있는지가 아닙니다.
+  //  ⚠ AX 디자인 2차 — 대표님: 「PC 에서 병원 화면으로 가는 단추가 사라졌어 — 전부 다」.
+  //    이제 PC 에는 세 군데입니다: 왼쪽 메뉴 맨 위 · 위쪽 흰 바 왼쪽 끝 · 대시보드 인사 줄.
   const shown = p.locator('[data-portal-switch]:visible')
-  ok((await shown.count()) === 1, '**대표님 첫 화면에 「병원이 보는 화면」 단추가 있다**',
+  ok((await shown.count()) >= 1, '**대표님 첫 화면에 「병원이 보는 화면」 단추가 있다**',
     `보이는 것 ${await shown.count()}개`)
   const box = await shown.first().boundingBox()
   ok((box?.height ?? 0) >= 44, '누를 만한 크기', `${Math.round(box?.height ?? 0)}px`)
-  const href = await shown.first().getAttribute('href')
-  ok(href === '/portal', '포털로 간다', String(href))
+  const hrefs = await shown.evaluateAll((els) => els.map((e) => e.getAttribute('href')))
+  ok(hrefs.length > 0 && hrefs.every((h) => h === '/portal'), '포털로 간다 (어느 자리든)', hrefs.join(' · '))
   await ctx.close()
 }
 {
@@ -292,10 +294,19 @@ async function open(path, { role = 'client', w = 1280, inquiries = [], requests 
     //  PC — 첫 화면 안
     const a = await open('/', { role, w: 1440 })
     const pc = a.p.locator('[data-portal-switch]:visible')
-    ok((await pc.count()) === 1, `PC · ${role} — 단추가 보인다`, `${await pc.count()}개`)
+    ok((await pc.count()) >= 1, `PC · ${role} — 단추가 보인다`, `${await pc.count()}개`)
     const y = await pc.first().evaluate((e) => Math.round(e.getBoundingClientRect().top + scrollY))
     ok(y < 400, `**PC · ${role} — 첫 화면 안에 있다**`, `y=${y}px`)
     await a.ctx.close()
+
+    //  PC — **대시보드가 아닌 화면**에서도 (왼쪽 메뉴 · 위쪽 흰 바)
+    for (const path of ['/clients', '/requests']) {
+      const o = await open(path, { role, w: 1440 })
+      const side = await o.p.locator('aside [data-portal-switch-side]:visible').count()
+      const top = await o.p.locator('[data-topbar] [data-portal-switch]:visible').count()
+      ok(side === 1 && top === 1, `PC · ${role} · ${path} — 왼쪽 메뉴와 위쪽 바에 하나씩`, `메뉴 ${side} · 위 ${top}`)
+      await o.ctx.close()
+    }
 
     //  폰 — 「더보기」 안. 대시보드에 두면 오늘 할 일이 밀립니다.
     const m = await open('/more', { role, w: 390 })
