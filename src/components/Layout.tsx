@@ -871,10 +871,7 @@ export function Layout() {
                      ⚠ 이 줄에서 유일하게 **진한 색** 알약입니다 — 상담 자리에서 바로
                        찾아 눌러야 하는 단추라서입니다. */}
                 {/*  화면 폭 3단계 (0141) — 줄 맨 앞. 시계와 「화면 색」은 붙어 있어야 합니다(check_clock). */}
-                {/*  병원이 보는 화면 — 줄 **왼쪽 끝**(me-auto). 오른쪽 도구들과 떨어뜨려
-                   「다른 화면으로 넘어가는 문」으로 읽히게 합니다 (AX 디자인 2차). */}
-              <PortalSwitchButton compact label="병원이 보는 화면" className="me-auto" />
-              <WidthToggle value={contentWidth} onChange={setContentWidth} />
+                <WidthToggle value={contentWidth} onChange={setContentWidth} />
                 {showVisitVideo && (
                   <button
                     type="button"
@@ -921,6 +918,11 @@ export function Layout() {
                   label="사용 후기 남기기 (개발자에게 요청)"
                 />
                 </span>
+                {/*  병원이 보는 화면 (AX 디자인 2차 · 대표님 「전부 다」) — 줄 **맨 끝**입니다.
+                     ⚠ 맨 앞에 뒀더니 줄이 밀려 「방문용 영상 ↔ 시계 ↔ 화면 색」이 서로 다른 줄로
+                       갈라졌습니다(check_clock · check_visit_video). 접히는 줄은 앞에서부터 채워지므로
+                       맨 끝에 두면 앞의 자리는 하나도 안 바뀝니다. */}
+                <PortalSwitchButton compact label="병원이 보는 화면" />
               </div>
             </div>
             <div className="px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px]">
