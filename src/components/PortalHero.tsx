@@ -65,10 +65,13 @@ export function PortalHero({ client, s, lastPickup }: { client: Client; s: Porta
             <p className="p-hero-date mt-2.5 text-navy-900">{prettyDate(s.nextDate)}</p>
             <p className="mt-1 break-keep text-[1.15rem] font-bold leading-snug text-navy-700 sm:text-[1.3rem]">
               {[time, rel && !isToday && !isTomorrow ? rel : null].filter(Boolean).join(' · ')}
-              {cycle && (
-                <span data-hero-cycle className="font-semibold text-navy-500">
+              {/*  기관 구분 · 수거 주기 — 실제로 등록된 값만 (지어낸 기관코드 · 무사고일수 금지, check_portal83) */}
+              {(client.type || cycle) && (
+                <span className="font-semibold text-navy-500">
                   {time || (rel && !isToday && !isTomorrow) ? ' · ' : ''}
-                  {cycle}
+                  {client.type && <span data-hero-type>{client.type}</span>}
+                  {client.type && cycle ? ' · ' : ''}
+                  {cycle && <span data-hero-cycle>{cycle}</span>}
                 </span>
               )}
             </p>

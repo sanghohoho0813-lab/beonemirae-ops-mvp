@@ -96,7 +96,7 @@ export function PortalSwitchButton({
         data-portal-switch
         to={to}
         aria-label={label ?? '병원이 보는 화면 열기'}
-        className={`group flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-[11px] bg-teal-50 px-3 ring-[1.5px] ring-inset ring-teal-300 transition hover:bg-teal-100 active:bg-teal-500 ${className}`}
+        className={`group flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[11px] bg-teal-50 px-3 ring-[1.5px] ring-inset ring-teal-300 transition hover:bg-teal-100 active:bg-teal-500 ${className}`}
       >
         <Building2 size={17} strokeWidth={2.6} className="shrink-0 text-teal-700 group-active:text-white" />
         <span className="whitespace-nowrap text-[0.899rem] font-extrabold text-teal-800 group-active:text-white">
