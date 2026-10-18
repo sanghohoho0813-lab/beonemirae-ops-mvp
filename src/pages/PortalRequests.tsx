@@ -6,7 +6,7 @@ import { usePortalSheet, useRequestDetail } from '../lib/portalSheet'
 import { requestsForClient } from '../lib/ops'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
-import { FeedRow, PortalEmpty } from '../components/portal/PortalUi'
+import { PortalEmpty, PortalPageHead, PortalStickyBar, RequestCard } from '../components/portal/PortalUi'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 요청 내역 (포털 1차 고도화)
@@ -24,6 +24,8 @@ import { FeedRow, PortalEmpty } from '../components/portal/PortalUi'
 //  포털 3차 — 요청마다 큰 카드 + 진행 막대를 그리던 것을 **활동 목록 한 줄**로
 //    바꿨습니다. 목록에는 지금 상태 칩만, 접수 → 처리 완료 단계와 담당자 안내는
 //    줄을 누르면 올라오는 요청 상세에서 봅니다.
+//  포털 3차 시안(적용 · 대표님 「맘에 든다」) — 다시 **주문 내역처럼 요청 하나 = 카드 하나**
+//    (상태 알약 · 얇은 단계 막대 · 비원미래 회신). 새 요청 단추는 폰에서 아래에 늘 떠 있습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Filter = 'all' | 'open' | 'done'
@@ -58,38 +60,8 @@ export function PortalRequests() {
     { v: 'done', l: '완료', n: all.length - openCount },
   ]
 
-  return (
-    <PageShell>
-      <div>
-        <h1 className="t-page text-navy-900">요청 내역</h1>
-        <p className="t-body mt-2.5 break-keep text-navy-500">
-          보내신 요청이 지금 어디까지 진행됐는지 보실 수 있습니다. 전화로 말씀하신 요청도 함께 표시됩니다.
-        </p>
-      </div>
-
-      {/*  새 요청 — 여기서 바로. 홈까지 돌아가지 않으셔도 됩니다. */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <button
-          type="button"
-          data-req-new="urgent"
-          onClick={() => open('urgent')}
-          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-[16px] bg-rose-50 px-3 text-[1.05rem] font-extrabold text-rose-700 transition hover:bg-rose-100"
-        >
-          <Siren size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">긴급수거 요청</span>
-        </button>
-        <button
-          type="button"
-          data-req-new="supply"
-          onClick={() => open('supply')}
-          className="flex min-h-[3.5rem] items-center justify-center gap-2 rounded-[16px] bg-teal-50 px-3 text-[1.05rem] font-extrabold text-teal-800 transition hover:bg-teal-100"
-        >
-          <PackagePlus size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">자재·용기 요청</span>
-        </button>
-      </div>
-
-      {/*  요청이 하나도 없으면 거르기 단추를 안 둡니다 — 「0건」 셋은 소음입니다.
-           포털 2차 — 한 덩어리 「나눔 단추」. 셋 중 하나만 켜진다는 것이 모양으로 보입니다. */}
-      {all.length > 0 && (
+  const filters =
+    all.length > 0 ? (
       //  포털 4차 — 흔한 앱의 거르기 칩(알약 셋). 고른 것은 짙은 면입니다.
       <div role="group" aria-label="요청 상태로 보기" data-req-filters className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -112,7 +84,14 @@ export function PortalRequests() {
           </button>
         ))}
       </div>
-      )}
+    ) : null
+
+  return (
+    <PageShell className="!space-y-4">
+      {/*  요청이 하나도 없으면 거르기 단추를 안 둡니다 — 「0건」 셋은 소음입니다. */}
+      <PortalPageHead title="요청 내역" sub="전화로 말씀하신 요청도 함께 표시됩니다.">
+        {filters}
+      </PortalPageHead>
 
       {rows.length === 0 ? (
         <div className="p-card">
@@ -130,7 +109,7 @@ export function PortalRequests() {
               }
               subtitle={
                 all.length === 0
-                  ? '위 단추로 요청하시면 처리 상태가 여기에 표시됩니다.'
+                  ? '아래 단추로 요청하시면 처리 상태가 여기에 표시됩니다.'
                   : '「전체」를 누르면 모든 요청을 보실 수 있습니다.'
               }
             />
@@ -138,12 +117,32 @@ export function PortalRequests() {
         />
         </div>
       ) : (
-        <ul data-req-list className="p-list p-card py-1 sm:py-2">
+        <ul data-req-list className="grid gap-3 lg:grid-cols-2">
           {rows.map((r) => (
-            <FeedRow key={r.id} r={r} preview onOpen={() => detail.open(r.id)} />
+            <RequestCard key={r.id} r={r} onOpen={() => detail.open(r.id)} />
           ))}
         </ul>
       )}
+
+      {/*  새 요청 — 여기서 바로. 홈까지 돌아가지 않으셔도 됩니다. */}
+      <PortalStickyBar>
+        <button
+          type="button"
+          data-req-new="urgent"
+          onClick={() => open('urgent')}
+          className="flex min-h-[3.5rem] shrink-0 items-center justify-center gap-2 rounded-[16px] bg-rose-50 px-4 text-[1.05rem] font-extrabold text-rose-700 transition hover:bg-rose-100 sm:px-6"
+        >
+          <Siren size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">긴급수거</span>
+        </button>
+        <button
+          type="button"
+          data-req-new="supply"
+          onClick={() => open('supply')}
+          className="flex min-h-[3.5rem] flex-1 items-center justify-center gap-2 rounded-[16px] bg-teal-600 px-3 text-[1.05rem] font-extrabold text-white transition hover:bg-teal-700 sm:flex-none sm:px-6"
+        >
+          <PackagePlus size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0" /> <span className="break-keep">자재·용기 요청</span>
+        </button>
+      </PortalStickyBar>
     </PageShell>
   )
 }

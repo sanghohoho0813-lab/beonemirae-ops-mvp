@@ -141,7 +141,8 @@ for (const [role, path, label] of PC_SCREENS) {
 //   두면 click 이 안 나가므로 화면이 안 바뀝니다.
 for (const [role, path, sel, label] of [
   ['field', '/collection', '.btn-primary', '수거 입력 · 주 단추'],
-  ['client', '/portal', '[data-portal-quick] button, [data-portal-quick] a, .pressable', '병원 첫 화면 · 빠른 실행'],
+  //  포털 3차 — 빠른 실행이 아이콘 8칸 한 판(data-portal-grid)이 됐습니다. 고르는 자리만 바꿉니다.
+  ['client', '/portal', '[data-portal-grid] [data-portal-action], [data-portal-quick] button, [data-portal-quick] a, .pressable', '병원 첫 화면 · 빠른 실행'],
 ]) {
   const { ctx, p } = await open(role, 390, path)
   const box = await p.evaluate((sel) => {

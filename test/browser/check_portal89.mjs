@@ -61,25 +61,30 @@ async function open(path, role, w = 1440, extra = {}) {
   await ctx.close()
 }
 
-// ── ② 큰 단추 둘 — 서로 구분되고, 바탕은 흰색 ──────────────────────────────
+// ── ② 빠른 메뉴 — 긴급수거 · 자재·용기가 구분되고, 바탕은 흰색 ──────────────
 //    포털 1차 고도화 — 대표님 브리프: 「가장 크게 보이는 주요 버튼은 긴급수거
 //    요청 · 자재·용기 요청 두 개 … 두 버튼은 명확히 구분되고 쉽게 누를 수
 //    있어야 한다」. 「카드 전체를 강한 색으로 칠하지 않는다」(0089)는 그대로.
+//    ⚠ 포털 3차 **시안 적용**(대표님 승인 「둘 다 실제로 적용해줘」) — 큰 단추 둘 + 칸 넷이
+//      레퍼런스처럼 **같은 크기 아이콘 8칸 한 판**이 됐습니다. 그래서 「큰 단추가 더 크다」는
+//      재지 않고, 남은 뜻(긴급수거가 맨 앞 · 두 요청의 색이 다름 · 흰 바탕 · 누르기 쉬운 크기)을 잽니다.
 {
   const { ctx, p } = await open(HOME, 'admin')
-  const big = p.locator('[data-card-tone]')
-  ok((await big.count()) === 2, `큰 단추가 둘이다 (${await big.count()}개)`)
-  const labels = await big.evaluateAll((els) => els.map((e) => e.getAttribute('data-portal-action')))
-  ok(labels[0] === '긴급수거 요청' && labels[1] === '자재·용기 요청', '긴급수거 요청 · 자재·용기 요청 순서', labels.join(','))
-  const tones = await big.evaluateAll((els) => els.map((e) => e.dataset.cardTone))
-  ok(new Set(tones).size === 2, `두 단추의 색이 서로 다르다`, tones.join(','))
-  const bg = await big.first().evaluate((el) => getComputedStyle(el).backgroundColor)
+  const tiles = p.locator('[data-portal-grid] [data-card-tone]')
+  ok((await tiles.count()) === 8, `빠른 메뉴가 8칸이다 (${await tiles.count()}개)`)
+  const labels = await tiles.evaluateAll((els) => els.map((e) => e.getAttribute('data-portal-action')))
+  ok(labels[0] === '긴급수거 요청' && labels.includes('자재·용기 요청'), '긴급수거 요청이 맨 앞 · 자재·용기 요청도 있다', labels.join(','))
+  const toneOf = (label) => p.locator(`[data-portal-action="${label}"]`).getAttribute('data-card-tone')
+  const t1 = await toneOf('긴급수거 요청')
+  const t2 = await toneOf('자재·용기 요청')
+  ok(t1 && t2 && t1 !== t2, '두 요청의 색이 서로 다르다', `${t1},${t2}`)
+  const bg = await p.locator('[data-portal-grid]').evaluate((el) => getComputedStyle(el).backgroundColor)
   const m = bg.match(/\d+/g).map(Number)
-  ok(m[0] > 240 && m[1] > 240 && m[2] > 240, '단추 바탕은 흰색이다 (색을 칠하지 않았다)', bg)
-  //  ⚠ 큰 단추는 정말 커야 합니다 — 작은 단추(추가수거 · 문의)보다 확실히.
-  const bh = (await big.first().boundingBox()).height
-  const sh = (await p.locator('[data-portal-action="문의하기"]').boundingBox()).height
-  ok(bh >= sh * 1.4, '큰 단추가 작은 단추보다 확실히 크다', `${Math.round(bh)} vs ${Math.round(sh)}px`)
+  ok(m[0] > 240 && m[1] > 240 && m[2] > 240, '빠른 메뉴 바탕은 흰색이다 (색을 칠하지 않았다)', bg)
+  const own = await p.locator('[data-portal-action="긴급수거 요청"]').evaluate((el) => getComputedStyle(el).backgroundColor)
+  ok(own === 'rgba(0, 0, 0, 0)' || /255, 255, 255/.test(own), '칸 자체도 강한 색으로 칠하지 않았다', own)
+  const box = await p.locator('[data-portal-action="긴급수거 요청"]').boundingBox()
+  ok(box.height >= 64 && box.width >= 64, '누르기 쉬운 크기 (64px 이상)', `${Math.round(box.width)}×${Math.round(box.height)}px`)
   await ctx.close()
 }
 

@@ -217,6 +217,125 @@ export function FeedRow({ r, onOpen, preview = false }: { r: RequestItem; onOpen
   )
 }
 
+/**
+ * 접수 → 처리 완료 — 얇은 막대 네 칸 + 이름 (포털 3차 시안 · 요청 카드용).
+ *  ⚠ 단계는 **지금 상태 그대로**입니다. 지어낸 중간 단계(기사 출발 등)는 없습니다.
+ */
+export function StepBar({ status }: { status: string }) {
+  const at = portalStepIndex(status)
+  return (
+    <span
+      data-step-bar
+      role="img"
+      aria-label={`${PORTAL_STEPS.length}단계 중 ${at + 1}단계 ${portalStatusLabel(status)}`}
+      className="block"
+    >
+      <span aria-hidden="true" className="flex gap-1">
+        {PORTAL_STEPS.map((x, i) => (
+          <span key={x.status} className={`h-1.5 flex-1 rounded-full ${i <= at ? 'bg-teal-600' : 'bg-navy-100'}`} />
+        ))}
+      </span>
+      <span aria-hidden="true" className="mt-1.5 flex justify-between text-[0.9rem] font-semibold text-navy-500">
+        {PORTAL_STEPS.map((x, i) => (
+          <span key={x.status} className={i === at ? 'font-extrabold text-teal-700' : ''}>
+            {x.label}
+          </span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+/**
+ * 요청 한 건 = 카드 하나 (포털 3차 시안 — 주문 내역처럼).
+ *
+ *  [상태 알약]                      어제 16:15
+ *  [아이콘] 긴급수거 요청
+ *           보관 용량 부족 · 격리 박스 2개
+ *  ▬▬▬ ▬▬▬ ▬▬▬ ─── 접수 · 확인 중 · 일정 확정 · 처리 완료
+ *  ┌ 비원미래 · 20일(화) 오후에 수거하겠습니다. ┐   ← 회신이 있을 때만
+ *
+ *  ⚠ 카드 전체가 단추입니다 — 누르면 지금처럼 요청 상세가 열립니다(data-req-open).
+ */
+export function RequestCard({ r, onOpen }: { r: RequestItem; onOpen: () => void }) {
+  return (
+    <li data-req-row={r.id}>
+      <button
+        type="button"
+        data-req-open={r.id}
+        onClick={onOpen}
+        className="p-card block w-full space-y-3 text-left transition hover:bg-navy-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+      >
+        <span className="flex items-center justify-between gap-3">
+          <StatusChip status={r.status} />
+          <span className="p-sub flex items-center gap-1.5 tabular-nums">
+            {r.source === 'staff' && (
+              <span className="inline-flex items-center gap-1">
+                <Phone size={14} strokeWidth={2.5} aria-hidden="true" /> 전화 접수 ·
+              </span>
+            )}
+            {friendlyWhen(r.when, today())}
+          </span>
+        </span>
+        <span className="flex items-center gap-3.5">
+          <KindIcon type={r.type} size="lg" />
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="p-body font-extrabold">{portalKindLabel(r.type)}</span>
+              {r.urgent && r.type !== '긴급수거' && <span className="pill bg-rose-50 text-rose-700">급함</span>}
+            </span>
+            {r.content && <span className="p-sub mt-0.5 block truncate">{r.content.split('\n')[0]}</span>}
+          </span>
+        </span>
+        <StepBar status={r.status} />
+        {r.reply && (
+          <span data-req-card-reply className="p-sub block break-keep rounded-[14px] bg-navy-50 px-3.5 py-3 text-navy-700">
+            <b className="text-navy-900">비원미래</b> · {r.reply}
+          </span>
+        )}
+      </button>
+    </li>
+  )
+}
+
+/**
+ * 하위 화면 머리 — 앱의 윗줄처럼 **제목 한 줄 + 칩** (포털 3차 시안).
+ *
+ *  예전에는 「병원 › 화면」 줄 아래에 큰 제목 + 두 줄 설명문이 있어 홈페이지처럼
+ *  읽혔습니다. 폰에서는 머리띠 바로 아래 흰 띠 하나(병원 › 화면 줄과 이어짐),
+ *  넓은 화면에서는 둥근 흰 칸입니다.
+ *  ⚠ 설명문은 없애지 않고 한 줄 보조 글자로 줄였습니다(sub).
+ */
+export function PortalPageHead({ title, sub, children }: { title: string; sub?: ReactNode; children?: ReactNode }) {
+  return (
+    //  ⚠ 폰에서 흰 띠를 화면 끝까지 — 음수 여백(-mx-4)으로 늘이면 본문이 **가로로 18px 밀렸습니다**
+    //    (check_flow390 「칸 안에서도 가로로 안 밀림」). 옆은 그림자로 칠합니다 — 자리를 차지하지 않습니다.
+    <div data-portal-page-head className="-mt-5 bg-white pb-4 pt-1 shadow-[-1rem_0_0_white,1rem_0_0_white] sm:mt-0 sm:rounded-[20px] sm:px-5 sm:pb-5 sm:pt-4 sm:shadow-none">
+      <h1 className="break-keep text-[1.6rem] font-extrabold leading-tight tracking-tight text-navy-900 sm:text-[1.9rem]">{title}</h1>
+      {sub && <p className="p-sub mt-1 break-keep">{sub}</p>}
+      {children && <div className="mt-3.5">{children}</div>}
+    </div>
+  )
+}
+
+/**
+ * 아래 고정 단추 줄 (포털 3차 시안) — 폰에서는 아래 메뉴 바로 위에 늘 떠 있고,
+ * 넓은 화면에서는 제자리(본문 흐름)에 놓입니다.
+ *  ⚠ 아래 메뉴 높이(58px + 안전 영역)만큼 띄웁니다. 본문 아래 여백(40vh)이 있어
+ *    마지막 카드가 가려지지 않습니다.
+ */
+export function PortalStickyBar({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-portal-sticky
+      className="fixed inset-x-0 z-20 flex gap-2.5 border-t border-navy-100 bg-white/95 px-4 py-3 backdrop-blur-lg sm:static sm:z-auto sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
+      style={{ bottom: 'calc(59px + env(safe-area-inset-bottom))' }}
+    >
+      {children}
+    </div>
+  )
+}
+
 /** 섹션 머리 — 칸(카드)이 아니라 **제목 한 줄**로 나눕니다 */
 export function SectionHead({
   title,

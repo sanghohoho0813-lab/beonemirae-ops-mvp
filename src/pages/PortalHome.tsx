@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CLIENT_TEL } from '../lib/brand'
-import { AlertTriangle, Check, CheckCircle2, ChevronRight, Hospital, Info, Sparkles } from 'lucide-react'
+import { AlertTriangle, BarChart3, Check, CheckCircle2, ChevronRight, Hospital, Info, Sparkles } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { usePortalSheet, useRequestDetail } from '../lib/portalSheet'
@@ -11,10 +11,11 @@ import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { portalTodos } from '../lib/portalActivity'
 import { collectionHistory } from '../lib/ops'
-import { prettyDate, today, weight, won } from '../lib/format'
+import { prettyDate, thisMonth, today, weight, won } from '../lib/format'
+import { clientMonthlyReport } from '../lib/insights'
 import { PortalHero, PortalActions } from '../components/PortalHero'
 import { PortalFooter } from '../components/PortalFooter'
-import { FeedRow, QuietEmpty, SectionHead } from '../components/portal/PortalUi'
+import { QuietEmpty, RequestCard, SectionHead } from '../components/portal/PortalUi'
 import { Stagger, StaggerItem } from '../components/motion'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,6 +76,9 @@ export function PortalHome() {
       .slice(0, 3)
   }, [data, client])
 
+  //  포털 3차 시안 — 「이번 달 배출 리포트」 띠. 이번 달에 실제 수거가 있을 때만.
+  const report = useMemo(() => (client ? clientMonthlyReport(data, client, thisMonth()) : null), [data, client])
+
   if (!client || !s) {
     //  ⚠ 자료가 오기 전에 「없다」고 하면 연결된 병원도 전화를 겁니다.
     return (
@@ -96,7 +100,7 @@ export function PortalHome() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className={`${COLS} gap-y-3`}>
-        <PortalHero client={client} s={s} />
+        <PortalHero client={client} s={s} lastPickup={recentPickups[0]?.date ?? null} />
         <PortalActions
           onUrgent={() => open('urgent')}
           onSupply={() => open('supply')}
@@ -104,6 +108,8 @@ export function PortalHome() {
           onAsk={() => open('ask')}
           onReport={() => open('report')}
           onDocs={() => open('docs')}
+          onBilling={() => navigate(path('billing'))}
+          onHistory={() => navigate(path('history'))}
         />
       </div>
 
@@ -146,21 +152,47 @@ export function PortalHome() {
         </section>
       )}
 
+      {/*  ── 이번 달 배출 리포트 ── 실제 수거가 있을 때만 (지어낸 숫자 없음) */}
+      {report && report.visits > 0 && (
+        <button
+          type="button"
+          data-portal-report-banner
+          onClick={() => open('report')}
+          className="flex w-full items-center gap-3.5 rounded-[18px] bg-violet-50 px-4 py-3.5 text-left transition hover:bg-violet-100"
+        >
+          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-violet-700">
+            <BarChart3 size={21} strokeWidth={2.3} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="p-body block font-extrabold">이번 달 배출 리포트</span>
+            <span className="p-sub mt-0.5 block tabular-nums">
+              {Number(report.month.slice(5))}월 지금까지 {weight(report.totalKg)} · {report.visits}번 수거
+            </span>
+          </span>
+          <ChevronRight size={19} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-navy-400" />
+        </button>
+      )}
+
       {/*  ── 최근 요청 · 최근 수거 ── 상자 없이, 제목과 구분선으로.
            0103 — 두 칸이 차례로 떠오릅니다(움직임 줄이기 설정에서는 꺼짐). */}
       <Stagger data-portal-cards className={`${COLS} items-start gap-y-5`}>
         <StaggerItem>
-          <section data-portal-requests data-tour="portal-requests" className="p-card scroll-mt-4 pb-2 sm:pb-3">
-            <SectionHead
-              title="최근 요청"
-              more={{ label: '전체 보기', onClick: () => navigate(path('requests')), data: 'requests' }}
-            />
+          {/*  포털 3차 시안 — 요청 하나 = 카드 하나 (상태 알약 · 단계 막대 · 회신). 최근 세 건. */}
+          <section data-portal-requests data-tour="portal-requests" className="scroll-mt-4">
+            <div className="px-1">
+              <SectionHead
+                title="최근 요청"
+                more={{ label: `전체 ${s.allRequests.length}`, onClick: () => navigate(path('requests')), data: 'requests' }}
+              />
+            </div>
             {s.allRequests.length === 0 ? (
-              <QuietEmpty>최근 요청이 없습니다.</QuietEmpty>
+              <div className="p-card">
+                <QuietEmpty>최근 요청이 없습니다.</QuietEmpty>
+              </div>
             ) : (
-              <ul className="p-list">
-                {s.allRequests.slice(0, 5).map((r) => (
-                  <FeedRow key={r.id} r={r} onOpen={() => detail.open(r.id)} />
+              <ul className="mt-1 space-y-3">
+                {s.allRequests.slice(0, 3).map((r) => (
+                  <RequestCard key={r.id} r={r} onOpen={() => detail.open(r.id)} />
                 ))}
               </ul>
             )}

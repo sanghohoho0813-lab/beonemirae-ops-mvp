@@ -13,6 +13,8 @@ import * as W from './walk_lib.mjs'
 //      브리프 「의미 없는 애니메이션 X」. 예전 28초 드리프트를 뺐습니다.
 //   ② 「최근 요청 · 최근 수거」 두 칸이 차례로 떠오르고, 0.9초 안에 다 떠 있다
 //   ③ 큰 단추에 올리면 바탕·아이콘·화살표가 200ms 안에 살짝 움직인다
+//      (포털 3차 — 큰 단추 둘 + 칸 넷이 **아이콘 8칸 한 판**이 됐습니다. 칸에는 화살표도
+//       뜨는 카드도 없어 「바탕이 물들고 아이콘이 살짝 커진다」만 잽니다.)
 //   ④ 위 탭·왼쪽 메뉴의 강조선이 **하나만** 있고, 다른 곳을 누르면 그리로 간다
 //   ⑤ 상품 카드에 올리면 사진이 살짝 다가온다
 //   ⑥ Esc 는 **맨 위 창 하나만** 닫는다 (내부 창도 이제 Esc 로 닫힌다)
@@ -72,9 +74,10 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
   const wrappers = await p.locator('[data-portal-cards] > div[style]').count()
   ok(wrappers === 2, '② 두 칸이 차례로 떠오르는 틀 안에 있다', `${wrappers}개`)
   ok(faded === 0, '② 0.9초 안에 두 칸이 전부 떠 있다', `${faded}개 아직 흐림`)
-  const heights = await p.evaluate(() => [...document.querySelectorAll('[data-card-tone]')]
+  //  포털 3차 — 빠른 메뉴 8칸(data-portal-grid)이 모두 같은 높이
+  const heights = await p.evaluate(() => [...document.querySelectorAll('[data-portal-grid] [data-card-tone]')]
     .map((el) => Math.round(el.getBoundingClientRect().height)))
-  ok(heights.length === 2 && new Set(heights).size === 1, '② 큰 단추 둘의 높이가 같다', heights.join('·'))
+  ok(heights.length === 8 && new Set(heights).size === 1, '② 빠른 메뉴 8칸의 높이가 같다', heights.join('·'))
 
   //  ③ 올리면 살짝 움직인다 — 200ms 안
   const card = '[data-portal-action]'
@@ -92,15 +95,14 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
     card: await tf(p, card), icon: await tf(p, `${card} [data-action-icon]`), arrow: await tf(p, `${card} [data-action-arrow]`),
     bg: await bgOf(),
   }
-  ok(before.card !== after.card, '③ 올리면 단추가 살짝 뜬다')
   ok(before.icon !== after.icon, '③ 아이콘이 살짝 커진다', `${before.icon} → ${after.icon}`)
-  ok(before.arrow !== after.arrow, '③ 화살표가 오른쪽으로 한 걸음 간다', `${before.arrow} → ${after.arrow}`)
   ok(before.bg !== after.bg, '③ 바탕이 옅게 물든다', `${before.bg} → ${after.bg}`)
   //  과하지 않은가 — 아이콘은 1.1배 미만, 화살표는 8px 미만
   const scale = Number((after.icon ?? '').match(/matrix\(([\d.]+)/)?.[1] ?? 1)
   const dx = Number((after.arrow ?? '').match(/matrix\([^)]*,\s*([-\d.]+),\s*[-\d.]+\)$/)?.[1] ?? 0)
   ok(scale > 1 && scale < 1.1, '③ 아이콘은 1.1배 미만 (과장 금지)', String(scale))
-  ok(dx > 0 && dx < 8, '③ 화살표는 8px 미만 (과장 금지)', String(dx))
+  //  화살표가 있는 칸이면(예전 큰 단추) 그 움직임도 8px 미만
+  if (before.arrow != null) ok(dx > 0 && dx < 8, '③ 화살표는 8px 미만 (과장 금지)', String(dx))
   const dur = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('[data-portal-action] [data-action-icon]')).transitionDuration) * 1000)
   ok(dur >= 140 && dur <= 250, '③ 140~250ms 안에 움직인다', `${dur}ms`)
   await p.mouse.move(2, 2)

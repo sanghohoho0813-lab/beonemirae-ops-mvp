@@ -8,7 +8,7 @@ import { LoadGate } from '../components/LoadState'
 import { Stagger, StaggerItem } from '../components/motion'
 import { PaymentBadge } from '../components/Badge'
 import { DunningPanel } from '../components/DunningPanel'
-import { ageOf } from '../lib/dunning'
+import { ageOf, dunningSummary } from '../lib/dunning'
 import { koMatch } from '../lib/koSearch'
 import { outstandingTotal, outstandingOf, paidTotalOf } from '../lib/selectors'
 import { strandedReceipts } from '../lib/moneyGuard'
@@ -107,6 +107,8 @@ export function Receivables() {
     .reduce((s, p) => s + paidTotalOf(data, p), 0)
   //  위 세 숫자 어디에도 안 잡히는 돈이 있는지 — 취소한 청구에 달린 입금.
   const stranded = useMemo(() => strandedReceipts(data), [data])
+  //  AX 3차 — PC 숫자 카드의 「독촉 대상」. 아래 독촉 대상 칸(DunningPanel)과 같은 계산입니다.
+  const dunning = useMemo(() => dunningSummary(data), [data])
   const strandedSum = stranded.reduce((s, r) => s + r.paid, 0)
 
   //  0141 발표 중 — 실제 거래처의 청구 · 입금 목록이 프로젝터에 비치지 않게 **독촉 대상 칸만**
@@ -130,19 +132,30 @@ export function Receivables() {
         </div>
       )}
 
-      {/* 미수금 요약 — 하나의 카드로 압축 */}
-      <div className="card mb-5 p-5">
-        <p className="text-[1.03rem] font-semibold text-navy-400">미수금 합계</p>
-        <p className="mt-1 text-[1.9rem] font-extrabold leading-none tracking-tight text-rose-500">{won(outstanding)}</p>
-        <p className="mt-1.5 text-[0.98rem] text-navy-400">부분입금을 뺀 실제 못 받은 금액</p>
-        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-3">
-          <div>
-            <p className="text-[0.98rem] font-semibold text-navy-400">입금 완료</p>
-            <p className="mt-0.5 text-base font-extrabold text-emerald-600">{won(collected)}</p>
+      {/* 미수금 요약 — 폰은 하나의 카드로 압축.
+          AX 3차 — PC 는 같은 칸들을 **숫자 카드 4칸**으로 펼칩니다(미수금 합계 · 독촉 대상 · 입금 완료 · 총 청구액).
+          ⚠ 숫자는 그대로입니다 — 같은 변수(outstanding · collected · billedTotal)를 같은 자리에서 씁니다. */}
+      <div data-recv-kpis className="card mb-5 p-5 lg:grid lg:grid-cols-4 lg:gap-3 lg:!border-0 lg:!bg-transparent lg:p-0 lg:!shadow-none">
+        <div className="lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+          <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">미수금 합계</p>
+          <p className="mt-1 text-[1.9rem] font-extrabold leading-none tracking-tight text-rose-500 lg:whitespace-nowrap lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-rose-700">{won(outstanding)}</p>
+          <p className="mt-1.5 text-[0.98rem] text-navy-400 lg:mt-0.5 lg:text-[0.843rem] lg:text-navy-500">부분입금을 뺀 실제 못 받은 금액</p>
+        </div>
+        <div className="hidden lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline lg:block">
+          <p className="text-[0.899rem] font-semibold text-navy-500">독촉 대상</p>
+          <p className="text-[1.348rem] font-extrabold leading-tight tabular-nums text-navy-900 2xl:text-[1.573rem]">
+            {dunning.rows.length}<small className="ms-1 text-[0.899rem] font-bold text-navy-500">곳</small>
+          </p>
+          <p className="text-[0.843rem] text-navy-500">지난달 이전 청구가 남은 곳</p>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-3 lg:contents">
+          <div className="lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+            <p className="text-[0.98rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">입금 완료</p>
+            <p className="mt-0.5 text-base font-extrabold text-emerald-600 lg:whitespace-nowrap lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-emerald-700">{won(collected)}</p>
           </div>
-          <div>
-            <p className="text-[0.98rem] font-semibold text-navy-400">총 청구액</p>
-            <p className="mt-0.5 text-base font-extrabold text-navy-800">{won(billedTotal)}</p>
+          <div className="lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+            <p className="text-[0.98rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">총 청구액</p>
+            <p className="mt-0.5 text-base font-extrabold text-navy-800 lg:whitespace-nowrap lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-navy-900">{won(billedTotal)}</p>
           </div>
         </div>
       </div>
@@ -190,8 +203,9 @@ export function Receivables() {
       {/*  독촉 대상 — 오래 밀린 곳부터. 미수가 없으면 아무것도 그리지 않습니다. */}
       <DunningPanel />
 
-      {/* 거래처 검색 · 줄 세우기 (0131) */}
-      <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+      {/* 거래처 검색 · 줄 세우기 (0131) — AX 3차: PC 에서는 칩 줄들을 표 위 도구 칸 하나로 */}
+      <div data-recv-tools className="lg:mb-3 lg:space-y-2 lg:rounded-[14px] lg:bg-white lg:px-3 lg:py-2.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+      <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:items-center lg:mb-0 lg:flex-wrap lg:gap-x-5">
         <input
           data-recv-search
           className="field-input sm:max-w-sm"
@@ -207,16 +221,16 @@ export function Receivables() {
           ))}
         </div>
       </div>
-      {/* 상태 필터 칩 */}
-      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+        {/* 상태 필터 칩 */}
+        <div className="mb-2.5 flex flex-wrap items-center gap-2 lg:mb-0">
         {FILTERS.map((f) => (
           <FilterChip key={f} active={filter === f} onClick={() => setFilter(f)}>
             {f}
           </FilterChip>
         ))}
-      </div>
+        </div>
       {/* 청구월 필터 칩 (가로 스크롤) */}
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:mb-0 lg:px-0">
         <FilterChip active={month === '전체'} onClick={() => setMonth('전체')}>
           전체 청구월
         </FilterChip>
@@ -225,6 +239,7 @@ export function Receivables() {
             {m}
           </FilterChip>
         ))}
+      </div>
       </div>
 
       {data.payments.length === 0 ? (
@@ -245,7 +260,18 @@ export function Receivables() {
         <p data-recv-count className="mb-2 px-1 t-muted">
           {list.length > shown ? `${num(list.length)}건 중 ${num(shown)}건` : `${num(list.length)}건 전부`}
         </p>
-        <Stagger className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:items-start">
+        {/*  AX 3차 — PC 에서는 청구 한 건 = 표 한 줄(같은 카드의 칸 배치만 바꿈 · Clients 와 같은 방식).
+             남은 돈이 있는 줄은 옅은 강조색 바탕. */}
+        <div className="lg:overflow-hidden lg:rounded-[14px] lg:bg-white lg:ring-1 lg:ring-inset lg:ring-cardline">
+        <div aria-hidden="true" data-recv-table-head className={`hidden gap-x-4 border-b border-cardline bg-navy-50 px-4 py-2.5 text-[0.843rem] font-bold text-navy-500 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,2.4fr)]`}>
+          <span>거래처</span>
+          <span>청구월 · 방법</span>
+          <span className="text-right">청구액</span>
+          <span className="text-right">입금</span>
+          <span className="text-right">남은 돈</span>
+          <span className="text-right">처리</span>
+        </div>
+        <Stagger className="grid grid-cols-1 gap-2.5 lg:gap-0 lg:divide-y lg:divide-navy-50">
           {visible.map((p) => {
             const client = clientById(p.clientId)
             //  얼마나 밀렸는지 — 청구월 경과(사실)와, 거래처에 결제일을 넣어
@@ -255,10 +281,15 @@ export function Receivables() {
               restOf(p) > 0 && p.status !== '취소' &&
               (age.monthsOld >= 1 || (age.daysPastDue != null && age.daysPastDue > 0))
             return (
-              <StaggerItem key={p.id} className="card p-4">
+              <StaggerItem
+                key={p.id}
+                className={`card p-4 lg:grid lg:items-center lg:gap-x-4 lg:!rounded-none lg:!border-0 lg:px-4 lg:py-2 lg:!shadow-none lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,2.4fr)] ${
+                  restOf(p) > 0 && p.status !== '취소' ? 'lg:!bg-teal-50/50' : 'lg:!bg-transparent'
+                }`}
+              >
                 {/* 업체명 — 항상 최우선, 첫 줄 전체를 사용해 잘리지 않게 */}
-                <div className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 flex-1 font-extrabold text-navy-900">{client?.name ?? '알 수 없음'}</span>
+                <div className="flex items-start justify-between gap-2 lg:min-w-0 lg:flex-wrap lg:items-center lg:justify-start lg:gap-1.5">
+                  <span className="min-w-0 flex-1 font-extrabold text-navy-900 lg:flex-none lg:truncate lg:text-[0.899rem]">{client?.name ?? '알 수 없음'}</span>
                   {late && (
                     <span data-late={p.id} className="pill shrink-0 bg-rose-100 text-rose-600">
                       {age.daysPastDue != null && age.daysPastDue > 0
@@ -269,13 +300,20 @@ export function Receivables() {
                   <PaymentBadge status={p.status} />
                 </div>
                 {/* 금액 + 청구 정보 */}
-                <div className="mt-2 flex items-end justify-between gap-3">
-                  <p className="t-caption">
+                <div className="mt-2 flex items-end justify-between gap-3 lg:contents">
+                  <p className="t-caption lg:min-w-0 lg:truncate lg:text-[0.899rem]">
                     {p.billingMonth} 청구 · {p.method}
                     {p.memo && ` · ${p.memo}`}
                   </p>
-                  <p className="shrink-0 text-right text-lg font-extrabold text-navy-900">{won(p.amount)}</p>
+                  <p className="shrink-0 text-right text-lg font-extrabold text-navy-900 lg:text-[0.899rem] lg:tabular-nums">{won(p.amount)}</p>
                 </div>
+                {/*  PC 표 칸 — 입금 · 남은 돈 (paidTotalOf · outstandingOf, 아래 폰 줄과 같은 계산) */}
+                <p className="hidden text-right text-[0.899rem] font-semibold tabular-nums text-navy-600 lg:block">
+                  {paidOf(p) > 0 ? won(paidOf(p)) : '—'}
+                </p>
+                <p className={`hidden text-right text-[0.899rem] tabular-nums lg:block ${restOf(p) > 0 && p.status !== '취소' ? 'font-extrabold text-rose-700' : 'font-medium text-navy-400'}`}>
+                  {restOf(p) > 0 && p.status !== '취소' ? won(restOf(p)) : '—'}
+                </p>
 
                 {/*
                   부분입금이 있으면 받은 돈과 남은 돈을 함께 보여 줍니다.
@@ -283,24 +321,24 @@ export function Receivables() {
                   받을 것처럼 읽힙니다.
                 */}
                 {paidOf(p) > 0 && restOf(p) > 0 && (
-                  <p data-partial={p.id} className="mt-1 text-right text-[1.0rem] font-semibold text-navy-500">
+                  <p data-partial={p.id} className="mt-1 text-right text-[1.0rem] font-semibold text-navy-500 lg:hidden">
                     받음 {won(paidOf(p))} · <b className="text-rose-500">남은 {won(restOf(p))}</b>
                   </p>
                 )}
 
                 {/* 취소한 청구는 더 손대지 않습니다 — 기록으로만 남습니다 */}
-                {restOf(p) > 0 && p.status !== '취소' && (
-                  <div className="mt-3 flex items-center justify-end gap-2">
+                {restOf(p) > 0 && p.status !== '취소' ? (
+                  <div className="mt-3 flex items-center justify-end gap-2 lg:col-start-6 lg:mt-0 lg:gap-1.5">
                     {p.status === '미수금' && (
                       <button
-                        className="rounded-full bg-navy-50 px-4 py-2 text-[1.08rem] font-bold text-navy-500 transition active:scale-95"
+                        className="whitespace-nowrap rounded-full bg-navy-50 px-4 py-2 text-[1.08rem] font-bold text-navy-500 transition active:scale-95 lg:rounded-[10px] lg:px-3 lg:py-1.5 lg:text-[0.899rem]"
                         onClick={() => updatePayment(p.id, { status: '확인필요' })}
                       >
                         확인필요
                       </button>
                     )}
                     <button
-                      className="flex items-center gap-1.5 rounded-full bg-teal-600 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
+                      className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-600 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95 lg:rounded-[10px] lg:px-3 lg:py-1.5 lg:text-[0.899rem]"
                       data-mark-paid={p.id}
                       onClick={() => void confirmPaid(p.id, client?.name ?? '거래처', p.billingMonth, restOf(p))}
                     >
@@ -308,11 +346,15 @@ export function Receivables() {
                       {paidOf(p) > 0 ? `남은 ${won(restOf(p))} 입금 처리` : '입금완료 처리'}
                     </button>
                   </div>
+                ) : (
+                  //  PC 표 — 처리할 것이 없는 줄도 칸은 맞춥니다
+                  <span aria-hidden="true" className="hidden lg:block" />
                 )}
               </StaggerItem>
             )
           })}
         </Stagger>
+        </div>
         {list.length > shown && (
           <button
             data-recv-more

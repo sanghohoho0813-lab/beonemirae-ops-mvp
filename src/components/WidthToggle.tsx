@@ -30,8 +30,9 @@ export function loadWidth(): ContentWidth {
 
 export function WidthToggle({ value, onChange }: { value: ContentWidth; onChange: (w: ContentWidth) => void }) {
   return (
-    <div role="group" aria-label="화면 폭" data-width-toggle className="flex shrink-0 items-center gap-0.5 rounded-full bg-white p-1 ring-1 ring-navy-100">
-      <span className="px-2 text-[0.95rem] font-bold text-navy-500">화면 폭</span>
+    <div role="group" aria-label="화면 폭" data-width-toggle className="flex shrink-0 items-center gap-0.5 rounded-[11px] bg-white p-1 ring-1 ring-navy-100">
+      {/*  AX 3차 — 이름은 넓은 화면(2xl)에서만 글자로, 그 아래에서는 화면 읽기용으로만 (위쪽 줄이 한 줄에 들어가게) */}
+      <span className="whitespace-nowrap px-2 text-[0.899rem] font-bold text-navy-500 max-2xl:sr-only">화면 폭</span>
       {(['narrow', 'normal', 'wide'] as ContentWidth[]).map((w) => {
         const Icon = ICON[w]
         const on = value === w
@@ -45,9 +46,9 @@ export function WidthToggle({ value, onChange }: { value: ContentWidth; onChange
               onChange(w)
               try { localStorage.setItem(WIDTH_KEY, w) } catch { /* 기억 못 해도 지금 화면은 바뀝니다 */ }
             }}
-            className={`flex min-h-[36px] items-center gap-1 rounded-full px-3 text-[0.95rem] font-bold transition ${on ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'}`}
+            className={`flex min-h-[32px] items-center gap-1 whitespace-nowrap rounded-[8px] px-2.5 text-[0.899rem] font-bold transition ${on ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'}`}
           >
-            <Icon className="h-[15px] w-[15px]" aria-hidden />
+            <Icon className="hidden h-[15px] w-[15px] 2xl:block" aria-hidden />
             {LABEL[w]}
           </button>
         )

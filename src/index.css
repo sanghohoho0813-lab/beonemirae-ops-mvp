@@ -109,7 +109,9 @@
     /* 페이지 제목 — 33px / 45px
        AX 디자인 2차 — 넓은 화면 55px → 45px. 제목이 본문보다 너무 커서
        화면이 「포스터」처럼 보였습니다. 본문 글자 크기는 그대로입니다. */
-    @apply break-keep text-[1.85rem] font-extrabold leading-tight tracking-tight sm:text-[2.15rem];
+    @apply break-keep text-[1.85rem] font-extrabold leading-tight tracking-tight sm:text-[2.15rem] lg:text-[1.6rem];
+    /*  AX 3차 — PC(lg↑) 38 → 28px. 흔한 ERP 처럼 위쪽 줄에 「묶음 › 화면 이름」이 있으니
+        제목은 표 바로 위의 이름표 정도면 됩니다. 폰 · 태블릿은 그대로입니다. */
   }
   /*  ⚠ 0080 — 폰을 **가로로 들면** 화면 높이가 390px 뿐입니다. 그 화면에서
       제목 한 줄이 55px 를 쓰면 정작 일할 목록이 안 보입니다. 지금 어느 화면인지는
@@ -120,13 +122,19 @@
       @apply text-[1.5rem] sm:text-[1.6rem];
     }
   }
+  /*  AX 3차 — 숫자 카드(흰 칸 · 얇은 테두리 · 그림자 없음). 대시보드 · 미수금 · 수거이력 첫 줄. */
+  .kpi-card {
+    @apply rounded-[14px] bg-white px-4 py-3.5 ring-1 ring-inset ring-cardline;
+  }
   .t-section {
     /* 섹션 제목 — 25px / 38px */
-    @apply break-keep text-[1.4rem] font-extrabold leading-snug tracking-tight sm:text-[1.8rem];
+    @apply break-keep text-[1.4rem] font-extrabold leading-snug tracking-tight sm:text-[1.8rem] lg:text-[1.3rem];
+    /*  AX 3차 — 제목(28px)보다 크지 않게 PC 에서 23px */
   }
   .t-card {
     /* 카드 제목 — 22px / 32px */
-    @apply break-keep text-[1.25rem] font-bold leading-snug sm:text-[1.5rem];
+    @apply break-keep text-[1.25rem] font-bold leading-snug sm:text-[1.5rem] lg:text-[1.2rem];
+    /*  AX 3차 — PC 에서 21px */
   }
   .t-kpi {
     /* KPI 숫자 — 카드 폭(container query)에 맞춰 자동으로 커지고, 카드가 좁아지면
@@ -314,7 +322,7 @@
   }
   /* 아이콘 메뉴 한 칸 — 옅은 색 둥근 네모 아이콘 + 짧은 이름 */
   .p-tile {
-    @apply flex min-h-[5.5rem] flex-col items-center justify-start gap-2 rounded-2xl px-1 py-2 text-center text-[0.95rem] font-bold leading-tight text-navy-700 transition hover:bg-navy-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400;
+    @apply flex min-h-[5.5rem] flex-col items-center justify-start gap-2 rounded-2xl px-1 py-2 text-center text-[0.95rem] font-bold leading-tight text-navy-700 transition hover:bg-navy-50 active:scale-[0.97] active:bg-navy-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400;
   }
 }
 

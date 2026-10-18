@@ -25,23 +25,24 @@ export function CoachPin() {
     <Link
       to="/ax-coach"
       data-coach-pin
-      className="mx-3 mb-2 block rounded-2xl bg-white/5 px-4 py-3.5 ring-1 ring-white/10 transition hover:bg-white/10"
+      //  AX 3차 — 한 줄(이름 · 막대 · %) + 오늘 할 일 한 줄. 예전 세 줄짜리 카드를 줄였습니다.
+      className="mx-2.5 mb-1.5 block rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/10 transition hover:bg-white/10"
     >
       <div className="flex items-center gap-2.5">
-        <Compass size={18} className="shrink-0 text-teal-300" strokeWidth={2.3} />
-        <span className="min-w-0 flex-1 break-keep text-[1.08rem] font-extrabold text-white">AX 코치</span>
-        <span data-coach-pin-pct className="shrink-0 text-[1.12rem] font-black tabular-nums text-teal-300">
+        <Compass size={17} className="shrink-0 text-teal-300" strokeWidth={2.3} />
+        <span className="shrink-0 whitespace-nowrap text-[0.871rem] font-extrabold text-white">AX 코치</span>
+        {/*  준비도 막대 — 실제 업무기록이 쌓일수록 자동으로 올라갑니다 */}
+        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-teal-400 transition-[width] duration-500"
+            style={{ width: `${Math.max(pct, pct > 0 ? 3 : 0)}%` }}
+          />
+        </div>
+        <span data-coach-pin-pct className="shrink-0 text-[0.871rem] font-black tabular-nums text-teal-300">
           {pct}%
         </span>
       </div>
-      {/*  준비도 막대 — 실제 업무기록이 쌓일수록 자동으로 올라갑니다 */}
-      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-teal-400 transition-[width] duration-500"
-          style={{ width: `${Math.max(pct, pct > 0 ? 3 : 0)}%` }}
-        />
-      </div>
-      <p data-coach-pin-today className="mt-2 break-keep text-[1rem] font-bold leading-snug text-navy-200">
+      <p data-coach-pin-today className="mt-1 break-keep text-[0.843rem] font-bold leading-snug text-navy-200">
         {total === 0 ? '오늘 드릴 일이 없습니다' : `오늘 할 일 ${total}개 중 ${done}개 확인됨`}
       </p>
     </Link>

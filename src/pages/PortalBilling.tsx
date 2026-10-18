@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, ClipboardList, FileBarChart, Headset, Info, ReceiptText, ScrollText } from 'lucide-react'
+import { CheckCircle2, ClipboardList, FileBarChart, Headset, Info, ReceiptText, ScrollText } from 'lucide-react'
 import { CLIENT_TEL } from '../lib/brand'
 import { usePortalSheet } from '../lib/portalSheet'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { PageShell } from '../components/ui'
-import { SectionHead, PortalEmpty } from '../components/portal/PortalUi'
+import { PortalEmpty, PortalPageHead, SectionHead } from '../components/portal/PortalUi'
 import { LoadGate } from '../components/LoadState'
 import { outstandingOf, paidTotalOf } from '../lib/selectors'
 import { won, prettyDate } from '../lib/format'
@@ -64,15 +64,10 @@ export function PortalBilling() {
   const billed = rows.reduce((a, r) => a + r.p.amount, 0)
 
   return (
-    <PageShell>
+    <PageShell className="!space-y-4">
       {/*  포털 1차 고도화 — 「정산·증빙」. 정산 내역 아래에 증빙자료를 함께
            둡니다. 둘 다 원무·행정 담당이 월말에 한 번에 찾는 것입니다. */}
-      <div>
-        <h1 className="t-page break-keep text-navy-900">정산·증빙</h1>
-        <p className="t-body mt-2 break-keep text-navy-500">
-          월별 청구 금액과 입금 상태, 인증·실사에 쓰실 증빙자료입니다.
-        </p>
-      </div>
+      <PortalPageHead title="정산·증빙" sub="월별 청구 · 입금 상태와 인증·실사 증빙자료" />
 
       {/*  ── 포털 2차 — 지금 상태 한 장 ──────────────────────────────────────
            원무·행정 담당이 이 화면에서 제일 먼저 묻는 것은 「낼 돈이 남았나」
@@ -80,19 +75,21 @@ export function PortalBilling() {
       {rows.length > 0 && (
         //  포털 4차 — 은행 앱 청구서처럼 **흰 카드에 금액 하나를 크게**. 상태는 알약(색 + 글자).
         <section data-pb-summary className="p-card px-5 py-5 sm:px-6 sm:py-6">
-          <span
-            className={`pill ${owed > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800'}`}
-          >
-            {owed > 0 ? <ReceiptText size={15} strokeWidth={2.6} aria-hidden="true" /> : <CheckCircle2 size={15} strokeWidth={2.6} aria-hidden="true" />}
-            {owed > 0 ? '아직 안 내신 금액' : '미납 없음'}
-          </span>
+          {/*  포털 3차 시안 — 은행 앱처럼 「아직 안 내신 금액」 아래 금액 하나를 크게(0원도 숫자로). */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="p-sub font-bold">아직 안 내신 금액</span>
+            <span className={`pill ${owed > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-800'}`}>
+              {owed > 0 ? <ReceiptText size={15} strokeWidth={2.6} aria-hidden="true" /> : <CheckCircle2 size={15} strokeWidth={2.6} aria-hidden="true" />}
+              {owed > 0 ? '입금 확인 필요' : '미납 없음'}
+            </span>
+          </div>
           <p
             data-pb-owed
-            className={`mt-3 break-keep text-[2rem] font-extrabold leading-tight tracking-tight tabular-nums sm:text-[2.3rem] ${
+            className={`mt-2 break-keep text-[2.4rem] font-extrabold leading-tight tracking-tight tabular-nums sm:text-[2.6rem] ${
               owed > 0 ? 'text-rose-700' : 'text-navy-900'
             }`}
           >
-            {owed > 0 ? won(owed) : '모두 입금 확인되었습니다'}
+            {won(owed)}
           </p>
           <div className="mt-4 grid grid-cols-2 divide-x divide-navy-100 border-t border-navy-100 pt-3.5">
             <div className="pr-4">
@@ -128,13 +125,23 @@ export function PortalBilling() {
               .map(({ p, paid, rest, label }) => (
               <li key={p.id} data-pb-row={p.billingMonth} className="py-4">
                 {/*  포털 4차 — 왼쪽에 달 · 상태 알약, 오른쪽에 금액(흔한 앱 청구 목록). */}
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3.5">
+                  {/*  포털 3차 시안 — 영수증 아이콘 동그라미(다 낸 달은 초록, 남은 달은 빨강) */}
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                      rest > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'
+                    }`}
+                  >
+                    <ReceiptText size={20} strokeWidth={2.3} />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="p-body break-keep font-extrabold">
+                    {/*  포털 3차 — 「2026년 9월」 한 줄(「청구」는 화면 읽기용으로만). */}
+                    <p className="p-body whitespace-nowrap font-extrabold">
                       {/^\d{4}-\d{2}$/.test(p.billingMonth)
                         ? `${Number(p.billingMonth.slice(0, 4))}년 ${Number(p.billingMonth.slice(5, 7))}월`
-                        : p.billingMonth}{' '}
-                      청구
+                        : p.billingMonth}
+                      <span className="sr-only"> 청구</span>
                     </p>
                     <div className="mt-1.5">
                       {rest > 0 ? (
@@ -152,7 +159,7 @@ export function PortalBilling() {
                     {won(p.amount)}
                   </p>
                 </div>
-                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 pl-[3.6rem]">
                   {rest > 0 ? (
                     <>
                       <p className="p-sub break-keep">
@@ -189,9 +196,9 @@ export function PortalBilling() {
            있는 것처럼 두면 병원이 여기서 결제를 기다립니다. */}
       <p data-pb-nopay className="p-sub flex items-start gap-2 break-keep px-1">
         <Info size={17} strokeWidth={2.4} aria-hidden="true" className="mt-0.5 shrink-0 text-navy-400" />
-        지금은 이 화면에서 결제하실 수 없습니다. 입금은 기존과 같이 계좌이체로 진행되며,
         <span>
-        여기서는 청구·입금 상태만 확인하실 수 있습니다.
+          지금은 이 화면에서 결제하실 수 없습니다. 입금은 기존과 같이 계좌이체로 진행되며,
+          여기서는 청구·입금 상태만 확인하실 수 있습니다.
         </span>
       </p>
 
@@ -199,20 +206,23 @@ export function PortalBilling() {
            내용을 여기로 모았습니다. 서랍(?do=docs)은 예전 링크를 위해 남겨 둡니다. */}
       <section data-pb-docs className="p-card">
         <SectionHead title="증빙자료" />
-        <ul className="p-list border-t border-navy-100">
+        {/*  포털 3차 시안 — 증빙 두 가지를 **나란한 두 칸**으로 */}
+        <ul className="grid grid-cols-2 gap-2.5">
           {[
             {
               key: 'history',
               icon: ClipboardList,
               title: '수거 이력',
-              desc: '날짜·수거량·용기·처리장 인계까지 그대로 나옵니다.',
+              desc: '날짜 · 수거량 · 처리장 인계',
+              tone: 'bg-teal-50 text-teal-700',
               onClick: () => navigate(path('history')),
             },
             {
               key: 'report',
               icon: FileBarChart,
               title: '월간 배출 리포트',
-              desc: '달별 배출량과 수거 횟수를 한 장으로. 인쇄 · PDF 저장이 됩니다.',
+              desc: '인쇄 · PDF 저장',
+              tone: 'bg-violet-50 text-violet-700',
               onClick: () => open('report'),
             },
           ].map((x) => {
@@ -223,16 +233,15 @@ export function PortalBilling() {
                   type="button"
                   data-pb-doc={x.key}
                   onClick={x.onClick}
-                  className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-xl px-2 py-3.5 text-left transition hover:bg-navy-50"
+                  className="flex h-full w-full flex-col items-start gap-2.5 rounded-[18px] bg-navy-50/60 p-4 text-left transition hover:bg-navy-50"
                 >
-                  <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-teal-50 text-teal-700">
+                  <span aria-hidden="true" className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${x.tone}`}>
                     <Icon size={21} strokeWidth={2.2} />
                   </span>
-                  <span className="min-w-0 flex-1">
+                  <span className="min-w-0">
                     <span className="p-body block break-keep font-extrabold">{x.title}</span>
                     <span className="p-sub mt-0.5 block break-keep">{x.desc}</span>
                   </span>
-                  <ChevronRight size={20} strokeWidth={2.4} aria-hidden="true" className="shrink-0 text-navy-400" />
                 </button>
               </li>
             )

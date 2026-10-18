@@ -347,7 +347,8 @@ export function PortalLayout() {
              적고 있어서 같은 말이 두 번 나옵니다.
            ⚠ 고르는 화면에도 안 답니다 — 아직 병원이 없습니다. */}
       {client && target.page !== '' && !onSelectPage && (
-        <div className="mx-auto w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] px-4 pt-4 lg:px-8 lg:pt-6">
+        //  포털 3차 시안 — 폰에서는 아래 화면 머리(흰 띠)와 이어지도록 흰 바탕.
+        <div className="mx-auto w-full max-w-[1240px] bg-white px-4 pt-4 sm:bg-transparent xl:max-w-[1600px] 2xl:max-w-[1840px] lg:px-8 lg:pt-6">
           <p data-portal-crumb className="t-muted flex flex-wrap items-center gap-1 break-keep">
             <b className="font-extrabold text-navy-700">{client.name}</b>
             <ChevronRight size={14} className="shrink-0 text-navy-400" strokeWidth={2.6} />

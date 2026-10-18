@@ -58,6 +58,9 @@ function expiringSoon(data: AppData): number {
   }).length
 }
 
+/** 「지금 처리할 것」 표의 칸 나눔 — 아이콘 · 항목 · 내용 · 규모 · 단추 (머리줄과 줄이 같이 씀) */
+const BOARD_COLS = 'grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.5fr)_5rem_7rem]'
+
 export function TodayBoard({ data }: { data: AppData }) {
   const navigate = useNavigate()
   const progress = todayProgress(data)
@@ -221,8 +224,10 @@ export function TodayBoard({ data }: { data: AppData }) {
 
       {/* ② 지금 처리할 것 — 0건은 그리지 않습니다 */}
       <div className="card overflow-hidden">
-        <div className="border-b border-navy-100 px-6 py-3.5">
-          <p className="t-card text-navy-900">지금 처리할 것</p>
+        {/*  AX 3차 — 흔한 ERP 의 「할 일 표」처럼: 머리줄(항목 · 내용 · 규모) + 촘촘한 줄 */}
+        <div className="flex items-center border-b border-navy-100 px-5 py-3">
+          <p className="t-card min-w-0 flex-1 text-navy-900">지금 처리할 것</p>
+          {tasks.length > 0 && <span className="shrink-0 text-[0.843rem] font-bold text-navy-500">{tasks.length}건</span>}
         </div>
         {tasks.length === 0 ? (
           <div className="flex h-[calc(100%-3.5rem)] min-h-[10rem] items-center justify-center px-6 py-8">
@@ -233,6 +238,14 @@ export function TodayBoard({ data }: { data: AppData }) {
             </p>
           </div>
         ) : (
+          <>
+          <div aria-hidden="true" className={`grid ${BOARD_COLS} gap-x-3 bg-navy-50 px-5 py-2 text-[0.843rem] font-bold text-navy-500`}>
+            <span />
+            <span>항목</span>
+            <span>내용</span>
+            <span className="text-right">규모</span>
+            <span />
+          </div>
           <ul className="divide-y divide-navy-50">
             {tasks.map((t) => {
               const Icon = t.icon
@@ -240,26 +253,24 @@ export function TodayBoard({ data }: { data: AppData }) {
                 <li key={t.key}>
                   <Link
                     to={t.to}
-                    className="flex items-center gap-4 px-6 py-3.5 transition hover:bg-navy-50"
+                    className={`grid ${BOARD_COLS} items-center gap-x-3 px-5 py-2.5 transition hover:bg-navy-50`}
                   >
                     <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${TONE[t.tone].tile}`}
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${TONE[t.tone].tile}`}
                     >
-                      <Icon size={21} strokeWidth={2.3} />
+                      <Icon size={17} strokeWidth={2.3} />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="t-body block break-keep font-extrabold text-navy-900">
-                        {t.label}
-                      </span>
-                      <span className="t-muted block break-keep">{t.detail}</span>
+                    <span className="min-w-0 break-keep text-[0.927rem] font-extrabold leading-snug text-navy-900">
+                      {t.label}
                     </span>
+                    <span className="min-w-0 break-keep text-[0.871rem] leading-snug text-navy-500">{t.detail}</span>
                     <span
-                      className={`shrink-0 whitespace-nowrap text-[1.5rem] font-extrabold tabular-nums ${TONE[t.tone].text}`}
+                      className={`shrink-0 whitespace-nowrap text-right text-[1.124rem] font-extrabold tabular-nums ${TONE[t.tone].text}`}
                     >
                       {t.count}
-                      <span className="t-label text-navy-400">{t.unit}</span>
+                      <span className="ms-0.5 text-[0.843rem] font-bold text-navy-400">{t.unit}</span>
                     </span>
-                    <span className="t-btn shrink-0 whitespace-nowrap rounded-full bg-navy-900 px-4 py-2 text-white">
+                    <span className="justify-self-end whitespace-nowrap rounded-[10px] bg-navy-900 px-3 py-1.5 text-[0.871rem] font-bold text-white">
                       {t.cta}
                     </span>
                   </Link>
@@ -267,6 +278,7 @@ export function TodayBoard({ data }: { data: AppData }) {
               )
             })}
           </ul>
+          </>
         )}
       </div>
     </section>

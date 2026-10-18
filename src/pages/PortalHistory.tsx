@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { CLIENT_TEL } from '../lib/brand'
-import { CalendarClock, Check, FileBarChart, Hospital, ClipboardList, Search } from 'lucide-react'
+import { BarChart3, CalendarClock, Check, FileBarChart, Hospital, ClipboardList, Search, ShieldCheck, Truck } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
-import { PortalEmpty } from '../components/portal/PortalUi'
+import { PortalEmpty, PortalPageHead } from '../components/portal/PortalUi'
 import { clientSchedules, collectionHistory } from '../lib/ops'
 import { isPending } from '../lib/scheduleLive'
 import { usePortalSheet } from '../lib/portalSheet'
@@ -26,6 +26,10 @@ import { prettyDate, weight, today } from '../lib/format'
 //  ⚠ 고를 수 있는 연도는 **실제 기록이 있는 해**만 만듭니다. 올해부터 5년치를
 //    미리 늘어놓으면 병원이 눌러 보고 빈 화면을 보게 되는데, 그때 병원은
 //    「자료가 없다」가 아니라 「고장났다」로 읽습니다.
+//
+//  포털 3차 시안(적용) — 위는 앱처럼 「제목 + 거르기」 흰 띠, 달마다 요약 띠
+//    (「10월 · 5회 · 570kg」) 아래에 **수거 한 번 = 카드 하나**(주문 내역처럼).
+//    ⚠ 폰의 기간 고르기는 그대로 고르는 칸입니다(0086 — 옆으로 밀리는 칩 금지).
 //
 //  포털 3차 — 상자를 걷어 냈습니다. 요약 세 칸 · 예정 · 거르기 · 목록이 각각
 //    카드였는데, 이제 **제목 · 구분선 · 여백**으로만 나눕니다. 줄마다 붙던 초록
@@ -133,26 +137,133 @@ export function PortalHistory() {
     )
   }
 
+  const filterBlock = (
+    <>
+          {/*  ── 기간 · 구분 · 찾기 (0086) ────────────────────────────────────────
+               ⚠ 「전체」를 기본값으로 두지 않습니다. 5년치를 처음부터 그리면
+                 폰에서 첫 화면이 한참 늦게 뜹니다. 기본은 최근 3개월이고,
+                 더 필요하면 눌러서 넓힙니다.
+
+               ⚠ **폰에서는 단추가 아니라 고르는 칸(select)입니다.**
+                 처음에는 폰에서도 단추를 늘어놓았는데, 여섯 개가 한 줄에 안
+                 들어가 옆으로 48px 이 잘렸습니다. 잘린 쪽에 있던 것이 하필
+                 「전체」였습니다 — 인증·실사에서 제일 많이 쓰는 그 단추를
+                 병원이 **못 찾습니다.** 줄바꿈을 시키면 이 칸만 384px 이 되어
+                 정작 첫 수거 기록이 화면 밖으로 밀립니다(390×844 실측).
+                 고르는 칸은 한 줄이면서 목록을 다 보여 줍니다.
+                 넓은 화면에서는 단추 그대로입니다 — 한눈에 다 보이고,
+                 한 번에 눌러집니다. */}
+          <div data-hist-filter className="space-y-2.5">
+            {/*  폰 — 고르는 칸 */}
+            <div className="flex flex-wrap gap-2.5 sm:hidden">
+              <label className="min-w-0 flex-1">
+                <span className="t-label block text-navy-500">기간</span>
+                <select
+                  data-hist-period-select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="field-input rounded-[14px] mt-1 w-full bg-white ring-navy-200"
+                >
+                  <option value="recent">최근 3개월</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>{y}년</option>
+                  ))}
+                  <option value="all">전체</option>
+                </select>
+              </label>
+              {types.length > 1 && (
+                <label className="min-w-0 flex-1">
+                  <span className="t-label block text-navy-500">구분</span>
+                  <select
+                    data-hist-type-select
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="field-input rounded-[14px] mt-1 w-full bg-white ring-navy-200"
+                  >
+                    <option value="all">전부</option>
+                    {types.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+
+            {/*  넓은 화면 — 단추 */}
+            <div className="hidden flex-wrap items-center gap-2 sm:flex">
+              <span className="t-label shrink-0 text-navy-500">기간</span>
+              {[{ v: 'recent', l: '최근 3개월' }, ...years.map((y) => ({ v: y, l: `${y}년` })), { v: 'all', l: '전체' }].map((o) => (
+                <button
+                  key={o.v}
+                  data-hist-period={o.v}
+                  onClick={() => setPeriod(o.v)}
+                  aria-pressed={period === o.v}
+                  className={`p-chip ${period === o.v ? 'p-chip-on' : ''}`}
+                >
+                  {o.l}
+                </button>
+              ))}
+            </div>
+
+            {types.length > 1 && (
+              <div className="hidden flex-wrap items-center gap-2 sm:flex">
+                <span className="t-label shrink-0 text-navy-500">구분</span>
+                {[{ v: 'all', l: '전부' }, ...types.map((t) => ({ v: t, l: t }))].map((o) => (
+                  <button
+                    key={o.v}
+                    data-hist-type={o.v}
+                    onClick={() => setType(o.v)}
+                    aria-pressed={type === o.v}
+                    className={`p-chip ${type === o.v ? 'p-chip-on' : ''}`}
+                  >
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/*  ⚠ 높이는 **바깥 상자가 아니라 글자칸 자체**에 줍니다. 처음에는
+                   label 에만 padding 을 줬는데 정작 눌리는 곳(input)은 26px 이라
+                   커서를 놓치면 옆을 눌러 놓고 왜 안 써지나 하게 됩니다.
+                   (check_ux390 이 「보통」과 「큰 글씨」 두 곳에서 잡았습니다) */}
+              <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[14px] bg-white px-3.5 ring-1 ring-inset ring-navy-200">
+                <Search size={18} className="shrink-0 text-navy-400" strokeWidth={2.4} />
+                <input
+                  data-hist-search
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="날짜·구분·용기로 찾기 (예: 8월 21일)"
+                  className="t-body min-h-[2.75rem] min-w-0 flex-1 bg-transparent font-medium text-navy-900 outline-none placeholder:text-navy-400"
+                />
+              </label>
+              {/*  ⚠ 고른 기간의 **합계**. 화면에 보이는 줄만 셉니다. */}
+              <p data-hist-total className="t-body shrink-0 break-keep font-extrabold text-navy-900">
+                {done.length}건 · {weight(totalKg)}
+              </p>
+              {/*  ⚠ 폰에서는 목록 **아래**에 둡니다 — 여기 두면 첫 수거 기록이
+                   첫 화면 밖으로 밀립니다(check_portal86 ⑧). */}
+              <button
+                type="button"
+                data-hist-report
+                onClick={() => open('report')}
+                className="hidden min-h-[2.75rem] shrink-0 items-center gap-2 rounded-full bg-white px-4 text-[1rem] font-bold text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 sm:flex"
+              >
+                <FileBarChart size={18} strokeWidth={2.3} aria-hidden="true" /> 월간 배출 리포트
+              </button>
+            </div>
+          </div>
+    </>
+  )
+
   return (
-    <PageShell>
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="t-page text-navy-900">수거 이력</h1>
-          <p className="t-body mt-2.5 break-keep text-navy-500">
-            {client.name} · 인증·실사 자료로 그대로 쓰실 수 있습니다
-          </p>
-        </div>
-        {/*  ⚠ 폰에서는 목록 **아래**에 둡니다 — 여기 두면 첫 수거 기록이
-             첫 화면 밖으로 밀립니다(check_portal86 ⑧). */}
-        <button
-          type="button"
-          data-hist-report
-          onClick={() => open('report')}
-          className="hidden min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-white px-5 text-[1.05rem] font-bold text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 sm:flex"
-        >
-          <FileBarChart size={19} strokeWidth={2.3} aria-hidden="true" /> 월간 배출 리포트
-        </button>
-      </div>
+    <PageShell className="!space-y-4">
+      <PortalPageHead
+        title="수거 이력"
+        sub={<>{client.name} · 인증·실사 자료로 그대로 쓰실 수 있습니다</>}
+      >
+        {filterBlock}
+      </PortalPageHead>
 
       {/*  ── 요약 (넓은 화면) ── 폰에서는 아래 목록의 달 머리가 같은 말을 합니다. */}
       {all.length > 0 && (
@@ -175,7 +286,7 @@ export function PortalHistory() {
 
       {/*  ── 예정된 수거 ── 있을 때만. 없으면 칸을 안 만듭니다. */}
       {upcoming.length > 0 && (
-        <section data-hist-upcoming className="p-card py-2 sm:py-3">
+        <section data-hist-upcoming className="p-card py-2 sm:py-3" aria-label="예정된 수거">
           {/*  폰에서는 제목 줄을 접습니다 — 「일정 확정」 칩과 날짜가 스스로 말합니다.
                이 한 줄 때문에 첫 수거 기록이 첫 화면 밖으로 밀렸습니다. */}
           <h2 className="sr-only sm:not-sr-only sm:p-title sm:mb-1">예정된 수거</h2>
@@ -190,117 +301,14 @@ export function PortalHistory() {
                   {prettyDate(x.date)}
                   {timeBand(x.scheduledTime) && <span className="ml-1.5 font-bold">{timeBand(x.scheduledTime)}</span>}
                 </b>
-                <span className="pill ml-auto bg-emerald-50 text-emerald-800">일정 확정</span>
+                <span className="pill ml-auto bg-teal-50 text-teal-800">
+                  <CalendarClock size={15} strokeWidth={2.6} aria-hidden="true" /> 예정 · 일정 확정
+                </span>
               </li>
             ))}
           </ul>
         </section>
       )}
-
-      {/*  ── 기간 · 구분 · 찾기 (0086) ────────────────────────────────────────
-           ⚠ 「전체」를 기본값으로 두지 않습니다. 5년치를 처음부터 그리면
-             폰에서 첫 화면이 한참 늦게 뜹니다. 기본은 최근 3개월이고,
-             더 필요하면 눌러서 넓힙니다.
-
-           ⚠ **폰에서는 단추가 아니라 고르는 칸(select)입니다.**
-             처음에는 폰에서도 단추를 늘어놓았는데, 여섯 개가 한 줄에 안
-             들어가 옆으로 48px 이 잘렸습니다. 잘린 쪽에 있던 것이 하필
-             「전체」였습니다 — 인증·실사에서 제일 많이 쓰는 그 단추를
-             병원이 **못 찾습니다.** 줄바꿈을 시키면 이 칸만 384px 이 되어
-             정작 첫 수거 기록이 화면 밖으로 밀립니다(390×844 실측).
-             고르는 칸은 한 줄이면서 목록을 다 보여 줍니다.
-             넓은 화면에서는 단추 그대로입니다 — 한눈에 다 보이고,
-             한 번에 눌러집니다. */}
-      <div data-hist-filter className="space-y-2.5">
-        {/*  폰 — 고르는 칸 */}
-        <div className="flex flex-wrap gap-2.5 sm:hidden">
-          <label className="min-w-0 flex-1">
-            <span className="t-label block text-navy-500">기간</span>
-            <select
-              data-hist-period-select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="field-input rounded-[14px] mt-1 w-full bg-white ring-navy-200"
-            >
-              <option value="recent">최근 3개월</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}년</option>
-              ))}
-              <option value="all">전체</option>
-            </select>
-          </label>
-          {types.length > 1 && (
-            <label className="min-w-0 flex-1">
-              <span className="t-label block text-navy-500">구분</span>
-              <select
-                data-hist-type-select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="field-input rounded-[14px] mt-1 w-full bg-white ring-navy-200"
-              >
-                <option value="all">전부</option>
-                {types.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
-
-        {/*  넓은 화면 — 단추 */}
-        <div className="hidden flex-wrap items-center gap-2 sm:flex">
-          <span className="t-label shrink-0 text-navy-500">기간</span>
-          {[{ v: 'recent', l: '최근 3개월' }, ...years.map((y) => ({ v: y, l: `${y}년` })), { v: 'all', l: '전체' }].map((o) => (
-            <button
-              key={o.v}
-              data-hist-period={o.v}
-              onClick={() => setPeriod(o.v)}
-              aria-pressed={period === o.v}
-              className={`p-chip ${period === o.v ? 'p-chip-on' : ''}`}
-            >
-              {o.l}
-            </button>
-          ))}
-        </div>
-
-        {types.length > 1 && (
-          <div className="hidden flex-wrap items-center gap-2 sm:flex">
-            <span className="t-label shrink-0 text-navy-500">구분</span>
-            {[{ v: 'all', l: '전부' }, ...types.map((t) => ({ v: t, l: t }))].map((o) => (
-              <button
-                key={o.v}
-                data-hist-type={o.v}
-                onClick={() => setType(o.v)}
-                aria-pressed={type === o.v}
-                className={`p-chip ${type === o.v ? 'p-chip-on' : ''}`}
-              >
-                {o.l}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/*  ⚠ 높이는 **바깥 상자가 아니라 글자칸 자체**에 줍니다. 처음에는
-               label 에만 padding 을 줬는데 정작 눌리는 곳(input)은 26px 이라
-               커서를 놓치면 옆을 눌러 놓고 왜 안 써지나 하게 됩니다.
-               (check_ux390 이 「보통」과 「큰 글씨」 두 곳에서 잡았습니다) */}
-          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-[14px] bg-white px-3.5 ring-1 ring-inset ring-navy-200">
-            <Search size={18} className="shrink-0 text-navy-400" strokeWidth={2.4} />
-            <input
-              data-hist-search
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="날짜·구분·용기로 찾기 (예: 8월 21일)"
-              className="t-body min-h-[2.75rem] min-w-0 flex-1 bg-transparent font-medium text-navy-900 outline-none placeholder:text-navy-400"
-            />
-          </label>
-          {/*  ⚠ 고른 기간의 **합계**. 화면에 보이는 줄만 셉니다. */}
-          <p data-hist-total className="t-body shrink-0 break-keep font-extrabold text-navy-900">
-            {done.length}건 · {weight(totalKg)}
-          </p>
-        </div>
-      </div>
 
       {done.length === 0 ? (
         <div className="p-card">
@@ -330,33 +338,45 @@ export function PortalHistory() {
              낫습니다. */}
         <div data-portal-hist-cards className="space-y-3 sm:hidden">
           {byMonth.map((g) => (
-            <div key={g.month} className="p-card pb-1.5">
-              <div data-hist-month={g.month} className="flex items-center justify-between gap-3 border-b border-navy-100 pb-2">
-                <b className="p-title break-keep">{monthLabel(g.month)}</b>
-                <span className="p-sub shrink-0 font-bold tabular-nums">
-                  {g.rows.length}회 · {weight(g.kg)}
+            <div key={g.month} className="space-y-2.5">
+              {/*  달 요약 띠 — ⚠ 「N회」는 바로 아래 카드 수와 같아야 합니다(check_portal134 ⑫). */}
+              <div data-hist-month={g.month} className="flex items-center gap-3 rounded-[18px] bg-teal-50 px-4 py-3">
+                <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-teal-700">
+                  <BarChart3 size={19} strokeWidth={2.3} />
                 </span>
+                <b className="p-body min-w-0 flex-1 break-keep tabular-nums">
+                  {monthLabel(g.month)} · {g.rows.length}회 · {weight(g.kg)}
+                </b>
               </div>
-              <div className="p-list">
+              <div className="space-y-2.5">
                 {g.rows.map((r) => (
-                  <div key={r.id} data-portal-hist-card={r.id} className="py-3.5">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                      <b className="t-body break-keep text-navy-900">{prettyDate(r.date)}</b>
-                      <span className="ml-auto text-[1.25rem] font-extrabold tabular-nums text-navy-900">
-                        {weight(r.amountKg ?? 0)}
-                      </span>
+                  <div key={r.id} data-portal-hist-card={r.id} className="p-card space-y-2.5 py-4">
+                    <div className="flex items-center gap-2">
+                      <Handover id={r.id} done={r.handedOver} status={r.handoverStatus} pill />
+                      <span className="p-sub ml-auto shrink-0 tabular-nums">{prettyDate(r.date)}</span>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                      {/*  ⚠ 용기를 **안 적었으면 「미기재」**입니다. 0 으로 채우지
-                           않습니다 — 「안 적었다」와 「0개였다」는 다른 말이고,
-                           병원은 이 숫자를 사실로 읽습니다. */}
-                      <span className="p-sub min-w-0 break-keep">
-                        {r.wasteType} ·{' '}
-                        {r.containerType
-                          ? `용기 ${r.containerType}${r.containerCount != null ? ` (${r.containerCount}개)` : ''}`
-                          : '용기 미기재'}
+                    <div className="flex items-center gap-3.5">
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                          r.handedOver ? 'bg-emerald-50 text-emerald-700' : 'bg-teal-50 text-teal-700'
+                        }`}
+                      >
+                        {r.handedOver ? <ShieldCheck size={21} strokeWidth={2.3} /> : <Truck size={21} strokeWidth={2.3} />}
                       </span>
-                      <Handover id={r.id} done={r.handedOver} status={r.handoverStatus} />
+                      <span className="min-w-0 flex-1">
+                        <b className="p-body block break-keep tabular-nums">
+                          {r.wasteType} {weight(r.amountKg ?? 0)}
+                        </b>
+                        {/*  ⚠ 용기를 **안 적었으면 「미기재」**입니다. 0 으로 채우지
+                             않습니다 — 「안 적었다」와 「0개였다」는 다른 말이고,
+                             병원은 이 숫자를 사실로 읽습니다. */}
+                        <span className="p-sub mt-0.5 block break-keep">
+                          {r.containerType
+                            ? `용기 ${r.containerType}${r.containerCount != null ? ` (${r.containerCount}개)` : ''}`
+                            : '용기 미기재'}
+                        </span>
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -422,7 +442,19 @@ export function PortalHistory() {
  * 처리장 인계 — 끝난 것은 작은 체크 + 회색 글자, **아직 안 끝난 것만 진하게**.
  *  ⚠ 줄마다 초록 알약을 달면 정작 「아직 인계 전」인 줄이 묻힙니다.
  */
-function Handover({ id, done, status }: { id?: string; done: boolean; status?: string | null }) {
+function Handover({ id, done, status, pill = false }: { id?: string; done: boolean; status?: string | null; pill?: boolean }) {
+  //  포털 3차 시안 — 폰 카드에서는 주문 내역처럼 맨 앞 **상태 알약**입니다.
+  if (pill) {
+    return (
+      <span
+        data-portal-hist-handover={id}
+        className={`pill ${done ? 'bg-emerald-50 text-emerald-800' : 'bg-navy-100 text-navy-800'}`}
+      >
+        {done && <Check size={15} strokeWidth={3} aria-hidden="true" />}
+        {done ? '인계 완료' : (status ?? '처리 중')}
+      </span>
+    )
+  }
   return (
     <span
       data-portal-hist-handover={id}

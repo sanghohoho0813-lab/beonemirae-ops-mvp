@@ -1,14 +1,24 @@
 import { useMemo, useState } from 'react'
-import { HelpCircle, Headset, Phone, Send } from 'lucide-react'
+import { CalendarClock, HelpCircle, Headset, MessageSquare, PackagePlus, Phone, ReceiptText, ScrollText, Send, Siren, type LucideIcon } from 'lucide-react'
 import { CLIENT_TEL, COMPANY_HOURS } from '../lib/brand'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { useAuth } from '../context/AuthContext'
 import { PageShell, EmptyState } from '../components/ui'
-import { SectionHead, PortalEmpty } from '../components/portal/PortalUi'
+import { PortalEmpty, PortalPageHead, PortalStickyBar, SectionHead } from '../components/portal/PortalUi'
 import { LoadGate } from '../components/LoadState'
 import { INQUIRY_TOPICS, type InquiryTopic } from '../types'
 import { prettyDate } from '../lib/format'
+
+//  포털 3차 시안 — 문의 종류를 아이콘 칸으로 (색만으로 가르지 않게 아이콘 · 이름 둘 다)
+const TOPIC_LOOK: Record<string, { icon: LucideIcon; tone: string }> = {
+  '수거 일정': { icon: CalendarClock, tone: 'bg-teal-50 text-teal-700' },
+  자재: { icon: PackagePlus, tone: 'bg-orange-50 text-orange-700' },
+  정산: { icon: ReceiptText, tone: 'bg-emerald-50 text-emerald-700' },
+  긴급수거: { icon: Siren, tone: 'bg-rose-50 text-rose-600' },
+  계약: { icon: ScrollText, tone: 'bg-violet-50 text-violet-700' },
+  기타: { icon: MessageSquare, tone: 'bg-navy-100 text-navy-700' },
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 문의 (0083)
@@ -95,16 +105,8 @@ export function PortalSupport() {
   }
 
   return (
-    <PageShell>
-      {/*  0095 — 머리 사진 띠. 글자는 사진 밖(아래)에 둡니다 — 사진 위
-           글자는 대비 관리가 하나 더 늘어나는 일입니다. */}
-      <div>
-        {/*  0098 — 담당자 얼굴이 위쪽 28% 에 있어 가운데로 자르면 잘립니다. */}
-        <h1 className="t-page break-keep text-navy-900">고객지원</h1>
-        <p className="t-body mt-2 break-keep text-navy-500">
-          수거 일정 · 자재 · 정산 등 궁금한 점을 남겨 주시면 담당자가 확인하고 답변드립니다.
-        </p>
-      </div>
+    <PageShell className="!space-y-4">
+      <PortalPageHead title="고객지원" sub="궁금한 점을 남겨 주시면 담당자가 확인하고 답변드립니다." />
 
       {/*  포털 2차 — 급하면 전화가 빠릅니다. 글로 남기는 길과 나란히 둡니다
            (앱으로만 하시라는 화면이 아닙니다). */}
@@ -117,32 +119,44 @@ export function PortalSupport() {
           <Headset size={24} strokeWidth={2.3} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="p-body block break-keep font-extrabold">
-            전화 상담 <span className="whitespace-nowrap tabular-nums">{CLIENT_TEL}</span>
+          <span className="p-sub block font-bold">전화 상담</span>
+          <span className="block whitespace-nowrap text-[1.6rem] font-extrabold leading-tight tracking-tight tabular-nums text-navy-900">
+            {CLIENT_TEL}
           </span>
-          <span className="p-sub mt-0.5 block break-keep">급하시면 전화가 빠릅니다 · {COMPANY_HOURS}</span>
+          <span className="p-sub mt-0.5 block break-keep">{COMPANY_HOURS} · 급하시면 전화가 빠릅니다</span>
         </span>
         <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700">
           <Phone size={20} strokeWidth={2.4} />
         </span>
       </a>
 
-      <section className="p-card">
-        <SectionHead title="새 문의" />
+      <section id="inq-new" className="p-card scroll-mt-4">
+        <SectionHead title="무엇이 궁금하세요?" />
 
-        <label className="field-label mt-2 transition-colors hover:text-navy-900" htmlFor="inq-topic">무엇에 대한 문의인가요?</label>
-        <div id="inq-topic" className="flex flex-wrap gap-2">
-          {INQUIRY_TOPICS.map((t) => (
-            <button
-              key={t}
-              data-inq-topic={t}
-              onClick={() => setTopic(t)}
-              aria-pressed={topic === t}
-              className={`p-chip ${topic === t ? 'p-chip-on' : ''}`}
-            >
-              {t}
-            </button>
-          ))}
+        {/*  포털 3차 시안 — 문의 종류 여섯 칸(아이콘 + 이름). 고른 칸은 짙은 테두리. */}
+        <div id="inq-topic" role="group" aria-label="무엇에 대한 문의인가요?" className="mt-1 grid grid-cols-3 gap-2">
+          {INQUIRY_TOPICS.map((t) => {
+            const look = TOPIC_LOOK[t] ?? TOPIC_LOOK['기타']
+            const Icon = look.icon
+            const on = topic === t
+            return (
+              <button
+                key={t}
+                type="button"
+                data-inq-topic={t}
+                onClick={() => setTopic(t)}
+                aria-pressed={on}
+                className={`flex min-h-[5.6rem] flex-col items-center justify-center gap-1.5 rounded-[16px] px-1 py-2.5 text-center text-[1rem] font-bold transition ${
+                  on ? 'bg-white text-navy-900 ring-2 ring-inset ring-navy-900' : 'text-navy-700 hover:bg-navy-50'
+                }`}
+              >
+                <span aria-hidden="true" className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${look.tone}`}>
+                  <Icon size={22} strokeWidth={2.2} />
+                </span>
+                <span className="break-keep">{t}</span>
+              </button>
+            )
+          })}
         </div>
 
         <label className="field-label mt-5 cursor-pointer transition-colors hover:text-navy-900" htmlFor="inq-subject">제목</label>
@@ -230,6 +244,27 @@ export function PortalSupport() {
           </ul>
         )}
       </section>
+
+      {/*  포털 3차 시안 — 폰에서는 아래에 늘 떠 있는 「전화 · 문의 남기기」 */}
+      <PortalStickyBar>
+        <a
+          href={`tel:${CLIENT_TEL}`}
+          className="flex min-h-[3.5rem] shrink-0 items-center justify-center gap-2 rounded-[16px] bg-white px-4 text-[1.05rem] font-extrabold text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 sm:hidden"
+        >
+          <Phone size={19} strokeWidth={2.4} aria-hidden="true" /> 전화
+        </a>
+        <button
+          type="button"
+          data-inq-jump
+          onClick={() => {
+            document.getElementById('inq-new')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            window.setTimeout(() => document.getElementById('inq-subject')?.focus(), 350)
+          }}
+          className="flex min-h-[3.5rem] flex-1 items-center justify-center gap-2 rounded-[16px] bg-teal-600 px-3 text-[1.05rem] font-extrabold text-white transition hover:bg-teal-700 sm:hidden"
+        >
+          <MessageSquare size={19} strokeWidth={2.4} aria-hidden="true" /> 문의 남기기
+        </button>
+      </PortalStickyBar>
     </PageShell>
   )
 }

@@ -75,16 +75,17 @@ export function PortalSwitchButton({
         data-portal-switch
         data-portal-switch-side
         to={to}
-        className={`group mx-3 mb-2 flex min-h-[56px] items-center gap-3 rounded-[14px] bg-white/[0.05] px-3 py-2 ring-1 ring-inset ring-white/15 transition hover:bg-white/10 hover:ring-teal-300/50 ${className}`}
+        //  AX 3차 — 한 줄짜리(설명 줄은 화면 읽기용으로만)
+        className={`group mx-2.5 mb-1.5 flex min-h-[44px] items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-1.5 ring-1 ring-inset ring-white/15 transition hover:bg-white/10 hover:ring-teal-300/50 ${className}`}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white">
-          <Building2 size={20} strokeWidth={2.4} />
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white">
+          <Building2 size={16} strokeWidth={2.4} />
         </span>
         <span className="min-w-0 flex-1 leading-tight">
-          <span className="block break-keep text-[1.08rem] font-extrabold text-white">{label ?? '병원이 보는 화면'}</span>
-          <span className="mt-0.5 block break-keep text-[0.95rem] font-medium text-navy-200">고객 포털 열기</span>
+          <span className="block whitespace-nowrap text-[0.871rem] font-extrabold text-white">{label ?? '병원이 보는 화면'}</span>
+          <span className="sr-only">고객 포털 열기</span>
         </span>
-        <ArrowUpRight size={18} strokeWidth={2.6} className="shrink-0 text-teal-300 transition group-hover:text-white" />
+        <ArrowUpRight size={17} strokeWidth={2.6} className="shrink-0 text-teal-300 transition group-hover:text-white" />
       </Link>
     )
   }
@@ -95,10 +96,10 @@ export function PortalSwitchButton({
         data-portal-switch
         to={to}
         aria-label={label ?? '병원이 보는 화면 열기'}
-        className={`group flex min-h-[2.75rem] shrink-0 items-center gap-1.5 rounded-2xl border-2 border-teal-500 bg-teal-50 px-2.5 transition hover:bg-teal-100 active:bg-teal-500 ${className}`}
+        className={`group flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-[11px] bg-teal-50 px-3 ring-[1.5px] ring-inset ring-teal-300 transition hover:bg-teal-100 active:bg-teal-500 ${className}`}
       >
         <Building2 size={17} strokeWidth={2.6} className="shrink-0 text-teal-700 group-active:text-white" />
-        <span className="whitespace-nowrap text-[1rem] font-extrabold text-teal-800 group-active:text-white">
+        <span className="whitespace-nowrap text-[0.899rem] font-extrabold text-teal-800 group-active:text-white">
           {label ?? '병원 화면'}
         </span>
         <ArrowUpRight size={15} strokeWidth={2.8} className="shrink-0 text-teal-700 group-active:text-white" />

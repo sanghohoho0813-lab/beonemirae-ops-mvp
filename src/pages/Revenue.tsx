@@ -180,6 +180,45 @@ export function Revenue() {
             단위 만원 · 회색 막대는 아직 끝나지 않은 달입니다 (평균·예상 계산에서 뺍니다). 막대를 누르면 그 달
             내역을 봅니다.
           </p>
+          {/*  AX 3차 — PC 에서는 막대 아래에 **월별 표**. 막대와 같은 자료(summary.trend)를 원 단위로.
+               줄을 누르면 막대를 누른 것과 같이 그 달 내역이 아래에 열립니다. */}
+          <table data-revenue-month-table className="mt-4 hidden w-full border-collapse text-left text-[0.899rem] lg:table">
+            <thead>
+              <tr className="text-[0.843rem] text-navy-500">
+                <th className="px-3 py-2 font-bold">월</th>
+                <th className="px-3 py-2 text-right font-bold">매출</th>
+                <th className="px-3 py-2 font-bold">상태</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {[...summary.trend].reverse().map((p) => (
+                <tr
+                  key={p.month}
+                  data-revenue-month-row={p.month}
+                  onClick={() => setMonth(p.month)}
+                  className={`cursor-pointer border-t border-navy-50 transition hover:bg-navy-50/70 ${month === p.month ? 'bg-teal-50/60' : ''}`}
+                >
+                  <td className="whitespace-nowrap px-3 py-1.5 font-semibold text-navy-800">{p.month.slice(0, 4)}년 {Number(p.month.slice(5, 7))}월</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-right font-extrabold tabular-nums text-navy-900">
+                    {p.total > 0 ? won(p.total) : '—'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-1.5">
+                    {p.partial ? (
+                      <span className="pill bg-navy-50 text-navy-500">진행 중</span>
+                    ) : p.total > 0 ? (
+                      <span className="pill bg-emerald-50 text-emerald-700">마감</span>
+                    ) : (
+                      <span className="text-navy-400">기록 없음</span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-right text-[0.843rem] font-bold text-teal-700">
+                    {month === p.month ? '아래에 보는 중' : '내역 보기 ›'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

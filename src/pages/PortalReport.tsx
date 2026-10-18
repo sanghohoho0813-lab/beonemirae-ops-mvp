@@ -5,6 +5,7 @@ import { usePortalClient } from '../lib/portalClient'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
 import { MonthlyReportView } from '../components/MonthlyReport'
+import { PortalPageHead } from '../components/portal/PortalUi'
 import { clientMonthlyReport } from '../lib/insights'
 import { thisMonth } from '../lib/format'
 
@@ -43,22 +44,12 @@ export function PortalReport() {
   }
 
   return (
-    <PageShell>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        {/*  ⚠ 폰에서 제목이 **세로로 한 글자씩** 늘어져 있었습니다 (71px 폭 ·
-             165px 높이). 옆의 달 고르기(버튼 셋 + 달 이름)가 `shrink-0` 이라
-             자리를 다 가져가고, 제목은 `flex-1 min-w-0` 이라 줄바꿈 대신
-             **끝까지 줄어들었습니다.** flex-wrap 이 있어도 제목이 0 까지
-             줄어들 수 있으면 줄이 안 넘어갑니다.
-             폰에서는 제목이 한 줄을 통째로 쓰고(basis-full), 넓은 화면은
-             지금까지처럼 나눠 씁니다. */}
-        <div className="min-w-0 flex-1 basis-full sm:basis-0">
-          <h1 className="t-page break-keep text-navy-900">월간 배출 리포트</h1>
-          <p className="t-body mt-2.5 break-keep font-medium text-navy-400">
-            {client.name} · 수거·배출량·용기 공급 내역
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+    <PageShell className="!space-y-4">
+      {/*  포털 3차 시안 — 앱처럼 「제목 + 달 넘기기」 흰 띠.
+           ⚠ 폰에서 제목이 세로로 한 글자씩 늘어지던 일(옆 달 고르기가 자리를 다
+             가져감)이 다시 안 생기도록, 달 넘기기는 제목 **아래 줄**에 둡니다. */}
+      <PortalPageHead title="월간 배출 리포트" sub={<>{client.name} · 수거·배출량·용기 공급 내역</>}>
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setMonth((m) => shiftMonth(m, -1))}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-navy-500 ring-1 ring-inset ring-navy-200 transition hover:text-navy-900"
@@ -78,7 +69,7 @@ export function PortalReport() {
             <ChevronRight size={20} strokeWidth={2.4} />
           </button>
         </div>
-      </div>
+      </PortalPageHead>
 
       {/*  포털 4차 — 회색 바탕 위 흰 카드 한 장 안에 리포트를 둡니다(안쪽 칸이 바탕에 묻히지 않게). */}
       <div className="p-card">

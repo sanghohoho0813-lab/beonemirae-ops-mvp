@@ -175,8 +175,11 @@ for (const w of [390, 412, 360]) {
   ok(/자재·용기 요청/.test(main) && /긴급수거 요청/.test(main) && /추가수거 요청/.test(main), '② 요청 이름이 병원 말')
   const chips = await p.locator('[data-req-list] [data-status-chip]').allInnerTexts()
   ok(chips.length === 3 && chips.every((c) => /접수|확인 중|일정 확정|처리 완료/.test(c)), '② 요청마다 상태가 **글자로** 있다', chips.join(','))
-  //  포털 3차 — 목록에는 **지금 상태 칩만**. 전체 단계 · 회신은 줄을 누르면 열리는 요청 상세에.
-  ok((await p.locator('[data-req-list] [data-status-steps]').count()) === 0, '② 목록에는 진행 막대 없이 상태 칩만')
+  //  ⚠ 포털 3차 **시안 적용**(대표님 승인) — 「목록에는 상태 칩만」을 바꿨습니다. 요청 하나 = 카드 하나에
+  //    상태 칩 + **4단계 막대**(주문 내역처럼). 막대가 그 요청의 실제 상태와 맞는지 잽니다.
+  ok((await p.locator('[data-req-list] [data-step-bar]').count()) === 3, '② 요청 카드마다 4단계 막대가 있다')
+  const bar1 = await p.locator('[data-req-open="r1"] [data-step-bar]').getAttribute('aria-label')
+  ok(/4단계 중 3단계 일정 확정/.test(bar1 ?? ''), '② 막대가 그 요청의 실제 상태와 맞다 (일정 반영 → 3단계 일정 확정)', bar1)
   ok(/전화 접수/.test(main), '② 전화로 말씀하신 요청도 같이 보인다 (앱만 쓰시라는 화면이 아님)')
   await p.locator('[data-req-open="r1"]').click()
   await p.locator('[data-portal-sheet="request"]').waitFor({ state: 'visible', timeout: 5000 })
@@ -416,8 +419,8 @@ for (const w of [390, 1280]) {
   //  포털 3차 — 「다음 수거」 칸에는 날짜 하나만 크게. 작은 메뉴 · 7일 줄이 없다.
   ok((await p.locator('[data-week-day]').count()) === 0, '⑩ 「다음 수거」 칸에 7일 줄 · 작은 정보가 겹치지 않는다')
   ok((await p.locator('[data-portal-hero] button, [data-portal-hero] a').count()) === 0, '⑩ 「다음 수거」 칸에 작은 단추가 없다')
-  //  최근 요청 — 지금 상태 칩만 (전체 단계는 요청 상세에서)
-  ok((await p.locator('[data-portal-requests] [data-status-steps], [data-portal-requests] [data-mini-steps]').count()) === 0, '⑩ 최근 요청 목록에는 진행 막대가 없다')
+  //  최근 요청 — 포털 3차 시안 적용: 요청 카드(상태 칩 + 4단계 막대 + 회신). 예전 「막대 없음」 규칙을 바꿨습니다.
+  ok((await p.locator('[data-portal-requests] [data-step-bar]').count()) === (await p.locator('[data-portal-requests] [data-status-chip]').count()), '⑩ 최근 요청 카드마다 4단계 막대 하나')
   ok((await p.locator('[data-portal-requests] [data-status-chip]').count()) === 3, '⑩ 최근 요청마다 상태 칩 하나')
   //  도움 · 설정 — 화면마다 깔리던 네 줄은 「내 정보」 안으로
   ok((await p.locator('[data-portal-utility]').count()) === 0, '⑩ 화면 아래 「도움·설정」 줄이 없다 (내 정보 안으로)')

@@ -15,7 +15,7 @@ import { ClientTidyCard } from '../components/ClientTidyCard'
 import { clientOutstanding } from '../lib/ops'
 import { nextActionsFor } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
-import { wonShort } from '../lib/format'
+import { won, wonShort } from '../lib/format'
 import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { findNameMatches, type NameMatch } from '../lib/clientName'
 import type { Client } from '../types'
@@ -24,6 +24,15 @@ import { koMatch } from '../lib/koSearch'
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 관리 — 데이터 세트 선택 + 실제/시연용 구분 + 필터
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ *  AX 3차 — PC(lg↑)에서는 카드 두 줄 목록을 **표**로 그립니다.
+ *  ⚠ 표를 따로 그리지 않고 **같은 카드(단추)** 의 칸 배치만 바꿉니다(grid · display:contents).
+ *    단추 · 글자 · data-* 가 하나뿐이라 폰과 PC 가 다른 것을 누르는 일이 없습니다.
+ *  머리줄과 각 줄이 같은 칸 나눔을 씁니다.
+ */
+const CLIENT_COLS =
+  'lg:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1.15fr)_1rem]'
 
 type Filter = '전체' | '실제' | '시연용' | '병원' | '요양병원' | '의원' | '기타'
 const FILTERS: Filter[] = ['전체', '실제', '시연용', '병원', '요양병원', '의원', '기타']
@@ -96,8 +105,11 @@ export function Clients() {
   //  카드마다 붙는 미수·추천 — 거래처 × (일정+청구+입금)을 훑는 계산이라 검색 글자마다
   //  다시 하면 버벅입니다. 자료가 바뀔 때 한 번만 셉니다 (0131).
   const signals = useMemo(() => {
-    const m = new Map<string, { unpaid: boolean; top: ReturnType<typeof nextActionsFor>[number] | undefined }>()
-    for (const c of data.clients) m.set(c.id, { unpaid: clientOutstanding(data, c.id) > 0, top: nextActionsFor(data, c)[0] })
+    const m = new Map<string, { unpaid: boolean; owed: number; top: ReturnType<typeof nextActionsFor>[number] | undefined }>()
+    for (const c of data.clients) {
+      const owed = clientOutstanding(data, c.id)
+      m.set(c.id, { unpaid: owed > 0, owed, top: nextActionsFor(data, c)[0] })
+    }
     return m
   }, [data])
 
@@ -212,7 +224,9 @@ export function Clients() {
            ⚠ 폰에서는 **자동으로 커서를 두지 않습니다.** 키보드가 올라와
              화면 절반을 덮어 버려, 목록을 보러 온 분이 매번 키보드를
              닫아야 합니다. 대신 칸 자체를 눈에 띄게 만듭니다. */}
-      <label className="relative mb-3 block">
+      {/*  AX 3차 — PC 에서는 검색 + 구분 칩을 표 바로 위 **한 줄**로 */}
+      <div className="lg:mb-3 lg:flex lg:items-center lg:gap-3">
+      <label className="relative mb-3 block lg:mb-0 lg:w-[24rem] lg:shrink-0">
         <Search size={18} strokeWidth={2.4} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-400" />
         <input
           data-client-search
@@ -226,10 +240,11 @@ export function Clients() {
       </label>
 
       {/* 필터 칩 (가로 스크롤) */}
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:mb-0 lg:min-w-0 lg:flex-1 lg:px-0 lg:pb-0">
         {(live ? LIVE_FILTERS : FILTERS).map((f) => (
           <FilterChip key={f} active={filter === f} onClick={() => setFilter(f)}>{f}</FilterChip>
         ))}
+      </div>
       </div>
 
       {/* 아직 한 곳도 없는 것(신규 고객사 1일차)과 필터에 안 걸린 것은 다른 상황입니다.
@@ -267,7 +282,21 @@ export function Clients() {
             Pilot 표식을 저장하지 못했습니다 — {pilotError}
           </p>
         )}
-        <ul data-guide="guide-client-list" className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+        <div className="lg:overflow-hidden lg:rounded-[14px] lg:bg-white lg:ring-1 lg:ring-inset lg:ring-cardline">
+        {/*  표 머리줄 (PC) — 글자만 있는 줄이라 화면 읽기에서는 건너뜁니다(각 칸 글자가 스스로 말함). */}
+        <div aria-hidden="true" data-client-table-head className="hidden border-b border-cardline bg-navy-50 text-[0.843rem] font-bold text-navy-500 lg:flex lg:items-center">
+          <div className={`grid min-w-0 flex-1 gap-x-4 px-4 py-2.5 ${CLIENT_COLS}`}>
+            <span>거래처</span>
+            <span>폐기물</span>
+            <span>수거 주기</span>
+            <span>담당</span>
+            <span>연락처</span>
+            <span className="text-right">{showMoney ? '미수금' : ''}</span>
+            <span />
+          </div>
+          {canPilot && <span className="w-[9.5rem] shrink-0 pe-4 text-center">이번 주 Pilot</span>}
+        </div>
+        <ul data-guide="guide-client-list" className="grid grid-cols-1 gap-2.5 lg:gap-0 lg:divide-y lg:divide-navy-50">
           {filtered.map((c, ci) => {
             const unpaid = signals.get(c.id)?.unpaid ?? false
             // 이 거래처의 최우선 추천 (수거이력·자재·청구 데이터 기반)
@@ -278,10 +307,14 @@ export function Clients() {
                 key={c.id}
                 data-tour={ci === 0 ? 'client-list' : undefined}
                 data-guide={ci === 0 ? 'guide-client-first' : undefined}
+                className="lg:flex lg:items-center lg:transition lg:hover:bg-navy-50/60"
               >
-                <button onClick={() => navigate(`/clients/${c.id}`)} className="card pressable flex w-full items-center justify-between gap-3 p-4 text-left">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => navigate(`/clients/${c.id}`)}
+                  className={`card pressable flex w-full items-center justify-between gap-3 p-4 text-left lg:grid lg:min-w-0 lg:flex-1 lg:items-center lg:gap-x-4 lg:gap-y-0 lg:!rounded-none lg:!border-0 lg:!bg-transparent lg:px-4 lg:py-2.5 lg:!shadow-none lg:active:scale-100 ${CLIENT_COLS}`}
+                >
+                  <div className="min-w-0 lg:contents">
+                    <div className="flex flex-wrap items-center gap-1.5 lg:col-start-1 lg:row-start-1 lg:min-w-0">
                       <span className="break-keep text-[1.07rem] font-bold text-navy-900">{c.name}</span>
                       <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.95rem] font-bold text-navy-500">{c.type}</span>
                       {c.isDemoGenerated ? (
@@ -291,36 +324,53 @@ export function Clients() {
                       )}
                       {pilotIds.has(c.id) && !c.isDemoGenerated && <PilotBadge />}
                     </div>
-                    <p className="mt-1 break-keep t-caption">{c.manager} · {c.collectionCycle}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
+                    <p className="mt-1 break-keep t-caption lg:contents">
+                      <span className="lg:col-start-4 lg:row-span-2 lg:row-start-1 lg:truncate">{c.manager}</span>
+                      <span className="lg:hidden"> · </span>
+                      <span className="lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:truncate">{c.collectionCycle}</span>
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
                       {/*  ⚠ 0069 — rose-500/rose-50 은 대비 3.3:1, 글자도 16px 로 작았습니다.
                            거래처마다 하나씩 붙어 이 화면에서 가장 많이 보이는 글자입니다. */}
                       {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.95rem] font-bold text-rose-700">의료</span>}
                       {c.collectsDiaper && <span className="rounded-md bg-teal-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-teal-600">기저귀</span>}
-                      {unpaid && showMoney && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-700">미수금</span>}
+                      {/*  PC 에서는 옆 「미수금」 칸에 금액이 있어 이 표는 폰에서만 */}
+                      {unpaid && showMoney && <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.9rem] font-bold text-amber-700 lg:hidden">미수금</span>}
                     </div>
                     {/*  추천은 영업 판단이고 금액이 함께 붙습니다(「추가 수거 제안 · +70만원」).
                         현장 담당자에게는 띄우지 않습니다 — 방문해서 수거하는 데
                         필요한 정보가 아니고, 병원 앞에서 열어 볼 수도 있는 화면입니다. */}
                     {showMoney && topAction && meta && topAction.kind !== '정기수거' && (
-                      <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.95rem] font-bold ${meta.chip}`}>
+                      <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.95rem] font-bold lg:col-start-1 lg:row-start-2 lg:mt-1 lg:justify-self-start lg:py-0.5 lg:text-[0.843rem] ${meta.chip}`}>
                         <meta.icon size={12} strokeWidth={2.6} className="shrink-0" />
                         <span className="break-keep">{topAction.title}</span>
                         {topAction.estValue > 0 && <span className="shrink-0">· +{wonShort(topAction.estValue)}</span>}
                       </p>
                     )}
                   </div>
-                  <ChevronRight size={16} className="shrink-0 text-navy-400" />
+                  {/*  PC 표 칸 — 연락처 · 미수금(clientOutstanding · 카드의 「미수금」 표와 같은 계산) */}
+                  <span className="hidden truncate text-[0.899rem] font-medium tabular-nums text-navy-600 lg:col-start-5 lg:row-span-2 lg:row-start-1 lg:block">
+                    {c.phone || '—'}
+                  </span>
+                  <span
+                    data-client-owed={showMoney ? signals.get(c.id)?.owed ?? 0 : undefined}
+                    className={`hidden whitespace-nowrap text-right text-[0.899rem] tabular-nums lg:col-start-6 lg:row-span-2 lg:row-start-1 lg:block ${
+                      unpaid ? 'font-extrabold text-rose-700' : 'font-medium text-navy-400'
+                    }`}
+                  >
+                    {showMoney ? (unpaid ? won(signals.get(c.id)?.owed ?? 0) : '—') : ''}
+                  </span>
+                  <ChevronRight size={16} className="shrink-0 text-navy-400 lg:col-start-7 lg:row-span-2 lg:row-start-1" />
                 </button>
                 {/*  Pilot 켜기 (0122) — 관리자만. 카드(button) 안에 단추를 넣을 수 없어
                      카드 아래 한 줄로 둡니다. 시연용 거래처는 켜도 세지 않으므로 칸을 안 보입니다. */}
                 {canPilot && !c.isDemoGenerated && (
                   <label
                     data-pilot-toggle={c.id}
-                    className="-mt-1.5 mb-1 flex min-h-[2.75rem] cursor-pointer items-center justify-end gap-2 px-3 text-[0.98rem] font-bold text-navy-500"
+                    className="-mt-1.5 mb-1 flex min-h-[2.75rem] cursor-pointer items-center justify-end gap-2 px-3 text-[0.98rem] font-bold text-navy-500 lg:m-0 lg:w-[9.5rem] lg:shrink-0 lg:justify-center lg:pe-4"
                   >
                     {isFlatFeeClient(c) && <span className="rounded-md bg-navy-50 px-1.5 py-0.5 text-[0.88rem] font-bold text-navy-500">월정액</span>}
-                    <span>이번 주 PILOT</span>
+                    <span className="lg:sr-only">이번 주 PILOT</span>
                     <input
                       type="checkbox"
                       className="h-5 w-5 accent-violet-600"
@@ -330,10 +380,13 @@ export function Clients() {
                     />
                   </label>
                 )}
+                {/*  PC 표 — 시연용 거래처는 Pilot 칸이 없으니 자리만 비워 칸을 맞춥니다 */}
+                {canPilot && c.isDemoGenerated && <span aria-hidden="true" className="hidden lg:block lg:w-[9.5rem] lg:shrink-0" />}
               </li>
             )
           })}
         </ul>
+        </div>
         </>
       )}
 

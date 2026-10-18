@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Building2,
+  CalendarClock,
+  Truck,
   Circle,
   CheckCircle2,
   ListChecks,
@@ -41,8 +43,13 @@ import { PortalSwitchButton } from '../components/PortalSwitch'
 import { hideRequests } from '../lib/pilotMode'
 import { RevenueKpis } from '../components/RevenueKpis'
 import { todayChecklist, dispatchPlans, todayProgress, type CheckStatus } from '../lib/ops'
+import { planGaps } from '../lib/planGap'
+import { rollupFor } from '../lib/billing'
+import { dunningSummary } from '../lib/dunning'
+import { outstandingTotal } from '../lib/selectors'
+import { shiftMonth } from '../lib/revenue'
 import { revenueOpportunities, clientMonthlyReport } from '../lib/insights'
-import { prettyDate, today, wonShort, thisMonth } from '../lib/format'
+import { prettyDate, today, won, wonShort, thisMonth } from '../lib/format'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 대시보드
@@ -94,6 +101,102 @@ function PhoneRow({
   )
 }
 
+/**
+ * PC 맨 위 숫자 카드 4칸 (AX 3차 · 흔한 ERP 첫 줄).
+ *
+ *  ⚠ 새로 계산하는 숫자가 없습니다. 아래 카드들이 쓰는 **같은 함수**를 그대로 부릅니다 —
+ *    오늘 수거(todayProgress) · 다음 방문 안 잡힘(planGaps, 「오늘 처리할 업무」와 같음) ·
+ *    미수금(outstandingTotal · dunningSummary, 「이번 달 경영현황」과 같음) ·
+ *    이번 달 매출(rollupFor, 같은 곳). 숫자가 화면 두 군데에서 다르면 둘 다 못 믿게 됩니다.
+ *  ⚠ 돈 두 칸은 돈을 볼 수 있는 계정에만 (canSeeMoney).
+ *  ⚠ 폰에는 없습니다 — 폰 첫 화면은 「오늘 무엇을 해야 하는가」(0084).
+ */
+function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
+  const { data } = useData()
+  const month = thisMonth()
+  const progress = todayProgress(data)
+  const gaps = useMemo(() => planGaps(data), [data])
+  const unpaid = outstandingTotal(data)
+  const dunning = useMemo(() => dunningSummary(data), [data])
+  const cur = useMemo(() => rollupFor(data, month), [data, month])
+  const prevMonth = shiftMonth(month, -1)
+  const prev = useMemo(() => rollupFor(data, prevMonth), [data, prevMonth])
+  const m = (ym: string) => `${Number(ym.slice(5, 7))}월`
+
+  const cells: { key: string; icon: LucideIcon; label: string; value: string; unit: string; tone: string; sub: string; to: string }[] = [
+    {
+      key: 'today',
+      icon: Truck,
+      label: '오늘 수거',
+      value: String(progress.done),
+      unit: `/ ${progress.planned}건`,
+      tone: 'text-navy-900',
+      sub: progress.planned === 0 ? '오늘 잡힌 일정 없음' : progress.pendingInput > 0 ? `입력 대기 ${progress.pendingInput}건` : '완료 / 오늘 일정',
+      to: '/today',
+    },
+    {
+      key: 'gap',
+      icon: CalendarClock,
+      label: '다음 방문 안 잡힘',
+      value: String(gaps.length),
+      unit: '곳',
+      tone: gaps.length > 0 ? 'text-amber-700' : 'text-navy-900',
+      sub: gaps.length > 0 ? '평소 간격이면 이번 주 갈 곳' : '빠진 곳 없음',
+      to: '/plan',
+    },
+  ]
+  if (canSeeMoney) {
+    cells.push(
+      {
+        key: 'unpaid',
+        icon: Wallet,
+        label: '미수금',
+        value: won(unpaid).replace(/원$/, ''),
+        unit: '원',
+        tone: unpaid > 0 ? 'text-rose-700' : 'text-navy-900',
+        sub: dunning.rows.length > 0 ? `독촉 대상 ${dunning.rows.length}곳 · 지난달 이전 청구` : '확정 청구 중 미입금액',
+        to: '/receivables',
+      },
+      {
+        key: 'rev',
+        icon: TrendingUp,
+        label: `${m(month)} 매출 (진행 중)`,
+        value: wonShort(cur.revenue),
+        unit: '',
+        tone: 'text-navy-900',
+        sub: `${m(prevMonth)} ${wonShort(prev.revenue)} · 확정 청구 + 미확정 정산`,
+        to: '/revenue',
+      },
+    )
+  }
+  return (
+    <div data-dash-kpis className={`hidden gap-3 lg:grid ${cells.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}>
+      {cells.map((c) => {
+        const Icon = c.icon
+        return (
+          <Link
+            key={c.key}
+            to={c.to}
+            data-dash-kpi={c.key}
+            className="kpi-card group flex min-w-0 flex-col gap-1 transition hover:ring-teal-300"
+          >
+            <span className="flex items-center gap-1.5 text-[0.899rem] font-bold text-navy-500">
+              <Icon size={16} strokeWidth={2.4} aria-hidden="true" className="shrink-0" />
+              <span className="truncate">{c.label}</span>
+              <ChevronRight size={16} aria-hidden="true" className="ms-auto shrink-0 text-navy-300 transition group-hover:text-navy-600" />
+            </span>
+            <span className={`whitespace-nowrap text-[1.348rem] font-extrabold 2xl:text-[1.573rem] leading-tight tracking-tight tabular-nums ${c.tone}`}>
+              {c.value}
+              {c.unit && <small className="ms-1 text-[0.899rem] font-bold text-navy-500">{c.unit}</small>}
+            </span>
+            <span className="truncate text-[0.843rem] font-medium text-navy-500">{c.sub}</span>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
 export function Dashboard() {
   const { data } = useData()
   const loadState = useLoadState()
@@ -131,7 +234,7 @@ export function Dashboard() {
            있으나 마나입니다.
            그래서 **줄을 늘리지 않고 옆에** 두었습니다. 세로로 0px 입니다. */}
       <div className="lg:flex lg:flex-wrap lg:items-baseline lg:gap-3">
-        <h1 className="t-page break-keep text-navy-900 lg:min-w-0 lg:flex-1 lg:text-[1.9rem]">
+        <h1 className="t-page break-keep text-navy-900 lg:min-w-0 lg:flex-1">
           <span className="lg:hidden">{profile ? `${profile.name}님, 오늘 할 일` : '오늘 할 일'}</span>
           <span className="hidden lg:inline">
             {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
@@ -152,13 +255,17 @@ export function Dashboard() {
         {/*  0083 — 「병원이 보는 화면」. PC 에서는 인사 줄 **오른쪽**에 나란히
              둡니다. 아래에 한 줄을 더 두면 그만큼 오늘 할 일이 밀립니다.
              ⚠ 실제로 열리는 사람에게만 보입니다(안에서 스스로 판단합니다). */}
+        {/*  AX 3차 — 왼쪽 메뉴 맨 위 · 위쪽 흰 줄에도 있어 여기서는 한 줄짜리(작은) 단추로 */}
         <div className="hidden lg:mt-0 lg:block lg:shrink-0">
-          <PortalSwitchButton />
+          <PortalSwitchButton compact label="병원이 보는 화면" />
         </div>
       </div>
 
 
 
+
+      {/*  AX 3차 — PC 첫 줄 숫자 카드 4칸 */}
+      <DashKpis canSeeMoney={canSeeMoney} />
 
       {/*  밀린 마감 — 인사 바로 아래. 오늘 할 일보다 위입니다.
            지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.

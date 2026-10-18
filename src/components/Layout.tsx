@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import { motion } from 'framer-motion'
 import {
@@ -10,6 +10,7 @@ import {
   Headset,
   Lock,
   ChevronDown,
+  ChevronRight,
   LogOut,
   HelpCircle,
   PlayCircle,
@@ -121,9 +122,12 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
     <NavLink
       to={item.to}
       end={item.to === '/'}
+      title={item.desc || undefined}
       className={({ isActive }) =>
-        `t-nav relative flex items-center gap-3 rounded-[14px] px-3 transition ${
-          muted ? 'min-h-[52px] font-semibold' : 'min-h-[64px]'
+        /*  AX 3차 — 메뉴 한 줄(설명 줄은 뺐습니다 · 마우스를 올리면 title 로 나옵니다).
+            한 화면에 보이는 메뉴가 두 배가 됩니다. 글자는 16.5px — 0069 바닥(16px) 위. */
+        `relative flex items-center gap-2.5 rounded-[11px] px-2.5 text-[0.927rem] transition ${
+          muted ? 'min-h-[40px] font-semibold' : 'min-h-[42px] font-bold'
         } ${
           /*  AX 디자인 2차 — 지금 보는 줄은 강조색(포털 파랑) 칸 + 얇은 테두리.
               예전 흰 반투명(bg-white/14)은 어두운 바탕에서 회색으로 떠 보였습니다. */
@@ -156,7 +160,7 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
           layoutId="sidebar-accent"
           data-sidebar-accent
           aria-hidden="true"
-          className="absolute bottom-3 left-0 top-3 w-1 rounded-full bg-teal-400"
+          className="absolute bottom-2.5 left-0 top-2.5 w-1 rounded-full bg-teal-400"
           transition={{ type: 'spring', stiffness: 520, damping: 42 }}
         />
       )}
@@ -167,42 +171,29 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
              글자를 무채색으로 바꿔 해결했습니다). 원인을 잘못 짚어
              멀쩡한 것을 건드렸던 셈입니다. */}
       {muted ? (
-        <Icon size={21} strokeWidth={2.2} className="ml-1 shrink-0" />
+        <Icon size={18} strokeWidth={2.2} className="ml-1 shrink-0" />
       ) : (
         //  AX 디자인 2차 — 색조는 그대로, **어두운 바탕용 칸**(반투명 + 밝은 아이콘)으로.
         //  흰 칸이 남색 바탕 위에서 하나씩 튀던 것을 아래 「추가 개발 예정」 아이콘과
         //  같은 방식으로 맞췄습니다. 지금 보는 메뉴만 강조색으로 채웁니다.
         <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
             isActive ? 'bg-teal-600 text-white' : `ring-1 ring-inset ${TONE[item.tone].side}`
           }`}
         >
-          <Icon size={22} strokeWidth={2.3} />
+          <Icon size={16} strokeWidth={2.4} />
         </span>
       )}
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="flex items-center gap-2 break-keep">
+        <span className="flex items-center gap-2 whitespace-nowrap">
           {item.label}
           {/*  임시로 올린 메뉴(신보 발표 시연)만 — 작은 글자 표 하나. 색 · 그림은 다른 메뉴와 같게. */}
           {item.badge && (
-            <span data-nav-badge className="shrink-0 rounded-md bg-teal-400/20 px-1.5 py-0.5 text-[0.78rem] font-extrabold tracking-wide text-teal-200 ring-1 ring-teal-300/40">
+            <span data-nav-badge className="ms-auto shrink-0 rounded-md bg-teal-400/20 px-1.5 py-0.5 text-[0.787rem] font-extrabold tracking-wide text-teal-200 ring-1 ring-teal-300/40">
               {item.badge}
             </span>
           )}
         </span>
-        {/* 설명은 사이드바가 넉넉해지는 xl 이상에서만 — 좁은 폭에서는 메뉴명만 보여 줍니다.
-            ⚠ 0082 — 여기에 navy-400 이 걸려 있었습니다. 그 색의 **일**은
-              「밝은 바탕의 캡션」이라 0080 에서 일부러 어둡게 내린 색입니다.
-              어두운 사이드바에 얹으면 검정 위의 짙은 회색이 됩니다 —
-              실제로 3.2~3.8:1 로 기준(4.5)에 못 미쳤습니다.
-              어두운 바탕용은 navy-300 입니다. 팔레트 주석에도 그렇게 적어
-              두었는데 코드가 이미 어기고 있었고, 자(a11y_measure)가 main
-              안만 봐서 여태 안 잡혔습니다. */}
-        {!muted && item.desc && (
-          <span className="mt-1 hidden break-keep text-[0.95rem] font-medium text-navy-200 xl:block">
-            {item.desc}
-          </span>
-        )}
       </span>
         </>
       )}
@@ -243,12 +234,12 @@ function GroupHeader({
       data-nav-group-header={title}
       /*  0082 — navy-400 은 「밝은 바탕의 캡션」 색입니다. 어두운 사이드바에
           얹으니 3.2~3.6:1 로 기준(4.5)에 못 미쳤습니다. 어두운 바탕용은 navy-300. */
-      className="mt-6 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-200 transition first:mt-1 hover:bg-white/5 hover:text-white"
+      className="mt-3 flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[0.843rem] font-extrabold tracking-wide text-navy-200 transition first:mt-1 hover:bg-white/5 hover:text-white"
     >
       {Icon && <Icon size={13} className="shrink-0" />}
       <span className="min-w-0 flex-1 break-keep text-left leading-snug">{title}</span>
       {!open && (
-        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.9rem] font-bold text-navy-200">
+        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.843rem] font-bold text-navy-200">
           {count}
         </span>
       )}
@@ -324,7 +315,7 @@ function NavGroup({
                  얹으니 3.0:1 밖에 안 나왔습니다(기준 4.5). 예전에는 이 묶음이
                  거의 안 펼쳐져 눈에 안 띄었을 뿐, 색 자체가 틀렸습니다.
                  어두운 바탕의 보조 글자는 navy-200 입니다(0082·0086). */
-            <p className="px-4 pb-1 pt-3 text-[0.9rem] font-bold tracking-wide text-navy-200">추가 개발 예정</p>
+            <p className="px-2.5 pb-1 pt-2 text-[0.843rem] font-bold tracking-wide text-navy-200">추가 개발 예정</p>
           )}
           {planned.map((label) => (
             //  0095 — 예전에는 잠긴 회색 글이었습니다. 눌러도 아무 일이
@@ -337,11 +328,11 @@ function NavGroup({
               data-nav-planned={label}
               onClick={() => onPlanned?.(label)}
               title="계획 중인 기능입니다 — 누르면 무엇을 검토 중인지 나옵니다"
-              className="flex w-full items-center gap-2.5 rounded-xl px-4 py-3 text-left text-[1rem] font-semibold text-navy-200 transition hover:bg-white/5 hover:text-white"
+              className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[11px] px-3 text-left text-[0.899rem] font-semibold text-navy-200 transition hover:bg-white/5 hover:text-white"
             >
               <Lock size={14} className="shrink-0" />
               <span className="min-w-0 flex-1 break-keep text-left leading-snug">{label}</span>
-              <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.95rem] font-bold text-navy-200">
+              <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.787rem] font-bold text-navy-200">
                 계획중
               </span>
             </button>
@@ -361,9 +352,9 @@ function NavGroup({
 function PlannedShowcase({ onPlanned }: { onPlanned: (label: string) => void }) {
   return (
     <div data-nav-planned-showcase className="space-y-0.5">
-      <p className="mt-6 flex items-center gap-2 px-4 py-2.5 text-[0.92rem] font-extrabold tracking-wide text-navy-200">
+      <p className="mt-3 flex items-center gap-2 px-2.5 py-1.5 text-[0.843rem] font-extrabold tracking-wide text-navy-200">
         <span className="min-w-0 flex-1 break-keep leading-snug">추가 개발 예정</span>
-        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.85rem] font-bold text-navy-200">계획중</span>
+        <span className="shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[0.787rem] font-bold text-navy-200">계획중</span>
       </p>
       {PLANNED.map((label) => {
         const Icon = PLANNED_ICON[label] ?? Lock
@@ -374,12 +365,12 @@ function PlannedShowcase({ onPlanned }: { onPlanned: (label: string) => void }) 
             data-nav-planned={label}
             onClick={() => onPlanned(label)}
             title="계획 중인 기능입니다 — 누르면 무엇을 검토 중인지 나옵니다"
-            className="flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-3 text-left text-[1rem] font-semibold text-white transition hover:bg-white/10"
+            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[11px] px-2.5 text-left text-[0.899rem] font-semibold text-white transition hover:bg-white/10"
           >
-            <span data-planned-icon className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-300/15 text-amber-300 ring-1 ring-amber-300/30">
-              <Icon size={18} strokeWidth={2.3} />
+            <span data-planned-icon className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-300/15 text-amber-300 ring-1 ring-amber-300/30">
+              <Icon size={15} strokeWidth={2.4} />
             </span>
-            <span className="min-w-0 flex-1 break-keep leading-snug">{label}</span>
+            <span className="min-w-0 flex-1 truncate leading-snug">{label}</span>
             <span className="sr-only">계획중</span>
           </button>
         )
@@ -408,14 +399,16 @@ function Sidebar() {
   const showMobilePreview = !configured || canAccess(profile?.role ?? null, '/mobile-preview')
 
   return (
-    <aside className="side-bg sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto border-r border-white/[0.06] lg:flex">
+    /*  AX 3차 — 폭 336/392 → 288/304px. 메뉴가 한 줄이 되어 넓을 이유가 없어졌고,
+        그만큼 본문(표)이 넓어집니다. */
+    <aside className="side-bg sticky top-0 hidden h-[100dvh] w-[288px] shrink-0 flex-col overflow-y-auto border-r border-white/[0.06] lg:flex">
       {/* 브랜드 */}
-      <div className="px-5 pb-4 pt-6">
+      <div className="px-4 pb-3 pt-4">
         <div className="flex items-center gap-2.5">
-          <BrandLogo size="lg" />
+          <BrandLogo size="md" />
           <div className="min-w-0 leading-tight">
-            <p className="break-keep text-[1.42rem] font-extrabold tracking-tight text-white">{COMPANY}</p>
-            <p className="mt-1.5 break-keep text-[1.03rem] font-medium leading-snug text-navy-200">
+            <p className="break-keep text-[1.067rem] font-extrabold tracking-tight text-white">{COMPANY}</p>
+            <p className="mt-1 break-keep text-[0.843rem] font-medium leading-snug text-navy-200">
               {SYSTEM_TAGLINE}
             </p>
           </div>
@@ -427,7 +420,7 @@ function Sidebar() {
              읽히라고 — 문장이 아니라 이름입니다. */}
         <p
           data-brand-ax
-          className="mt-3.5 select-none border-t border-white/10 pt-3 text-[0.98rem] font-black uppercase tracking-[0.22em] text-amber-300"
+          className="mt-2.5 select-none border-t border-white/10 pt-2.5 text-[0.73rem] font-black uppercase tracking-[0.2em] text-amber-300"
         >
           {SYSTEM_WORDMARK}
           {/*  0082 — 글자에 alpha 를 걸면 그만큼 대비가 깎입니다(3.8:1).
@@ -447,7 +440,7 @@ function Sidebar() {
            열 수 없는 역할(현장)에게는 안에서 스스로 숨습니다. */}
       <PortalSwitchButton side />
 
-      <nav className="flex-1 px-3">
+      <nav className="flex-1 px-2.5">
         {groups.map((g) => (
           <Fragment key={g.id}>
             <NavGroup
@@ -466,18 +459,18 @@ function Sidebar() {
       </nav>
 
       {/* 하단 — 계정 / 바로가기 */}
-      <div className="space-y-2 px-3 pb-4 pt-3">
-        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2.5">
+      <div className="space-y-1.5 px-2.5 pb-3 pt-3">
+        <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-3 py-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 text-[0.98rem] font-black text-teal-300">
             {(profile?.name ?? '비').slice(0, 1)}
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="break-keep text-[1.12rem] font-bold text-white">
+            <p className="break-keep text-[0.899rem] font-bold text-white">
               {profile?.name || (configured ? '로그인 필요' : '비원미래 대표')}
             </p>
             {/*  0082 — 어두운 사이드바 위라 navy-300 입니다(navy-400 은 밝은
                  바탕용이라 여기서는 3.2:1 밖에 안 나옵니다). */}
-            <p className="break-keep text-[1rem] text-navy-200">
+            <p className="break-keep text-[0.843rem] text-navy-200">
               {profile ? ROLE_LABEL[profile.role] : configured ? '—' : '시연 모드'}
             </p>
             {/*  ⚠ 0129 — 여기 있던 시계를 **사이드바 맨 위로** 옮겼습니다.
@@ -506,15 +499,15 @@ function Sidebar() {
              예전에는 병원 상담번호(1533-8876)가 여기 있었습니다. 직원이
              자기 회사 상담센터로 전화할 일은 없고, 정작 대표번호는
              어디에도 없었습니다. */}
-        <div data-company-contact className="rounded-xl bg-white/5 px-3 py-2.5">
+        <div data-company-contact className="rounded-xl bg-white/5 px-3 py-2">
           <div className="flex items-center gap-2.5">
             <Headset size={16} className="shrink-0 text-teal-300" />
             <div className="min-w-0 leading-tight">
-              <p className="break-keep text-[1.12rem] font-bold text-white">{COMPANY_TEL}</p>
-              <p className="break-keep text-[1rem] text-navy-200">{COMPANY_HOURS}</p>
+              <p className="break-keep text-[0.899rem] font-bold text-white">{COMPANY_TEL}</p>
+              <p className="break-keep text-[0.843rem] text-navy-200">{COMPANY_HOURS}</p>
             </div>
           </div>
-          <p className="mt-1.5 break-keep text-[1rem] leading-snug text-navy-200">
+          <p className="mt-1 break-keep text-[0.843rem] leading-snug text-navy-200">
             팩스 {COMPANY_FAX}
             <br />
             {COMPANY_EMAIL}
@@ -526,10 +519,10 @@ function Sidebar() {
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => navigate('/company')}
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-200 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-white/5 py-2 text-navy-200 transition hover:bg-white/10 hover:text-white"
           >
-            <Globe size={18} strokeWidth={2.2} />
-            <span className="break-keep text-[0.98rem] font-semibold">홈페이지</span>
+            <Globe size={17} strokeWidth={2.2} />
+            <span className="whitespace-nowrap text-[0.843rem] font-semibold">홈페이지</span>
           </button>
           {/*  ⚠ 0074 — 이 단추가 **막힌 곳으로 가는 단추**였습니다. 현장
                담당자에게도 보이는데 누르면 「접근 권한이 없는 화면입니다」가
@@ -539,26 +532,69 @@ function Sidebar() {
             <button
               data-go-mobile-preview
               onClick={() => navigate('/mobile-preview')}
-              className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-200 transition hover:bg-white/10 hover:text-white"
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-white/5 py-2 text-navy-200 transition hover:bg-white/10 hover:text-white"
             >
               <Smartphone size={18} strokeWidth={2.2} />
-              <span className="break-keep text-[0.98rem] font-semibold">모바일 화면</span>
+              <span className="whitespace-nowrap text-[0.843rem] font-semibold">모바일 화면</span>
             </button>
           )}
           <a
             href={ALLBARO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/5 py-2.5 text-navy-200 transition hover:bg-white/10 hover:text-white"
+            className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-white/5 py-2 text-navy-200 transition hover:bg-white/10 hover:text-white"
           >
             <ExternalLink size={18} strokeWidth={2.2} />
-            <span className="break-keep text-[0.98rem] font-semibold">올바로</span>
+            <span className="whitespace-nowrap text-[0.843rem] font-semibold">올바로</span>
           </a>
         </div>
       </div>
     
       <PlannedPreview label={plannedOpen} onClose={() => setPlannedOpen(null)} />
     </aside>
+  )
+}
+
+// ── PC 제목 위 「묶음 › 화면 이름」 (AX 3차) ────────────────────────────────
+/**
+ *  흔한 ERP 화면처럼 지금 어디인지 한 줄로 적습니다. 이름은 왼쪽 메뉴(lib/nav.ts)와
+ *  **같은 곳**에서 가져옵니다 — 따로 적어 두면 메뉴 이름이 바뀔 때 어긋납니다.
+ *  거래처 상세처럼 메뉴 아래 화면이면 메뉴 이름을 눌러 목록으로 돌아갈 수 있습니다.
+ *  ⚠ 시안에는 위쪽 흰 줄 맨 왼쪽이었는데, 거기 두면 1440px 에서 도구 줄이 두 줄로 꺾여
+ *    「방문용 영상 ↔ 시계 ↔ 화면 색」 자리(check_clock · check_visit_video)가 흔들립니다.
+ *    그래서 본문 맨 위(제목 바로 위)에 둡니다.
+ */
+function TopCrumb() {
+  const { pathname } = useLocation()
+  const hit = useMemo(() => {
+    for (const g of NAV_GROUPS) {
+      for (const i of g.items) {
+        if (i.to === '/' ? pathname === '/' : pathname === i.to || pathname.startsWith(`${i.to}/`)) {
+          return { group: g.title, label: i.label, to: i.to, sub: pathname !== i.to }
+        }
+      }
+    }
+    return null
+  }, [pathname])
+  if (!hit) return null
+  return (
+    <nav
+      aria-label="지금 위치"
+      data-page-crumb
+      className="mb-2 hidden min-w-0 items-center gap-1.5 whitespace-nowrap text-[0.899rem] font-semibold text-navy-500 lg:flex"
+    >
+      <span>{hit.group}</span>
+      <ChevronRight size={15} strokeWidth={2.4} aria-hidden="true" className="text-navy-300" />
+      {hit.sub ? (
+        <>
+          <Link to={hit.to} className="transition hover:text-navy-900">{hit.label}</Link>
+          <ChevronRight size={15} strokeWidth={2.4} aria-hidden="true" className="text-navy-300" />
+          <span className="font-extrabold text-navy-900">상세</span>
+        </>
+      ) : (
+        <span className="font-extrabold text-navy-900" aria-current="page">{hit.label}</span>
+      )}
+    </nav>
   )
 }
 
@@ -839,7 +875,7 @@ export function Layout() {
                  ⚠ 발표 집중 모드(minimal)에서는 예전처럼 통째로 숨습니다. */}
             <div
               data-topbar
-              className={`${minimal ? 'hidden' : 'hidden lg:block'} border-b border-cardline bg-white px-[40px] 2xl:px-[56px]`}
+              className={`${minimal ? 'hidden' : 'hidden lg:block'} border-b border-cardline bg-white px-[32px] 2xl:px-[48px]`}
             >
                 {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
                     사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
@@ -849,7 +885,7 @@ export function Layout() {
                      줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
                      (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
                      같은 이유로 안전합니다. */}
-              <div className={`mx-auto flex w-full flex-wrap items-center justify-end gap-1.5 py-2.5 ${WIDTH_CLASS[contentWidth]}`}>
+              <div className={`mx-auto flex w-full flex-wrap items-center justify-end gap-1.5 py-2 ${WIDTH_CLASS[contentWidth]}`}>
                 {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
                      설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
                      설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
@@ -877,7 +913,7 @@ export function Layout() {
                     type="button"
                     data-visit-video-btn
                     onClick={() => navigate('/visit-video')}
-                    className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-900 px-4 py-2 text-[1rem] font-bold text-white transition hover:bg-navy-950"
+                    className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-navy-900 px-3.5 py-1.5 text-[0.899rem] font-bold text-white transition hover:bg-navy-950"
                   >
                     <PlayCircle className="h-[18px] w-[18px]" aria-hidden />
                     신용보증기금 방문용 영상
@@ -885,7 +921,7 @@ export function Layout() {
                 )}
                 <p
                   data-clock-top
-                  className="me-3 shrink-0 whitespace-nowrap text-[0.98rem] font-extrabold text-navy-700"
+                  className="me-3 shrink-0 whitespace-nowrap text-[0.899rem] font-extrabold text-navy-700"
                 >
                   {/*  ⚠ 날짜는 짧게 씁니다 — 이 줄에는 이미 단추가 넷입니다.
                        `full`(312px)·보통(226px)을 넣으면 968px 짜리 줄이 넘쳐
@@ -894,13 +930,13 @@ export function Layout() {
                 </p>
                 {!helpInSettings && (
                   <>
-                    <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900" />
+                    <ThemeButton className="flex shrink-0 min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-white px-3 py-1.5 text-[0.899rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900" />
                     {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
                     {showWhy && (
-                      <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 ring-1 ring-navy-100 transition hover:text-navy-800" />
+                      <TourWhyButton className="flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-white px-3 py-1.5 text-[0.899rem] font-bold text-navy-500 ring-1 ring-navy-100 transition hover:text-navy-800" />
                     )}
                     <TourButton
-                      className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900"
+                      className="flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-white px-3 py-1.5 text-[0.899rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900"
                       label="사용 방법"
                     />
                   </>
@@ -911,7 +947,7 @@ export function Layout() {
                      이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
                 <span data-hide-presenting className="contents">
                 <FeedbackButton
-                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
+                  className="flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-teal-50 px-3 py-1.5 text-[0.899rem] font-bold text-teal-700 ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
                   /*  PC 는 한 줄짜리 알약이라 아래에 붙일 자리가 없습니다 —
                       괄호를 뒤에 답니다. 폰 더보기·도움말에서는 제목 아래 줄에
                       들어갑니다(그쪽은 두 줄짜리 칸이라). */
@@ -925,7 +961,7 @@ export function Layout() {
                 <PortalSwitchButton compact label="병원이 보는 화면" />
               </div>
             </div>
-            <div className="px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px]">
+            <div className="px-4 pt-4 lg:px-[32px] lg:pt-6 2xl:px-[48px]">
             <div className={`mx-auto w-full ${WIDTH_CLASS[contentWidth]}`}>
             {/*
               안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어
@@ -936,6 +972,7 @@ export function Layout() {
               풀리지 않아서, 키를 안 바꾸면 다른 화면으로 가도 계속 오류
               화면이 붙어 있습니다.
             */}
+            {!minimal && <TopCrumb />}
             <ErrorBoundary key={pathname} scope="page">
               <PageMotion key={pathname}>
                 <Outlet />

@@ -136,47 +136,49 @@ export function CollectionHistory() {
 
       {/* 요약 */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="card kpi-box p-4">
-          <p className="text-[1.03rem] font-semibold text-navy-400">{status === '완료' ? '수거건수' : '미입력 건수'}</p>
-          <p className="t-stat mt-1.5 text-navy-900">{rows.length}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
+        <div className="kpi-card kpi-box">
+          <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">{status === '완료' ? '수거건수' : '미입력 건수'}</p>
+          <p className="t-stat mt-1.5 lg:mt-0.5 lg:text-[1.573rem] text-navy-900">{rows.length}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
         </div>
-        <div className="card kpi-box p-4">
-          <p className="text-[1.03rem] font-semibold text-navy-400">총 수거량</p>
-          <p className="t-stat mt-1.5 text-teal-600">{weight(totalKg)}</p>
+        <div className="kpi-card kpi-box">
+          <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">총 수거량</p>
+          <p className="t-stat mt-1.5 lg:mt-0.5 lg:text-[1.573rem] text-teal-600">{weight(totalKg)}</p>
         </div>
-        <div className="card kpi-box p-4">
-          <p className="text-[1.03rem] font-semibold text-navy-400">긴급수거</p>
-          <p className="t-stat mt-1.5 text-rose-500">{urgent}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
+        <div className="kpi-card kpi-box">
+          <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">긴급수거</p>
+          <p className="t-stat mt-1.5 lg:mt-0.5 lg:text-[1.573rem] text-rose-500">{urgent}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
         </div>
-        <div className="card kpi-box p-4">
-          <p className="text-[1.03rem] font-semibold text-navy-400">인계 완료율</p>
-          <p className="t-stat mt-1.5 text-navy-900">{handoverRate}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">%</span></p>
+        <div className="kpi-card kpi-box">
+          <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">인계 완료율</p>
+          <p className="t-stat mt-1.5 lg:mt-0.5 lg:text-[1.573rem] text-navy-900">{handoverRate}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">%</span></p>
         </div>
       </div>
 
-      {/* 필터 */}
-      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1" data-history-status>
+      {/* 필터 — AX 3차: PC 에서는 칩 줄들을 표 바로 위 **도구 줄**로 붙입니다(폰은 그대로 한 줄씩) */}
+      <div data-history-tools className="lg:mb-3 lg:flex lg:flex-wrap lg:items-center lg:gap-x-5 lg:gap-y-2 lg:rounded-[14px] lg:bg-white lg:px-3 lg:py-2.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1 lg:m-0 lg:p-0" data-history-status>
         {(['완료', '미입력'] as StatusFilter[]).map((st) => (
           <FilterChip key={st} active={status === st} onClick={() => setStatus(st)}>
             {st === '완료' ? '입력된 수거' : '지난 일정 · 미입력'}
           </FilterChip>
         ))}
       </div>
-      <input data-history-search className="field-input mb-3" placeholder="거래처 · 기사 · 차량 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
+      <input data-history-search className="field-input mb-3 lg:mb-0 lg:w-[18rem] lg:shrink-0" placeholder="거래처 · 기사 · 차량 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1 lg:m-0 lg:p-0">
         {(['전체', '의료폐기물', '일회용기저귀'] as WasteFilter[]).map((w) => (
           <FilterChip key={w} active={waste === w} onClick={() => setWaste(w)}>{w}</FilterChip>
         ))}
       </div>
-      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1 lg:m-0 lg:p-0">
         {(['전체', '정기', '추가', '긴급'] as KindFilter[]).map((k) => (
           <FilterChip key={k} active={kind === k} onClick={() => setKind(k)}>{k}</FilterChip>
         ))}
       </div>
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:m-0 lg:p-0">
         {(['전체', '최근 7일', '이번 달', '지난 달'] as PeriodFilter[]).map((p) => (
           <FilterChip key={p} active={period === p} onClick={() => setPeriod(p)}>{p}</FilterChip>
         ))}
+      </div>
       </div>
 
       {/*  ── 몇 건 중 몇 건을 보고 있는가 (0082) ──────────────────────────
@@ -194,7 +196,8 @@ export function CollectionHistory() {
 
       {/* 테이블 */}
       <div className="card overflow-x-auto p-1">
-        <table className="w-full border-collapse text-left text-[0.98rem]">
+        {/*  AX 3차 — PC 에서 글자 16px · 줄 높이를 줄여 한 화면에 더 많은 줄 */}
+        <table className="w-full border-collapse text-left text-[0.98rem] lg:text-[0.899rem] lg:[&_td]:py-1.5">
           <thead>
             <tr className="bg-navy-50 text-navy-500">
               {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고', ...(canRevert ? ['보기·수정'] : [])].map((h) => (
@@ -238,7 +241,7 @@ export function CollectionHistory() {
                       <button
                         data-history-open={r.id}
                         onClick={() => { setError(''); setOpenId(r.eventId!) }}
-                        className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-teal-700 transition hover:bg-teal-50"
+                        className="flex min-h-[2.25rem] items-center gap-1 rounded-lg px-2 text-[0.98rem] font-bold text-teal-700 transition hover:bg-teal-50 lg:min-h-[2rem] lg:text-[0.899rem]"
                       >
                         <Pencil size={14} strokeWidth={2.5} /> 보기·수정
                       </button>
