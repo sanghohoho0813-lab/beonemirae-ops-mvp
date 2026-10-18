@@ -902,7 +902,7 @@ export function CollectionInput() {
                 applySchedule(nextPending.id)
                 window.scrollTo({ top: 0 })
               }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 px-5 py-4 text-[1.2rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-4 text-[1.2rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
             >
               다음 방문 · {nextPendingClient?.name ?? '수거 입력'}
               <ArrowRight size={20} strokeWidth={2.5} />
@@ -1171,7 +1171,7 @@ export function CollectionInput() {
                   key={s.id}
                   onClick={() => applySchedule(s.id)}
                   className={`rounded-xl px-3.5 py-2.5 text-left text-[1.08rem] font-bold transition active:scale-[0.97] ${
-                    active ? 'bg-teal-500 text-white' : 'bg-navy-50 text-navy-700'
+                    active ? 'bg-teal-600 text-white' : 'bg-navy-50 text-navy-700'
                   }`}
                 >
                   <span className="tabular-nums">{s.scheduledTime}</span> · {c?.name ?? '거래처'}
@@ -1227,7 +1227,7 @@ export function CollectionInput() {
                       }}
                       title={c.name}
                       className={`min-h-[2.75rem] max-w-full truncate rounded-xl px-3.5 py-2.5 text-left text-[1.05rem] font-bold transition active:scale-[0.97] ${
-                        clientId === c.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-navy-50 text-navy-700'
+                        clientId === c.id ? 'bg-teal-600 text-white shadow-sm' : 'bg-navy-50 text-navy-700'
                       }`}
                     >
                       {/*  「서울인화스포츠마취통증의학과의원」처럼 긴 이름이 두 줄을

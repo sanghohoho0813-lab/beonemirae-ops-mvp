@@ -722,7 +722,7 @@ export function ClientDetail() {
             //  본문보다 작으면 어디를 보고 있는지 매번 다시 찾게 됩니다.
             //  폰·태블릿은 그대로 — 좁은 화면에서 키우면 줄이 넘칩니다.
             className={`min-w-0 break-keep rounded-2xl px-3.5 py-2.5 text-[1.08rem] font-bold transition sm:shrink-0 sm:whitespace-nowrap sm:rounded-full sm:px-4 sm:text-[1.12rem] lg:px-3.5 lg:py-2.5 lg:text-[1.34rem] ${
-              tab === t.id ? 'bg-teal-500 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card'
+              tab === t.id ? 'bg-navy-900 text-white' : 'bg-white text-navy-600 ring-1 ring-inset ring-navy-200'
             }`}
           >
             {t.label}

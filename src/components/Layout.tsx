@@ -121,11 +121,13 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
       to={item.to}
       end={item.to === '/'}
       className={({ isActive }) =>
-        `t-nav relative flex items-center gap-3 rounded-2xl px-3 transition ${
+        `t-nav relative flex items-center gap-3 rounded-[14px] px-3 transition ${
           muted ? 'min-h-[52px] font-semibold' : 'min-h-[64px]'
         } ${
+          /*  AX 디자인 2차 — 지금 보는 줄은 강조색(포털 파랑) 칸 + 얇은 테두리.
+              예전 흰 반투명(bg-white/14)은 어두운 바탕에서 회색으로 떠 보였습니다. */
           isActive
-            ? 'bg-white/[0.14] text-white'
+            ? 'bg-teal-600/30 text-white ring-1 ring-inset ring-teal-400/35'
             : muted
               /*  0082 — 글자에 걸린 투명도(/75)를 뗐습니다. 글자를 흐리게 만드는
                   방식이라 그만큼 대비가 깎입니다. 「덜 중요함」은 색 단계로
@@ -166,7 +168,14 @@ function SidebarLink({ item, muted = false }: { item: NavItem; muted?: boolean }
       {muted ? (
         <Icon size={21} strokeWidth={2.2} className="ml-1 shrink-0" />
       ) : (
-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE[item.tone].tile}`}>
+        //  AX 디자인 2차 — 색조는 그대로, **어두운 바탕용 칸**(반투명 + 밝은 아이콘)으로.
+        //  흰 칸이 남색 바탕 위에서 하나씩 튀던 것을 아래 「추가 개발 예정」 아이콘과
+        //  같은 방식으로 맞췄습니다. 지금 보는 메뉴만 강조색으로 채웁니다.
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+            isActive ? 'bg-teal-600 text-white' : `ring-1 ring-inset ${TONE[item.tone].side}`
+          }`}
+        >
           <Icon size={22} strokeWidth={2.3} />
         </span>
       )}
@@ -398,7 +407,7 @@ function Sidebar() {
   const showMobilePreview = !configured || canAccess(profile?.role ?? null, '/mobile-preview')
 
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto bg-navy-950 lg:flex">
+    <aside className="side-bg sticky top-0 hidden h-[100dvh] w-[336px] shrink-0 xl:w-[392px] flex-col overflow-y-auto border-r border-white/[0.06] lg:flex">
       {/* 브랜드 */}
       <div className="px-5 pb-4 pt-6">
         <div className="flex items-center gap-2.5">
@@ -816,21 +825,24 @@ export function Layout() {
           <SchemaBar />
           <SyncBar />
           <MobileHeader onHelp={() => setHelpOpen(true)} />
-          <main
-            className={`w-full px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px] ${
-              pcView ? 'pb-32' : 'pb-24 lg:pb-14'
-            }`}
+          {/*  AX 디자인 2차 — PC 도구 줄을 **흰 상단 바** 한 줄로 (ERP 머리줄).
+               예전에는 회색 바탕 위에 흰 알약들이 그림자를 달고 떠 있었습니다. 줄 안의
+               순서 · 단추는 그대로이고, 바만 화면 끝까지 깔았습니다.
+               ⚠ 안쪽 폭은 본문과 같은 WIDTH_CLASS — 오른쪽 끝이 본문 카드 끝과 맞습니다.
+               ⚠ 발표 집중 모드(minimal)에서는 예전처럼 통째로 숨습니다. */}
+          <div
+            data-topbar
+            className={`${minimal ? 'hidden' : 'hidden lg:block'} border-b border-cardline bg-white px-[40px] 2xl:px-[56px]`}
           >
-            {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
-                사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
-                안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
-            {/*  ⚠ 0129 — 시계가 들어오면서 이 줄이 968px 를 넘었고, 그러자
-                 「화면 색」 단추가 70px 로 **찌그러져 세 줄**이 됐습니다.
-                 줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
-                 (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
-                 같은 이유로 안전합니다. */}
-            <div className={`mx-auto w-full ${WIDTH_CLASS[contentWidth]}`}>
-            <div className={`mb-3 flex-wrap items-center justify-end gap-1.5 ${minimal ? 'hidden' : 'hidden lg:flex'}`}>
+              {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
+                  사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
+                  안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
+              {/*  ⚠ 0129 — 시계가 들어오면서 이 줄이 968px 를 넘었고, 그러자
+                   「화면 색」 단추가 70px 로 **찌그러져 세 줄**이 됐습니다.
+                   줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
+                   (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
+                   같은 이유로 안전합니다. */}
+            <div className={`mx-auto flex w-full flex-wrap items-center justify-end gap-1.5 py-2.5 ${WIDTH_CLASS[contentWidth]}`}>
               {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
                    설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
                    설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
@@ -858,7 +870,7 @@ export function Layout() {
                   type="button"
                   data-visit-video-btn
                   onClick={() => navigate('/visit-video')}
-                  className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-800 px-4 py-2 text-[1rem] font-bold text-white shadow-sm transition hover:bg-navy-900"
+                  className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-900 px-4 py-2 text-[1rem] font-bold text-white transition hover:bg-navy-950"
                 >
                   <PlayCircle className="h-[18px] w-[18px]" aria-hidden />
                   신용보증기금 방문용 영상
@@ -875,13 +887,13 @@ export function Layout() {
               </p>
               {!helpInSettings && (
                 <>
-                  <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900" />
+                  <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900" />
                   {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
                   {showWhy && (
-                    <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-800" />
+                    <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 ring-1 ring-navy-100 transition hover:text-navy-800" />
                   )}
                   <TourButton
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition hover:text-navy-900"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900"
                     label="사용 방법"
                   />
                 </>
@@ -892,7 +904,7 @@ export function Layout() {
                    이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
               <span data-hide-presenting className="contents">
               <FeedbackButton
-                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 shadow-sm ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
+                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
                 /*  PC 는 한 줄짜리 알약이라 아래에 붙일 자리가 없습니다 —
                     괄호를 뒤에 답니다. 폰 더보기·도움말에서는 제목 아래 줄에
                     들어갑니다(그쪽은 두 줄짜리 칸이라). */
@@ -900,6 +912,13 @@ export function Layout() {
               />
               </span>
             </div>
+          </div>
+          <main
+            className={`w-full px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px] ${
+              pcView ? 'pb-32' : 'pb-24 lg:pb-14'
+            }`}
+          >
+            <div className={`mx-auto w-full ${WIDTH_CLASS[contentWidth]}`}>
             {/*
               안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어
               다른 화면으로 그냥 넘어갈 수 있습니다. 예전에는 메뉴까지 사라져

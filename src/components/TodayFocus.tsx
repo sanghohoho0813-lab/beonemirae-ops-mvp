@@ -150,7 +150,7 @@ export function TodayFocus({ data }: { data: AppData }) {
         <div className="px-5 pb-4 pt-4">
           <button
             onClick={() => navigate('/collection')}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 px-5 py-4 text-[1.28rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-4 text-[1.28rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
           >
             <PlusCircle size={22} strokeWidth={2.5} /> 수거 완료 입력
           </button>

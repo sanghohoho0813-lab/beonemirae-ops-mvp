@@ -594,7 +594,7 @@ export function TodaySchedule() {
                         <ClipboardEdit size={15} strokeWidth={2.4} /> 수거정보 입력
                       </button>
                       <button
-                        className="flex items-center justify-center gap-1.5 rounded-xl bg-teal-500 px-3 py-2.5 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
+                        className="flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-3 py-2.5 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
                         onClick={() => openQuick(s)}
                       >
                         <Zap size={15} strokeWidth={2.6} /> 빠른 완료

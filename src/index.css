@@ -90,6 +90,10 @@
   * {
     -webkit-tap-highlight-color: transparent;
   }
+  /*  AX 디자인 2차 — 표 머리줄은 옅은 회색 띠. 따로 색을 준 표(bg-* 클래스)는 그쪽이 이깁니다. */
+  thead tr {
+    background-color: rgb(var(--c-navy-50));
+  }
 }
 
 @layer components {
@@ -102,8 +106,10 @@
   /* 아래 px 환산은 새 기본 root(모바일 17.8px / 데스크톱 21px) 기준입니다.
      '크게'는 ×1.10, '매우 크게'는 ×1.20 으로 전부 함께 커집니다. */
   .t-page {
-    /* 페이지 제목 — 33px / 55px */
-    @apply break-keep text-[1.85rem] font-extrabold leading-tight tracking-tight sm:text-[2.6rem];
+    /* 페이지 제목 — 33px / 45px
+       AX 디자인 2차 — 넓은 화면 55px → 45px. 제목이 본문보다 너무 커서
+       화면이 「포스터」처럼 보였습니다. 본문 글자 크기는 그대로입니다. */
+    @apply break-keep text-[1.85rem] font-extrabold leading-tight tracking-tight sm:text-[2.15rem];
   }
   /*  ⚠ 0080 — 폰을 **가로로 들면** 화면 높이가 390px 뿐입니다. 그 화면에서
       제목 한 줄이 55px 를 쓰면 정작 일할 목록이 안 보입니다. 지금 어느 화면인지는
@@ -192,10 +198,21 @@
         녹아 「경계가 또렷하지 않다」가 됐습니다.
         실선 한 겹을 답니다 — 테마를 따라가는 색이고, 흰 카드 위에서
         눈에 보이는 세기입니다(흰 바탕 대비 약 1.4:1). */
-    @apply rounded-3xl border border-cardline bg-white shadow-card;
+    /*  AX 디자인 2차 — 모서리 24 → 18px, 그림자는 한 단계 옅게.
+        테두리 한 겹이 경계를 맡고 그림자는 살짝 뜬 느낌만 냅니다(ERP 화면 방식). */
+    @apply rounded-[18px] border border-cardline bg-white;
+    box-shadow: 0 1px 2px rgb(var(--c-shadow) / 0.04), 0 4px 14px -8px rgb(var(--c-shadow) / 0.1);
   }
   .pressable {
     @apply transition-[transform,box-shadow] duration-200 active:scale-[0.98];
+  }
+  /*  AX 디자인 2차 — 왼쪽 메뉴 바탕. 테마의 가장 짙은 색(navy-950) 위에 **강조색을
+      아주 옅게** 겹쳐, 검정에 가까운 남색을 병원 포털 파랑과 같은 계열로 당깁니다.
+      테마를 바꾸면 그 테마 색으로 따라갑니다(초록 테마 → 짙은 초록).
+      ⚠ 맨 끝 바탕색이 그대로 navy-950 이라 글자 대비 계산은 예전과 같습니다. */
+  .side-bg {
+    background: linear-gradient(180deg, rgb(var(--c-teal-600) / 0.14) 0%, rgb(var(--c-teal-600) / 0.06) 60%, rgb(var(--c-teal-600) / 0.04) 100%),
+      rgb(var(--c-navy-950));
   }
   /*  0099 — 마우스가 있는 기기에서는 올리면 1px 뜹니다 (v3.0 §21).
       거래처 목록 같은 「누르는 카드」가 PC 에서 아무 티가 없었습니다(check_hover).
@@ -209,13 +226,14 @@
 
   /* 버튼 ---------------------------------------------------------------- */
   .btn {
-    @apply inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-2xl px-5 py-3.5 t-btn transition duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-[14px] px-5 py-3.5 t-btn transition duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40;
   }
+  /*  AX 디자인 2차 — 주 단추는 병원 포털과 같은 강조색(teal-600), 짙은 단추는 navy-900 */
   .btn-primary {
-    @apply btn bg-teal-500 text-white shadow-sm hover:bg-teal-600;
+    @apply btn bg-teal-600 text-white shadow-sm hover:bg-teal-700;
   }
   .btn-navy {
-    @apply btn bg-navy-800 text-white shadow-sm hover:bg-navy-900;
+    @apply btn bg-navy-900 text-white shadow-sm hover:bg-navy-950;
   }
   .btn-ghost {
     @apply btn bg-navy-50 text-navy-700 hover:bg-navy-100;
@@ -228,8 +246,11 @@
   .field-label {
     @apply mb-2 block text-[1.05rem] font-bold text-navy-600;
   }
+  /*  AX 디자인 2차 — 회색 칸 → **흰 칸 + 얇은 테두리** (병원 포털 입력칸과 같은 방식).
+      회색 칸은 카드(흰색) 안에서는 보이지만 바탕(회색) 위에서는 칸이 어디까지인지
+      흐렸습니다. 누르면 강조색 테두리가 두꺼워집니다. */
   .field-input {
-    @apply w-full rounded-2xl border-0 bg-navy-50 px-4 py-4 text-[1.08rem] font-medium text-navy-900 outline-none ring-1 ring-transparent transition placeholder:font-normal placeholder:text-navy-300 focus:bg-white focus:ring-2 focus:ring-teal-400;
+    @apply w-full rounded-2xl border-0 bg-white px-4 py-4 text-[1.08rem] font-medium text-navy-900 outline-none ring-1 ring-inset ring-navy-200 transition placeholder:font-normal placeholder:text-navy-300 focus:ring-2 focus:ring-teal-500;
   }
 
   /* 텍스트 위계 -------------------------------------------------------- */

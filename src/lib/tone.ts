@@ -17,6 +17,8 @@ export type Tone = 'navy' | 'blue' | 'teal' | 'emerald' | 'amber' | 'orange' | '
 export interface ToneStyle {
   /** 아이콘 타일 (연한 배경 + 진한 아이콘) */
   tile: string
+  /** 어두운 사이드바 위 아이콘 타일 (반투명 배경 + 밝은 아이콘) — 색조는 tile 과 같음 */
+  side: string
   /** 작은 라벨 칩 */
   chip: string
   /** 상태 점 · 얇은 바 */
@@ -26,15 +28,15 @@ export interface ToneStyle {
 }
 
 export const TONE: Record<Tone, ToneStyle> = {
-  navy:    { tile: 'bg-navy-100 text-navy-600',     chip: 'bg-navy-100 text-navy-600',     dot: 'bg-navy-300',   text: 'text-navy-700' },
-  blue:    { tile: 'bg-teal-50 text-teal-600',      chip: 'bg-teal-50 text-teal-700',      dot: 'bg-teal-500',   text: 'text-teal-700' },
-  teal:    { tile: 'bg-accent-50 text-accent-600',  chip: 'bg-accent-50 text-accent-700',  dot: 'bg-accent-500', text: 'text-accent-700' },
-  emerald: { tile: 'bg-emerald-50 text-emerald-600',chip: 'bg-emerald-50 text-emerald-700',dot: 'bg-emerald-500',text: 'text-emerald-700' },
-  amber:   { tile: 'bg-amber-50 text-amber-700',    chip: 'bg-amber-50 text-amber-700',    dot: 'bg-amber-500',  text: 'text-amber-700' },
-  orange:  { tile: 'bg-orange-50 text-orange-600',  chip: 'bg-orange-50 text-orange-700',  dot: 'bg-orange-500', text: 'text-orange-700' },
-  rose:    { tile: 'bg-rose-50 text-rose-600',      chip: 'bg-rose-50 text-rose-600',      dot: 'bg-rose-500',   text: 'text-rose-600' },
-  violet:  { tile: 'bg-violet-50 text-violet-600',  chip: 'bg-violet-50 text-violet-700',  dot: 'bg-violet-500', text: 'text-violet-700' },
-  sky:     { tile: 'bg-sky-50 text-sky-600',        chip: 'bg-sky-50 text-sky-700',        dot: 'bg-sky-500',    text: 'text-sky-700' },
+  navy:    { tile: 'bg-navy-100 text-navy-600',     side: 'bg-white/[0.08] text-navy-200 ring-white/20',          chip: 'bg-navy-100 text-navy-600',     dot: 'bg-navy-300',   text: 'text-navy-700' },
+  blue:    { tile: 'bg-teal-50 text-teal-600',      side: 'bg-teal-500/20 text-teal-300 ring-teal-300/30',         chip: 'bg-teal-50 text-teal-700',      dot: 'bg-teal-500',   text: 'text-teal-700' },
+  teal:    { tile: 'bg-accent-50 text-accent-600',  side: 'bg-accent-500/15 text-accent-300 ring-accent-300/30',   chip: 'bg-accent-50 text-accent-700',  dot: 'bg-accent-500', text: 'text-accent-700' },
+  emerald: { tile: 'bg-emerald-50 text-emerald-600',side: 'bg-emerald-500/15 text-emerald-300 ring-emerald-300/30',chip: 'bg-emerald-50 text-emerald-700',dot: 'bg-emerald-500',text: 'text-emerald-700' },
+  amber:   { tile: 'bg-amber-50 text-amber-700',    side: 'bg-amber-300/15 text-amber-300 ring-amber-300/30',      chip: 'bg-amber-50 text-amber-700',    dot: 'bg-amber-500',  text: 'text-amber-700' },
+  orange:  { tile: 'bg-orange-50 text-orange-600',  side: 'bg-orange-500/15 text-orange-300 ring-orange-300/30',   chip: 'bg-orange-50 text-orange-700',  dot: 'bg-orange-500', text: 'text-orange-700' },
+  rose:    { tile: 'bg-rose-50 text-rose-600',      side: 'bg-rose-500/15 text-rose-300 ring-rose-300/30',         chip: 'bg-rose-50 text-rose-600',      dot: 'bg-rose-500',   text: 'text-rose-600' },
+  violet:  { tile: 'bg-violet-50 text-violet-600',  side: 'bg-violet-500/20 text-violet-300 ring-violet-300/30',   chip: 'bg-violet-50 text-violet-700',  dot: 'bg-violet-500', text: 'text-violet-700' },
+  sky:     { tile: 'bg-sky-50 text-sky-600',        side: 'bg-sky-500/15 text-sky-300 ring-sky-300/30',            chip: 'bg-sky-50 text-sky-700',        dot: 'bg-sky-500',    text: 'text-sky-700' },
 }
 
 // ── 의미 → 색 매핑 (한 곳에서만 정합니다) ───────────────────────────────────

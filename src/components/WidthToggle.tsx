@@ -30,7 +30,7 @@ export function loadWidth(): ContentWidth {
 
 export function WidthToggle({ value, onChange }: { value: ContentWidth; onChange: (w: ContentWidth) => void }) {
   return (
-    <div role="group" aria-label="화면 폭" data-width-toggle className="flex shrink-0 items-center gap-0.5 rounded-full bg-white p-1 shadow-sm ring-1 ring-navy-100">
+    <div role="group" aria-label="화면 폭" data-width-toggle className="flex shrink-0 items-center gap-0.5 rounded-full bg-white p-1 ring-1 ring-navy-100">
       <span className="px-2 text-[0.95rem] font-bold text-navy-500">화면 폭</span>
       {(['narrow', 'normal', 'wide'] as ContentWidth[]).map((w) => {
         const Icon = ICON[w]

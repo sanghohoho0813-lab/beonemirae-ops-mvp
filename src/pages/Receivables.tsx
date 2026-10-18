@@ -300,7 +300,7 @@ export function Receivables() {
                       </button>
                     )}
                     <button
-                      className="flex items-center gap-1.5 rounded-full bg-teal-500 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
+                      className="flex items-center gap-1.5 rounded-full bg-teal-600 px-4 py-2 text-[1.08rem] font-bold text-white shadow-sm transition active:scale-95"
                       data-mark-paid={p.id}
                       onClick={() => void confirmPaid(p.id, client?.name ?? '거래처', p.billingMonth, restOf(p))}
                     >

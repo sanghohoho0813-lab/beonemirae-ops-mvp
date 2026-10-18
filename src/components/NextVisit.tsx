@@ -151,7 +151,7 @@ export function NextVisitCard({
 
         <button
           onClick={() => navigate(`/collection?schedule=${next.id}`)}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 px-5 py-4 text-[1.28rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-4 text-[1.28rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
         >
           <PlusCircle size={22} strokeWidth={2.5} /> 수거 입력 시작
         </button>

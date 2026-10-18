@@ -363,7 +363,9 @@ export function FilterChip({
         //    (18px 굵게는 큰 글자 기준을 못 넘습니다). 바탕을 한 단계 내립니다.
         //  ⚠ 0099 — 꺼진 칩은 마우스를 올려도 아무 티가 안 났습니다(check_hover).
         //    흰 바탕을 한 단계만 내리고 글자를 조금 진하게 — 「누를 수 있다」만 알립니다.
-        active ? 'bg-teal-600 text-white shadow-sm' : 'bg-white text-navy-500 shadow-card hover:bg-navy-50 hover:text-navy-700'
+        //  AX 디자인 2차 — 켜진 칩은 **짙은 남색**(병원 포털 칩 · 월 고르기와 같은 규칙).
+        //    강조색은 「누르면 일이 일어나는 단추」에만 남깁니다. 꺼진 칩은 그림자 대신 얇은 테두리.
+        active ? 'bg-navy-900 text-white' : 'bg-white text-navy-600 ring-1 ring-inset ring-navy-200 hover:bg-navy-50 hover:text-navy-800'
       }`}
     >
       {children}

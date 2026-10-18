@@ -206,7 +206,7 @@ export function TodayBoard({ data }: { data: AppData }) {
         <div className="px-6 pb-5 pt-4">
           <button
             onClick={() => navigate('/collection')}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-500 px-5 py-3.5 text-[1.16rem] font-extrabold text-white shadow-sm transition hover:bg-teal-600 active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-3.5 text-[1.16rem] font-extrabold text-white shadow-sm transition hover:bg-teal-700 active:scale-[0.99]"
           >
             <PlusCircle size={20} strokeWidth={2.5} /> 수거 완료 입력
           </button>
