@@ -7,7 +7,6 @@ import { usePortalClient } from '../lib/portalClient'
 import { usePortalSheet, useRequestDetail } from '../lib/portalSheet'
 import { PageShell, EmptyState } from '../components/ui'
 import { LoadGate } from '../components/LoadState'
-import { TourBanner } from '../components/TourEntry'
 import { portalSummary } from '../lib/portal'
 import { portalTodos } from '../lib/portalActivity'
 import { collectionHistory } from '../lib/ops'
@@ -241,8 +240,11 @@ export function PortalHome() {
       {/*  ── 비원미래가 보낸 제안 ── */}
       {(s.pendingProposals.length > 0 || s.acceptedProposals.length > 0) && <ProposalList s={s} />}
 
-      {/*  처음 오신 분께만 — 사용 방법 둘러보기. 한 번 보시면 사라집니다. */}
-      <TourBanner tourId="client" />
+      {/*  ⚠ 대표님: 「병원 화면에서는 AX 알림이 절대 안 보여야 해 — 고객용 화면이잖아」.
+           예전에는 여기에 시작 안내 띠(TourBanner)가 떴는데, 제목이 「비원미래 AX 운영시스템」 ·
+           본문이 「사무실 업무 · 월 정산까지 연결」 — **우리 내부 시스템 소개**였습니다.
+           병원 화면에는 두지 않습니다. 사용 방법은 「내 정보」 메뉴(PortalMenu)에서 그대로 열 수 있습니다.
+           검사들이 tour-seen 을 미리 넣어 두어 이 띠가 한 번도 안 잡혔습니다 — check_portal134 ⑭ 가 지킵니다. */}
 
       <PortalFooter client={client} />
     </div>

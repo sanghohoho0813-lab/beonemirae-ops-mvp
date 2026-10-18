@@ -114,7 +114,7 @@ function wire(ctx, srv, profile) {
   })
 }
 
-async function open(srv, path, { w = 390, scale = 'normal' } = {}) {
+async function open(srv, path, { w = 390, scale = 'normal', tourSeen = true } = {}) {
   const profile = { ...W.profileFor('client'), font_scale: scale, client_id: HOSP.id }
   //  ⚠ 병원 담당자의 폰 · PC 는 한국 시각입니다. 「오늘 10:49」 같은 시각 글자가
   //    실제와 같은 조건에서 맞는지 봅니다(검사 기계의 시간대는 UTC).
@@ -123,14 +123,27 @@ async function open(srv, path, { w = 390, scale = 'normal' } = {}) {
   const p = await ctx.newPage()
   const errors = []
   p.on('pageerror', (e) => errors.push(String(e.message).slice(0, 120)))
-  await p.addInitScript(([k, u]) => {
+  await p.addInitScript(([k, u, seen]) => {
     localStorage.setItem(k, JSON.stringify({ access_token: 't', token_type: 'bearer', expires_in: 3600,
       expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u }))
-    localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client')
-  }, ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }])
+    if (seen) localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client')
+  }, ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }, tourSeen])
   await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, srv); await p.waitForTimeout(700)
   return { ctx, p, errors }
+}
+
+// ── ⑭ 병원 화면에는 내부(AX) 안내가 없다 ──────────────────────────────────────
+//    대표님: 「병원 화면에서는 저 AX 알림이 절대 안 보여야 해 — 고객용 화면이잖아」.
+//    ⚠ 다른 검사들은 tour-seen 을 미리 넣고 열어서, **처음 들어온 병원**에게 뜨던
+//      「비원미래 AX 운영시스템」 띠를 한 번도 못 봤습니다. 여기서는 넣지 않고 엽니다.
+for (const [w, path] of [[390, '/portal'], [1440, '/portal'], [390, '/portal/requests'], [390, '/portal/history']]) {
+  const srv = makeServer()
+  const { ctx, p } = await open(srv, path, { w, tourSeen: false })
+  const body = flat(await p.locator('body').innerText())
+  ok(!/AX 운영시스템|AX 코치|운영관리 시스템|BUSINESS AX/i.test(body), `${w}px ${path} ⑭ 내부 시스템 이름 · 안내가 없다`, (body.match(/.{0,20}AX.{0,20}/) ?? [''])[0])
+  ok((await p.locator('[data-tour-snooze], [data-tour-start]').count()) === 0, `${w}px ${path} ⑭ 처음 들어와도 시작 안내 띠가 뜨지 않는다`)
+  await ctx.close()
 }
 
 // ── ① 첫 화면 5초 ─────────────────────────────────────────────────────────
