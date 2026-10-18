@@ -355,7 +355,11 @@ for (const [w, maxPad] of [
   //  포털 1차 고도화 — 넓은 화면에서는 「다음 수거 | 요청 단추」가 나란히,
   //  각각 본문의 절반 이하(한 줄이 화면을 가로지르지 않게).
   const hero = await p.locator('[data-portal-hero]').boundingBox()
-  const card = await p.locator('[data-portal-action]').first().boundingBox()
+  //  포털 3차 — 단추들이 흰 카드 한 장(data-portal-grid) 안의 8칸이 됐습니다. 칸은 카드 안쪽 여백만큼
+  //  아래에 있으므로, 나란히 서는지는 **카드**로 잽니다(첫 칸이 없으면 예전처럼 단추로).
+  const card = (await p.locator('[data-portal-grid]').count())
+    ? await p.locator('[data-portal-grid]').boundingBox()
+    : await p.locator('[data-portal-action]').first().boundingBox()
   ok(Math.abs(hero.y - card.y) < 4 && card.x > hero.x + hero.width - 2,
     `${w}px — 다음 수거 옆에 요청 단추가 나란히 선다`, `hero ${Math.round(hero.x)},${Math.round(hero.y)} · 단추 ${Math.round(card.x)},${Math.round(card.y)}`)
   ok(card.width <= main.width / 2 && hero.width <= main.width / 2,
