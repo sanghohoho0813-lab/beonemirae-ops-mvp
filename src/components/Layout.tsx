@@ -825,99 +825,98 @@ export function Layout() {
           <SchemaBar />
           <SyncBar />
           <MobileHeader onHelp={() => setHelpOpen(true)} />
-          {/*  AX 디자인 2차 — PC 도구 줄을 **흰 상단 바** 한 줄로 (ERP 머리줄).
-               예전에는 회색 바탕 위에 흰 알약들이 그림자를 달고 떠 있었습니다. 줄 안의
-               순서 · 단추는 그대로이고, 바만 화면 끝까지 깔았습니다.
-               ⚠ 안쪽 폭은 본문과 같은 WIDTH_CLASS — 오른쪽 끝이 본문 카드 끝과 맞습니다.
-               ⚠ 발표 집중 모드(minimal)에서는 예전처럼 통째로 숨습니다. */}
-          <div
-            data-topbar
-            className={`${minimal ? 'hidden' : 'hidden lg:block'} border-b border-cardline bg-white px-[40px] 2xl:px-[56px]`}
-          >
-              {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
-                  사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
-                  안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
-              {/*  ⚠ 0129 — 시계가 들어오면서 이 줄이 968px 를 넘었고, 그러자
-                   「화면 색」 단추가 70px 로 **찌그러져 세 줄**이 됐습니다.
-                   줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
-                   (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
-                   같은 이유로 안전합니다. */}
-            <div className={`mx-auto flex w-full flex-wrap items-center justify-end gap-1.5 py-2.5 ${WIDTH_CLASS[contentWidth]}`}>
-              {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
-                   설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
-                   설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
-                   새 줄을 만들지 않고 이미 있던 오른쪽 위 줄에 얹었습니다 —
-                   배치를 바꾸지 않는 것이 이번 작업의 전제입니다. */}
-              {/*  ── 오늘 날짜 · 지금 시각 (0129) ────────────────────────────
-                   대표님: 「시간을 화면 색 옆으로, 간격 좀 띄워서」.
-                   처음에는 왼쪽 계정 카드 아래에 있었고(끝까지 내려야 보임),
-                   그다음 사이드바 맨 위였는데 자리가 마음에 안 드셨습니다.
-                   이제 **오른쪽 위 도구 줄**의 맨 앞입니다.
+          <main className={`w-full ${pcView ? 'pb-32' : 'pb-24 lg:pb-14'}`}>
+            {/*  AX 디자인 2차 — PC 도구 줄을 **흰 상단 바** 한 줄로 (ERP 머리줄).
+                 예전에는 회색 바탕 위에 흰 알약들이 그림자를 달고 떠 있었습니다. 줄 안의
+                 순서 · 단추는 그대로이고, 바만 화면 끝까지 깔았습니다.
+                 ⚠ 안쪽 폭은 본문과 같은 WIDTH_CLASS — 오른쪽 끝이 본문 카드 끝과 맞습니다.
+                 ⚠ main **안**의 첫 줄입니다 — 도구 줄은 예전부터 main 안에 있었고,
+                   검사(check_phoneui · check_motion)도 거기서 찾습니다.
+                 ⚠ 발표 집중 모드(minimal)에서는 예전처럼 통째로 숨습니다. */}
+            <div
+              data-topbar
+              className={`${minimal ? 'hidden' : 'hidden lg:block'} border-b border-cardline bg-white px-[40px] 2xl:px-[56px]`}
+            >
+                {/* 상시 도움말 (PC) — 페이지 제목 바로 위 오른쪽.
+                    사이드바 맨 아래에도 있지만 거기까지 눈이 가지 않습니다.
+                    안내를 실수로 닫아도 모든 화면 같은 자리에서 다시 열 수 있습니다. */}
+                {/*  ⚠ 0129 — 시계가 들어오면서 이 줄이 968px 를 넘었고, 그러자
+                     「화면 색」 단추가 70px 로 **찌그러져 세 줄**이 됐습니다.
+                     줄이 모자라면 단추를 짜부라뜨리는 대신 **접히게** 둡니다
+                     (shrink-0 + flex-wrap). 글자 크기를 「크게」로 쓰시는 분에게도
+                     같은 이유로 안전합니다. */}
+              <div className={`mx-auto flex w-full flex-wrap items-center justify-end gap-1.5 py-2.5 ${WIDTH_CLASS[contentWidth]}`}>
+                {/*  화면 색 바꾸기 (0081) — 대표님 요청으로 **오른쪽 위**에 둡니다.
+                     설정 화면에도 같은 것이 있지만, 색은 보면서 고르는 것이라
+                     설정까지 들어갔다 나오게 하면 고르는 맛이 없습니다.
+                     새 줄을 만들지 않고 이미 있던 오른쪽 위 줄에 얹었습니다 —
+                     배치를 바꾸지 않는 것이 이번 작업의 전제입니다. */}
+                {/*  ── 오늘 날짜 · 지금 시각 (0129) ────────────────────────────
+                     대표님: 「시간을 화면 색 옆으로, 간격 좀 띄워서」.
+                     처음에는 왼쪽 계정 카드 아래에 있었고(끝까지 내려야 보임),
+                     그다음 사이드바 맨 위였는데 자리가 마음에 안 드셨습니다.
+                     이제 **오른쪽 위 도구 줄**의 맨 앞입니다.
 
-                   ⚠ 단추가 아닙니다. 옆의 흰 알약들과 같은 모양으로 두면
-                     눌러 보게 됩니다 — 알약 없이 글자만, 대신 굵게.
-                   ⚠ `me-3` 은 「간격 좀 띄워서」입니다 (줄 기본 간격 8px + 12px). */}
-              {/*  ── 신용보증기금 방문용 영상 (0130) ─────────────────────────
-                   대표님: 「오늘 날짜·현재 시각 옆에 버튼을」.
-                   ⚠ 시계 **왼쪽**에 둡니다. 시계와 「화면 색」은 붙어 있어야 합니다
-                     (0129 「화면 색 옆으로」 — check_clock 이 지킵니다).
-                   ⚠ 이 줄에서 유일하게 **진한 색** 알약입니다 — 상담 자리에서 바로
-                     찾아 눌러야 하는 단추라서입니다. */}
-              {/*  화면 폭 3단계 (0141) — 줄 맨 앞. 시계와 「화면 색」은 붙어 있어야 합니다(check_clock). */}
-              <WidthToggle value={contentWidth} onChange={setContentWidth} />
-              {showVisitVideo && (
-                <button
-                  type="button"
-                  data-visit-video-btn
-                  onClick={() => navigate('/visit-video')}
-                  className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-900 px-4 py-2 text-[1rem] font-bold text-white transition hover:bg-navy-950"
+                     ⚠ 단추가 아닙니다. 옆의 흰 알약들과 같은 모양으로 두면
+                       눌러 보게 됩니다 — 알약 없이 글자만, 대신 굵게.
+                     ⚠ `me-3` 은 「간격 좀 띄워서」입니다 (줄 기본 간격 8px + 12px). */}
+                {/*  ── 신용보증기금 방문용 영상 (0130) ─────────────────────────
+                     대표님: 「오늘 날짜·현재 시각 옆에 버튼을」.
+                     ⚠ 시계 **왼쪽**에 둡니다. 시계와 「화면 색」은 붙어 있어야 합니다
+                       (0129 「화면 색 옆으로」 — check_clock 이 지킵니다).
+                     ⚠ 이 줄에서 유일하게 **진한 색** 알약입니다 — 상담 자리에서 바로
+                       찾아 눌러야 하는 단추라서입니다. */}
+                {/*  화면 폭 3단계 (0141) — 줄 맨 앞. 시계와 「화면 색」은 붙어 있어야 합니다(check_clock). */}
+                <WidthToggle value={contentWidth} onChange={setContentWidth} />
+                {showVisitVideo && (
+                  <button
+                    type="button"
+                    data-visit-video-btn
+                    onClick={() => navigate('/visit-video')}
+                    className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-900 px-4 py-2 text-[1rem] font-bold text-white transition hover:bg-navy-950"
+                  >
+                    <PlayCircle className="h-[18px] w-[18px]" aria-hidden />
+                    신용보증기금 방문용 영상
+                  </button>
+                )}
+                <p
+                  data-clock-top
+                  className="me-3 shrink-0 whitespace-nowrap text-[0.98rem] font-extrabold text-navy-700"
                 >
-                  <PlayCircle className="h-[18px] w-[18px]" aria-hidden />
-                  신용보증기금 방문용 영상
-                </button>
-              )}
-              <p
-                data-clock-top
-                className="me-3 shrink-0 whitespace-nowrap text-[0.98rem] font-extrabold text-navy-700"
-              >
-                {/*  ⚠ 날짜는 짧게 씁니다 — 이 줄에는 이미 단추가 넷입니다.
-                     `full`(312px)·보통(226px)을 넣으면 968px 짜리 줄이 넘쳐
-                     단추가 찌그러집니다. 시·분·초는 그대로 둡니다. */}
-                <LiveClock compact />
-              </p>
-              {!helpInSettings && (
-                <>
-                  <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900" />
-                  {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
-                  {showWhy && (
-                    <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 ring-1 ring-navy-100 transition hover:text-navy-800" />
-                  )}
-                  <TourButton
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900"
-                    label="사용 방법"
-                  />
-                </>
-              )}
-              {/*  사용 후기 남기기 — 왼쪽 목차에서 여기로 올렸습니다.
-                   같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈립니다.
-                   **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고
-                   이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
-              <span data-hide-presenting className="contents">
-              <FeedbackButton
-                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
-                /*  PC 는 한 줄짜리 알약이라 아래에 붙일 자리가 없습니다 —
-                    괄호를 뒤에 답니다. 폰 더보기·도움말에서는 제목 아래 줄에
-                    들어갑니다(그쪽은 두 줄짜리 칸이라). */
-                label="사용 후기 남기기 (개발자에게 요청)"
-              />
-              </span>
+                  {/*  ⚠ 날짜는 짧게 씁니다 — 이 줄에는 이미 단추가 넷입니다.
+                       `full`(312px)·보통(226px)을 넣으면 968px 짜리 줄이 넘쳐
+                       단추가 찌그러집니다. 시·분·초는 그대로 둡니다. */}
+                  <LiveClock compact />
+                </p>
+                {!helpInSettings && (
+                  <>
+                    <ThemeButton className="flex shrink-0 min-h-[44px] items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900" />
+                    {/* 「만든 이유」는 회사 이야기입니다 — 현장 담당자에게는 띄우지 않습니다 */}
+                    {showWhy && (
+                      <TourWhyButton className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-500 ring-1 ring-navy-100 transition hover:text-navy-800" />
+                    )}
+                    <TourButton
+                      className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[1rem] font-bold text-navy-600 ring-1 ring-navy-100 transition hover:text-navy-900"
+                      label="사용 방법"
+                    />
+                  </>
+                )}
+                {/*  사용 후기 남기기 — 왼쪽 목차에서 여기로 올렸습니다.
+                     같은 입구를 두 군데 두면 어느 쪽이 진짜인지 헷갈립니다.
+                     **여기만 살짝 색을 넣습니다** — 옆의 둘은 읽는 곳이고
+                     이건 보내는 곳이라, 눈에 걸려야 실제로 눌립니다. */}
+                <span data-hide-presenting className="contents">
+                <FeedbackButton
+                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal-50 px-3.5 py-2 text-[1rem] font-bold text-teal-700 ring-1 ring-teal-200 transition hover:bg-teal-100 hover:text-teal-800"
+                  /*  PC 는 한 줄짜리 알약이라 아래에 붙일 자리가 없습니다 —
+                      괄호를 뒤에 답니다. 폰 더보기·도움말에서는 제목 아래 줄에
+                      들어갑니다(그쪽은 두 줄짜리 칸이라). */
+                  label="사용 후기 남기기 (개발자에게 요청)"
+                />
+                </span>
+              </div>
             </div>
-          </div>
-          <main
-            className={`w-full px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px] ${
-              pcView ? 'pb-32' : 'pb-24 lg:pb-14'
-            }`}
-          >
+            <div className="px-4 pt-4 lg:px-[40px] lg:pt-8 2xl:px-[56px]">
             <div className={`mx-auto w-full ${WIDTH_CLASS[contentWidth]}`}>
             {/*
               안쪽 한 겹 — 본문만 터진 경우입니다. 이때 왼쪽 메뉴는 살아 있어
@@ -933,6 +932,7 @@ export function Layout() {
                 <Outlet />
               </PageMotion>
             </ErrorBoundary>
+            </div>
             </div>
           </main>
         </div>
