@@ -263,7 +263,7 @@ export function Receivables() {
         {/*  AX 3차 — PC 에서는 청구 한 건 = 표 한 줄(같은 카드의 칸 배치만 바꿈 · Clients 와 같은 방식).
              남은 돈이 있는 줄은 옅은 강조색 바탕. */}
         <div className="lg:overflow-hidden lg:rounded-[14px] lg:bg-white lg:ring-1 lg:ring-inset lg:ring-cardline">
-        <div aria-hidden="true" data-recv-table-head className={`hidden gap-x-4 border-b border-cardline bg-navy-50 px-4 py-2.5 text-[0.843rem] font-bold text-navy-500 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,2.4fr)]`}>
+        <div data-recv-table-head className={`hidden gap-x-4 border-b border-cardline bg-navy-50 px-4 py-2.5 text-[0.843rem] font-bold text-navy-500 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,2.4fr)]`}>
           <span>거래처</span>
           <span>청구월 · 방법</span>
           <span className="text-right">청구액</span>

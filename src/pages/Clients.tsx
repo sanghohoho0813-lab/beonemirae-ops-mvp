@@ -283,8 +283,10 @@ export function Clients() {
           </p>
         )}
         <div className="lg:overflow-hidden lg:rounded-[14px] lg:bg-white lg:ring-1 lg:ring-inset lg:ring-cardline">
-        {/*  표 머리줄 (PC) — 글자만 있는 줄이라 화면 읽기에서는 건너뜁니다(각 칸 글자가 스스로 말함). */}
-        <div aria-hidden="true" data-client-table-head className="hidden border-b border-cardline bg-navy-50 text-[0.843rem] font-bold text-navy-500 lg:flex lg:items-center">
+        {/*  표 머리줄 (PC) — 칸 이름 한 줄.
+             ⚠ aria-hidden 을 달지 않습니다 — 자료가 온 뒤에만 그려져, 「안내를 끝낸 뒤 aria-hidden 이
+               남았나」(check_tourclean)를 켜기 전 값과 견줄 때 개수가 흔들립니다. */}
+        <div data-client-table-head className="hidden border-b border-cardline bg-navy-50 text-[0.843rem] font-bold text-navy-500 lg:flex lg:items-center">
           <div className={`grid min-w-0 flex-1 gap-x-4 px-4 py-2.5 ${CLIENT_COLS}`}>
             <span>거래처</span>
             <span>폐기물</span>

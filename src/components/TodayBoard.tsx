@@ -239,7 +239,7 @@ export function TodayBoard({ data }: { data: AppData }) {
           </div>
         ) : (
           <>
-          <div aria-hidden="true" className={`grid ${BOARD_COLS} gap-x-3 bg-navy-50 px-5 py-2 text-[0.843rem] font-bold text-navy-500`}>
+          <div className={`grid ${BOARD_COLS} gap-x-3 bg-navy-50 px-5 py-2 text-[0.843rem] font-bold text-navy-500`}>
             <span />
             <span>항목</span>
             <span>내용</span>
