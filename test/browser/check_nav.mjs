@@ -201,6 +201,9 @@ async function open(role, width = 390, height = 900) {
   ok((await p.locator('[data-more-item="/receivables"]').count()) === 0, '현장 담당자에게 미수금이 안 보임')
   ok((await p.locator('[data-more-item="/billing"]').count()) === 0, '월말 청구도 안 보임')
   ok((await p.locator('[data-more-section="more-admin"]').count()) === 0, '관리 묶음이 통째로 없음')
+  //  대표님: 「현장 직원 폰 더보기에 AX 코치는 굳이 볼 필요 없으니 없애 줘」 — 목차에서만 감춥니다(화면 · 권한은 그대로)
+  ok((await p.locator('[data-more-item="/ax-coach"]').count()) === 0 && (await p.locator('[data-more-section="more-ax"]').count()) === 0,
+    '현장 담당자 더보기에 AX 코치가 없음 (AX·심사 묶음째 안 보임)')
   const sheet = ((await p.textContent('body')) ?? '').replace(/\s+/g, ' ')
   ok(/글자 크기/.test(sheet), '설정에 못 들어가는 분에게는 글자 크기 조절기를 그대로 둠')
   await ctx.close()

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, Monitor, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, MessageSquarePlus, Compass, Globe, type LucideIcon } from 'lucide-react'
+import { Smartphone, Monitor, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, MessageSquarePlus, Compass, Globe, PlayCircle, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -11,7 +11,7 @@ import { IconChip } from './ui'
 import { TourButton } from './TourEntry'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, canSeeShowcase } from '../lib/access'
-import { NAV_GROUPS, type NavItem } from '../lib/nav'
+import { NAV_GROUPS, hiddenInMenu, type NavItem } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 import { canSendDevRequest } from '../lib/devRequests'
 import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
@@ -146,7 +146,7 @@ export function MoreMenu({
   const [plannedPreview, setPlannedPreview] = useState<string | null>(null)
   //  현장 담당자에게는 미수금·통계·배차가 열리지 않습니다 — PC 사이드바(useVisibleNav)와 같은 규칙.
   const visible = (items: NavItem[]) =>
-    configured ? items.filter((i) => canAccess(role, i.to)) : items
+    configured ? items.filter((i) => canAccess(role, i.to) && !hiddenInMenu(role, i.to)) : items
   //  첫 묶음(오늘 업무)은 아래 고정 탭이 맡고 있어 뺍니다. 표(badge)가 붙은 것만 맨 위 한 줄로.
   const pinned = visible(NAV_GROUPS.find((g) => g.id === 'today')?.items.filter((i) => i.badge) ?? [])
   const groups = NAV_GROUPS.filter((g) => g.id !== 'today')
@@ -154,6 +154,10 @@ export function MoreMenu({
     .filter((g) => g.items.length > 0)
   const showcase = canSeeShowcase(role)
   const showRoadmap = canAccess(role, '/roadmap')
+  //  신용보증기금 방문용 영상 (0130) — 폰 머리띠에서 여기로 내렸습니다(대표님: 「이제 필요 없어졌으니
+  //  지우지 말고 더보기에」). 규칙은 그대로 — 대표·이사님 계정만, 시연 모드에서는 안 띄웁니다.
+  //  PC 는 위쪽 도구 줄 단추가 그대로 있어 폰 시트에만 둡니다.
+  const showVisitVideo = variant === 'mobile' && configured && canAccess(role, '/visit-video')
   //  계획 중 기능 — 묶음에 붙어 있던 것을 한 줄로 모읍니다(활용 계획을 볼 수 있는 계정만)
   const planned = showRoadmap ? groups.flatMap((g) => g.planned ?? []) : []
   function go(to: string) {
@@ -272,6 +276,9 @@ export function MoreMenu({
             </span>
             <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
           </button>
+        )}
+        {showVisitVideo && (
+          <Row icon={PlayCircle} label="신용보증기금 방문용 영상" onClick={() => go('/visit-video')} hook={{ 'data-visit-video-btn': '' }} />
         )}
         {/*  계획 중 기능 — **단추가 아니라 미리보기**입니다(눌리는데 아무 일도 안 일어나는 것이 제일 나쁩니다).
              한 줄로 접어 두고, 펼치면 이름마다 「계획 중 · 지금은 이렇게」가 열립니다(0095). */}

@@ -166,6 +166,18 @@ export interface NavGroupDef {
   planned?: string[]
 }
 
+/**
+ *  목차(사이드바 · 폰 더보기)에서만 감추는 것 — **화면과 권한은 그대로**입니다(주소로는 열립니다).
+ *   현장(field) · AX 코치 — 대표님: 「현장 직원 폰 더보기에 AX 코치는 굳이 볼 필요 없으니 없애 줘」.
+ *   (대시보드 한 줄 · 사이드바 고정핀은 원래 대표 · 사무실에게만 보입니다)
+ */
+const MENU_HIDDEN: Record<string, readonly string[]> = {
+  field: ['/ax-coach'],
+}
+export function hiddenInMenu(role: string | null | undefined, to: string): boolean {
+  return !!role && (MENU_HIDDEN[role]?.includes(to) ?? false)
+}
+
 export const NAV_GROUPS: NavGroupDef[] = [
   {
     id: 'today',

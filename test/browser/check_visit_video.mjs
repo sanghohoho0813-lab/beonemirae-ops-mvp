@@ -123,20 +123,35 @@ for (const role of ['admin', 'office']) {
   }
 }
 
-// ── ② 폰 — 대표·이사님: **PC 버전으로 바꾸지 않아도** 시계 옆에 단추 ─────────
+// ── ② 폰 — 대표·이사님: 단추는 **더보기 안**에 (머리띠에서 내림) ──────────────
+//   대표님: 「신용보증기금 방문용 영상 버튼 — 이제 필요 없어졌으니 기능은 지우지 말고 더보기에 넣어 줘」.
+//   지키는 것: 기능(영상 화면)은 그대로 · PC 버전으로 바꾸지 않아도 폰에서 닿음 · 손가락 크기 · 누르면 영상 화면.
 for (const role of ['admin', 'office']) {
   for (const [w, h] of [[390, 844], [360, 780], [430, 932], [320, 640]]) {
     const s = await open(role, { w, h })
-    const r = await btnBox(s.p)
-    ok(r !== null, `${role} · 폰 ${w}px — **단추가 보임** (PC 버전 전환 없이)`, r?.text ?? '(없음)')
+    const inHeader = await s.p.evaluate(() => [...document.querySelectorAll('header [data-visit-video-btn]')].filter((e) => e.getBoundingClientRect().width > 2).length)
+    ok(inHeader === 0, `${role} · 폰 ${w}px — 머리띠에는 단추가 **없음** (더보기로 내림)`)
+    //  시계는 어느 계정이든 그대로 — 단추가 빠져 긴 날짜(「10월 5일 (월)」)로
+    const c = await s.p.evaluate(() => {
+      const e = [...document.querySelectorAll('header [data-live-clock]')].find((x) => x.getBoundingClientRect().width > 2)
+      return e ? { text: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), right: Math.round(e.getBoundingClientRect().right),
+        hscroll: document.documentElement.scrollWidth > window.innerWidth + 1 } : null
+    })
+    ok(!!c && /\d+월 \d+일 \(.\)/.test(c.text) && /(오전|오후) \d{1,2}:\d{2}:\d{2}/.test(c.text), `${role} · 폰 ${w}px — 시계는 날짜 + 시·분·초 그대로`, c?.text ?? '(없음)')
+    ok(!!c && c.right <= w - 12 && !c.hscroll, `${role} · 폰 ${w}px — 화면 밖으로 안 나감`, `시계 오른쪽 끝 ${c?.right}px`)
+    //  더보기 안 — PC 버전 전환 없이 닿는가
+    await s.p.locator('nav.fixed.bottom-0 button:has-text("더보기")').click()
+    await s.p.waitForTimeout(900)
+    const r = await s.p.evaluate(() => {
+      const e = [...document.querySelectorAll('[data-visit-video-btn]')].find((x) => x.getBoundingClientRect().width > 2)
+      if (!e) return null
+      const b = e.getBoundingClientRect()
+      return { text: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), h: Math.round(b.height), w: Math.round(b.width), inSheet: !!e.closest('[data-more-help]') }
+    })
+    ok(r !== null && r.inSheet, `${role} · 폰 ${w}px — **더보기 안에 단추가 있음** (PC 버전 전환 없이)`, r?.text ?? '(없음)')
     if (r) {
-      //  320px 폰은 자리가 모자라 시계가 아랫줄로 내려갑니다 — 그 대신 단추가 짜부라지지 않음
-      if (w >= 360) ok(r.sameRowClock && r.leftOfClock, `${role} · 폰 ${w}px — 시계와 **같은 줄 · 왼쪽**`, `간격 ${r.gapToClock}px`)
-      ok(r.w >= 110, `${role} · 폰 ${w}px — 단추가 짜부라지지 않음 (글자 세로 안 됨)`, `${r.w}px`)
+      ok(/신용보증기금 방문용 영상/.test(r.text), `${role} · 폰 ${w}px — 글자 그대로`, r.text)
       ok(r.h >= 44, `${role} · 폰 ${w}px — 손가락으로 누를 만한 높이`, `${r.h}px`)
-      ok(r.right <= w - 12 && !r.hscroll, `${role} · 폰 ${w}px — 화면 밖으로 안 나감`, `시계 오른쪽 끝 ${r.right}px`)
-      ok(/\d+\/\d+\(.\)/.test(r.clockText) && /(오전|오후) \d{1,2}:\d{2}:\d{2}/.test(r.clockText),
-        `${role} · 폰 ${w}px — 시계는 짧은 날짜 + 시·분·초`, r.clockText)
     }
     //  눌러서 들어가기
     if (r && w === 390) {

@@ -59,6 +59,7 @@ import { PageMotion } from './motion'
 
 import {
   NAV_GROUPS,
+  hiddenInMenu,
   readNavOpen,
   writeNavOpen,
   BOTTOM_NAV_STAFF,
@@ -93,7 +94,7 @@ const MORE_PATHS = [
 function useVisibleNav(items: NavItem[]): NavItem[] {
   const { configured, role } = useAuth()
   if (!configured) return items          // 시연 모드에서는 기존과 동일
-  return items.filter((i) => canAccess(role, i.to))
+  return items.filter((i) => canAccess(role, i.to) && !hiddenInMenu(role, i.to))
 }
 
 /**
@@ -106,7 +107,7 @@ function useVisibleGroups(): NavGroupDef[] {
   const { configured, role } = useAuth()
   return NAV_GROUPS.map((g) => ({
     ...g,
-    items: configured ? g.items.filter((i) => canAccess(role, i.to)) : g.items,
+    items: configured ? g.items.filter((i) => canAccess(role, i.to) && !hiddenInMenu(role, i.to)) : g.items,
   })).filter((g) => g.items.length > 0)
 }
 
@@ -664,7 +665,7 @@ function TopCrumb() {
 // ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
 //  AX 5차 — 대표님: 「레퍼런스 영상 바탕으로 예쁘게」(배민 · talabat).
 //   예전: 밝은 바탕에 상호 · 영문 이름표 · 설명 세 줄 + 영상 단추(두 줄) · 시계.
-//   지금: **브랜드 색 띠 하나** — 로고 · 상호 · 이름표 / 영상 단추 · 시계 / 그 화면 제목.
+//   지금: **브랜드 색 띠 하나** — 로고 · 상호 · 이름표 / 시계 / 그 화면 제목.
 //   제목 자리(slot)는 화면이 채웁니다(PhoneBand). 첫 카드가 띠 끝에 겹쳐 올라옵니다.
 //   ⚠ 띠 색은 테마 주색(teal-600 → 700)입니다 — 화면 색을 바꾸면 띠도 따라 바뀝니다.
 //     바탕색(bg-teal-600)도 함께 둡니다 — 그라데이션의 **가장 밝은 끝**이라, 흰 글자 대비를 잴 때
@@ -672,11 +673,8 @@ function TopCrumb() {
 //   ⚠ 붙박이(sticky)가 아닙니다. 띠가 제목까지 품어 키가 커졌기 때문에, 붙여 두면
 //     폰 화면의 4분의 1을 늘 먹습니다. 내리면 같이 올라가고, 아래 탭은 그대로입니다.
 function MobileHeader({ onHelp, slotRef }: { onHelp: () => void; slotRef: (el: HTMLDivElement | null) => void }) {
-  const { mode, configured, role } = useAuth()
+  const { mode } = useAuth()
   const live = mode === 'live'
-  //  신용보증기금 방문용 영상 (0130) — 폰에서도. PC 와 같은 규칙(대표·이사님만).
-  const showVisitVideo = configured && canAccess(role, '/visit-video')
-  const navigate = useNavigate()
   return (
     /*  ⚠ 0080 — 폰을 **가로로 들면** 화면 높이가 390px 밖에 안 됩니다
         (트럭 안에서 실제로 이렇게 듭니다). 높이가 짧을 때만 이름표를 접고
@@ -727,33 +725,12 @@ function MobileHeader({ onHelp, slotRef }: { onHelp: () => void; slotRef: (el: H
           <LiveClock />
         </span>
       </div>
-      {/*  ── 영상 단추 · 오늘 날짜 · 지금 시각 (0078 · 0130) ────────────────
-           대표·이사님 계정에만 영상 단추가 있고, 그때 시계를 짧은 표기로 줄입니다.
-           ⚠ 단추는 줄지 않게(shrink-0), 자리가 모자라면 **시계가 아랫줄로**(flex-wrap). */}
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 [@media(max-height:480px)]:hidden">
-        {showVisitVideo && (
-          <button
-            type="button"
-            data-visit-video-btn
-            aria-label="신용보증기금 방문용 영상"
-            onClick={() => navigate('/visit-video')}
-            className="me-auto flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-950/25 px-3 py-1 text-left text-[0.76rem] font-bold leading-tight text-white transition active:bg-navy-950/40"
-          >
-            <PlayCircle size={16} strokeWidth={2.3} className="shrink-0" aria-hidden />
-            {/*  420px 미만 폰에서는 두 줄(「신용보증기금 / 방문용 영상」)로 접어 시계와 한 줄을 지킵니다(check_visit_video).
-                 넓은 폰에서는 한 줄. */}
-            <span>
-              <span className="block min-[420px]:inline">신용보증기금</span>
-              <span className="hidden min-[420px]:inline"> </span>
-              <span className="block min-[420px]:inline">방문용 영상</span>
-            </span>
-          </button>
-        )}
-        {/*  ⚠ 0135 — 시가 두 자리(10~12시)면 시계가 길어집니다. 시계는 읽을 만한 크기(15px 이상 ·
-             check_clock)를 지키고, 좁은 폰에서는 단추 글자를 두 줄로 접어 한 줄에 맞춥니다
-             (320px 이나 글자를 키우면 시계가 아랫줄로). */}
-        <p className={`shrink-0 whitespace-nowrap text-right font-bold text-white ${showVisitVideo ? 'text-[0.85rem]' : 'text-[0.95rem]'}`}>
-          <LiveClock compact={showVisitVideo} />
+      {/*  ── 오늘 날짜 · 지금 시각 (0078) — 어느 계정이든 보이게 ────────────────
+           ⚠ 「신용보증기금 방문용 영상」 단추(0130)는 더보기로 내렸습니다 — 대표님: 「이제 필요 없어졌으니
+             기능은 지우지 말고 더보기에 넣어 줘」. 영상 화면(/visit-video)과 PC 위쪽 단추는 그대로입니다. */}
+      <div className="mt-2 flex items-center justify-end [@media(max-height:480px)]:hidden">
+        <p className="shrink-0 whitespace-nowrap text-right text-[0.95rem] font-bold text-white">
+          <LiveClock />
         </p>
       </div>
       {/*  그 화면의 제목 자리 — 화면이 <PhoneBand> 로 채웁니다(없으면 비어 있음) */}
