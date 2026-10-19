@@ -4,6 +4,9 @@ import { useData } from '../context/DataContext'
 import type { Vehicle, WasteType } from '../types'
 import { Modal } from './Modal'
 
+//  톤수는 소수 둘째 자리까지만 — 계산으로 들어온 값(1.2×3 = 3.5999…)이 그대로 길게 찍히지 않게
+const tonText = (t: number) => t.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 차량 관리
 //
@@ -75,7 +78,7 @@ export function VehicleManager() {
             <div className="min-w-0 flex-1 basis-[9rem]">
               <p className="t-body break-keep font-extrabold text-navy-900">{v.name}</p>
               <p className="t-muted break-keep">
-                {v.wasteType} · {v.tonnage}톤 · 최대 {v.nominalCapacity.toLocaleString('ko-KR')}kg
+                {v.wasteType} · {tonText(v.tonnage)}톤 · 최대 {v.nominalCapacity.toLocaleString('ko-KR')}kg
                 {v.driver ? ` · ${v.driver}` : ''}
               </p>
             </div>
@@ -123,7 +126,7 @@ export function VehicleManager() {
                 <div className="min-w-0 flex-1 basis-[9rem]">
                   <p className="t-body break-keep font-bold text-navy-500">{v.name}</p>
                   <p className="t-muted break-keep">
-                    {v.wasteType} · {v.tonnage}톤{v.driver ? ` · ${v.driver}` : ''}
+                    {v.wasteType} · {tonText(v.tonnage)}톤{v.driver ? ` · ${v.driver}` : ''}
                   </p>
                 </div>
                 <button

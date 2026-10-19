@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { TourButton, TourWhyButton } from '../components/TourEntry'
 import {
@@ -36,6 +37,7 @@ import { SURVEY_TAKEN_ON, surveyBaselineFields } from '../lib/opsSurvey'
 import { PageShell } from '../components/ui'
 import { SetupGapsCard } from '../components/SetupGapsCard'
 import { PageHeader } from '../components/PageHeader'
+import { useIsPhone } from '../components/PhoneBand'
 import { FontSizeControl } from '../components/FontSizeControl'
 import { ThemeButton, ThemePicker } from '../components/ThemePicker'
 import { Modal } from '../components/Modal'
@@ -85,6 +87,7 @@ function SettingCard({
   anchor,
   defaultOpen = false,
   hook,
+  tile,
   children,
 }: {
   icon: LucideIcon
@@ -93,18 +96,36 @@ function SettingCard({
   tone?: 'navy' | 'teal' | 'amber' | 'rose'
   /** 주소 뒤에 #이름 을 붙여 바로 올 수 있게 (예: /settings#vehicles) */
   anchor?: string
-  /** 폰에서도 처음부터 펼쳐 둘지 (지금 손봐야 하는 카드) */
+  /** 폰에서도 처음부터 펼쳐 둘지 (지금 손봐야 하는 카드) — 폰에서도 칸이 아니라 카드로 그대로 둡니다 */
   defaultOpen?: boolean
   /** 검사 · 안내가 찾는 표시 (예: data-settings-help) */
   hook?: Record<string, string>
+  /** 폰 설정 목차의 칸 — 어느 묶음 · 칸 이름 */
+  tile?: TileSpec
   children: React.ReactNode
 }) {
+  const key = anchor ?? title
+  const nav = useContext(SetNavCtx)
+  const asTile = !!nav?.phone && !!tile && !defaultOpen
+  useSettingTile(asTile, key, tile, Icon)
   const [open, setOpen] = useState(
     () => defaultOpen || (!!anchor && typeof window !== 'undefined' && window.location.hash === `#${anchor}`),
   )
+  //  폰 — 목차 칸을 누르면 아래에서 올라오는 창으로 엽니다(더보기와 같은 모양)
+  if (asTile && nav) {
+    return createPortal(
+      <Modal open={nav.active === key} title={title} onClose={nav.close}>
+        <div {...hook} data-setting-sheet={key} className="space-y-4">
+          <p className="t-muted break-keep">{desc}</p>
+          {children}
+        </div>
+      </Modal>,
+      document.body,
+    )
+  }
   return (
     <section id={anchor} {...hook} className="card scroll-mt-6 p-4 sm:p-6">
-      <FoldHead icon={Icon} title={title} desc={desc} tone={tone} toggle={anchor ?? title} open={open} onToggle={() => setOpen((v) => !v)} />
+      <FoldHead icon={Icon} title={title} desc={desc} tone={tone} toggle={key} open={open} onToggle={() => setOpen((v) => !v)} />
       <div className={open ? 'mt-4' : 'mt-4 hidden sm:block'}>{children}</div>
     </section>
   )
@@ -167,30 +188,135 @@ function FoldHead({
 }
 
 /**
- * 폰에서만 접는 감싸개 — 이미 제 모양이 있는 카드(직원 명부 · 운영 변화 기록 · 서버 점검)를
- * 폰에서는 한 줄로 둡니다. 누르면 그 카드가 바로 아래에 그대로 펼쳐집니다.
- * ⚠ PC 에서는 감싸개가 없는 것과 같습니다(한 줄 머리를 아예 안 그립니다).
+ * 이미 제 모양이 있는 카드(직원 명부 · 운영 변화 기록 · 서버 점검)를 폰 목차의 칸 하나로 둡니다.
+ * 누르면 그 카드가 아래에서 올라오는 창 안에 그대로 열립니다. PC 에서는 감싸개가 없는 것과 같습니다.
  */
 function PhoneFold({
   icon,
   title,
   anchor,
-  tone,
+  tile,
   children,
 }: {
   icon: LucideIcon
   title: string
   anchor?: string
-  tone?: keyof typeof FOLD_TONE
+  tile: TileSpec
   children: React.ReactNode
 }) {
-  const [open, setOpen] = useState(() => !!anchor && typeof window !== 'undefined' && window.location.hash === `#${anchor}`)
+  const key = anchor ?? title
+  const nav = useContext(SetNavCtx)
+  const asTile = !!nav?.phone
+  useSettingTile(asTile, key, tile, icon)
+  if (asTile && nav) {
+    return createPortal(
+      <Modal open={nav.active === key} title={title} onClose={nav.close}>
+        <div data-setting-sheet={key} className="space-y-3">{children}</div>
+      </Modal>,
+      document.body,
+    )
+  }
   return (
-    <div id={anchor} className="scroll-mt-6">
-      <div className="card p-4 sm:hidden">
-        <FoldHead icon={icon} title={title} tone={tone} toggle={anchor ?? title} open={open} onToggle={() => setOpen((v) => !v)} />
-      </div>
-      <div className={`space-y-3 sm:space-y-4 xl:space-y-5 ${open ? 'max-sm:mt-2' : 'max-sm:hidden'}`}>{children}</div>
+    <div id={anchor} className="scroll-mt-6 space-y-3 sm:space-y-4 xl:space-y-5">
+      {children}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 폰 설정 목차 — 「더보기」처럼 묶음 카드 + 아이콘 칸 4개씩
+//
+//  대표님: 「설정도 더보기 눌렀을 때 저런 방식으로 배치해 주면 오히려 좋을 것 같다」.
+//  폰(lg 미만)에서는 카드를 늘어놓지 않고 묶음별 칸만 보여 줍니다. 칸을 누르면 그 설정이
+//  아래에서 올라오는 창으로 열립니다. 창은 뒤로 가기로도 닫힙니다.
+//
+//   · 칸은 그 카드가 **실제로 그려질 때만** 생깁니다(운영 모드 · 계정에 따라 다름) —
+//     카드가 스스로 목차에 이름을 올립니다. 없는 기능 칸을 만들지 않습니다.
+//   · /settings#vehicles 처럼 주소로 오면 그 창을 바로 엽니다.
+//   · PC 는 예전 그대로 카드가 다 펼쳐져 있습니다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type TileGroup = 'view' | 'work' | 'data' | 'ax' | 'mode'
+type TileSpec = { group: TileGroup; short: string }
+type TileReg = TileSpec & { key: string; icon: LucideIcon }
+
+const TILE_GROUPS: { id: TileGroup; title: string; dot: string; tile: string }[] = [
+  { id: 'view', title: '화면 · 도움말', dot: 'bg-sky-500', tile: 'bg-sky-50 text-sky-700' },
+  { id: 'work', title: '운영 · 계정', dot: 'bg-violet-500', tile: 'bg-violet-50 text-violet-700' },
+  { id: 'data', title: '데이터 · 시스템', dot: 'bg-emerald-500', tile: 'bg-emerald-50 text-emerald-700' },
+  { id: 'ax', title: 'AX 실증', dot: 'bg-orange-500', tile: 'bg-orange-50 text-orange-700' },
+  { id: 'mode', title: '운영 모드', dot: 'bg-rose-500', tile: 'bg-rose-50 text-rose-600' },
+]
+
+//  칸 순서 — 자주 여는 것부터
+const TILE_ORDER = [
+  'help', 'theme', 'font',
+  'vehicles', 'stock', 'staff', 'password', 'users',
+  'backup', 'export', 'clientset', 'import-local', 'sysinfo', 'health', 'live',
+  'baseline', 'ops-changes',
+  'mode', 'demo', 'reset',
+]
+
+const SetNavCtx = createContext<{
+  phone: boolean
+  active: string | null
+  close: () => void
+  register: (t: TileReg) => () => void
+} | null>(null)
+
+/** 카드가 폰 목차에 자기 칸을 올립니다 (그려질 때만) */
+function useSettingTile(on: boolean, key: string, tile: TileSpec | undefined, icon: LucideIcon) {
+  const nav = useContext(SetNavCtx)
+  const register = nav?.register
+  const group = tile?.group
+  const short = tile?.short
+  useLayoutEffect(() => {
+    if (!on || !register || !group || !short) return
+    return register({ key, group, short, icon })
+  }, [on, register, key, group, short, icon])
+}
+
+function SettingsGrid({ tiles, onOpen }: { tiles: Record<string, TileReg>; onOpen: (key: string) => void }) {
+  const order = (k: string) => {
+    const i = TILE_ORDER.indexOf(k)
+    return i < 0 ? 99 : i
+  }
+  return (
+    <div data-settings-grid className="space-y-3">
+      {TILE_GROUPS.map((g) => {
+        const items = Object.values(tiles)
+          .filter((t) => t.group === g.id)
+          .sort((a, b) => order(a.key) - order(b.key))
+        if (items.length === 0) return null
+        return (
+          <section key={g.id} data-settings-group={g.id} className="card px-3 pb-4 pt-3.5">
+            <div className="mb-3 flex items-center gap-2 px-1">
+              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${g.dot}`} />
+              <h2 className="min-w-0 flex-1 break-keep text-[1.02rem] font-extrabold text-navy-900">{g.title}</h2>
+              <span className="shrink-0 text-[0.86rem] font-bold text-navy-500">{items.length}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-x-1 gap-y-3.5">
+              {items.map((t) => {
+                const Icon = t.icon
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    data-setting-tile={t.key}
+                    onClick={() => onOpen(t.key)}
+                    className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-0.5 transition active:scale-95 active:bg-navy-50"
+                  >
+                    <span aria-hidden="true" className={`flex h-[2.7rem] w-[2.7rem] items-center justify-center rounded-[15px] ${g.tile}`}>
+                      <Icon size={21} strokeWidth={2.2} />
+                    </span>
+                    <span className="w-full break-keep text-center text-[0.82rem] font-bold leading-tight text-navy-800">{t.short}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
@@ -223,8 +349,30 @@ export function Settings() {
   const live = mode === 'live'
   const demoActive = data.demoSession?.active !== false
   const navigate = useNavigate()
-  //  기준값 카드는 폰에서만 접습니다 (PC 는 항상 펼침).
-  const [baselineOpen, setBaselineOpen] = useState(false)
+
+  //  ── 폰 설정 목차 (더보기 모양) ──────────────────────────────────────────
+  const phone = useIsPhone()
+  const [tiles, setTiles] = useState<Record<string, TileReg>>({})
+  const [active, setActive] = useState<string | null>(null)
+  const register = useCallback((t: TileReg) => {
+    setTiles((m) => ({ ...m, [t.key]: t }))
+    return () =>
+      setTiles((m) => {
+        const next = { ...m }
+        delete next[t.key]
+        return next
+      })
+  }, [])
+  const closeSheet = useCallback(() => setActive(null), [])
+  const nav = useMemo(() => ({ phone, active, close: closeSheet, register }), [phone, active, closeSheet, register])
+  //  /settings#vehicles 처럼 주소로 오면 그 창을 바로 엽니다 — 한 번만.
+  const hashDone = useRef(false)
+  useEffect(() => {
+    if (!phone || hashDone.current) return
+    const h = window.location.hash.slice(1)
+    if (!h) { hashDone.current = true; return }
+    if (tiles[h]) { hashDone.current = true; setActive(h) }
+  }, [phone, tiles])
 
   //  기준값 칸은 타이핑 중에는 화면에만 담아 두고, 칸을 벗어날 때 한 번 저장합니다.
   //  예전에는 글자를 칠 때마다 서버에 쓰고 전체 데이터를 다시 읽어 왔는데,
@@ -321,6 +469,7 @@ export function Settings() {
   ]
 
   return (
+    <SetNavCtx.Provider value={nav}>
     <PageShell className="max-sm:space-y-3">
       <PageHeader title="설정" subtitle="화면 표시 · 데이터 관리 설정 (이 기기에 저장됩니다)" />
 
@@ -367,10 +516,15 @@ export function Settings() {
            대표님이 여기서 한 번에 훑고 채우실 수 있어야 합니다. */}
       <SetupGapsCard />
 
+      {/*  폰 — 더보기처럼 묶음 카드 + 칸. 칸을 누르면 그 설정이 아래에서 올라옵니다. */}
+      {phone && <SettingsGrid tiles={tiles} onOpen={setActive} />}
+
       {/* 사용 방법 — 언제든 다시 실행
           0142 — 위 줄의 「화면 색 · 이 시스템을 만든 이유 · 사용 방법」 세 단추를 여기로 모았습니다 (PC 위 줄에서는 뺌). */}
       <SettingCard
         icon={PlayCircle}
+        anchor="help"
+        tile={{ group: 'view', short: '도움말' }}
         title="도움말 · 화면 색"
         desc="「사용 방법」은 화면을 하나씩 짚어 어디에 무엇을 입력하는지 안내합니다. 「이 시스템을 만든 이유」는 왜 시작했는지 읽는 글이고, 「화면 색」은 시스템 전체 색만 바꿉니다."
         tone="teal"
@@ -392,17 +546,15 @@ export function Settings() {
           {/*  ⚠ 이 카드 하나가 폰에서 1,948px 이었습니다 — 설정 화면 전체의 3분의 1.
                기준값은 **한 번 넣고 거의 안 고치는 값**이라, 폰에서는 다른
                설정 카드와 같은 방식으로 접습니다. PC 는 그대로 펼쳐집니다. */}
-          <section id="baseline" className="card scroll-mt-6 p-4 sm:p-6">
-            <FoldHead
-              icon={Gauge}
-              title="AX 실증 · 도입 전 기준값"
-              desc="이 시스템을 쓰기 전의 실제 업무 값을 입력하세요. 도입 후 성과와 비교하는 기준이 됩니다."
-              tone="teal"
-              toggle="baseline"
-              open={baselineOpen}
-              onToggle={() => setBaselineOpen((v) => !v)}
-            />
-            <div className={baselineOpen ? '' : 'hidden sm:block'}>
+          <SettingCard
+            icon={Gauge}
+            anchor="baseline"
+            tile={{ group: 'ax', short: '도입 전 기준값' }}
+            title="AX 실증 · 도입 전 기준값"
+            desc="이 시스템을 쓰기 전의 실제 업무 값을 입력하세요. 도입 후 성과와 비교하는 기준이 됩니다."
+            tone="teal"
+          >
+            <div>
 
             {/* 실증 시작일 */}
             <div className="mt-4 rounded-2xl bg-navy-50 p-4">
@@ -544,11 +696,11 @@ export function Settings() {
               AX 도입 성과 보기 <ArrowRight size={17} strokeWidth={2.4} />
             </button>
             </div>
-          </section>
+          </SettingCard>
 
           {/*  0106 — 운영 변화 기록. 차량·인력·거점·계약 변화의 적용일 — 성과와 분리하는 근거. */}
           {live && (
-            <PhoneFold icon={History} title="운영 변화 기록" anchor="ops-changes">
+            <PhoneFold icon={History} title="운영 변화 기록" anchor="ops-changes" tile={{ group: 'ax', short: '운영 변화' }}>
               <OpsChangesCard />
             </PhoneFold>
           )}
@@ -557,6 +709,8 @@ export function Settings() {
                맞추는 설정이라 한자리에 모여 있어야 찾습니다. */}
           <SettingCard
             icon={Palette}
+            anchor="theme"
+            tile={{ group: 'view', short: '화면 색' }}
             title="화면 색"
             desc="시스템 전체 색을 바꿉니다. 화면 배치와 기능은 그대로이고 색만 바뀝니다. 고른 색은 이 기기에 저장됩니다."
             tone="navy"
@@ -574,6 +728,8 @@ export function Settings() {
 
           <SettingCard
             icon={Type}
+            anchor="font"
+            tile={{ group: 'view', short: '글자 크기' }}
             title="화면 글자 크기"
             desc="앱 전체 글자 크기를 조절합니다. 선택 즉시 반영되고 이 기기에 저장됩니다."
             tone="teal"
@@ -589,6 +745,8 @@ export function Settings() {
 
           <SettingCard
             icon={Building2}
+            anchor="clientset"
+            tile={{ group: 'data', short: '거래처 세트' }}
             title="거래처 데이터 세트"
             desc="화면에 표시할 거래처 범위입니다. 기본 5곳은 실제 주요거래처, 확장분은 서울·경기권 시연용 데이터입니다."
           >
@@ -615,6 +773,8 @@ export function Settings() {
 
           <SettingCard
             icon={Database}
+            anchor="sysinfo"
+            tile={{ group: 'data', short: '시스템 정보' }}
             title="시스템 정보"
             desc="이 기기 브라우저에 저장된 시연 데이터 현황입니다. 실제 운영 데이터는 서버(Supabase)에 있습니다."
           >
@@ -640,12 +800,12 @@ export function Settings() {
              서버가 직접 세어 보고, 없으면 이름을 그대로 보여 줍니다.
           */}
           {(data.staff ?? []).some((x) => x.active) && (
-            <PhoneFold icon={Users} title="우리 직원" anchor="staff">
+            <PhoneFold icon={Users} title="우리 직원" anchor="staff" tile={{ group: 'work', short: '우리 직원' }}>
               <StaffCard />
             </PhoneFold>
           )}
           {live && role === 'admin' && (
-            <PhoneFold icon={Stethoscope} title="서버 자가진단 · 최근 오류" anchor="health">
+            <PhoneFold icon={Stethoscope} title="서버 자가진단 · 최근 오류" anchor="health" tile={{ group: 'data', short: '서버 점검' }}>
               <HealthCard />
               <ErrorLogCard />
             </PhoneFold>
@@ -665,6 +825,8 @@ export function Settings() {
           */}
           <SettingCard
             icon={Download}
+            anchor="backup"
+            tile={{ group: 'data', short: live ? '스냅샷' : '백업 · 복원' }}
             title={live ? '전체 스냅샷 내려받기' : '데이터 백업 · 복원'}
             desc={
               live
@@ -722,6 +884,8 @@ export function Settings() {
           */}
           <SettingCard
             icon={FileSpreadsheet}
+            anchor="export"
+            tile={{ group: 'data', short: '표 내려받기' }}
             title="운영 데이터 표로 내려받기"
             desc="거래처 · 수거 · 청구 · 입금 · 매출을 엑셀에서 열어 확인하고 보관합니다."
           >
@@ -779,6 +943,8 @@ export function Settings() {
                  습관대로 설정을 여신 분이 길을 잃지 않게. */}
           <SettingCard
             icon={Package}
+            anchor="stock"
+            tile={{ group: 'work', short: '자재 재고' }}
             title="사무실 자재 재고"
             desc="자재 관리 화면으로 옮겼습니다. 매일 보는 것이라 설정 안쪽에 두지 않았습니다."
           >
@@ -799,6 +965,7 @@ export function Settings() {
             <SettingCard
               icon={Truck}
               anchor="vehicles"
+              tile={{ group: 'work', short: '운행 차량' }}
               title="운행 차량"
               desc="수거에 사용하는 차량을 등록합니다. 차량이 없으면 수거 입력을 할 수 없습니다."
             >
@@ -810,6 +977,8 @@ export function Settings() {
           {live && (
             <SettingCard
               icon={KeyRound}
+              anchor="password"
+              tile={{ group: 'work', short: '내 비밀번호' }}
               title="내 비밀번호"
               desc="본인 계정의 비밀번호를 변경합니다."
               tone="navy"
@@ -825,6 +994,8 @@ export function Settings() {
                    여기서는 가는 길만 둡니다 — 어느 쪽이 진짜인지 헷갈리지 않게. */}
               <SettingCard
                 icon={Users}
+                anchor="users"
+                tile={{ group: 'work', short: '사용자 계정' }}
                 title="사용자 계정"
                 desc="계정 만들기 · 역할 · 사용/중지 · 비밀번호 초기화는 「사용자 관리」 화면 한 곳에서 합니다."
                 tone="navy"
@@ -836,6 +1007,8 @@ export function Settings() {
 
               <SettingCard
                 icon={Database}
+                anchor="import-local"
+                tile={{ group: 'data', short: '데이터 가져오기' }}
                 title="브라우저 데이터 가져오기"
                 desc="이 브라우저에 저장된 실제 데이터를 확인한 뒤 서버로 올립니다."
                 tone="teal"
@@ -850,6 +1023,8 @@ export function Settings() {
           {!live && (
           <SettingCard
             icon={FlaskConical}
+            anchor="mode"
+            tile={{ group: 'mode', short: '운영 모드' }}
             title="운영 모드"
             desc="이후 저장되는 수거 입력·영업 기록을 시연 데이터로 남길지, 실제 현장 데이터로 남길지 정합니다."
             tone={demoActive ? 'amber' : 'teal'}
@@ -893,6 +1068,8 @@ export function Settings() {
           {live ? (
             <SettingCard
               icon={Database}
+              anchor="live"
+              tile={{ group: 'data', short: '실제 운영' }}
               title="실제 운영 중"
               desc="이 계정은 서버(Supabase)에 연결되어 있습니다."
               tone="teal"
@@ -914,6 +1091,8 @@ export function Settings() {
           ) : (
           <SettingCard
             icon={PlayCircle}
+            anchor="demo"
+            tile={{ group: 'mode', short: '시연 데이터' }}
             title="시연 데이터 관리"
             desc="시연용 변경만 기준 상태로 되돌립니다. 실제 거래처 기본정보와 실제 현장 기록은 유지됩니다."
             tone="amber"
@@ -947,6 +1126,8 @@ export function Settings() {
           {!live && (
           <SettingCard
             icon={AlertTriangle}
+            anchor="reset"
+            tile={{ group: 'mode', short: '전체 초기화' }}
             title="전체 초기화"
             desc="모든 입력 내용을 지우고 초기 샘플 상태로 되돌립니다. 되돌릴 수 없습니다."
             tone="rose"
@@ -994,5 +1175,6 @@ export function Settings() {
         </p>
       </Modal>
     </PageShell>
+    </SetNavCtx.Provider>
   )
 }

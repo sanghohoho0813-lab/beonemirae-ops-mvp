@@ -10,7 +10,7 @@ import * as F from './perf_fixtures.mjs'
 //     ① 글자가 세로로 늘어지지 않는다 (폭이 글자 두 개도 안 되는데 네 줄 이상)
 //     ② 글자가 자기 상자(카드) 밖으로 나가지 않는다
 //     ③ 화면 밖으로 나가거나 가로로 밀리지 않는다
-//     ④ 설정은 폰에서 한 줄씩 접혀 있고, 누르면 펼쳐진다 · 화면이 짧다
+//     ④ 설정은 폰에서 「더보기」처럼 묶음 칸 · 누르면 그 설정 창이 올라온다 · 화면이 짧다
 //     ⑤ 길던 화면의 접힌 칸(인쇄용 브리핑 · 편성 목록 · 입고 칸)은 눌러서 펼쳐진다
 //
 //   ⚠ 가짜 자료로 봅니다(쓰기 없음). 숫자는 화면 모양을 재는 데만 씁니다.
@@ -96,38 +96,68 @@ for (const [w, scale] of [[384, 'xl'], [360, 'lg']]) {
   await ctx.close()
 }
 
-// ── ④ 설정 — 폰에서는 한 줄씩 접혀 있다 ─────────────────────────────────────
+// ── ④ 설정 — 폰에서는 「더보기」처럼 묶음 카드 + 칸, 누르면 아래에서 창 ─────────
+//   대표님: 「설정도 더보기 눌렀을 때 저런 방식으로 배치해 주면 좋겠다」.
 {
   const { ctx, p } = await open('/settings')
-  const t = await p.evaluate(() => {
-    const all = [...document.querySelectorAll('[data-setting-toggle]')].filter((e) => e.getBoundingClientRect().height > 0)
-    return { n: all.length, open: all.filter((e) => e.getAttribute('aria-expanded') === 'true').length, h: document.documentElement.scrollHeight }
-  })
-  ok(t.n >= 10 && t.open === 0, '설정 카드가 폰에서 모두 접혀 있다', `${t.n}개 중 펼침 ${t.open}`)
-  //  예전 6,434px(가장 큰 글씨). 접힌 한 줄 카드만이면 3,000px 안쪽입니다.
-  ok(t.h < 3300, '설정 화면이 짧다 (가장 큰 글씨, 예전 6,434px)', `${t.h}px`)
-  //  설명 글은 접혀 있을 때 안 보인다 — 「한 줄」
-  const descShown = await p.locator('[data-setting-toggle] .t-muted:visible').count()
-  ok(descShown === 0, '접힌 카드에는 설명 글이 안 보인다 (제목 한 줄)', `${descShown}개 보임`)
+  const t = await p.evaluate(() => ({
+    tiles: [...document.querySelectorAll('[data-setting-tile]')].map((e) => e.getAttribute('data-setting-tile')),
+    groups: document.querySelectorAll('[data-settings-group]').length,
+    cards: [...document.querySelectorAll('main section.card')].filter((e) => e.getBoundingClientRect().height > 0 && !e.hasAttribute('data-settings-group')).length,
+    h: document.documentElement.scrollHeight,
+  }))
+  ok(t.tiles.length >= 10 && t.groups >= 3, '설정이 묶음 카드 + 칸으로 나온다', `${t.groups}묶음 · ${t.tiles.length}칸`)
+  ok(t.cards === 0, '폰에서는 설정 카드를 늘어놓지 않는다 (칸만)', `${t.cards}장`)
+  //  예전 6,434px(가장 큰 글씨) → 한 줄 접기 2,420px → 칸 배치
+  ok(t.h < 2700, '설정 화면이 짧다 (가장 큰 글씨, 예전 6,434px)', `${t.h}px`)
+
   //  값이 비어서 못 쓰는 기능 — 접힌 줄에 몇 가지인지만
-  const gaps = p.locator('[data-setup-gaps]')
-  if (await gaps.count()) {
-    ok((await p.locator('[data-setup-gap]:visible').count()) === 0, '「값이 비어서 못 쓰는 기능」 목록도 접혀 있다')
+  if (await p.locator('[data-setup-gaps]').count()) {
+    ok((await p.locator('[data-setup-gap]:visible').count()) === 0, '「값이 비어서 못 쓰는 기능」 목록은 접혀 있다')
     await p.locator('[data-setup-toggle]').click()
     await p.waitForTimeout(300)
     ok((await p.locator('[data-setup-gap]:visible').count()) > 0, '누르면 그 목록이 펼쳐진다')
   }
-  //  도움말 · 화면 색 — 누르면 세 단추가 글 **아래**에 (예전엔 옆에 세워 글이 세로로 늘어짐)
-  await p.locator('[data-settings-help] [data-setting-toggle]').click()
-  await p.waitForTimeout(300)
+
+  //  칸마다 — 누르면 그 설정 창이 열리고, 창 안 글자도 넘치거나 눌리지 않는다
+  for (const key of t.tiles) {
+    await p.locator(`[data-setting-tile="${key}"]`).click()
+    await p.waitForTimeout(450)
+    const sheet = p.locator(`[role="dialog"] [data-setting-sheet="${key}"]`)
+    const shown = await sheet.isVisible().catch(() => false)
+    const title = (await p.locator('[role="dialog"] h2').last().textContent().catch(() => '')) ?? ''
+    const r = await measure(p)
+    ok(shown && title.trim().length > 0, `칸 「${key}」 → 창이 열린다`, title.trim())
+    ok(r.squeezed.length === 0 && r.spill.length === 0 && r.outside.length === 0 && r.push <= 0,
+      `칸 「${key}」 창 안 — 눌림 · 넘침 없음`, [...r.squeezed, ...r.spill, ...r.outside].join(' ; '))
+    await p.locator('[role="dialog"] button[aria-label="닫기"]').last().click()
+    await p.waitForTimeout(400)
+  }
+  //  닫힘은 아래로 미끄러지는 움직임이 있어 잠깐 기다립니다
+  await p.locator('[role="dialog"]').first().waitFor({ state: 'detached', timeout: 3000 }).catch(() => {})
+  ok((await p.locator('[role="dialog"]').count()) === 0, '닫으면 창이 사라진다')
+
+  //  도움말 — 세 단추가 글 아래에 (예전엔 옆에 세워 글이 세로로 늘어짐)
+  await p.locator('[data-setting-tile="help"]').click()
+  await p.waitForTimeout(450)
   const help = await p.evaluate(() => {
     const box = document.querySelector('[data-settings-help]')
     const start = box?.querySelector('[data-tour-start]')
-    const desc = box?.querySelector('[data-setting-toggle] .t-muted')
+    const desc = box?.querySelector('.t-muted')
     if (!start || !desc) return null
     return { below: start.getBoundingClientRect().top >= desc.getBoundingClientRect().bottom - 1, descW: Math.round(desc.getBoundingClientRect().width) }
   })
-  ok(help != null && help.below && help.descW > 150, '도움말을 펴면 단추가 글 아래에 · 글은 넉넉한 폭', JSON.stringify(help))
+  ok(help != null && help.below && help.descW > 150, '도움말 창 — 단추는 글 아래 · 글은 넉넉한 폭', JSON.stringify(help))
+  //  기기 뒤로 가기로 닫힌다 (화면은 설정 그대로)
+  await p.goBack()
+  await p.locator('[role="dialog"]').first().waitFor({ state: 'detached', timeout: 3000 }).catch(() => {})
+  ok((await p.locator('[role="dialog"]').count()) === 0 && /\/settings/.test(p.url()), '뒤로 가기로 창만 닫히고 설정에 그대로', p.url().replace(W.BASE, ''))
+  await ctx.close()
+}
+{
+  //  주소로 바로 오면(/settings#vehicles · 대시보드 「차량 등록」 등) 그 창이 열려 있다
+  const { ctx, p } = await open('/settings#vehicles')
+  ok(await p.locator('[role="dialog"] [data-setting-sheet="vehicles"]').isVisible().catch(() => false), '/settings#vehicles → 운행 차량 창이 바로 열린다')
   await ctx.close()
 }
 
@@ -168,6 +198,7 @@ for (const [w, scale] of [[384, 'xl'], [360, 'lg']]) {
   await W.settle(p, state)
   await p.waitForTimeout(700)
   ok(await p.locator('[data-settings-help] [data-tour-start]').isVisible(), 'PC 설정 — 도움말 단추가 바로 보인다 (접지 않음)')
+  ok((await p.locator('[data-settings-grid]').count()) === 0, 'PC 설정 — 칸 목차 없이 카드 그대로')
   await p.goto(`${W.BASE}/readiness`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)
   await p.waitForTimeout(700)
