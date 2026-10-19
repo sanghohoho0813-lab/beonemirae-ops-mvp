@@ -240,7 +240,7 @@ export function DayClose({ date = today() }: { date?: string }) {
         data-day-close-note
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="남길 말이 있으면 한 줄 (없으면 비워 두세요)"
+        placeholder="남길 말이 있으면 한 줄 (선택)"
         className="input mt-3.5"
         maxLength={200}
       />

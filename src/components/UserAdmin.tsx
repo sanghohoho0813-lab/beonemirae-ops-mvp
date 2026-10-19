@@ -315,7 +315,7 @@ export function UserAdmin() {
                       /*  0082 — navy-300 은 흰 바탕에서 2.0:1 입니다. 눌러야 하는 링크가
                           그 정도로 흐리면 있는 줄도 모릅니다. 밝은 바탕의
                           보조 글자는 navy-500 입니다. */
-                      className="ml-2 align-middle text-[0.95rem] font-bold text-navy-500 underline transition hover:text-navy-800 disabled:opacity-40"
+                      className="ml-1 inline-flex min-h-[44px] items-center px-1 align-middle text-[0.95rem] font-bold text-navy-500 underline transition hover:text-navy-800 disabled:opacity-40"
                       onClick={() => {
                         const next = window.prompt(
                           `${r.email} 계정에 표시할 이름을 적어 주세요.\n\n권한은 바뀌지 않습니다 — 호칭만 바뀝니다.`,

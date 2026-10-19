@@ -184,8 +184,9 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
                 <tbody className="t-cell divide-y divide-navy-50">
                   {(alloc ? alloc.rows : r.rows).map((s) => (
                     <tr key={s.clientId} className="transition hover:bg-navy-50">
-                      <td className="px-4 py-2.5 font-bold text-navy-800">
-                        <Link to={`/clients/${s.clientId}`} className="hover:underline">
+                      <td className="px-4 py-1 font-bold text-navy-800">
+                        {/*  폰에서 손가락으로 누를 만한 높이(44px) — 줄 높이는 그대로 */}
+                        <Link to={`/clients/${s.clientId}`} className="inline-flex min-h-[44px] items-center hover:underline">
                           {s.clientName}
                         </Link>
                       </td>
@@ -218,7 +219,7 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
                         </td>
                       )}
                       <td className="pr-3 text-right">
-                        <Link to={`/clients/${s.clientId}`} aria-label={`${s.clientName} 정산`}>
+                        <Link to={`/clients/${s.clientId}`} aria-label={`${s.clientName} 정산`} className="inline-flex h-11 w-11 items-center justify-center rounded-xl hover:bg-navy-100">
                           <ChevronRight size={16} className="text-navy-400" />
                         </Link>
                       </td>

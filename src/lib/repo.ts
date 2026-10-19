@@ -91,16 +91,29 @@ function unwrapOne(res: { data: Row | null; error: { message: string } | null })
  *  오고 어떤 줄은 영영 안 옵니다. 그래서 모든 조회에 정렬을 붙였습니다.
  */
 const PAGE = 1000
+/**
+ *  0146 — 첫 장이 꽉 차면(1000줄) 다음 장들은 **세 장씩 한꺼번에** 받습니다.
+ *  예전에는 한 장씩 차례로 받아, 수거 일정 5천여 건이면 서버 왕복 6번을 줄 서서 기다렸습니다
+ *  (앱을 켤 때마다 · 폰 통신에서 그만큼 늦음). 장 번호 순서대로 이어 붙이고, 처음으로 덜 찬 장에서
+ *  멈추는 규칙은 그대로입니다 — 그 뒤 장은 비어 있어 버립니다(많아야 빈 장 두 번 더 물음).
+ */
+const PAGE_BATCH = 3
 async function pageAll(
   make: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
 ): Promise<Row[]> {
-  const out: Row[] = []
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await make(from, from + PAGE - 1)
+  const page = async (n: number): Promise<Row[]> => {
+    const { data, error } = await make(n * PAGE, n * PAGE + PAGE - 1)
     if (error) throw new Error(error.message)
-    const rows = data ?? []
-    out.push(...rows)
-    if (rows.length < PAGE) return out
+    return data ?? []
+  }
+  const out = await page(0)
+  if (out.length < PAGE) return out
+  for (let next = 1; ; next += PAGE_BATCH) {
+    const pages = await Promise.all(Array.from({ length: PAGE_BATCH }, (_, i) => page(next + i)))
+    for (const rows of pages) {
+      out.push(...rows)
+      if (rows.length < PAGE) return out
+    }
   }
 }
 
@@ -482,7 +495,8 @@ export async function loadAppData(): Promise<AppData> {
     }
   }
 
-  const [clients, vehicles, schedules, materials, notes, events, stock, overrides, requests] = await Promise.all([
+  //  0146 — 기본 표는 아래 표들과 **함께** 받기 시작합니다(맨 아래에서 한꺼번에 기다림).
+  const coreP = Promise.all([
     // 그만둔 거래처까지 함께 읽습니다. 목록에는 활성만 넣고, 비활성은
     // 청구·수거 기록의 이름을 되찾는 데만 씁니다(아래 retiredClients).
     withRetry(async () => pageAll((f, t) => sb.from('clients').select(CLIENT_COLS).order('id').range(f, t))),
@@ -520,7 +534,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  엑셀에서 가져온 월 실적 (0025). 아직 마이그레이션을 적용하지 않은
   //  환경에서는 표가 없으므로, 실패해도 화면 전체가 멈추지 않게 soft 로 읽습니다.
-  const monthlyActuals = await soft(
+  const monthlyActualsP = soft(
     async () => pageAll((f, t) => sb.from('client_monthly_actuals').select('*').order('month').range(f, t)),
     [] as Row[],
     'Excel 월 실적',
@@ -529,7 +543,7 @@ export async function loadAppData(): Promise<AppData> {
   //  고객 문의 (0083). 판 82 이하에는 표가 없으므로 soft 로 읽습니다 —
   //  없으면 「문의가 아직 없다」와 같은 상태이고, 화면은 그대로 뜹니다.
   //  ⚠ 병원 계정에는 RLS 가 **자기 병원 것만** 내려 줍니다.
-  const inquiryRows = await soft(
+  const inquiryRowsP = soft(
     async () =>
       pageAll((f, t) =>
         sb
@@ -551,7 +565,7 @@ export async function loadAppData(): Promise<AppData> {
     const r = await soft<Row[] | typeof NO_TABLE>(fn, NO_TABLE, what)
     return r === NO_TABLE ? undefined : r
   }
-  const [opsChangeRows, recoViewRows, dispatchRows, dayCloseRows, aiCallRows, coachRows] = await Promise.all([
+  const evidenceP = Promise.all([
     softTable(
       () => pageAll((f, t) => sb.from('ops_changes').select('*').order('effective_on', { ascending: false, nullsFirst: true }).range(f, t)),
       '운영 변화 기록',
@@ -599,7 +613,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  현장 의견 (0062). 현장 계정에는 **자기가 낸 것만** 내려옵니다(RLS).
   //  마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다.
-  const feedbackRows = await soft(
+  const feedbackRowsP = soft(
     async () =>
       pageAll((f, t) =>
         sb.from('schedule_feedback').select('*').order('created_at', { ascending: false }).range(f, t),
@@ -610,7 +624,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  월 매출 직접입력·조정 (0038). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 조정이 없는 것과 같습니다.
-  const revenueOverrides = await soft(
+  const revenueOverridesP = soft(
     async () => pageAll((f, t) => sb.from('revenue_overrides').select('*').order('month').range(f, t)),
     [] as Row[],
     '매출 직접입력',
@@ -623,7 +637,7 @@ export async function loadAppData(): Promise<AppData> {
   //    그러면 소모품 화면이 빈 화면이 아니라 **오류**가 됩니다.
   //    (0063 이 거래처에서 똑같은 함정을 만들었습니다 — 그때 배운 대로 씁니다)
   //    칸 이름을 적어 두면 잠그기 전에도 후에도 똑같이 돕니다.
-  const products = await soft(
+  const productsP = soft(
     async () => pageAll((f, t) => sb.from('products').select(PRODUCT_COLS).order('sort').range(f, t)),
     [] as Row[],
     '소모품 상품',
@@ -635,29 +649,24 @@ export async function loadAppData(): Promise<AppData> {
   //   에서는 그 함수가 없으므로, 예전처럼 표에서 그 칸만 다시 읽습니다.
   //   둘 다 soft 라 **어느 쪽이 없어도 화면이 안 깨집니다.**
   //   (현장·병원은 어느 길로도 못 받습니다 — 빈 값이고 오류가 아닙니다)
-  const costRows = await soft(
+  const costRowsP = soft(
     async () => unwrap<Row[]>(await sb.rpc('product_costs')),
     null as Row[] | null,
   )
-  const costFallback =
+  const costFallbackP = costRowsP.then((costRows) =>
     costRows == null
-      ? await soft(
+      ? soft(
           async () => pageAll((f, t) => sb.from('products').select('id, cost_price').order('id').range(f, t)),
           [] as Row[],
         )
-      : []
-  const costById = new Map<string, number | null>(
-    [...(costRows ?? []), ...costFallback].map((r) => [
-      String(r.id),
-      r.cost_price == null ? null : Number(r.cost_price),
-    ]),
+      : ([] as Row[]),
   )
-  const orderRows = await soft(
+  const orderRowsP = soft(
     async () => pageAll((f, t) => sb.from('product_orders').select('*').order('requested_at').range(f, t)),
     [] as Row[],
     '소모품 주문',
   )
-  const orderItemRows = await soft(
+  const orderItemRowsP = soft(
     async () => pageAll((f, t) => sb.from('product_order_items').select('*').order('id').range(f, t)),
     [] as Row[],
     '소모품 주문 품목',
@@ -674,14 +683,14 @@ export async function loadAppData(): Promise<AppData> {
   //     배열을 돌려주므로, DB 를 아직 안 올리셨어도 앱이 안 깨집니다.
   //   ⚠ 병원 계정에는 서버가 아무것도 안 줍니다(RLS). 화면에서 거르지
   //     않습니다 — 화면에서 거르면 「화면엔 없는데 서버는 주더라」가 됩니다.
-  const reservations = await soft(
+  const reservationsP = soft(
     async () =>
       pageAll((f, t) =>
         sb.from('vehicle_reservations').select('id, vehicle_id, date, profile_id, profile_name, note').order('date').range(f, t)),
     [] as Row[],
   )
 
-  const staff = await soft(
+  const staffP = soft(
     async () => pageAll((f, t) => sb.from('staff').select(STAFF_COLS).order('name').range(f, t)),
     [] as Row[],
     '직원 명부',
@@ -689,28 +698,23 @@ export async function loadAppData(): Promise<AppData> {
 
   //  4대보험 자격취득일은 **관리자만** 봅니다 (0064). 상품 원가와 같은 방식 —
   //  새 함수가 있으면 그쪽에서, 아직 없으면 예전처럼 표에서. 둘 다 soft 입니다.
-  const hrRows = await soft(
+  const hrRowsP = soft(
     async () => unwrap<Row[]>(await sb.rpc('staff_hr')),
     null as Row[] | null,
   )
-  const hrFallback =
+  const hrFallbackP = hrRowsP.then((hrRows) =>
     hrRows == null
-      ? await soft(
+      ? soft(
           async () =>
             pageAll((f, t) => sb.from('staff').select('id, insured_from, insurance').order('id').range(f, t)),
           [] as Row[],
         )
-      : []
-  const hrById = new Map<string, { insured_from: unknown; insurance: unknown }>(
-    [...(hrRows ?? []), ...hrFallback].map((r) => [
-      String(r.id),
-      { insured_from: r.insured_from, insurance: r.insurance },
-    ]),
+      : ([] as Row[]),
   )
 
   //  국세청 신고 매출 (0047). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 그 칸이 안 뜹니다.
-  const taxFilings = await soft(
+  const taxFilingsP = soft(
     async () => pageAll((f, t) => sb.from('tax_filings').select('*').order('period_from').range(f, t)),
     [] as Row[],
     '국세청 신고 매출',
@@ -718,7 +722,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  휴무일 (0034). 마이그레이션 전 환경에는 표가 없으므로 soft 로 읽습니다 —
   //  없으면 빈 목록이고, 편성은 지금까지와 똑같이 동작합니다.
-  const holidays = await soft(
+  const holidaysP = soft(
     async () => pageAll((f, t) => sb.from('holidays').select('*').order('day').range(f, t)),
     [] as Row[],
     '휴무일',
@@ -727,7 +731,7 @@ export async function loadAppData(): Promise<AppData> {
   //  마감 표시 (0054). 사람이 「보냈다/발행했다」고 누른 기록입니다.
   //  없으면 지금까지와 똑같이 「준비됨」에 머뭅니다 — 시스템이 스스로
   //  「보냈다」로 채우지 않습니다.
-  const monthCloseMarks = await soft(
+  const monthCloseMarksP = soft(
     async () => pageAll((f, t) => sb.from('month_close_marks').select('*').order('month').range(f, t)),
     [] as Row[],
     '마감 표시',
@@ -735,7 +739,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  담당 기사 배정 (0056). 마이그레이션 전 환경에는 표가 없으므로 soft 로
   //  읽습니다 — 없으면 빈 목록이고, 지금까지처럼 전부 보입니다.
-  const clientAssignments = await soft(
+  const clientAssignmentsP = soft(
     async () => pageAll((f, t) => sb.from('client_assignments').select('*').order('assigned_at').range(f, t)),
     [] as Row[],
     '담당 기사 배정',
@@ -743,7 +747,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  사전 등록(초대) 명단 (0056). 관리자만 읽을 수 있습니다 — 다른 역할은
   //  RLS 가 막으므로 빈 목록으로 옵니다.
-  const staffInvites = await soft(
+  const staffInvitesP = soft(
     async () => pageAll((f, t) => sb.from('staff_invites').select('*').order('created_at').range(f, t)),
     [] as Row[],
     '사전 등록 명단',
@@ -755,7 +759,7 @@ export async function loadAppData(): Promise<AppData> {
   //  ⚠ 0063 을 아직 안 올린 서버에는 이 함수가 없습니다. 그때는 `clients` 에
   //    돈 칸이 아직 열려 있어 위에서 이미 읽힙니다 — soft 로 조용히 넘어가고
   //    화면은 지금까지처럼 돕니다.
-  const billingTerms = await soft(
+  const billingTermsP = soft(
     async () => {
       const { data, error } = await sb.rpc('client_billing_terms')
       if (error) throw new Error(error.message)
@@ -767,7 +771,7 @@ export async function loadAppData(): Promise<AppData> {
 
   //  거래처 단가의 판 (0036). 현장은 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다 — 없으면 지금 단가를 씁니다.
-  const clientPrices = await soft(
+  const clientPricesP = soft(
     async () => pageAll((f, t) => sb.from('client_prices').select('*').order('effective_from').range(f, t)),
     [] as Row[],
     '단가 이력',
@@ -775,40 +779,116 @@ export async function loadAppData(): Promise<AppData> {
 
   //  월 운영비 (0030). 현장 담당자는 RLS 로 막혀 있고, 마이그레이션 전
   //  환경에는 표가 없으므로 soft 로 읽습니다.
-  const operatingCosts = await soft(
+  const operatingCostsP = soft(
     async () => pageAll((f, t) => sb.from('operating_costs').select('*').order('month').range(f, t)),
     [] as Row[],
     '월 운영비',
   )
 
   //  입금 기록 (0026). 현장 담당자는 RLS 로 막혀 있으므로 soft 로 읽습니다.
-  const receipts = await soft(
+  const receiptsP = soft(
     async () => pageAll((f, t) => sb.from('payment_receipts').select('*').order('received_on').range(f, t)),
     [] as Row[],
     '입금 기록',
   )
 
-  const payments = await soft(
+  const paymentsP = soft(
     async () => pageAll((f, t) => sb.from('payments').select('*').order('id').range(f, t)),
     [] as Row[],
     '청구',
   )
-  const leads = await soft(
+  const leadsP = soft(
     async () =>
       pageAll((f, t) =>
         sb.from('sales_leads').select('*, sales_lead_events(stage, at)').order('id').range(f, t),
       ),
     [] as Row[],
   )
-  const baselineRow = await soft(
+  const baselineRowP = soft(
     async () => unwrapOne(await sb.from('performance_baselines').select('*').eq('id', 1).maybeSingle()),
     null as Row | null,
     '도입 전 기준값',
   )
-  const experimentRow = await soft(
+  const experimentRowP = soft(
     async () => unwrapOne(await sb.from('experiment_settings').select('*').eq('id', 1).maybeSingle()),
     null as Row | null,
     '실증 시작일',
+  )
+
+  //  0146 — 위 표들은 서로 기다릴 필요가 없어 **한꺼번에** 받습니다. 예전에는 하나 받고 다음 하나를
+  //  받느라(22번 차례로) 폰 통신에서 앱을 켤 때마다 몇 초씩 더 걸렸습니다. 각 표의 「없어도 화면은
+  //  돈다(soft)」 규칙 · 대체 길(product_costs → 표, staff_hr → 표)은 그대로입니다.
+  const [
+    [clients, vehicles, schedules, materials, notes, events, stock, overrides, requests],
+    [opsChangeRows, recoViewRows, dispatchRows, dayCloseRows, aiCallRows, coachRows],
+    monthlyActuals,
+    inquiryRows,
+    feedbackRows,
+    revenueOverrides,
+    products,
+    costRows,
+    orderRows,
+    orderItemRows,
+    reservations,
+    staff,
+    hrRows,
+    taxFilings,
+    holidays,
+    monthCloseMarks,
+    clientAssignments,
+    staffInvites,
+    billingTerms,
+    clientPrices,
+    operatingCosts,
+    receipts,
+    payments,
+    leads,
+    baselineRow,
+    experimentRow,
+    costFallback,
+    hrFallback,
+  ] = await Promise.all([
+    coreP,
+    evidenceP,
+    monthlyActualsP,
+    inquiryRowsP,
+    feedbackRowsP,
+    revenueOverridesP,
+    productsP,
+    costRowsP,
+    orderRowsP,
+    orderItemRowsP,
+    reservationsP,
+    staffP,
+    hrRowsP,
+    taxFilingsP,
+    holidaysP,
+    monthCloseMarksP,
+    clientAssignmentsP,
+    staffInvitesP,
+    billingTermsP,
+    clientPricesP,
+    operatingCostsP,
+    receiptsP,
+    paymentsP,
+    leadsP,
+    baselineRowP,
+    experimentRowP,
+    costFallbackP,
+    hrFallbackP,
+  ])
+
+  const costById = new Map<string, number | null>(
+    [...(costRows ?? []), ...costFallback].map((r) => [
+      String(r.id),
+      r.cost_price == null ? null : Number(r.cost_price),
+    ]),
+  )
+  const hrById = new Map<string, { insured_from: unknown; insurance: unknown }>(
+    [...(hrRows ?? []), ...hrFallback].map((r) => [
+      String(r.id),
+      { insured_from: r.insured_from, insurance: r.insurance },
+    ]),
   )
 
   return {

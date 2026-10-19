@@ -422,7 +422,8 @@ export function Materials() {
                   {/*  이제 실제로 지워지고 재고가 돌아옵니다(0023). 되돌릴 수
                        없으므로 무엇이 지워지는지 보여 주고 한 번 확인합니다. */}
                   <button
-                    className="text-[0.98rem] font-medium text-navy-400 hover:text-rose-500"
+                    data-supply-delete={m.id}
+                    className="-mr-2 min-h-[44px] shrink-0 rounded-xl px-3 text-[0.98rem] font-medium text-navy-500 hover:bg-rose-50 hover:text-rose-600"
                     onClick={() => {
                       const who = client?.name ?? '알 수 없음'
                       if (

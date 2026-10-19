@@ -152,7 +152,7 @@ export function CustomerInsight() {
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <Link
                       to={`/clients/${h.clientId}`}
-                      className="t-card min-w-0 break-keep text-navy-900 hover:underline"
+                      className="t-card inline-flex min-h-[44px] min-w-0 items-center break-keep text-navy-900 hover:underline"
                     >
                       {h.clientName}
                     </Link>
