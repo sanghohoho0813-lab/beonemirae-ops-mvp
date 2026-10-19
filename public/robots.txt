@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+# 사업계획서 사전 설문(0144) — 개인별 링크라 검색에 올리지 않습니다
+Disallow: /survey/
+Disallow: /survey-preview/
 
 # TODO: 실제 도메인 연결 후 아래 Sitemap 주소를 실제 배포 도메인으로 수정할 것
 Sitemap: https://www.beonemirae.co.kr/sitemap.xml

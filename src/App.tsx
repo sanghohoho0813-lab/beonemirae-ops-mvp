@@ -31,6 +31,9 @@ import { Presentation } from './pages/Presentation'
 import { PerformanceIr } from './pages/PerformanceIr'
 import { MobilePreview } from './pages/MobilePreview'
 import { CompanyHomePage } from './pages/CompanyHomePage'
+import { BizSurveyPage } from './pages/BizSurveyPage'
+import { BizSurveyPreview } from './pages/BizSurveyPreview'
+import { BIZ_SURVEY_ENABLED } from './lib/bizSurvey'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { ResetPassword } from './pages/ResetPassword'
@@ -83,6 +86,20 @@ export default function App() {
         />
         {/* 공개용 회사 홈페이지 — Layout 바깥의 독립 전체화면 라우트 */}
         <Route path="company" element={<CompanyHomePage />} />
+        {/*  사업계획서 사전 설문 (0144 · 임시) — 대표님 · 이사님이 카카오톡 링크로 여는 화면.
+             로그인 없이 열리지만 **링크 열쇠가 맞을 때만** 그 사람 답지 하나가 열립니다(서버 판단).
+             미리보기는 관리자만. 끄려면 lib/bizSurvey.ts 의 BIZ_SURVEY_ENABLED. */}
+        {BIZ_SURVEY_ENABLED && <Route path="survey/:token" element={<BizSurveyPage />} />}
+        {BIZ_SURVEY_ENABLED && (
+          <Route
+            path="survey-preview/:who"
+            element={
+              <RequireAuth>
+                <BizSurveyPreview />
+              </RequireAuth>
+            }
+          />
+        )}
         {/* 로그인 — Layout 바깥의 독립 전체화면 라우트 */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<Signup />} />

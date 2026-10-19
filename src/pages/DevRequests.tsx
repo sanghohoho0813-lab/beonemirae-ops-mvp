@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Inbox, Loader2, RefreshCw } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState, FilterChip } from '../components/ui'
@@ -13,6 +14,8 @@ import {
 import { friendlyError } from '../lib/supabase'
 import { EXCEL_TOPIC, parseExcelChecks } from '../lib/excelCheck'
 import { prettyDate } from '../lib/format'
+import { BIZ_SURVEY_ENABLED } from '../lib/bizSurvey'
+import { SurveyAdmin } from '../components/bizSurvey/SurveyAdmin'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 사용자 피드백 (관리자 전용)
@@ -45,7 +48,59 @@ interface Item {
   picks: string[]
 }
 
+/**
+ *  사용자 피드백 화면 — 위에 「사용자 피드백 | 사업계획서 사전 설문(임시 · 0144)」 두 칸.
+ *  ⚠ 기존 피드백(FeedbackInbox)은 그대로입니다. 설문은 BIZ_SURVEY_ENABLED 로 통째로 숨깁니다.
+ *    주소 ?tab=survey 로 바로 열 수 있습니다(미리보기에서 돌아올 때).
+ */
 export function DevRequests() {
+  const [params, setParams] = useSearchParams()
+  const view = BIZ_SURVEY_ENABLED && params.get('tab') === 'survey' ? 'survey' : 'feedback'
+  if (!BIZ_SURVEY_ENABLED) return <FeedbackInbox />
+  return (
+    <div>
+      <div role="tablist" aria-label="사용자 피드백 화면" className="mb-4 flex gap-1 rounded-2xl bg-navy-100/70 p-1">
+        {(
+          [
+            ['feedback', '사용자 피드백'],
+            ['survey', '사업계획서 사전 설문'],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={view === k}
+            data-devreq-view={k}
+            onClick={() => setParams(k === 'survey' ? { tab: 'survey' } : {}, { replace: true })}
+            className={`min-h-[44px] flex-1 break-keep rounded-xl px-3 py-2 text-[1rem] font-extrabold transition ${
+              view === k ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-500'
+            }`}
+          >
+            {k === 'survey' ? (
+              <>
+                <span className="sm:hidden">사전 설문</span>
+                <span className="hidden sm:inline">{label}</span>
+              </>
+            ) : (
+              label
+            )}
+          </button>
+        ))}
+      </div>
+      {view === 'survey' ? (
+        <div>
+          <PageHeader title="사업계획서 사전 설문" subtitle="신보 뉴본펭귄 사업계획서 준비용 · 임시" />
+          <SurveyAdmin />
+        </div>
+      ) : (
+        <FeedbackInbox />
+      )}
+    </div>
+  )
+}
+
+function FeedbackInbox() {
   const { mode } = useAuth()
   const [rows, setRows] = useState<DevRequestRow[]>([])
   const [busy, setBusy] = useState(false)
