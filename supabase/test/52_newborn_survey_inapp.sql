@@ -123,4 +123,41 @@ begin
   perform as_postgres();
 end $$;
 
+\echo '── 4. 동시 작성 보호 — 바뀐 질문만 끼워 넣기 (my_patch) ───────────────'
+do $$
+declare r jsonb; n int;
+begin
+  perform as_anon();
+  perform test_assert(blocked($q$select public.biz_survey_my_patch('{"q1":{"choice":"없음"}}')$q$), '로그인 안 함 — 끼워 넣기 막힘');
+  perform as_postgres();
+  perform login_as('nbdrive@dev.test');
+  perform test_assert(blocked($q$select public.biz_survey_my_patch('{"q1":{"choice":"없음"}}')$q$), '현장 계정 — 끼워 넣기 막힘');
+  perform as_postgres();
+
+  --  대표님 화면과 이사님 화면이 같은 옛 답지(q3 · q22)를 열어 둔 채 각자 다른 질문을 고침
+  perform login_as('nbboss@dev.test');
+  r := public.biz_survey_my_patch('{"q1":{"choice":"있음"}}');
+  perform test_assert(r->'answers'->'q1'->>'choice' = '있음' and r->'answers'->'q22'->>'choice' = '5억원', '대표님 Q1 — 다른 답(Q22)은 그대로');
+  perform as_postgres();
+  perform login_as('nbdir@dev.test');
+  r := public.biz_survey_my_patch('{"q2":{"choice":"5개사"}}');
+  perform test_assert(r->'answers'->'q1'->>'choice' = '있음' and r->'answers'->'q2'->>'choice' = '5개사',
+    '이사님 Q2 — 대표님이 방금 쓴 Q1 이 지워지지 않음 (서로 덮어쓰지 않음)');
+  perform test_assert(r->>'edited_by' = '홍현주', '끼워 넣기도 마지막 작성자를 남김');
+  r := public.biz_survey_my_patch('{}', array['q2']);
+  perform test_assert(not (r->'answers' ? 'q2') and r->'answers'->'q1'->>'choice' = '있음', '지운 질문만 빠짐 (p_unset)');
+  perform test_assert(blocked($q$select public.biz_survey_my_patch('[1]')$q$), '답 모양이 객체가 아니면 거절');
+  perform test_assert(blocked(format('select public.biz_survey_my_patch(%L)', jsonb_build_object('q9', repeat('가', 210000)))), '합친 답이 너무 크면 거절');
+  perform as_postgres();
+  select count(*) into n from public.biz_survey_revisions;
+  perform login_as('nbdir@dev.test');
+  r := public.biz_survey_my_patch('{"q8":{"choice":"미정"}}', '{}', true);
+  perform test_assert(r->>'status' = 'submitted' and r->'answers'->'q8'->>'choice' = '미정' and r->'answers'->'q1'->>'choice' = '있음',
+    '끼워 넣고 바로 제출 — 서버 답 전체 기준');
+  perform test_assert(blocked('select * from public.biz_survey_revisions'), '이사님 — 이력 표 직접 읽기 막힘');
+  perform as_postgres();
+  perform test_assert((select count(*) from public.biz_survey_revisions) = n + 1, '제출 이력 한 장 더');
+  perform test_assert((select answers->'q8'->>'choice' from public.biz_survey_revisions order by submitted_at desc limit 1) = '미정', '이력에는 합친 답 그대로');
+end $$;
+
 \echo '── 52 끝 ──'

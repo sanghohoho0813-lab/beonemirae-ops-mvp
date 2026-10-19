@@ -46,6 +46,22 @@ function wireSurvey(ctx, S, role) {
       S.row ??= { respondent: 'ceo', answers: {}, status: 'draft', updated_at: now(), submitted_at: null, first_submitted_at: null, edited_by: '', edited_role: '' }
       const row = S.row
       if (fn === 'biz_survey_my_open') return send(200, { ...row })
+      if (fn === 'biz_survey_my_patch') {
+        //  0145 동시 작성 보호 — 바뀐 질문만 끼워 넣고 합친 답지를 돌려줌 (예전 0145 서버면 함수 없음)
+        if (S.noPatch) return send(404, { code: 'PGRST202', message: 'Could not find the function public.biz_survey_my_patch' })
+        if (S.failSave) return r.abort('failed')
+        const ans = { ...row.answers }
+        for (const k of body.p_unset ?? []) delete ans[k]
+        Object.assign(ans, body.p_set)
+        const at = now()
+        Object.assign(row, { answers: ans, updated_at: at, edited_by: NAME[role], edited_role: role })
+        if (body.p_submit) {
+          Object.assign(row, { status: 'submitted', submitted_at: at })
+          row.first_submitted_at ??= at
+          S.revisions.push({ id: `v${S.revisions.length + 1}`, respondent: 'ceo', submitted_at: at })
+        }
+        return send(200, { ...row })
+      }
       if (fn === 'biz_survey_my_save') {
         if (S.failSave) return r.abort('failed')
         Object.assign(row, { answers: body.p_answers, updated_at: now(), edited_by: NAME[role], edited_role: role })
@@ -328,6 +344,95 @@ const S = makeServer()
   await p.waitForTimeout(1200)
   ok((await p.getAttribute('[data-survey-status]', 'data-survey-status')) === 'submitted', '④ 다시 열면 — 제출 완료')
   ok(/답변 확인 · 수정하기/.test(flat(await p.textContent('[data-survey-start="review"]'))), '④ 제출 뒤 첫 단추 — 답변 확인 · 수정하기')
+  await ctx.close()
+}
+
+// ═══ ④-2 두 분이 동시에 열어 두어도 — 서로 답을 지우지 않음 (0145 동시 작성 보호) ═══════
+{
+  const S7 = makeServer()
+  const A1 = await openStaff(S7, '/newborn-survey', { role: 'admin' })
+  const B1 = await openStaff(S7, '/newborn-survey', { role: 'office', w: 384, scale: 'xl' })
+  //  두 분 다 빈 답지를 열어 둔 상태에서 — 대표님 Q1
+  await A1.p.click('[data-survey-start="core"]')
+  await A1.p.waitForTimeout(300)
+  await A1.p.click('[data-survey-opt="있음"]')
+  await waitSaved(A1.p)
+  ok(S7.calls.some((c) => c.fn === 'biz_survey_my_patch' && Object.keys(c.body.p_set).join() === 'q1'), '④-2 보낼 때 바뀐 질문(Q1)만 보냄', JSON.stringify(S7.calls.at(-1)?.body))
+  //  이사님(옛 화면 그대로) — Q3
+  await B1.p.click('[data-survey-start="core"]')
+  await B1.p.waitForTimeout(300)
+  await B1.p.click('[data-survey-next]')
+  await B1.p.waitForTimeout(250)
+  await B1.p.click('[data-survey-next]')
+  await B1.p.waitForTimeout(250)
+  await B1.p.click('[data-survey-opt="60~80만원"]')
+  await waitSaved(B1.p)
+  ok(A(S7).q1?.choice === '있음' && A(S7).q3?.choice === '60~80만원', '④-2 서버 답지 — 대표님 Q1 · 이사님 Q3 둘 다 남음 (덮어쓰지 않음)', JSON.stringify(A(S7)))
+  ok(/다른 분이 고친 답 1개/.test(flat(await B1.p.textContent('[data-survey-notice]').catch(() => ''))), '④-2 이사님 화면 — 「다른 분이 고친 답 1개를 함께 반영」 알림')
+  ok(/2 \/ 26 답함/.test(flat(await B1.p.textContent('[data-survey-progress]'))), '④-2 이사님 화면 진행률에 대표님 답도 들어옴', flat(await B1.p.textContent('[data-survey-progress]')))
+  //  대표님이 앱으로 돌아오면(화면이 다시 보이면) 이사님 답이 들어옴
+  await A1.p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await A1.p.waitForTimeout(900)
+  ok(/2 \/ 26 답함/.test(flat(await A1.p.textContent('[data-survey-progress]'))) && (await A1.p.locator('[data-survey-notice]').count()) === 1,
+    '④-2 대표님 화면 — 다시 보일 때 이사님 답을 읽어 옴', flat(await A1.p.textContent('[data-survey-progress]')))
+  //  대표님이 제출 — 서버 답지 전체(이사님 Q3 포함)가 제출됨
+  await A1.p.click('[data-survey-toc]')
+  await A1.p.waitForTimeout(400)
+  await A1.p.locator('[data-survey-toc-list] button', { hasText: '답변 확인 · 제출로' }).click()
+  await A1.p.waitForTimeout(400)
+  ok(/60~80만원/.test(flat(await A1.p.textContent('[data-survey-review]'))), '④-2 대표님 확인 화면에 이사님 답(Q3)이 보임')
+  await A1.p.click('[data-survey-submit]')
+  await A1.p.waitForTimeout(800)
+  ok(S7.row.status === 'submitted' && A(S7).q3?.choice === '60~80만원' && A(S7).q1?.choice === '있음' && S7.revisions.length === 1, '④-2 제출해도 이사님 답이 지워지지 않음')
+  await A1.ctx.close()
+  await B1.ctx.close()
+}
+{
+  //  서버가 예전 0145(끼워 넣기 함수 없음)여도 — 예전처럼 답지 전체 저장 · 제출
+  const S8 = makeServer()
+  S8.noPatch = true
+  const { ctx, p } = await openStaff(S8, '/newborn-survey')
+  await p.click('[data-survey-start="core"]')
+  await p.waitForTimeout(300)
+  await p.click('[data-survey-opt="있음"]')
+  await waitSaved(p)
+  ok(A(S8).q1?.choice === '있음' && S8.calls.some((c) => c.fn === 'biz_survey_my_save'), '④-2 예전 서버 — 답지 전체 저장으로 넘어감 (저장 실패 아님)')
+  ok((await p.locator('[data-survey-save="error"]').count()) === 0, '④-2 예전 서버 — 「저장 안 됨」이 뜨지 않음')
+  await p.click('[data-survey-toc]')
+  await p.waitForTimeout(400)
+  await p.locator('[data-survey-toc-list] button', { hasText: '답변 확인 · 제출로' }).click()
+  await p.waitForTimeout(400)
+  await p.click('[data-survey-submit]')
+  await p.waitForTimeout(800)
+  ok(S8.row.status === 'submitted' && (await p.locator('[data-survey-done]').count()) === 1, '④-2 예전 서버 — 제출도 됨')
+  await ctx.close()
+}
+
+{
+  //  가장 좁은 폰(320px) · 가장 큰 글씨 — 첫 화면 · 조건부 칸 · 표 질문 · 확인 화면
+  const S9 = makeServer()
+  const { ctx, p } = await openStaff(S9, '/newborn-survey', { w: 320, scale: 'xl' })
+  const bad = []
+  const check = async (what) => {
+    const m = await measure(p)
+    if (m.bad.length || m.push > 0 || m.small.length) bad.push(`${what}: ${[...m.bad, ...m.small.map((x) => `작음 ${x}`), m.push > 0 ? `밀림 ${m.push}px` : ''].filter(Boolean).join(', ')}`)
+  }
+  await check('첫 화면')
+  await p.click('[data-survey-start="core"]')
+  await p.waitForTimeout(300)
+  await p.click('[data-survey-opt="있음"]')
+  await p.waitForTimeout(200)
+  await check('Q1 조건부 칸')
+  await p.click('[data-survey-toc]')
+  await p.waitForTimeout(400)
+  await p.locator('[data-survey-toc-list] button', { hasText: '서류 준비 현황' }).click()
+  await p.waitForTimeout(300)
+  await check('Q26 표')
+  await p.click('[data-survey-next]')
+  await p.waitForTimeout(400)
+  await check('확인 화면')
+  ok(bad.length === 0, '④-3 320px · 가장 큰 글씨 — 눌림 · 화면 밖 · 작은 단추 · 가로 밀림 없음', bad.join(' ; '))
+  await shot(p, 's09_320_review')
   await ctx.close()
 }
 

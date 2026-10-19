@@ -38,6 +38,9 @@ interface Props {
   saveState?: SaveState
   saveError?: string | null
   onRetrySave?: () => void
+  /** 다른 분이 고친 답을 들였을 때 한 줄 알림 */
+  notice?: string | null
+  onNotice?: () => void
   onChange: (next: Answers) => void
   onSubmit: () => Promise<void>
   preview?: boolean
@@ -138,6 +141,16 @@ export function SurveyRunner(p: Props) {
       />
 
       <main className="mx-auto w-full max-w-xl px-4 pt-4">
+        {p.notice && !p.preview && (
+          <p data-survey-notice role="status" className="mb-3 flex items-start gap-2 break-keep rounded-2xl bg-teal-50 px-4 py-3 text-[1rem] font-bold text-teal-800">
+            <span className="min-w-0 flex-1">{p.notice}</span>
+            {p.onNotice && (
+              <button type="button" onClick={p.onNotice} aria-label="알림 닫기" className="-my-1.5 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-teal-700">
+                <X size={18} strokeWidth={2.6} />
+              </button>
+            )}
+          </p>
+        )}
         {p.saveError && !p.preview && (
           <p data-survey-save-error className="mb-3 break-keep rounded-2xl bg-amber-50 px-4 py-3 text-[1rem] font-bold text-amber-800">
             {p.saveError}
@@ -818,10 +831,11 @@ function NavBar({
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex w-full max-w-xl gap-2.5 px-4 py-3">
-        <button type="button" data-survey-prev onClick={onPrev} className="btn-ghost min-h-[3.3rem] flex-1 whitespace-nowrap">
+        <button type="button" data-survey-prev onClick={onPrev} className="btn-ghost min-h-[3.3rem] min-w-0 flex-1 whitespace-nowrap">
           <ArrowLeft size={18} strokeWidth={2.4} /> {isFirst ? '처음' : '이전'}
         </button>
-        <button type="button" data-survey-next onClick={onNext} className="btn-primary min-h-[3.3rem] flex-[1.6] whitespace-nowrap">
+        {/*  ⚠ 320px · 가장 큰 글씨에서 「답변 확인하기」가 화면 밖으로 나갔습니다 — 자리가 모자라면 낱말 단위로 두 줄 */}
+        <button type="button" data-survey-next onClick={onNext} className="btn-primary min-h-[3.3rem] min-w-0 flex-[1.6] break-keep leading-tight">
           {backToReview ? '확인 화면으로' : isLast ? '답변 확인하기' : '다음'} <ArrowRight size={18} strokeWidth={2.4} />
         </button>
       </div>

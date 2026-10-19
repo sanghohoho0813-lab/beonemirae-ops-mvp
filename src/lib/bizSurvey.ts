@@ -479,6 +479,38 @@ export function progressOf(who: SurveyWho, answers: Answers) {
   }
 }
 
+// ── 동시 작성 보호 (0145) — 바뀐 질문만 보내고, 서버 답 위에 다시 얹기 ─────────
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+
+/** 서버에 있던 답(base)과 지금 답(cur)의 차이 — 바꾼 질문 · 지운 질문 */
+export function diffAnswers(base: Answers, cur: Answers): { set: Answers; unset: string[] } {
+  const set: Answers = {}
+  for (const [k, v] of Object.entries(cur)) if (!same(base[k], v)) set[k] = v
+  const unset = Object.keys(base).filter((k) => !(k in cur))
+  return { set, unset }
+}
+
+export const isEmptyDiff = (d: { set: Answers; unset: string[] }) => Object.keys(d.set).length === 0 && d.unset.length === 0
+
+/** 차이를 답 위에 적용 (서버의 끼워 넣기와 같은 계산) */
+export function applyDiff(base: Answers, d: { set: Answers; unset: string[] }): Answers {
+  const out: Answers = { ...base }
+  for (const k of d.unset) delete out[k]
+  return Object.assign(out, d.set)
+}
+
+/** 서버가 돌려준 답(server) 위에 — 보낸 뒤(sent) 이 화면에서 또 바꾼 것(cur)만 다시 얹습니다 */
+export function rebase(server: Answers, sent: Answers, cur: Answers): Answers {
+  const out: Answers = { ...server }
+  for (const k of new Set([...Object.keys(sent), ...Object.keys(cur)])) {
+    if (same(sent[k], cur[k])) continue
+    if (k in cur) out[k] = cur[k]
+    else delete out[k]
+  }
+  return out
+}
+
 // ── 한 줄 요약 (검토 화면 · 관리자 비교 · 복사) ─────────────────────────────
 
 const fieldText = (fs: Field[], o: Record<string, string> | undefined) =>

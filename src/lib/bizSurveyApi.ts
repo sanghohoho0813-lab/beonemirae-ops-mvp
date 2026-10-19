@@ -66,6 +66,11 @@ export const mySave = (answers: Answers) => call<{ updated_at: string }>('biz_su
 export const mySubmit = (answers: Answers) =>
   call<{ updated_at: string; submitted_at: string }>('biz_survey_my_submit', { p_answers: answers })
 
+/** 바뀐 질문만 서버에서 끼워 넣기 — 두 분이 동시에 열어도 서로 답을 지우지 않음 (0145 · 동시 작성 보호).
+ *  submit=true 면 끼워 넣고 그대로 제출. 서버에 합쳐진 답 전체를 돌려받습니다. */
+export const myPatch = (set: Answers, unset: string[], submit = false) =>
+  call<OpenResult>('biz_survey_my_patch', { p_set: set, p_unset: unset, p_submit: submit })
+
 export interface RevisionRow {
   id: string
   respondent: Respondent

@@ -175,6 +175,8 @@ for (const role of ['field', 'office']) {
 }
 {
   const { ctx, p } = await open('admin', '/presentation', { aiCalls: [{ id: 'a1', kind: 'request_triage', request_id: null, ok: true, error: '', ms: 1800, model: 'gpt-x', actor_name: '대표', edited: false, created_at: `${TODAY}T01:00:00Z` }] })
+  //  ⚠ 무거운 검사 묶음 안에서는 첫 읽기가 settle 뒤에 끝나기도 합니다 — 「불러오는 중」이 지나간 뒤 잽니다
+  await p.waitForFunction(() => !/불러오는 중/.test(document.querySelector('[data-ready="ai"]')?.textContent ?? ''), null, { timeout: 30000 }).catch(() => {})
   ok((await p.locator('[data-ready="ai"]').getAttribute('data-ready-mark')) === 'ok' && /최근 성공/.test(flat(await p.locator('[data-ready="ai"]').innerText())), '① AI — 실제 성공 기록이 있으면 ✓ (최근 성공 시각 · 모델)')
   //  ai_calls.created_at 은 UTC(01:00Z) — 화면은 한국 시각 10:00 으로
   ok(flat(await p.locator('[data-ready="ai"]').innerText()).includes(`${TODAY.slice(5)} 10:00`), '① AI 최근 성공 시각은 한국 시각으로 (UTC 01:00 → 10:00)', flat(await p.locator('[data-ready="ai"]').innerText()))

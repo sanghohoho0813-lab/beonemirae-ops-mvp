@@ -2,7 +2,8 @@
 -- 0145 — 뉴본펭귄 사전 설문: 링크 없이 앱 안에서 바로 (0144 다음에 실행)
 --
 --  ⚠ 대표님이 Supabase SQL Editor 에서 실행하십니다. 지우는 것 없습니다.
---     0144 에서 만든 표에 **칸 둘**을 더하고, **함수 넷**을 더할 뿐입니다.
+--     0144 에서 만든 표에 **칸 둘**을 더하고, **함수 다섯**을 더할 뿐입니다.
+--     여러 번 실행해도 됩니다(이미 실행하셨어도 한 번 더 실행하면 새 함수가 더해집니다).
 --     판 번호(app_schema_version)는 바꾸지 않습니다.
 --
 --  ── 바뀌는 것 ────────────────────────────────────────────────────────────
@@ -15,6 +16,10 @@
 --    · 현장 · 병원 계정, 로그인 안 한 사람은 열지도 쓰지도 못합니다.
 --    · 두 분 답 전체를 모아 보는 관리 화면(사용자 피드백 › 뉴본펭귄 사전 설문)은
 --      0144 그대로 설문 관리자(admin)만 봅니다.
+--
+--    · **두 분이 동시에 열어 두어도 서로 답을 지우지 않습니다.** 화면은 바뀐 질문만
+--      보내고(biz_survey_my_patch), 서버가 그 질문만 바꿔 끼웁니다. 같은 질문을 두 분이
+--      동시에 고치면 나중에 저장한 쪽이 남습니다. 제출도 서버에 있는 답 기준입니다.
 --
 --   0144 의 초대 링크 함수는 그대로 남지만 화면에서는 더 쓰지 않습니다.
 -- ════════════════════════════════════════════════════════════════════════════
@@ -94,20 +99,61 @@ begin
   return jsonb_build_object('updated_at', v_at, 'submitted_at', v_at);
 end $$;
 
+--  바뀐 질문만 끼워 넣기 (동시 작성 보호) — p_set: 바꾼 질문들 {질문id: 답}, p_unset: 지운 질문 id 들.
+--  p_submit = true 면 끼워 넣은 뒤 그대로 제출(이력 한 장). 합친 답 전체를 돌려줘 화면이 다른 분 답을 반영합니다.
+create or replace function public.biz_survey_my_patch(p_set jsonb, p_unset text[] default '{}', p_submit boolean default false)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_at timestamptz := clock_timestamp(); v_name text; v_role text; v_ans jsonb; r public.biz_survey_responses%rowtype;
+begin
+  if not public.biz_survey_can_answer() then
+    raise exception '뉴본펭귄 사전 설문은 대표님 · 이사님 계정만 쓸 수 있습니다.' using errcode = '42501';
+  end if;
+  if p_set is null or jsonb_typeof(p_set) <> 'object' then
+    raise exception '답변 형식이 올바르지 않습니다.' using errcode = '22023';
+  end if;
+  if coalesce(array_length(p_unset, 1), 0) > 100 then
+    raise exception '답변 형식이 올바르지 않습니다.' using errcode = '22023';
+  end if;
+  select name, role::text into v_name, v_role from public.profiles where id = auth.uid();
+  insert into public.biz_survey_responses(respondent) values ('ceo') on conflict (respondent) do nothing;
+  --  같은 순간 두 분이 저장해도 한 분씩 차례로 (줄 잠금)
+  select * into r from public.biz_survey_responses where respondent = 'ceo' for update;
+  v_ans := (coalesce(r.answers, '{}'::jsonb) - coalesce(p_unset, '{}'::text[])) || p_set;
+  perform public.biz_survey_check_answers(v_ans);
+  update public.biz_survey_responses
+     set answers = v_ans, updated_at = v_at, save_count = save_count + 1,
+         edited_by = coalesce(v_name, ''), edited_role = coalesce(v_role, ''),
+         status = case when p_submit then 'submitted' else status end,
+         first_submitted_at = case when p_submit then coalesce(first_submitted_at, v_at) else first_submitted_at end,
+         submitted_at = case when p_submit then v_at else submitted_at end
+   where respondent = 'ceo'
+   returning * into r;
+  if p_submit then
+    insert into public.biz_survey_revisions(respondent, answers, submitted_at) values ('ceo', v_ans, v_at);
+  end if;
+  return jsonb_build_object(
+    'answers', r.answers, 'status', r.status, 'updated_at', r.updated_at,
+    'submitted_at', r.submitted_at, 'first_submitted_at', r.first_submitted_at,
+    'edited_by', r.edited_by, 'edited_role', r.edited_role
+  );
+end $$;
+
 revoke all on function public.biz_survey_can_answer() from public, anon;
 revoke all on function public.biz_survey_my_open() from public, anon;
 revoke all on function public.biz_survey_my_save(jsonb) from public, anon;
 revoke all on function public.biz_survey_my_submit(jsonb) from public, anon;
+revoke all on function public.biz_survey_my_patch(jsonb, text[], boolean) from public, anon;
 grant execute on function public.biz_survey_can_answer() to authenticated;
 grant execute on function public.biz_survey_my_open() to authenticated;
 grant execute on function public.biz_survey_my_save(jsonb) to authenticated;
 grant execute on function public.biz_survey_my_submit(jsonb) to authenticated;
+grant execute on function public.biz_survey_my_patch(jsonb, text[], boolean) to authenticated;
 
--- ── 바로 확인 — 한 줄로 「칸 2 · 함수 4」가 나오면 끝입니다 ──────────────────
+-- ── 바로 확인 — 한 줄로 「칸 2 · 함수 5」가 나오면 끝입니다 ──────────────────
 select
   (select count(*) from information_schema.columns
     where table_schema = 'public' and table_name = 'biz_survey_responses'
       and column_name in ('edited_by','edited_role')) as "칸 (2)",
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname in ('biz_survey_can_answer','biz_survey_my_open','biz_survey_my_save','biz_survey_my_submit')) as "함수 (4)";
+      and p.proname in ('biz_survey_can_answer','biz_survey_my_open','biz_survey_my_save','biz_survey_my_submit','biz_survey_my_patch')) as "함수 (5)";

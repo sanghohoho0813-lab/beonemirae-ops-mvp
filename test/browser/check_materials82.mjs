@@ -30,6 +30,12 @@ async function open(w = 1280) {
   })), ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }])
   await p.goto(`${W.BASE}/materials`, { waitUntil: 'domcontentloaded' })
   await W.settle(p, state)
+  //  ⚠ 공급 1,408건은 여러 번에 나눠 받습니다. 받는 사이 잠잠한 틈에 settle 이 끝나
+  //    「0건」 · 「더 보기 없음」으로 재던 날이 있었습니다(화면 문제가 아니라 잰 때가 이름).
+  //    목록 줄과 거래처 칸이 그려질 때까지 기다린 뒤 잽니다.
+  await p.waitForFunction(() => document.querySelectorAll('[data-supply-line]').length > 0
+    && /전체 [\d,]+건/.test(document.querySelector('[data-supply-count]')?.textContent ?? ''), null, { timeout: 30000 }).catch(() => {})
+  await W.settle(p, state)
   await p.waitForTimeout(400)
   return { ctx, p, state }
 }

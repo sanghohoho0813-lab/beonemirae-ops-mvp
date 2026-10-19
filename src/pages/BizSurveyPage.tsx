@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react'
 import { BrandLogo } from '../components/BrandLogo'
 import { SurveyRunner, type SaveState } from '../components/bizSurvey/SurveyRunner'
-import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, type Answers } from '../lib/bizSurvey'
-import { SurveyError, myOpen, mySave, mySubmit } from '../lib/bizSurveyApi'
+import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, applyDiff, diffAnswers, isEmptyDiff, rebase, type Answers } from '../lib/bizSurvey'
+import { SurveyError, myOpen, myPatch, mySave, mySubmit, type OpenResult } from '../lib/bizSurveyApi'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 뉴본펭귄 사전 설문 — 앱 안에서 바로 답하는 화면 (/newborn-survey) · 0145
@@ -19,8 +19,15 @@ import { SurveyError, myOpen, mySave, mySubmit } from '../lib/bizSurveyApi'
 //   · 고를 때마다 0.7초 뒤 서버에 저장합니다(자동 저장).
 //   · 서버에 닿지 못하면 **이 폰에만** 잠시 보관했다가 다시 저장합니다. 저장되면
 //     폰의 보관본은 지웁니다 — 회사 정보가 폰에 오래 남지 않게.
-//   · 다시 열면 서버에 있는 답으로 이어집니다. 폰 보관본이 더 새것이면
-//     (저장 못 하고 닫은 경우) 그것으로 이어서 다시 저장합니다.
+//   · 다시 열면 서버에 있는 답으로 이어집니다. 폰 보관본에 저장 못 한 것이 있으면
+//     (저장 못 하고 닫은 경우) 그것만 이어서 다시 저장합니다.
+//
+//  ── 두 분이 동시에 열어 두면 (0145 · 동시 작성 보호) ─────────────────────────
+//   · 답지 전체가 아니라 **바뀐 질문만** 보냅니다(biz_survey_my_patch). 서버가 그 질문만
+//     바꿔 끼우고 합친 답지를 돌려주면, 다른 분이 고친 답이 이 화면에도 들어옵니다.
+//   · 앱으로 돌아올 때(화면이 다시 보일 때)도 서버 답지를 다시 읽습니다.
+//   · 제출도 서버 답지 기준입니다. 같은 질문을 두 분이 동시에 고치면 나중 저장이 남습니다.
+//   · 서버에 끼워 넣기 함수가 아직 없으면(예전 0145) 예전처럼 답지 전체를 저장합니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BACKUP_KEY = 'beonemirae-ops:biz-survey:shared'
@@ -33,17 +40,23 @@ interface Ready {
   editedBy: string
 }
 
-function readBackup(): { answers: Answers; at: number } | null {
+/** 폰 보관본 — 지금 답(answers)과 그때 서버에 있던 답(base). 차이가 「저장 못 한 것」입니다 */
+interface Backup {
+  answers: Answers
+  base?: Answers
+  at: number
+}
+function readBackup(): Backup | null {
   try {
     const raw = localStorage.getItem(BACKUP_KEY)
-    return raw ? (JSON.parse(raw) as { answers: Answers; at: number }) : null
+    return raw ? (JSON.parse(raw) as Backup) : null
   } catch {
     return null
   }
 }
-function writeBackup(answers: Answers) {
+function writeBackup(answers: Answers, base: Answers) {
   try {
-    localStorage.setItem(BACKUP_KEY, JSON.stringify({ answers, at: Date.now() }))
+    localStorage.setItem(BACKUP_KEY, JSON.stringify({ answers, base, at: Date.now() }))
   } catch {
     /* 저장 공간이 막힌 폰 — 서버 저장만 합니다 */
   }
@@ -63,7 +76,12 @@ export function BizSurveyPage() {
   const [fail, setFail] = useState<SurveyError | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const answersRef = useRef<Answers>({})
+  /** 마지막으로 서버에서 받은 답지 — 바뀐 질문을 셀 기준 */
+  const baseRef = useRef<Answers>({})
+  /** 서버에 끼워 넣기 함수가 없으면(예전 0145) 답지 전체 저장으로 */
+  const legacy = useRef(false)
   const dirty = useRef(false)
   const inFlight = useRef(false)
   const timer = useRef<number | null>(null)
@@ -82,15 +100,26 @@ export function BizSurveyPage() {
     myOpen()
       .then((r) => {
         if (!alive) return
-        let answers = r.answers ?? {}
+        const server = r.answers ?? {}
+        let answers = server
         const b = readBackup()
-        const serverAt = r.updated_at ? Date.parse(r.updated_at) : 0
-        if (b && b.at > serverAt && JSON.stringify(b.answers) !== JSON.stringify(answers)) {
-          answers = b.answers
-          dirty.current = true
+        if (b?.base) {
+          //  저장 못 한 것(보관본 − 그때 서버 답)만 지금 서버 답지 위에 얹습니다 — 그사이 다른 분이 쓴 답은 그대로
+          const pending = diffAnswers(b.base, b.answers)
+          if (!isEmptyDiff(pending)) {
+            answers = applyDiff(server, pending)
+            dirty.current = !isEmptyDiff(diffAnswers(server, answers))
+          }
+          if (!dirty.current) clearBackup()
         } else if (b) {
-          clearBackup()
+          //  예전 보관본(서버 답 없이 저장된 것) — 서버보다 새것일 때만
+          const serverAt = r.updated_at ? Date.parse(r.updated_at) : 0
+          if (b.at > serverAt && JSON.stringify(b.answers) !== JSON.stringify(server)) {
+            answers = b.answers
+            dirty.current = true
+          } else clearBackup()
         }
+        baseRef.current = server
         answersRef.current = answers
         setReady({
           answers,
@@ -106,19 +135,51 @@ export function BizSurveyPage() {
     }
   }, [])
 
+  /** 서버가 돌려준 답지를 받아들이기 — 보낸 뒤 이 화면에서 또 바꾼 것은 그대로 두고, 다른 분이 고친 것은 들임 */
+  const accept = useCallback((r: OpenResult, expected: Answers, sent: Answers) => {
+    const server = r.answers ?? {}
+    const others = Object.keys(diffAnswers(expected, server).set).length + diffAnswers(expected, server).unset.length
+    baseRef.current = server
+    const merged = rebase(server, sent, answersRef.current)
+    answersRef.current = merged
+    dirty.current = !isEmptyDiff(diffAnswers(server, merged))
+    if (others > 0) setNotice(`다른 분이 고친 답 ${others}개를 함께 반영했습니다${r.edited_by ? ` (마지막 작성 ${r.edited_by})` : ''}.`)
+    setReady((x) =>
+      x ? { ...x, answers: merged, status: r.status ?? x.status, updatedAt: r.updated_at, submittedAt: r.submitted_at ?? x.submittedAt, editedBy: r.edited_by ?? x.editedBy } : x,
+    )
+    return merged
+  }, [])
+
   const flush = useCallback(async () => {
     if (!ready || !dirty.current || inFlight.current) return
     inFlight.current = true
     dirty.current = false
     const sent = answersRef.current
+    const base = baseRef.current
+    const diff = diffAnswers(base, sent)
     let failed = false
     setSaveState('saving')
     try {
-      const r = await mySave(sent)
-      setReady((x) => (x ? { ...x, updatedAt: r.updated_at } : x))
+      if (isEmptyDiff(diff)) {
+        //  되돌려서 서버와 같아진 경우 — 보낼 것이 없습니다
+      } else if (!legacy.current) {
+        try {
+          accept(await myPatch(diff.set, diff.unset), applyDiff(base, diff), sent)
+        } catch (e) {
+          if (!(e instanceof SurveyError && e.kind === 'missing')) throw e
+          legacy.current = true
+        }
+      }
+      if (legacy.current && !isEmptyDiff(diff)) {
+        const r = await mySave(sent)
+        baseRef.current = sent
+        dirty.current = answersRef.current !== sent
+        setReady((x) => (x ? { ...x, updatedAt: r.updated_at } : x))
+      }
       setSaveError(null)
       setSaveState('saved')
-      if (answersRef.current === sent) clearBackup()
+      if (!dirty.current) clearBackup()
+      else writeBackup(answersRef.current, baseRef.current)
     } catch (e) {
       failed = true
       dirty.current = true
@@ -134,7 +195,7 @@ export function BizSurveyPage() {
         }, failed ? 8000 : 700)
       }
     }
-  }, [ready])
+  }, [ready, accept])
 
   const flushRef = useRef(flush)
   flushRef.current = flush
@@ -145,10 +206,29 @@ export function BizSurveyPage() {
     if (opened && dirty.current) void flushRef.current()
   }, [opened])
 
-  //  화면을 벗어날 때(앱 전환 · 닫기) 남은 것을 저장
+  //  화면을 벗어날 때(앱 전환 · 닫기) 남은 것을 저장 · 다시 보일 때는 서버 답지를 다시 읽기
+  //  (다른 분이 그사이 고친 답이 들어오게 — 저장할 것이 남아 있으면 저장하면서 합쳐집니다)
   useEffect(() => {
     const onHide = () => {
-      if (document.visibilityState === 'hidden') void flush()
+      if (document.visibilityState === 'hidden') {
+        void flush()
+        return
+      }
+      if (!ready || legacy.current) return
+      if (dirty.current) {
+        void flush()
+        return
+      }
+      if (inFlight.current) return
+      const before = baseRef.current
+      myOpen()
+        .then((r) => {
+          if (dirty.current || inFlight.current) return
+          accept(r, before, answersRef.current)
+        })
+        .catch(() => {
+          /* 못 읽으면 지금 화면 그대로 — 다음 저장 때 합쳐집니다 */
+        })
     }
     document.addEventListener('visibilitychange', onHide)
     window.addEventListener('pagehide', onHide)
@@ -156,13 +236,13 @@ export function BizSurveyPage() {
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', onHide)
     }
-  }, [flush])
+  }, [flush, ready, accept])
 
   const onChange = (next: Answers) => {
     if (!ready) return
     answersRef.current = next
     dirty.current = true
-    writeBackup(next)
+    writeBackup(next, baseRef.current)
     setReady({ ...ready, answers: next })
     if (timer.current != null) window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => {
@@ -177,12 +257,27 @@ export function BizSurveyPage() {
       window.clearTimeout(timer.current)
       timer.current = null
     }
-    const r = await mySubmit(answersRef.current)
-    dirty.current = false
-    clearBackup()
+    const sent = answersRef.current
+    const base = baseRef.current
+    const diff = diffAnswers(base, sent)
+    if (!legacy.current) {
+      try {
+        //  끼워 넣고 그대로 제출 — 제출되는 것은 서버에 합쳐진 답지 전체
+        accept(await myPatch(diff.set, diff.unset, true), applyDiff(base, diff), sent)
+      } catch (e) {
+        if (!(e instanceof SurveyError && e.kind === 'missing')) throw e
+        legacy.current = true
+      }
+    }
+    if (legacy.current) {
+      const r = await mySubmit(sent)
+      baseRef.current = sent
+      dirty.current = answersRef.current !== sent
+      setReady((x) => (x ? { ...x, status: 'submitted', submittedAt: r.submitted_at, updatedAt: r.updated_at } : x))
+    }
+    if (!dirty.current) clearBackup()
     setSaveState('saved')
     setSaveError(null)
-    setReady((x) => (x ? { ...x, status: 'submitted', submittedAt: r.submitted_at, updatedAt: r.updated_at } : x))
   }
 
   //  앱으로 돌아가기 — 남은 것을 저장하고, 들어온 화면으로 (바로 열었으면 첫 화면)
@@ -213,6 +308,8 @@ export function BizSurveyPage() {
       editedBy={ready.editedBy}
       saveState={saveState}
       saveError={saveState === 'error' ? saveError : null}
+      notice={notice}
+      onNotice={() => setNotice(null)}
       onRetrySave={() => {
         dirty.current = true
         void flush()

@@ -60,7 +60,7 @@ const fmtNum = (v: number) => (Number.isInteger(v) ? `${v}` : v.toFixed(1))
 
 export function Presentation() {
   const navigate = useNavigate()
-  const { data, reload } = useData()
+  const { data, reload, sync } = useData()
   const { role, mode, profile } = useAuth()
   const presenter = usePresenter()
   const { prepare } = usePrepareDemo()
@@ -127,7 +127,10 @@ export function Presentation() {
     {
       key: 'ai', label: 'AI 실제 호출',
       mark: aiOk ? 'ok' : 'todo',
-      detail: data.aiCalls == null
+      //  ⚠ 아직 첫 읽기 중이면 「못 읽음」이 아니라 「읽는 중」 — 느린 통신에서 잠깐 「표를 읽지 못함」이 떴습니다
+      detail: !sync.ready
+        ? '호출 기록을 불러오는 중…'
+        : data.aiCalls == null
         ? '호출 기록 표를 읽지 못함 — 시연 전에 요청 하나로 직접 실행해 보세요'
         : aiOk
           ? `최근 성공 ${kstStamp(aiOk.createdAt)}${aiOk.model ? ` · ${aiOk.model}` : ''}`
