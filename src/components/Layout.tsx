@@ -780,7 +780,7 @@ function NavTab({ active, icon: Icon, img, label, onClick, guideAt }: { active: 
         />
       )}
       {img ? (
-        //  이름이 아래 있으니 그림은 장식(alt=""). 지금 탭은 살짝 크게 — 색은 원본 그대로 둡니다.
+        //  이름이 아래 있으니 그림은 장식(alt=""). 대표님: 「아이콘이 너무 커」 → 선 아이콘과 비슷한 크기(1.45rem).
         <img
           src={img}
           alt=""
@@ -789,7 +789,7 @@ function NavTab({ active, icon: Icon, img, label, onClick, guideAt }: { active: 
           height={192}
           decoding="async"
           draggable={false}
-          className={`relative z-10 h-[1.85rem] w-[1.85rem] select-none object-contain transition-transform [@media(max-height:480px)]:h-6 [@media(max-height:480px)]:w-6 ${active ? 'scale-110' : ''}`}
+          className="relative z-10 h-[1.45rem] w-[1.45rem] select-none object-contain [@media(max-height:480px)]:h-5 [@media(max-height:480px)]:w-5"
         />
       ) : (
         <Icon

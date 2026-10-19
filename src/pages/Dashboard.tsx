@@ -241,10 +241,11 @@ function QuickGrid() {
   const items = configured ? QUICK.filter((q) => canAccess(role, q.to)) : QUICK
   if (items.length === 0) return null
   return (
-    <nav aria-label="자주 쓰는 화면" data-quick-grid className="card grid grid-cols-4 gap-x-1 gap-y-3.5 px-2 pb-4 pt-3.5 lg:hidden">
+    <nav aria-label="자주 쓰는 화면" data-quick-grid className="card grid grid-cols-4 gap-x-1 gap-y-3 px-2 pb-3.5 pt-3 lg:hidden">
       {items.map((q) => (
         <Link key={q.to} to={q.to} data-quick={q.to} className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-1 transition active:scale-95 active:bg-navy-50">
-          {/*  입체 그림은 그 자체로 모양이 있어 칸(색 네모)을 씌우지 않습니다 — 이름이 옆에 있으니 그림은 장식(alt="") */}
+          {/*  입체 그림은 그 자체로 모양이 있어 칸(색 네모)을 씌우지 않습니다 — 이름이 옆에 있으니 그림은 장식(alt="").
+               ⚠ 대표님: 「아이콘이 너무 커, 글자가 우선해서 보여야」 — 그림은 작게(2.3rem), 이름은 조금 크게. */}
           <img
             src={icon3d(q.to)}
             alt=""
@@ -253,9 +254,9 @@ function QuickGrid() {
             height={192}
             decoding="async"
             draggable={false}
-            className="h-[3.3rem] w-[3.3rem] select-none object-contain drop-shadow-[0_3px_4px_rgba(15,26,46,0.12)]"
+            className="h-[2.3rem] w-[2.3rem] select-none object-contain drop-shadow-[0_2px_3px_rgba(15,26,46,0.12)]"
           />
-          <span className="max-w-full truncate text-[0.78rem] font-bold text-navy-700">{q.label}</span>
+          <span className="max-w-full break-keep text-center text-[0.86rem] font-bold leading-tight text-navy-800">{q.label}</span>
         </Link>
       ))}
     </nav>

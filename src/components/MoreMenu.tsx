@@ -92,15 +92,15 @@ function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: stri
               className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-0.5 transition active:scale-95 active:bg-navy-50"
             >
               {img ? (
-                <span data-more-tile className="flex h-[3rem] w-[3rem] items-center justify-center">
-                  <Img3d src={img} className="h-[3rem] w-[3rem] drop-shadow-[0_3px_4px_rgba(15,26,46,0.12)]" />
+                <span data-more-tile className="flex h-[2.3rem] w-[2.3rem] items-center justify-center">
+                  <Img3d src={img} className="h-[2.2rem] w-[2.2rem] drop-shadow-[0_2px_3px_rgba(15,26,46,0.12)]" />
                 </span>
               ) : (
                 <span data-more-tile className={`flex h-[2.7rem] w-[2.7rem] items-center justify-center rounded-[15px] ${tone.tiles[i % tone.tiles.length]}`}>
                   <Icon size={21} strokeWidth={2.2} aria-hidden="true" />
                 </span>
               )}
-              <span className="w-full break-keep text-center text-[0.76rem] font-bold leading-tight text-navy-700">{item.label}</span>
+              <span className="w-full break-keep text-center text-[0.82rem] font-bold leading-tight text-navy-800">{item.label}</span>
             </button>
           )
         })}
@@ -132,7 +132,7 @@ function Row({
 }) {
   const inner = (
     <>
-      {img ? <Img3d src={img} className="h-[1.9rem] w-[1.9rem]" /> : <Icon size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />}
+      {img ? <Img3d src={img} className="h-[1.5rem] w-[1.5rem]" /> : <Icon size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />}
       <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
         {label}
         {note && <span className="ms-1 text-[0.84rem] font-semibold text-navy-500">{note}</span>}
@@ -268,7 +268,7 @@ export function MoreMenu({
           <TourButton
             className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left text-navy-500 transition active:bg-navy-50"
             label=""
-            icon={<Img3d src={icon3d('tour') ?? ''} className="h-[1.9rem] w-[1.9rem]" />}
+            icon={<Img3d src={icon3d('tour') ?? ''} className="h-[1.5rem] w-[1.5rem]" />}
           >
             <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">사용 방법</span>
             <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
@@ -285,7 +285,7 @@ export function MoreMenu({
             }}
             className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
           >
-            <Img3d src={icon3d('feedback') ?? ''} className="h-[1.9rem] w-[1.9rem]" />
+            <Img3d src={icon3d('feedback') ?? ''} className="h-[1.5rem] w-[1.5rem]" />
             <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
               사용 후기 남기기 <span className="text-[0.84rem] font-semibold text-navy-500">(개발자에게 요청)</span>
             </span>
@@ -302,7 +302,7 @@ export function MoreMenu({
             onClick={onPcView}
             className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
           >
-            <Img3d src={icon3d('pcview') ?? ''} className="h-[1.9rem] w-[1.9rem]" />
+            <Img3d src={icon3d('pcview') ?? ''} className="h-[1.5rem] w-[1.5rem]" />
             <span data-pc-view-open className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
               PC 화면으로 보기
             </span>
@@ -323,7 +323,7 @@ export function MoreMenu({
               onClick={() => setPlannedOpen((v) => !v)}
               className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
             >
-              <Img3d src={icon3d('planned') ?? ''} className="h-[1.9rem] w-[1.9rem]" />
+              <Img3d src={icon3d('planned') ?? ''} className="h-[1.5rem] w-[1.5rem]" />
               <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-600">추가 개발 예정 {planned.length}가지</span>
               <span className="pill shrink-0 bg-navy-50 text-navy-600">계획중</span>
               <ChevronDown size={17} className={`shrink-0 text-navy-400 transition-transform ${plannedOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
