@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, Wrench } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronDown, Wrench } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { scanSetupGaps, type GapWeight } from '../lib/setupGaps'
@@ -29,6 +30,9 @@ const TONE: Record<GapWeight, { chip: string; ring: string }> = {
 export function SetupGapsCard() {
   const { data } = useData()
   const { role } = useAuth()
+  //  폰에서는 접어 둡니다 — 대표님: 「아직 값이 비어서 못 쓰는 이것? 이것도 그냥 다 접어두기로」.
+  //  몇 가지인지는 접힌 줄에 그대로 보이고, 누르면 목록이 펼쳐집니다. PC 는 늘 펼침.
+  const [open, setOpen] = useState(false)
   //  현장·병원은 이 값들을 넣을 수 없습니다.
   if (role === 'field' || role === 'client') return null
 
@@ -43,7 +47,7 @@ export function SetupGapsCard() {
             <p className="break-keep text-[1.08rem] font-extrabold text-navy-900">
               넣어야 할 값이 다 채워져 있습니다
             </p>
-            <p className="t-caption mt-1 break-keep text-navy-500">
+            <p className="t-caption mt-1 break-keep text-navy-500 max-sm:hidden">
               거래처 정리 · 휴무일 · 소모품 단가 · 사업자정보 · 부가세 처리 · 거래처 단가 · 월 운영비 · 직원 명부
             </p>
           </div>
@@ -54,22 +58,35 @@ export function SetupGapsCard() {
 
   return (
     <div data-setup-gaps className="card p-4 sm:p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-navy-50 text-navy-500">
+      <button
+        type="button"
+        data-setup-toggle
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 text-left sm:pointer-events-none sm:gap-2"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-500 sm:h-9 sm:w-9 sm:rounded-2xl">
           <Wrench size={18} />
         </span>
-        <div className="min-w-0 flex-1">
-          <p data-setup-headline className="break-keep text-[1.12rem] font-extrabold leading-snug text-navy-900">
-            아직 값이 비어서 못 쓰는 기능이 {scan.gaps.length}가지 있습니다
-          </p>
-          <p className="t-caption mt-0.5 break-keep text-navy-500">
+        <span className="min-w-0 flex-1">
+          <span data-setup-headline className="block break-keep text-[1.08rem] font-extrabold leading-snug text-navy-900 sm:text-[1.12rem]">
+            {/*  폰에서는 짧게(「값이 비어서 못 쓰는 기능이 N가지」) — 큰 글씨에서 세 줄이 되던 머리. 읽는 문장은 그대로입니다. */}
+            <span className="max-sm:hidden">아직 </span>값이 비어서 못 쓰는 기능이 {scan.gaps.length}가지<span className="max-sm:hidden"> 있습니다</span>
+          </span>
+          <span className={`t-caption mt-0.5 block break-keep text-navy-500 ${open ? '' : 'max-sm:hidden'}`}>
             {scan.moneyCount > 0
               ? `그중 ${scan.moneyCount}가지는 돈이 틀릴 수 있는 자리입니다 — 위부터 보십시오.`
               : '기능은 다 만들어져 있고 값만 넣으면 됩니다.'}
-          </p>
-        </div>
-      </div>
+          </span>
+        </span>
+        <ChevronDown
+          size={20}
+          strokeWidth={2.4}
+          className={`shrink-0 text-navy-400 transition-transform sm:hidden ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
 
+      <div className={open ? '' : 'max-sm:hidden'}>
       <ul className="mt-3 flex flex-col gap-2">
         {scan.gaps.map((g) => {
           const t = TONE[g.weight]
@@ -101,6 +118,7 @@ export function SetupGapsCard() {
       <p className="t-caption mt-2.5 break-keep leading-snug text-navy-400">
         전부 실제 기록에서 센 숫자입니다. 다 채우면 이 목록은 사라집니다.
       </p>
+      </div>
     </div>
   )
 }

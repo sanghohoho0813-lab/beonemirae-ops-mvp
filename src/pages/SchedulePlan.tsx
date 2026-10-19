@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarClock, CalendarPlus, CalendarX2, CheckCircle2, Info, Truck, Undo2 } from 'lucide-react'
+import { CalendarClock, CalendarPlus, CalendarX2, CheckCircle2, ChevronDown, Info, Truck, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { AiButton } from '../components/AiAction'
@@ -288,6 +288,8 @@ export function SchedulePlan() {
   const { data, planSchedules, undoPlan, sync } = useData()
   const [weeks, setWeeks] = useState(4)
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
+  //  폰에서 「거래처별 반복 요일」 목록을 펼쳤는지 (PC 는 늘 펼침)
+  const [patternsOpen, setPatternsOpen] = useState(false)
   const [done, setDone] = useState<PlanBatchResult | null>(null)
   const [undone, setUndone] = useState<{ deleted: number; kept: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -538,7 +540,22 @@ export function SchedulePlan() {
             subtitle="최근 12주 수거 기록이 쌓이면 자동으로 나타납니다. 엑셀 가져오기로 과거 기록을 넣어도 됩니다."
           />
         ) : (
-          <div className="card divide-y divide-navy-100">
+          <>
+          {/*  폰에서는 접어 둡니다 — 거래처마다 한 칸이라 폰에서 5,000px 이 넘습니다. 만들 건수와
+               「일정 만들기」 단추는 위에 그대로 있고, 뺄 곳을 고를 때만 펴면 됩니다. PC 는 늘 펼침. */}
+          <button
+            type="button"
+            data-plan-patterns-toggle
+            aria-expanded={patternsOpen}
+            onClick={() => setPatternsOpen((v) => !v)}
+            className="card mb-2 flex min-h-[44px] w-full items-center gap-2 px-4 py-3 text-left font-bold text-navy-700 sm:hidden"
+          >
+            <span className="flex-1 break-keep">
+              {patternsOpen ? '목록 접기' : `거래처 ${plan.usable.length}곳${excluded.size > 0 ? ` · ${excluded.size}곳 뺌` : ''} — 펼쳐서 고르기`}
+            </span>
+            <ChevronDown size={20} strokeWidth={2.4} className={`shrink-0 text-navy-400 transition-transform ${patternsOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <div className={`card divide-y divide-navy-100 ${patternsOpen ? '' : 'max-sm:hidden'}`}>
             {plan.usable.map((p) => {
               const k = key(p.clientId, p.wasteType)
               const off = excluded.has(k)
@@ -576,6 +593,7 @@ export function SchedulePlan() {
               )
             })}
           </div>
+          </>
         )}
       </section>
 

@@ -23,6 +23,8 @@ import {
   ArrowRight,
   type LucideIcon,
   FileSpreadsheet,
+  History,
+  Stethoscope,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -82,6 +84,7 @@ function SettingCard({
   tone = 'navy',
   anchor,
   defaultOpen = false,
+  hook,
   children,
 }: {
   icon: LucideIcon
@@ -92,41 +95,103 @@ function SettingCard({
   anchor?: string
   /** 폰에서도 처음부터 펼쳐 둘지 (지금 손봐야 하는 카드) */
   defaultOpen?: boolean
+  /** 검사 · 안내가 찾는 표시 (예: data-settings-help) */
+  hook?: Record<string, string>
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(
     () => defaultOpen || (!!anchor && typeof window !== 'undefined' && window.location.hash === `#${anchor}`),
   )
-  const toneStyle = {
-    navy: 'bg-navy-50 text-navy-600',
-    teal: 'bg-teal-50 text-teal-600',
-    amber: 'bg-amber-50 text-amber-700',
-    rose: 'bg-rose-50 text-rose-500',
-  }[tone]
   return (
-    <section id={anchor} className="card scroll-mt-6 p-5 sm:p-6">
-      <button
-        type="button"
-        data-setting-toggle={anchor ?? title}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-3 text-left sm:pointer-events-none"
-      >
-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneStyle}`}>
-          <Icon size={22} strokeWidth={2.2} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="t-card block text-navy-900">{title}</span>
-          <span className="t-muted mt-1 block">{desc}</span>
-        </span>
-        <ChevronDown
-          size={20}
-          strokeWidth={2.4}
-          className={`mt-2 shrink-0 text-navy-400 transition-transform sm:hidden ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
+    <section id={anchor} {...hook} className="card scroll-mt-6 p-4 sm:p-6">
+      <FoldHead icon={Icon} title={title} desc={desc} tone={tone} toggle={anchor ?? title} open={open} onToggle={() => setOpen((v) => !v)} />
       <div className={open ? 'mt-4' : 'mt-4 hidden sm:block'}>{children}</div>
     </section>
+  )
+}
+
+const FOLD_TONE = {
+  navy: 'bg-navy-50 text-navy-600',
+  teal: 'bg-teal-50 text-teal-600',
+  amber: 'bg-amber-50 text-amber-700',
+  rose: 'bg-rose-50 text-rose-500',
+} as const
+
+/**
+ * 접는 카드의 머리 — 폰에서는 **한 줄**(작은 아이콘 + 제목 + 꺾쇠)입니다.
+ *
+ *  대표님: 「설정란을 눌러 보면 뭐가 너무 많아 … 다 접어 두고 굉장히 심플하게」.
+ *  예전에는 접혀 있어도 설명 두세 줄이 늘 보여서 카드 하나가 화면 4분의 1 이었고,
+ *  스무 개 가까운 카드가 6,000px 넘게 이어졌습니다. 설명은 **펼쳤을 때만** 보입니다.
+ *  ⚠ 태블릿·PC(sm 이상)는 예전 그대로 — 큰 아이콘 · 설명까지 다 보입니다.
+ */
+function FoldHead({
+  icon: Icon,
+  title,
+  desc,
+  tone = 'navy',
+  toggle,
+  open,
+  onToggle,
+}: {
+  icon: LucideIcon
+  title: string
+  desc?: React.ReactNode
+  tone?: keyof typeof FOLD_TONE
+  toggle: string
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      data-setting-toggle={toggle}
+      aria-expanded={open}
+      onClick={onToggle}
+      className="flex w-full items-center gap-3 text-left sm:items-start sm:pointer-events-none"
+    >
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl ${FOLD_TONE[tone]}`}>
+        <Icon size={22} strokeWidth={2.2} className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="t-card block break-keep text-navy-900 max-sm:text-[1.08rem] max-sm:leading-snug">{title}</span>
+        {desc && <span className={`t-muted mt-1 block break-keep ${open ? '' : 'max-sm:hidden'}`}>{desc}</span>}
+      </span>
+      <ChevronDown
+        size={20}
+        strokeWidth={2.4}
+        className={`shrink-0 text-navy-400 transition-transform sm:hidden ${open ? 'rotate-180' : ''}`}
+      />
+    </button>
+  )
+}
+
+/**
+ * 폰에서만 접는 감싸개 — 이미 제 모양이 있는 카드(직원 명부 · 운영 변화 기록 · 서버 점검)를
+ * 폰에서는 한 줄로 둡니다. 누르면 그 카드가 바로 아래에 그대로 펼쳐집니다.
+ * ⚠ PC 에서는 감싸개가 없는 것과 같습니다(한 줄 머리를 아예 안 그립니다).
+ */
+function PhoneFold({
+  icon,
+  title,
+  anchor,
+  tone,
+  children,
+}: {
+  icon: LucideIcon
+  title: string
+  anchor?: string
+  tone?: keyof typeof FOLD_TONE
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(() => !!anchor && typeof window !== 'undefined' && window.location.hash === `#${anchor}`)
+  return (
+    <div id={anchor} className="scroll-mt-6">
+      <div className="card p-4 sm:hidden">
+        <FoldHead icon={icon} title={title} tone={tone} toggle={anchor ?? title} open={open} onToggle={() => setOpen((v) => !v)} />
+      </div>
+      <div className={`space-y-3 sm:space-y-4 xl:space-y-5 ${open ? 'max-sm:mt-2' : 'max-sm:hidden'}`}>{children}</div>
+    </div>
   )
 }
 
@@ -154,7 +219,7 @@ export function Settings() {
     setPilotStart,
     setDemoActive,
   } = useData()
-  const { mode, profile } = useAuth()
+  const { mode, profile, role } = useAuth()
   const live = mode === 'live'
   const demoActive = data.demoSession?.active !== false
   const navigate = useNavigate()
@@ -256,7 +321,7 @@ export function Settings() {
   ]
 
   return (
-    <PageShell>
+    <PageShell className="max-sm:space-y-3">
       <PageHeader title="설정" subtitle="화면 표시 · 데이터 관리 설정 (이 기기에 저장됩니다)" />
 
       {msg && (
@@ -304,55 +369,39 @@ export function Settings() {
 
       {/* 사용 방법 — 언제든 다시 실행
           0142 — 위 줄의 「화면 색 · 이 시스템을 만든 이유 · 사용 방법」 세 단추를 여기로 모았습니다 (PC 위 줄에서는 뺌). */}
-      <section data-settings-help className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-5 sm:p-6">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-          <PlayCircle size={22} strokeWidth={2.2} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="t-card break-keep text-navy-900">도움말 · 화면 색</h2>
-          <p className="t-muted mt-1 break-keep">
-            「사용 방법」은 화면을 하나씩 짚어 어디에 무엇을 입력하는지 역할에 맞게 안내합니다.
-            「이 시스템을 만든 이유」는 왜 시작했고 회사가 어디로 가려는지 읽는 글입니다 — 목적이 다릅니다.
-            「화면 색」은 시스템 전체 색만 바꿉니다.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+      <SettingCard
+        icon={PlayCircle}
+        title="도움말 · 화면 색"
+        desc="「사용 방법」은 화면을 하나씩 짚어 어디에 무엇을 입력하는지 안내합니다. 「이 시스템을 만든 이유」는 왜 시작했는지 읽는 글이고, 「화면 색」은 시스템 전체 색만 바꿉니다."
+        tone="teal"
+        hook={{ 'data-settings-help': '' }}
+      >
+        {/*  ⚠ 폰에서 글자 칸 옆에 단추 셋을 세로로 세워 두면 글자 칸이 한 글자 폭으로 눌려
+             세로로 늘어졌습니다(대표님 화면). 단추는 **글 아래**에 둡니다. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <TourButton className="btn-primary" label="사용 방법 보기" />
           <TourWhyButton className="btn-ghost" />
           <ThemeButton className="btn-ghost" showLabel />
         </div>
-      </section>
+      </SettingCard>
 
-      <div className="grid gap-4 xl:grid-cols-2 xl:items-start xl:gap-5">
+      <div className="grid gap-3 sm:gap-4 xl:grid-cols-2 xl:items-start xl:gap-5">
         {/* ── 좌: 성과측정 · 화면 표시 ── */}
-        <div className="space-y-4 xl:space-y-5">
+        <div className="space-y-3 sm:space-y-4 xl:space-y-5">
           {/* AX 실증 — 도입 전 기준값 (반드시 사용자가 입력. 시스템이 임의 생성하지 않음) */}
           {/*  ⚠ 이 카드 하나가 폰에서 1,948px 이었습니다 — 설정 화면 전체의 3분의 1.
                기준값은 **한 번 넣고 거의 안 고치는 값**이라, 폰에서는 다른
                설정 카드와 같은 방식으로 접습니다. PC 는 그대로 펼쳐집니다. */}
-          <section id="baseline" className="card p-5 sm:p-6">
-            <button
-              type="button"
-              data-setting-toggle="baseline"
-              aria-expanded={baselineOpen}
-              onClick={() => setBaselineOpen((v) => !v)}
-              className="flex w-full items-start gap-3 text-left sm:pointer-events-none"
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
-                <Gauge size={22} strokeWidth={2.2} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="t-card block text-navy-900">AX 실증 · 도입 전 기준값</span>
-                <span className="t-muted mt-1 block">
-                  이 시스템을 쓰기 전의 실제 업무 값을 입력하세요. 도입 후 성과와 비교하는 기준이 됩니다.
-                </span>
-              </span>
-              <ChevronDown
-                size={20}
-                strokeWidth={2.4}
-                className={`mt-2 shrink-0 text-navy-400 transition-transform sm:hidden ${baselineOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
+          <section id="baseline" className="card scroll-mt-6 p-4 sm:p-6">
+            <FoldHead
+              icon={Gauge}
+              title="AX 실증 · 도입 전 기준값"
+              desc="이 시스템을 쓰기 전의 실제 업무 값을 입력하세요. 도입 후 성과와 비교하는 기준이 됩니다."
+              tone="teal"
+              toggle="baseline"
+              open={baselineOpen}
+              onToggle={() => setBaselineOpen((v) => !v)}
+            />
             <div className={baselineOpen ? '' : 'hidden sm:block'}>
 
             {/* 실증 시작일 */}
@@ -499,9 +548,9 @@ export function Settings() {
 
           {/*  0106 — 운영 변화 기록. 차량·인력·거점·계약 변화의 적용일 — 성과와 분리하는 근거. */}
           {live && (
-            <div id="ops-changes">
+            <PhoneFold icon={History} title="운영 변화 기록" anchor="ops-changes">
               <OpsChangesCard />
-            </div>
+            </PhoneFold>
           )}
 
           {/*  화면 색 (0081) — 글자 크기 바로 위에 둡니다. 둘 다 「보이는 것」을
@@ -582,7 +631,7 @@ export function Settings() {
         </div>
 
         {/* ── 우: 데이터 관리 ── */}
-        <div className="space-y-4 xl:space-y-5">
+        <div className="space-y-3 sm:space-y-4 xl:space-y-5">
           {/*
             서버 자가진단 — 판 번호만으로는 알 수 없는 것.
 
@@ -590,9 +639,17 @@ export function Settings() {
              지워졌거나 색인이 사라졌으면 돈이 두 번 들어갈 수 있습니다.
              서버가 직접 세어 보고, 없으면 이름을 그대로 보여 줍니다.
           */}
-          <StaffCard />
-          <HealthCard />
-          <ErrorLogCard />
+          {(data.staff ?? []).some((x) => x.active) && (
+            <PhoneFold icon={Users} title="우리 직원" anchor="staff">
+              <StaffCard />
+            </PhoneFold>
+          )}
+          {live && role === 'admin' && (
+            <PhoneFold icon={Stethoscope} title="서버 자가진단 · 최근 오류" anchor="health">
+              <HealthCard />
+              <ErrorLogCard />
+            </PhoneFold>
+          )}
 
           {/*
             전체 스냅샷.

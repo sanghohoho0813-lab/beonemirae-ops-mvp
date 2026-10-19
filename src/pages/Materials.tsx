@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { PackageSearch } from 'lucide-react'
+import { useIsPhone } from '../components/PhoneBand'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
 import { MetricCard, EmptyState, SectionTitle, QtyField } from '../components/ui'
@@ -86,7 +87,9 @@ export function Materials() {
   //   ⚠ 지우거나 숨기는 것이 아닙니다. 「몇 건 중 몇 건을 보고 있는지」를
   //     늘 적고, 거래처로 좁히거나 더 볼 수 있게 합니다. 조용히 자르면
   //     「내 기록이 없어졌다」가 됩니다.
-  const PAGE = 30
+  //  폰은 한 건이 180px 남짓이라 30건이면 5,000px 이 넘습니다 — 폰은 10건씩 봅니다(PC 는 30건).
+  const phone = useIsPhone()
+  const PAGE = phone ? 10 : 30
   const [supplyClient, setSupplyClient] = useState('')
   const [shown, setShown] = useState(PAGE)
   const filtered = useMemo(

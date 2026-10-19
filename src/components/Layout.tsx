@@ -713,7 +713,8 @@ function MobileHeader({ onHelp, slotRef }: { onHelp: () => void; slotRef: (el: H
           >
             {SYSTEM_WORDMARK}
             <span> · </span>
-            {SYSTEM_WORDMARK_TAIL}
+            {/*  접히더라도 「BUSINESS AX」는 한 덩어리로 — 「AX」만 홀로 다음 줄에 남지 않게 */}
+            <span className="whitespace-nowrap">{SYSTEM_WORDMARK_TAIL}</span>
           </p>
         </div>
         {/*  화면 색 (0081) · 도움말 — 띠 위의 반투명 동그라미 두 개 (손가락 44px) */}

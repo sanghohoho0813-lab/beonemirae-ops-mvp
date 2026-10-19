@@ -89,12 +89,14 @@ export function DunningPanel() {
         <ul className="mt-3.5 flex flex-col gap-2">
           {sum.rows.map((r) => (
             <li key={r.clientId} data-dunning-row={r.clientId} className="rounded-xl bg-white/90 p-3.5 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 flex-1 font-extrabold text-navy-900">{nm(r.clientName)}</span>
+              {/*  ⚠ 큰 글씨 폰에서 기간 딱지가 자리를 먼저 차지해 거래처 이름이 한 글자 폭으로 눌렸습니다.
+                   이름은 최소 폭을 지키고, 모자라면 딱지가 아랫줄로 내려갑니다. */}
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <span className="min-w-[7rem] flex-1 break-keep font-extrabold text-navy-900">{nm(r.clientName)}</span>
                 <span className={`pill shrink-0 ${TONE[r.bucket] ?? ''}`}>{ageLabel(r)}</span>
               </div>
-              <div className="mt-1.5 flex items-end justify-between gap-3">
-                <p className="t-caption min-w-0 break-keep">
+              <div className="mt-1.5 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+                <p className="t-caption min-w-[9rem] flex-1 break-keep">
                   {/*  ⚠ 0131 — 몇 달 밀린 곳은 달마다 다 적으면 한 거래처가 열 줄을
                        넘었습니다(36개월 = 화면 한 장). 셋까지는 그대로, 그보다 많으면
                        「몇 개월 · 언제부터 언제까지」로 줄이고 눌러서 펼칩니다. */}
@@ -118,7 +120,7 @@ export function DunningPanel() {
                     </span>
                   ) : null}
                 </p>
-                <p className="shrink-0 text-right text-lg font-extrabold text-rose-600">{won(r.total)}</p>
+                <p className="ml-auto shrink-0 text-right text-lg font-extrabold text-rose-600">{won(r.total)}</p>
               </div>
               <div className="mt-2.5 flex justify-end gap-2">
                 {r.phone && !presenting && (

@@ -99,14 +99,16 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
           ) : (
             <div className="space-y-1.5">
               {report.byWaste.map((w) => (
-                <div key={w.type} className="flex items-center gap-3 rounded-2xl bg-navy-50 px-4 py-3.5">
+                //  ⚠ 큰 글씨 폰에서 품목 이름과 무게가 서로 「min-w-0」이라 둘 다 한 글자 폭으로 눌렸습니다.
+                //    이름은 최소 폭을 지키고, 모자라면 무게가 아랫줄 오른쪽으로 내려갑니다.
+                <div key={w.type} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-navy-50 px-4 py-3.5">
                   <span
                     className={`h-3 w-3 shrink-0 rounded-full ${
                       w.type === '의료폐기물' ? 'bg-teal-500' : 'bg-slate2-500'
                     }`}
                   />
-                  <p className="min-w-0 flex-1 break-keep text-[1.12rem] font-bold leading-snug text-navy-700">{w.type}</p>
-                  <p className="min-w-0 break-keep text-right text-[1.12rem] font-extrabold text-navy-900">
+                  <p className="min-w-[6.5rem] flex-1 break-keep text-[1.12rem] font-bold leading-snug text-navy-700">{w.type}</p>
+                  <p className="ml-auto break-keep text-right text-[1.12rem] font-extrabold text-navy-900">
                     {weight(w.kg)}
                     <span className="ml-1.5 inline-block text-[0.9rem] font-semibold text-navy-400">{w.count}회</span>
                   </p>

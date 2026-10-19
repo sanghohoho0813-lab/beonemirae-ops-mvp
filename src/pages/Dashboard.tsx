@@ -208,9 +208,11 @@ function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
               <span className="truncate">{c.label}</span>
               {!phone && <ChevronRight size={16} aria-hidden="true" className="ms-auto shrink-0 text-navy-300 transition group-hover:text-navy-600" />}
             </span>
-            <span className={`whitespace-nowrap text-[1.348rem] font-extrabold 2xl:text-[1.573rem] leading-tight tracking-tight tabular-nums ${c.tone}`} title={c.key === 'unpaid' ? won(unpaid) : undefined}>
-              {c.value}
-              {c.unit && <small className="ms-1 text-[0.899rem] font-bold text-navy-500">{c.unit}</small>}
+            {/*  ⚠ 대표님 화면: 큰 글씨(폰 기본)에서 「1,718만원 진행 중」이 칸 밖으로 나갔습니다.
+                 숫자는 한 덩어리로 두고, 꼬리말(진행 중 · 건 · 곳)은 자리가 모자라면 **아랫줄로** 내립니다. */}
+            <span className={`flex min-w-0 flex-wrap items-baseline gap-x-1 text-[1.348rem] font-extrabold 2xl:text-[1.573rem] leading-tight tracking-tight tabular-nums ${c.tone}`} title={c.key === 'unpaid' ? won(unpaid) : undefined}>
+              <span className="whitespace-nowrap">{c.value}</span>
+              {c.unit && <small className="whitespace-nowrap text-[0.899rem] font-bold text-navy-500">{c.unit}</small>}
             </span>
             <span className="truncate text-[0.843rem] font-medium text-navy-500">{c.sub}</span>
           </Link>

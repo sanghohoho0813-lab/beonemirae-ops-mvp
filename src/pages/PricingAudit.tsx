@@ -430,8 +430,9 @@ function Row({
           </div>
         )}
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="t-muted min-w-0">
+        {/*  ⚠ 단추 둘이 자리를 먼저 차지해 이 줄이 한 글자 폭으로 눌렸습니다(큰 글씨 폰) — 모자라면 단추가 아랫줄로. */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="t-muted min-w-[9rem] flex-1 break-keep">
             청구 {row.billedMonths}개월 · 수거 {row.collections}건
           </p>
           <div className="flex shrink-0 gap-2">

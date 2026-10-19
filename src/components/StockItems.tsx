@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertCircle, Boxes, Check, Loader2, RefreshCw } from 'lucide-react'
+import { AlertCircle, Boxes, Check, ChevronDown, Loader2, RefreshCw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { useSchemaAtLeast } from '../lib/schemaGate'
@@ -65,6 +65,7 @@ export function StockItems() {
   const staff = role === 'admin' || role === 'office'
 
   const [rows, setRows] = useState<StockItem[] | null>(null)
+  const [recvOpen, setRecvOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   //  세어 넣기
@@ -141,7 +142,7 @@ export function StockItems() {
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
           <Boxes size={18} strokeWidth={2.2} />
         </span>
-        <h3 className="t-card min-w-0 flex-1 break-keep text-navy-900">규격별 재고</h3>
+        <h3 className="t-card min-w-[6rem] flex-1 break-keep text-navy-900">규격별 재고</h3>
         {hasUsage && (
           <button
             data-spec-showall
@@ -221,7 +222,7 @@ export function StockItems() {
                       key={it.key}
                       data-spec-stock={it.key}
                       data-spec-folded={hiddenOf(it.key) ? '1' : undefined}
-                      className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 ${
+                      className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-3.5 py-3 ${
                         unknown ? 'bg-amber-50' : 'bg-navy-50'
                       }${hiddenOf(it.key) ? ' hidden' : ''}`}
                     >
@@ -232,7 +233,8 @@ export function StockItems() {
                       </span>
                       {unknown ? (
                         //  ⚠ 0 이라고 적지 않습니다.
-                        <span data-spec-unknown={it.key} className="shrink-0 break-keep text-[1rem] font-extrabold text-amber-700">
+                        //  ⚠ 큰 글씨 폰에서 이 말 + 「세기」 단추가 칸 밖으로 밀려났습니다 — 모자라면 아랫줄로 내립니다.
+                        <span data-spec-unknown={it.key} className="ml-auto shrink-0 break-keep text-[1rem] font-extrabold text-amber-700">
                           아직 안 세어 봄
                         </span>
                       ) : (
@@ -270,7 +272,19 @@ export function StockItems() {
              그래서 63L 인지 12L 인지는 영영 알 수 없었습니다. */}
       {staff && mode === 'live' && rows != null && (
         <div className="mt-5 border-t border-navy-100 pt-4">
-          <p className="mb-2 text-[1.05rem] font-extrabold text-navy-700">창고에 들어온 자재 적기</p>
+          {/*  폰에서는 접어 둡니다 — 규격 열세 칸이 늘 펼쳐져 있으면 이 칸만 1,800px 입니다.
+               입고는 들어온 날만 적는 일이라 눌러서 펴면 충분합니다. PC 는 그대로 펼침. */}
+          <button
+            type="button"
+            data-spec-receive-toggle
+            aria-expanded={recvOpen}
+            onClick={() => setRecvOpen((v) => !v)}
+            className="mb-2 flex min-h-[44px] w-full items-center gap-2 text-left sm:pointer-events-none sm:min-h-0"
+          >
+            <span className="flex-1 text-[1.05rem] font-extrabold text-navy-700">창고에 들어온 자재 적기</span>
+            <ChevronDown size={20} strokeWidth={2.4} className={`shrink-0 text-navy-400 transition-transform sm:hidden ${recvOpen ? 'rotate-180' : ''}`} />
+          </button>
+          <div className={recvOpen ? '' : 'max-sm:hidden'}>
           <p className="mb-3 break-keep text-[1rem] leading-snug text-navy-500">
             규격으로 적으면 넉 장 카드의 칸 합계도 같이 늘어납니다. <b className="text-navy-700">아직 안 세어 본
             규격은 「모름」 그대로</b> 둡니다 — 들어온 수는 알아도 원래 몇 개였는지는 모르니까요.
@@ -311,6 +325,7 @@ export function StockItems() {
             {busy ? <Loader2 size={18} className="animate-spin" /> : null}
             {addTotal > 0 ? `${addTotal}개 입고로 적기` : '수량을 넣어 주세요'}
           </button>
+          </div>
         </div>
       )}
 

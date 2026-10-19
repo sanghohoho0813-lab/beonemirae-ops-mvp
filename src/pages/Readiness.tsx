@@ -1,8 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CheckCircle2, CircleDashed, CircleAlert, CircleHelp, Printer, ArrowRight,
-  ClipboardCheck, Landmark,
+  ClipboardCheck, Landmark, ChevronDown,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageShell, SectionTitle } from '../components/ui'
@@ -37,6 +37,9 @@ const STATE_META: Record<ReadyState, { icon: typeof CheckCircle2; chip: string; 
 export function Readiness() {
   const { data } = useData()
   const navigate = useNavigate()
+  //  폰에서는 「심사 브리핑」을 접어 둡니다 — 인쇄용 한 장이라 폰에서 펼치면 10,000px 이 넘습니다.
+  //  PC · 인쇄는 그대로 다 나옵니다.
+  const [briefOpen, setBriefOpen] = useState(false)
   const items = useMemo(() => readinessOf(data), [data])
   const counts = readinessCounts(items)
   const survey = useMemo(() => surveyTotals(), [])
@@ -131,7 +134,17 @@ export function Readiness() {
         <SectionTitle action={<span className="pill bg-navy-100 text-navy-500 print:hidden">인쇄하면 이 장만 나옵니다</span>}>
           심사 브리핑 — 한 장
         </SectionTitle>
-        <div className="card space-y-5 p-6 print:border-0 print:shadow-none">
+        <button
+          type="button"
+          data-brief-toggle
+          aria-expanded={briefOpen}
+          onClick={() => setBriefOpen((v) => !v)}
+          className="card mb-3 flex min-h-[44px] w-full items-center gap-2 px-4 py-3 text-left font-bold text-navy-700 sm:hidden print:hidden"
+        >
+          <span className="flex-1 break-keep">{briefOpen ? '브리핑 접기' : '브리핑 펼쳐 보기 (인쇄용 한 장)'}</span>
+          <ChevronDown size={20} strokeWidth={2.4} className={`shrink-0 text-navy-400 transition-transform ${briefOpen ? 'rotate-180' : ''}`} />
+        </button>
+        <div className={`card space-y-5 p-6 print:border-0 print:shadow-none ${briefOpen ? '' : 'max-sm:hidden print:!block'}`}>
           <div>
             <p className="flex items-center gap-2 text-[1.15rem] font-extrabold text-navy-900">
               <Landmark size={19} strokeWidth={2.4} className="shrink-0 text-navy-500" />
@@ -205,9 +218,10 @@ export function Readiness() {
               <tbody>
                 {items.map((it) => (
                   <tr key={it.key} className="border-t border-navy-100 align-top">
-                    <td className="t-body py-1.5 pr-3 font-bold text-navy-800">{it.label}</td>
-                    <td className="t-body py-1.5 pr-3 text-navy-600">{it.value}</td>
-                    <td className="t-body py-1.5 text-navy-500">{READY_LABEL[it.state]}</td>
+                    {/*  ⚠ 폰에서 셋째 칸(상태)이 한 글자 폭으로 눌려 세로로 늘어졌습니다 — 상태는 한 줄로 둡니다. */}
+                    <td className="t-body break-keep py-1.5 pr-3 font-bold text-navy-800">{it.label}</td>
+                    <td className="t-body break-keep py-1.5 pr-3 text-navy-600">{it.value}</td>
+                    <td className="t-body whitespace-nowrap py-1.5 text-navy-500">{READY_LABEL[it.state]}</td>
                   </tr>
                 ))}
               </tbody>

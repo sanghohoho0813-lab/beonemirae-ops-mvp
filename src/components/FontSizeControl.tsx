@@ -31,7 +31,7 @@ export function FontSizeControl({
             onClick={() => setFontScale(opt.value)}
             aria-pressed={active}
             title={`${opt.label} — ${opt.hint}`}
-            className={`relative flex flex-col items-center justify-center rounded-xl px-1 py-2.5 transition ${
+            className={`relative flex min-w-0 flex-col items-center justify-center rounded-xl px-1 py-2.5 transition ${
               active
                 /*  0082 — 켜진 칸의 작은 설명 글자(14px)가 teal-500 위에서
                     3.4:1 이었습니다. 바탕을 한 단계 진하게 두어 흰 계열 글자가
@@ -46,10 +46,11 @@ export function FontSizeControl({
               <Check size={12} strokeWidth={3.5} className="absolute right-1.5 top-1.5 text-white" />
             )}
             <span className={`font-extrabold leading-none ${previewSize}`}>가</span>
-            <span className="mt-1.5 whitespace-nowrap text-[1.05rem] font-bold leading-none">{opt.label}</span>
+            {/*  ⚠ 폰 큰 글씨에서 한 줄로 고정한 글자가 칸 밖으로 나갔습니다 — 칸 안에서 줄을 바꿉니다. */}
+            <span className="mt-1.5 break-keep text-center text-[1.05rem] font-bold leading-tight">{opt.label}</span>
             {!compact && (
               <span
-                className={`mt-1 whitespace-nowrap text-[0.9rem] leading-none ${
+                className={`mt-1 break-keep text-center text-[0.9rem] leading-tight ${
                   active ? 'text-white' : dark ? 'text-navy-300' : 'text-navy-500'
                 }`}
               >

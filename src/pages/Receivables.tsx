@@ -288,8 +288,10 @@ export function Receivables() {
                 }`}
               >
                 {/* 업체명 — 항상 최우선, 첫 줄 전체를 사용해 잘리지 않게 */}
-                <div className="flex items-start justify-between gap-2 lg:min-w-0 lg:flex-wrap lg:items-center lg:justify-start lg:gap-1.5">
-                  <span className="min-w-0 flex-1 font-extrabold text-navy-900 lg:flex-none lg:truncate lg:text-[0.899rem]">{client?.name ?? '알 수 없음'}</span>
+                {/*  ⚠ 큰 글씨 폰에서 딱지 둘(기한 지남 · 입금 상태)이 자리를 먼저 차지해 이름이 한 글자 폭으로
+                     눌렸습니다. 폰에서는 이름이 최소 폭을 지키고, 모자라면 딱지가 아랫줄로 내려갑니다. */}
+                <div className="flex flex-wrap items-start justify-between gap-2 lg:min-w-0 lg:items-center lg:justify-start lg:gap-1.5">
+                  <span className="min-w-[7rem] flex-1 break-keep font-extrabold text-navy-900 lg:min-w-0 lg:flex-none lg:truncate lg:text-[0.899rem]">{client?.name ?? '알 수 없음'}</span>
                   {late && (
                     <span data-late={p.id} className="pill shrink-0 bg-rose-100 text-rose-600">
                       {age.daysPastDue != null && age.daysPastDue > 0

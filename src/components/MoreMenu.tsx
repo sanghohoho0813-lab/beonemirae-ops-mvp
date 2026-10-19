@@ -135,7 +135,8 @@ function Row({
       {img ? <Img3d src={img} className="h-[1.3rem] w-[1.3rem]" /> : <Icon size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />}
       <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
         {label}
-        {note && <span className="ms-1 text-[0.84rem] font-semibold text-navy-500">{note}</span>}
+        {/*  덧말은 늘 아랫줄에 — 큰 글씨에서 제목 뒤에 붙였더니 「폐기물 / 적법처리」처럼 중간에서 끊겼습니다. */}
+        {note && <span className="mt-0.5 block text-[0.84rem] font-semibold text-navy-500"> {note}</span>}
       </span>
       {children ?? <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />}
     </>
@@ -287,7 +288,7 @@ export function MoreMenu({
           >
             <Img3d src={icon3d('feedback') ?? ''} className="h-[1.3rem] w-[1.3rem]" />
             <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
-              사용 후기 남기기 <span className="text-[0.84rem] font-semibold text-navy-500">(개발자에게 요청)</span>
+              사용 후기 남기기 <span className="mt-0.5 block text-[0.84rem] font-semibold text-navy-500">(개발자에게 요청)</span>
             </span>
             <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
           </button>
