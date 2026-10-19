@@ -142,7 +142,7 @@ export function SurveyAdmin() {
         </div>
         <p className="t-body break-keep text-navy-700">
           {SURVEY_TITLE} · 7개 섹션 26문항. <b className="text-navy-900">대표님 · 이사님 중 한 분만</b> 답하시면 됩니다. 링크 없이 아래
-          「{startLabel}」을 누르면 바로 시작하고, 다른 분이 열어도 같은 답지에 이어집니다.
+          「{startLabel}」를 누르면 바로 시작하고, 다른 분이 열어도 같은 답지에 이어집니다.
         </p>
         <p data-survey-admin-progress className="t-body font-bold text-navy-800">
           {st.p.answered} / {st.p.total} 답함 · 미정·논의 {st.p.unsure} · 추후 확인 {st.p.left}
