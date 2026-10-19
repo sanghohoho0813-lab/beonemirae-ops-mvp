@@ -64,12 +64,13 @@ export function ExcelCheckLine() {
   return (
     <div data-excel-check={state} className="rounded-2xl bg-white px-4 py-3 shadow-card">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Table2 size={17} className="shrink-0 text-navy-400" />
-        <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">
+        <Table2 size={17} className="shrink-0 text-navy-400 max-lg:hidden" />
+        {/*  AX 5차 — 폰에서는 질문을 한 줄 통째로, 「없음 · 있음」은 그 아래 반반 (글이 세로로 눌리지 않게) */}
+        <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700 max-lg:basis-full">
           오늘 엑셀·카톡에 <b className="text-navy-900">같은 내용을 다시 적은 것</b>이 있었나요?
         </p>
         {state !== 'detail' && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 max-lg:grid max-lg:w-full max-lg:grid-cols-2">
             <button data-excel-none onClick={() => void save(0)} disabled={state === 'saving'} className="btn-ghost min-h-[2.75rem]">
               {state === 'saving' ? <Loader2 size={16} className="animate-spin" /> : '없음'}
             </button>

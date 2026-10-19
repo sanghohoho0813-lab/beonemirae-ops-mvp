@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, MoreHorizontal, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, MoreHorizontal, AlertTriangle, ClipboardEdit, Zap, AlertCircle, Inbox, CalendarX2, Pin, CalendarPlus, CalendarClock, CalendarDays, ChevronDown, ShieldCheck } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canAccess } from '../lib/access'
@@ -20,6 +20,8 @@ import { MoveVisitModal } from '../components/MoveVisit'
 import { ScheduleCalendar } from '../components/ScheduleCalendar'
 import { UpcomingVisits } from '../components/UpcomingVisits'
 import { FieldDayStrip } from '../components/FieldDayStrip'
+import { PhoneBand, BandTitle, BAND_OVERLAP, useIsPhone } from '../components/PhoneBand'
+import { planGaps } from '../lib/planGap'
 import { AddVisitSheet } from '../components/AddVisitSheet'
 import { SharedTruck } from '../components/SharedTruck'
 import { CollectionRecord } from '../components/CollectionRecord'
@@ -73,6 +75,47 @@ function purposeOf(s: Schedule): '추가수거' | '긴급수거' | null {
   return null
 }
 
+/**
+ *  하루 진행 3단계 — 예정 → 수거 완료 → 처리장 인계 (AX 5차 · 배달앱 「주문 → 조리 → 배달」 줄).
+ *   숫자는 이 날 일정에서 그대로 셉니다: 예정 = 이 날 일정 수, 수거 완료 = 완료된 일정,
+ *   처리장 인계 = 완료 중 인계 상태가 「인계 완료」인 것. 건수가 0인 단계는 회색입니다.
+ */
+function DayTrack({ planned, done, handed }: { planned: number; done: number; handed: number }) {
+  const steps = [
+    { key: 'plan', label: '예정', n: planned, icon: CalendarClock },
+    { key: 'done', label: '수거 완료', n: done, icon: Check },
+    { key: 'handed', label: '처리장 인계', n: handed, icon: ShieldCheck },
+  ]
+  return (
+    //  세 칸 같은 폭(grid) — 글자를 「매우 크게」로 켜도 카드 밖으로 안 나갑니다(check_scale).
+    //  잇는 선은 앞 칸 동그라미 끝 → 이 칸 동그라미 앞까지.
+    <ol data-day-track className="mt-3.5 grid grid-cols-3">
+      {steps.map((st, i) => {
+        const Icon = st.icon
+        const on = st.n > 0
+        return (
+          <li key={st.key} className="relative flex min-w-0 flex-col items-center">
+            {i > 0 && (
+              <span
+                aria-hidden
+                className={`absolute left-[calc(-50%+1.5rem)] right-[calc(50%+1.5rem)] top-[1.05rem] h-[3px] rounded-full ${on ? 'bg-teal-600' : 'bg-navy-100'}`}
+              />
+            )}
+            <span data-day-step={st.key} className="flex min-w-0 flex-col items-center">
+              <span className={`flex h-[2.2rem] w-[2.2rem] items-center justify-center rounded-full ${on ? 'bg-teal-600 text-white' : 'bg-navy-100 text-navy-400'}`}>
+                <Icon size={16} strokeWidth={2.6} aria-hidden="true" />
+              </span>
+              <span className={`mt-1 text-[1.08rem] font-extrabold tabular-nums ${on ? 'text-navy-900' : 'text-navy-400'}`}>{st.n}</span>
+              {/*  기사님 화면이라 16px 이상(check_scale) */}
+              <span className="break-keep text-center text-[0.9rem] font-bold leading-tight text-navy-500">{st.label}</span>
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function TodaySchedule() {
   const { data, clientById, completeSchedule, completeCollection, notesFor } = useData()
   const { configured, role } = useAuth()
@@ -84,6 +127,8 @@ export function TodaySchedule() {
   const [moveTarget, setMoveTarget] = useState<Schedule | null>(null)
   const canGoMaterials = !configured || canAccess(role, '/materials')
   const navigate = useNavigate()
+  //  AX 5차 — 폰에서는 제목이 파란 띠 안으로, 날짜 띠가 띠 끝에 겹쳐 올라옵니다
+  const phone = useIsPhone()
   const [date, setDate] = useState(today())
   //  일정 추가 시트 (0068)
   const [addOpen, setAddOpen] = useState(false)
@@ -202,8 +247,66 @@ export function TodaySchedule() {
   }
 
   const doneCount = list.filter((s) => s.status === '완료').length
+  const handedCount = list.filter((s) => s.status === '완료' && s.handoverStatus === '인계 완료').length
+  //  빈 날 두 번째 단추 — 「다음 방문 안 잡힘」(대시보드와 같은 계산). 일정을 잡는 계정에만.
+  const gapCount = useMemo(() => (canBook ? planGaps(data).length : 0), [canBook, data])
   //  Pilot 동안 병원 요청은 안 씁니다 — 위아래 배너가 같이 사라집니다 (0080)
   const pendingRequests = hideRequests() ? [] : openRequests(data)
+
+  //  빈 날 — 폰에서는 그날 카드 **안**에, 넓은 화면에서는 목록 자리에 카드로 (AX 5차)
+  function emptyGate() {
+    return (
+      <LoadGate
+        loadingTitle="오늘 일정을 불러오는 중입니다"
+        empty={
+          //  ⚠ 빈 화면에 「없어요」만 띄우면 기사님은 **거기서 멈춥니다.**
+          //    없으면 다음에 무엇을 할 수 있는지 같이 줍니다 (대표님 요청).
+          <div
+            data-empty-day
+            data-guide="guide-empty-day"
+            className={phone ? 'mt-4 border-t border-navy-50 pt-4 text-center' : 'card p-6 text-center'}
+          >
+            {!phone && <CalendarX2 size={34} className="mx-auto mb-3 text-navy-200" strokeWidth={1.8} />}
+            <p className="text-[1.15rem] font-extrabold text-navy-900">
+              {date === today() ? '오늘은 잡힌 일정이 없어요' : `${prettyDate(date)}에 잡힌 일정이 없어요`}
+            </p>
+            {/*  AX 5차 — 왜 비었는지 한 줄 + 바로 할 수 있는 두 가지 (「다음 방문 안 잡힘」은 대시보드와 같은 계산) */}
+            {gapCount > 0 && (
+              <p data-empty-gap className="t-muted mt-0.5 break-keep">
+                방문 안 잡힌 거래처 <b className="text-amber-700">{gapCount}곳</b> · 이번 주 갈 곳
+              </p>
+            )}
+            {canAddVisit ? (
+              <div className={`mt-4 ${gapCount > 0 ? 'grid grid-cols-2 gap-2' : 'flex justify-center'}`}>
+                <button
+                  data-empty-add
+                  data-guide="guide-add"
+                  onClick={() => setAddOpen(true)}
+                  className={`btn-primary !text-[1.02rem] ${gapCount > 0 ? '!px-2' : ''}`}
+                  style={{ minHeight: 48 }}
+                >
+                  <CalendarPlus size={18} strokeWidth={2.4} /> 이 날 일정 추가
+                </button>
+                {gapCount > 0 && (
+                  <button
+                    data-empty-plan
+                    onClick={() => navigate('/plan')}
+                    className="flex min-h-[48px] items-center justify-center rounded-xl bg-teal-50 px-2 text-[1.02rem] font-extrabold text-teal-700 transition active:scale-[0.98]"
+                  >
+                    {gapCount}곳 일정 편성
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="mt-2 break-keep text-[1.02rem] text-navy-400">
+                다른 날짜를 확인하거나 수거 입력에서 등록하세요.
+              </p>
+            )}
+          </div>
+        }
+      />
+    )
+  }
 
   return (
     <div>
@@ -221,20 +324,81 @@ export function TodaySchedule() {
            없앤 게 아니라 자리를 옮겼습니다.
         */}
         {/* 진행 건수는 아래 「다음 방문」 카드가 크게 보여 주므로 폰에서는 반복하지 않습니다 */}
-        <PageHeader
-          title="오늘 일정"
-          subtitle={<span className="hidden lg:inline">{`완료 ${doneCount} / 전체 ${list.length}건`}</span>}
-        />
+        {!phone && (
+          <PageHeader
+            title="오늘 일정"
+            subtitle={`완료 ${doneCount} / 전체 ${list.length}건`}
+          />
+        )}
         {/*  매일 아침 여는 화면입니다. 병원 전화는 대개 이 화면을 보고 있을
              때 옵니다 — 「다음 주 목요일에 와 주세요」. 그 자리에서 바로
              넣을 수 있어야 수첩으로 가지 않습니다. 기사님에게는 안 띄웁니다
              (남의 일정을 만드는 자리가 아닙니다). */}
-        {canBook && (
+        {!phone && canBook && (
           <button data-book-open onClick={() => setBookOpen(true)} className="btn-ghost shrink-0">
             <CalendarPlus size={17} strokeWidth={2.4} /> 다른 날 방문 잡기
           </button>
         )}
       </div>
+
+      {/*  AX 5차 — 폰: 제목과 「다른 날 방문 잡기」는 파란 띠 안에 */}
+      <PhoneBand overlap>
+        <BandTitle
+          title="오늘 일정"
+          right={
+            canBook ? (
+              <button
+                data-book-open
+                onClick={() => setBookOpen(true)}
+                className="flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/15 px-3 text-[0.86rem] font-bold text-white transition active:bg-white/25"
+              >
+                <CalendarPlus size={16} strokeWidth={2.4} /> 다른 날 방문 잡기
+              </button>
+            ) : undefined
+          }
+        />
+      </PhoneBand>
+
+      {/*
+        ── 날짜 띠 (0068) — 폰에서 날짜 네비 대신 ──────────────────────────
+        예전에는 화살표 두 개와 「오늘로 이동」뿐이라, 며칠 뒤에 무엇이
+        있는지 보려면 하루씩 눌러야 했습니다. 띠는 한 번 밀면 2~4주가
+        지나가고, **일정이 있는 날에는 건수가 숫자로** 붙습니다.
+        AX 5차 — 흰 카드에 담아 파란 띠 끝에 겹쳐 올립니다(배민 첫 화면 검색 카드 자리).
+        넓은 화면은 예전 네비를 그대로 씁니다 — 마우스로는 화살표가 편합니다.
+      */}
+      {phone && (
+        <div data-guide="guide-day-strip" className={`card mb-3 px-3 py-3 ${BAND_OVERLAP}`}>
+          <FieldDayStrip data={data} selected={date} onPick={setDate} onCard />
+        </div>
+      )}
+
+      {/*  AX 5차 — 폰: 그날 카드 하나에 날짜 · 3단계 진행 · (빈 날이면) 다음에 할 일 */}
+      {phone && (
+        <section data-day-card className="card mb-3 p-4">
+          <div className="flex items-center gap-2">
+            <p data-day-title className="min-w-0 flex-1 break-keep text-[1.12rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
+            {date !== today() && (
+              <button
+                data-go-today
+                onClick={() => setDate(today())}
+                className="min-h-[2.75rem] shrink-0 rounded-xl bg-teal-50 px-3 text-[1rem] font-extrabold text-teal-700 transition active:scale-95"
+              >
+                오늘로
+              </button>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <p data-day-sub className="t-muted min-w-0 flex-1 tabular-nums">
+              {list.length === 0 ? '잡힌 일정 0건' : `${list.length}곳 · 완료 ${doneCount}`}
+            </p>
+            {/*  2단계 예정 기능의 입구 — 건수 줄 오른쪽에 얹습니다(새 줄을 만들지 않게) */}
+            <AiButton id="route" variant="chip" />
+          </div>
+          <DayTrack planned={list.length} done={doneCount} handed={handedCount} />
+          {list.length === 0 && emptyGate()}
+        </section>
+      )}
 
       {canBook && <BookVisitModal open={bookOpen} onClose={() => setBookOpen(false)} />}
 
@@ -309,40 +473,11 @@ export function TodaySchedule() {
         <RequestBanner requests={pendingRequests} onGo={() => navigate('/requests')} className="mb-4 hidden lg:grid" />
       )}
 
-      {/*
-        ── 날짜 띠 (0068) — 폰에서 날짜 네비 대신 ──────────────────────────
-        예전에는 화살표 두 개와 「오늘로 이동」뿐이라, 며칠 뒤에 무엇이
-        있는지 보려면 하루씩 눌러야 했습니다. 띠는 한 번 밀면 2~4주가
-        지나가고, **일정이 있는 날에는 건수가 숫자로** 붙습니다.
-        넓은 화면은 예전 네비를 그대로 씁니다 — 마우스로는 화살표가 편합니다.
-      */}
-      <div className="mb-3 sm:hidden">
-        <div className="mb-2 flex items-center gap-2">
-          <p data-day-title className="text-[1.15rem] font-extrabold text-navy-900">{prettyDate(date)}</p>
-          {/*  ── 2단계 예정 기능의 입구 (폰) ──────────────────────────────
-               ⚠ 처음에는 날짜 띠 **아래 한 줄**로 뒀는데, 그러면 오늘 갈 곳
-                 첫 줄이 55px 아래로 밀립니다. 폰에서 제일 중요한 것은
-                 오늘 갈 곳이므로, 새 줄을 만들지 않고 **이미 있는 날짜 줄
-                 오른쪽**에 얹습니다. 자리를 거의 안 뺏으면서 일정 목록
-                 바로 위에 있어 눈에는 걸립니다. */}
-          <AiButton id="route" variant="chip" className="ml-auto" />
-          {date !== today() && (
-            <button
-              data-go-today
-              onClick={() => setDate(today())}
-              className="min-h-[2.5rem] shrink-0 rounded-xl bg-teal-50 px-3 text-[1rem] font-extrabold text-teal-700 transition active:scale-95"
-            >
-              오늘로
-            </button>
-          )}
-        </div>
-        <div data-guide="guide-day-strip">
-          <FieldDayStrip data={data} selected={date} onPick={setDate} />
-        </div>
-      </div>
+      {/*  (폰 날짜 띠 · 날짜 줄은 위 「AX 5차」 카드 두 장으로 옮겼습니다) */}
 
       {/* 날짜 네비게이션 (넓은 화면) */}
-      <div className="card mb-4 hidden items-center justify-between p-2 sm:flex">
+      {!phone && (
+      <div className="card mb-4 flex items-center justify-between p-2">
         <button
           className="flex h-11 w-11 items-center justify-center rounded-2xl bg-navy-50 text-navy-500 transition active:scale-95"
           onClick={() => setDate((d) => shiftDate(d, -1))}
@@ -369,36 +504,10 @@ export function TodaySchedule() {
           <ChevronRight size={20} />
         </button>
       </div>
+      )}
 
       {list.length === 0 ? (
-        <LoadGate
-          loadingTitle="오늘 일정을 불러오는 중입니다"
-          empty={
-            //  ⚠ 빈 화면에 「없어요」만 띄우면 기사님은 **거기서 멈춥니다.**
-            //    없으면 다음에 무엇을 할 수 있는지 같이 줍니다 (대표님 요청).
-            <div data-empty-day data-guide="guide-empty-day" className="card p-6 text-center">
-              <CalendarX2 size={34} className="mx-auto text-navy-200" strokeWidth={1.8} />
-              <p className="mt-3 text-[1.15rem] font-extrabold text-navy-900">
-                {date === today() ? '오늘은 잡힌 일정이 없어요' : `${prettyDate(date)}에 잡힌 일정이 없어요`}
-              </p>
-              {canAddVisit ? (
-                <button
-                  data-empty-add
-                  data-guide="guide-add"
-                  onClick={() => setAddOpen(true)}
-                  className="btn-primary mx-auto mt-4 !text-[1.08rem]"
-                  style={{ minHeight: 48 }}
-                >
-                  <CalendarPlus size={18} strokeWidth={2.4} /> 이 날 일정 추가
-                </button>
-              ) : (
-                <p className="mt-2 break-keep text-[1.02rem] text-navy-400">
-                  다른 날짜를 확인하거나 수거 입력에서 등록하세요.
-                </p>
-              )}
-            </div>
-          }
-        />
+        !phone && emptyGate()
       ) : (
         <Stagger className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
           {list.map((s, si) => {

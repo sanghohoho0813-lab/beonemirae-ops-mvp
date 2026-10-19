@@ -166,11 +166,13 @@ async function checkPanel(p, where) {
   //    잘못 안 것이었습니다 — 폰에서 날짜 줄은 오늘 담당·가져다 줄 물품·
   //    다음 방문 카드 **아래**입니다. 재야 할 것은 자리(y)가 아니라
   //    **새 줄을 만들지 않았는가**와 **일정 목록 바로 위인가**입니다.
-  const title = await p.locator('[data-day-title]').boundingBox()
+  //  ⚠ AX 5차 — 그날 카드는 「날짜 / 건수」 두 줄입니다. 칩은 원래 있던 **건수 줄**에 얹힙니다
+  //    (날짜 줄은 「오늘로」 자리). 지킬 것은 그대로 — 칩 하나 때문에 새 줄을 만들지 않는다.
+  const title = await p.locator('[data-day-sub]').boundingBox()
   const mid = (b) => (b?.y ?? 0) + (b?.height ?? 0) / 2
   ok(Math.abs(mid(box) - mid(title)) < 30,
-    '**새 줄을 만들지 않는다** (날짜 줄에 얹힘)',
-    `칩 ${Math.round(mid(box))} · 날짜 ${Math.round(mid(title))}`)
+    '**새 줄을 만들지 않는다** (그날 카드의 건수 줄에 얹힘)',
+    `칩 ${Math.round(mid(box))} · 건수 줄 ${Math.round(mid(title))}`)
   ok((box?.height ?? 0) >= 44, '누르는 자리가 손가락 크기', `${Math.round(box?.height ?? 0)}px`)
   ok((box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= 391, '390px 밖으로 안 나간다',
     `${Math.round(box?.x ?? 0)}~${Math.round((box?.x ?? 0) + (box?.width ?? 0))}`)

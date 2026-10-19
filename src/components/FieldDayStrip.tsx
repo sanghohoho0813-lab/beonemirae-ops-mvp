@@ -30,11 +30,14 @@ export function FieldDayStrip({
   selected,
   onPick,
   days = 28,
+  onCard = false,
 }: {
   data: AppData
   selected: string
   onPick: (date: string) => void
   days?: number
+  /** AX 5차 — 흰 카드 안에 담을 때: 날짜 칸을 연한 회색으로(흰 위에 흰 칸이 안 보이므로) */
+  onCard?: boolean
 }) {
   const from = today()
 
@@ -66,7 +69,7 @@ export function FieldDayStrip({
     <div
       ref={boxRef}
       data-day-strip
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
+      className={`flex gap-2 overflow-x-auto pb-1 ${onCard ? '-mx-3 px-3' : '-mx-4 px-4 sm:mx-0 sm:px-0'}`}
       style={{ scrollbarWidth: 'none' }}
     >
       {list.map((d) => {
@@ -85,7 +88,9 @@ export function FieldDayStrip({
                 ? 'bg-navy-900 text-white shadow-sm'
                 : isToday
                   ? 'bg-teal-50 text-teal-800'
-                  : 'bg-white text-navy-600'
+                  : onCard
+                    ? 'bg-navy-50 text-navy-600'
+                    : 'bg-white text-navy-600'
             }`}
           >
             <span

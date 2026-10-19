@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, ChevronRight, RotateCcw, Search, SearchX } from 'lucide-react'
+import { Building2, ChevronRight, PlusCircle, RotateCcw, Search, SearchX } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { canSeeMoney } from '../lib/access'
@@ -20,6 +20,8 @@ import { CLIENT_SETS, type ClientSetSize } from '../lib/storage'
 import { findNameMatches, type NameMatch } from '../lib/clientName'
 import type { Client } from '../types'
 import { koMatch } from '../lib/koSearch'
+import { PhoneBand, BandTitle, useIsPhone } from '../components/PhoneBand'
+import { TONE } from '../lib/tone'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 관리 — 데이터 세트 선택 + 실제/시연용 구분 + 필터
@@ -79,6 +81,12 @@ export function Clients() {
   const canAddClient = !configured || canSeeMoney(role)
   const live = mode === 'live'
   const navigate = useNavigate()
+  //  AX 5차 — 폰: 제목 · 검색창은 파란 띠 안, 칩은 띠 끝에 겹치고, 목록은 한 줄씩
+  const phone = useIsPhone()
+  //  폰 칩 「미수금 N」 — 미수가 있는 곳만 (PC 는 표에 미수금 칸이 따로 있습니다)
+  const [owedOnly, setOwedOnly] = useState(false)
+  //  폰 칩 「Pilot N / 10」 — 눌렀을 때만 줄마다 Pilot 켜기 칸이 나옵니다(관리자). 평소에는 목록이 한 줄씩.
+  const [pilotMode, setPilotMode] = useState(false)
   const [filter, setFilter] = useState<Filter>('전체')
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
@@ -88,19 +96,6 @@ export function Clients() {
   const [saveError, setSaveError] = useState('')
   //  「이번 저장 시도」 표. 창을 열 때 하나 만들고 성공하면 버립니다.
   const [requestId, setRequestId] = useState('')
-
-  const filtered = useMemo(() => {
-    //  폰 자판은 낱말 뒤에 공백을 붙여 주는 일이 잦습니다. 그대로 비교하면
-    //  분명히 있는 거래처인데 "없어요" 가 나옵니다. 앞뒤 공백을 떼고,
-    //  영문 대소문자도 가리지 않습니다.
-    //  0131 — 담당자·전화·초성으로도 찾습니다(「ㄱㄴ」 · 「5000100」). 병원에서 전화가
-    //  오면 번호로 바로, 폰에서는 초성만 쳐서 찾습니다.
-    return data.clients.filter((c) => {
-      if (!matchFilter(c, filter)) return false
-      if (!koMatch(query, [c.name, c.address, c.manager, c.phone])) return false
-      return true
-    })
-  }, [data.clients, filter, query])
 
   //  카드마다 붙는 미수·추천 — 거래처 × (일정+청구+입금)을 훑는 계산이라 검색 글자마다
   //  다시 하면 버벅입니다. 자료가 바뀔 때 한 번만 셉니다 (0131).
@@ -112,6 +107,22 @@ export function Clients() {
     }
     return m
   }, [data])
+
+  const unpaidCount = useMemo(() => [...signals.values()].filter((x) => x.unpaid).length, [signals])
+
+  const filtered = useMemo(() => {
+    //  폰 자판은 낱말 뒤에 공백을 붙여 주는 일이 잦습니다. 그대로 비교하면
+    //  분명히 있는 거래처인데 "없어요" 가 나옵니다. 앞뒤 공백을 떼고,
+    //  영문 대소문자도 가리지 않습니다.
+    //  0131 — 담당자·전화·초성으로도 찾습니다(「ㄱㄴ」 · 「5000100」). 병원에서 전화가
+    //  오면 번호로 바로, 폰에서는 초성만 쳐서 찾습니다.
+    return data.clients.filter((c) => {
+      if (!matchFilter(c, filter)) return false
+      if (!koMatch(query, [c.name, c.address, c.manager, c.phone])) return false
+      if (owedOnly && !signals.get(c.id)?.unpaid) return false
+      return true
+    })
+  }, [data.clients, filter, query, owedOnly, signals])
 
   //  거래를 종료한 곳 — 목록에는 없지만 되살릴 수 있어야 합니다.
   const retired = data.retiredClients ?? []
@@ -156,8 +167,77 @@ export function Clients() {
     void commit(false)
   }
 
+  function openAdd() {
+    setForm(emptyClientForm)
+    setSaveError('')
+    setDupOf(null)
+    setRequestId(crypto.randomUUID())
+    setAdding(true)
+  }
+
+  const searchInput = (
+    <input
+      data-client-search
+      autoFocus={typeof window !== 'undefined' && window.innerWidth >= 1024}
+      className={`field-input !pl-11 ${phone ? '!border-0 ring-0' : 'ring-2 ring-teal-200 focus:ring-teal-500'}`}
+      placeholder="거래처 · 주소 · 담당자 · 전화 (초성 가능)"
+      aria-label="거래처명 · 주소 검색"
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+    />
+  )
+
   return (
     <div>
+      {/*  AX 5차 — 폰: 제목 · 검색창은 파란 띠 안 (배민 첫 화면의 검색창 자리) */}
+      <PhoneBand overlap>
+        <BandTitle
+          title={
+            <>
+              거래처 <span className="text-[1rem] font-bold">{data.clients.length}곳</span>
+            </>
+          }
+          sub={live ? undefined : `실제 ${realCount} / 시연용 ${demoCount}`}
+        />
+        <label className="relative mt-3 block">
+          <Search size={18} strokeWidth={2.4} className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-navy-400" />
+          {searchInput}
+        </label>
+      </PhoneBand>
+      {/*  폰 칩 — 띠 끝에 겹쳐 올라옵니다. 자주 쓰는 셋(전체 · 미수금 · Pilot)을 앞에, 종류는 뒤에(옆으로 밀기) */}
+      {phone && (
+        <div data-client-chips className="relative -mx-4 -mt-[2.45rem] mb-3 flex gap-2 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: 'none' }}>
+          <FilterChip active={filter === '전체' && !owedOnly} onClick={() => { setFilter('전체'); setOwedOnly(false) }}>
+            전체 {data.clients.length}
+          </FilterChip>
+          {showMoney && unpaidCount > 0 && (
+            <FilterChip active={owedOnly} onClick={() => setOwedOnly((v) => !v)}>
+              <span className={owedOnly ? '' : 'text-rose-700'}>미수금 {unpaidCount}</span>
+            </FilterChip>
+          )}
+          {canPilot && (
+            <FilterChip active={pilotMode} onClick={() => setPilotMode((v) => !v)}>
+              <span data-pilot-chip className={pilotMode ? '' : 'text-violet-700'}>
+                Pilot {pilotCount} / {PILOT_RECOMMENDED}
+              </span>
+            </FilterChip>
+          )}
+          {(live ? LIVE_FILTERS : FILTERS).filter((f) => f !== '전체').map((f) => (
+            <FilterChip key={f} active={filter === f} onClick={() => setFilter(filter === f ? '전체' : f)}>{f}</FilterChip>
+          ))}
+        </div>
+      )}
+      {/*  폰 「거래처 추가」 — 오른쪽 아래 둥근 단추 (아래 탭을 피해 앉습니다) */}
+      {phone && canAddClient && (
+        <button
+          data-client-add-fab
+          onClick={openAdd}
+          className="fixed bottom-[5.5rem] right-4 z-30 flex h-[3.1rem] items-center gap-1.5 rounded-full bg-teal-600 px-5 text-[1rem] font-extrabold text-white shadow-lg transition active:scale-95"
+        >
+          <PlusCircle size={20} strokeWidth={2.4} /> 거래처 추가
+        </button>
+      )}
+      {!phone && (
       <PageHeader
         title="거래처 관리"
         subtitle={
@@ -168,21 +248,13 @@ export function Clients() {
           //  거래처 등록은 사무실·관리자 업무입니다. 서버도 막고 있어
           //  (RLS: clients_write) 현장 담당자가 눌러도 저장되지 않습니다.
           canAddClient ? (
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setForm(emptyClientForm)
-                setSaveError('')
-                setDupOf(null)
-                setRequestId(crypto.randomUUID())
-                setAdding(true)
-              }}
-            >
+            <button className="btn-primary" onClick={openAdd}>
               ＋ 추가
             </button>
           ) : undefined
         }
       />
+      )}
 
       {/* 거래처 데이터 세트 — 시연 전용.
           실제 운영 DB 에서는 동작하지 않는 데다("시연용 데이터" 문구까지 보입니다)
@@ -225,18 +297,11 @@ export function Clients() {
              화면 절반을 덮어 버려, 목록을 보러 온 분이 매번 키보드를
              닫아야 합니다. 대신 칸 자체를 눈에 띄게 만듭니다. */}
       {/*  AX 3차 — PC 에서는 검색 + 구분 칩을 표 바로 위 **한 줄**로 */}
+      {!phone && (
       <div className="lg:mb-3 lg:flex lg:items-center lg:gap-3">
       <label className="relative mb-3 block lg:mb-0 lg:w-[24rem] lg:shrink-0">
         <Search size={18} strokeWidth={2.4} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-navy-400" />
-        <input
-          data-client-search
-          autoFocus={typeof window !== 'undefined' && window.innerWidth >= 1024}
-          className="field-input !pl-11 ring-2 ring-teal-200 focus:ring-teal-500"
-          placeholder="거래처 · 주소 · 담당자 · 전화 (초성 가능)"
-          aria-label="거래처명 · 주소 검색"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        {searchInput}
       </label>
 
       {/* 필터 칩 (가로 스크롤) */}
@@ -246,6 +311,7 @@ export function Clients() {
         ))}
       </div>
       </div>
+      )}
 
       {/* 아직 한 곳도 없는 것(신규 고객사 1일차)과 필터에 안 걸린 것은 다른 상황입니다.
           전자는 "등록하세요", 후자는 "조건을 바꾸세요"가 맞는 안내입니다. */}
@@ -267,14 +333,14 @@ export function Clients() {
         <>
         {/*  Pilot 안내 한 줄 (0122) — 관리자만. 칸이 없는 판이면 SQL 이름을 알려 주고,
              저장이 거절되면 서버의 말을 그대로 보여 줍니다. */}
-        {canPilot && live && pilotColumnMissing(data) && (
+        {canPilot && live && pilotColumnMissing(data) && (!phone || pilotMode) && (
           <p data-pilot-note className="mb-2.5 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[0.98rem] font-semibold text-amber-700">
             Pilot 거래처 칸이 아직 없습니다 — supabase/proposals/PROPOSAL_0122_pilot_clients.sql 을 실행하면 켜집니다. 그전까지 Pilot 은 0곳으로 셉니다.
           </p>
         )}
-        {canPilot && !pilotColumnMissing(data) && pilotCount === 0 && !pilotError && (
+        {canPilot && !pilotColumnMissing(data) && pilotCount === 0 && !pilotError && (!phone || pilotMode) && (
           <p data-pilot-note className="mb-2.5 rounded-xl bg-navy-50 px-3.5 py-2.5 text-[0.98rem] font-semibold text-navy-500">
-            이번 주 Pilot 거래처를 5~10곳 켜 주세요 — 월정액 거래처부터 권합니다(카드 아래 「이번 주 PILOT」).
+            이번 주 Pilot 거래처를 5~10곳 켜 주세요 — 월정액 거래처부터 권합니다({phone ? '줄 아래' : '카드 아래'} 「이번 주 PILOT」).
           </p>
         )}
         {pilotError && (
@@ -298,7 +364,10 @@ export function Clients() {
           </div>
           {canPilot && <span className="w-[9.5rem] shrink-0 pe-4 text-center">이번 주 Pilot</span>}
         </div>
-        <ul data-guide="guide-client-list" className="grid grid-cols-1 gap-2.5 lg:gap-0 lg:divide-y lg:divide-navy-50">
+        <ul
+          data-guide="guide-client-list"
+          className={phone ? 'card divide-y divide-navy-50 overflow-hidden' : 'grid grid-cols-1 gap-2.5 lg:gap-0 lg:divide-y lg:divide-navy-50'}
+        >
           {filtered.map((c, ci) => {
             const unpaid = signals.get(c.id)?.unpaid ?? false
             // 이 거래처의 최우선 추천 (수거이력·자재·청구 데이터 기반)
@@ -309,29 +378,59 @@ export function Clients() {
                 key={c.id}
                 data-tour={ci === 0 ? 'client-list' : undefined}
                 data-guide={ci === 0 ? 'guide-client-first' : undefined}
-                className="lg:flex lg:items-center lg:transition lg:hover:bg-navy-50/60"
+                //  폰 — 줄 사이 8px: 장갑 낀 손가락이 옆 줄을 누르지 않게(check_scale), 선은 그대로 이어 보입니다
+                className={phone ? 'py-1' : 'lg:flex lg:items-center lg:transition lg:hover:bg-navy-50/60'}
               >
                 <button
                   onClick={() => navigate(`/clients/${c.id}`)}
-                  className={`card pressable flex w-full items-center justify-between gap-3 p-4 text-left lg:grid lg:min-w-0 lg:flex-1 lg:items-center lg:gap-x-4 lg:gap-y-0 lg:!rounded-none lg:!border-0 lg:!bg-transparent lg:px-4 lg:py-2.5 lg:!shadow-none lg:active:scale-100 ${CLIENT_COLS}`}
+                  className={
+                    phone
+                      ? 'flex w-full items-center gap-3 px-3.5 py-2 text-left transition active:bg-navy-50'
+                      : `card pressable flex w-full items-center justify-between gap-3 p-4 text-left lg:grid lg:min-w-0 lg:flex-1 lg:items-center lg:gap-x-4 lg:gap-y-0 lg:!rounded-none lg:!border-0 lg:!bg-transparent lg:px-4 lg:py-2.5 lg:!shadow-none lg:active:scale-100 ${CLIENT_COLS}`
+                  }
                 >
-                  <div className="min-w-0 lg:contents">
+                  {/*  폰 — 첫 글자 칸 (요양병원은 보라, 나머지는 파랑) */}
+                  {phone && (
+                    <span
+                      aria-hidden="true"
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[1.02rem] font-black ${
+                        c.type === '요양병원' ? TONE.violet.tile : TONE.blue.tile
+                      }`}
+                    >
+                      {c.name.replace(/^(의료법인|재단법인|사회복지법인)\s*/, '').slice(0, 1)}
+                    </span>
+                  )}
+                  <div className="min-w-0 max-lg:flex-1 lg:contents">
                     <div className="flex flex-wrap items-center gap-1.5 lg:col-start-1 lg:row-start-1 lg:min-w-0">
                       <span className="break-keep text-[1.07rem] font-bold text-navy-900">{c.name}</span>
-                      <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.95rem] font-bold text-navy-500">{c.type}</span>
+                      {!phone && <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.95rem] font-bold text-navy-500">{c.type}</span>}
                       {c.isDemoGenerated ? (
                         <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[0.9rem] font-bold text-navy-500">시연용</span>
                       ) : (
-                        <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.9rem] font-bold text-teal-600">주요거래처</span>
+                        !phone && <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-0.5 text-[0.9rem] font-bold text-teal-600">주요거래처</span>
                       )}
                       {pilotIds.has(c.id) && !c.isDemoGenerated && <PilotBadge />}
                     </div>
-                    <p className="mt-1 break-keep t-caption lg:contents">
-                      <span className="lg:col-start-4 lg:row-span-2 lg:row-start-1 lg:truncate">{c.manager}</span>
-                      <span className="lg:hidden"> · </span>
-                      <span className="lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:truncate">{c.collectionCycle}</span>
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
+                    {phone ? (
+                      //  폰 — 둘째 줄에 종류 · 담당 · 주기 · 폐기물 (글이 길면 낱말 단위로 접힘)
+                      <p className="mt-0.5 break-keep t-caption">
+                        {[
+                          c.type,
+                          c.manager,
+                          c.collectionCycle,
+                          [c.collectsMedicalWaste ? '의료' : '', c.collectsDiaper ? '기저귀' : ''].filter(Boolean).join('·'),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    ) : (
+                      <p className="mt-1 break-keep t-caption lg:contents">
+                        <span className="lg:col-start-4 lg:row-span-2 lg:row-start-1 lg:truncate">{c.manager}</span>
+                        <span className="lg:hidden"> · </span>
+                        <span className="lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:truncate">{c.collectionCycle}</span>
+                      </p>
+                    )}
+                    <div className={`mt-1.5 flex-wrap gap-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 ${phone ? 'hidden' : 'flex'}`}>
                       {/*  ⚠ 0069 — rose-500/rose-50 은 대비 3.3:1, 글자도 16px 로 작았습니다.
                            거래처마다 하나씩 붙어 이 화면에서 가장 많이 보이는 글자입니다. */}
                       {c.collectsMedicalWaste && <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[0.95rem] font-bold text-rose-700">의료</span>}
@@ -342,7 +441,9 @@ export function Clients() {
                     {/*  추천은 영업 판단이고 금액이 함께 붙습니다(「추가 수거 제안 · +70만원」).
                         현장 담당자에게는 띄우지 않습니다 — 방문해서 수거하는 데
                         필요한 정보가 아니고, 병원 앞에서 열어 볼 수도 있는 화면입니다. */}
-                    {showMoney && topAction && meta && topAction.kind !== '정기수거' && (
+                    {/*  ⚠ AX 5차 — 폰 목록은 **한 줄씩**(대표님 「한눈에 쫙」). 추천 칩은 줄을 두 배로 키워
+                         폰에서는 뺍니다 — 같은 추천이 거래처 상세와 PC 표에 그대로 있습니다. */}
+                    {!phone && showMoney && topAction && meta && topAction.kind !== '정기수거' && (
                       <p className={`mt-2 inline-flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.95rem] font-bold lg:col-start-1 lg:row-start-2 lg:mt-1 lg:justify-self-start lg:py-0.5 lg:text-[0.843rem] ${meta.chip}`}>
                         <meta.icon size={12} strokeWidth={2.6} className="shrink-0" />
                         <span className="break-keep">{topAction.title}</span>
@@ -362,11 +463,17 @@ export function Clients() {
                   >
                     {showMoney ? (unpaid ? won(signals.get(c.id)?.owed ?? 0) : '—') : ''}
                   </span>
+                  {/*  폰 — 미수가 있는 곳만 오른쪽에 빨간 금액 (PC 미수금 칸과 같은 계산 · 1원 단위 그대로) */}
+                  {phone && showMoney && unpaid && (
+                    <span data-client-owed-phone className="shrink-0 whitespace-nowrap text-[0.9rem] font-extrabold tabular-nums text-rose-700">
+                      {won(signals.get(c.id)?.owed ?? 0)}
+                    </span>
+                  )}
                   <ChevronRight size={16} className="shrink-0 text-navy-400 lg:col-start-7 lg:row-span-2 lg:row-start-1" />
                 </button>
                 {/*  Pilot 켜기 (0122) — 관리자만. 카드(button) 안에 단추를 넣을 수 없어
                      카드 아래 한 줄로 둡니다. 시연용 거래처는 켜도 세지 않으므로 칸을 안 보입니다. */}
-                {canPilot && !c.isDemoGenerated && (
+                {canPilot && !c.isDemoGenerated && (!phone || pilotMode) && (
                   <label
                     data-pilot-toggle={c.id}
                     className="-mt-1.5 mb-1 flex min-h-[2.75rem] cursor-pointer items-center justify-end gap-2 px-3 text-[0.98rem] font-bold text-navy-500 lg:m-0 lg:w-[9.5rem] lg:shrink-0 lg:justify-center lg:pe-4"

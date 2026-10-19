@@ -167,17 +167,18 @@ const sheetScrollLen = (p) =>
   ok(service < showcaseTop,
     '**병원 서비스 목차가 「발표·확인용」보다 위** — 매일 쓰는 것이 먼저',
     `서비스 ${service}px · 발표용 ${showcaseTop}px`)
-  ok(help < service, '도움말은 맨 위 그대로')
-
-  //  안내·요청 세 가지가 한 묶음, 두 칸 격자 (세 개면 두 줄)
-  const helpCards = await p.locator('[data-more-help] .card, [data-more-help] [class*="card"]').evaluateAll(
-    (els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
-  ok(helpCards.length === 3, '사용 방법·만든 이유·개발자 요청이 한 묶음', String(helpCards.length))
-  ok([...new Set(helpCards)].length === 2, '두 칸 격자 — 세 개가 두 줄', String([...new Set(helpCards)].length))
-  ok(helpCards[0] === helpCards[1], '첫 두 개는 같은 줄에 나란히')
-  //  「요청」이라는 별도 묶음은 사라졌습니다
-  const sheetText = flat(await p.textContent('body'))
-  ok(/안내 · 요청/.test(sheetText), '묶음 이름은 「안내 · 요청」')
+  //  ⚠ AX 5차 — 맨 위는 **내 계정(로그아웃)**, 목차 다섯 묶음, 그다음 안내 · 바로가기 **한 목록**.
+  //    (예전: 안내 · 요청 두 칸 격자가 맨 위 — 매일 쓰는 목차가 그만큼 밀렸습니다)
+  const account = await topOf('[data-more-account]')
+  const admin = await topOf('[data-more-section="more-admin"]')
+  ok(account < service, '내 계정이 맨 위', `${account}px`)
+  ok(help > admin, '안내 · 바로가기 목록은 목차 아래', `목록 ${help}px · 관리 ${admin}px`)
+  //  한 목록 — 줄마다 손가락 크기, 한 줄에 하나
+  const rows = await p.locator('[data-more-help] > button, [data-more-help] > a, [data-more-help] > div > button').evaluateAll(
+    (els) => els.map((e) => { const r = e.getBoundingClientRect(); return { top: Math.round(r.top), h: Math.round(r.height) } }))
+  ok(rows.length >= 5, '사용 방법 · 사용 후기 · 회사 홈페이지 · 올바로 · PC 화면이 한 목록', String(rows.length))
+  ok(rows.every((r) => r.h >= 44), '줄마다 44px 이상', rows.map((r) => r.h).join(','))
+  ok(new Set(rows.map((r) => r.top)).size === rows.length, '한 줄에 하나씩')
 
   //  「PC 화면으로 보기」와 「시연용 핵심 요약」이 아래로 내려갔는가
   const pcTop = await topOf('[data-pc-view-open]')
@@ -197,15 +198,13 @@ const sheetScrollLen = (p) =>
   //  고친 뒤 실측 기준. 이 숫자가 커지면 무언가를 또 펼쳐 둔 것입니다.
   ok(len <= 4.2, `더보기 전체 길이가 화면 ${len}개 — 4.2개 이하`, `${len}개`)
 
-  //  묶음을 펼치면 길어지는 것이 맞습니다. 대신 **접었을 때** 짧아야
-  //  합니다 — 접기가 실제로 효과가 있는지 재서 확인합니다.
-  //  ⚠ 0110 — 전부 접힌 시트는 한 화면 안에 들어갑니다(비율 1.0). 그래서
-  //    비율로는 차이가 안 보입니다 — **실제 높이(px)** 로 잽니다.
+  //  ⚠ AX 5차 — 목차 묶음은 접지 않고(4칸 색 아이콘), 계획 중 기능 7가지만 한 줄로 접어 둡니다.
+  //    그 한 줄이 실제로 줄이고 있는지 **실제 높이(px)** 로 잽니다.
   const closedPx = await sheetScrollPx(p)
-  await p.click('[data-more-toggle="more-money"]')
+  await p.click('[data-more-toggle="more-planned"]')
   await p.waitForTimeout(400)
   const openedPx = await sheetScrollPx(p)
-  ok(openedPx > closedPx, '펼치면 길어짐 (접기가 실제로 줄이고 있음)', `${closedPx}px → ${openedPx}px`)
+  ok(openedPx > closedPx, '계획 중 줄을 펼치면 길어짐 (접기가 실제로 줄이고 있음)', `${closedPx}px → ${openedPx}px`)
   await ctx.close()
 }
 
@@ -324,10 +323,11 @@ for (const w of [320, 360, 390, 430]) {
   ok(/관리/.test(sheet), '「관리」 묶음이 있음')
   ok(!/운영 도구/.test(sheet), '옛 묶음 이름 「운영 도구」가 안 남음')
 
-  await p.click('[data-more-toggle="more-admin"]')
+  //  AX 5차 — 계획 중 7가지는 맨 아래 「추가 개발 예정 7가지 · 계획중」 한 줄을 눌러 펼칩니다
+  await p.click('[data-more-toggle="more-planned"]')
   await p.waitForTimeout(400)
   const planned = await p.locator('[data-more-planned-item]').count()
-  ok(planned === 7, '아직 못 쓰는 7가지가 활용 계획과 같은 묶음 안에', String(planned))
+  ok(planned === 7, '아직 못 쓰는 7가지가 「추가 개발 예정」 한 줄 안에', String(planned))
   const real = await p.locator('[data-more-section="more-admin"] [data-more-item]').count()
   //  개수를 못 박기보다 **비어 있지 않은지**를 봅니다.
   ok(real >= 6, '쓸 수 있는 것들이 같은 묶음 안에', String(real))
@@ -347,11 +347,9 @@ for (const w of [320, 360, 390, 430]) {
   await p.getByRole('button', { name: '확인' }).last().click()
   await p.waitForTimeout(700)
   ok((await p.locator('[data-planned-preview]').count()) === 0, '미리보기가 닫힘')
-  ok((await p.locator('[data-more-toggle="more-admin"]').count()) === 1, '시트가 그대로 열려 있음')
+  ok((await p.locator('[data-more-toggle="more-planned"]').count()) === 1, '시트가 그대로 열려 있음')
 
   //  쓸 수 있는 것은 그대로 열려야 합니다 (주소는 그대로 /pricing)
-  await p.click('[data-more-toggle="more-money"]')
-  await p.waitForTimeout(400)
   await p.locator('[data-more-item="/pricing"]').click()
   await p.waitForTimeout(1400)
   ok(p.url().endsWith('/pricing'), '쓸 수 있는 것은 그대로 열림', p.url())

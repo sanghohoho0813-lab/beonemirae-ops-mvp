@@ -50,8 +50,12 @@ function useAssist<T>(task: 'briefing' | 'field_note' | 'dunning') {
 
 /** 공통 틀 — 제목 · 「AI 제안 → 담당자 확인」 · 실행 단추 · 기다림 · 실패 · 결과 · 아래 줄 */
 function AiShell({
-  attr, title, desc, runLabel, onRun, busy, hasResult, error, meta, disabled = false, disabledNote, children,
+  attr, title, desc, runLabel, onRun, busy, hasResult, error, meta, disabled = false, disabledNote, children, promo = false, phoneDesc,
 }: {
+  /** AX 5차 — 폰 첫 화면용 보라 띠 카드(배민 「이벤트」 칸처럼). PC 는 예전 그대로입니다. */
+  promo?: boolean
+  /** 폰에서만 쓰는 짧은 설명 (promo 일 때) */
+  phoneDesc?: string
   attr: string
   title: string
   desc?: string
@@ -66,18 +70,29 @@ function AiShell({
   children?: ReactNode
 }) {
   return (
-    <section data-ai-assist={attr} className="rounded-2xl border-2 border-violet-200 bg-violet-50 px-4 py-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Sparkles size={20} strokeWidth={2.4} className="shrink-0 text-violet-600" />
+    <section
+      data-ai-assist={attr}
+      className={`rounded-2xl border-2 border-violet-200 bg-violet-50 px-4 py-4 ${
+        //  바탕색(violet-600)은 그라데이션의 밝은 끝 — 흰 글자 대비를 가장 나쁜 경우로 잽니다
+        promo ? 'max-lg:border-0 max-lg:bg-violet-600 max-lg:bg-gradient-to-br max-lg:from-violet-600 max-lg:to-violet-800' : ''
+      }`}
+    >
+      <div className={`flex flex-wrap items-center gap-2 ${promo ? 'max-lg:flex-nowrap max-lg:gap-3' : ''}`}>
+        <Sparkles size={20} strokeWidth={2.4} className={`shrink-0 text-violet-600 ${promo ? 'max-lg:text-white' : ''}`} />
         {/*  0142 — 칸이 좁으면(수거 입력 왼쪽 칸) 단추가 글 아래로 내려갑니다. 글이 세로로 좁게 눌리지 않게. */}
-        <div className="min-w-0 flex-1 basis-[16rem]">
-          <p className="break-keep text-[1.12rem] font-black text-violet-950">
+        <div className={`min-w-0 flex-1 basis-[16rem] ${promo ? 'max-lg:basis-auto' : ''}`}>
+          <p className={`break-keep text-[1.12rem] font-black text-violet-950 ${promo ? 'max-lg:text-[1.02rem] max-lg:text-white' : ''}`}>
             {title}
-            <span className="ml-2 inline-block rounded-full bg-white px-2.5 py-0.5 align-middle text-[0.88rem] font-extrabold text-violet-800 ring-1 ring-violet-200">
+            <span
+              className={`ml-2 inline-block rounded-full bg-white px-2.5 py-0.5 align-middle text-[0.88rem] font-extrabold text-violet-800 ring-1 ring-violet-200 ${
+                promo ? 'max-lg:ml-1.5 max-lg:bg-white/15 max-lg:px-2 max-lg:text-[0.72rem] max-lg:text-white max-lg:ring-white/30' : ''
+              }`}
+            >
               AI 제안 → 담당자 확인
             </span>
           </p>
-          {desc && <p className="mt-0.5 break-keep text-[0.98rem] text-violet-900/80">{desc}</p>}
+          {desc && <p className={`mt-0.5 break-keep text-[0.98rem] text-violet-900/80 ${promo && phoneDesc ? 'max-lg:hidden' : ''}`}>{desc}</p>}
+          {promo && phoneDesc && <p className="mt-0.5 break-keep text-[0.84rem] font-medium text-white lg:hidden">{phoneDesc}</p>}
         </div>
         <button
           type="button"
@@ -87,9 +102,18 @@ function AiShell({
           aria-busy={busy}
           className={`inline-flex min-h-[3rem] shrink-0 items-center gap-1.5 rounded-full px-5 text-[1.02rem] font-extrabold transition disabled:opacity-50 ${
             hasResult && !busy ? 'bg-white text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100' : 'bg-violet-600 text-white shadow-md hover:bg-violet-700'
-          }`}
+          } ${promo ? 'max-lg:min-h-[2.75rem] max-lg:bg-white max-lg:px-4 max-lg:text-violet-800 max-lg:shadow-none' : ''}`}
         >
-          {busy ? <><Loader2 size={18} className="animate-spin" /> 분석 중…</> : hasResult ? '다시 하기' : <><Sparkles size={18} strokeWidth={2.4} /> {runLabel}</>}
+          {busy ? (
+            <><Loader2 size={18} className="animate-spin" /> 분석 중…</>
+          ) : hasResult ? (
+            '다시 하기'
+          ) : promo ? (
+            //  폰 보라 카드에서는 단추를 짧게 — 「받기」 (제목에 이미 「AI 오늘 브리핑」이 있습니다)
+            <><Sparkles size={18} strokeWidth={2.4} className="max-lg:hidden" /><span className="max-lg:hidden">{runLabel}</span><span className="lg:hidden">받기</span></>
+          ) : (
+            <><Sparkles size={18} strokeWidth={2.4} /> {runLabel}</>
+          )}
         </button>
       </div>
       {disabled && disabledNote && <p className="mt-2 break-keep text-[0.98rem] text-violet-900/80">{disabledNote}</p>}
@@ -170,11 +194,13 @@ export function AiBriefingCard() {
   if (!can) return null
   const r = st.result
   return (
-    <div className="mb-3">
+    <div className="lg:mb-3">
       <AiShell
         attr="briefing"
         title="AI 오늘 브리핑"
         desc="오늘 숫자(차량별 남은 방문 · 기다린 요청 · 미수)만 AI에 보내 할 일을 언제 · 어느 화면에서 할지까지 정리합니다. 거래처 이름은 보내지 않습니다."
+        promo
+        phoneDesc="숫자만 보내 할 일을 정리합니다 · 거래처 이름은 안 보냄"
         runLabel="AI 브리핑 받기"
         onRun={() => void run(briefingInput(data))}
         busy={st.busy}

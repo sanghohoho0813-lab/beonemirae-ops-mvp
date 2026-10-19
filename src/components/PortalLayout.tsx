@@ -374,6 +374,7 @@ export function PortalLayout() {
            아래 여백을 넉넉히 둡니다 — 페이지가 짧으면 마지막 섹션을 위로
            스크롤할 수 없어 사용 방법 안내가 들어갈 자리가 나오지 않습니다 */}
       <main
+        data-portal-main
         className={`relative mx-auto w-full max-w-[1240px] xl:max-w-[1600px] 2xl:max-w-[1840px] px-4 pb-[40vh] lg:px-8 ${
           isHome && !target.isPreview ? '-mt-12 pt-0 sm:-mt-14' : 'pt-5 lg:pt-8'
         }`}

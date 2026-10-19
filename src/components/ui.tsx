@@ -73,15 +73,27 @@ export function AreaHeader({
   title,
   desc,
   action,
+  phoneTitle,
+  phoneRight,
 }: {
   n: number
   icon: LucideIcon
   title: string
   desc: string
   action?: ReactNode
+  /** AX 5차 — 폰에서는 번호 · 설명 없이 짧은 제목 한 줄 (배민 「지금 주문」 처럼) */
+  phoneTitle?: string
+  phoneRight?: ReactNode
 }) {
   return (
-    <div className="mb-3 flex items-start gap-3 px-1 pt-1 lg:mb-4 lg:gap-3.5">
+    <>
+    {phoneTitle && (
+      <div data-area-phone className="mb-2 flex items-center gap-2 px-1 lg:hidden">
+        <h2 className="min-w-0 flex-1 break-keep text-[1.08rem] font-extrabold text-navy-900">{phoneTitle}</h2>
+        {phoneRight && <span className="shrink-0 text-[0.86rem] font-bold text-navy-500">{phoneRight}</span>}
+      </div>
+    )}
+    <div className={`mb-3 items-start gap-3 px-1 pt-1 lg:mb-4 lg:gap-3.5 ${phoneTitle ? 'hidden lg:flex' : 'flex'}`}>
       <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-navy-900 text-white lg:h-10 lg:w-10">
         <Icon size={18} strokeWidth={2.3} />
         {/* 번호는 아이콘 위에 작게 — 제목 줄의 글자 흐름을 끊지 않습니다 */}
@@ -98,12 +110,13 @@ export function AreaHeader({
       </div>
       {action && <div className="shrink-0 pt-0.5">{action}</div>}
     </div>
+    </>
   )
 }
 
 /** 대영역 사이 구분선 — 색 대신 여백과 가는 선으로만 끊습니다 */
-export function AreaDivider() {
-  return <div className="h-px bg-navy-200/70" />
+export function AreaDivider({ className = '' }: { className?: string } = {}) {
+  return <div className={`h-px bg-navy-200/70 ${className}`} />
 }
 
 type NumberTone = 'navy' | 'teal' | 'amber' | 'rose' | 'emerald'

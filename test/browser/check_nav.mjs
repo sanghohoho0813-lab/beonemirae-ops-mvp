@@ -100,11 +100,15 @@ async function open(role, width = 390, height = 900) {
   await p.locator('nav.fixed.bottom-0 button:has-text("더보기")').click()
   await p.waitForTimeout(1000)
 
-  //  맨 위 세 가지는 그대로 있어야 합니다
+  //  안내 세 가지는 그대로 있어야 합니다
+  //  ⚠ AX 5차 — 대표님: 「더보기에 예전 것 섞인 것 · 잘 안 쓰는 것 정리」. 두 번 나오던
+  //    「이 시스템을 만든 이유」 칸은 빼고 AX·심사 묶음의 「만든 이유」(/why) 하나만 남깁니다.
   const sheet = ((await p.textContent('body')) ?? '').replace(/\s+/g, ' ')
-  ok(/사용 방법/.test(sheet), '맨 위에 사용 방법')
-  ok(/이 시스템을 만든 이유/.test(sheet), '맨 위에 이 시스템을 만든 이유')
+  ok(/사용 방법/.test(sheet), '안내 목록에 사용 방법')
+  ok((await p.locator('[data-more-item="/why"]').count()) === 1 && !/이 시스템을 만든 이유/.test(sheet),
+    '「만든 이유」는 AX·심사 안 한 자리만 (중복 칸 없음)')
   ok((await p.locator('[data-dev-request-more]').count()) === 1, '사용 후기 남기기도 그대로')
+  ok(!/시연용 핵심 요약/.test(sheet) && !/기술개발 현황/.test(sheet), '정리한 것 — 「시연용 핵심 요약」 · 「기술개발 현황」이 더보기에 없음')
 
   //  ⚠ 0110 — 묶음이 **여섯**으로 다시 짜였습니다 (lib/nav.ts 의 NAV_GROUPS).
   //    폰 「더보기」는 그중 첫 묶음(오늘 업무)만 빼고 그대로 읽습니다 —
@@ -162,19 +166,15 @@ async function open(role, width = 390, height = 900) {
     ok(all.includes('/supplies'), '소모품 주문이 폰 더보기에도 있음')
   }
 
-  //  ⚠ 0110 — 폰에서도 **전부 접힌 채로** 시작합니다. 매일 누르는 넷은
-  //    아래 고정 탭에 있으므로, 더보기는 목차만 짧게 보여 주는 자리입니다.
-  ok(!(await p.locator('[data-more-item="/pricing"]').first().isVisible()),
-    '더보기의 묶음은 접힌 채로 시작 — 스크롤을 줄입니다')
-  ok((await p.locator('[data-more-toggle="more-money"]').count()) === 1, '펼쳐보기 단추가 있음')
-  await p.click('[data-more-toggle="more-money"]')
-  await p.waitForTimeout(400)
-  ok(await p.locator('[data-more-item="/pricing"]').first().isVisible(), '누르면 펼쳐짐')
+  //  ⚠ AX 5차 — 묶음을 접지 않습니다. 한 칸이 아이콘 + 이름뿐인 **4칸 격자**라 다섯 묶음을 다 펴도
+  //    예전 「다 접은 두 칸 목록」보다 짧습니다(시안 승인). 접는 단추가 없어 한 번 덜 누릅니다.
+  ok(await p.locator('[data-more-item="/pricing"]').first().isVisible(), '묶음이 펼쳐진 채로 — 바로 누를 수 있음')
+  ok((await p.locator('[data-more-toggle="more-money"]').count()) === 0, '묶음 접기 단추 없음')
 
-  //  두 칸 격자인지 — 같은 줄에 두 개가 나란히 서야 합니다
+  //  4칸 격자인지 — 첫 네 개가 같은 줄에 나란히
   const boxes = await p.locator('[data-more-section="more-money"] [data-more-item]').evaluateAll(
-    (els) => els.slice(0, 2).map((e) => Math.round(e.getBoundingClientRect().top)))
-  ok(boxes.length === 2 && boxes[0] === boxes[1], '두 칸 격자 — 첫 두 개가 같은 줄', String(boxes))
+    (els) => els.slice(0, 4).map((e) => Math.round(e.getBoundingClientRect().top)))
+  ok(boxes.length === 4 && boxes.every((v) => v === boxes[0]), '4칸 격자 — 첫 네 개가 같은 줄', String(boxes))
 
   //  발표 뒤 — 「신보 발표 시연」은 맨 위 고정 칸에서 내려와 AX·심사 묶음 안 한 자리에만
   const pinned = await p.locator('[data-more-section="more-today"] [data-more-item]').evaluateAll((els) => els.map((e) => e.getAttribute('data-more-item')))

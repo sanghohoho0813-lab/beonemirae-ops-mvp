@@ -74,12 +74,15 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
   ok(new URL(s.p.url()).pathname === '/today', '① 로그인하면 오늘 일정으로', new URL(s.p.url()).pathname)
 
   // ── ② 향후 일정 확인 ────────────────────────────────────────────────────
-  const soon = await s.p.evaluate((d) => {
+  //  ⚠ AX 5차 — 폰은 날짜 띠([data-day]), PC 는 늘 펼쳐진 달력([data-cal-pick])으로 날을 고릅니다.
+  //    예전에는 PC 에도 **숨겨진** 폰 날짜 띠가 DOM 에 있어 그걸 눌렀습니다 — 사람은 못 누르는 자리였습니다.
+  const daySel = (d) => (w < 1024 ? `[data-day="${d}"]` : `[data-cal-pick="${d}"]`)
+  const soon = await s.p.evaluate(([sel]) => {
     const t = (document.querySelector('main')?.innerText ?? '')
-    const strip = !!document.querySelector(`[data-day="${d}"]`)
+    const strip = !!document.querySelector(sel)
     return { strip, upcoming: /앞으로 갈 곳/.test(t) }
-  }, day(3))
-  ok(soon.strip, '② 날짜 줄에 사흘 뒤가 보임')
+  }, [daySel(day(3))])
+  ok(soon.strip, w < 1024 ? '② 날짜 줄에 사흘 뒤가 보임' : '② 달력에 사흘 뒤가 보임')
   ok(soon.upcoming, '② 「앞으로 갈 곳」이 있음')
 
   //  ⚠ 0074 — 전화는 첫 화면에서 바로 걸려야 합니다. 예전에는 수거 입력까지
@@ -113,7 +116,7 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
 
   // ── ③ 본인 일정 추가 ────────────────────────────────────────────────────
   const target = day(5)
-  await s.p.locator(`[data-day="${target}"]`).dispatchEvent('click')
+  await s.p.locator(daySel(target)).dispatchEvent('click')
   await s.p.waitForTimeout(700)
   const addSel = (await s.p.locator('[data-empty-add]').count()) ? '[data-empty-add]' : '[data-add-fab]'
   ok((await s.p.locator(addSel).count()) === 1, '③ 그 날에서 바로 일정 추가 단추가 있음', addSel)

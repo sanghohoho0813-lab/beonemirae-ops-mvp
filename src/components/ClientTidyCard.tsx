@@ -40,8 +40,9 @@ export function ClientTidyCard({ clients }: { clients: Client[] }) {
 
   const total = report.issues.length
   if (total === 0 && report.demoMixed === 0) {
+    //  AX 5차 — 폰에서는 「다 정리됐다」 줄을 감춥니다(목록을 한 줄이라도 더 보이게). 정리할 것이 생기면 아래 카드가 뜹니다.
     return (
-      <div data-tidy-card data-tidy-clean className="mb-3 flex items-center gap-2.5 rounded-2xl bg-accent-50 px-4 py-3">
+      <div data-tidy-card data-tidy-clean className="mb-3 flex items-center gap-2.5 rounded-2xl bg-accent-50 px-4 py-3 max-lg:hidden">
         <CheckCircle2 size={19} strokeWidth={2.4} className="shrink-0 text-accent-700" />
         <p className="t-body min-w-0 break-keep font-bold text-accent-800">
           거래처 {report.clients}곳 전부 정리됐습니다 — 빈칸도, 겹치는 이름도 없습니다.

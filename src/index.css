@@ -496,9 +496,13 @@ html[data-presenting] [data-hide-presenting] { display: none !important; }
 
 /*  0143 — 발표 안내 카드(왼쪽 아래 고정)가 떠 있는 동안, 창(모달)은 카드 오른쪽 자리에서 가운데로 뜹니다.
     1024 폭에서 카드가 회신 창 · 날짜 잡기 창을 가리던 것. 카드 폭 312px(xl 368px) + 왼쪽 12px + 틈 16px. */
+/*  병원 화면(포털)도 같습니다 — 메뉴(사이드바)가 없어 본문이 카드 밑으로 들어가, 「병원 화면에서 확인」 단계에서
+    첫 요청 카드를 카드가 덮어 누를 수 없었습니다(check_presenter139). 발표 안내가 떠 있을 때만 본문을 비켜 둡니다. */
 @media (min-width: 1024px) {
   html[data-presenter-card-on] [role="dialog"][aria-modal="true"] { padding-left: 340px; }
+  html[data-presenter-card-on] [data-portal-main] { padding-left: 340px; }
 }
 @media (min-width: 1280px) {
   html[data-presenter-card-on] [role="dialog"][aria-modal="true"] { padding-left: 396px; }
+  html[data-presenter-card-on] [data-portal-main] { padding-left: 396px; }
 }

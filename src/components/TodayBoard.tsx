@@ -37,7 +37,7 @@ import { TONE, type Tone } from '../lib/tone'
 //  숫자가 0인 줄은 그리지 않습니다. 남아 있는 줄이 곧 할 일입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface Task {
+export interface TodayTask {
   key: string
   icon: LucideIcon
   label: string
@@ -61,8 +61,11 @@ function expiringSoon(data: AppData): number {
 /** 「지금 처리할 것」 표의 칸 나눔 — 아이콘 · 항목 · 내용 · 규모 · 단추 (머리줄과 줄이 같이 씀) */
 const BOARD_COLS = 'grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.5fr)_5rem_7rem]'
 
-export function TodayBoard({ data }: { data: AppData }) {
-  const navigate = useNavigate()
+/**
+ * 「지금 처리할 것」 목록 — PC 표(TodayBoard)와 폰 카드(TodayFocus)가 **같은 목록**을 씁니다.
+ *  AX 5차에서 폰도 같은 줄(내용 · 단추 글자까지)을 쓰게 꺼냈습니다. 두 곳 숫자가 다르면 둘 다 못 믿습니다.
+ */
+export function useTodayTasks(data: AppData) {
   const progress = todayProgress(data)
   //  Pilot 동안 병원 요청은 안 씁니다 (0080)
   const open = hideRequests() ? [] : openRequests(data)
@@ -78,8 +81,8 @@ export function TodayBoard({ data }: { data: AppData }) {
   const dunning = useMemo(() => dunningSummary(data), [data])
   const gaps = useMemo(() => planGaps(data), [data])
 
-  const tasks = useMemo<Task[]>(() => {
-    const all: Task[] = [
+  const tasks = useMemo<TodayTask[]>(() => {
+    const all: TodayTask[] = [
       {
         key: 'urgent',
         icon: Siren,
@@ -180,6 +183,12 @@ export function TodayBoard({ data }: { data: AppData }) {
 
   const left = Math.max(0, progress.planned - progress.done)
   const pct = progress.planned ? Math.round((progress.done / progress.planned) * 100) : 0
+  return { tasks, progress, left, pct, urgent: urgent.length }
+}
+
+export function TodayBoard({ data }: { data: AppData }) {
+  const navigate = useNavigate()
+  const { tasks, progress, left, pct } = useTodayTasks(data)
 
   return (
     <section

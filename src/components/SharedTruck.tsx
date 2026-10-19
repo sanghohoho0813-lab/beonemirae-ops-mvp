@@ -77,9 +77,17 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
 
   return (
     <div data-shared-truck className="card mt-4 p-4">
-      <div className="flex items-center gap-2.5">
-        <Truck size={20} strokeWidth={2.3} className="shrink-0 text-navy-500" />
-        <p className="text-[1.12rem] font-extrabold text-navy-900">{truck.name}</p>
+      {/*  AX 5차 — 차량 카드는 아이콘 칸 + 이름 · 있는 곳 두 줄 + 상태 딱지 (배달앱 라이더 카드처럼) */}
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-sky-50 text-sky-700">
+          <Truck size={21} strokeWidth={2.3} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[1.08rem] font-extrabold text-navy-900">{truck.name}</p>
+          <p className="break-keep text-[0.95rem] text-navy-500">
+            {prettyDate(date)} · 본사 앞에 있습니다
+          </p>
+        </div>
         {/*  다섯 가지 — 사용 가능 / 예약 / 사용 중 / 반납 완료 / 반납 지연.
              ⚠ 「반납 지연」에만 강한 빨강을 씁니다. */}
         <span
@@ -114,10 +122,6 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
               : '사용 가능'}
         </span>
       </div>
-
-      <p className="mt-1.5 break-keep text-[1.02rem] text-navy-500">
-        {prettyDate(date)} · 본사 앞에 있습니다
-      </p>
       {/*  ⚠ 딱지에만 이름을 넣으면 폰에서 잘립니다. 한 줄로 다시 적습니다.
            ⚠ 이름이 없는 옛 예약(판 75 이전)에는 이 줄을 안 그립니다 —
              「알 수 없음」이라고 적으면 고장으로 보입니다. */}
@@ -142,10 +146,10 @@ export function SharedTruck({ date, onPick }: { date: string; onPick?: (d: strin
           data-truck-toggle
           onClick={() => void go()}
           disabled={busy}
-          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-2xl text-[1.1rem] font-extrabold transition active:scale-[0.98] disabled:opacity-50 ${
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl text-[1.02rem] font-extrabold transition active:scale-[0.98] disabled:opacity-50 ${
             held ? (isPast ? 'bg-rose-600 text-white' : 'bg-navy-50 text-navy-600') : 'bg-navy-900 text-white'
           }`}
-          style={{ minHeight: 52 }}
+          style={{ minHeight: 46 }}
         >
           {busy && <Loader2 size={18} className="animate-spin" />}
           {held

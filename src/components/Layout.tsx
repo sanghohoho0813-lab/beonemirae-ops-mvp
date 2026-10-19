@@ -71,6 +71,7 @@ import {
 } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 import { BrandLogo } from './BrandLogo'
+import { PhoneBandSlot } from './PhoneBand'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
@@ -661,7 +662,16 @@ function TopCrumb() {
 }
 
 // ── 모바일 상단 헤더 ─────────────────────────────────────────────────────────
-function MobileHeader({ onHelp }: { onHelp: () => void }) {
+//  AX 5차 — 대표님: 「레퍼런스 영상 바탕으로 예쁘게」(배민 · talabat).
+//   예전: 밝은 바탕에 상호 · 영문 이름표 · 설명 세 줄 + 영상 단추(두 줄) · 시계.
+//   지금: **브랜드 색 띠 하나** — 로고 · 상호 · 이름표 / 영상 단추 · 시계 / 그 화면 제목.
+//   제목 자리(slot)는 화면이 채웁니다(PhoneBand). 첫 카드가 띠 끝에 겹쳐 올라옵니다.
+//   ⚠ 띠 색은 테마 주색(teal-600 → 700)입니다 — 화면 색을 바꾸면 띠도 따라 바뀝니다.
+//     바탕색(bg-teal-600)도 함께 둡니다 — 그라데이션의 **가장 밝은 끝**이라, 흰 글자 대비를 잴 때
+//     가장 나쁜 경우로 잽니다(아홉 테마 모두 5.2:1 이상).
+//   ⚠ 붙박이(sticky)가 아닙니다. 띠가 제목까지 품어 키가 커졌기 때문에, 붙여 두면
+//     폰 화면의 4분의 1을 늘 먹습니다. 내리면 같이 올라가고, 아래 탭은 그대로입니다.
+function MobileHeader({ onHelp, slotRef }: { onHelp: () => void; slotRef: (el: HTMLDivElement | null) => void }) {
   const { mode, configured, role } = useAuth()
   const live = mode === 'live'
   //  신용보증기금 방문용 영상 (0130) — 폰에서도. PC 와 같은 규칙(대표·이사님만).
@@ -669,127 +679,85 @@ function MobileHeader({ onHelp }: { onHelp: () => void }) {
   const navigate = useNavigate()
   return (
     /*  ⚠ 0080 — 폰을 **가로로 들면** 화면 높이가 390px 밖에 안 됩니다
-        (트럭 안에서 실제로 이렇게 듭니다). 그런데 위 머리띠 102px + 아래 탭
-        58px 이 그대로 붙어 있어, **화면의 41%** 를 붙박이가 먹고 일할 자리는
-        230px 만 남았습니다. 「매우 크게」로 켜면 46% 까지 갑니다.
-        높이가 짧을 때만(가로로 든 폰) 이름표·태그라인을 접고 여백을 줄입니다.
-        폭이 아니라 **높이**로 가릅니다 — 세로로 든 폰(844px)과 태블릿은
-        그대로입니다. 시계는 남깁니다: 대표님이 「어느 계정이든 보이게」
-        요청한 것이라, 자리가 좁다고 뺄 것이 아닙니다. */
-    <header className="sticky top-0 z-30 bg-app/90 px-4 py-2.5 backdrop-blur-lg [@media(max-height:480px)]:py-1.5 lg:hidden">
+        (트럭 안에서 실제로 이렇게 듭니다). 높이가 짧을 때만 이름표를 접고
+        여백을 줄입니다. 폭이 아니라 **높이**로 가릅니다. 시계는 남깁니다:
+        대표님이 「어느 계정이든 보이게」 요청한 것입니다. */
+    <header
+      data-phone-band
+      className="relative rounded-b-[26px] bg-teal-600 bg-gradient-to-br from-teal-600 to-teal-700 px-4 pb-3 pt-2.5 text-white [@media(max-height:480px)]:py-1.5 lg:hidden"
+    >
       <div className="flex items-center gap-2.5">
-        <BrandLogo size="sm" tone="dark" />
-        {/* 폰 헤더는 가로가 390px 뿐입니다. 회사명·담당자·사용법·상태배지를
-            다 넣으면 글자 크기를 '매우 크게'로 둔 사용자에게서 서로 밀어냅니다.
-            그래서 이 블록만 줄어들게 두고(min-w-0 + truncate),
-            오른쪽 두 개는 절대 줄지 않게 했습니다.
-
-            여기만 rem 이 아니라 px 입니다. 상호와 역할은 '읽어서 판단하는
-            업무 데이터'가 아니라 앱 이름표라서, 글자 크기를 키운 목적과
-            상관이 없습니다. 오히려 같이 커지면 정작 눌러야 할 「사용법」과
-            실제/시연 배지를 밀어내 상호가 「㈜비…」로 잘렸습니다. */}
+        <BrandLogo size="sm" tone="dark" className="!ring-0" />
+        {/*  폰 머리띠는 가로가 390px 뿐입니다 — 이 칸만 줄어들게(min-w-0),
+             오른쪽 단추는 절대 줄지 않게 둡니다. 여기만 px 입니다: 상호 · 이름표는
+             앱 이름표라 글자 크기 설정과 같이 커질 이유가 없습니다(0080). */}
         <div className="min-w-0 flex-1 leading-none">
-          <p className="truncate text-[15px] font-extrabold tracking-tight text-navy-900">{COMPANY}</p>
-          {/*  PC 사이드바와 **같은 이름표**입니다. 폰에서는 지금까지 더보기
-              맨 아래까지 내려가야 볼 수 있었습니다. */}
-          {/*  ⚠ 0080 — 여기에 truncate 가 걸려 있어, 「매우 크게」로 켠 폰에서
-                 「BEONEMIRAE · BUSINESS A…」로 잘렸습니다. 글자 크기는 px 로
-                 고정돼 있어도 **옆에 있는 것들이 rem 이라 커지면서** 이 칸의
-                 남는 폭을 가져가기 때문입니다.
-                 이름표는 잘려 있으면 「고장 난 화면」으로 읽힙니다. 한 줄을
-                 고집하지 않고 **접히게** 둡니다 — 헤더가 한 줄 길어질 뿐입니다.
-                 (px 로 둔 이유 자체는 위 설명 그대로 유지합니다.) */}
+          <p className="truncate text-[15px] font-extrabold tracking-tight text-white">{COMPANY}</p>
+          {/*  PC 사이드바와 **같은 이름표**. 잘리지 않게 접히도록 둡니다(0080). */}
           <p
             data-brand-ax-header
-            /*  0082 — amber-500 은 밝은 바탕에서 2.0:1 입니다. 사이드바(어두운
-                바탕)에서는 잘 보이는 금색이지만, 폰 머리띠는 밝은 바탕이라
-                같은 색을 쓰면 안 읽힙니다. 같은 계열의 어두운 단계로 둡니다. */
-            className="mt-1 break-keep text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-amber-800 [@media(max-height:480px)]:hidden"
+            className="mt-1 break-keep text-[10px] font-black uppercase leading-tight tracking-[0.08em] text-white [@media(max-height:480px)]:hidden"
           >
             {SYSTEM_WORDMARK}
-            {/*  0082 — 밝은 바탕에서 navy-300 은 1.8:1 입니다. 이름표 글자와
-                 같은 색으로 둡니다 — 구분점만 유령처럼 흐릴 이유가 없습니다. */}
-            <span className="text-amber-800"> · </span>
+            <span> · </span>
             {SYSTEM_WORDMARK_TAIL}
           </p>
-          {/*  무엇을 하는 시스템인지. 아주 좁은 폰(360px 미만)에서는 상호를
-              밀어내므로 그때만 접습니다 — 이름이 잘리는 것보다 낫습니다. */}
-          <p className="mt-0.5 hidden break-keep text-[9.5px] font-medium leading-tight text-navy-400 min-[360px]:block [@media(max-height:480px)]:hidden">
-            {SYSTEM_TAGLINE}
-          </p>
         </div>
-        {/*  화면 색 (0081) — 폰에서도 오른쪽 위입니다.
-             ⚠ 420px 미만에서는 글자를 접고 아이콘만 남깁니다(ThemePicker 안).
-               여기서 글자까지 달면 상호가 「㈜비…」로 잘립니다 — 0080 에서
-               같은 자리를 두고 이미 한 번 다툰 적이 있습니다. */}
-        <ThemeButton className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-2 text-[0.95rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition active:bg-navy-50" />
-        {/* 도움말은 두 갈래입니다 — 사용 방법 / 만든 이유.
-            폰 헤더에는 둘을 나란히 둘 자리가 없습니다. 하나만 내놓았더니
-            나머지는 더보기를 뒤져야 나오는 상태가 됐습니다.
-            그래서 여기는 「도움말」 하나로 두고, 누르면 두 갈래를 함께 보여줍니다. */}
+        {/*  화면 색 (0081) · 도움말 — 띠 위의 반투명 동그라미 두 개 (손가락 44px) */}
+        <ThemeButton className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition active:bg-white/25 [&>span]:!hidden" />
         <button
           data-help-open
           onClick={onHelp}
-          className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-white px-3 py-2 text-[0.95rem] font-bold text-navy-600 shadow-sm ring-1 ring-navy-100 transition active:bg-navy-50"
+          aria-label="도움말"
+          title="도움말"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition active:bg-white/25"
         >
-          <HelpCircle size={17} strokeWidth={2.3} className="shrink-0" />
-          {/*  아주 좁은 폰(360px 미만)에서는 글자를 접고 물음표만 남깁니다 —
-              여기서 50px 을 아껴야 왼쪽 이름표가 안 잘립니다. */}
-          <span className="hidden min-[380px]:inline">도움말</span>
+          <HelpCircle size={20} strokeWidth={2.3} className="shrink-0" />
+          {/*  글자는 화면 읽기용으로만 — 띠 위 동그라미는 아이콘 하나가 깔끔합니다 */}
+          <span className="sr-only">도움말</span>
         </button>
-        {/*  「실제 운영」 딱지는 뗐습니다 — 실제로 쓰고 있는 지금은 굳이
-            매 화면에서 알릴 것이 아니고, 좁은 폰에서 상호를 밀어냈습니다.
-            **「시연용」은 그대로 둡니다.** 이건 안내가 아니라 경고입니다 —
-            시연 자료를 실제 기록으로 착각하면 그게 진짜 사고입니다. */}
+        {/*  「시연용」은 그대로 둡니다 — 안내가 아니라 경고입니다(시연 자료를 실제로 착각하면 사고). */}
         {!live && (
           <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-[0.9rem] font-bold text-amber-700 ring-1 ring-amber-100">
             시연용
           </span>
         )}
-        {/*  가로로 든 폰에서는 시계를 **이 줄 안**에 넣습니다. 아래 줄을
-             따로 쓰지 않아 머리띠가 한 줄 짧아집니다(26px). 이 줄을 피해
-             아래로 내렸던 이유는 「폰은 가로가 390px 뿐」이라서인데,
-             가로로 들면 844px 이라 그 이유가 없어집니다. */}
-        <span className="hidden shrink-0 whitespace-nowrap text-[0.98rem] font-bold text-navy-500 [@media(max-height:480px)]:inline">
+        {/*  가로로 든 폰에서는 시계를 **이 줄 안**에 넣어 한 줄을 아낍니다. */}
+        <span className="hidden shrink-0 whitespace-nowrap text-[0.98rem] font-bold text-white [@media(max-height:480px)]:inline">
           <LiveClock />
         </span>
       </div>
-      {/*  ── 오늘 날짜 · 지금 시각 (0078) ────────────────────────────────────
-           대표님 요청으로 어느 계정이든 보이게 답니다.
-           ⚠ 위 머리글 **안**에 넣지 않았습니다. 폰은 가로가 390px 뿐이라
-             상호·도움말과 자리를 다투다 상호가 「㈜비…」로 잘립니다.
-             한 줄 아래에 통째로 두면 아무것도 밀어내지 않습니다. */}
-      {/*  ── 신용보증기금 방문용 영상 (0130) — 폰 ─────────────────────────────
-           대표님: 「폰에서도 볼 수 있게 — 지금은 PC 버전으로 들어가야만 보여요」.
-           PC 처럼 **시계 옆**(같은 줄 왼쪽)에 둡니다. 대표·이사님 계정에만 있고,
-           그때만 시계를 짧은 표기(「10/5(월) · 오후 9:19:17」)로 줄여 한 줄에 맞춥니다.
-           ⚠ 현장·병원 계정은 이 줄이 예전과 **똑같습니다** (머리띠 높이 그대로). */}
-      {/*  ⚠ 320px 폰에서 단추가 30px 로 짜부라져 글자가 세로로 섰습니다(check_phoneui).
-           글자는 **두 줄로 고정**(「신용보증기금 / 방문용 영상」)하고 단추는 줄지 않게,
-           자리가 모자라면 **시계가 아랫줄로** 내려갑니다(flex-wrap). */}
-      <div className="mt-1.5 flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1 [@media(max-height:480px)]:hidden">
+      {/*  ── 영상 단추 · 오늘 날짜 · 지금 시각 (0078 · 0130) ────────────────
+           대표·이사님 계정에만 영상 단추가 있고, 그때 시계를 짧은 표기로 줄입니다.
+           ⚠ 단추는 줄지 않게(shrink-0), 자리가 모자라면 **시계가 아랫줄로**(flex-wrap). */}
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 [@media(max-height:480px)]:hidden">
         {showVisitVideo && (
           <button
             type="button"
             data-visit-video-btn
             aria-label="신용보증기금 방문용 영상"
             onClick={() => navigate('/visit-video')}
-            className="me-auto flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-navy-800 px-2.5 py-1 text-[0.9rem] font-bold leading-tight text-white shadow-sm transition active:bg-navy-900"
+            className="me-auto flex min-h-[44px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-navy-950/25 px-3 py-1 text-left text-[0.76rem] font-bold leading-tight text-white transition active:bg-navy-950/40"
           >
             <PlayCircle size={16} strokeWidth={2.3} className="shrink-0" aria-hidden />
-            <span className="text-left">
-              <span className="block whitespace-nowrap">신용보증기금</span>
-              <span className="block whitespace-nowrap">방문용 영상</span>
+            {/*  420px 미만 폰에서는 두 줄(「신용보증기금 / 방문용 영상」)로 접어 시계와 한 줄을 지킵니다(check_visit_video).
+                 넓은 폰에서는 한 줄. */}
+            <span>
+              <span className="block min-[420px]:inline">신용보증기금</span>
+              <span className="hidden min-[420px]:inline"> </span>
+              <span className="block min-[420px]:inline">방문용 영상</span>
             </span>
           </button>
         )}
-        {/*  단추가 있을 때만 작게 — 360px 폰에서 한 줄에 들어가게 (단추 126 + 시계 189 ≤ 324)
-             ⚠ 0135 — 0.95rem 이면 **오전·오후 10~12시**(시가 두 자리)에 시계가 10px
-               길어져 단추와 1px 겹쳤습니다(밤 10시 이후 회귀에서 잡힘). 0.9rem(16px)으로. */}
-        <p className={`shrink-0 whitespace-nowrap text-right font-bold text-navy-500 ${showVisitVideo ? 'text-[0.9rem]' : 'text-[1rem]'}`}>
+        {/*  ⚠ 0135 — 시가 두 자리(10~12시)면 시계가 길어집니다. 시계는 읽을 만한 크기(15px 이상 ·
+             check_clock)를 지키고, 좁은 폰에서는 단추 글자를 두 줄로 접어 한 줄에 맞춥니다
+             (320px 이나 글자를 키우면 시계가 아랫줄로). */}
+        <p className={`shrink-0 whitespace-nowrap text-right font-bold text-white ${showVisitVideo ? 'text-[0.85rem]' : 'text-[0.95rem]'}`}>
           <LiveClock compact={showVisitVideo} />
         </p>
       </div>
+      {/*  그 화면의 제목 자리 — 화면이 <PhoneBand> 로 채웁니다(없으면 비어 있음) */}
+      <div ref={slotRef} data-phone-band-slot />
     </header>
   )
 }
@@ -917,6 +885,8 @@ export function Layout() {
   //  지금 켜져 있는 사용 안내 (0069)
   const store = useMemo(() => guideStore(), [])
   const guideOn = useSyncExternalStore(store.subscribe, store.get, store.get)
+  //  AX 5차 — 폰 파란 띠 안 「그 화면 제목」 자리 (PhoneBand)
+  const [bandSlot, setBandSlot] = useState<HTMLDivElement | null>(null)
 
   return (
     <div className="min-h-[100dvh] bg-app">
@@ -926,7 +896,7 @@ export function Layout() {
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
           <SchemaBar />
           <SyncBar />
-          <MobileHeader onHelp={() => setHelpOpen(true)} />
+          <MobileHeader onHelp={() => setHelpOpen(true)} slotRef={setBandSlot} />
           <main className={`w-full ${pcView ? 'pb-32' : 'pb-24 lg:pb-14'}`}>
             {/*  AX 디자인 2차 — PC 도구 줄을 **흰 상단 바** 한 줄로 (ERP 머리줄).
                  예전에는 회색 바탕 위에 흰 알약들이 그림자를 달고 떠 있었습니다. 줄 안의
@@ -1035,11 +1005,13 @@ export function Layout() {
               화면이 붙어 있습니다.
             */}
             {!minimal && <TopCrumb />}
+            <PhoneBandSlot value={bandSlot}>
             <ErrorBoundary key={pathname} scope="page">
               <PageMotion key={pathname}>
                 <Outlet />
               </PageMotion>
             </ErrorBoundary>
+            </PhoneBandSlot>
             </div>
             </div>
           </main>

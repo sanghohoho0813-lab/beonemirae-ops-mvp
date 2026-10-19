@@ -12,6 +12,10 @@ import {
   ListChecks,
   TrendingUp,
   Wallet,
+  PlusCircle,
+  History,
+  Inbox,
+  Boxes,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -35,7 +39,10 @@ import { StartHere } from '../components/StartHere'
 import { PendingApprovals } from '../components/PendingApprovals'
 import { useLoadState } from '../components/LoadState'
 import { TodayFocus } from '../components/TodayFocus'
-import { TodayBoard } from '../components/TodayBoard'
+import { TodayBoard, useTodayTasks } from '../components/TodayBoard'
+import { PhoneBand, BandTitle, BAND_OVERLAP, useIsPhone } from '../components/PhoneBand'
+import { canAccess } from '../lib/access'
+import { TONE, type Tone } from '../lib/tone'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
 import { canSeeDashboard } from '../lib/access'
@@ -113,6 +120,9 @@ function PhoneRow({
  */
 function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
   const { data } = useData()
+  //  AX 5차 — 폰에도 둡니다. 흰 카드 한 장에 2×2 로, 파란 띠 끝에 겹쳐 올라옵니다
+  //  (배민 첫 화면의 「주소 · 검색」 카드 자리). 숫자는 PC 와 같은 함수 그대로.
+  const phone = useIsPhone()
   const month = thisMonth()
   const progress = todayProgress(data)
   const gaps = useMemo(() => planGaps(data), [data])
@@ -131,17 +141,17 @@ function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
       value: String(progress.done),
       unit: `/ ${progress.planned}건`,
       tone: 'text-navy-900',
-      sub: progress.planned === 0 ? '오늘 잡힌 일정 없음' : progress.pendingInput > 0 ? `입력 대기 ${progress.pendingInput}건` : '완료 / 오늘 일정',
+      sub: progress.planned === 0 ? (phone ? '잡힌 일정 없음' : '오늘 잡힌 일정 없음') : progress.pendingInput > 0 ? `입력 대기 ${progress.pendingInput}건` : '완료 / 오늘 일정',
       to: '/today',
     },
     {
       key: 'gap',
       icon: CalendarClock,
-      label: '다음 방문 안 잡힘',
+      label: phone ? '방문 안 잡힘' : '다음 방문 안 잡힘',
       value: String(gaps.length),
       unit: '곳',
       tone: gaps.length > 0 ? 'text-amber-700' : 'text-navy-900',
-      sub: gaps.length > 0 ? '평소 간격이면 이번 주 갈 곳' : '빠진 곳 없음',
+      sub: gaps.length > 0 ? (phone ? '이번 주 갈 곳' : '평소 간격이면 이번 주 갈 곳') : '빠진 곳 없음',
       to: '/plan',
     },
   ]
@@ -151,26 +161,39 @@ function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
         key: 'unpaid',
         icon: Wallet,
         label: '미수금',
-        value: won(unpaid).replace(/원$/, ''),
-        unit: '원',
+        //  폰 칸은 170px 남짓이라 「118,714,572원」이 안 들어갑니다 — 억 · 만 단위로 줄이고,
+        //  1원 단위 금액은 바로 아래 「독촉 대상」 카드와 미수금 화면에 그대로 있습니다.
+        value: phone ? wonShort(unpaid) : won(unpaid).replace(/원$/, ''),
+        unit: phone ? '' : '원',
         tone: unpaid > 0 ? 'text-rose-700' : 'text-navy-900',
-        sub: dunning.rows.length > 0 ? `독촉 대상 ${dunning.rows.length}곳 · 지난달 이전 청구` : '확정 청구 중 미입금액',
+        sub:
+          dunning.rows.length > 0
+            ? `독촉 대상 ${dunning.rows.length}곳${phone ? '' : ' · 지난달 이전 청구'}`
+            : phone ? '미입금액' : '확정 청구 중 미입금액',
         to: '/receivables',
       },
       {
         key: 'rev',
         icon: TrendingUp,
-        label: `${m(month)} 매출 (진행 중)`,
+        label: phone ? `${m(month)} 매출` : `${m(month)} 매출 (진행 중)`,
         value: wonShort(cur.revenue),
-        unit: '',
+        //  폰은 칸이 좁아 「(진행 중)」을 이름표 대신 숫자 옆에 작게 붙입니다 — 이 달이 아직 안 끝났다는 표시는 꼭 남깁니다.
+        unit: phone ? '진행 중' : '',
         tone: 'text-navy-900',
-        sub: `${m(prevMonth)} ${wonShort(prev.revenue)} · 확정 청구 + 미확정 정산`,
+        sub: phone ? `${m(prevMonth)} ${wonShort(prev.revenue)}` : `${m(prevMonth)} ${wonShort(prev.revenue)} · 확정 청구 + 미확정 정산`,
         to: '/revenue',
       },
     )
   }
   return (
-    <div data-dash-kpis className={`hidden gap-3 lg:grid ${cells.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}>
+    <div
+      data-dash-kpis
+      className={
+        phone
+          ? `card grid grid-cols-2 gap-1 p-1.5 ${BAND_OVERLAP}`
+          : `grid gap-3 ${cells.length === 4 ? 'grid-cols-4' : 'grid-cols-2'}`
+      }
+    >
       {cells.map((c) => {
         const Icon = c.icon
         return (
@@ -178,14 +201,18 @@ function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
             key={c.key}
             to={c.to}
             data-dash-kpi={c.key}
-            className="kpi-card group flex min-w-0 flex-col gap-1 transition hover:ring-teal-300"
+            className={
+              phone
+                ? 'flex min-w-0 flex-col gap-0.5 rounded-[14px] px-3 py-2.5 transition active:bg-navy-50'
+                : 'kpi-card group flex min-w-0 flex-col gap-1 transition hover:ring-teal-300'
+            }
           >
             <span className="flex items-center gap-1.5 text-[0.899rem] font-bold text-navy-500">
               <Icon size={16} strokeWidth={2.4} aria-hidden="true" className="shrink-0" />
               <span className="truncate">{c.label}</span>
-              <ChevronRight size={16} aria-hidden="true" className="ms-auto shrink-0 text-navy-300 transition group-hover:text-navy-600" />
+              {!phone && <ChevronRight size={16} aria-hidden="true" className="ms-auto shrink-0 text-navy-300 transition group-hover:text-navy-600" />}
             </span>
-            <span className={`whitespace-nowrap text-[1.348rem] font-extrabold 2xl:text-[1.573rem] leading-tight tracking-tight tabular-nums ${c.tone}`}>
+            <span className={`whitespace-nowrap text-[1.348rem] font-extrabold 2xl:text-[1.573rem] leading-tight tracking-tight tabular-nums ${c.tone}`} title={c.key === 'unpaid' ? won(unpaid) : undefined}>
               {c.value}
               {c.unit && <small className="ms-1 text-[0.899rem] font-bold text-navy-500">{c.unit}</small>}
             </span>
@@ -194,6 +221,43 @@ function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
         )
       })}
     </div>
+  )
+}
+
+/**
+ *  폰 첫 화면 「자주 쓰는 8개」 (AX 5차 · 배민 첫 화면의 카테고리 칸).
+ *   색은 사이드바 목차 색과 같습니다 — 현장 = 하늘 · 돈 = 초록 · 병원 서비스 = 보라.
+ *   ⚠ 이 계정이 못 여는 화면은 칸째 뺍니다(사이드바와 같은 규칙).
+ */
+const QUICK: { to: string; label: string; icon: LucideIcon; tone: Tone }[] = [
+  { to: '/collection', label: '수거 입력', icon: PlusCircle, tone: 'emerald' },
+  { to: '/today', label: '오늘 일정', icon: CalendarClock, tone: 'sky' },
+  { to: '/clients', label: '거래처', icon: Building2, tone: 'blue' },
+  { to: '/history', label: '수거이력', icon: History, tone: 'sky' },
+  { to: '/requests', label: '고객 요청', icon: Inbox, tone: 'violet' },
+  { to: '/receivables', label: '미수금', icon: Wallet, tone: 'emerald' },
+  { to: '/revenue', label: '매출 현황', icon: TrendingUp, tone: 'emerald' },
+  { to: '/materials', label: '자재 관리', icon: Boxes, tone: 'sky' },
+]
+
+function QuickGrid() {
+  const { configured, role } = useAuth()
+  const items = configured ? QUICK.filter((q) => canAccess(role, q.to)) : QUICK
+  if (items.length === 0) return null
+  return (
+    <nav aria-label="자주 쓰는 화면" data-quick-grid className="card grid grid-cols-4 gap-x-1 gap-y-3 px-2 py-4 lg:hidden">
+      {items.map((q) => {
+        const Icon = q.icon
+        return (
+          <Link key={q.to} to={q.to} data-quick={q.to} className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl py-0.5 transition active:scale-95">
+            <span className={`flex h-[2.8rem] w-[2.8rem] items-center justify-center rounded-[16px] ${TONE[q.tone].tile}`}>
+              <Icon size={22} strokeWidth={2.2} aria-hidden="true" />
+            </span>
+            <span className="max-w-full truncate text-[0.76rem] font-bold text-navy-700">{q.label}</span>
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -218,11 +282,19 @@ export function Dashboard() {
 
   const opportunities = useMemo(() => revenueOpportunities(data, month), [data, month])
   const reports = useMemo(() => data.clients.map((c) => clientMonthlyReport(data, c, month)), [data, month])
-  const progress = todayProgress(data)
+  const phone = useIsPhone()
+  const taskCount = useTodayTasks(data).tasks.length
 
 
   return (
-    <PageShell>
+    <PageShell className="max-lg:space-y-3">
+      {/*  AX 5차 — 폰에서는 인사 · 날짜가 파란 띠 안으로 올라갑니다(PhoneBand). */}
+      <PhoneBand overlap>
+        <BandTitle
+          title={profile ? `${profile.name}님, 오늘 할 일` : '오늘 할 일'}
+          sub={`${prettyDate(t)} · 의료폐기물 운영관리`}
+        />
+      </PhoneBand>
       {/* 인사 — 넓은 화면에서는 제목과 날짜를 한 줄에 둡니다.
           인사말이 화면 위쪽을 크게 차지하면 정작 오늘 할 일이 아래로 밀립니다. */}
       {/*  ⚠ 0084 — 폰에서는 이 줄이 **가로**가 됩니다. 「병원 화면」 단추를
@@ -233,12 +305,10 @@ export function Dashboard() {
            그렇다고 오늘 할 일 아래로 내리면 y=1,458px — 2화면 아래라
            있으나 마나입니다.
            그래서 **줄을 늘리지 않고 옆에** 두었습니다. 세로로 0px 입니다. */}
+      {!phone && (
       <div className="lg:flex lg:flex-wrap lg:items-baseline lg:gap-3">
         <h1 className="t-page break-keep text-navy-900 lg:min-w-0 lg:flex-1">
-          <span className="lg:hidden">{profile ? `${profile.name}님, 오늘 할 일` : '오늘 할 일'}</span>
-          <span className="hidden lg:inline">
-            {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
-          </span>
+          {profile ? `${profile.name}님, 오늘 운영 현황입니다` : '대표님 한눈에 보기'}
         </h1>
         {/*  ⚠ 0084 — 폰에서는 이 자리에 **안 둡니다.**
              세 자리를 다 재 봤습니다 —
@@ -260,12 +330,15 @@ export function Dashboard() {
           <PortalSwitchButton compact label="병원이 보는 화면" />
         </div>
       </div>
+      )}
 
 
 
 
       {/*  AX 3차 — PC 첫 줄 숫자 카드 4칸 */}
       <DashKpis canSeeMoney={canSeeMoney} />
+      {/*  AX 5차 — 폰 「자주 쓰는 8개」 */}
+      <QuickGrid />
 
       {/*  밀린 마감 — 인사 바로 아래. 오늘 할 일보다 위입니다.
            지지난달 세금계산서를 빠뜨린 것이 오늘 수거보다 급합니다.
@@ -299,28 +372,36 @@ export function Dashboard() {
       <PendingApprovals />
 
       {/* ══ ① 오늘 처리할 업무 ═══════════════════════════════════════════════ */}
-      <section>
+      {/*  AX 5차 — 폰에서는 순서를 시안대로: 오늘 수거 · 할 일 카드 → 빈 설정 → AI 브리핑 → AX 코치 → 엑셀 질문.
+           PC 는 예전 순서 그대로입니다(order 는 폰에서만). */}
+      <section className="max-lg:flex max-lg:flex-col max-lg:gap-3">
         <AreaHeader
           n={1}
           icon={ListChecks}
           title="오늘 처리할 업무"
           desc="오늘 안에 확인하거나 처리해야 할 일을 먼저 보여드립니다."
+          phoneTitle="지금 처리할 것"
+          phoneRight={taskCount > 0 ? `${taskCount}건` : undefined}
         />
         {/*  ⚠ 0121 — 오늘 무엇을 하면 자료가 쌓이는지 알려 주는 줄입니다.
              0108 에는 이 구역 맨 아래에 두었는데 페이지 절반 아래라 아무도
              못 봤습니다. 오늘 할 일 목록보다 뒤에 있을 이유가 없어 맨 위로
              올립니다 — 여전히 한 줄이라 아래 일정을 크게 밀지 않습니다. */}
         {/*  0140 — 발표 중에는 숨김(준비용 안내 · data-hide-presenting) */}
-        <div data-hide-presenting className="contents">
-          <CoachLine className="mb-2.5" />
+        <div data-hide-presenting className="max-lg:order-4 lg:contents">
+          <CoachLine className="lg:mb-2.5" />
         </div>
         {/* 실제 운영 전환 직후 — 무엇부터 해야 하는지 (다 끝나면 사라집니다) */}
         <div data-hide-presenting className="hidden lg:block">
           <StartHere data={data} />
         </div>
         {/*  0141 — AI 오늘 브리핑 (실제 AI · 숫자만 보냄 · 관리자 · 사무실 · 운영 연결에서만) */}
-        <AiBriefingCard />
-        <TodayFocus data={data} />
+        <div className="max-lg:order-3 lg:contents">
+          <AiBriefingCard />
+        </div>
+        <div className="max-lg:order-1 lg:contents">
+          <TodayFocus data={data} />
+        </div>
         <TodayBoard data={data} />
         {/*  한 줄만 — 비어 있는 것이 없으면 이 자리도 없습니다.
              띠를 하나 더 두면 둘 다 안 보게 됩니다.
@@ -329,12 +410,12 @@ export function Dashboard() {
                오늘 할 일이 y=497 까지 밀려(검사가 잡았습니다) 첫 화면에서
                사라졌습니다 — 대표님이 이 화면을 여는 이유가 그것입니다.
                채워야 할 값은 오늘 나갈 차보다 급하지 않습니다. */}
-        <div data-hide-presenting className="contents">
+        <div data-hide-presenting className="max-lg:order-2 lg:contents">
           <SetupGapsLine />
         </div>
         {/*  0106 — 하루 한 줄: 「오늘 엑셀·카톡에 다시 적은 것이 있었나」.
              답하지 않아도 아무것도 막지 않고, 답하면 그날은 사라집니다. */}
-        <div data-hide-presenting className="contents">
+        <div data-hide-presenting className="max-lg:order-5 lg:contents">
           <ExcelCheckLine />
         </div>
         {/*  0108 — AX 코치 한 줄. 오늘 할 일이 없으면 이 줄도 없습니다.
@@ -347,7 +428,7 @@ export function Dashboard() {
         <TourBanner />
       </div>
 
-      <AreaDivider />
+      <AreaDivider className="max-lg:hidden" />
 
       {/* ══ ② 이번 달 경영현황 ═══════════════════════════════════════════════
           대표가 스크롤 없이 봐야 하는 숫자입니다. 예전에는 거래처 운영상태
@@ -358,36 +439,24 @@ export function Dashboard() {
           icon={Wallet}
           title="이번 달 경영현황"
           desc="매출과 비용, 미수금까지 이번 달 돈의 흐름입니다."
+          phoneTitle="이번 달 돈 흐름"
+          phoneRight={`${Number(month.slice(5, 7))}월`}
         />
         <MonthGlance data={data} />
       </section>
 
-      <AreaDivider />
+      <AreaDivider className="max-lg:hidden" />
 
-      {/* ══ ③ 거래처 운영상태 ════════════════════════════════════════════════ */}
-      <section>
+      {/* ══ ③ 거래처 운영상태 ════════════════════════════════════════════════
+           AX 5차 — 폰에서는 뺍니다. 「오늘 방문 거래처 · 거래처 전체」 두 줄은 맨 위 숫자 카드(오늘 수거)와
+           아래 탭 「거래처」에 이미 있어, 같은 숫자를 세 번째로 보여 주는 자리였습니다. */}
+      <section className="max-lg:hidden">
         <AreaHeader
           n={3}
           icon={Building2}
           title="거래처 운영상태"
           desc="요청·계약·자재·특이사항 등 거래처 쪽에서 지금 벌어지는 일입니다."
         />
-
-        {/* 폰 — 숫자 두 줄과 「전체보기」로 끝냅니다 */}
-        <div className="card divide-y divide-navy-50 lg:hidden">
-          <PhoneRow
-            to="/today"
-            label="오늘 방문 거래처"
-            detail="일정과 현장 메모를 함께 봅니다"
-            value={`${progress.planned}곳`}
-          />
-          <PhoneRow
-            to="/clients"
-            label="거래처 전체"
-            detail="계약·단가·수거 이력·월 정산"
-            value={`${data.clients.length}곳`}
-          />
-        </div>
 
         {/* PC — 가로가 넓으므로 오늘 현황과 챙길 일을 나란히 비교합니다 */}
         <div className="hidden gap-4 lg:grid lg:grid-cols-2 lg:gap-5">
@@ -459,7 +528,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <AreaDivider />
+      <AreaDivider className="max-lg:hidden" />
 
       {/* ══ ④ 성장기회 ═══════════════════════════════════════════════════════
           매일 처리하는 일이 아니라 「더 할 수 있는 일」입니다. 오늘 업무와

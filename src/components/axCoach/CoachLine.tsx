@@ -28,13 +28,22 @@ export function CoachLine({ className = '' }: { className?: string }) {
       className={`flex items-center gap-2.5 rounded-2xl bg-white px-4 py-3 shadow-card transition hover:bg-navy-50 ${className}`}
     >
       <Compass size={17} className="shrink-0 text-teal-600" />
-      <span className="min-w-0 flex-1 break-keep text-[1.02rem] font-bold text-navy-700">
+      {/*  AX 5차 — 폰에서는 한 줄: 「AX 코치 ▬▬ 31% · 3개 중 0개」 (막대가 숫자보다 먼저 읽힙니다) */}
+      <span className="flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap text-[0.95rem] font-bold text-navy-700 lg:hidden">
+        <span className="font-extrabold text-navy-900">AX 코치</span>
+        <span aria-hidden className="h-1.5 min-w-[2.5rem] flex-1 overflow-hidden rounded-full bg-navy-100">
+          <span className="block h-full rounded-full bg-teal-500" style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }} />
+        </span>
+        <span className="font-extrabold text-teal-700">{pct}%</span>
+        <span className="text-[0.84rem] text-navy-500">{total}개 중 {done}개</span>
+      </span>
+      <span className="hidden min-w-0 flex-1 break-keep text-[1.02rem] font-bold text-navy-700 lg:inline">
         AX 코치 — 오늘 할 일 {total}개 중 <span className="text-teal-700">{done}개 확인됨</span>
         {todo > 0 && <span className="text-navy-500"> · {todo}개 남음</span>}
         <span className="text-navy-500"> · 실증 자료 준비도 {pct}%</span>
       </span>
       {/*  준비도 막대 — 넓은 화면에서만. 폰에서는 줄이 두 줄로 접힙니다. */}
-      <span aria-hidden className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-navy-100 sm:block">
+      <span aria-hidden className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-navy-100 lg:block">
         <span
           className="block h-full rounded-full bg-teal-500"
           style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }}
