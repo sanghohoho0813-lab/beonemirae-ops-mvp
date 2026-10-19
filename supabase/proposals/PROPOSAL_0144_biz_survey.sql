@@ -275,8 +275,10 @@ comment on table public.biz_survey_responses is
 --  실행하세요. 비워 두면 대표·관리자 역할 모두가 봅니다.
 -- insert into public.biz_survey_admins(email) values ('관리자 이메일') on conflict do nothing;
 
--- ── 바로 확인 — 아래가 각각 4 · 9 이어야 합니다 ──────────────────────────────
-select count(*) as "새 표 4개" from information_schema.tables
- where table_schema='public' and table_name like 'biz_survey_%';
-select count(*) as "새 함수 9개" from pg_proc p join pg_namespace n on n.oid = p.pronamespace
- where n.nspname = 'public' and p.proname like 'biz_survey_%';
+-- ── 바로 확인 — 한 줄로 「표 4 · 함수 9」가 나오면 끝입니다 ──────────────────
+--  (SQL Editor 는 마지막 결과 하나만 보여 줍니다 — 그래서 한 줄로 모았습니다)
+select
+  (select count(*) from information_schema.tables
+    where table_schema = 'public' and table_name like 'biz_survey_%') as "표 (4)",
+  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname like 'biz_survey_%') as "함수 (9)";
