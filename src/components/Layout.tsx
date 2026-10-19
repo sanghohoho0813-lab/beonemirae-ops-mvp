@@ -119,13 +119,21 @@ function useVisibleGroups(): NavGroupDef[] {
 /**
  *  묶음별 아이콘 칸 색 — 대표님: 「병원 서비스 · 정산 매출 · AX 심사 안의 기능들도 아이콘에 색을 넣어 줘.
  *  같은 목차 안은 같은 색으로 묶되 톤만 다르게」.
- *   병원 서비스 = 보라 · 정산·매출 = 초록 · AX·심사 = 주황 (「추가 개발 예정」의 노랑과 겹치지 않게).
+ *   현장·운영 = 하늘 · 병원 서비스 = 보라 · 정산·매출 = 초록 · AX·심사 = 주황 · 관리 = 분홍
+ *   (「추가 개발 예정」의 노랑과 겹치지 않게).
  *   줄 순서대로 옅은 톤 → 짙은 톤. 지금 보는 줄은 다른 묶음과 같게 강조색으로 채웁니다.
  *  ⚠ Tailwind 가 글자 그대로 찾아 쓰므로 클래스 이름을 통째로 적습니다(조립 금지).
  *  ⚠ 아이콘은 늘 **색이 보이는** 밝은 단계(200~300)로 — 50 · 100 은 어두운 바탕에서 회색처럼 보였습니다.
  *    톤 차이는 칸 바탕의 짙기(300/20 → 700/60)로 냅니다.
  */
 const GROUP_SHADES: Record<string, string[]> = {
+  //  대표님(후속): 「현장·운영이랑 관리 목차 안에도 똑같이」 — 현장·운영 = 하늘 · 관리 = 분홍
+  ops: [
+    'bg-sky-300/20 text-sky-200 ring-sky-200/40',
+    'bg-sky-400/25 text-sky-300 ring-sky-300/40',
+    'bg-sky-500/30 text-sky-300 ring-sky-400/45',
+    'bg-sky-500/45 text-sky-200 ring-sky-400/50',
+  ],
   //  보라는 이 팔레트에서 200 이 거의 흰색이라(채도 0.16) 300 · 400 만 씁니다
   service: [
     'bg-violet-300/20 text-violet-300 ring-violet-200/40',
@@ -147,6 +155,15 @@ const GROUP_SHADES: Record<string, string[]> = {
     'bg-orange-500/30 text-orange-300 ring-orange-400/45',
     'bg-orange-500/45 text-orange-200 ring-orange-400/50',
     'bg-orange-600/50 text-orange-200 ring-orange-500/55',
+  ],
+  //  분홍도 200 이 거의 흰색이라(채도 0.19) 300 · 400 만 씁니다
+  admin: [
+    'bg-rose-300/20 text-rose-300 ring-rose-200/40',
+    'bg-rose-400/25 text-rose-400 ring-rose-300/40',
+    'bg-rose-500/30 text-rose-300 ring-rose-400/45',
+    'bg-rose-500/45 text-rose-400 ring-rose-400/50',
+    'bg-rose-600/50 text-rose-300 ring-rose-500/55',
+    'bg-rose-700/60 text-rose-400 ring-rose-500/60',
   ],
 }
 

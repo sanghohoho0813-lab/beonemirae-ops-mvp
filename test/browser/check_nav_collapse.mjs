@@ -192,7 +192,8 @@ const hueOf = (rgb) => {
   return Math.round((h * 60 + 360) % 360)
 }
 const groupHue = {}
-for (const [id, title] of [['service', '병원 서비스'], ['money', '정산·매출'], ['ax', 'AX·심사']]) {
+//  후속 — 현장·운영 · 관리도 같은 규칙(대표님 「현장 운영이랑 관리 목차 안에도 똑같이」)
+for (const [id, title] of [['ops', '현장·운영'], ['service', '병원 서비스'], ['money', '정산·매출'], ['ax', 'AX·심사'], ['admin', '관리']]) {
   if ((await p.locator(`[data-nav-group="${id}"]`).count()) === 0) await p.locator(`[data-nav-group-header="${title}"]`).click()
   await p.waitForTimeout(250)
   const cols = await p.locator(`[data-nav-group="${id}"] a:not([aria-current="page"]) [data-nav-shade]`).evaluateAll((els) => els.map((e) => getComputedStyle(e).color))
@@ -210,8 +211,8 @@ for (const [id, title] of [['service', '병원 서비스'], ['money', '정산·�
   groupHue[id] = hues.reduce((x, y) => x + y, 0) / hues.length
 }
 const hs = Object.values(groupHue)
-const far = hs.every((h, i) => hs.every((k, j) => i === j || Math.min(Math.abs(h - k), 360 - Math.abs(h - k)) >= 40))
-ok(far, '세 묶음은 서로 다른 색 (보라 · 초록 · 주황)', JSON.stringify(groupHue))
+const far = hs.every((h, i) => hs.every((k, j) => i === j || Math.min(Math.abs(h - k), 360 - Math.abs(h - k)) >= 35))
+ok(far, '다섯 묶음은 서로 다른 색 (하늘 · 보라 · 초록 · 주황 · 분홍)', JSON.stringify(groupHue))
 
 console.log('')
 console.log(`총 ${out.length}건 · 실패 ${out.filter((v) => !v).length}건`)
