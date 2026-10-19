@@ -73,6 +73,7 @@ import {
 import { PlannedPreview } from './PlannedPreview'
 import { BrandLogo } from './BrandLogo'
 import { PhoneBandSlot } from './PhoneBand'
+import { icon3d } from '../lib/icons3d'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
@@ -754,7 +755,13 @@ function MobileHeader({ onHelp, slotRef }: { onHelp: () => void; slotRef: (el: H
 }
 
 // ── 모바일 하단 탭바 ─────────────────────────────────────────────────────────
-function NavTab({ active, icon: Icon, label, onClick, guideAt }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void; guideAt?: string }) {
+/**
+ *  아래 탭 입체 그림 — 대표님이 주신 아이콘(public/icons3d). 주소로 고릅니다(현장 계정은 탭 구성이 달라서).
+ *   그림이 없는 주소는 예전 선 아이콘 그대로입니다.
+ */
+const tabImg = (to: string) => icon3d(`tab:${to}`) ?? icon3d(to)
+
+function NavTab({ active, icon: Icon, img, label, onClick, guideAt }: { active: boolean; icon: LucideIcon; img?: string; label: string; onClick: () => void; guideAt?: string }) {
   return (
     <button
       onClick={onClick}
@@ -772,11 +779,25 @@ function NavTab({ active, icon: Icon, label, onClick, guideAt }: { active: boole
           transition={{ type: 'spring', stiffness: 420, damping: 32 }}
         />
       )}
-      <Icon
-        size={22}
-        strokeWidth={active ? 2.4 : 2}
-        className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
-      />
+      {img ? (
+        //  이름이 아래 있으니 그림은 장식(alt=""). 지금 탭은 살짝 크게 — 색은 원본 그대로 둡니다.
+        <img
+          src={img}
+          alt=""
+          aria-hidden="true"
+          width={192}
+          height={192}
+          decoding="async"
+          draggable={false}
+          className={`relative z-10 h-[1.85rem] w-[1.85rem] select-none object-contain transition-transform [@media(max-height:480px)]:h-6 [@media(max-height:480px)]:w-6 ${active ? 'scale-110' : ''}`}
+        />
+      ) : (
+        <Icon
+          size={22}
+          strokeWidth={active ? 2.4 : 2}
+          className={`relative z-10 transition-colors ${active ? 'text-teal-600' : 'text-navy-400'}`}
+        />
+      )}
       <span className={`t-tab relative z-10 whitespace-nowrap transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
@@ -822,6 +843,7 @@ function BottomNav({
               key={item.to}
               active={active}
               icon={item.icon}
+              img={tabImg(item.to)}
               label={item.label}
               guideAt={item.to === '/collection' ? 'guide-nav-collect' : undefined}
               onClick={() => {
@@ -831,7 +853,7 @@ function BottomNav({
             />
           )
         })}
-        <NavTab active={moreActive} icon={MoreHorizontal} label="더보기" onClick={onMore} />
+        <NavTab active={moreActive} icon={MoreHorizontal} img={tabImg('more')} label="더보기" onClick={onMore} />
       </div>
     </nav>
   )

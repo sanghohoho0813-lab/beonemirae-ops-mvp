@@ -12,10 +12,6 @@ import {
   ListChecks,
   TrendingUp,
   Wallet,
-  PlusCircle,
-  History,
-  Inbox,
-  Boxes,
   type LucideIcon,
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -42,7 +38,7 @@ import { TodayFocus } from '../components/TodayFocus'
 import { TodayBoard, useTodayTasks } from '../components/TodayBoard'
 import { PhoneBand, BandTitle, BAND_OVERLAP, useIsPhone } from '../components/PhoneBand'
 import { canAccess } from '../lib/access'
-import { TONE, type Tone } from '../lib/tone'
+import { icon3d } from '../lib/icons3d'
 import { TourBanner } from '../components/TourEntry'
 import { useAuth } from '../context/AuthContext'
 import { canSeeDashboard } from '../lib/access'
@@ -226,18 +222,18 @@ function DashKpis({ canSeeMoney }: { canSeeMoney: boolean }) {
 
 /**
  *  폰 첫 화면 「자주 쓰는 8개」 (AX 5차 · 배민 첫 화면의 카테고리 칸).
- *   색은 사이드바 목차 색과 같습니다 — 현장 = 하늘 · 돈 = 초록 · 병원 서비스 = 보라.
+ *   그림은 대표님이 주신 입체 아이콘(public/icons3d — 원본 두 장에서 잘라 배경 얼룩만 지움).
  *   ⚠ 이 계정이 못 여는 화면은 칸째 뺍니다(사이드바와 같은 규칙).
  */
-const QUICK: { to: string; label: string; icon: LucideIcon; tone: Tone }[] = [
-  { to: '/collection', label: '수거 입력', icon: PlusCircle, tone: 'emerald' },
-  { to: '/today', label: '오늘 일정', icon: CalendarClock, tone: 'sky' },
-  { to: '/clients', label: '거래처', icon: Building2, tone: 'blue' },
-  { to: '/history', label: '수거이력', icon: History, tone: 'sky' },
-  { to: '/requests', label: '고객 요청', icon: Inbox, tone: 'violet' },
-  { to: '/receivables', label: '미수금', icon: Wallet, tone: 'emerald' },
-  { to: '/revenue', label: '매출 현황', icon: TrendingUp, tone: 'emerald' },
-  { to: '/materials', label: '자재 관리', icon: Boxes, tone: 'sky' },
+const QUICK: { to: string; label: string }[] = [
+  { to: '/collection', label: '수거 입력' },
+  { to: '/today', label: '오늘 일정' },
+  { to: '/clients', label: '거래처' },
+  { to: '/history', label: '수거이력' },
+  { to: '/requests', label: '고객 요청' },
+  { to: '/receivables', label: '미수금' },
+  { to: '/revenue', label: '매출 현황' },
+  { to: '/materials', label: '자재 관리' },
 ]
 
 function QuickGrid() {
@@ -245,18 +241,23 @@ function QuickGrid() {
   const items = configured ? QUICK.filter((q) => canAccess(role, q.to)) : QUICK
   if (items.length === 0) return null
   return (
-    <nav aria-label="자주 쓰는 화면" data-quick-grid className="card grid grid-cols-4 gap-x-1 gap-y-3 px-2 py-4 lg:hidden">
-      {items.map((q) => {
-        const Icon = q.icon
-        return (
-          <Link key={q.to} to={q.to} data-quick={q.to} className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl py-0.5 transition active:scale-95">
-            <span className={`flex h-[2.8rem] w-[2.8rem] items-center justify-center rounded-[16px] ${TONE[q.tone].tile}`}>
-              <Icon size={22} strokeWidth={2.2} aria-hidden="true" />
-            </span>
-            <span className="max-w-full truncate text-[0.76rem] font-bold text-navy-700">{q.label}</span>
-          </Link>
-        )
-      })}
+    <nav aria-label="자주 쓰는 화면" data-quick-grid className="card grid grid-cols-4 gap-x-1 gap-y-3.5 px-2 pb-4 pt-3.5 lg:hidden">
+      {items.map((q) => (
+        <Link key={q.to} to={q.to} data-quick={q.to} className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-1 transition active:scale-95 active:bg-navy-50">
+          {/*  입체 그림은 그 자체로 모양이 있어 칸(색 네모)을 씌우지 않습니다 — 이름이 옆에 있으니 그림은 장식(alt="") */}
+          <img
+            src={icon3d(q.to)}
+            alt=""
+            aria-hidden="true"
+            width={192}
+            height={192}
+            decoding="async"
+            draggable={false}
+            className="h-[3.3rem] w-[3.3rem] select-none object-contain drop-shadow-[0_3px_4px_rgba(15,26,46,0.12)]"
+          />
+          <span className="max-w-full truncate text-[0.78rem] font-bold text-navy-700">{q.label}</span>
+        </Link>
+      ))}
     </nav>
   )
 }

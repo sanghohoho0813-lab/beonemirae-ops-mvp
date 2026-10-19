@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, Monitor, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, MessageSquarePlus, Compass, Globe, PlayCircle, type LucideIcon } from 'lucide-react'
+import { Smartphone, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, Globe, PlayCircle, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -14,6 +14,7 @@ import { canAccess, canSeeShowcase } from '../lib/access'
 import { NAV_GROUPS, hiddenInMenu, type NavItem } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 import { canSendDevRequest } from '../lib/devRequests'
+import { icon3d } from '../lib/icons3d'
 import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,7 +51,24 @@ const GROUP_TILE: Record<string, { dot: string; tiles: string[] }> = {
 }
 const FALLBACK_TILE = { dot: 'bg-navy-400', tiles: ['bg-navy-50 text-navy-600'] }
 
-/** 목차 한 묶음 — 흰 카드 한 장에 색 아이콘 칸 4개씩 (배민 「카테고리」 칸처럼) */
+/** 입체 아이콘 한 장 — 이름이 옆에 있으니 장식(alt="") */
+function Img3d({ src, className }: { src: string; className: string }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      width={192}
+      height={192}
+      decoding="async"
+      draggable={false}
+      className={`shrink-0 select-none object-contain ${className}`}
+    />
+  )
+}
+
+/** 목차 한 묶음 — 흰 카드 한 장에 아이콘 칸 4개씩 (배민 「카테고리」 칸처럼).
+ *  대표님이 주신 입체 아이콘을 씁니다(lib/icons3d). 그림이 없는 주소만 예전 색 칸 + 선 아이콘. */
 function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: string; items: NavItem[]; onGo: (to: string) => void }) {
   const tone = GROUP_TILE[groupId] ?? FALLBACK_TILE
   return (
@@ -63,6 +81,7 @@ function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: stri
       <div className="grid grid-cols-4 gap-x-1 gap-y-3.5">
         {items.map((item, i) => {
           const Icon = item.icon
+          const img = icon3d(item.to)
           return (
             <button
               key={item.to}
@@ -70,11 +89,17 @@ function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: stri
               data-more-item={item.to}
               onClick={() => onGo(item.to)}
               title={item.desc}
-              className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl py-0.5 transition active:scale-95"
+              className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-0.5 transition active:scale-95 active:bg-navy-50"
             >
-              <span data-more-tile className={`flex h-[2.7rem] w-[2.7rem] items-center justify-center rounded-[15px] ${tone.tiles[i % tone.tiles.length]}`}>
-                <Icon size={21} strokeWidth={2.2} aria-hidden="true" />
-              </span>
+              {img ? (
+                <span data-more-tile className="flex h-[3rem] w-[3rem] items-center justify-center">
+                  <Img3d src={img} className="h-[3rem] w-[3rem] drop-shadow-[0_3px_4px_rgba(15,26,46,0.12)]" />
+                </span>
+              ) : (
+                <span data-more-tile className={`flex h-[2.7rem] w-[2.7rem] items-center justify-center rounded-[15px] ${tone.tiles[i % tone.tiles.length]}`}>
+                  <Icon size={21} strokeWidth={2.2} aria-hidden="true" />
+                </span>
+              )}
               <span className="w-full break-keep text-center text-[0.76rem] font-bold leading-tight text-navy-700">{item.label}</span>
             </button>
           )
@@ -87,6 +112,7 @@ function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: stri
 /** 아래 한 목록의 한 줄 */
 function Row({
   icon: Icon,
+  img,
   label,
   note,
   onClick,
@@ -95,6 +121,8 @@ function Row({
   hook,
 }: {
   icon: LucideIcon
+  /** 입체 아이콘 (있으면 선 아이콘 대신) */
+  img?: string
   label: string
   note?: string
   onClick?: () => void
@@ -104,7 +132,7 @@ function Row({
 }) {
   const inner = (
     <>
-      <Icon size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />
+      {img ? <Img3d src={img} className="h-[1.9rem] w-[1.9rem]" /> : <Icon size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />}
       <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
         {label}
         {note && <span className="ms-1 text-[0.84rem] font-semibold text-navy-500">{note}</span>}
@@ -237,7 +265,11 @@ export function MoreMenu({
         {/*  사용 방법 — 현장 담당자에게는 없습니다(0078: 위쪽 「도움말」 하나로). */}
         {role !== 'field' && (
           //  ⚠ TourButton 이 ▶ 아이콘을 스스로 그립니다 — 여기서 하나 더 그리지 않습니다
-          <TourButton className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left text-navy-500 transition active:bg-navy-50" label="">
+          <TourButton
+            className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left text-navy-500 transition active:bg-navy-50"
+            label=""
+            icon={<Img3d src={icon3d('tour') ?? ''} className="h-[1.9rem] w-[1.9rem]" />}
+          >
             <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">사용 방법</span>
             <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
           </TourButton>
@@ -253,15 +285,15 @@ export function MoreMenu({
             }}
             className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
           >
-            <MessageSquarePlus size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />
+            <Img3d src={icon3d('feedback') ?? ''} className="h-[1.9rem] w-[1.9rem]" />
             <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
               사용 후기 남기기 <span className="text-[0.84rem] font-semibold text-navy-500">(개발자에게 요청)</span>
             </span>
             <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
           </button>
         )}
-        <Row icon={Globe} label="회사 홈페이지" onClick={() => go('/company')} />
-        <Row icon={ExternalLink} label="올바로 시스템" note="폐기물 적법처리" href={ALLBARO_URL} />
+        <Row icon={Globe} img={icon3d('/company')} label="회사 홈페이지" onClick={() => go('/company')} />
+        <Row icon={ExternalLink} img={icon3d('allbaro')} label="올바로 시스템" note="폐기물 적법처리" href={ALLBARO_URL} />
         {variant === 'desktop' && <Row icon={Smartphone} label="모바일 프레임으로 보기" onClick={() => go('/mobile-preview')} />}
         {onPcView && (
           <button
@@ -270,7 +302,7 @@ export function MoreMenu({
             onClick={onPcView}
             className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
           >
-            <Monitor size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />
+            <Img3d src={icon3d('pcview') ?? ''} className="h-[1.9rem] w-[1.9rem]" />
             <span data-pc-view-open className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
               PC 화면으로 보기
             </span>
@@ -278,7 +310,7 @@ export function MoreMenu({
           </button>
         )}
         {showVisitVideo && (
-          <Row icon={PlayCircle} label="신용보증기금 방문용 영상" onClick={() => go('/visit-video')} hook={{ 'data-visit-video-btn': '' }} />
+          <Row icon={PlayCircle} img={icon3d('/visit-video')} label="신용보증기금 방문용 영상" onClick={() => go('/visit-video')} hook={{ 'data-visit-video-btn': '' }} />
         )}
         {/*  계획 중 기능 — **단추가 아니라 미리보기**입니다(눌리는데 아무 일도 안 일어나는 것이 제일 나쁩니다).
              한 줄로 접어 두고, 펼치면 이름마다 「계획 중 · 지금은 이렇게」가 열립니다(0095). */}
@@ -291,7 +323,7 @@ export function MoreMenu({
               onClick={() => setPlannedOpen((v) => !v)}
               className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
             >
-              <Compass size={18} strokeWidth={2.3} className="shrink-0 text-navy-500" aria-hidden="true" />
+              <Img3d src={icon3d('planned') ?? ''} className="h-[1.9rem] w-[1.9rem]" />
               <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-600">추가 개발 예정 {planned.length}가지</span>
               <span className="pill shrink-0 bg-navy-50 text-navy-600">계획중</span>
               <ChevronDown size={17} className={`shrink-0 text-navy-400 transition-transform ${plannedOpen ? 'rotate-180' : ''}`} aria-hidden="true" />

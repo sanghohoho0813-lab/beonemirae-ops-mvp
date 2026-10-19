@@ -150,12 +150,15 @@ export function TourButton({
   tourId,
   /** 넘기면 라벨 대신 이 내용을 씁니다 */
   children,
+  /** 넘기면 ▶ 아이콘 대신 이것을 그립니다 (폰 더보기의 입체 아이콘) */
+  icon,
 }: {
   className?: string
   label?: string
   compact?: boolean
   tourId?: TourId
   children?: ReactNode
+  icon?: ReactNode
 }) {
   const { start } = useTour()
   const { role } = useAuth()
@@ -176,7 +179,7 @@ export function TourButton({
       className={className}
       title="사용 방법 다시 보기"
     >
-      <PlayCircle size={17} strokeWidth={2.3} className="shrink-0" />
+      {icon ?? <PlayCircle size={17} strokeWidth={2.3} className="shrink-0" />}
       {children ?? (
         <span className={compact ? 'hidden whitespace-nowrap sm:inline' : 'whitespace-nowrap'}>{label}</span>
       )}

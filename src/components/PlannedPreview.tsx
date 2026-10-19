@@ -1,5 +1,6 @@
 import { CalendarClock, Workflow } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { Modal } from './Modal'
 import { PLANNED_DETAIL } from '../lib/nav'
 
@@ -17,7 +18,10 @@ import { PLANNED_DETAIL } from '../lib/nav'
 export function PlannedPreview({ label, onClose }: { label: string | null; onClose: () => void }) {
   const navigate = useNavigate()
   const d = label ? PLANNED_DETAIL[label] : undefined
-  return (
+  //  ⚠ 문서 맨 바깥(body)에 그립니다. 폰 더보기 시트(z-50) 안에서 열면 창이 시트의 겹침 순서에
+  //    갇혀, 시트보다 위에 있는 아래 탭(z-[55])이 창의 「확인」 단추를 덮었습니다(check_phoneui).
+  //    화면 색 고르기 창(ThemePicker)과 같은 이유 · 같은 방법입니다.
+  return createPortal(
     <Modal
       open={label != null}
       title={label ?? ''}
@@ -51,6 +55,7 @@ export function PlannedPreview({ label, onClose }: { label: string | null; onClo
           </span>
         </p>
       </div>
-    </Modal>
+    </Modal>,
+    document.body,
   )
 }
