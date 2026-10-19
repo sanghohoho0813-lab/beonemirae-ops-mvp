@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from '
 import { motion } from 'framer-motion'
 import { CLIENT_TEL } from '../lib/brand'
 import { ChevronRight, ClipboardList, Headset, House, MessageSquare, ReceiptText, Truck, type LucideIcon } from 'lucide-react'
+import { icon3d } from '../lib/icons3d'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
 import { SyncBar } from './SyncBar'
@@ -50,6 +51,8 @@ interface Item {
   /** 모바일에서 세 메뉴가 한 줄에 들어가도록 쓰는 짧은 이름 */
   short: string
   icon: LucideIcon
+  /** 입체 그림 이름 (icons3d 의 portal:…) — 대표님이 만들어 주신 그림 */
+  img: string
   /** 폰 아래 고정 띠에 둘 것인가 (0083) */
   bottom: boolean
 }
@@ -93,12 +96,30 @@ interface Item {
 //     칸(65px)일 때 글자가 세로로 늘어졌던 것은 이름이 길어서였습니다.
 //     이름을 네 글자 이내로 두고, 실측(check_scale · check_ux390)으로 지킵니다.
 const NAV: Item[] = [
-  { page: '', label: '홈', short: '홈', icon: House, bottom: true },
-  { page: 'requests', label: '요청 내역', short: '요청 내역', icon: ClipboardList, bottom: true },
-  { page: 'history', label: '수거 이력', short: '수거 이력', icon: Truck, bottom: true },
-  { page: 'billing', label: '정산·증빙', short: '정산·증빙', icon: ReceiptText, bottom: true },
-  { page: 'support', label: '고객지원', short: '고객지원', icon: MessageSquare, bottom: true },
+  { page: '', label: '홈', short: '홈', icon: House, img: 'portal:tab-home', bottom: true },
+  { page: 'requests', label: '요청 내역', short: '요청 내역', icon: ClipboardList, img: 'portal:tab-requests', bottom: true },
+  { page: 'history', label: '수거 이력', short: '수거 이력', icon: Truck, img: 'portal:history', bottom: true },
+  { page: 'billing', label: '정산·증빙', short: '정산·증빙', icon: ReceiptText, img: 'portal:tab-billing', bottom: true },
+  { page: 'support', label: '고객지원', short: '고객지원', icon: MessageSquare, img: 'portal:ask', bottom: true },
 ]
+
+/** 메뉴 그림 — 입체 그림이 있으면 그것, 없으면 예전 선 아이콘. 이름이 옆에 있어 그림은 장식입니다. */
+function NavImg({ img, icon: Icon, className }: { img: string; icon: LucideIcon; className: string }) {
+  const src = icon3d(img)
+  if (!src) return <Icon size={20} strokeWidth={2.2} aria-hidden="true" className={`shrink-0 ${className}`} />
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      width={192}
+      height={192}
+      decoding="async"
+      draggable={false}
+      className={`shrink-0 select-none object-contain ${className}`}
+    />
+  )
+}
 
 /** 지금 화면 이름 — 병원명 옆에 적습니다 (0088 · 브리프 11) */
 const PAGE_LABEL: Record<PortalPage, string> = {
@@ -312,7 +333,7 @@ export function PortalLayout() {
                         transition={{ type: 'spring', stiffness: 520, damping: 42 }}
                       />
                     )}
-                    <Icon size={20} className="shrink-0" strokeWidth={2.2} />
+                    <NavImg img={n.img} icon={Icon} className="h-[1.35rem] w-[1.35rem]" />
                     <span className="whitespace-nowrap sm:hidden">{n.short}</span>
                     <span className="hidden whitespace-nowrap sm:inline">{n.label}</span>
                   </>
@@ -448,11 +469,13 @@ export function PortalLayout() {
               end={n.page === ''}
               className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 py-1.5"
             >
-              {/*  포털 4차 — 고른 칸은 짙은 글자 + 굵은 아이콘(흔한 앱 아래 띠). 색 면은 깔지 않습니다. */}
-              <Icon
-                size={22}
-                strokeWidth={active ? 2.6 : 2}
-                className={`relative z-10 ${active ? 'text-navy-900' : 'text-navy-400'}`}
+              {/*  포털 4차 — 고른 칸은 짙은 글자(흔한 앱 아래 띠). 색 면은 깔지 않습니다.
+                   입체 그림은 AX 아래 탭과 같은 크기(1.27rem) — 고르지 않은 칸은 그림을 옅게 둬서
+                   지금 어디인지가 그림만으로도 보이게 합니다. */}
+              <NavImg
+                img={n.img}
+                icon={Icon}
+                className={`relative z-10 h-[1.27rem] w-[1.27rem] transition ${active ? '' : 'opacity-55 grayscale-[0.5]'}`}
               />
               <span className={`t-tab relative z-10 whitespace-nowrap ${active ? 'font-extrabold text-navy-900' : 'text-navy-500'}`}>
                 {n.short}

@@ -65,7 +65,10 @@ const tf = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s);
     return imgs.filter((img) => img.getAnimations().some((a) => a.playState === 'running' && (a.effect?.getTiming?.().duration ?? 0) > 2000)).length
   })
   ok(drift === 0, '① 홈에 계속 움직이는 사진이 없다 (의미 없는 움직임 금지)', `${drift}장`)
-  ok((await p.locator('[data-portal-hero] img').count()) === 0, '① 머리 칸에 장식 사진이 없다')
+  //  ⚠ 진행 단계(지난 수거 → 일정 → 수거 → 처리장 인계)의 작은 입체 아이콘은 사진이 아니라 단계 표시입니다
+  //    (대표님이 만들어 주신 그림 · 칸마다 이름이 붙어 있음). 그 밖의 그림은 여전히 없어야 합니다.
+  ok((await p.locator('[data-portal-hero] img:not([data-hero-track] img)').count()) === 0, '① 머리 칸에 장식 사진이 없다 (단계 아이콘 말고는)')
+  ok((await p.locator('[data-hero-track] img').count()) === 4, '① 진행 단계 아이콘은 단계 수(4)만큼만', String(await p.locator('[data-hero-track] img').count()))
 
   //  ② 차례로 떠오른 뒤 0.9초 안에 전부 보인다
   await p.waitForTimeout(900)

@@ -1,5 +1,6 @@
-import { BarChart3, CalendarCheck, CalendarClock, Check, FileText, Headset, ListChecks, PackagePlus, ReceiptText, ShieldCheck, Siren, Truck, type LucideIcon } from 'lucide-react'
+import { CalendarCheck, Truck } from 'lucide-react'
 import type { Client } from '../types'
+import { icon3d } from '../lib/icons3d'
 import type { PortalSummary } from '../lib/portal'
 import { prettyDate, today } from '../lib/format'
 import { daysFromToday, timeBand } from '../lib/portalLabels'
@@ -98,46 +99,52 @@ export function PortalHero({ client, s, lastPickup }: { client: Client; s: Porta
   )
 }
 
-/** 다음 수거까지의 단계 — 동그라미 + 잇는 선 (배달 앱의 주문 추적 모양) */
+/** 다음 수거까지의 단계 — 동그라미 + 잇는 선 (배달 앱의 주문 추적 모양)
+ *  대표님이 만들어 주신 입체 그림 4개를 씁니다. 아직 안 온 단계는 그림을 옅게(흑백 쪽으로) 둡니다. */
 function HeroTrack({ lastPickup, estimate }: { lastPickup: string | null; estimate: boolean }) {
-  const steps: { key: string; label: string; icon: LucideIcon; state: 'done' | 'now' | 'todo' }[] = [
-    { key: 'last', label: '지난 수거', icon: Check, state: lastPickup ? 'done' : 'todo' },
-    { key: 'plan', label: estimate ? '예상' : '일정 확정', icon: estimate ? CalendarClock : CalendarCheck, state: 'now' },
-    { key: 'pick', label: '수거', icon: Truck, state: 'todo' },
-    { key: 'hand', label: '처리장 인계', icon: ShieldCheck, state: 'todo' },
+  const steps: { key: string; label: string; img: string; state: 'done' | 'now' | 'todo' }[] = [
+    { key: 'last', label: '지난 수거', img: 'portal:step-last', state: lastPickup ? 'done' : 'todo' },
+    { key: 'plan', label: estimate ? '예상' : '일정 확정', img: 'portal:step-plan', state: 'now' },
+    { key: 'pick', label: '수거', img: 'portal:step-pick', state: 'todo' },
+    { key: 'hand', label: '처리장 인계', img: 'portal:step-hand', state: 'todo' },
   ]
   return (
     <ol data-hero-track aria-label={`다음 수거 진행 — ${estimate ? '예상 날짜' : '일정 확정'}`} className="mt-4 grid grid-cols-4">
-      {steps.map((x, i) => {
-        const Icon = x.icon
-        return (
-          <li key={x.key} className="relative flex flex-col items-center gap-1.5">
-            {i > 0 && (
-              <span
-                aria-hidden="true"
-                className={`absolute -left-1/2 right-1/2 top-[1.15rem] h-1 -translate-y-1/2 ${x.state === 'todo' ? 'bg-navy-100' : 'bg-teal-600'}`}
-              />
-            )}
+      {steps.map((x, i) => (
+        <li key={x.key} data-track-step={x.key} data-track-state={x.state} className="relative flex flex-col items-center gap-1.5">
+          {i > 0 && (
             <span
               aria-hidden="true"
-              className={`relative z-[1] flex h-[2.3rem] w-[2.3rem] items-center justify-center rounded-full ${
-                x.state === 'done'
-                  ? 'bg-teal-600 text-white'
-                  : x.state === 'now'
-                    ? estimate
-                      ? 'border-2 border-dashed border-teal-500 bg-white text-teal-700'
-                      : 'bg-teal-600 text-white ring-4 ring-teal-100'
-                    : 'bg-navy-50 text-navy-300'
-              }`}
-            >
-              <Icon size={17} strokeWidth={2.6} />
-            </span>
-            <span className={`break-keep text-center text-[0.9rem] font-semibold ${x.state === 'now' ? 'font-extrabold text-teal-700' : 'text-navy-500'}`}>
-              {x.label}
-            </span>
-          </li>
-        )
-      })}
+              className={`absolute -left-1/2 right-1/2 top-[1.3rem] h-1 -translate-y-1/2 ${x.state === 'todo' ? 'bg-navy-100' : 'bg-teal-600'}`}
+            />
+          )}
+          <span
+            aria-hidden="true"
+            className={`relative z-[1] flex h-[2.6rem] w-[2.6rem] items-center justify-center rounded-full ${
+              x.state === 'done'
+                ? 'bg-teal-50 ring-2 ring-teal-600'
+                : x.state === 'now'
+                  ? estimate
+                    ? 'border-2 border-dashed border-teal-500 bg-white'
+                    : 'bg-white ring-2 ring-teal-600 outline outline-4 outline-teal-100'
+                  : 'bg-navy-50'
+            }`}
+          >
+            <img
+              src={icon3d(x.img)}
+              alt=""
+              width={192}
+              height={192}
+              decoding="async"
+              draggable={false}
+              className={`h-[1.85rem] w-[1.85rem] select-none object-contain ${x.state === 'todo' ? 'opacity-50 grayscale-[0.6]' : ''}`}
+            />
+          </span>
+          <span className={`break-keep text-center text-[0.9rem] font-semibold ${x.state === 'now' ? 'font-extrabold text-teal-700' : 'text-navy-500'}`}>
+            {x.label}
+          </span>
+        </li>
+      ))}
     </ol>
   )
 }
@@ -151,21 +158,15 @@ function HeroTrack({ lastPickup, estimate }: { lastPickup: string | null; estima
 //  ⚠ 색만으로 가르지 않습니다 — 아이콘 · 이름이 칸마다 다릅니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-//  아이콘 칸 색 — 옅은 면 + 진한 아이콘
-const TILE_TONE = {
-  rose: 'bg-rose-50 text-rose-600',
-  blue: 'bg-teal-50 text-teal-700',
-  orange: 'bg-orange-50 text-orange-700',
-  green: 'bg-emerald-50 text-emerald-700',
-  violet: 'bg-violet-50 text-violet-700',
-  gray: 'bg-navy-100 text-navy-700',
-} as const
+//  칸 색 이름 — 입체 그림이 들어오면서 색 네모는 그리지 않지만, 칸마다 어느 색 무리인지는
+//  그대로 적어 둡니다(data-card-tone). 그림 자체가 그 색입니다(긴급 = 빨강, 자재 = 노랑 상자).
+const TILE_TONE = ['rose', 'blue', 'orange', 'green', 'violet', 'gray'] as const
 
 function GridTile({
   label,
   short,
   cta,
-  icon: Icon,
+  img,
   tone,
   onClick,
 }: {
@@ -174,8 +175,9 @@ function GridTile({
   /** 칸에 적는 짧은 이름 */
   short: string
   cta?: string
-  icon: LucideIcon
-  tone: keyof typeof TILE_TONE
+  /** 입체 그림 이름 (icons3d 의 portal:…) */
+  img: string
+  tone: (typeof TILE_TONE)[number]
   onClick: () => void
 }) {
   return (
@@ -188,12 +190,22 @@ function GridTile({
       onClick={onClick}
       className="p-tile group !px-0"
     >
+      {/*  대표님: 「글자 크기와 그림 비율을 AX 화면에 맞춰」 — AX 홈 8칸은 그림 2rem : 이름 0.86rem.
+           여기 이름은 0.95rem 이라 같은 비율로 그림 2.2rem. 색 네모는 씌우지 않습니다(그림이 이미 입체). */}
       <span
         aria-hidden="true"
         data-action-icon
-        className={`flex h-14 w-14 items-center justify-center rounded-[18px] transition-transform duration-200 group-hover:scale-105 ${TILE_TONE[tone]}`}
+        className="flex h-[2.2rem] w-[2.2rem] items-center justify-center transition-transform duration-200 group-hover:scale-105"
       >
-        <Icon size={26} strokeWidth={2.2} />
+        <img
+          src={icon3d(img)}
+          alt=""
+          width={192}
+          height={192}
+          decoding="async"
+          draggable={false}
+          className="h-full w-full select-none object-contain drop-shadow-[0_2px_3px_rgba(15,26,46,0.12)]"
+        />
       </span>
       <span aria-hidden="true" className="whitespace-nowrap tracking-[-0.01em]">{short}</span>
     </button>
@@ -222,14 +234,14 @@ export function PortalActions({
   return (
     <section aria-label="빠른 메뉴" data-portal-actions data-tour="portal-request">
       <div data-portal-grid className="p-card grid grid-cols-4 gap-x-1 gap-y-3 px-1.5 py-4 sm:px-3">
-        <GridTile label="긴급수거 요청" short="긴급수거" cta="urgent" icon={Siren} tone="rose" onClick={onUrgent} />
-        <GridTile label="추가수거 요청" short="추가수거" cta="collect" icon={Truck} tone="blue" onClick={onPickup} />
-        <GridTile label="자재·용기 요청" short="자재·용기" cta="supplies" icon={PackagePlus} tone="orange" onClick={onSupply} />
-        {onBilling && <GridTile label="정산·청구" short="정산·청구" icon={ReceiptText} tone="green" onClick={onBilling} />}
-        {onReport && <GridTile label="배출 리포트" short="배출 리포트" icon={BarChart3} tone="violet" onClick={onReport} />}
-        {onHistory && <GridTile label="수거 이력" short="수거 이력" icon={ListChecks} tone="blue" onClick={onHistory} />}
-        {onDocs && <GridTile label="증빙자료" short="증빙자료" icon={FileText} tone="green" onClick={onDocs} />}
-        <GridTile label="문의하기" short="문의하기" icon={Headset} tone="gray" onClick={onAsk} />
+        <GridTile label="긴급수거 요청" short="긴급수거" cta="urgent" img="portal:urgent" tone="rose" onClick={onUrgent} />
+        <GridTile label="추가수거 요청" short="추가수거" cta="collect" img="portal:pickup" tone="blue" onClick={onPickup} />
+        <GridTile label="자재·용기 요청" short="자재·용기" cta="supplies" img="portal:supplies" tone="orange" onClick={onSupply} />
+        {onBilling && <GridTile label="정산·청구" short="정산·청구" img="portal:billing" tone="green" onClick={onBilling} />}
+        {onReport && <GridTile label="배출 리포트" short="배출 리포트" img="portal:report" tone="violet" onClick={onReport} />}
+        {onHistory && <GridTile label="수거 이력" short="수거 이력" img="portal:history" tone="blue" onClick={onHistory} />}
+        {onDocs && <GridTile label="증빙자료" short="증빙자료" img="portal:docs" tone="green" onClick={onDocs} />}
+        <GridTile label="문의하기" short="문의하기" img="portal:ask" tone="gray" onClick={onAsk} />
       </div>
     </section>
   )

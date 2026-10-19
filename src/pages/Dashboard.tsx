@@ -245,7 +245,7 @@ function QuickGrid() {
       {items.map((q) => (
         <Link key={q.to} to={q.to} data-quick={q.to} className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-1 transition active:scale-95 active:bg-navy-50">
           {/*  입체 그림은 그 자체로 모양이 있어 칸(색 네모)을 씌우지 않습니다 — 이름이 옆에 있으니 그림은 장식(alt="").
-               ⚠ 대표님: 「아이콘이 너무 커, 글자가 우선해서 보여야」 — 그림은 작게(2.3rem), 이름은 조금 크게. */}
+               ⚠ 대표님: 「아이콘이 너무 커, 글자가 우선해서 보여야」 — 그림은 작게(2rem · 한 번 더 13% 줄임), 이름은 조금 크게. */}
           <img
             src={icon3d(q.to)}
             alt=""
@@ -254,7 +254,7 @@ function QuickGrid() {
             height={192}
             decoding="async"
             draggable={false}
-            className="h-[2.3rem] w-[2.3rem] select-none object-contain drop-shadow-[0_2px_3px_rgba(15,26,46,0.12)]"
+            className="h-[2rem] w-[2rem] select-none object-contain drop-shadow-[0_2px_3px_rgba(15,26,46,0.12)]"
           />
           <span className="max-w-full break-keep text-center text-[0.86rem] font-bold leading-tight text-navy-800">{q.label}</span>
         </Link>

@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CLIENT_TEL } from '../lib/brand'
-import { AlertTriangle, BarChart3, Check, CheckCircle2, ChevronRight, Hospital, Info, Sparkles } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, ChevronRight, Hospital, Info, Sparkles } from 'lucide-react'
+import { icon3d } from '../lib/icons3d'
 import { useData } from '../context/DataContext'
 import { usePortalClient } from '../lib/portalClient'
 import { usePortalSheet, useRequestDetail } from '../lib/portalSheet'
@@ -159,8 +160,9 @@ export function PortalHome() {
           onClick={() => open('report')}
           className="flex w-full items-center gap-3.5 rounded-[18px] bg-violet-50 px-4 py-3.5 text-left transition hover:bg-violet-100"
         >
-          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-violet-700">
-            <BarChart3 size={21} strokeWidth={2.3} />
+          {/*  빠른 메뉴 「배출 리포트」와 같은 입체 그림 — 같은 일은 같은 그림으로 */}
+          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white">
+            <img src={icon3d('portal:report')} alt="" width={192} height={192} decoding="async" draggable={false} className="h-[1.8rem] w-[1.8rem] select-none object-contain" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="p-body block font-extrabold">이번 달 배출 리포트</span>

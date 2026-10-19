@@ -6,6 +6,7 @@
 //  파일: public/icons3d/<이름>.webp
 //
 //  쓰는 곳: 폰 홈 「자주 쓰는 8개」 · 아래 탭 · 더보기(목차 칸 · 안내 목록).
+//          고객용 화면(포털) — 홈 8칸 · 진행 단계 · 메뉴 (portal:… 이름).
 //  PC 사이드바는 짙은 바탕의 작은 칸이라 지금처럼 선 아이콘을 씁니다.
 //  ⚠ 그림 옆에 늘 이름이 있으므로 그림은 장식(alt="")입니다.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +58,25 @@ const FILE: Record<string, string> = {
   'tab:/today': 'tab-today',
   'tab:/collection': 'tab-collect',
   'tab:more': 'tab-more',
+  //  고객용 화면(병원 포털) — 대표님이 따로 만들어 주신 15개
+  //   홈 빠른 메뉴 8칸
+  'portal:urgent': 'p-urgent',
+  'portal:pickup': 'p-pickup',
+  'portal:supplies': 'p-supplies',
+  'portal:billing': 'p-billing',
+  'portal:report': 'p-report',
+  'portal:history': 'p-history',
+  'portal:docs': 'p-docs',
+  'portal:ask': 'p-ask',
+  //   다음 수거 진행 단계 4개 (지난 수거 → 일정 → 수거 → 처리장 인계)
+  'portal:step-last': 'p-step-last',
+  'portal:step-plan': 'p-step-plan',
+  'portal:step-pick': 'p-step-pick',
+  'portal:step-hand': 'p-step-hand',
+  //   메뉴(폰 아래 띠 · PC 위 줄) — 수거 이력 · 고객지원은 위 8칸 그림을 같이 씁니다
+  'portal:tab-home': 'p-tab-home',
+  'portal:tab-requests': 'p-tab-requests',
+  'portal:tab-billing': 'p-tab-billing',
 }
 
 /** 주소(또는 이름)에 맞는 입체 아이콘 주소. 없으면 undefined — 그때는 예전 선 아이콘을 씁니다. */
