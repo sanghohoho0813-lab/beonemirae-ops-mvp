@@ -461,6 +461,9 @@ function Sidebar() {
   const showPlanned = !configured || canAccess(profile?.role ?? null, '/roadmap')
   //  0074 — 못 여는 역할에게는 그 단추를 아예 안 보입니다 (아래 ⚠ 참고)
   const showMobilePreview = !configured || canAccess(profile?.role ?? null, '/mobile-preview')
+  //  신용보증기금 방문용 영상 (0130) — 대표님: 「PC 위쪽 단추도 내려 줘」(이제 필요 없어짐, 기능은 그대로).
+  //  위쪽 도구 줄에서 여기 아래 바로가기 위 한 줄로 옮겼습니다. 규칙은 그대로 — 대표·이사님 계정만.
+  const showVisitVideo = configured && canAccess(profile?.role ?? null, '/visit-video')
 
   return (
     /*  AX 3차 — 폭 336/392 → 288/304px. 메뉴가 한 줄이 되어 넓을 이유가 없어졌고,
@@ -580,6 +583,17 @@ function Sidebar() {
         {/*  바깥으로 나가는 길. 아이콘만 두었더니 무엇인지 눌러 보기 전에는
              알 수 없었습니다 — 이름을 함께 답니다. 글자와 아이콘을 같은
              크기 감각으로 맞추고 예전보다 10% 키웠습니다. */}
+        {showVisitVideo && (
+          <button
+            type="button"
+            data-visit-video-btn
+            onClick={() => navigate('/visit-video')}
+            className="flex min-h-[40px] w-full items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-left text-navy-200 transition hover:bg-white/10 hover:text-white"
+          >
+            <PlayCircle size={17} strokeWidth={2.2} className="shrink-0" aria-hidden />
+            <span className="whitespace-nowrap text-[0.843rem] font-semibold">신용보증기금 방문용 영상</span>
+          </button>
+        )}
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => navigate('/company')}
@@ -845,10 +859,7 @@ export function Layout() {
   //    설정을 여는 계정(대표)은 위 줄에서 빼고 설정 맨 위 「도움말 · 화면 색」 칸에서 씁니다.
   //    ⚠ 설정을 못 여는 계정(사무실 · 현장)은 그대로 둡니다 — 빼면 「사용 방법」 들어갈 문이 없어집니다.
   const helpInSettings = !configured || canAccess(role, '/settings')
-  //  신용보증기금 방문용 영상 (0130) — 대표·이사님(사무실)만. 매출 숫자가 든 상담 영상입니다.
-  //  ⚠ 시연 모드(설정 없음)에서도 띄우지 않습니다 — 영상 파일이 실제 계정으로만 열립니다.
-  const showVisitVideo = configured && canAccess(role, '/visit-video')
-  const navigate = useNavigate()
+  //  신용보증기금 방문용 영상 (0130) — 위쪽 도구 줄에서 사이드바 아래(Sidebar)로 내렸습니다.
   const [moreOpen, setMoreOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   //  더보기 시트 안에서 열면 시트가 닫힐 때 함께 사라집니다 — 여기서 소유합니다.
@@ -909,25 +920,10 @@ export function Layout() {
                      ⚠ 단추가 아닙니다. 옆의 흰 알약들과 같은 모양으로 두면
                        눌러 보게 됩니다 — 알약 없이 글자만, 대신 굵게.
                      ⚠ `me-3` 은 「간격 좀 띄워서」입니다 (줄 기본 간격 8px + 12px). */}
-                {/*  ── 신용보증기금 방문용 영상 (0130) ─────────────────────────
-                     대표님: 「오늘 날짜·현재 시각 옆에 버튼을」.
-                     ⚠ 시계 **왼쪽**에 둡니다. 시계와 「화면 색」은 붙어 있어야 합니다
-                       (0129 「화면 색 옆으로」 — check_clock 이 지킵니다).
-                     ⚠ 이 줄에서 유일하게 **진한 색** 알약입니다 — 상담 자리에서 바로
-                       찾아 눌러야 하는 단추라서입니다. */}
+                {/*  ── 신용보증기금 방문용 영상 (0130) — 예전에는 시계 왼쪽에 있었습니다.
+                     대표님: 「이제 필요 없어졌으니 내려 줘(기능은 그대로)」 → 왼쪽 사이드바 맨 아래로. */}
                 {/*  화면 폭 3단계 (0141) — 줄 맨 앞. 시계와 「화면 색」은 붙어 있어야 합니다(check_clock). */}
                 <WidthToggle value={contentWidth} onChange={setContentWidth} />
-                {showVisitVideo && (
-                  <button
-                    type="button"
-                    data-visit-video-btn
-                    onClick={() => navigate('/visit-video')}
-                    className="me-1 flex shrink-0 min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-[11px] bg-navy-900 px-3.5 py-1.5 text-[0.899rem] font-bold text-white transition hover:bg-navy-950"
-                  >
-                    <PlayCircle className="h-[18px] w-[18px]" aria-hidden />
-                    신용보증기금 방문용 영상
-                  </button>
-                )}
                 <p
                   data-clock-top
                   className="me-3 shrink-0 whitespace-nowrap text-[0.899rem] font-extrabold text-navy-700"

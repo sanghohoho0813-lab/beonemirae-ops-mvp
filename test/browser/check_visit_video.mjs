@@ -74,50 +74,30 @@ async function open(role, { w = 1440, h = 900, path = '/', media = 'real' } = {}
   return { ctx, p, state }
 }
 
-//  보이는 단추 하나와 그 옆 시계
-const btnBox = (p) => p.evaluate(() => {
-  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 2 && r.height > 2 && getComputedStyle(e).visibility !== 'hidden' }
-  const btn = [...document.querySelectorAll('[data-visit-video-btn]')].find(vis)
-  if (!btn) return null
-  //  같은 줄의 시계 — PC 는 data-clock-top, 폰은 머리띠의 data-live-clock
-  const clock = [...document.querySelectorAll('[data-clock-top], header [data-live-clock]')].find(vis)
-  const theme = [...document.querySelectorAll('button')]
-    .filter((x) => /화면 색/.test(x.textContent ?? '') || /화면 색/.test(x.getAttribute('aria-label') ?? ''))
-    .find(vis)
-  const a = btn.getBoundingClientRect(); const c = clock?.getBoundingClientRect(); const t = theme?.getBoundingClientRect()
-  const mid = (r) => r.top + r.height / 2
-  return {
-    text: (btn.textContent ?? '').replace(/\s+/g, ' ').trim(),
-    clockText: (clock?.textContent ?? '').replace(/\s+/g, ' ').trim(),
-    sameRowClock: c ? Math.abs(mid(a) - mid(c)) <= 14 : false,
-    leftOfClock: c ? a.right <= c.left : false,
-    gapToClock: c ? Math.round(c.left - a.right) : -1,
-    clockThemeGap: c && t ? Math.round(t.left - c.right) : -1,
-    clockThemeRow: c && t ? Math.abs(mid(c) - mid(t)) <= 12 : false,
-    hasTheme: !!t,
-    h: Math.round(a.height), w: Math.round(a.width), right: Math.round(c?.right ?? 0),
-    hscroll: document.documentElement.scrollWidth > window.innerWidth + 1,
-  }
-})
-
-// ── ① PC — 대표(admin) · 이사님(office): 시계 바로 옆에 단추 ────────────────
+// ── ① PC — 대표(admin) · 이사님(office): 단추는 **왼쪽 사이드바 맨 아래** ────────
+//   대표님: 「PC 위쪽 방문용 영상 단추도 내려 줘」(이제 필요 없어짐 · 기능은 그대로).
+//   지키는 것: 위쪽 도구 줄에서는 빠짐 · 사이드바에서 한 번에 닿음 · 누르면 영상 화면 · 시계는 위쪽 그대로.
 for (const role of ['admin', 'office']) {
   for (const w of [1440, 1280]) {
     const s = await open(role, { w })
-    const r = await btnBox(s.p)
-    ok(r !== null, `${role} · PC ${w}px — **「신용보증기금 방문용 영상」 단추가 보임**`, r?.text ?? '(없음)')
-    if (r) {
-      ok(r.text === '신용보증기금 방문용 영상', `${role} · ${w}px — 글자 그대로`, r.text)
-      ok(r.sameRowClock && r.leftOfClock, `${role} · ${w}px — **오늘 날짜·현재 시각 바로 옆(왼쪽)**`, `간격 ${r.gapToClock}px`)
-      ok(r.gapToClock >= 4 && r.gapToClock <= 40, `${role} · ${w}px — 시계와 붙어 있음`, `${r.gapToClock}px`)
-      //  0129 의 자리 — 시계는 「화면 색」 옆.
-      //  ⚠ 0142 — 대표 계정은 「화면 색」을 설정 안으로 옮겼습니다(위 줄에 없음).
-      //  ⚠ 0141 화면 폭 단추가 줄 맨 앞에 들어와, 사무실 계정 1280px 에서는 「화면 색」이 둘째 줄로
-      //    내려갑니다(줄 바꿈). 같은 줄일 때만 간격을 잽니다.
-      if (role === 'admin') ok(!r.hasTheme, `${role} · ${w}px — 「화면 색」은 위 줄에 없음 (설정 안으로)`)
-      else if (w >= 1440) ok(r.clockThemeRow && r.clockThemeGap >= 12 && r.clockThemeGap <= 80, `${role} · ${w}px — 시계 ↔ 「화면 색」은 그대로 붙어 있음`, `${r.clockThemeGap}px`)
-      else ok(r.hasTheme, `${role} · ${w}px — 「화면 색」은 위쪽 도구에 그대로 (좁으면 둘째 줄)`)
-      ok(r.h >= 44 && r.h < 60, `${role} · ${w}px — 한 줄 · 누를 만한 높이`, `${r.h}px`)
+    const r = await s.p.evaluate(() => {
+      const vis = (e) => { const b = e.getBoundingClientRect(); return b.width > 2 && b.height > 2 && getComputedStyle(e).visibility !== 'hidden' }
+      const btns = [...document.querySelectorAll('[data-visit-video-btn]')].filter(vis)
+      const inTop = btns.filter((e) => e.closest('[data-topbar]')).length
+      const side = btns.find((e) => e.closest('[data-app-sidebar]'))
+      const clock = [...document.querySelectorAll('[data-clock-top]')].find(vis)
+      const b = side?.getBoundingClientRect()
+      return { inTop, side: !!side, text: (side?.textContent ?? '').replace(/\s+/g, ' ').trim(), h: Math.round(b?.height ?? 0), clock: !!clock }
+    })
+    ok(r.inTop === 0, `${role} · PC ${w}px — 위쪽 도구 줄에는 단추가 **없음** (내림)`)
+    ok(r.side, `${role} · PC ${w}px — **왼쪽 사이드바 아래에 단추가 있음**`, r.text || '(없음)')
+    ok(r.text === '신용보증기금 방문용 영상', `${role} · ${w}px — 글자 그대로`, r.text)
+    ok(r.h >= 40, `${role} · ${w}px — 누를 만한 높이`, `${r.h}px`)
+    ok(r.clock, `${role} · ${w}px — 위쪽 시계는 그대로`)
+    if (w === 1440) {
+      await s.p.locator('[data-app-sidebar] [data-visit-video-btn]').click()
+      await s.p.waitForSelector('[data-visit-video]', { timeout: 15000 }).catch(() => {})
+      ok(new URL(s.p.url()).pathname === '/visit-video', `${role} · PC — 누르면 **영상 화면**`, new URL(s.p.url()).pathname)
     }
     await s.ctx.close()
   }
