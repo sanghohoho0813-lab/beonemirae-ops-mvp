@@ -486,7 +486,8 @@ for (const w of [360, 390, 430]) {
     status: '접수', admin_note: '', handled_at: null,
   })
 
-  const { ctx, p } = await open('admin', '00000000-0000-0000-0000-0000000000ad', '송대표', { path: '/dev-requests' })
+  //  0145 — 이 화면의 첫 칸은 「★ 뉴본펭귄 사전 설문」입니다. 피드백은 두 번째 칸(?tab=feedback).
+  const { ctx, p } = await open('admin', '00000000-0000-0000-0000-0000000000ad', '송대표', { path: '/dev-requests?tab=feedback' })
   const body = flat(await p.textContent('main'))
 
   ok(/사용자 피드백/.test(body), '화면 이름이 「사용자 피드백」')

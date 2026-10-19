@@ -3,21 +3,22 @@ import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, CircleDashed,
 import { BrandLogo } from '../BrandLogo'
 import { Modal } from '../Modal'
 import {
-  QUESTIONS, RESPONDENTS, SECTIONS, STATE_LABEL, SURVEY_INTRO, SURVEY_THANKS, SURVEY_TITLE,
-  detailOpen, fmtDateTime, isAnswered, progressOf, questionsFor, stateOf, summaryLines,
-  type Answer, type Answers, type Field, type Opt, type Question, type Respondent,
+  QUESTIONS, RESPONDENTS, SECTIONS, STATE_LABEL, SURVEY_INTRO, SURVEY_MENU_NAME, SURVEY_THANKS, SURVEY_TITLE,
+  detailOpen, fmtDateTime, isAnswered, notMineFor, progressOf, questionsFor, stateOf, summaryLines,
+  type Answer, type Answers, type Field, type Opt, type Question, type SurveyWho,
 } from '../../lib/bizSurvey'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 사업계획서 사전 설문 — 응답 화면 (0144)
+// 뉴본펭귄 사전 설문 — 응답 화면 (0144 · 0145)
 //
-//  대표님 · 이사님이 카카오톡 링크로 폰에서 여십니다. 가장 중요한 것은 **폰에서
-//  손가락으로 쉽게 끝낼 수 있는가**입니다.
+//  대표님 · 이사님 중 한 분이 앱의 「뉴본펭귄 사전 설문 › 시작하기」로 폰에서
+//  바로 여십니다(링크 없음 · 답지 하나). 가장 중요한 것은 **폰에서 손가락으로
+//  쉽게 끝낼 수 있는가**입니다.
 //
 //   · 한 화면에 질문 하나. 위에는 진행률 · 남은 질문 수, 아래에는 이전/다음.
 //   · 대부분 고르기만 하면 됩니다. 세부 칸은 해당 답을 골랐을 때만 나타납니다.
 //   · 답하지 않고 넘어가도 됩니다 — 「추후 확인」으로 남습니다(제출도 됩니다).
-//   · 바꿀 때마다 자동 저장. 닫았다가 링크를 다시 열면 이어서 합니다.
+//   · 바꿀 때마다 자동 저장. 닫았다가 다시 열면(누가 열어도) 이어서 합니다.
 //   · 추천안 · 제안안은 **미리 골라 두지 않습니다.** 보여만 드리고 고르시게 합니다.
 //
 //  preview — 관리자 미리보기. 서버에 아무것도 저장하지 않습니다.
@@ -26,12 +27,13 @@ import {
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface Props {
-  who: Respondent
+  who: SurveyWho
   answers: Answers
   status: 'draft' | 'submitted'
   updatedAt: string | null
   submittedAt: string | null
-  expiresAt?: string | null
+  /** 공동 답지 — 마지막으로 고친 분 이름 */
+  editedBy?: string
   /** 저장 상태는 바깥(페이지)이 관리합니다 — 미리보기에는 없음 */
   saveState?: SaveState
   saveError?: string | null
@@ -39,6 +41,7 @@ interface Props {
   onChange: (next: Answers) => void
   onSubmit: () => Promise<void>
   preview?: boolean
+  /** 앱으로 돌아가기 (미리보기에서는 「닫기」) */
   onExit?: () => void
 }
 
@@ -116,7 +119,7 @@ export function SurveyRunner(p: Props) {
     <div data-survey data-survey-who={who} className="min-h-[100dvh] bg-app pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
       {p.preview && (
         <div data-survey-preview className="sticky top-0 z-40 flex items-center gap-2 bg-amber-100 px-4 py-2.5 text-[0.98rem] font-bold text-amber-900">
-          <span className="min-w-0 flex-1 break-keep">관리자 미리보기 — {RESPONDENTS[who].label} 화면 · 저장되지 않습니다</span>
+          <span className="min-w-0 flex-1 break-keep">관리자 미리보기 — 대표님 · 이사님 화면 그대로 · 저장되지 않습니다</span>
           {p.onExit && (
             <button type="button" data-survey-preview-close onClick={p.onExit} className="flex h-11 min-w-[44px] items-center justify-center gap-1 rounded-full bg-white/70 px-3">
               <X size={18} strokeWidth={2.6} /> 닫기
@@ -130,6 +133,7 @@ export function SurveyRunner(p: Props) {
         saveState={p.preview ? undefined : p.saveState}
         onRetry={p.onRetrySave}
         onToc={screen.mode === 'q' ? () => setToc(true) : undefined}
+        onExit={p.preview ? undefined : p.onExit}
         sticky={!p.preview}
       />
 
@@ -147,7 +151,7 @@ export function SurveyRunner(p: Props) {
             status={p.status}
             updatedAt={p.updatedAt}
             submittedAt={p.submittedAt}
-            expiresAt={p.expiresAt ?? null}
+            editedBy={p.editedBy ?? ''}
             onCore={() => go({ mode: 'q', path: 'core', idx: resumeIdx('core') })}
             onAll={() => go({ mode: 'q', path: 'all', idx: prog.answered > 0 ? resumeIdx('all') : 0 })}
             onReview={() => go({ mode: 'review' })}
@@ -183,7 +187,7 @@ export function SurveyRunner(p: Props) {
         )}
 
         {screen.mode === 'done' && (
-          <Done preview={!!p.preview} onReview={() => go({ mode: 'review' })} updatedAt={p.updatedAt} />
+          <Done preview={!!p.preview} onReview={() => go({ mode: 'review' })} updatedAt={p.updatedAt} onExit={p.preview ? undefined : p.onExit} />
         )}
       </main>
 
@@ -226,20 +230,34 @@ function Header({
   saveState,
   onRetry,
   onToc,
+  onExit,
   sticky,
 }: {
   prog: ReturnType<typeof progressOf>
   saveState?: SaveState
   onRetry?: () => void
   onToc?: () => void
+  onExit?: () => void
   sticky: boolean
 }) {
   const pct = Math.round((prog.answered / Math.max(prog.total, 1)) * 100)
   return (
     <header data-survey-header className={`${sticky ? 'sticky top-0' : ''} z-30 border-b border-navy-100 bg-white/95 backdrop-blur`}>
       <div className="mx-auto flex w-full max-w-xl items-center gap-2.5 px-4 pb-2 pt-3">
-        <BrandLogo size="sm" />
-        <p className="min-w-0 flex-1 truncate text-[0.98rem] font-extrabold text-navy-900">사업계획서 사전 설문</p>
+        {onExit ? (
+          <button
+            type="button"
+            data-survey-exit
+            onClick={onExit}
+            aria-label="앱으로 돌아가기"
+            className="-ml-1 flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-full text-navy-700 hover:bg-navy-50"
+          >
+            <ArrowLeft size={21} strokeWidth={2.4} />
+          </button>
+        ) : (
+          <BrandLogo size="sm" />
+        )}
+        <p className="min-w-0 flex-1 truncate text-[0.98rem] font-extrabold text-navy-900">{SURVEY_MENU_NAME}</p>
         <SaveChip state={saveState} onRetry={onRetry} />
         {onToc && (
           <button
@@ -292,17 +310,17 @@ function Intro({
   status,
   updatedAt,
   submittedAt,
-  expiresAt,
+  editedBy,
   onCore,
   onAll,
   onReview,
 }: {
-  who: Respondent
+  who: SurveyWho
   prog: ReturnType<typeof progressOf>
   status: 'draft' | 'submitted'
   updatedAt: string | null
   submittedAt: string | null
-  expiresAt: string | null
+  editedBy: string
   onCore: () => void
   onAll: () => void
   onReview: () => void
@@ -311,7 +329,10 @@ function Intro({
   const started = prog.answered > 0
   return (
     <section data-survey-intro className="space-y-4">
-      <h1 className="break-keep text-[1.45rem] font-extrabold leading-snug text-navy-900">{SURVEY_TITLE}</h1>
+      <div>
+        <p className="text-[0.98rem] font-extrabold text-amber-700">★ {SURVEY_MENU_NAME}</p>
+        <h1 className="mt-1 break-keep text-[1.45rem] font-extrabold leading-snug text-navy-900">{SURVEY_TITLE}</h1>
+      </div>
       <div className="card space-y-2.5 p-5">
         {SURVEY_INTRO.map((l, i) => (
           <p key={i} className={`break-keep text-[1.05rem] leading-relaxed ${i === 0 ? 'font-bold text-navy-900' : 'text-navy-700'}`}>
@@ -333,6 +354,7 @@ function Intro({
           {prog.unsure > 0 ? ` · 미정 ${prog.unsure}` : ''}
           {status === 'submitted' && submittedAt ? ` · 제출 ${fmtDateTime(submittedAt)}` : ''}
           {updatedAt && started ? ` · 최종 저장 ${fmtDateTime(updatedAt)}` : ''}
+          {editedBy && started ? ` · 마지막 작성 ${editedBy}` : ''}
         </p>
       </div>
 
@@ -344,7 +366,7 @@ function Intro({
         ) : (
           <button type="button" data-survey-start="core" onClick={onCore} className="btn-primary w-full">
             <Star size={18} strokeWidth={2.4} />
-            {started && prog.coreLeft === 0 ? '이어서 답하기' : `핵심 질문부터 시작 (${coreTotal}개)`}
+            {started ? (prog.coreLeft === 0 ? '이어서 답하기' : `이어서 — 핵심 질문 ${prog.coreLeft}개 남음`) : `시작하기 · 핵심 질문 ${coreTotal}개부터`}
           </button>
         )}
         <button type="button" data-survey-start="all" onClick={onAll} className="btn-ghost w-full">
@@ -358,10 +380,9 @@ function Intro({
       </div>
 
       <ul className="space-y-1.5 px-1 text-[0.98rem] text-navy-600">
-        <li className="break-keep">· 고르는 즉시 자동 저장됩니다. 중간에 닫아도 이 링크로 이어서 하실 수 있습니다.</li>
+        <li className="break-keep">· 고르는 즉시 자동 저장됩니다. 중간에 닫아도 「{SURVEY_MENU_NAME}」에서 이어서 하실 수 있습니다.</li>
         <li className="break-keep">· ★ 표시는 먼저 여쭙는 핵심 질문입니다. 답하지 않고 넘어가셔도 됩니다.</li>
         <li className="break-keep">· 추천안 · 제안안은 검토안일 뿐 확정이 아닙니다.</li>
-        {expiresAt && <li className="break-keep">· 이 링크는 {fmtDateTime(expiresAt)}까지 열립니다.</li>}
       </ul>
     </section>
   )
@@ -376,14 +397,14 @@ function QuestionScreen({
   onPatch,
   onClear,
 }: {
-  who: Respondent
+  who: SurveyWho
   q: Question
   a: Answer | undefined
   onPatch: (patch: Partial<Answer>) => void
   onClear: () => void
 }) {
   const s = sectionOf(q)
-  const notMine = !!q.onlyFor && q.onlyFor !== who
+  const notMine = notMineFor(q, who)
   const [noteOpen, setNoteOpen] = useState(() => !!a?.note)
   return (
     <section data-survey-q={q.id} className="space-y-4">
@@ -404,6 +425,11 @@ function QuestionScreen({
       </div>
 
       {q.info && <InfoBox info={q.info} />}
+      {who === 'shared' && q.sharedNote && (
+        <p data-survey-shared-note className="break-keep rounded-2xl bg-amber-50 px-4 py-3 text-[1rem] font-bold text-amber-800">
+          {q.sharedNote}
+        </p>
+      )}
 
       {notMine ? (
         <div data-survey-notmine className="card space-y-2 p-5">
@@ -805,8 +831,8 @@ function NavBar({
 
 // ── 목록 ────────────────────────────────────────────────────────────────────
 
-function StateChip({ q, a, who }: { q: Question; a: Answer | undefined; who: Respondent }) {
-  if (q.onlyFor && q.onlyFor !== who) return <span className="pill bg-navy-50 text-navy-400">해당 없음</span>
+function StateChip({ q, a, who }: { q: Question; a: Answer | undefined; who: SurveyWho }) {
+  if (notMineFor(q, who)) return <span className="pill bg-navy-50 text-navy-400">해당 없음</span>
   const st = stateOf(q, a)
   return (
     <span
@@ -819,7 +845,7 @@ function StateChip({ q, a, who }: { q: Question; a: Answer | undefined; who: Res
   )
 }
 
-function Toc({ who, answers, onPick, onReview }: { who: Respondent; answers: Answers; onPick: (qid: string) => void; onReview: () => void }) {
+function Toc({ who, answers, onPick, onReview }: { who: SurveyWho; answers: Answers; onPick: (qid: string) => void; onReview: () => void }) {
   return (
     <div data-survey-toc-list className="space-y-4">
       {SECTIONS.map((s) => (
@@ -862,7 +888,7 @@ function Review({
   onSubmit,
   preview,
 }: {
-  who: Respondent
+  who: SurveyWho
   answers: Answers
   status: 'draft' | 'submitted'
   submitting: boolean
@@ -887,7 +913,7 @@ function Review({
           </p>
           <ul className="divide-y divide-navy-100">
             {QUESTIONS.filter((q) => q.section === s.id).map((q) => {
-              const lines = q.onlyFor && q.onlyFor !== who ? ['이사님 확인 항목 (해당 없음)'] : summaryLines(q, answers[q.id])
+              const lines = notMineFor(q, who) ? ['이사님 확인 항목 (해당 없음)'] : summaryLines(q, answers[q.id])
               return (
                 <li key={q.id} data-survey-review-q={q.id} className="py-3">
                   <div className="flex items-start gap-2">
@@ -908,7 +934,7 @@ function Review({
                   ) : (
                     <p className="mt-1 text-[1rem] text-navy-400">추후 확인 (아직 고르지 않음)</p>
                   )}
-                  {!(q.onlyFor && q.onlyFor !== who) && (
+                  {!notMineFor(q, who) && (
                     <button type="button" data-survey-edit={q.id} onClick={() => onEdit(q.id)} className="mt-1 flex min-h-[44px] items-center gap-1 text-[0.98rem] font-bold text-teal-700">
                       수정 <ChevronRight size={16} strokeWidth={2.6} />
                     </button>
@@ -923,7 +949,7 @@ function Review({
       <div className="space-y-2.5 pb-2">
         {prog.left > 0 && (
           <p className="break-keep px-1 text-[0.98rem] text-navy-600">
-            아직 고르지 않은 {prog.left}개는 「추후 확인」으로 제출됩니다. 나중에 이 링크로 언제든 고칠 수 있습니다.
+            아직 고르지 않은 {prog.left}개는 「추후 확인」으로 제출됩니다. 제출한 뒤에도 「{SURVEY_MENU_NAME}」에서 언제든 고칠 수 있습니다.
           </p>
         )}
         {error && <p className="break-keep rounded-2xl bg-rose-50 px-4 py-3 font-bold text-rose-700">{error}</p>}
@@ -937,7 +963,17 @@ function Review({
   )
 }
 
-function Done({ preview, onReview, updatedAt }: { preview: boolean; onReview: () => void; updatedAt: string | null }): ReactNode {
+function Done({
+  preview,
+  onReview,
+  updatedAt,
+  onExit,
+}: {
+  preview: boolean
+  onReview: () => void
+  updatedAt: string | null
+  onExit?: () => void
+}): ReactNode {
   return (
     <section data-survey-done className="space-y-4 pt-4">
       <div className="flex justify-center">
@@ -956,6 +992,11 @@ function Done({ preview, onReview, updatedAt }: { preview: boolean; onReview: ()
       <button type="button" data-survey-again onClick={onReview} className="btn-ghost w-full">
         답변 다시 보기 · 수정
       </button>
+      {onExit && (
+        <button type="button" data-survey-home onClick={onExit} className="btn-primary w-full">
+          앱으로 돌아가기
+        </button>
+      )}
     </section>
   )
 }

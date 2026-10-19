@@ -86,13 +86,22 @@ export default function App() {
         />
         {/* 공개용 회사 홈페이지 — Layout 바깥의 독립 전체화면 라우트 */}
         <Route path="company" element={<CompanyHomePage />} />
-        {/*  사업계획서 사전 설문 (0144 · 임시) — 대표님 · 이사님이 카카오톡 링크로 여는 화면.
-             로그인 없이 열리지만 **링크 열쇠가 맞을 때만** 그 사람 답지 하나가 열립니다(서버 판단).
-             미리보기는 관리자만. 끄려면 lib/bizSurvey.ts 의 BIZ_SURVEY_ENABLED. */}
-        {BIZ_SURVEY_ENABLED && <Route path="survey/:token" element={<BizSurveyPage />} />}
+        {/*  뉴본펭귄 사전 설문 (0144 · 0145 · 임시) — 앱 안에서 바로 답하는 전체화면.
+             링크 없음. 대표·관리자 · 사무실(이사님) 계정만(access.ts + 서버 판단), 답지 하나.
+             미리보기는 관리자만 · 저장 안 함. 끄려면 lib/bizSurvey.ts 의 BIZ_SURVEY_ENABLED. */}
         {BIZ_SURVEY_ENABLED && (
           <Route
-            path="survey-preview/:who"
+            path="newborn-survey"
+            element={
+              <RequireAuth>
+                <BizSurveyPage />
+              </RequireAuth>
+            }
+          />
+        )}
+        {BIZ_SURVEY_ENABLED && (
+          <Route
+            path="survey-preview/*"
             element={
               <RequireAuth>
                 <BizSurveyPreview />

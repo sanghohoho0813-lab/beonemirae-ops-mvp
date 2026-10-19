@@ -176,7 +176,14 @@ const sheetScrollLen = (p) =>
   //  한 목록 — 줄마다 손가락 크기, 한 줄에 하나
   const rows = await p.locator('[data-more-help] > button, [data-more-help] > a, [data-more-help] > div > button').evaluateAll(
     (els) => els.map((e) => { const r = e.getBoundingClientRect(); return { top: Math.round(r.top), h: Math.round(r.height) } }))
-  ok(rows.length >= 5, '사용 방법 · 사용 후기 · 회사 홈페이지 · 올바로 · PC 화면이 한 목록', String(rows.length))
+  //  0145 — 대표님: 「회사 홈페이지 · 올바로 · PC 화면으로 보기 · 추가 개발 예정 빼고는 다 각 목차 안에」.
+  //    사용 방법 · 사용 후기 남기기는 「관리」 칸으로 갔습니다.
+  ok(rows.length >= 4, '회사 홈페이지 · 올바로 · PC 화면 · 추가 개발 예정이 한 목록', String(rows.length))
+  const helpText = flat(await p.locator('[data-more-help]').textContent())
+  ok(!/사용 방법|사용 후기/.test(helpText), '바로가기 목록에 사용 방법 · 사용 후기가 **없음** (목차 안으로)', helpText.slice(0, 80))
+  ok((await p.locator('[data-more-section="more-admin"] [data-tour-start]').count()) === 1
+    && (await p.locator('[data-more-section="more-admin"] [data-dev-request-more]').count()) === 1,
+    '사용 방법 · 사용 후기 남기기는 「관리」 칸 안에')
   ok(rows.every((r) => r.h >= 44), '줄마다 44px 이상', rows.map((r) => r.h).join(','))
   ok(new Set(rows.map((r) => r.top)).size === rows.length, '한 줄에 하나씩')
 

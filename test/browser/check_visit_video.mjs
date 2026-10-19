@@ -126,11 +126,12 @@ for (const role of ['admin', 'office']) {
       const e = [...document.querySelectorAll('[data-visit-video-btn]')].find((x) => x.getBoundingClientRect().width > 2)
       if (!e) return null
       const b = e.getBoundingClientRect()
-      return { text: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), h: Math.round(b.height), w: Math.round(b.width), inSheet: !!e.closest('[data-more-help]') }
+      return { text: (e.textContent ?? '').replace(/\s+/g, ' ').trim(), h: Math.round(b.height), w: Math.round(b.width), inSheet: !!e.closest('[data-more-section="more-ax"]') }
     })
-    ok(r !== null && r.inSheet, `${role} · 폰 ${w}px — **더보기 안에 단추가 있음** (PC 버전 전환 없이)`, r?.text ?? '(없음)')
+    //  0145 — 대표님: 「사용 방법 · 사용 후기 같은 것도 적절한 목차 안에」 → 방문용 영상은 「AX·심사」 칸으로
+    ok(r !== null && r.inSheet, `${role} · 폰 ${w}px — **더보기 「AX·심사」 칸 안에 단추가 있음** (PC 버전 전환 없이)`, r?.text ?? '(없음)')
     if (r) {
-      ok(/신용보증기금 방문용 영상/.test(r.text), `${role} · 폰 ${w}px — 글자 그대로`, r.text)
+      ok(/신보 방문용 영상/.test(r.text), `${role} · 폰 ${w}px — 이름 그대로 (칸에 맞게 「신보」)`, r.text)
       ok(r.h >= 44, `${role} · 폰 ${w}px — 손가락으로 누를 만한 높이`, `${r.h}px`)
     }
     //  눌러서 들어가기

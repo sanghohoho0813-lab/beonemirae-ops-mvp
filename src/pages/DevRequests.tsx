@@ -14,7 +14,7 @@ import {
 import { friendlyError } from '../lib/supabase'
 import { EXCEL_TOPIC, parseExcelChecks } from '../lib/excelCheck'
 import { prettyDate } from '../lib/format'
-import { BIZ_SURVEY_ENABLED } from '../lib/bizSurvey'
+import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME } from '../lib/bizSurvey'
 import { SurveyAdmin } from '../components/bizSurvey/SurveyAdmin'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,21 +49,22 @@ interface Item {
 }
 
 /**
- *  사용자 피드백 화면 — 위에 「사용자 피드백 | 사업계획서 사전 설문(임시 · 0144)」 두 칸.
- *  ⚠ 기존 피드백(FeedbackInbox)은 그대로입니다. 설문은 BIZ_SURVEY_ENABLED 로 통째로 숨깁니다.
- *    주소 ?tab=survey 로 바로 열 수 있습니다(미리보기에서 돌아올 때).
+ *  사용자 피드백 화면 — 위에 「★ 뉴본펭귄 사전 설문(임시 · 0144·0145) | 사용자 피드백」 두 칸.
+ *  대표님: 「사용자 피드백보다 사전 설문을 먼저 뜨게 · 더 강조」 — 설문이 첫 칸이고 기본으로 열립니다.
+ *  ⚠ 기존 피드백(FeedbackInbox)은 그대로입니다(?tab=feedback). 설문은 BIZ_SURVEY_ENABLED 로 통째로 숨깁니다.
  */
 export function DevRequests() {
   const [params, setParams] = useSearchParams()
-  const view = BIZ_SURVEY_ENABLED && params.get('tab') === 'survey' ? 'survey' : 'feedback'
+  const view = BIZ_SURVEY_ENABLED && params.get('tab') !== 'feedback' ? 'survey' : 'feedback'
   if (!BIZ_SURVEY_ENABLED) return <FeedbackInbox />
   return (
     <div>
       <div role="tablist" aria-label="사용자 피드백 화면" className="mb-4 flex gap-1 rounded-2xl bg-navy-100/70 p-1">
         {(
           [
+            //  줄이 넘치면 「★ 뉴본펭귄 / 사전 설문」으로 — 이름 중간(「사전 / 설문」)에서 끊기지 않게
+            ['survey', `★\u00a0${SURVEY_MENU_NAME.replace(/ (?=[^ ]+$)/, '\u00a0')}`],
             ['feedback', '사용자 피드백'],
-            ['survey', '사업계획서 사전 설문'],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -72,14 +73,22 @@ export function DevRequests() {
             role="tab"
             aria-selected={view === k}
             data-devreq-view={k}
-            onClick={() => setParams(k === 'survey' ? { tab: 'survey' } : {}, { replace: true })}
-            className={`min-h-[44px] flex-1 break-keep rounded-xl px-3 py-2 text-[1rem] font-extrabold transition ${
-              view === k ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-500'
+            onClick={() => setParams(k === 'feedback' ? { tab: 'feedback' } : {}, { replace: true })}
+            className={`min-h-[44px] break-keep rounded-xl px-3 py-2 text-[1rem] font-extrabold transition max-sm:px-2 ${
+              k === 'survey' ? 'flex-[1.6]' : 'flex-1'
+            } ${
+              k === 'survey'
+                ? view === k
+                  ? 'bg-amber-400 text-navy-900 shadow-sm'
+                  : 'bg-amber-100 text-amber-900'
+                : view === k
+                  ? 'bg-white text-navy-900 shadow-sm'
+                  : 'text-navy-500'
             }`}
           >
-            {k === 'survey' ? (
+            {k === 'feedback' ? (
               <>
-                <span className="sm:hidden">사전 설문</span>
+                <span className="sm:hidden">피드백</span>
                 <span className="hidden sm:inline">{label}</span>
               </>
             ) : (
@@ -90,7 +99,7 @@ export function DevRequests() {
       </div>
       {view === 'survey' ? (
         <div>
-          <PageHeader title="사업계획서 사전 설문" subtitle="신보 뉴본펭귄 사업계획서 준비용 · 임시" />
+          <PageHeader title={SURVEY_MENU_NAME} subtitle="신보 뉴본펭귄 사업계획서 준비용 사전 설문 · 임시" />
           <SurveyAdmin />
         </div>
       ) : (

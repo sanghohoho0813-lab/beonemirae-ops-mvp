@@ -14,6 +14,7 @@ import {
   LogOut,
   HelpCircle,
   PlayCircle,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -74,6 +75,7 @@ import { PlannedPreview } from './PlannedPreview'
 import { BrandLogo } from './BrandLogo'
 import { PhoneBandSlot } from './PhoneBand'
 import { icon3d } from '../lib/icons3d'
+import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
@@ -465,6 +467,8 @@ function Sidebar() {
   //  신용보증기금 방문용 영상 (0130) — 대표님: 「PC 위쪽 단추도 내려 줘」(이제 필요 없어짐, 기능은 그대로).
   //  위쪽 도구 줄에서 여기 아래 바로가기 위 한 줄로 옮겼습니다. 규칙은 그대로 — 대표·이사님 계정만.
   const showVisitVideo = configured && canAccess(profile?.role ?? null, '/visit-video')
+  //  뉴본펭귄 사전 설문 (0145 · 임시) — 대표·관리자 · 사무실(이사님) 계정만
+  const showSurvey = BIZ_SURVEY_ENABLED && (!configured || canAccess(profile?.role ?? null, SURVEY_PATH))
 
   return (
     /*  AX 3차 — 폭 336/392 → 288/304px. 메뉴가 한 줄이 되어 넓을 이유가 없어졌고,
@@ -507,6 +511,24 @@ function Sidebar() {
       {/*  병원이 보는 화면 — 어느 화면에서든 한 번에 (AX 디자인 2차 · 대표님 「전부 다」).
            열 수 없는 역할(현장)에게는 안에서 스스로 숨습니다. */}
       <PortalSwitchButton side />
+      {/*  ★ 뉴본펭귄 사전 설문 (0145 · 임시) — 대표·사무실 계정. 링크 없이 눌러서 바로 답합니다. */}
+      {showSurvey && (
+        <div data-hide-presenting className="contents">
+          <Link
+            to={SURVEY_PATH}
+            data-side-survey
+            className="group mx-2.5 mb-1.5 flex min-h-[44px] items-center gap-2.5 rounded-xl bg-amber-300/15 px-2.5 py-1.5 ring-1 ring-inset ring-amber-300/60 transition hover:bg-amber-300/25"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-navy-900">
+              <Star size={16} strokeWidth={2.4} className="fill-navy-900" />
+            </span>
+            <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[0.871rem] font-extrabold leading-tight text-amber-200">
+              ★ {SURVEY_MENU_NAME}
+            </span>
+            <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-[0.78rem] font-extrabold text-navy-900">시작</span>
+          </Link>
+        </div>
+      )}
 
       <nav className="flex-1 px-2.5">
         {groups.map((g) => (

@@ -60,6 +60,12 @@ end $$;
 grant execute on function blocked(text) to anon, authenticated;
 grant execute on function test_assert(boolean, text) to anon, authenticated;
 
+--  깨끗한 답지에서 시작 (로컬 검증 DB 의 설문 표만 — 다른 검사가 남긴 줄을 치웁니다)
+delete from public.biz_survey_revisions;
+delete from public.biz_survey_responses;
+delete from public.biz_survey_invites;
+delete from public.biz_survey_admins;
+
 --  계정 — 역할은 서버가 정한 그대로 (profiles)
 insert into auth.users (email, raw_user_meta_data, raw_app_meta_data) values
   ('svboss@dev.test',  '{"name":"대표"}',   '{"role":"admin"}'),

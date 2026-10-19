@@ -1,8 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // 사업계획서 사전 설문 (0144 · 임시) — 신용보증기금 뉴본펭귄 사업계획서 준비용
 //
-//  대표님(송명근) · 이사님(홍현주) 두 분께 카카오톡 링크로 여쭙는 일회성 설문입니다.
-//  정식 설문 플랫폼이 아니라 **사업계획서 초안을 쓰기 위한 의견 수렴 도구**입니다.
+//  대표님(송명근) · 이사님(홍현주) 중 **한 분**이 앱 안에서 「시작하기」로 바로 답하는
+//  일회성 설문입니다(0145 — 링크 없이 · 답지 하나). 정식 설문 플랫폼이 아니라
+//  **사업계획서 초안을 쓰기 위한 의견 수렴 도구**입니다.
 //
 //   · 질문 · 선택지 · 안내문은 전부 이 파일 한 곳에 있습니다.
 //   · 추천안 · 제안안은 「검토안」일 뿐 확정이 아닙니다. 아무 것도 미리 골라 두지
@@ -15,12 +16,17 @@
 export const BIZ_SURVEY_ENABLED = true
 
 export const SURVEY_TITLE = '비원미래 AX 사업화 계획 사전 설문'
+/** 메뉴 · 탭에 쓰는 이름 (대표님: 「뉴본펭귄 사전 설문으로 이름 바꿔 주고」) */
+export const SURVEY_MENU_NAME = '뉴본펭귄 사전 설문'
+/** 앱 안에서 답하는 주소 */
+export const SURVEY_PATH = '/newborn-survey'
 
 export const SURVEY_INTRO = [
   '대표님, 이사님 안녕하세요.',
   '신용보증기금 뉴본펭귄 사업계획서를 준비하기 위해 몇 가지 의견을 여쭙고자 합니다.',
   '개발계획과 매출 전망 등은 저희가 먼저 설계할 예정이므로 부담 없이 실제 업계 상황과 평소 생각하셨던 방향을 중심으로 선택해 주시면 됩니다.',
   "정확히 모르시는 내용은 '미정'으로 선택하셔도 괜찮습니다.",
+  '두 분 중 한 분만 답해 주셔도 됩니다. 이어서 쓰시면 같은 답지에 이어집니다.',
   '응답해 주신 내용을 바탕으로 사업계획서 초안을 작성하고 최종적으로 함께 검토하겠습니다.',
 ]
 
@@ -33,11 +39,13 @@ export const SURVEY_THANKS = [
 // ── 응답자 ──────────────────────────────────────────────────────────────────
 
 export type Respondent = 'ceo' | 'director'
-export const RESPONDENTS: Record<Respondent, { name: string; title: string; label: string }> = {
+/** 'shared' — 두 분 중 한 분이 답하는 공동 답지 (0145 · 지금 쓰는 방식) */
+export type SurveyWho = Respondent | 'shared'
+export const RESPONDENTS: Record<SurveyWho, { name: string; title: string; label: string }> = {
   ceo: { name: '송명근', title: '대표님', label: '송명근 대표님' },
   director: { name: '홍현주', title: '이사님', label: '홍현주 이사님' },
+  shared: { name: '', title: '대표님 · 이사님', label: '대표님 · 이사님 (한 분만 답하시면 됩니다)' },
 }
-export const RESPONDENT_KEYS: Respondent[] = ['ceo', 'director']
 
 // ── 질문 모양 ───────────────────────────────────────────────────────────────
 
@@ -102,6 +110,8 @@ export interface Question {
   onlyFor?: Respondent
   /** 화면 아래 작은 주의 문구 */
   caution?: string
+  /** 공동 답지(한 분이 답할 때)에서만 보이는 안내 */
+  sharedNote?: string
 }
 
 const U = (v: string): Opt => ({ v, unsure: true })
@@ -365,6 +375,7 @@ export const QUESTIONS: Question[] = [
       { key: 'rnd', label: '연구개발 관련 경험', kind: 'long' },
     ],
     caution: '주민등록번호 · 상세 주소 같은 개인정보는 적지 마세요. 이 설문에서는 받지 않습니다.',
+    sharedNote: '이사님 경력입니다. 대표님이 답하시는 경우 아는 만큼만 적거나 「미정 · 나중에」를 눌러 넘어가셔도 됩니다.',
   },
   {
     id: 'q26', no: 26, section: 's7', title: '신보 제출서류 준비 현황',
@@ -399,10 +410,13 @@ export interface Answer {
 }
 export type Answers = Record<string, Answer>
 
-/** 이 사람이 답하는 질문 (Q25 는 이사님만 — 대표님께는 확인 항목으로만) */
-export function questionsFor(who: Respondent): Question[] {
-  return QUESTIONS.filter((q) => !q.onlyFor || q.onlyFor === who)
+/** 이 사람이 답하는 질문 (공동 답지는 26문항 전부 · 개인 답지면 Q25 는 이사님만) */
+export function questionsFor(who: SurveyWho): Question[] {
+  return QUESTIONS.filter((q) => who === 'shared' || !q.onlyFor || q.onlyFor === who)
 }
+
+/** 이 사람에게 해당 없는 질문인가 (개인 답지에서 남의 확인 항목) */
+export const notMineFor = (q: Question, who: SurveyWho) => who !== 'shared' && !!q.onlyFor && q.onlyFor !== who
 
 const filled = (s: string | undefined) => !!s && s.trim().length > 0
 const anyFilled = (o: Record<string, string> | undefined) => !!o && Object.values(o).some(filled)
@@ -452,7 +466,7 @@ export function detailOpen(q: Question, a: Answer | undefined): boolean {
   return !!a.choice && q.detail.when.includes(a.choice)
 }
 
-export function progressOf(who: Respondent, answers: Answers) {
+export function progressOf(who: SurveyWho, answers: Answers) {
   const qs = questionsFor(who)
   const states = qs.map((q) => stateOf(q, answers[q.id]))
   const answered = states.filter((s) => s !== 'later').length
@@ -507,31 +521,7 @@ function isAnsweredIgnoringSkip(q: Question, a: Answer): boolean {
   return isAnswered(q, { ...a, skip: false })
 }
 
-/** 비교용 — 두 분 답이 같은가 (고른 것 기준. 의견 글은 비교하지 않음) */
-export function answerKey(q: Question, a: Answer | undefined): string {
-  if (!a || !isAnswered(q, a)) return ''
-  if (a.skip && !isAnsweredIgnoringSkip(q, a)) return 'skip'
-  switch (q.kind) {
-    case 'single':
-      return a.choice ?? ''
-    case 'multi':
-      return [...(a.picks ?? [])].sort().join('|') + '#' + (a.extra ?? '')
-    case 'grid':
-      return (q.rows ?? []).map((r) => a.grid?.[r] ?? '').join('|')
-    case 'fields':
-      return (q.fields ?? []).map((f) => (a.fields?.[f.key] ?? '').trim()).join('|')
-  }
-}
-
-/** 두 분이 모두 답했는데 고른 것이 다른가 */
-export function differs(q: Question, a: Answer | undefined, b: Answer | undefined): boolean {
-  if (q.onlyFor) return false
-  const ka = answerKey(q, a)
-  const kb = answerKey(q, b)
-  return ka !== '' && kb !== '' && ka !== kb
-}
-
-// ── 관리자 — 문서 · 복사 · 내보내기 ─────────────────────────────────────────
+// ── 관리 화면 — 문서 · 복사 · 내보내기 (답지 하나) ────────────────────────────
 
 export interface ResponseRow {
   respondent: Respondent
@@ -541,48 +531,38 @@ export interface ResponseRow {
   updated_at?: string | null
   submitted_at?: string | null
   first_submitted_at?: string | null
+  /** 0145 — 마지막으로 고친 사람 */
+  edited_by?: string
+  edited_role?: string
 }
 
 const sectionOf = (id: SectionId) => SECTIONS.find((s) => s.id === id)!
 
-function answerText(q: Question, who: Respondent, r: ResponseRow | undefined): string {
-  if (q.onlyFor && q.onlyFor !== who) return '(해당 없음 — 이사님 확인 항목)'
+function answerText(q: Question, r: ResponseRow | undefined): string {
   const lines = summaryLines(q, r?.answers?.[q.id])
   return lines.length ? lines.join(' / ') : '추후 확인 (미응답)'
 }
 
-/** 읽기 좋은 문서 (전체 답변 복사) */
-export function documentText(rows: Partial<Record<Respondent, ResponseRow>>, opts: { onlyOpen?: boolean } = {}): string {
+/** 읽기 좋은 문서 (전체 답변 복사 · 미확정 사항 복사) */
+export function documentText(row: ResponseRow | undefined, opts: { onlyOpen?: boolean } = {}): string {
   const out: string[] = []
-  out.push(`${SURVEY_TITLE}${opts.onlyOpen ? ' — 미확정 사항' : ' — 답변 정리'}`)
-  for (const who of RESPONDENT_KEYS) {
-    const r = rows[who]
-    const p = progressOf(who, r?.answers ?? {})
-    out.push(
-      `· ${RESPONDENTS[who].label}: ${r ? (r.status === 'submitted' ? '제출 완료' : '응답 중') : '응답 없음'} · ${p.answered}/${p.total} 답함 · 미정 ${p.unsure} · 추후 확인 ${p.left}` +
-        (r?.updated_at ? ` · 최종 수정 ${fmtDateTime(r.updated_at)}` : ''),
-    )
-  }
+  const p = progressOf('shared', row?.answers ?? {})
+  out.push(`${SURVEY_MENU_NAME} — ${SURVEY_TITLE}${opts.onlyOpen ? ' · 미확정 사항' : ' · 답변 정리'}`)
+  out.push(
+    `· 상태: ${row ? (row.status === 'submitted' ? '제출 완료' : p.answered > 0 ? '작성 중' : '작성 전') : '작성 전'} · ${p.answered}/${p.total} 답함 · 미정 ${p.unsure} · 추후 확인 ${p.left}` +
+      (row?.edited_by ? ` · 마지막 작성 ${row.edited_by}` : '') +
+      (row?.updated_at && p.answered > 0 ? ` · 최종 수정 ${fmtDateTime(row.updated_at)}` : ''),
+  )
   out.push('※ 추천안·제안안은 검토안이며, 이 답변은 사업계획서 초안을 위한 의견 수렴입니다.')
   for (const s of SECTIONS) {
-    const qs = QUESTIONS.filter((q) => q.section === s.id).filter((q) => {
-      if (!opts.onlyOpen) return true
-      return RESPONDENT_KEYS.some((who) => {
-        if (q.onlyFor && q.onlyFor !== who) return false
-        const st = stateOf(q, rows[who]?.answers?.[q.id])
-        return st !== 'done'
-      })
-    })
+    const qs = QUESTIONS.filter((q) => q.section === s.id).filter((q) => !opts.onlyOpen || stateOf(q, row?.answers?.[q.id]) !== 'done')
     if (!qs.length) continue
     out.push('')
     out.push(`■ SECTION ${s.no}. ${s.title}`)
     for (const q of qs) {
-      const diff = differs(q, rows.ceo?.answers?.[q.id], rows.director?.answers?.[q.id])
-      out.push(`Q${q.no}. ${q.title}${q.core ? ' ★' : ''}${diff ? ' [의견 다름]' : ''}`)
-      for (const who of RESPONDENT_KEYS) {
-        if (q.onlyFor && q.onlyFor !== who) continue
-        out.push(`  - ${RESPONDENTS[who].title}: ${answerText(q, who, rows[who])}`)
-      }
+      const st = stateOf(q, row?.answers?.[q.id])
+      out.push(`Q${q.no}. ${q.title}${q.core ? ' ★' : ''}${st === 'unsure' ? ' [미정·논의]' : ''}`)
+      out.push(`  - ${answerText(q, row)}`)
     }
   }
   return out.join('\n')
@@ -591,54 +571,44 @@ export function documentText(rows: Partial<Record<Respondent, ResponseRow>>, opt
 const csvCell = (v: string) => `"${v.replace(/"/g, '""')}"`
 
 /** CSV — 엑셀에서 한글이 깨지지 않게 BOM 을 붙입니다 */
-export function csvText(rows: Partial<Record<Respondent, ResponseRow>>): string {
-  const head = ['섹션', '번호', '질문', '핵심', '대표님 답변', '대표님 상태', '이사님 답변', '이사님 상태', '의견 다름']
+export function csvText(row: ResponseRow | undefined): string {
+  const head = ['섹션', '번호', '질문', '핵심', '답변', '상태']
   const lines = [head.map(csvCell).join(',')]
   for (const q of QUESTIONS) {
-    const st = (who: Respondent) =>
-      q.onlyFor && q.onlyFor !== who ? '해당 없음' : STATE_LABEL[stateOf(q, rows[who]?.answers?.[q.id])]
     lines.push(
       [
         `${sectionOf(q.section).no} ${sectionOf(q.section).title}`,
         `Q${q.no}`,
         q.title,
         q.core ? '★' : '',
-        answerText(q, 'ceo', rows.ceo),
-        st('ceo'),
-        answerText(q, 'director', rows.director),
-        st('director'),
-        differs(q, rows.ceo?.answers?.[q.id], rows.director?.answers?.[q.id]) ? '다름' : '',
+        answerText(q, row),
+        STATE_LABEL[stateOf(q, row?.answers?.[q.id])],
       ]
         .map(csvCell)
         .join(','),
     )
   }
-  return '﻿' + lines.join('\r\n')
+  return '\ufeff' + lines.join('\r\n')
 }
 
 /** JSON — 질문 id 별 원래 답 그대로 + 질문 제목 */
-export function jsonText(rows: Partial<Record<Respondent, ResponseRow>>): string {
+export function jsonText(row: ResponseRow | undefined): string {
   return JSON.stringify(
     {
-      survey: 'biz-survey-0144',
-      title: SURVEY_TITLE,
+      survey: 'newborn-survey-0145',
+      title: `${SURVEY_MENU_NAME} — ${SURVEY_TITLE}`,
       exportedAt: new Date().toISOString(),
       questions: QUESTIONS.map((q) => ({ id: q.id, no: q.no, section: sectionOf(q.section).title, title: q.title, core: !!q.core })),
-      respondents: Object.fromEntries(
-        RESPONDENT_KEYS.map((who) => [
-          who,
-          rows[who]
-            ? {
-                name: RESPONDENTS[who].label,
-                status: rows[who]!.status,
-                updated_at: rows[who]!.updated_at ?? null,
-                submitted_at: rows[who]!.submitted_at ?? null,
-                first_submitted_at: rows[who]!.first_submitted_at ?? null,
-                answers: rows[who]!.answers,
-              }
-            : null,
-        ]),
-      ),
+      response: row
+        ? {
+            status: row.status,
+            edited_by: row.edited_by ?? '',
+            updated_at: row.updated_at ?? null,
+            submitted_at: row.submitted_at ?? null,
+            first_submitted_at: row.first_submitted_at ?? null,
+            answers: row.answers,
+          }
+        : null,
     },
     null,
     2,

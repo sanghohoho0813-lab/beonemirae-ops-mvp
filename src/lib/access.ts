@@ -109,8 +109,10 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   //  요청함은 관리자만 봅니다. 보내는 것은 누구나 하되(0022 RLS),
   //  모아 보는 화면은 대표님 자리입니다.
   { prefix: '/dev-requests', roles: ['admin'] },
-  //  사업계획서 사전 설문 미리보기 (0144 · 임시) — 설문 관리와 같은 사람만
+  //  뉴본펭귄 사전 설문 미리보기 (0144 · 임시) — 설문 관리와 같은 사람만
   { prefix: '/survey-preview', roles: ['admin'] },
+  //  뉴본펭귄 사전 설문 답하기 (0145 · 임시) — 대표님 · 이사님 계정. 서버도 같은 판단(biz_survey_can_answer)
+  { prefix: '/newborn-survey', roles: ['admin', 'office'] },
   { prefix: '/import', roles: ['admin'] },
   // 대시보드는 경영 지표가 포함되므로 현장 담당자에게는 오늘 일정이 첫 화면입니다.
   { prefix: '/demo', roles: ['admin'] },

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, Globe, PlayCircle, type LucideIcon } from 'lucide-react'
+import { Smartphone, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, Globe, Star, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -16,6 +16,7 @@ import { PlannedPreview } from './PlannedPreview'
 import { canSendDevRequest } from '../lib/devRequests'
 import { icon3d } from '../lib/icons3d'
 import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
+import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 — 폰에서는 이곳이 목차 전부입니다
@@ -27,6 +28,13 @@ import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '
 //         (AX·심사 「만든 이유」 하나만 남김). 계획 중인 기능은 맨 아래 한 줄로 접었습니다.
 //
 //  목차는 PC 사이드바와 같은 것을 씁니다 (lib/nav.ts) — 순서도 분류도 같습니다.
+//
+//  0145 — 대표님: 「사용 방법 · 사용 후기 남기기 같은 것도 적절한 목차 안에 넣어야 되지 않을까.
+//   회사 홈페이지 · 올바로 시스템 · PC 화면으로 보기 · 추가 개발 예정 빼고는 다 각 묶음 안에」.
+//   → 사용 방법 · 사용 후기 남기기 = 「관리」 칸 · 신용보증기금 방문용 영상 = 「AX·심사」 칸.
+//     (그 묶음이 안 보이는 계정은 마지막 묶음에 붙입니다 — 기능을 잃는 계정이 없게)
+//   아래 목록에는 바깥으로 가는 길 · 보기 전환 · 계획 중 기능만 남깁니다.
+//   맨 위에는 「★ 뉴본펭귄 사전 설문 · 시작하기」(대표·사무실 계정 · 임시)를 눈에 띄게 둡니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -67,16 +75,50 @@ function Img3d({ src, className }: { src: string; className: string }) {
   )
 }
 
+/** 묶음 끝에 붙는 칸 — 화면 주소가 아니라 할 일(사용 방법 · 사용 후기)인 것 */
+interface ExtraTile {
+  key: string
+  label: string
+  img?: string
+  /** 사용 방법 — TourButton 이 직접 엽니다 */
+  tour?: boolean
+  onClick?: () => void
+  hook?: Record<string, string>
+}
+
+const TILE_BTN = 'flex min-w-0 flex-col items-center gap-1 rounded-2xl py-0.5 transition active:scale-95 active:bg-navy-50'
+const TILE_LABEL = 'w-full break-keep text-center text-[0.82rem] font-bold leading-tight text-navy-800'
+
+function TileImg({ img }: { img?: string }) {
+  return (
+    <span data-more-tile className="flex h-[2.3rem] w-[2.3rem] items-center justify-center">
+      {img && <Img3d src={img} className="h-[1.92rem] w-[1.92rem] drop-shadow-[0_2px_3px_rgba(15,26,46,0.12)]" />}
+    </span>
+  )
+}
+
 /** 목차 한 묶음 — 흰 카드 한 장에 아이콘 칸 4개씩 (배민 「카테고리」 칸처럼).
  *  대표님이 주신 입체 아이콘을 씁니다(lib/icons3d). 그림이 없는 주소만 예전 색 칸 + 선 아이콘. */
-function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: string; items: NavItem[]; onGo: (to: string) => void }) {
+function NavGrid({
+  groupId,
+  title,
+  items,
+  extras = [],
+  onGo,
+}: {
+  groupId: string
+  title: string
+  items: NavItem[]
+  extras?: ExtraTile[]
+  onGo: (to: string) => void
+}) {
   const tone = GROUP_TILE[groupId] ?? FALLBACK_TILE
   return (
     <section data-more-section={`more-${groupId}`} className="card px-3 pb-4 pt-3.5">
       <div className="mb-3 flex items-center gap-2 px-1">
         <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${tone.dot}`} />
         <h3 className="min-w-0 flex-1 break-keep text-[1.02rem] font-extrabold text-navy-900">{title}</h3>
-        <span className="shrink-0 text-[0.86rem] font-bold text-navy-500">{items.length}</span>
+        <span className="shrink-0 text-[0.86rem] font-bold text-navy-500">{items.length + extras.length}</span>
       </div>
       <div className="grid grid-cols-4 gap-x-1 gap-y-3.5">
         {items.map((item, i) => {
@@ -89,7 +131,7 @@ function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: stri
               data-more-item={item.to}
               onClick={() => onGo(item.to)}
               title={item.desc}
-              className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-0.5 transition active:scale-95 active:bg-navy-50"
+              className={TILE_BTN}
             >
               {img ? (
                 <span data-more-tile className="flex h-[2.3rem] w-[2.3rem] items-center justify-center">
@@ -100,10 +142,23 @@ function NavGrid({ groupId, title, items, onGo }: { groupId: string; title: stri
                   <Icon size={21} strokeWidth={2.2} aria-hidden="true" />
                 </span>
               )}
-              <span className="w-full break-keep text-center text-[0.82rem] font-bold leading-tight text-navy-800">{item.label}</span>
+              <span className={TILE_LABEL}>{item.label}</span>
             </button>
           )
         })}
+        {extras.map((x) =>
+          x.tour ? (
+            //  ⚠ TourButton 이 아이콘 자리를 그립니다(icon) — 이름은 children
+            <TourButton key={x.key} className={TILE_BTN} label="" icon={<TileImg img={x.img} />}>
+              <span className={TILE_LABEL}>{x.label}</span>
+            </TourButton>
+          ) : (
+            <button key={x.key} type="button" data-more-extra={x.key} onClick={x.onClick} className={TILE_BTN} {...x.hook}>
+              <TileImg img={x.img} />
+              <span className={TILE_LABEL}>{x.label}</span>
+            </button>
+          ),
+        )}
       </div>
     </section>
   )
@@ -189,10 +244,36 @@ export function MoreMenu({
   const showVisitVideo = variant === 'mobile' && configured && canAccess(role, '/visit-video')
   //  계획 중 기능 — 묶음에 붙어 있던 것을 한 줄로 모읍니다(활용 계획을 볼 수 있는 계정만)
   const planned = showRoadmap ? groups.flatMap((g) => g.planned ?? []) : []
+  //  뉴본펭귄 사전 설문 (0145 · 임시) — 대표·관리자 · 사무실(이사님) 계정에게만, 맨 위에 눈에 띄게
+  const showSurvey = BIZ_SURVEY_ENABLED && (!configured || canAccess(role, SURVEY_PATH))
   function go(to: string) {
     onNavigate?.()
     navigate(to)
   }
+
+  //  묶음 끝에 붙일 칸 (0145) — 「관리」 · 「AX·심사」가 안 보이는 계정은 마지막 묶음에
+  const extras: Record<string, ExtraTile[]> = {}
+  const lastId = groups[groups.length - 1]?.id
+  const put = (groupId: string, x: ExtraTile) => {
+    const id = groups.some((g) => g.id === groupId) ? groupId : lastId
+    if (id) (extras[id] ??= []).push(x)
+  }
+  //  사용 방법 — 현장 담당자에게는 없습니다(0078: 위쪽 「도움말」 하나로).
+  if (role !== 'field') put('admin', { key: 'tour', label: '사용 방법', img: icon3d('tour'), tour: true })
+  //  사용 후기 남기기 — 폰에서 이 칸이 유일한 통로입니다(현장 담당자는 더보기밖에 없습니다).
+  if (onDevRequest && canSendDevRequest(role))
+    put('admin', {
+      key: 'feedback',
+      label: '사용 후기 남기기',
+      img: icon3d('feedback-send'),
+      onClick: () => {
+        onNavigate?.()
+        onDevRequest()
+      },
+      hook: { 'data-dev-request-more': '' },
+    })
+  if (showVisitVideo)
+    put('ax', { key: 'visit-video', label: '신보 방문용 영상', img: icon3d('/visit-video'), onClick: () => go('/visit-video'), hook: { 'data-visit-video-btn': '' } })
 
   return (
     <div className="space-y-3">
@@ -222,6 +303,30 @@ export function MoreMenu({
             <LogOut size={15} strokeWidth={2.4} /> 로그아웃
           </button>
         </section>
+      )}
+
+      {/*  ★ 뉴본펭귄 사전 설문 (0145 · 임시) — 대표님: 「별표든 글자색이든 더 눈에 띄게 · 시작하기 누르면 바로」.
+           두 분 중 한 분만 답하시면 됩니다. 링크 없이 이 단추로 바로 엽니다. */}
+      {showSurvey && (
+        <button
+          type="button"
+          data-more-survey
+          onClick={() => go(SURVEY_PATH)}
+          className="block w-full rounded-[20px] bg-gradient-to-br from-amber-100 via-amber-50 to-white p-3.5 text-left ring-2 ring-inset ring-amber-300 transition active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-3">
+            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-amber-400 text-white shadow-sm">
+              <Star size={22} strokeWidth={2.4} className="fill-white" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block break-keep text-[1.08rem] font-extrabold leading-snug text-amber-900">★ {SURVEY_MENU_NAME}</span>
+              <span className="mt-0.5 block break-keep text-[0.88rem] font-semibold text-navy-600">두 분 중 한 분만 답하시면 됩니다</span>
+            </span>
+          </span>
+          <span className="mt-3 flex min-h-[2.9rem] items-center justify-center gap-1.5 rounded-2xl bg-navy-900 text-[1rem] font-extrabold text-white">
+            시작하기 <ChevronRight size={18} strokeWidth={2.6} aria-hidden="true" />
+          </span>
+        </button>
       )}
 
       {/*  병원이 보는 화면 — 열리는 사람에게만 보입니다(현장 담당자에게는 안 나옵니다). */}
@@ -258,41 +363,18 @@ export function MoreMenu({
       {/*  목차 — PC 사이드바와 같은 묶음 · 같은 순서 · 같은 색.
            ⚠ 묶음 안이 하나뿐이면 그 화면 이름을 제목으로 씁니다(없는 성과를 제목이 약속하지 않게). */}
       {groups.map((g) => (
-        <NavGrid key={g.id} groupId={g.id} title={g.items.length === 1 ? g.items[0].label : g.title} items={g.items} onGo={go} />
+        <NavGrid
+          key={g.id}
+          groupId={g.id}
+          title={g.items.length === 1 && !extras[g.id]?.length ? g.items[0].label : g.title}
+          items={g.items}
+          extras={extras[g.id]}
+          onGo={go}
+        />
       ))}
 
-      {/*  안내 · 바로가기 — 흩어져 있던 것을 한 목록으로 (업무가 아니라 시스템 · 바깥으로 가는 길) */}
+      {/*  바로가기 — 바깥으로 가는 길 · 보기 전환 · 계획 중 기능만 (사용 방법 · 사용 후기는 0145 에 묶음 안으로) */}
       <section data-more-help className="card divide-y divide-navy-50 overflow-hidden">
-        {/*  사용 방법 — 현장 담당자에게는 없습니다(0078: 위쪽 「도움말」 하나로). */}
-        {role !== 'field' && (
-          //  ⚠ TourButton 이 ▶ 아이콘을 스스로 그립니다 — 여기서 하나 더 그리지 않습니다
-          <TourButton
-            className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left text-navy-500 transition active:bg-navy-50"
-            label=""
-            icon={<Img3d src={icon3d('tour') ?? ''} className="h-[1.3rem] w-[1.3rem]" />}
-          >
-            <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">사용 방법</span>
-            <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
-          </TourButton>
-        )}
-        {/*  사용 후기 남기기 — 폰에서 이 자리가 유일한 통로입니다(현장 담당자는 더보기밖에 없습니다). */}
-        {onDevRequest && canSendDevRequest(role) && (
-          <button
-            type="button"
-            data-dev-request-more
-            onClick={() => {
-              onNavigate?.()
-              onDevRequest()
-            }}
-            className="flex min-h-[3.1rem] w-full items-center gap-3 px-4 py-2.5 text-left transition active:bg-navy-50"
-          >
-            <Img3d src={icon3d('feedback') ?? ''} className="h-[1.3rem] w-[1.3rem]" />
-            <span className="min-w-0 flex-1 break-keep text-[1rem] font-bold text-navy-900">
-              사용 후기 남기기 <span className="mt-0.5 block text-[0.84rem] font-semibold text-navy-500">(개발자에게 요청)</span>
-            </span>
-            <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
-          </button>
-        )}
         <Row icon={Globe} img={icon3d('/company')} label="회사 홈페이지" onClick={() => go('/company')} />
         <Row icon={ExternalLink} img={icon3d('allbaro')} label="올바로 시스템" note="폐기물 적법처리" href={ALLBARO_URL} />
         {variant === 'desktop' && <Row icon={Smartphone} label="모바일 프레임으로 보기" onClick={() => go('/mobile-preview')} />}
@@ -309,9 +391,6 @@ export function MoreMenu({
             </span>
             <ChevronRight size={17} className="shrink-0 text-navy-400" aria-hidden="true" />
           </button>
-        )}
-        {showVisitVideo && (
-          <Row icon={PlayCircle} img={icon3d('/visit-video')} label="신용보증기금 방문용 영상" onClick={() => go('/visit-video')} hook={{ 'data-visit-video-btn': '' }} />
         )}
         {/*  계획 중 기능 — **단추가 아니라 미리보기**입니다(눌리는데 아무 일도 안 일어나는 것이 제일 나쁩니다).
              한 줄로 접어 두고, 펼치면 이름마다 「계획 중 · 지금은 이렇게」가 열립니다(0095). */}

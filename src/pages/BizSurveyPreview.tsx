@@ -1,19 +1,18 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { SurveyRunner } from '../components/bizSurvey/SurveyRunner'
-import { BIZ_SURVEY_ENABLED, RESPONDENT_KEYS, type Answers, type Respondent } from '../lib/bizSurvey'
+import { BIZ_SURVEY_ENABLED, type Answers } from '../lib/bizSurvey'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 사업계획서 사전 설문 — 관리자 미리보기 (/survey-preview/ceo · director) · 0144
+// 뉴본펭귄 사전 설문 — 관리자 미리보기 (/survey-preview) · 0144 · 0145
 //
 //  대표님 · 이사님이 보시는 화면 그대로를 미리 눌러 봅니다. 서버에는 **아무것도
-//  저장하지 않습니다** — 고른 것은 이 화면을 닫으면 사라집니다.
+//  저장하지 않습니다** — 고른 것은 이 화면을 닫으면 사라집니다. 실제 답지를
+//  건드리지 않고 확인하는 용도입니다(「시작하기」는 실제 답지에 저장됩니다).
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BizSurveyPreview() {
-  const { who: raw = 'ceo' } = useParams()
-  const who: Respondent = (RESPONDENT_KEYS as string[]).includes(raw) ? (raw as Respondent) : 'ceo'
   const { role } = useAuth()
   const navigate = useNavigate()
   const [answers, setAnswers] = useState<Answers>({})
@@ -24,7 +23,7 @@ export function BizSurveyPreview() {
   }
   return (
     <SurveyRunner
-      who={who}
+      who="shared"
       answers={answers}
       status={submitted ? 'submitted' : 'draft'}
       updatedAt={null}
@@ -32,7 +31,7 @@ export function BizSurveyPreview() {
       onChange={setAnswers}
       onSubmit={async () => setSubmitted(true)}
       preview
-      onExit={() => navigate('/dev-requests?tab=survey')}
+      onExit={() => navigate('/dev-requests')}
     />
   )
 }

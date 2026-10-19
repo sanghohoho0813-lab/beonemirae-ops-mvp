@@ -51,6 +51,8 @@ const FILE: Record<string, string> = {
   '/visit-video': 'visit-video',
   'tour': 'tour',
   'feedback': 'feedback',
+  //  0145 — 더보기 「관리」 칸에서 「사용자 피드백」(받은 함)과 나란히 놓여 그림을 달리합니다
+  'feedback-send': 'p-ask',
   'allbaro': 'allbaro',
   'pcview': 'pcview',
   'planned': 'planned',
