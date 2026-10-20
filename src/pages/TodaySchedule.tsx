@@ -389,7 +389,7 @@ export function TodaySchedule() {
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p data-day-sub className="t-muted min-w-0 flex-1 basis-[7rem] tabular-nums">
+            <p data-day-sub className="t-muted min-w-0 flex-1 basis-[4.5rem] tabular-nums">
               {list.length === 0 ? '잡힌 일정 0건' : `${list.length}곳 · 완료 ${doneCount}`}
             </p>
             {/*  2단계 예정 기능의 입구 — 건수 줄 오른쪽에 얹습니다(새 줄을 만들지 않게) */}
