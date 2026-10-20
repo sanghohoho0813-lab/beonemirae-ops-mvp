@@ -248,7 +248,8 @@ let reqId = null
   const body = flat(await p.locator('main').innerText())
   ok(body.includes('격리환자'), '**직원 요청함에 병원이 올린 요청이 떴다**')
   ok(body.includes(HOSP.name), `어느 병원인지 적혀 있다 (${HOSP.name})`)
-  ok(/희망일 2026-09-03/.test(body), '희망일이 직원 화면에 그대로 나온다')
+  //  0148 — 직원 화면은 「2026-09-03」 대신 읽기 쉬운 「9월 3일 (목)」로 적습니다. **같은 날짜**인지를 봅니다.
+  ok(/희망일 9월 3일 \(목\)/.test(body), '희망일이 직원 화면에 그대로 나온다 (9월 3일 (목) = 2026-09-03)', (body.match(/희망일 [^·]{0,14}/) ?? [''])[0])
   const savedKg = store.requests[0].expected_kg
   if (savedKg != null) {
     ok(body.includes(`병원 어림 ${savedKg}kg`),
