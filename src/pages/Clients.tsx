@@ -430,6 +430,14 @@ export function Clients() {
                         <span className="lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:truncate">{c.collectionCycle}</span>
                       </p>
                     )}
+                    {/*  폰 — 미수가 있는 곳만 셋째 줄에 빨간 금액 (PC 미수금 칸과 같은 계산 · 1원 단위 그대로).
+                         0147: 예전엔 줄 오른쪽에 두어, 가장 큰 글씨에서 금액이 병원 이름 자리를 먹고
+                         이름이 한 글자씩 세로로 섰습니다(「차오름병 / 원」). */}
+                    {phone && showMoney && unpaid && (
+                      <p data-client-owed-phone className="mt-0.5 whitespace-nowrap text-[0.95rem] font-extrabold tabular-nums text-rose-700">
+                        미수 {won(signals.get(c.id)?.owed ?? 0)}
+                      </p>
+                    )}
                     <div className={`mt-1.5 flex-wrap gap-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 ${phone ? 'hidden' : 'flex'}`}>
                       {/*  ⚠ 0069 — rose-500/rose-50 은 대비 3.3:1, 글자도 16px 로 작았습니다.
                            거래처마다 하나씩 붙어 이 화면에서 가장 많이 보이는 글자입니다. */}
@@ -463,12 +471,6 @@ export function Clients() {
                   >
                     {showMoney ? (unpaid ? won(signals.get(c.id)?.owed ?? 0) : '—') : ''}
                   </span>
-                  {/*  폰 — 미수가 있는 곳만 오른쪽에 빨간 금액 (PC 미수금 칸과 같은 계산 · 1원 단위 그대로) */}
-                  {phone && showMoney && unpaid && (
-                    <span data-client-owed-phone className="shrink-0 whitespace-nowrap text-[0.9rem] font-extrabold tabular-nums text-rose-700">
-                      {won(signals.get(c.id)?.owed ?? 0)}
-                    </span>
-                  )}
                   <ChevronRight size={16} className="shrink-0 text-navy-400 lg:col-start-7 lg:row-span-2 lg:row-start-1" />
                 </button>
                 {/*  Pilot 켜기 (0122) — 관리자만. 카드(button) 안에 단추를 넣을 수 없어

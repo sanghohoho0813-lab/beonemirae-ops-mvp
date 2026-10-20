@@ -130,12 +130,12 @@ function Section({
           type="button"
           data-fold={fold.id}
           onClick={fold.onOpen}
-          className="flex min-h-[3.5rem] w-full items-center gap-2.5 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
+          className="flex min-h-[3.5rem] w-full flex-wrap items-center gap-x-2.5 gap-y-1 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
         >
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-[0.98rem] font-extrabold text-teal-600">
             {n}
           </span>
-          <span className="min-w-0 break-keep text-[1.1rem] font-extrabold text-navy-900">{title}</span>
+          <span className="min-w-0 flex-1 basis-[8rem] break-keep text-[1.1rem] font-extrabold text-navy-900">{title}</span>
           <span
             data-fold-summary={fold.id}
             className="ml-auto flex shrink-0 items-center gap-1 text-[1.02rem] font-bold text-navy-500"

@@ -138,7 +138,7 @@ export function Receivables() {
       <div data-recv-kpis className="card mb-5 p-5 lg:grid lg:grid-cols-4 lg:gap-3 lg:!border-0 lg:!bg-transparent lg:p-0 lg:!shadow-none">
         <div className="lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
           <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">미수금 합계</p>
-          <p className="mt-1 text-[1.9rem] font-extrabold leading-none tracking-tight text-rose-500 lg:whitespace-nowrap lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-rose-700">{won(outstanding)}</p>
+          <p className="mt-1 whitespace-nowrap text-[1.9rem] font-extrabold leading-none tracking-tight tabular-nums text-rose-500 max-[380px]:text-[1.55rem] lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-rose-700">{won(outstanding)}</p>
           <p className="mt-1.5 text-[0.98rem] text-navy-400 lg:mt-0.5 lg:text-[0.843rem] lg:text-navy-500">부분입금을 뺀 실제 못 받은 금액</p>
         </div>
         <div className="hidden lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline lg:block">
@@ -148,14 +148,15 @@ export function Receivables() {
           </p>
           <p className="text-[0.843rem] text-navy-500">지난달 이전 청구가 남은 곳</p>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-3 lg:contents">
-          <div className="lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+        {/*  0147 — 폰은 한 줄에 하나(이름 왼쪽 · 금액 오른쪽). 두 칸이면 「948,665,66 / 4원」처럼 금액이 끊겼습니다 */}
+        <div className="mt-4 grid grid-cols-1 gap-1.5 border-t border-navy-100 pt-3 sm:grid-cols-2 sm:gap-3 lg:contents">
+          <div className="flex items-baseline justify-between gap-3 sm:block lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
             <p className="text-[0.98rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">입금 완료</p>
-            <p className="mt-0.5 text-base font-extrabold text-emerald-600 lg:whitespace-nowrap lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-emerald-700">{won(collected)}</p>
+            <p className="mt-0.5 whitespace-nowrap text-base font-extrabold tabular-nums text-emerald-600 lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-emerald-700">{won(collected)}</p>
           </div>
-          <div className="lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
+          <div className="flex items-baseline justify-between gap-3 sm:block lg:rounded-[14px] lg:bg-white lg:px-4 lg:py-3.5 lg:ring-1 lg:ring-inset lg:ring-cardline">
             <p className="text-[0.98rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">총 청구액</p>
-            <p className="mt-0.5 text-base font-extrabold text-navy-800 lg:whitespace-nowrap lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-navy-900">{won(billedTotal)}</p>
+            <p className="mt-0.5 whitespace-nowrap text-base font-extrabold tabular-nums text-navy-800 lg:text-[1.348rem] lg:leading-tight lg:tabular-nums 2xl:text-[1.573rem] lg:text-navy-900">{won(billedTotal)}</p>
           </div>
         </div>
       </div>
@@ -330,7 +331,7 @@ export function Receivables() {
 
                 {/* 취소한 청구는 더 손대지 않습니다 — 기록으로만 남습니다 */}
                 {restOf(p) > 0 && p.status !== '취소' ? (
-                  <div className="mt-3 flex items-center justify-end gap-2 lg:col-start-6 lg:mt-0 lg:gap-1.5">
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2 lg:col-start-6 lg:mt-0 lg:gap-1.5">
                     {p.status === '미수금' && (
                       <button
                         className="whitespace-nowrap rounded-full bg-navy-50 px-4 py-2 text-[1.08rem] font-bold text-navy-500 transition active:scale-95 lg:rounded-[10px] lg:px-3 lg:py-1.5 lg:text-[0.899rem]"

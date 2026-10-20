@@ -91,14 +91,15 @@ export function PortalBilling() {
           >
             {won(owed)}
           </p>
-          <div className="mt-4 grid grid-cols-2 divide-x divide-navy-100 border-t border-navy-100 pt-3.5">
+          {/*  0147 — 건수 칸은 좁게 · 금액 칸은 넓게. 반반이면 큰 글씨에서 「59,712,3 / 36원」으로 끊겼습니다 */}
+          <div className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] divide-x divide-navy-100 border-t border-navy-100 pt-3.5">
             <div className="pr-4">
               <p className="p-sub break-keep">청구 건수</p>
               <p data-pb-count className="t-body mt-0.5 font-extrabold tabular-nums text-navy-900">{rows.length}건</p>
             </div>
             <div className="pl-4">
               <p className="p-sub break-keep">누적 청구액</p>
-              <p data-pb-billed className="t-body mt-0.5 break-keep font-extrabold tabular-nums text-navy-900">{won(billed)}</p>
+              <p data-pb-billed className="t-body mt-0.5 whitespace-nowrap font-extrabold tabular-nums text-navy-900">{won(billed)}</p>
             </div>
           </div>
         </section>

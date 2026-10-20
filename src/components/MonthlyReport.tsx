@@ -76,7 +76,8 @@ export function MonthlyReportView({ report }: { report: MonthlyReport; compact?:
 
       <div className="space-y-6 p-5 sm:p-7">
         {/* 핵심 4개 */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/*  0147 — 아주 좁은 폰(380px 미만)은 한 줄에 하나. 두 칸이면 가장 큰 글씨에서 「총 수 / 거량」 「620k / g」로 끊겼습니다 */}
+        <div className="grid grid-cols-2 gap-3 max-[380px]:grid-cols-1 lg:grid-cols-4">
           <Stat icon={Scale} label="총 수거량" value={weight(report.totalKg)} />
           <Stat icon={Repeat} label="수거 횟수" value={`${report.visits}회`} />
           <Stat icon={Package} label="자재 공급" value={`${supplyTotal}개`} />

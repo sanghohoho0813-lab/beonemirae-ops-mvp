@@ -79,9 +79,12 @@ export function DunningPanel() {
         {/* 구간 요약 — 대표가 먼저 보는 숫자는 「3개월 이상이 얼마인가」입니다 */}
         <div data-dunning-buckets className="mt-3 flex flex-wrap gap-2">
           {sum.byBucket.map((b) => (
-            <span key={b.bucket} className={`pill ${TONE[b.bucket] ?? 'bg-navy-100 text-navy-500'}`}>
-              {b.bucket === '3개월이상' ? '3개월 이상' : b.bucket === '이번달' ? '기한 지남' : `${b.bucket} 경과`} {b.count}곳 ·{' '}
-              {won(b.amount)}
+            //  0147 — 좁은 폰 · 큰 글씨에서는 금액이 다음 줄로 (알약이 카드 밖으로 넘치던 것). 금액은 끊지 않음
+            <span key={b.bucket} className={`pill max-w-full flex-wrap whitespace-normal ${TONE[b.bucket] ?? 'bg-navy-100 text-navy-500'}`}>
+              <span className="whitespace-nowrap">
+                {b.bucket === '3개월이상' ? '3개월 이상' : b.bucket === '이번달' ? '기한 지남' : `${b.bucket} 경과`} {b.count}곳 ·
+              </span>{' '}
+              <span className="whitespace-nowrap tabular-nums">{won(b.amount)}</span>
             </span>
           ))}
         </div>

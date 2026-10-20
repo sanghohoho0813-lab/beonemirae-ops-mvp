@@ -35,7 +35,8 @@ export function CoachLine({ className = '' }: { className?: string }) {
           <span className="block h-full rounded-full bg-teal-500" style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%` }} />
         </span>
         <span className="font-extrabold text-teal-700">{pct}%</span>
-        <span className="text-[0.84rem] text-navy-500">{total}개 중 {done}개</span>
+        {/*  0147 — 360px · 가장 큰 글씨에서 이 줄이 카드 밖으로 넘쳤습니다. 아주 좁은 폰에서는 막대 · 퍼센트만 */}
+        <span className="text-[0.84rem] text-navy-500 max-[380px]:hidden">{total}개 중 {done}개</span>
       </span>
       <span className="hidden min-w-0 flex-1 break-keep text-[1.02rem] font-bold text-navy-700 lg:inline">
         AX 코치 — 오늘 할 일 {total}개 중 <span className="text-teal-700">{done}개 확인됨</span>

@@ -72,7 +72,7 @@ export function ClientHealthCard({ clientId }: { clientId: string }) {
         className="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-navy-100 px-5 py-4 text-left transition hover:bg-navy-50 sm:pointer-events-none"
       >
         <Activity size={19} strokeWidth={2.4} className="shrink-0 text-navy-500" />
-        <p className="t-card min-w-0 flex-1 break-keep text-navy-900">고객 인사이트</p>
+        <p className="t-card min-w-0 flex-1 basis-[7rem] break-keep text-navy-900">고객 인사이트</p>
         <span className={`pill ${GRADE_TONE[h.grade]}`}>{h.grade}</span>
         <span data-client-health-score className="shrink-0 text-[1.2rem] font-extrabold tabular-nums text-navy-900">
           {h.score}점

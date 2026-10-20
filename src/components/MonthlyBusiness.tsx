@@ -163,7 +163,8 @@ export function MonthlyBusiness({ data }: { data: AppData }) {
               )}
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] text-left">
+              {/*  0147 — 칸 안에서 줄을 바꾸지 않습니다(「새벽병 / 원」 「655,20 / 0원」). 넓으면 표만 옆으로 밀어 봅니다 */}
+              <table className="w-full min-w-[34rem] whitespace-nowrap text-left">
                 <thead className="t-label bg-navy-50 text-navy-500">
                   <tr>
                     <th className="px-4 py-2.5">거래처</th>

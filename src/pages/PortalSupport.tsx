@@ -153,7 +153,8 @@ export function PortalSupport() {
                 <span aria-hidden="true" className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${look.tone}`}>
                   <Icon size={22} strokeWidth={2.2} />
                 </span>
-                <span className="break-keep">{t}</span>
+                {/*  0147 — 세 칸 격자 · 가장 큰 글씨 · 아주 좁은 폰에서 「긴급수 / 거」로 끊겨 글자만 조금 줄임 */}
+                <span className="break-keep max-[380px]:text-[0.9rem]">{t}</span>
               </button>
             )
           })}

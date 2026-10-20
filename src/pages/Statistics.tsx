@@ -116,12 +116,13 @@ export function Statistics() {
         <div className="card space-y-3 p-4">
           {vehicleStats.map(({ vehicle, count, amount }) => (
             <div key={vehicle.id}>
-              <div className="mb-1 flex items-center justify-between text-[1.08rem]">
-                <span className="flex items-center gap-2">
+              {/*  0147 — 자리가 모자라면 건수 · 무게가 아랫줄로 (가장 큰 글씨에서 「의료폐기물」 표가 32px 로 눌렸던 것) */}
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[1.08rem]">
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
                   <WasteBadge type={vehicle.wasteType} />
                   <span className="font-medium text-navy-700">{vehicle.name}</span>
                 </span>
-                <span className="text-navy-500">
+                <span className="whitespace-nowrap tabular-nums text-navy-500">
                   {count}건 · {weight(amount)}
                 </span>
               </div>

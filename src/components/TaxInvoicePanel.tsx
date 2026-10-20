@@ -123,7 +123,7 @@ export function TaxInvoicePanel({ month }: { month: string }) {
               <p className="t-caption mt-1 break-keep">
                 사업자등록번호와 부가세 처리 방식은 계약서를 보고 사람이 넣어야 합니다. 시스템이 짐작해서 넣으면 틀린
                 세금계산서가 나갑니다.{' '}
-                <Link data-tax-clients-link to="/pricing" className="font-bold text-amber-700 underline underline-offset-2">
+                <Link data-tax-clients-link to="/pricing" className="-my-2.5 inline-block py-2.5 font-bold text-amber-700 underline underline-offset-2">
                   거래처 점검에서 한 번에 입력
                 </Link>
               </p>

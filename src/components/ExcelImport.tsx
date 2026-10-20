@@ -205,7 +205,7 @@ export function ExcelImport() {
         />
         <div className="flex flex-wrap items-center gap-3">
           <FileSpreadsheet size={22} className="shrink-0 text-navy-500" />
-          <p className="t-body min-w-0 flex-1 break-keep font-bold text-navy-700">
+          <p className="t-body min-w-0 flex-1 basis-[9rem] break-keep font-bold text-navy-700">
             {plan ? plan.fileName : '거래처 관리 엑셀(.xlsx) 을 고르세요'}
           </p>
           <button className="btn-navy shrink-0" onClick={() => fileRef.current?.click()}>

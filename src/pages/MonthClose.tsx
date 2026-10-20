@@ -184,9 +184,10 @@ export function MonthClose() {
             <span className="ml-0.5 text-base text-navy-400">곳</span>
           </p>
         </div>
-        <div className="card p-4">
+        {/*  0147 — 금액 칸은 폰에서 **맨 위 한 줄 전체**. 두 칸 격자에서는 「10,767, / 330원」처럼 끊겼습니다 */}
+        <div className="card col-span-2 p-4 max-xl:order-first xl:col-span-1">
           <p className="text-[1.03rem] font-semibold text-navy-400">확정할 금액</p>
-          <p className="mt-1.5 text-2xl font-extrabold text-teal-600">{won(pickedTotal)}</p>
+          <p className="mt-1.5 whitespace-nowrap text-2xl font-extrabold tabular-nums text-teal-600">{won(pickedTotal)}</p>
         </div>
         <div className="card p-4">
           <p className="text-[1.03rem] font-semibold text-navy-400">기본 단가 섞임</p>
@@ -268,7 +269,7 @@ export function MonthClose() {
             <b className="text-amber-700">{close.defaultPricedCount}곳은 거래처 단가가 없어 시스템 기본 단가로 계산됐습니다.</b>{' '}
             그대로 확정하면 추정 금액이 병원에 나가는 청구서가 됩니다. 처음부터 체크를 꺼 두었으니, 단가를 넣거나 금액을
             확인한 뒤 직접 켜 주세요.{' '}
-            <Link data-close-pricing-link to="/pricing" className="font-bold text-amber-700 underline underline-offset-2">
+            <Link data-close-pricing-link to="/pricing" className="-my-2.5 inline-block py-2.5 font-bold text-amber-700 underline underline-offset-2">
               거래처 점검에서 한 번에 확인
             </Link>
           </p>

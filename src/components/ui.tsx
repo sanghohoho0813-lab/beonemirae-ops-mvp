@@ -312,13 +312,14 @@ export function MetricCard({
       transition={{ duration: 0.15, ease: EASE }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      className={`card flex w-full flex-col p-4 text-left transition sm:p-5 ${
+      //  0147 — 360px · 가장 큰 글씨의 두 칸 격자에서 「의료폐기물」이 칸에 반 글자 모자라 끊겼습니다 — 아주 좁은 폰만 여백 · 라벨 글자를 조금 줄임
+      className={`card flex w-full flex-col p-4 text-left transition max-[380px]:p-3.5 sm:p-5 ${
         onClick
           ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400'
           : ''
       }`}
     >
-      <span className={`order-2 mt-2 hyphens-none break-keep font-semibold text-navy-400 ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
+      <span className={`order-2 mt-2 hyphens-none break-keep font-semibold text-navy-400 max-[380px]:text-[0.92rem] ${size === 'lg' ? 'text-[1.08rem]' : 'text-[1.03rem]'}`}>{label}</span>
       <span className={`order-1 font-extrabold leading-none tracking-tight ${numberSize} ${nowrap ? 'whitespace-nowrap' : ''} ${numberTone[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-[max(0.9rem,0.7em)] font-bold text-navy-400">{unit}</span>}
@@ -665,14 +666,16 @@ export function KpiCard({
     >
       {/* 글자가 커진 뒤에도 라벨이 두 줄로 접히지 않도록 아이콘을 위로 올리고
           라벨이 카드 가로폭 전체를 쓰게 합니다. 숫자는 그 아래 전체 폭 사용. */}
-      <div className="flex min-w-0 items-center gap-2 sm:block sm:gap-0">
+      {/*  0147 — 폰 · 가장 큰 글씨에서는 아이콘 옆 자리가 모자라 라벨이 한 글자씩 세로로 섰습니다
+           (「이번 달 총 수거량」 → 47px). 자리가 모자라면 라벨이 아이콘 **아래 줄**로 내려갑니다. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 sm:block sm:gap-0">
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:mb-2.5 sm:h-11 sm:w-11 sm:rounded-2xl ${kpiToneStyle[tone]}`}
         >
           <Icon size={20} strokeWidth={2.2} className="sm:hidden" />
           <Icon size={23} strokeWidth={2.2} className="hidden sm:block" />
         </span>
-        <p className="t-label min-w-0 text-navy-500">{label}</p>
+        <p className="t-label min-w-0 flex-1 basis-[5.5rem] text-navy-500">{label}</p>
       </div>
       <p className="t-kpi mt-3.5 text-navy-900">
         {num}
