@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useIsPhone } from '../components/PhoneBand'
 import { Pencil, Undo2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { PageHeader } from '../components/PageHeader'
@@ -61,6 +62,7 @@ export function Revenue() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const max = Math.max(1, ...summary.trend.map((p) => p.total))
+  const phone = useIsPhone()
 
   //  거래처별 기여 — 이 달 상위부터. 화면을 길게 만들지 않도록 접어 둡니다.
   const [allRows, setAllRows] = useState(false)
@@ -146,6 +148,39 @@ export function Revenue() {
       <section>
         <SectionTitle>최근 12개월 매출</SectionTitle>
         <div className="card p-4 sm:p-5" data-revenue-trend>
+          {/*  0147 — 폰은 **한 달에 한 줄**(가로 막대). 세로 막대 12개에 숫자를 얹으니 폰 폭에서는
+               숫자끼리 겹치거나(「2,96702,9…」) 한 글자씩 세로로 쌓여 읽을 수 없었습니다. */}
+          {phone ? (
+            <div data-revenue-rows className="space-y-1">
+              {summary.trend.map((p) => (
+                <button
+                  key={p.month}
+                  type="button"
+                  data-revenue-bar={p.month}
+                  onClick={() => setMonth(p.month)}
+                  aria-pressed={month === p.month}
+                  className={`flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-2 text-left transition active:bg-navy-50 ${
+                    month === p.month ? 'bg-navy-50 ring-1 ring-inset ring-navy-200' : ''
+                  }`}
+                >
+                  <span className="w-[3.1rem] shrink-0 whitespace-nowrap text-[0.95rem] font-bold tabular-nums text-navy-500">
+                    {p.month.slice(2, 4)}.{p.month.slice(5)}
+                  </span>
+                  <span className="relative h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-navy-50">
+                    <span
+                      className={`absolute inset-y-0 left-0 rounded-full ${
+                        month === p.month ? 'bg-navy-800' : p.partial ? 'bg-navy-200' : 'bg-teal-400'
+                      }`}
+                      style={{ width: `${Math.max(p.total > 0 ? 2 : 0, Math.round((p.total / max) * 100))}%` }}
+                    />
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap text-right text-[0.98rem] font-extrabold tabular-nums text-navy-800">
+                    {p.total > 0 ? `${Math.round(p.total / 10000).toLocaleString('ko-KR')}만` : '—'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
           <div className="flex items-end gap-1.5 sm:gap-2.5" style={{ height: 160 }}>
             {summary.trend.map((p) => (
               <button
@@ -176,6 +211,7 @@ export function Revenue() {
               </button>
             ))}
           </div>
+          )}
           <p className="mt-2.5 break-keep text-[0.96rem] text-navy-400">
             단위 만원 · 회색 막대는 아직 끝나지 않은 달입니다 (평균·예상 계산에서 뺍니다). 막대를 누르면 그 달
             내역을 봅니다.

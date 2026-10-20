@@ -9,6 +9,8 @@ import * as F from './perf_fixtures.mjs'
 //   ③ 아직 없는 표가 있어도(옛 서버) 앱이 그대로 열리는가
 //   ④ `input` 칸 — 정의가 없어 테두리 없는 회색 글자처럼 보이던 15곳이 이제 입력 칸 모양인가
 //   ⑤ 폰에서 누르는 곳이 손가락 크기(44px)인가 — 홈 · 인사이트 · 통계 · 사용자 · 자재 · 오늘 메모
+//   ⑥ (0147) 수거 입력 「오늘 일정 선택」 — 폰은 앞 6곳 + 「나머지 N곳 더 보기」
+//   ⑦ (0147) 숫자 · 낱말이 한가운데서 끊기지 않음 — 월말 청구 금액 · 달 단추 · 매출 그래프(폰은 한 달 한 줄)
 //
 //   ⚠ 흉내 서버는 즉시 답합니다 — 자료 요청마다 일부러 지연을 얹어 「차례로 vs 동시」를 잽니다.
 
@@ -103,6 +105,50 @@ for (const [role, path, sel, what] of [
   const { ctx, p } = await open(role, path, { w: 360 })
   const hs = await p.locator(sel).evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().width > 0).map((e) => Math.round(e.getBoundingClientRect().height)))
   ok(hs.length > 0 && Math.min(...hs) >= 44, `⑤ ${what} — 44px 이상`, hs.length ? `가장 작은 것 ${Math.min(...hs)}px · ${hs.length}개` : '못 찾음')
+  await ctx.close()
+}
+
+// ── ⑥ 수거 입력 — 앞 6곳 + 더 보기 ──────────────────────────────────────────
+{
+  const { ctx, p } = await open('field', '/collection')
+  const chips = () => p.locator('[data-pick-mode]').locator('xpath=preceding-sibling::div[1]').locator('button:not([data-pick-more])')
+  const before = await chips().count()
+  const more = p.locator('[data-pick-more]')
+  ok((await more.count()) === 1 && /나머지 \d+곳 더 보기/.test((await more.textContent()) ?? ''), '⑥ 폰 — 「나머지 N곳 더 보기」', (await more.textContent().catch(() => '')) ?? '')
+  ok(before === 7, '⑥ 처음엔 「직접 입력」 + 앞 6곳만', `${before}개`)
+  await more.click()
+  await p.waitForTimeout(300)
+  const after = await chips().count()
+  const pending = F.schedules.filter((x) => x.date === F.TODAY && x.status !== '완료' && x.status !== '취소').length
+  ok(after === pending + 1, '⑥ 누르면 남은 곳이 모두 보임', `${after - 1}곳 / 남은 ${pending}곳`)
+  await ctx.close()
+}
+
+// ── ⑦ 끊기지 않는 숫자 · 낱말 ────────────────────────────────────────────────
+const brokenIn = (p, sel) =>
+  p.evaluate((sel) => {
+    const out = []
+    for (const el of document.querySelectorAll(sel)) {
+      const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.4
+      if (el.getBoundingClientRect().height > lh * 1.6) out.push((el.textContent ?? '').trim())
+    }
+    return out
+  }, sel)
+for (const [w, scale] of [[390, 'lg'], [360, 'xl']]) {
+  const { ctx, p } = await open('office', '/billing', { w, scale })
+  const money = await brokenIn(p, '[data-progress-money] p.tabular-nums')
+  ok(money.length === 0, `⑦ ${w}·${scale} 월말 청구 — 금액이 두 줄로 끊기지 않음`, money.join(' / '))
+  const months = await p.locator('[data-close-month] span').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height > parseFloat(getComputedStyle(e).fontSize) * 2).map((e) => e.textContent))
+  ok(months.length === 0, `⑦ ${w}·${scale} 청구할 달 — 「2026년」 · 「10월」이 각각 한 줄`, months.join(' / '))
+  await ctx.close()
+}
+{
+  const { ctx, p } = await open('admin', '/revenue', { w: 360, scale: 'xl' })
+  ok((await p.locator('[data-revenue-rows] [data-revenue-bar]').count()) === 12, '⑦ 폰 매출 — 한 달에 한 줄 (12줄)')
+  const rows = await brokenIn(p, '[data-revenue-rows] [data-revenue-bar] span.whitespace-nowrap')
+  ok(rows.length === 0, '⑦ 폰 매출 — 달 · 금액이 겹치거나 세로로 쌓이지 않음', rows.join(' / '))
+  const hs = await p.locator('[data-revenue-rows] [data-revenue-bar]').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
+  ok(Math.min(...hs) >= 44, '⑦ 폰 매출 — 줄마다 손가락 높이', `${Math.min(...hs)}px`)
   await ctx.close()
 }
 

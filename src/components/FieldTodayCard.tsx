@@ -184,7 +184,7 @@ export function FieldTodayCard() {
                 >
                   {v.clientName}
                 </Link>
-                {v.who && <span className="t-caption text-navy-400">{v.who}</span>}
+                {v.who && <span className="t-caption shrink-0 whitespace-nowrap text-navy-400">{v.who}</span>}
               </li>
             ))}
           </ul>

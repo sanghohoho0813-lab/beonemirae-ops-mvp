@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useIsPhone } from '../components/PhoneBand'
 import { AiFieldNote, type FieldFill } from '../components/AiAssist'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -60,6 +61,8 @@ import { AiButton } from '../components/AiAction'
 const nowTime = nowHm
 
 const HANDOVERS: HandoverStatus[] = ['수거 완료', '인계 대기', '인계 완료']
+/** 폰 「오늘 일정 선택」에 먼저 보여 줄 수 (0147) */
+const PICK_SHOW = 6
 
 //  ⚠ 이름표는 lib/collection.ts 한 곳에 있습니다 — 수거기록 상세도 같은 것을
 //    씁니다. 두 벌이면 한쪽만 고쳐집니다.
@@ -187,6 +190,11 @@ export function CollectionInput() {
   )
 
   const [scheduleId, setScheduleId] = useState<string>('') // '' = 직접 입력
+  //  0147 — 폰에서 남은 방문이 많으면 **앞의 6곳만** 먼저 보여 줍니다(시간 순 — 다음에 넣을 곳).
+  //   18곳이 세로로 다 깔려 거래처 · 수거량 칸까지 화면 두 장을 밀어야 했습니다.
+  //   고른 일정이 뒤쪽이면 저절로 다 펼칩니다. PC 는 한 줄에 여러 개라 그대로 다 보입니다.
+  const phone = useIsPhone()
+  const [pickAll, setPickAll] = useState(false)
   //  일정을 고른 뒤 ①② 를 다시 펼쳤는지 — 「다른 일정 고르기」를 누르면 켜집니다.
   const [pickOpen, setPickOpen] = useState(false)
   const [clientId, setClientId] = useState('')
@@ -1163,7 +1171,10 @@ export function CollectionInput() {
               직접 입력
             </button>
             )}
-            {todayPending.map((s) => {
+            {(phone && !pickAll && todayPending.findIndex((x) => x.id === scheduleId) < PICK_SHOW
+              ? todayPending.slice(0, PICK_SHOW)
+              : todayPending
+            ).map((s) => {
               const c = data.clients.find((x) => x.id === s.clientId)
               const active = scheduleId === s.id
               return (
@@ -1179,6 +1190,18 @@ export function CollectionInput() {
                 </button>
               )
             })}
+            {phone && todayPending.length > PICK_SHOW && todayPending.findIndex((x) => x.id === scheduleId) < PICK_SHOW && (
+              <button
+                type="button"
+                data-pick-more
+                aria-expanded={pickAll}
+                onClick={() => setPickAll((v) => !v)}
+                className="flex min-h-[2.75rem] items-center gap-1 rounded-xl px-3 text-[1.02rem] font-bold text-teal-700 transition active:bg-teal-50"
+              >
+                {pickAll ? '접기' : `나머지 ${todayPending.length - PICK_SHOW}곳 더 보기`}
+                <ChevronDown size={17} strokeWidth={2.4} className={pickAll ? 'rotate-180' : ''} />
+              </button>
+            )}
             {todayPending.length === 0 && (
               <p data-pick-mode className="text-[1.08rem] text-navy-500">
                 오늘 예정된 수거가 없어 <b className="text-navy-600">직접 입력</b>으로 넣습니다.

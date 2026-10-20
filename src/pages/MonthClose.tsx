@@ -150,11 +150,16 @@ export function MonthClose() {
                   setResult(null)
                   setTouched('')
                 }}
+                aria-label={`${m.replace('-', '년 ')}월`}
                 className={`rounded-2xl px-4 py-2.5 text-[1.05rem] font-bold transition ${
                   month === m ? 'bg-navy-800 text-white' : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
                 }`}
               >
-                {m.replace('-', '년 ')}월
+                {/*  0147 — 폰 두 칸 격자에서 「2026년 10 / 월」로 끊겼습니다. 해는 작게 위에 · 달은 크게 */}
+                <span className="block whitespace-nowrap text-[0.85rem] font-semibold opacity-75 sm:inline sm:text-[1.05rem] sm:font-bold sm:opacity-100">
+                  {m.slice(0, 4)}년<span className="hidden sm:inline"> </span>
+                </span>
+                <span className="block whitespace-nowrap sm:inline">{Number(m.slice(5))}월</span>
               </button>
             ))}
           </div>

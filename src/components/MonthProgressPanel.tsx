@@ -231,19 +231,21 @@ export function MonthProgressPanel({ month }: { month: string }) {
         </div>
 
         {/*  돈 세 줄 — 확정한 금액과 실제로 받은 돈은 다른 숫자입니다 */}
-        <div className="mt-3.5 grid grid-cols-3 gap-2.5 border-t border-navy-100 pt-3.5" data-progress-money>
-          <div>
-            <p className="text-[0.98rem] font-semibold text-navy-400">확정 청구</p>
-            <p className="mt-0.5 break-all text-[1.1rem] font-extrabold tabular-nums text-navy-900">{won(p.billed)}</p>
-          </div>
-          <div>
-            <p className="text-[0.98rem] font-semibold text-navy-400">받은 돈</p>
-            <p className="mt-0.5 break-all text-[1.1rem] font-extrabold tabular-nums text-emerald-600">{won(p.collected)}</p>
-          </div>
-          <div>
-            <p className="text-[0.98rem] font-semibold text-navy-400">못 받은 돈</p>
-            <p className="mt-0.5 break-all text-[1.1rem] font-extrabold tabular-nums text-rose-500">{won(p.outstanding)}</p>
-          </div>
+        {/*  0147 — 폰은 한 줄에 하나(이름 왼쪽 · 금액 오른쪽). 세 칸으로 나누니 큰 글씨에서
+             「28,735, / 821원」처럼 **금액이 숫자 한가운데서 끊겼습니다.** 금액은 끊지 않습니다. */}
+        <div className="mt-3.5 grid grid-cols-1 gap-1.5 border-t border-navy-100 pt-3.5 sm:grid-cols-3 sm:gap-2.5" data-progress-money>
+          {(
+            [
+              ['확정 청구', p.billed, 'text-navy-900'],
+              ['받은 돈', p.collected, 'text-emerald-600'],
+              ['못 받은 돈', p.outstanding, 'text-rose-500'],
+            ] as const
+          ).map(([label, v, tone]) => (
+            <div key={label} className="flex items-baseline justify-between gap-3 sm:block">
+              <p className="text-[0.98rem] font-semibold text-navy-400">{label}</p>
+              <p className={`mt-0.5 whitespace-nowrap text-[1.1rem] font-extrabold tabular-nums ${tone}`}>{won(v)}</p>
+            </div>
+          ))}
         </div>
       </div>
 
