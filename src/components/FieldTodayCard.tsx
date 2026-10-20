@@ -180,7 +180,7 @@ export function FieldTodayCard() {
                 {v.atTime && <span className="t-caption tabular-nums text-navy-400">{v.atTime}</span>}
                 <Link
                   to={`/clients/${v.clientId}`}
-                  className="inline-flex min-h-[44px] items-center break-keep text-[1.02rem] font-bold text-navy-800 underline underline-offset-4"
+                  className="inline-flex min-h-[44px] items-center break-keep text-[1.02rem] font-bold text-navy-800 underline-offset-4 hover:underline"
                 >
                   {v.clientName}
                 </Link>
