@@ -27,6 +27,7 @@ import { BillingDrawer } from './portal/BillingDrawer'
 import { DocsDrawer } from './portal/DocsDrawer'
 import { RequestDetailSheet } from './portal/RequestDetailSheet'
 import { touchPortalSeen } from '../lib/repo'
+import { OrgName } from './OrgName'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 고객 포털 레이아웃
@@ -258,7 +259,7 @@ export function PortalLayout() {
                 isHome ? 'text-white' : 'text-navy-900'
               }`}
             >
-              {clientName || '우리 병원'}
+              {clientName ? <OrgName name={clientName} /> : '우리 병원'}
             </p>
           </div>
           <a

@@ -55,6 +55,7 @@ import {
   type BillStatus,
 } from '../lib/ops'
 import { prettyDate, thisMonth, today, weight, won, wonShort } from '../lib/format'
+import { friendlyWhen } from '../lib/portalLabels'
 import { nextActionsFor, clientMonthlyReport } from '../lib/insights'
 import { actionMeta } from '../components/Opportunities'
 import { LeadStageControl } from '../components/LeadStage'
@@ -68,6 +69,7 @@ import { MonthlyActuals } from '../components/MonthlyActuals'
 import { ReceiptPanel } from '../components/Receipts'
 import { ClientDrivers } from '../components/ClientDrivers'
 import { REQUEST_KIND_LABEL, type Client } from '../types'
+import { OrgName } from '../components/OrgName'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 상세 (/clients/:id) — 실제 거래처 운영관리 화면
@@ -337,7 +339,7 @@ export function ClientDetail() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="min-w-0 break-keep text-[1.75rem] font-extrabold leading-tight text-navy-900">{client.name}</h1>
+              <h1 className="min-w-0 break-keep text-[1.75rem] font-extrabold leading-tight text-navy-900"><OrgName name={client.name} /></h1>
               <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.95rem] font-bold text-navy-500">{client.type}</span>
               <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[0.9rem] font-bold ${client.isDemoGenerated ? 'bg-navy-100 text-navy-500' : 'bg-teal-50 text-teal-600'}`}>
                 {client.isDemoGenerated ? '시연용' : '주요거래처'}
@@ -374,25 +376,31 @@ export function ClientDetail() {
         {/*  PC 에서는 단추가 화면 끝까지 늘어날 이유가 없습니다 — 글자만큼만
              차지하고, 남은 자리에 핵심 지표를 놓습니다. 폰은 그대로
              (한 손으로 누르려면 넓은 편이 낫습니다). */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        {/*  0148 — 폰: 「수거 / 입력」 · 「수거대장 / 보기」가 두 줄로 갈리고 「배차 반영」이 혼자 반 칸이었습니다.
+             폰은 2칸 격자 — 가장 많이 누르는 「수거 입력」이 한 줄을 다 쓰고, 나머지 둘이 반씩 나눕니다. */}
+        <div className="mt-4 grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:items-center">
           {/*  수거 입력 — 거래처를 보다가 바로 넣을 수 있어야 합니다.
                예전에는 왼쪽 메뉴로 나갔다가 목록에서 이 병원을 다시 찾아야
                했습니다. 거래처가 100곳 가까이 되면 그게 매번 일입니다.
                오늘 예정이 있으면 차량·시간까지 따라옵니다. */}
           <button
             data-go-collect={id}
-            className="btn-primary flex-1 lg:flex-none lg:px-6"
+            className="btn-primary col-span-2 whitespace-nowrap lg:flex-none lg:px-6"
             onClick={() => navigate(`/collection?client=${id}`)}
           >
             <PlusCircle size={17} strokeWidth={2.4} /> 수거 입력
           </button>
-          <button className="btn-ghost flex-1 lg:flex-none lg:px-6" onClick={() => setLogOpen(true)}>
-            <FileText size={17} strokeWidth={2.4} /> 수거대장 보기
+          {/*  반 칸(약 150px)에는 「수거대장 보기」 + 그림이 안 들어갑니다 — 폰은 「수거대장」으로 */}
+          <button
+            className={`btn-ghost whitespace-nowrap px-3 lg:flex-none lg:px-6 ${canGoDispatch ? '' : 'col-span-2'}`}
+            onClick={() => setLogOpen(true)}
+          >
+            <FileText size={17} strokeWidth={2.4} className="shrink-0" /> 수거대장<span className="hidden lg:inline"> 보기</span>
           </button>
           {/* 배차 화면은 현장 담당자에게 막혀 있습니다 — 갈 수 없는 곳으로 보내지 않습니다 */}
           {canGoDispatch && (
-            <button className="btn-ghost" onClick={() => navigate('/dispatch')}>
-              <Truck size={16} /> 배차 반영
+            <button className="btn-ghost whitespace-nowrap px-3 lg:px-5" onClick={() => navigate('/dispatch')}>
+              <Truck size={16} className="shrink-0" /> 배차 반영
             </button>
           )}
           {/*  ── 0086 — 이 병원이 **실제로 보는 화면** ─────────────────────
@@ -406,7 +414,7 @@ export function ClientDetail() {
                ⚠ 병원 id 를 달고 갑니다 — 안 달면 「어느 병원을 보시겠습니까」로
                  갑니다. 열리는 사람에게만 보입니다(안에서 스스로 판단합니다). */}
           {canSeeMoney && (
-            <span data-client-portal-link className="contents">
+            <span data-client-portal-link className="col-span-2 flex lg:contents">
               <PortalSwitchButton compact clientId={client.id} label="병원 화면 보기" />
             </span>
           )}
@@ -497,7 +505,8 @@ export function ClientDetail() {
             </SectionTitle>
             {/*  이미 카드 안입니다 — 여기서 또 card 를 쓰면 상자 속 상자가
                  됩니다. 옅은 바탕으로 「같은 카드의 한 칸」처럼 둡니다. */}
-            <div className="divide-y divide-navy-100 rounded-2xl bg-navy-50 p-2">
+            {/*  0148 — 폰에서 접혀 있으면 이 칸 자체를 숨깁니다. 예전에는 속이 빈 회색 띠(16px)가 남았습니다. */}
+            <div className={`divide-y divide-navy-100 rounded-2xl bg-navy-50 p-2 ${allActions ? '' : 'hidden lg:block'}`}>
               {actions.map((a, i) => {
                 const meta = actionMeta[a.kind]
                 const Icon = meta.icon
@@ -566,7 +575,9 @@ export function ClientDetail() {
                 )
               })}
             </div>
-            {!stageOpen && (
+            {/*  ⚠ 0148 — 추천이 접혀 있을 때 이 단추를 누르면 단추만 사라지고 아무것도 안 보였습니다
+                 (영업 진행 상태는 추천 칸 **안**에 있습니다). 추천을 편 뒤에만 보입니다. */}
+            {!stageOpen && allActions && (
               <button
                 data-stage-open
                 onClick={() => setStageOpen(true)}
@@ -910,7 +921,7 @@ export function ClientDetail() {
                     <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[0.98rem] font-bold text-teal-700">{REQUEST_KIND_LABEL[r.type]}</span>
                     {r.urgent && <span className="rounded-lg bg-rose-50 px-2 py-0.5 text-[0.98rem] font-bold text-rose-500">긴급</span>}
                     <span className={`rounded-lg px-2 py-0.5 text-[0.98rem] font-bold ${reqStatusStyle[r.status]}`}>{r.status}</span>
-                    <span className="ml-auto text-[0.98rem] text-navy-400">{r.when}</span>
+                    <span className="ml-auto text-[0.98rem] tabular-nums text-navy-500" title={r.when}>{friendlyWhen(r.when, today())}</span>
                   </div>
                   <p className="mt-1.5 text-[1.08rem] leading-snug text-navy-700">{r.content}</p>
                   <p className="mt-1 text-[0.98rem] text-navy-400">

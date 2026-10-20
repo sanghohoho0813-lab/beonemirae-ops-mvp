@@ -8,6 +8,7 @@ import { NoteChips } from '../components/SiteNotes'
 import { PageHeader } from '../components/PageHeader'
 import { handlersOf } from '../components/StaffCard'
 import { NextVisitCard } from '../components/NextVisit'
+import { OrgName } from '../components/OrgName'
 import { StatusBadge, WasteBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Stagger, StaggerItem } from '../components/motion'
@@ -389,7 +390,9 @@ export function TodaySchedule() {
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p data-day-sub className="t-muted min-w-0 flex-1 basis-[4.5rem] tabular-nums">
+            {/*  0148 — 큰 글씨에서 「3곳 · 완료 / 0」처럼 숫자만 다음 줄로 떨어졌습니다.
+                 건수 줄은 한 줄로 두고, 모자라면 옆의 칩이 다음 줄로 내려갑니다. */}
+            <p data-day-sub className="t-muted min-w-0 grow whitespace-nowrap tabular-nums">
               {list.length === 0 ? '잡힌 일정 0건' : `${list.length}곳 · 완료 ${doneCount}`}
             </p>
             {/*  2단계 예정 기능의 입구 — 건수 줄 오른쪽에 얹습니다(새 줄을 만들지 않게) */}
@@ -542,7 +545,7 @@ export function TodaySchedule() {
                         done ? 'text-navy-400' : 'text-navy-900'
                       }`}
                     >
-                      {client?.name ?? '알 수 없는 거래처'}
+                      {client ? <OrgName name={client.name} /> : '알 수 없는 거래처'}
                     </span>
                     {/*
                       ── 둘째 줄은 **방문 목적**부터 (0068) ─────────────────
@@ -639,7 +642,7 @@ export function TodaySchedule() {
                         className="mt-1.5 flex min-w-0 max-w-full items-center gap-1 text-left"
                       >
                         <span className="min-w-0 text-xl font-extrabold text-navy-900 [overflow-wrap:anywhere] [word-break:keep-all]">
-                          {client?.name ?? '알 수 없는 거래처'}
+                          {client ? <OrgName name={client.name} /> : '알 수 없는 거래처'}
                         </span>
                         <ChevronRight size={16} className="shrink-0 text-navy-400" />
                       </button>

@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Clock, MapPin, Phone, PlusCircle, Truck } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronRight, Clock, MapPin, Phone, PlusCircle, Truck } from 'lucide-react'
 import type { AppData, Schedule } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { NoteChips } from './SiteNotes'
 import type { SiteNote } from '../types'
 import { mapUrl } from '../lib/mapLink'
+import { today } from '../lib/format'
+import { OrgName } from './OrgName'
+import { useDayCloseShown } from './DayClose'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 다음 방문 (모바일 전용)
@@ -30,6 +33,7 @@ export function NextVisitCard({
 }) {
   const navigate = useNavigate()
   const { role } = useAuth()
+  const dayCloseShown = useDayCloseShown()
   const done = list.filter((s) => s.status === '완료').length
   const next = list.find((s) => s.status !== '완료')
   const client = next ? data.clients.find((c) => c.id === next.clientId) : null
@@ -50,9 +54,21 @@ export function NextVisitCard({
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
           <CheckCircle2 size={26} strokeWidth={2.3} />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="t-card break-keep text-navy-900">오늘 방문을 모두 마쳤습니다</p>
           <p className="t-muted mt-1 break-keep">{list.length}건 완료 · 입력까지 끝났습니다</p>
+          {/*  0148 — 다 돌았으면 남은 일은 「오늘 업무 마감」 하나입니다. 그 카드는 이 화면
+               맨 아래에 있어 한참 밀어야 했습니다. 현장 계정 · 오늘일 때만 (마감은 기사님 것) */}
+          {dayCloseShown && list[0]?.date === today() && (
+            <button
+              type="button"
+              data-go-day-close
+              onClick={() => document.getElementById('day-close')?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+              className="t-btn -ml-1 mt-1.5 inline-flex min-h-[2.75rem] items-center gap-1 rounded-xl px-1 font-extrabold text-teal-700"
+            >
+              오늘 업무 마감 <ChevronDown size={17} strokeWidth={2.6} className="shrink-0" />
+            </button>
+          )}
         </div>
       </section>
     )
@@ -83,7 +99,7 @@ export function NextVisitCard({
         </div>
 
         <p className="mt-1.5 break-keep text-[1.55rem] font-extrabold leading-tight tracking-tight text-navy-900">
-          {client?.name ?? '알 수 없는 거래처'}
+          {client ? <OrgName name={client.name} /> : '알 수 없는 거래처'}
         </p>
 
         <div className="mt-2.5 space-y-1.5">

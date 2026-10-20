@@ -41,3 +41,14 @@ export function koMatch(q: string, texts: (string | null | undefined)[]): boolea
   }
   return false
 }
+
+/**
+ * 받침에 맞는 조사 (0148) — 「차량을」 · 「거래처를」. 「을(를)」처럼 둘 다 적지 않습니다.
+ *  끝 글자가 한글이 아니면(숫자 · 영문) 앞의 것(받침 있음 쪽)을 씁니다.
+ */
+export function josa(word: string, withFinal: string, withoutFinal: string): string {
+  const last = word.trim().slice(-1)
+  const code = last.charCodeAt(0) - 0xac00
+  if (!(code >= 0 && code <= 11171)) return withFinal
+  return code % 28 === 0 ? withoutFinal : withFinal
+}

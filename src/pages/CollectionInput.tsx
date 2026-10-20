@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Undo2,
   ChevronUp,
+  Moon,
 } from 'lucide-react'
 import { nowHm } from '../lib/format'
 import { addDays } from '../lib/performance'
@@ -34,6 +35,9 @@ import { WasteBadge } from '../components/Badge'
 import { schedulesOn } from '../lib/selectors'
 import { prettyDate, today, weight } from '../lib/format'
 import { mapUrl } from '../lib/mapLink'
+import { josa } from '../lib/koSearch'
+import { OrgName } from '../components/OrgName'
+import { useDayCloseShown } from '../components/DayClose'
 import { clearDraft, loadDraft, saveDraft, type CollectDraft } from '../lib/collectDraft'
 import {
   CONTAINER_KEYS,
@@ -280,6 +284,8 @@ export function CollectionInput() {
   //  ⚠ 사무실·관리자 화면은 아래 「차량 · 기사」 칸을 그대로 씁니다. 사무실은
   //    여러 차를 대신 입력하는 자리라 고르는 칸을 없애면 일이 안 됩니다.
   const fieldPick = role === 'field' && configured
+  //  다 끝난 뒤 「오늘 업무 마감하기」 — 마감 카드가 실제로 있는 계정·서버일 때만 (0148)
+  const dayCloseShown = useDayCloseShown()
 
   //  기사님이 이번 건에 직접 고른 차. null 이면 일정 배차를 기본값으로 씁니다.
   //  ⚠ 저장이 끝나면 지웁니다 — 오늘 3호차를 탔다고 다음 건까지 3호차로
@@ -677,6 +683,9 @@ export function CollectionInput() {
       //    지울 수 있게 기록 번호를 들고 있습니다.
       eventId: result.eventId,
     })
+    //  0148 — 저장 단추는 폼 맨 아래라, 그 자리에 머물면 결과 화면의 **아래쪽**(목록)부터 보였습니다.
+    //    결과 · 「다음 방문」이 있는 맨 위에서 시작합니다.
+    window.scrollTo({ top: 0 })
     // 폼 초기화
     setScheduleId('')
     setClientId('')
@@ -862,11 +871,11 @@ export function CollectionInput() {
           animate={{ opacity: 1, y: 0 }}
           className="card mt-6 p-7 text-center"
         >
-          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-            <CheckCircle2 size={34} className="text-emerald-500" strokeWidth={2.2} />
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+            <CheckCircle2 size={30} className="text-emerald-500" strokeWidth={2.2} />
           </span>
-          <h2 className="mt-4 text-2xl font-extrabold text-navy-900">수거 완료가 반영되었습니다</h2>
-          <p className="mt-1.5 text-[1.07rem] text-navy-500">
+          <h2 className="mt-3 break-keep text-[1.5rem] font-extrabold leading-tight text-navy-900">수거 완료가 반영되었습니다</h2>
+          <p className="mt-1.5 break-keep text-[1.07rem] text-navy-500">
             {success.client} · {weight(success.amount)}
             {success.supplied > 0 && ` · 자재 ${success.supplied}점 동시공급`}
             {success.used > 0 && <span data-collect-done-used>{` · 사용 자재 ${success.used}개 기록`}</span>}
@@ -885,26 +894,14 @@ export function CollectionInput() {
             </div>
           )}
 
-          <div className="mt-5 space-y-2 rounded-2xl bg-navy-50 p-4 text-left text-[1.08rem]">
-            <p className="mb-1 text-[0.98rem] font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
-            {[
-              '오늘 일정 완료 처리 · 수거이력 생성',
-              '거래처 최근 활동 · 월간 수거량 반영',
-              success.supplied > 0 ? '자재 공급 이력 기록 · 사무실 재고 차감' : '대시보드·통계 수거량 반영',
-              '처리장 인계 상태 · 수거대장/월간 명세 초안 반영',
-              //  규격별로 적었을 때만 — 안 적었으면 그 줄은 없습니다 (0122)
-              ...(success.used > 0 ? ['사용 자재 규격별 기록 · 거래처 수거이력 반영 (재고와 무관)'] : []),
-            ].map((t) => (
-              <p key={t} className="flex items-center gap-2 text-navy-700">
-                <CheckCircle2 size={15} className="shrink-0 text-teal-500" /> {t}
-              </p>
-            ))}
-          </div>
-
           {/* 현장에서는 저장 다음에 할 일이 하나뿐입니다 — 다음 병원으로.
-              그래서 남은 일정이 있으면 그 병원을 미리 채운 버튼을 가장 크게 둡니다. */}
+              그래서 남은 일정이 있으면 그 병원을 미리 채운 버튼을 가장 크게 둡니다.
+              ⚠ 0148 — 예전에는 아래 「자동 연결됨」 목록 밑에 있어, 폰에서는 이 단추가
+                화면 밖(아래 탭 뒤)에 있었습니다. 저장할 때마다 밀어 올려야 했습니다.
+                그래서 결과 한 줄 바로 밑으로 올렸습니다. 목록은 맨 아래에 그대로 둡니다. */}
           {nextPending ? (
             <button
+              data-collect-next={nextPending.id}
               onClick={() => {
                 setSuccess(null)
                 applySchedule(nextPending.id)
@@ -912,13 +909,32 @@ export function CollectionInput() {
               }}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-4 text-[1.2rem] font-extrabold text-white shadow-sm transition active:scale-[0.98]"
             >
-              다음 방문 · {nextPendingClient?.name ?? '수거 입력'}
-              <ArrowRight size={20} strokeWidth={2.5} />
+              <span className="min-w-0 break-keep">
+                다음 방문 · {nextPending.scheduledTime && <span className="tabular-nums">{nextPending.scheduledTime} </span>}
+                {nextPendingClient?.name ?? '수거 입력'}
+              </span>
+              <ArrowRight size={20} strokeWidth={2.5} className="shrink-0" />
             </button>
           ) : (
-            <p className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3.5 text-[1.12rem] font-bold text-emerald-700">
+            <p className="mt-5 break-keep rounded-2xl bg-emerald-50 px-4 py-3.5 text-[1.12rem] font-bold text-emerald-700">
               오늘 방문을 모두 마쳤습니다
             </p>
+          )}
+          {/*  남은 곳 수 — 하루가 어디까지 왔는지 저장할 때마다 한눈에 */}
+          {nextPending && (
+            <p data-collect-left className="t-caption mt-1.5 break-keep font-bold text-navy-500">
+              오늘 남은 방문 {todayPending.length}곳
+            </p>
+          )}
+          {/*  다 끝났으면 다음 일은 「오늘 업무 마감」입니다 — 마감은 기사님 것이라 현장 계정에만 */}
+          {!nextPending && dayCloseShown && (
+            <Link
+              to="/today#day-close"
+              data-collect-go-close
+              className="mt-2.5 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-navy-900 px-5 text-[1.12rem] font-extrabold text-white transition active:scale-[0.98]"
+            >
+              <Moon size={19} strokeWidth={2.4} className="shrink-0" /> 오늘 업무 마감하기
+            </Link>
           )}
 
           {/*  수거이력은 현장 담당자에게 막혀 있습니다(access.ts). 링크가 하나만
@@ -955,6 +971,24 @@ export function CollectionInput() {
               if (!data.events.find((e) => e.id === success.eventId && !e.reverted)) setSuccess(null)
             }}
           />
+          {/*  한 번 입력이 어디까지 이어졌는지 — 발표 투어(⑤단계)도 이 목록을 짚습니다.
+               ⚠ 0148 — 다음 할 일(위 단추)보다 **아래**에 둡니다. 읽을거리이지 누를 것이 아닙니다. */}
+          <div data-collect-linked className="mt-5 space-y-1.5 rounded-2xl bg-navy-50 p-4 text-left text-[1.02rem]">
+            <p className="mb-1 text-[0.98rem] font-bold text-navy-400">한 번 입력으로 자동 연결됨</p>
+            {[
+              '오늘 일정 완료 처리 · 수거이력 생성',
+              '거래처 최근 활동 · 월간 수거량 반영',
+              success.supplied > 0 ? '자재 공급 이력 기록 · 사무실 재고 차감' : '대시보드·통계 수거량 반영',
+              '처리장 인계 상태 · 수거대장/월간 명세 초안 반영',
+              //  규격별로 적었을 때만 — 안 적었으면 그 줄은 없습니다 (0122)
+              ...(success.used > 0 ? ['사용 자재 규격별 기록 · 거래처 수거이력 반영 (재고와 무관)'] : []),
+            ].map((t) => (
+              <p key={t} className="flex items-start gap-2 break-keep text-navy-700">
+                <CheckCircle2 size={15} className="mt-[0.3em] shrink-0 text-teal-500" /> {t}
+              </p>
+            ))}
+          </div>
+
           <button className="mt-3 block w-full text-[1.08rem] font-bold text-navy-500" onClick={() => setSuccess(null)}>
             + 직접 골라서 입력
           </button>
@@ -1104,7 +1138,7 @@ export function CollectionInput() {
               <span className="t-caption text-navy-500">{picked.scheduledTime || '시간 미정'}</span>
             </div>
             <p data-collect-here-name className="mt-1.5 break-keep text-[1.32rem] font-extrabold leading-snug text-navy-900">
-              {client?.name ?? '거래처'}
+              {client ? <OrgName name={client.name} /> : '거래처'}
             </p>
             {client?.address && (
               //  누르면 지도 (0131)
@@ -1156,7 +1190,9 @@ export function CollectionInput() {
           단추와 안내문뿐입니다. 기사님은 아무것도 고를 수 없는 칸을 250px
           밀고 지나가야 했습니다. 0건일 때는 한 줄로 알리기만 합니다.
         */}
-        <Section n={step()} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
+        {/*  0148 — 일정을 골라 ①② 가 접혀 있으면 번호를 건너뛰지 않습니다(예전: ③ 부터 시작해 「①② 는 어디 갔지?」).
+             「지금 이 병원」 카드가 그 자리를 대신하므로 그다음 칸이 ① 입니다. */}
+        <Section n={picked && !pickOpen ? 0 : step()} title="오늘 일정 선택" desc="예정된 수거를 고르면 거래처·차량이 자동 입력됩니다">
           <div className="flex flex-wrap gap-2">
             {todayPending.length > 0 && (
             <button
@@ -1231,7 +1267,7 @@ export function CollectionInput() {
         </Section>
 
         {/* 2. 거래처 · 폐기물 구분 */}
-        <Section n={step()} title="거래처 · 폐기물 구분">
+        <Section n={picked && !pickOpen ? 0 : step()} title="거래처 · 폐기물 구분">
           <div className="space-y-3">
             <div>
               <label className="field-label" data-guide="guide-client">거래처 *</label>
@@ -1371,8 +1407,11 @@ export function CollectionInput() {
                 onClick={() => setOpenTime(true)}
                 className="flex min-h-[3rem] w-full items-center gap-2 rounded-2xl bg-navy-50 px-4 py-3 text-left transition active:scale-[0.99] sm:hidden"
               >
+                {/*  0148 — 글자가 커지면 「10월 21일 (수) / 01:09 으로 / 저장」처럼 세 줄로 갈렸습니다.
+                     날짜 · 시각을 각각 한 덩어리로 묶어 끊기는 자리를 둘 사이로만 둡니다. */}
                 <span data-fold-summary="time" className="min-w-0 break-keep text-[1.05rem] font-bold text-navy-700">
-                  {prettyDate(visitDate)} {time} 으로 저장
+                  <span className="whitespace-nowrap">{prettyDate(visitDate)}</span>{' '}
+                  <span className="whitespace-nowrap"><span className="tabular-nums">{time}</span> 으로 저장</span>
                 </span>
                 <span className="ml-auto flex shrink-0 items-center gap-1 text-[1.02rem] font-bold text-teal-700">
                   시간 바꾸기
@@ -1945,14 +1984,22 @@ export function CollectionInput() {
                 {/*  누를 자리는 44px — 글자만 한 단추는 장갑 낀 손으로 못 누릅니다 */}
                 <button
                   type="button"
-                  className="mx-0.5 inline-flex min-h-[2.75rem] min-w-[2.75rem] items-center justify-center px-1.5 font-extrabold text-blue-600 underline underline-offset-2"
+                  className="ml-0.5 inline-flex min-h-[2.75rem] min-w-[2.75rem] items-center justify-center pl-1.5 pr-0.5 font-extrabold text-blue-600 underline underline-offset-2"
                   onClick={() => document.getElementById(m.target)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 >
                   {m.label}
                 </button>
               </span>
             ))}
-            {missing.some((m) => m.label === '재고 초과') ? ' 를 확인해 주세요' : ' 을(를) 채워 주세요'}
+            {/*  0148 — 예전 「차량 을(를) 채워 주세요」. 받침에 맞는 조사 · 칸에 맞는 말로 */}
+            {josa(missing[missing.length - 1].label, '을', '를')}{' '}
+            {missing.some((m) => m.label === '재고 초과')
+              ? '확인해 주세요'
+              : missing.every((m) => m.label === '차량')
+                ? '골라 주세요'
+                : missing.every((m) => m.label === '수거량')
+                  ? '적어 주세요'
+                  : '채워 주세요'}
           </p>
         )}
         <button

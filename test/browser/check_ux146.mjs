@@ -20,9 +20,22 @@ const ok = (c, m, d = '') => {
 }
 const b = await chromium.launch({ executablePath: EXEC })
 
+//  ⚠ 공용 자료는 화·금에만 수거가 있습니다. 오늘이 다른 요일이면 「오늘 일정」이 비어
+//    ⑤ · ⑥ 이 누를 것을 못 찾습니다(요일에 따라 결과가 바뀌는 검사). 그날이면 그날 몫을 끼워 넣습니다.
+const SCHED = F.schedules.some((x) => x.date === F.TODAY)
+  ? F.schedules
+  : [
+      ...F.schedules,
+      ...F.clients.map((c, i) => ({
+        ...F.schedules.find((x) => x.client_id === c.id),
+        id: `today${i}`, date: F.TODAY, status: '예정', actual_amount: null, completed_at: null, handover_status: null,
+        scheduled_time: `${String(9 + (i % 8)).padStart(2, '0')}:00`, created_at: `${F.TODAY}T00:00:00Z`, updated_at: `${F.TODAY}T00:00:00Z`,
+      })),
+    ]
+
 async function open(role, path, { w = 390, scale = 'lg', delay = 0, missing = [] } = {}) {
   const phone = w < 1024
-  const state = { profile: { ...W.profileFor(role), font_scale: scale }, reqs: 0, writes: [], schemaVersion: 123 }
+  const state = { profile: { ...W.profileFor(role), font_scale: scale }, reqs: 0, writes: [], schemaVersion: 123, schedules: SCHED }
   const ctx = await b.newContext({ viewport: { width: w, height: phone ? 844 : 900 }, isMobile: phone, hasTouch: phone, timezoneId: 'Asia/Seoul' })
   W.wire(ctx, state)
   const log = []
@@ -65,7 +78,7 @@ async function open(role, path, { w = 390, scale = 'lg', delay = 0, missing = []
   //  ② 수거 일정 — 장마다 1000줄, 빠짐 · 겹침 없이
   const sch = log.filter((x) => x.table === 'schedules' && x.limit > 0)
   const offsets = [...new Set(sch.map((x) => x.offset))].sort((a, b) => a - b)
-  const need = Math.ceil((F.schedules.length + 1) / 1000)
+  const need = Math.ceil((SCHED.length + 1) / 1000)
   ok(offsets.slice(0, need).every((o, i) => o === i * 1000), '② 수거 일정 — 0 · 1000 · 2000 … 장을 하나도 안 빼고 받음', offsets.join(','))
   ok(offsets.length <= need + 2, '② 다 받은 뒤 쓸데없이 더 묻는 장은 많아야 둘', `${offsets.length}장 (필요 ${need}장)`)
   const loaded = await p.evaluate(() => document.body.innerText.length)
@@ -119,7 +132,7 @@ for (const [role, path, sel, what] of [
   await more.click()
   await p.waitForTimeout(300)
   const after = await chips().count()
-  const pending = F.schedules.filter((x) => x.date === F.TODAY && x.status !== '완료' && x.status !== '취소').length
+  const pending = SCHED.filter((x) => x.date === F.TODAY && x.status !== '완료' && x.status !== '취소').length
   ok(after === pending + 1, '⑥ 누르면 남은 곳이 모두 보임', `${after - 1}곳 / 남은 ${pending}곳`)
   await ctx.close()
 }

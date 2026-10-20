@@ -43,6 +43,8 @@ import { AiRequestPlan, PLAN_EMPTY, type PlanView } from '../components/AiReques
 import { Sparkles, Loader2 } from 'lucide-react'
 import { aiVendor } from '../lib/aiVendor'
 import { dispatchHint } from '../lib/dispatchHint'
+import { friendlyWhen } from '../lib/portalLabels'
+import { koMatch } from '../lib/koSearch'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 요청 (비원미래 담당자 화면)
@@ -114,7 +116,8 @@ export function Requests() {
   const [replyTo, setReplyTo] = useState<RequestItem | null>(null)
   const [replyText, setReplyText] = useState('')
   //  0106 — 저장 결과를 그 자리에 적습니다. 예전에는 저장 전에 창이 닫혔고 실패해도 표시가 없었습니다.
-  const [saveMsg, setSaveMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
+  //  suggest — 회신을 남긴 요청이 아직 「접수」면, 다음 단계(확인 중)를 **권하기만** 합니다 (0148)
+  const [saveMsg, setSaveMsg] = useState<Record<string, { ok: boolean; text: string; suggest?: RequestStatus }>>({})
   //  그 병원에 오늘 이후로 잡힌(무르지 않은·아직 안 끝난) 방문이 있는가 (0131)
   const hasUpcoming = (clientId: string) =>
     data.schedules.some((x) => x.clientId === clientId && x.date >= today() && x.status !== '완료' && !x.canceledAt)
@@ -151,6 +154,15 @@ export function Requests() {
   const [nClient, setNClient] = useState('')
   const [nKind, setNKind] = useState<RequestKind>('추가수거')
   const [nContent, setNContent] = useState('')
+  //  0148 — 거래처 찾기 (이름 · 초성 · 전화번호). 통화 중에 수십 곳 목록을 내려 찾지 않게.
+  const [nQuery, setNQuery] = useState('')
+  //  방금 접수한 곳 — 창이 닫힌 뒤 「접수됐다」를 목록 위에 한 줄로 (몇 초 뒤 사라짐)
+  const [justAdded, setJustAdded] = useState<string | null>(null)
+  useEffect(() => {
+    if (!justAdded) return
+    const t = window.setTimeout(() => setJustAdded(null), 6000)
+    return () => window.clearTimeout(t)
+  }, [justAdded])
 
   const all = useMemo(() => clientRequests(data), [data])
   const stats = useMemo(() => customerServiceStats(data), [data])
@@ -236,7 +248,9 @@ export function Requests() {
       markAiCallEdited(view.callId, `${view.usedDraft ? '[수정]' : '[초안 미사용]'} ${text}`.slice(0, 300))
         .catch(() => { /* 기록 실패는 회신을 되돌리지 않습니다 */ })
     }
-    setSaveMsg((m) => ({ ...m, [replyTo.id]: { ok: true, text: '회신 저장됨 — 병원 화면에 보입니다' } }))
+    //  ⚠ 0148 — 회신했는데 상태가 「접수」로 남으면 병원 화면에는 「아직 아무도 안 봤다」로 보입니다.
+    //    상태를 **대신 바꾸지는 않습니다**(회신만 하고 접수로 두는 경우도 있습니다). 한 번 누를 단추만 둡니다.
+    setSaveMsg((m) => ({ ...m, [replyTo.id]: { ok: true, text: '회신 저장됨 — 병원 화면에 보입니다', suggest: replyTo.status === '접수' ? '확인 중' : undefined } }))
     setAiByReq((m) => {
       const next = { ...m }
       delete next[replyTo.id]
@@ -320,7 +334,9 @@ export function Requests() {
       return
     }
     setNewError(null)
+    setJustAdded(data.clients.find((c) => c.id === nClient)?.name ?? '거래처')
     setNContent('')
+    setNQuery('')
     setNewOpen(false)
     setNewRequestId(crypto.randomUUID())
   }
@@ -343,7 +359,22 @@ export function Requests() {
         }
       />
 
-      <div data-hide-presenting className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">
+      {/*  0148 — 폰: 숫자 카드 네 장(2×2)이 첫 화면을 다 차지해, 처리할 요청이 하나도 안 보였습니다.
+           폰에서는 같은 숫자를 글자 한두 줄로 줄이고, 바로 아래에서 요청 목록이 시작되게 합니다. */}
+      <div data-hide-presenting data-req-stats-compact className="-mt-1 flex flex-wrap gap-x-4 gap-y-1 px-1 lg:hidden">
+        {[
+          { k: 'open', label: '처리 대기', v: `${stats.requestsOpen}건`, tone: stats.requestsOpen > 0 ? 'text-rose-600' : 'text-navy-900' },
+          { k: 'done', label: '처리 완료', v: `${stats.requestsDone}건`, tone: 'text-teal-700' },
+          { k: 'portal', label: '병원 직접', v: `${stats.portalRatio}%`, tone: 'text-navy-900' },
+          { k: 'clients', label: '요청 병원', v: `${stats.activeClients}곳`, tone: 'text-navy-900' },
+        ].map((c) => (
+          <p key={c.k} data-req-stat={c.k} className="t-muted flex items-baseline gap-1.5 whitespace-nowrap">
+            {c.label}
+            <b className={`text-[1.15rem] font-extrabold tabular-nums ${c.tone}`}>{c.v}</b>
+          </p>
+        ))}
+      </div>
+      <div data-hide-presenting className="hidden grid-cols-2 gap-3 lg:grid lg:gap-4 xl:grid-cols-4">
         <KpiCard icon={AlertTriangle} label="처리 대기" value={stats.requestsOpen} unit="건" tone="rose" />
         <KpiCard icon={CheckCircle2} label="처리 완료" value={stats.requestsDone} unit="건" tone="teal" />
         <KpiCard
@@ -369,6 +400,13 @@ export function Requests() {
           </FilterChip>
         ))}
       </div>
+
+      {justAdded && (
+        <p data-new-req-done role="status" className="flex items-center gap-2 break-keep rounded-2xl bg-teal-50 px-4 py-3 text-[1.05rem] font-bold text-teal-800 ring-1 ring-teal-100">
+          <CheckCircle2 size={18} strokeWidth={2.4} className="shrink-0" />
+          {justAdded} 요청을 접수했습니다. 병원 화면에도 「접수」로 보입니다.
+        </p>
+      )}
 
       {listRows.length === 0 ? (
         <LoadGate
@@ -433,13 +471,14 @@ export function Requests() {
                     </>
                   )}
                 </span>
-                <span className="t-muted ml-auto shrink-0">{r.when}</span>
+                {/*  0148 — 「2026-10-21 09:30」 대신 「오늘 09:30」 · 「어제 14:00」 (정확한 시각은 손가락을 대면) */}
+                <span data-req-when className="t-muted ml-auto shrink-0 tabular-nums" title={r.when}>{friendlyWhen(r.when, today())}</span>
               </div>
 
               <p className="t-body mt-2.5 break-keep leading-snug text-navy-700">{r.content}</p>
               <p className="t-muted mt-1.5 break-keep">
                 {r.requesterName || '담당자 미기재'}
-                {r.desiredDate && ` · 희망일 ${r.desiredDate}`}
+                {r.desiredDate && ` · 희망일 ${prettyDate(r.desiredDate)}`}
                 {/*  ⚠ 0087 — 병원이 적어 준 것만 답니다. 안 적었으면 이 자리에
                      아무것도 안 나옵니다 — 저희가 짐작해 채우면 그 값을 보고
                      차를 고르게 되고, 틀리면 헛걸음입니다. */}
@@ -449,7 +488,8 @@ export function Requests() {
 
               {/* 이 요청이 어떤 매출로 이어지는지 — 요청 처리 = 영업 행동임을 명시.
                   현장 담당자에게는 안 적습니다 (위 주석 참고). */}
-              {showRevenueLine && (
+              {/*  0148 — 매출로 이어지지 않는 요청(기타)은 「연결되는 매출: —」 줄을 그리지 않습니다 */}
+              {showRevenueLine && REQUEST_REVENUE[r.type] !== '—' && (
                 <p data-req-revenue className="t-muted mt-2 flex flex-wrap items-center gap-1.5 break-keep">
                   <span className={`h-2 w-2 shrink-0 rounded-full ${TONE[REQUEST_TONE[r.type]].dot}`} />
                   연결되는 매출: <b className="font-extrabold text-navy-600">{REQUEST_REVENUE[r.type]}</b>
@@ -473,7 +513,7 @@ export function Requests() {
                     key={st}
                     data-req-status={st}
                     onClick={() => void setStatus(r, st)}
-                    className={`rounded-full px-3.5 py-2 text-[1rem] font-extrabold transition ${
+                    className={`min-h-[2.75rem] rounded-full px-3.5 py-2 text-[1rem] font-extrabold transition lg:min-h-0 ${
                       r.status === st ? TONE[STATUS_TONE[st]].chip : 'bg-navy-50 text-navy-400 hover:text-navy-700'
                     }`}
                   >
@@ -525,9 +565,21 @@ export function Requests() {
                 </button>
               </div>
               {saveMsg[r.id] && (
-                <p data-req-save={saveMsg[r.id].ok ? 'ok' : 'fail'} className={`t-caption mt-2 break-keep font-bold ${saveMsg[r.id].ok ? 'text-teal-700' : 'text-rose-600'}`}>
-                  {saveMsg[r.id].text}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p data-req-save={saveMsg[r.id].ok ? 'ok' : 'fail'} className={`t-caption break-keep font-bold ${saveMsg[r.id].ok ? 'text-teal-700' : 'text-rose-600'}`}>
+                    {saveMsg[r.id].text}
+                  </p>
+                  {saveMsg[r.id].suggest && r.status === '접수' && (
+                    <button
+                      type="button"
+                      data-req-suggest={saveMsg[r.id].suggest}
+                      onClick={() => void setStatus(r, saveMsg[r.id].suggest!)}
+                      className={`t-btn inline-flex min-h-[2.75rem] items-center gap-1 rounded-full px-3.5 font-extrabold ${TONE[STATUS_TONE[saveMsg[r.id].suggest!]].chip}`}
+                    >
+                      「{saveMsg[r.id].suggest}」으로 바꾸기
+                    </button>
+                  )}
+                </div>
               )}
               {/*  ⚠ 0131 — 수거 요청을 「일정 반영」으로 바꿨는데 이 병원에 **잡힌 방문이 없으면**
                    병원 화면에는 예약된 것처럼 보이고 차는 안 갑니다(0058 과 같은 사고).
@@ -778,17 +830,26 @@ export function Requests() {
         title="전화 요청 접수"
         onClose={() => setNewOpen(false)}
         footer={
-          <div className="flex gap-2">
-            <button onClick={() => setNewOpen(false)} className="btn-ghost flex-1">
-              취소
-            </button>
-            <button
-              onClick={() => void submitNew()}
-              disabled={!nClient || !nContent.trim()}
-              className="btn-primary flex-1 disabled:opacity-50"
-            >
-              접수
-            </button>
+          //  0148 — 예전에는 두 단추가 왼쪽에 작게 몰려 있었습니다(회신 창과 다르게). 폭을 반씩 채웁니다.
+          <div className="flex w-full flex-col gap-2">
+            {(!nClient || !nContent.trim()) && (
+              <p data-new-req-missing className="t-caption break-keep text-center font-bold text-navy-500">
+                {!nClient && !nContent.trim() ? '거래처를 고르고 내용을 적으면 접수됩니다' : !nClient ? '거래처를 고르면 접수됩니다' : '내용을 적으면 접수됩니다'}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setNewOpen(false)} className="btn-ghost flex-1">
+                취소
+              </button>
+              <button
+                data-new-req-save
+                onClick={() => void submitNew()}
+                disabled={!nClient || !nContent.trim()}
+                className="btn-primary flex-1 disabled:opacity-50"
+              >
+                접수
+              </button>
+            </div>
           </div>
         }
       >
@@ -803,19 +864,49 @@ export function Requests() {
             <label className="field-label" htmlFor="nr-client">
               거래처
             </label>
-            <select
-              id="nr-client"
-              value={nClient}
-              onChange={(e) => setNClient(e.target.value)}
-              className="field-input w-full"
-            >
-              <option value="">거래처를 선택하세요</option>
-              {data.clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <input
+              data-new-req-search
+              type="search"
+              value={nQuery}
+              onChange={(e) => {
+                const q = e.target.value
+                setNQuery(q)
+                //  딱 한 곳만 맞으면 바로 고릅니다 — 「ㄱㄴㅇ」 · 「0100」만 쳐도 끝
+                const hit = q.trim() ? data.clients.filter((c) => koMatch(q, [c.name, c.phone, c.manager])) : []
+                if (hit.length === 1) setNClient(hit[0].id)
+              }}
+              placeholder="이름 · 초성(ㄱㄴㅇ) · 전화번호로 찾기"
+              aria-label="거래처 찾기"
+              className="field-input mb-2 w-full"
+            />
+            {(() => {
+              const q = nQuery.trim()
+              const hit = q ? data.clients.filter((c) => koMatch(q, [c.name, c.phone, c.manager])) : data.clients
+              //  고른 곳은 찾기 결과에서 빠져도 목록에 남깁니다 — 안 그러면 칸이 조용히 비어 보입니다
+              const shown = nClient && !hit.some((c) => c.id === nClient) ? [...data.clients.filter((c) => c.id === nClient), ...hit] : hit
+              return (
+                <>
+                  <select
+                    id="nr-client"
+                    value={nClient}
+                    onChange={(e) => setNClient(e.target.value)}
+                    className="field-input w-full"
+                  >
+                    <option value="">{q ? `찾은 곳 ${hit.length}곳 — 고르세요` : '거래처를 선택하세요'}</option>
+                    {shown.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  {q && hit.length === 0 && (
+                    <p data-new-req-nohit className="t-caption mt-1.5 break-keep font-bold text-amber-700">
+                      「{q}」에 맞는 거래처가 없습니다 — 이름을 줄여 보세요.
+                    </p>
+                  )}
+                </>
+              )
+            })()}
           </div>
           <div>
             <label className="field-label">요청 유형</label>

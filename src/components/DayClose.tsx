@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { CheckCircle2, Loader2, Moon, Gauge, ChevronDown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useData } from '../context/DataContext'
@@ -22,6 +23,16 @@ import { today } from '../lib/format'
 //  ⚠ 판 73 이 아직이면 **아무것도 그리지 않습니다.** 눌러도 안 되는 단추를
 //    만들지 않습니다.
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ *  이 계정 화면에 「오늘 업무 마감」 카드가 그려지는가 (0148).
+ *  ⚠ 마감으로 **보내는 단추**(수거 저장 뒤 · 「다 마쳤습니다」)도 이것을 봅니다 —
+ *    카드가 없는데 단추만 있으면 눌러도 아무 데도 안 갑니다.
+ */
+export function useDayCloseShown(): boolean {
+  const { role, mode } = useAuth()
+  return useSchemaAtLeast(73) === true && mode === 'live' && role === 'field'
+}
 
 export function DayClose({ date = today() }: { date?: string }) {
   const { profile, role, mode } = useAuth()
@@ -93,6 +104,16 @@ export function DayClose({ date = today() }: { date?: string }) {
     (r) => r.profileId === profile?.id && r.date <= date,
   )
 
+  //  0148 — 「오늘 업무 마감하기」(수거 저장 뒤) · 「오늘 업무 마감」(오늘 일정의 「다 마쳤습니다」)로 오면
+  //   이 카드로 화면을 옮깁니다. 카드는 오늘 일정 맨 아래라, 안 옮기면 또 한참 밀어야 합니다.
+  const { hash } = useLocation()
+  const shown = useDayCloseShown()
+  useEffect(() => {
+    if (!shown || hash !== '#day-close') return
+    const t = window.setTimeout(() => document.getElementById('day-close')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 120)
+    return () => window.clearTimeout(t)
+  }, [shown, hash, state])
+
   if (!ready || mode !== 'live') return null
   //  병원 계정에는 없습니다. 사무실·관리자는 자기 마감이 필요 없습니다.
   if (role !== 'field') return null
@@ -121,7 +142,7 @@ export function DayClose({ date = today() }: { date?: string }) {
 
   if (state === 'done' && summary) {
     return (
-      <section data-day-close="done" className="card border-2 border-emerald-200 bg-emerald-50 p-5">
+      <section id="day-close" data-day-close="done" className="card scroll-mt-28 border-2 border-emerald-200 bg-emerald-50 p-5">
         <p className="flex items-center gap-2.5 break-keep text-[1.3rem] font-extrabold text-emerald-800">
           <CheckCircle2 size={24} strokeWidth={2.4} className="shrink-0" />
           오늘 업무 마감했습니다
@@ -145,7 +166,7 @@ export function DayClose({ date = today() }: { date?: string }) {
   }
 
   return (
-    <section data-day-close="open" className="card p-5">
+    <section id="day-close" data-day-close="open" className="card scroll-mt-28 p-5">
       <p className="flex items-center gap-2.5 break-keep text-[1.24rem] font-extrabold text-navy-900">
         <Moon size={22} strokeWidth={2.3} className="shrink-0 text-navy-500" />
         오늘 업무 마감

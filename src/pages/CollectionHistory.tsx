@@ -135,7 +135,21 @@ export function CollectionHistory() {
       <PageHeader title="전체 수거이력" subtitle="거래처·차량·폐기물 구분별 수거 기록" />
 
       {/* 요약 */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/*  0148 — 폰: 숫자 카드 네 장이 첫 화면을 다 차지했습니다. 같은 숫자를 글자 한두 줄로 */}
+      <div data-history-kpi-compact className="mb-3 flex flex-wrap gap-x-4 gap-y-1 px-1 lg:hidden">
+        {[
+          { k: 'n', label: status === '완료' ? '수거건수' : '미입력 건수', v: `${num(rows.length)}건`, tone: 'text-navy-900' },
+          { k: 'kg', label: '총 수거량', v: weight(totalKg), tone: 'text-teal-600' },
+          { k: 'urgent', label: '긴급수거', v: `${urgent}건`, tone: urgent > 0 ? 'text-rose-500' : 'text-navy-900' },
+          { k: 'hand', label: '인계 완료율', v: `${handoverRate}%`, tone: 'text-navy-900' },
+        ].map((c) => (
+          <p key={c.k} className="t-muted flex items-baseline gap-1.5 whitespace-nowrap">
+            {c.label}
+            <b className={`text-[1.15rem] font-extrabold tabular-nums ${c.tone}`}>{c.v}</b>
+          </p>
+        ))}
+      </div>
+      <div className="mb-4 hidden grid-cols-2 gap-3 lg:grid lg:grid-cols-4">
         <div className="kpi-card kpi-box">
           <p className="text-[1.03rem] font-semibold text-navy-400 lg:text-[0.899rem] lg:text-navy-500">{status === '완료' ? '수거건수' : '미입력 건수'}</p>
           <p className="t-stat mt-1.5 lg:mt-0.5 lg:text-[1.573rem] text-navy-900">{rows.length}<span className="ml-0.5 text-[max(0.9rem,0.55em)] text-navy-400">건</span></p>
@@ -200,8 +214,13 @@ export function CollectionHistory() {
         <table className="w-full border-collapse text-left text-[0.98rem] lg:text-[0.899rem] lg:[&_td]:py-1.5">
           <thead>
             <tr className="bg-navy-50 text-navy-500">
-              {['날짜', '거래처', '유형', '구분', '수거량', '기사', '차량', '처리장', '인계', '비고', ...(canRevert ? ['보기·수정'] : [])].map((h) => (
-                <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold">{h}</th>
+              {/*  0148 — 수거량을 거래처 바로 옆으로. 폰에서는 표가 옆으로 넘쳐 「날짜 · 거래처」만 보이고
+                   정작 몇 kg 인지는 밀어야 보였습니다. 폰은 거래처 칸 안에 kg 를 붙이고
+                   따로 된 칸은 PC 에서만 그립니다. (기사 칸은 그대로 여섯째) */}
+              {['날짜', '거래처', '수거량', '유형', '구분', '기사', '차량', '처리장', '인계', '비고', ...(canRevert ? ['보기·수정'] : [])].map((h) => (
+                <th key={h} className={`whitespace-nowrap px-2.5 py-2 font-bold ${h === '수거량' ? 'hidden lg:table-cell' : ''}`}>
+                  {h === '거래처' ? <>거래처<span className="lg:hidden"> · 수거량</span></> : h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -220,11 +239,13 @@ export function CollectionHistory() {
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">{r.date.slice(5)} {r.time}</td>
                 <td className="whitespace-nowrap px-2.5 py-2 font-semibold">
                   {r.clientName}
-                  {r.fromField && <span className="ml-1 rounded bg-teal-50 px-1 py-0.5 text-[0.98rem] font-bold text-teal-600">현장입력</span>}
+                  {/*  폰에서는 뺍니다 — 이 딱지 때문에 수거량이 화면 밖으로 밀렸습니다 */}
+                  {r.fromField && <span className="ml-1 hidden rounded bg-teal-50 px-1 py-0.5 text-[0.98rem] font-bold text-teal-600 lg:inline">현장입력</span>}
+                  <span data-history-kg-inline className="ml-2 font-extrabold tabular-nums text-navy-900 lg:hidden">{r.amount != null ? `${r.amount}kg` : '-'}</span>
                 </td>
+                <td className="hidden whitespace-nowrap px-2.5 py-2 font-bold tabular-nums lg:table-cell">{r.amount != null ? `${r.amount}kg` : '-'}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.clientType}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.wasteType === '의료폐기물' ? '의료' : '기저귀'} · {r.kind}</td>
-                <td className="whitespace-nowrap px-2.5 py-2 font-bold">{r.amount != null ? `${r.amount}kg` : '-'}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.driver}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.vehicleName}</td>
                 <td className="whitespace-nowrap px-2.5 py-2">{r.facility}</td>

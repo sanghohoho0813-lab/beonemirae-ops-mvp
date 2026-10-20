@@ -21,10 +21,14 @@ export function TimeField({
   value,
   onChange,
   label = '실제 수거 시간',
+  optional = false,
 }: {
   value: string
   onChange: (next: string) => void
+  /** 빈 글자면 제목 줄을 안 그립니다 — 부르는 쪽이 이미 제목을 단 경우 (0148) */
   label?: string
+  /** 「안 정해도 됩니다」 칸 — 비어 있으면 「안 정함」이라고 적고, 정한 뒤에는 지울 수 있게 (0148) */
+  optional?: boolean
 }) {
   const parts = parseHm(value)
   //  치는 도중에는 칸이 비어 있을 수 있습니다. 그 순간을 저장하지는 않습니다 —
@@ -44,7 +48,7 @@ export function TimeField({
 
   return (
     <div data-timefield>
-      <label className="field-label">{label}</label>
+      {label && <label className="field-label">{label}</label>}
 
       {/* 오전 / 오후 — 누르는 자리를 크게 */}
       <div className="grid grid-cols-2 gap-2">
@@ -53,10 +57,11 @@ export function TimeField({
             key={m}
             type="button"
             data-time-ampm={m}
-            aria-pressed={parts.meridiem === m}
+            //  비어 있으면(안 정함) 둘 다 눌리지 않은 모양 — 오전이 켜져 보이면 정해진 줄 압니다 (0148)
+            aria-pressed={!!value && parts.meridiem === m}
             onClick={() => push({ meridiem: m })}
             className={`rounded-2xl px-4 py-3.5 text-[1.15rem] font-extrabold transition active:scale-[0.97] ${
-              parts.meridiem === m ? 'bg-navy-900 text-white shadow-sm' : 'bg-navy-50 text-navy-500'
+              value && parts.meridiem === m ? 'bg-navy-900 text-white shadow-sm' : 'bg-navy-50 text-navy-500'
             }`}
           >
             {m}
@@ -104,9 +109,28 @@ export function TimeField({
            점심 수거가 새벽으로 남는 일을 여기서 눈으로 잡습니다. */}
       {/*  0080 — navy-400 은 3.5:1 로 기준(4.5)에 못 미쳤습니다. 하필 이 줄은
            「눈으로 잡으라」고 만든 줄이라, 안 읽히면 있으나 마나입니다. */}
-      <p data-time-value={value} className="t-muted mt-1.5 font-bold text-navy-500">
-        저장될 시간 <span className="tabular-nums text-navy-700">{value}</span>
-      </p>
+      {/*  ⚠ 0148 — 방문 예약처럼 「안 정해도 되는」 칸은 값이 비어 있어도 칸에는 오전 9:00 이 보입니다.
+           예전에는 「저장될 시간」 뒤가 그냥 비어 있어, 9시로 잡힌 줄 알았습니다. 비었으면 비었다고 적습니다. */}
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
+        <p data-time-value={value} className="t-muted font-bold text-navy-500">
+          저장될 시간{' '}
+          {value ? (
+            <span className="tabular-nums text-navy-700">{value}</span>
+          ) : (
+            <span data-time-unset className="text-navy-700">안 정함 — 위에서 고르면 정해집니다</span>
+          )}
+        </p>
+        {optional && value && (
+          <button
+            type="button"
+            data-time-clear
+            onClick={() => onChange('')}
+            className="t-btn -mx-1 inline-flex min-h-[2.75rem] items-center px-1 font-bold text-navy-500 underline underline-offset-2"
+          >
+            시각 지우기
+          </button>
+        )}
+      </div>
     </div>
   )
 }

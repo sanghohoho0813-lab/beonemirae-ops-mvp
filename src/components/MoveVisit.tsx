@@ -119,7 +119,8 @@ export function MoveVisitModal({
       title={`${clientName} 방문`}
       onClose={onClose}
       footer={
-        <div className="flex gap-2">
+        //  0148 — w-full: 예전에는 두 단추가 왼쪽에 몰려 「이 날짜로 잡기」가 두 줄로 갈렸습니다
+        <div className="flex w-full gap-2">
           <button onClick={onClose} className="btn-ghost flex-1">
             닫기
           </button>
@@ -308,7 +309,7 @@ export function MoveVisitModal({
               <p className="t-label mb-1 text-navy-500">
                 방문 시각 <span className="font-normal text-navy-400">(안 정해도 됩니다)</span>
               </p>
-              <TimeField value={time} onChange={setTime} />
+              <TimeField label="" optional value={time} onChange={setTime} />
             </div>
 
             <p className="t-muted break-keep text-navy-400">

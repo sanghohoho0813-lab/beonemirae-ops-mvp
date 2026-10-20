@@ -131,7 +131,8 @@ export function BookVisitModal({
       title="방문 예약"
       onClose={onClose}
       footer={
-        <div className="flex gap-2">
+        //  0148 — w-full: 예전에는 두 단추가 왼쪽에 몰려 「이 날짜로 잡기」가 두 줄로 갈렸습니다
+        <div className="flex w-full gap-2">
           <button onClick={onClose} className="btn-ghost flex-1">
             취소
           </button>
@@ -249,7 +250,7 @@ export function BookVisitModal({
           <p className="t-label mb-1 text-navy-500">
             방문 시각 <span className="font-normal text-navy-400">(안 정해도 됩니다)</span>
           </p>
-          <TimeField value={time} onChange={setTime} />
+          <TimeField label="" optional value={time} onChange={setTime} />
         </div>
 
         {/* 차량 — 미리 정해 두면 배차에 반영됩니다 */}

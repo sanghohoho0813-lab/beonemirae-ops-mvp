@@ -22,6 +22,7 @@ import type { Client } from '../types'
 import { koMatch } from '../lib/koSearch'
 import { PhoneBand, BandTitle, useIsPhone } from '../components/PhoneBand'
 import { TONE } from '../lib/tone'
+import { OrgName } from '../components/OrgName'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 거래처 관리 — 데이터 세트 선택 + 실제/시연용 구분 + 필터
@@ -402,7 +403,7 @@ export function Clients() {
                   )}
                   <div className="min-w-0 max-lg:flex-1 lg:contents">
                     <div className="flex flex-wrap items-center gap-1.5 lg:col-start-1 lg:row-start-1 lg:min-w-0">
-                      <span className="break-keep text-[1.07rem] font-bold text-navy-900">{c.name}</span>
+                      <span className="break-keep text-[1.07rem] font-bold text-navy-900"><OrgName name={c.name} /></span>
                       {!phone && <span className="shrink-0 rounded-lg bg-navy-50 px-2 py-0.5 text-[0.95rem] font-bold text-navy-500">{c.type}</span>}
                       {c.isDemoGenerated ? (
                         <span className="shrink-0 rounded-lg bg-navy-100 px-2 py-0.5 text-[0.9rem] font-bold text-navy-500">시연용</span>
