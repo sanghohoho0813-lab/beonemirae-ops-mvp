@@ -34,6 +34,8 @@ import { CompanyHomePage } from './pages/CompanyHomePage'
 import { BizSurveyPage } from './pages/BizSurveyPage'
 import { BizSurveyPreview } from './pages/BizSurveyPreview'
 import { BIZ_SURVEY_ENABLED } from './lib/bizSurvey'
+import { BizPlanPage } from './pages/BizPlanPage'
+import { BIZPLAN_ENABLED } from './lib/bizPlan'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { ResetPassword } from './pages/ResetPassword'
@@ -105,6 +107,18 @@ export default function App() {
             element={
               <RequireAuth>
                 <BizSurveyPreview />
+              </RequireAuth>
+            }
+          />
+        )}
+        {/*  제출 예정 사업계획서 — 신보 뉴본펭귄 (0146) · 전체화면. 대표·관리자 · 등록된 사무실 계정.
+             여는 것 · 고치는 것은 서버가 판단(bizplan_require). 끄려면 lib/bizPlan.ts 의 BIZPLAN_ENABLED. */}
+        {BIZPLAN_ENABLED && (
+          <Route
+            path="bizplan"
+            element={
+              <RequireAuth>
+                <BizPlanPage />
               </RequireAuth>
             }
           />

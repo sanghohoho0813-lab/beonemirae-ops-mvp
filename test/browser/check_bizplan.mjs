@@ -1,0 +1,329 @@
+import { chromium, EXEC } from './_pw.mjs'
+import * as W from './walk_lib.mjs'
+import * as F from './perf_fixtures.mjs'
+
+//  제출 예정 사업계획서 (0146) — 신보 뉴본펭귄 공동작성 · 검토
+//
+//   대표님 · 이사님은 폰에서 읽고 확인 표시 · 수정요청을 남기고, 담당 한 분이 반영합니다.
+//   이 검사는 실제 폰(390) · PC(1440) 크기에서 메뉴 → 목차 → 본문 → 수정요청 → 요청함 →
+//   제안 반영(비교) → 충돌 → 버전 → 내보내기(검토 표시 없음)까지 손가락으로 눌러 봅니다.
+//
+//   ⚠ 서버(bizplan_*)는 여기서 **흉내**만 냅니다. 권한(참여자 · 담당/검토) · 요청이 문서를 안 바꿈 ·
+//     기록 지우기 금지 · 주민번호 거절의 진짜 검증은 supabase/test/53_bizplan.sql 이 로컬
+//     PostgreSQL 에서 합니다. 여기서는 화면이 그 약속대로 부르고 그리는지를 봅니다.
+//   ⚠ 가짜 자료입니다(회사 숫자 아님). 저장소가 공개라 회사 초안은 여기에 넣지 않습니다.
+
+const ok = (c, m, d = '') => {
+  console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? ` — ${d}` : ''}`)
+  if (!c) process.exitCode = 1
+}
+const SHOTS = process.env.SHOTS
+const b = await chromium.launch({ executablePath: EXEC })
+
+const NAME = { admin: '대표', office: '이사', field: '기사' }
+
+/** 사업계획서 서버 흉내 — 여러 창이 같은 문서 하나를 봅니다 */
+function makeServer() {
+  const now = () => new Date(Date.now() + S.seq++).toISOString()
+  const S = {
+    seq: 0,
+    mode: 'ok', // ok | missing
+    members: {}, // role → 'editor' | 'reviewer'
+    doc: { id: 'newborn2026', status: '초안 작성 중', version_label: 'V0.1', locked_label: '', updated_at: null, updated_by: '' },
+    fields: {
+      's1.company': { key: 's1.company', value: '시험용 회사', status: '초안 입력 완료', basis: { kind: '사실', source: '검사용', asOf: '2026-10-23' }, rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' },
+      's1.founded': { key: 's1.founded', value: '', status: '확인 필요', basis: { kind: '미확인', note: '등기부 대조' }, rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' },
+      's1.industry': { key: 's1.industry', value: '시험 업종 (예시)', status: '확인 필요', basis: {}, rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' },
+      's1.homepage': { key: 's1.homepage', value: 'www.○○.kr (예시)', status: '확인 필요', basis: {}, rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' },
+      'a.sales_items': {
+        key: 'a.sales_items', status: '초안 입력 완료', basis: { kind: '추정' }, rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사',
+        value: [{ item: '부문 가', y1: '100' }, { item: '부문 나', y1: '50' }],
+      },
+    },
+    requests: [],
+    checks: [],
+    versions: [{ id: 1, label: 'V0.1', note: '1차', is_submission: false, doc_status: '초안 작성 중', created_by: '검사', created_at: '2026-10-23T01:00:00Z', snapshot: {} }],
+    revisions: [],
+    calls: [],
+    now,
+  }
+  return S
+}
+const LOCKED = ['sign.seal', 's2.ceo_rrn', 's2.ceo_addr', 's2.ceo_tel', 's2.ceo_house', 's2.ceo_estate', 's10.account', 's10.consent', 'x1.rrn', 'x1.phone', 'x1.house', 'x1.assets', 'x2.rrn', 'x2.phone', 'x2.house', 'x2.assets', 'x3.rrn', 'x3.phone', 'x3.house', 'x3.assets']
+
+function wirePlan(ctx, S, role) {
+  ctx.route('**/rest/v1/rpc/bizplan_*', async (r) => {
+    const fn = r.request().url().split('/rpc/')[1].split('?')[0]
+    const a = JSON.parse(r.request().postData() || '{}')
+    const send = (status, v) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(v) })
+    const deny = (m) => send(403, { code: '42501', message: m })
+    S.calls.push({ fn, role, a })
+    if (S.mode === 'missing') return send(404, { code: 'PGRST202', message: 'Could not find the function public.' + fn })
+    //  서버 판단 — 관리자는 등록 전에도 검토, 사무실은 등록해야, 현장은 안 됨
+    const my = ['admin', 'office'].includes(role) ? S.members[role] ?? (role === 'admin' ? 'reviewer' : null) : null
+    if (fn === 'bizplan_my_role') return send(200, my)
+    if (!my) return deny('사업계획서는 참여자로 등록된 계정만 열 수 있습니다.')
+    const me = { id: `${role}-id`, name: NAME[role], title: role === 'admin' ? '대표' : '이사', role: my }
+    const editorOnly = () => my !== 'editor' && deny('이 일은 사업계획 담당만 할 수 있습니다. 수정요청으로 남겨 주세요.')
+    if (fn === 'bizplan_open')
+      return send(200, {
+        me, can_manage: role === 'admin' || my === 'editor', locked_keys: LOCKED, doc: S.doc,
+        fields: Object.values(S.fields), requests: S.requests.map((q) => ({ ...q, mine: q.requester_role === role })), checks: S.checks,
+        members: [], versions: S.versions.map(({ snapshot, ...v }) => v),
+      })
+    if (fn === 'bizplan_request_create') {
+      const f = S.fields[a.p_key]
+      const q = {
+        id: `r${S.requests.length + 1}-0000-0000-0000-000000000000`, key: a.p_key, key_label: a.p_label, req_type: a.p_type, body: a.p_body, suggestion: a.p_suggestion,
+        snapshot: f?.value ?? null, prev_status: f?.status ?? '작성 전', requester_name: me.name, requester_title: me.title, requester_role: role,
+        created_at: S.now(), status: '접수', handler_name: '', handled_at: null, resolution: '', applied_revision: null, updated_at: S.now(),
+      }
+      S.requests.unshift(q)
+      //  요청은 내용을 바꾸지 않음 — 상태만 「수정 요청 있음」
+      if (!['의견 또는 질문', '최종 확인 요청'].includes(a.p_type)) {
+        S.fields[a.p_key] = { ...(f ?? { key: a.p_key, value: '', basis: {}, rev: 0, updated_at: null, updated_by: '' }), status: '수정 요청 있음', rev: (f?.rev ?? 0) + 1 }
+      }
+      return send(200, q)
+    }
+    if (fn === 'bizplan_check') {
+      S.checks = S.checks.filter((c) => !(c.key === a.p_key && c.profile_id === me.id))
+      if (a.p_mark) S.checks.push({ key: a.p_key, profile_id: me.id, mark: a.p_mark, note: '', name: me.name, title: me.title, at: S.now() })
+      return send(200, { ok: true, at: S.now() })
+    }
+    if (fn === 'bizplan_history') return send(200, { revisions: S.revisions.filter((x) => !a.p_key || x.key === a.p_key), request_log: [], check_log: [] })
+    if (fn === 'bizplan_version_get') return send(200, S.versions.find((v) => v.id === a.p_id))
+    if (fn === 'bizplan_members_list') return send(200, { members: [], candidates: [] })
+    if (editorOnly()) return
+    if (fn === 'bizplan_save_field') {
+      if (LOCKED.includes(a.p_key)) return send(400, { code: '22023', message: '이 칸은 이 시스템에 저장하지 않습니다.' })
+      if (/[0-9]{6}\s*-\s*[1-4][0-9]{6}/.test(JSON.stringify(a.p_value ?? ''))) return send(400, { code: '22023', message: '주민등록번호는 이 시스템에 저장하지 않습니다. 제출 직전 원본 서식에 직접 적어 주세요.' })
+      const f = S.fields[a.p_key] ?? { key: a.p_key, value: '', status: '작성 전', basis: {}, rev: 0, updated_at: null, updated_by: '' }
+      if (f.rev !== a.p_expected_rev) return send(200, { ok: false, conflict: true, field: f })
+      const nf = { ...f, value: a.p_value ?? f.value, status: a.p_status ?? f.status, basis: a.p_basis ?? f.basis, rev: f.rev + 1, updated_at: S.now(), updated_by: me.name }
+      S.fields[a.p_key] = nf
+      S.revisions.unshift({ id: S.revisions.length + 1, key: a.p_key, before_value: f.value, after_value: nf.value, before_status: f.status, after_status: nf.status, reason: a.p_reason, request_id: a.p_request_id, version_label: S.doc.version_label, actor_name: me.name, actor_title: me.title, at: nf.updated_at })
+      if (a.p_request_id) Object.assign(S.requests.find((q) => q.id === a.p_request_id), { status: '반영 완료', handler_name: me.name, handled_at: S.now() })
+      if (S.doc.status === '제출본 확정') S.doc.status = '수정 중'
+      return send(200, { ok: true, revision: S.revisions.length, field: nf })
+    }
+    if (fn === 'bizplan_request_update') {
+      const q = S.requests.find((x) => x.id === a.p_id)
+      if (['보류', '반려'].includes(a.p_status) && (a.p_note ?? '').trim().length < 2) return send(400, { code: '22023', message: '까닭을 적어 주세요.' })
+      Object.assign(q, { status: a.p_status, handler_name: me.name, handled_at: S.now(), resolution: a.p_note })
+      return send(200, q)
+    }
+    if (fn === 'bizplan_version_create') {
+      if (a.p_submission && S.requests.some((q) => ['접수', '검토 중'].includes(q.status))) return send(400, { code: '22023', message: '처리하지 않은 수정요청이 있어 제출본으로 확정할 수 없습니다.' })
+      const snapshot = JSON.parse(JSON.stringify(S.fields))
+      S.versions.unshift({ id: S.versions.length + 1, label: a.p_label, note: a.p_note, is_submission: a.p_submission, doc_status: a.p_submission ? '제출본 확정' : S.doc.status, created_by: me.name, created_at: S.now(), snapshot })
+      S.doc.version_label = a.p_label
+      if (a.p_submission) Object.assign(S.doc, { status: '제출본 확정', locked_label: a.p_label })
+      return send(200, { ok: true, id: S.versions[0].id, label: a.p_label })
+    }
+    if (fn === 'bizplan_doc_set') {
+      S.doc.status = a.p_status
+      return send(200, { ok: true })
+    }
+    return send(404, { code: 'PGRST202', message: 'unknown ' + fn })
+  })
+}
+
+async function openStaff(S, path, { w = 390, role = 'admin', scale = 'lg' } = {}) {
+  const phone = w < 700
+  const ctx = await b.newContext({ viewport: { width: w, height: phone ? 844 : 900 }, isMobile: phone, hasTouch: phone, timezoneId: 'Asia/Seoul', permissions: ['clipboard-read', 'clipboard-write'], acceptDownloads: true })
+  const state = { profile: { ...W.profileFor(role), name: NAME[role], font_scale: scale }, reqs: 0, writes: [], schemaVersion: 123 }
+  W.wire(ctx, state)
+  wirePlan(ctx, S, role)
+  const p = await ctx.newPage()
+  p.on('pageerror', (e) => ok(false, `화면 오류 없음 (${role} ${path})`, e.message))
+  await p.addInitScript(([k, u]) => {
+    localStorage.setItem(k, JSON.stringify({ access_token: 't', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 86400, refresh_token: 'r', user: u }))
+    localStorage.setItem('beonemirae-ops:tour-seen', 'staff,field,client,demo')
+  }, ['beonemirae-ops:auth', { id: F.UID, aud: 'authenticated', email: 'x@b.c', app_metadata: {}, user_metadata: {} }])
+  await p.goto(`${W.BASE}${path}`, { waitUntil: 'domcontentloaded' })
+  await W.settle(p, state)
+  await p.waitForTimeout(700)
+  return { ctx, p, state }
+}
+const shot = async (p, n) => SHOTS && p.screenshot({ path: `${SHOTS}/${n}.png` })
+
+/** 가로 밀림 · 작은 단추 (사업계획서 화면 안) */
+const measure = (p, scope) =>
+  p.evaluate((scope) => {
+    const vis = (e) => { const s = getComputedStyle(e); if (s.display === 'none' || s.visibility === 'hidden') return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 }
+    const overflow = document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+    const small = [...document.querySelectorAll(`${scope} button, ${scope} input, ${scope} textarea`)]
+      .filter(vis).filter((e) => e.type !== 'checkbox').filter((e) => e.getBoundingClientRect().height < 35.5).map((e) => (e.textContent || e.getAttribute('aria-label') || e.tagName).trim().slice(0, 14))
+    return { overflow, small }
+  }, scope)
+
+// ═══ 1. 누가 보나 — 메뉴 단추 · 화면 ═══════════════════════════════════════════
+{
+  const S = makeServer()
+  const { ctx, p } = await openStaff(S, '/more', { role: 'office' })
+  ok((await p.locator('[data-more-bizplan]').count()) === 0, '1 사무실 · 등록 전 — 더보기에 단추 없음')
+  ok((await p.locator('[data-more-survey]').count()) === 1, '1 사전 설문 단추는 그대로')
+  await p.goto(`${W.BASE}/bizplan`); await p.waitForTimeout(1200)
+  ok((await p.getAttribute('[data-bizplan-fail]', 'data-bizplan-fail')) === 'denied', '1 사무실 · 등록 전 — 주소로 열어도 서버가 막음')
+  await ctx.close()
+}
+{
+  const S = makeServer()
+  S.members.office = 'reviewer'
+  const { ctx, p } = await openStaff(S, '/more', { role: 'office' })
+  ok((await p.locator('[data-more-bizplan]').count()) === 1, '1 사무실 · 참여자 — 더보기에 「제출 예정 사업계획서」')
+  const order = await p.evaluate(() => {
+    const a = document.querySelector('[data-more-survey]'); const c = document.querySelector('[data-more-bizplan]')
+    return !!(a && c && a.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+  ok(order, '1 설문 바로 다음 자리')
+  await ctx.close()
+}
+{
+  const S = makeServer()
+  const { ctx, p } = await openStaff(S, '/bizplan', { role: 'field' })
+  ok((await p.locator('[data-bizplan-page]').count()) === 0, '1 현장 — 화면 안 열림')
+  ok(!S.calls.some((c) => c.fn === 'bizplan_open'), '1 현장 — 서버에 열기 요청도 안 보냄')
+  await ctx.close()
+}
+{
+  const S = makeServer()
+  S.mode = 'missing'
+  const { ctx, p } = await openStaff(S, '/bizplan', { role: 'admin' })
+  ok((await p.getAttribute('[data-bizplan-fail]', 'data-bizplan-fail')) === 'missing', '1 SQL 전 — 「서버 준비 전」 안내 (가짜 화면 없음)')
+  ok(((await p.textContent('body')) ?? '').includes('PROPOSAL_0146'), '1 무엇을 실행할지 알려 줌')
+  await ctx.close()
+}
+{
+  const S = makeServer()
+  const { ctx, p } = await openStaff(S, '/', { role: 'admin', w: 1440, scale: 'normal' })
+  ok((await p.locator('[data-side-bizplan]').count()) === 1, '1 PC 사이드바 — 설문 아래 사업계획서')
+  await ctx.close()
+}
+
+// ═══ 2. 이사님(폰 · 검토) — 목차 → 본문 → 항목 → 수정요청 ═════════════════════════
+const S = makeServer()
+S.members.office = 'reviewer'
+S.members.admin = 'editor'
+{
+  const { ctx, p } = await openStaff(S, '/bizplan', { role: 'office' })
+  ok((await p.getAttribute('[data-bizplan-page]', 'data-bizplan-role')) === 'reviewer', '2 이사님 = 검토')
+  ok((await p.textContent('[data-sum-written]')) === '4', '2 작성 칸 수 — 내용 있는 칸만 (빈 「확인 필요」 칸은 미작성)')
+  ok((await p.getAttribute('[data-step="toc"]', 'aria-selected')) === 'true', '2 폰은 ① 목차부터')
+  ok((await p.locator('[data-toc]').count()) === 21, '2 목차 21개 (원본 순서 · 별첨 · 참고 포함)')
+  const m0 = await measure(p, '[data-bizplan-page]')
+  ok(!m0.overflow, '2 폰 — 가로 밀림 없음')
+  ok(m0.small.length === 0, '2 폰 — 손가락 단추 크기', m0.small.join(','))
+  await shot(p, 'bizplan_phone_toc')
+  await p.click('[data-toc="s1"]'); await p.waitForTimeout(400)
+  ok((await p.getAttribute('[data-step="body"]', 'aria-selected')) === 'true', '2 목차 → ② 본문')
+  ok((await p.locator('[data-card-edit]').count()) === 0, '2 검토에게 편집 단추 없음')
+  ok((await p.getAttribute('[data-field-card="s1.founded"]', 'data-field-status')) === '확인 필요', '2 칸마다 상태 글자')
+  await p.click('[data-card-detail="s1.founded"]'); await p.waitForTimeout(400)
+  ok((await p.getAttribute('[data-step="panel"]', 'aria-selected')) === 'true', '2 항목 → ③ 수정요청')
+  const y = await p.evaluate(() => document.querySelector('[data-field-panel]').getBoundingClientRect().top)
+  ok(y < 300, '2 ③ 단계로 가면 검토 칸이 화면 위쪽에 (요약을 다시 내려 보지 않음)', String(Math.round(y)))
+  await p.click('[data-panel-request]'); await p.waitForTimeout(300)
+  ok((await p.textContent('[data-req-target]'))?.includes('설립(개업)일자'), '2 수정 대상 항목 자동')
+  ok(await p.isDisabled('[data-req-send]'), '2 유형 · 내용 전에는 보내기 꺼짐')
+  await p.click('[data-req-type="사실관계 수정"]')
+  await p.fill('[data-req-body]', '등기부 기준 날짜로 적어 주세요')
+  await p.fill('[data-req-suggestion]', '2000-01-01 (검사용)')
+  await shot(p, 'bizplan_phone_request')
+  await p.click('[data-req-send]'); await p.waitForTimeout(900)
+  ok(S.requests.length === 1 && S.requests[0].requester_name === '이사', '2 요청 저장 · 요청자 자동')
+  ok(S.fields['s1.founded'].value === '', '2 요청만으로 내용은 그대로')
+  ok((await p.getAttribute('[data-field-panel="s1.founded"] [data-status-badge]', 'data-status-badge')) === '수정 요청 있음', '2 항목 상태 → 수정 요청 있음')
+  //  확인 표시
+  await p.click('[data-check-pick="동의"]'); await p.waitForTimeout(600)
+  ok(S.checks.some((c) => c.key === 's1.founded' && c.mark === '동의' && c.name === '이사'), '2 「동의」 표시 — 누가 · 언제')
+  await ctx.close()
+}
+
+// ═══ 3. 대표님(PC · 담당) — 요청함 → 제안 반영 · 비교 → 반영 완료 ═══════════════════
+{
+  const { ctx, p } = await openStaff(S, '/bizplan', { role: 'admin', w: 1440, scale: 'normal' })
+  ok((await p.getAttribute('[data-bizplan-page]', 'data-bizplan-role')) === 'editor', '3 대표(이 검사에서는 담당)')
+  ok((await p.locator('[data-bizplan-toc-pane]').count()) === 1 && (await p.locator('[data-bizplan-panel-pane]').count()) === 1, '3 PC 3칸 — 목차 · 본문 · 검토 칸')
+  const m1 = await measure(p, '[data-bizplan-page]')
+  ok(!m1.overflow, '3 PC — 가로 밀림 없음')
+  ok((await p.textContent('[data-tab-badge]')) === '1', '3 요청함 탭에 처리 전 1')
+  await shot(p, 'bizplan_pc_doc')
+  await p.click('[data-bizplan-tab="inbox"]'); await p.waitForTimeout(300)
+  const id = S.requests[0].id
+  await p.click(`[data-request-card="${id}"] [data-req-act="apply"]`); await p.waitForTimeout(400)
+  ok((await p.inputValue('[data-edit-value]')) === '2000-01-01 (검사용)', '3 편집 창에 제안 문장')
+  ok((await p.locator('[data-diff-op="add"]').count()) === 1 && (await p.locator('[data-diff-op="del"]').count()) === 0, '3 비교 — 빈 칸이던 것은 지움 줄 없이')
+  await p.click('[data-edit-save]'); await p.waitForTimeout(900)
+  ok(S.requests[0].status === '반영 완료' && S.fields['s1.founded'].value === '2000-01-01 (검사용)', '3 저장 → 요청 반영 완료')
+  ok(S.calls.some((c) => c.fn === 'bizplan_save_field' && c.a.p_request_id === id), '3 저장이 요청과 이어짐')
+  //  충돌 — 창을 연 사이 다른 창이 저장
+  await p.click('[data-bizplan-tab="doc"]'); await p.waitForTimeout(300)
+  await p.click('[data-card-edit="s1.industry"]'); await p.waitForTimeout(300)
+  S.fields['s1.industry'] = { ...S.fields['s1.industry'], value: '다른 창 내용', rev: S.fields['s1.industry'].rev + 1, updated_by: '이사' }
+  await p.fill('[data-edit-value]', '이 창 내용')
+  await p.click('[data-edit-save]'); await p.waitForTimeout(700)
+  ok((await p.locator('[data-edit-conflict]').count()) === 1, '3 충돌 — 저장하지 않고 두 내용을 보여 줌')
+  ok(S.fields['s1.industry'].value === '다른 창 내용', '3 조용히 덮어쓰지 않음')
+  await p.click('[data-conflict-keep-mine]'); await p.waitForTimeout(800)
+  ok(S.fields['s1.industry'].value === '이 창 내용', '3 「확인했고 내 것으로」를 눌러야만 저장')
+  ok((await p.locator('[data-edit-conflict]').count()) === 0, '3 저장 뒤 창 닫힘')
+  //  주민번호 모양 — 서버 거절 문구가 그대로
+  await p.click('[data-card-edit="s1.company"]'); await p.waitForTimeout(300)
+  await p.fill('[data-edit-value]', '시험 800101-1234567')
+  await p.click('[data-edit-save]'); await p.waitForTimeout(600)
+  ok(((await p.textContent('[data-edit-error]')) ?? '').includes('주민등록번호'), '3 주민번호 — 거절 문구')
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300)
+  //  직접 기입 칸은 편집 단추 없음
+  ok((await p.locator('[data-card-edit="s2.ceo_rrn"]').count()) === 0 && (await p.locator('[data-field-card="s2.ceo_rrn"] [data-offline-field]').count()) === 1, '3 주민번호 칸 — 저장 안 함 · 직접 기입')
+  await ctx.close()
+}
+
+// ═══ 4. 거르기 · 버전 · 내보내기 ═══════════════════════════════════════════════
+{
+  const { ctx, p } = await openStaff(S, '/bizplan', { role: 'admin', w: 1440, scale: 'normal' })
+  await p.click('[data-filter="미작성"]'); await p.waitForTimeout(300)
+  ok((await p.locator('[data-field-card="s1.company"]').count()) === 0, '4 「미작성」 — 쓴 칸은 숨김')
+  await p.click('[data-filter="전체"]'); await p.waitForTimeout(200)
+  //  제출본 확정
+  await p.click('[data-bizplan-tab="versions"]'); await p.waitForTimeout(300)
+  await p.click('[data-version-submission]')
+  ok((await p.textContent('[data-version-save]'))?.includes('V1.0'), '4 제출본 이름 V1.0')
+  await p.click('[data-version-save]'); await p.waitForTimeout(800)
+  ok(S.doc.status === '제출본 확정' && S.doc.locked_label === 'V1.0', '4 제출본 확정')
+  //  내보내기 — 검토 표시 없음 · 원본 순서 · 합계
+  await p.click('[data-bizplan-tab="export"]'); await p.waitForTimeout(400)
+  const doc = p.locator('[data-export-doc]')
+  ok((await doc.locator('[data-status-badge], [data-basis], [data-check-chip]').count()) === 0, '4 제출본 미리보기 — 상태 · 근거 · 확인 표시 없음')
+  const order = await doc.locator('[data-doc-section]').evaluateAll((els) => els.map((e) => e.getAttribute('data-doc-section')).join(','))
+  ok(order === 'cover,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,x1,x2,x3,a1,a2,a3,a4', '4 원본 순서', order)
+  ok(((await doc.textContent()) ?? '').includes('150'), '4 표 합계 (100 + 50)')
+  ok((await p.getAttribute('[data-export-holders]', 'data-export-holders')) === '1', '4 「(예시)」 남은 칸 경고')
+  await p.click('[data-export-copy]'); await p.waitForTimeout(300)
+  const clip = await p.evaluate(() => navigator.clipboard.readText())
+  ok(clip.includes('■ 1. 기업체 현황') && !clip.includes('확인 필요') && !clip.includes('수정 요청'), '4 전체 복사 — 원본 순서 · 검토 표시 없음')
+  await shot(p, 'bizplan_pc_export')
+  await ctx.close()
+}
+
+// ═══ 5. 사용자 피드백 › 사업계획서 수정요청 ════════════════════════════════════════
+{
+  const { ctx, p } = await openStaff(S, '/dev-requests?tab=bizplan', { role: 'admin', w: 390 })
+  ok((await p.locator('[data-devreq-view]').count()) === 3, '5 요청함 칸 셋 (설문 · 사업계획서 · 피드백)')
+  ok((await p.locator('[data-devreq-bizplan] [data-bizplan-inbox]').count()) === 1, '5 사업계획서 수정요청 목록')
+  await p.click('[data-inbox-view="전체"]'); await p.waitForTimeout(200)
+  await p.click('[data-request-go]'); await p.waitForTimeout(1200)
+  ok(p.url().includes('/bizplan?f=s1.founded'), '5 위치로 이동 → 문서의 그 항목')
+  ok((await p.getAttribute('[data-step="body"]', 'aria-selected')) === 'true', '5 폰 — 본문 단계에서 그 항목')
+  await ctx.close()
+}
+{
+  const S2 = makeServer()
+  const { ctx, p } = await openStaff(S2, '/dev-requests', { role: 'admin', w: 1280, scale: 'normal' })
+  ok((await p.getAttribute('[data-devreq-view="survey"]', 'aria-selected')) === 'true', '5 기본 칸은 여전히 사전 설문')
+  await p.click('[data-devreq-view="feedback"]'); await p.waitForTimeout(400)
+  ok(p.url().includes('tab=feedback'), '5 피드백 칸 그대로')
+  await ctx.close()
+}
+
+await b.close()

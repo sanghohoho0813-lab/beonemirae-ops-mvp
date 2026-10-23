@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Smartphone, ChevronDown, ChevronRight, ExternalLink, Lock, LogOut, Globe, Star, type LucideIcon } from 'lucide-react'
+import { Smartphone, ChevronDown, ChevronRight, ExternalLink, FileText, Lock, LogOut, Globe, Star, type LucideIcon } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
@@ -17,6 +17,8 @@ import { canSendDevRequest } from '../lib/devRequests'
 import { icon3d } from '../lib/icons3d'
 import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '../lib/brand'
 import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
+import { BIZPLAN_MENU_NAME, BIZPLAN_PATH } from '../lib/bizPlan'
+import { useBizPlanMenu } from './bizPlan/useBizPlanMenu'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 — 폰에서는 이곳이 목차 전부입니다
@@ -246,6 +248,8 @@ export function MoreMenu({
   const planned = showRoadmap ? groups.flatMap((g) => g.planned ?? []) : []
   //  뉴본펭귄 사전 설문 (0145 · 임시) — 대표·관리자 · 사무실(이사님) 계정에게만, 맨 위에 눈에 띄게
   const showSurvey = BIZ_SURVEY_ENABLED && (!configured || canAccess(role, SURVEY_PATH))
+  //  제출 예정 사업계획서 (0146) — 설문 바로 옆. 대표·관리자 · 참여자로 등록된 사무실 계정
+  const showBizPlan = useBizPlanMenu()
   function go(to: string) {
     onNavigate?.()
     navigate(to)
@@ -325,6 +329,27 @@ export function MoreMenu({
           </span>
           <span className="mt-3 flex min-h-[2.9rem] items-center justify-center gap-1.5 rounded-2xl bg-navy-900 text-[1rem] font-extrabold text-white">
             시작하기 <ChevronRight size={18} strokeWidth={2.6} aria-hidden="true" />
+          </span>
+        </button>
+      )}
+
+      {/*  제출 예정 사업계획서 (0146) — 「뉴본펭귄 사전 설문」 바로 옆. 대표님 · 이사님이 폰에서 읽고 수정요청 */}
+      {showBizPlan && (
+        <button
+          type="button"
+          data-more-bizplan
+          onClick={() => go(BIZPLAN_PATH)}
+          className="block w-full rounded-[20px] bg-gradient-to-br from-teal-50 via-white to-white p-3.5 text-left ring-2 ring-inset ring-teal-200 transition active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-3">
+            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-teal-600 text-white shadow-sm">
+              <FileText size={22} strokeWidth={2.4} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block break-keep text-[1.08rem] font-extrabold leading-snug text-navy-900">{BIZPLAN_MENU_NAME}</span>
+              <span className="mt-0.5 block break-keep text-[0.88rem] font-semibold text-navy-600">신보 뉴본펭귄 · 함께 읽고 수정요청</span>
+            </span>
+            <ChevronRight size={20} strokeWidth={2.6} className="shrink-0 text-teal-700" aria-hidden="true" />
           </span>
         </button>
       )}

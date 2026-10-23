@@ -15,6 +15,7 @@ import {
   HelpCircle,
   PlayCircle,
   Star,
+  FileText,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -76,6 +77,8 @@ import { BrandLogo } from './BrandLogo'
 import { PhoneBandSlot } from './PhoneBand'
 import { icon3d } from '../lib/icons3d'
 import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
+import { BIZPLAN_MENU_NAME, BIZPLAN_PATH } from '../lib/bizPlan'
+import { useBizPlanMenu } from './bizPlan/useBizPlanMenu'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
@@ -469,6 +472,8 @@ function Sidebar() {
   const showVisitVideo = configured && canAccess(profile?.role ?? null, '/visit-video')
   //  뉴본펭귄 사전 설문 (0145 · 임시) — 대표·관리자 · 사무실(이사님) 계정만
   const showSurvey = BIZ_SURVEY_ENABLED && (!configured || canAccess(profile?.role ?? null, SURVEY_PATH))
+  //  제출 예정 사업계획서 (0146) — 설문 바로 아래. 대표·관리자 · 참여자로 등록된 사무실 계정
+  const showBizPlan = useBizPlanMenu()
 
   return (
     /*  AX 3차 — 폭 336/392 → 288/304px. 메뉴가 한 줄이 되어 넓을 이유가 없어졌고,
@@ -526,6 +531,23 @@ function Sidebar() {
               ★ {SURVEY_MENU_NAME}
             </span>
             <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-[0.78rem] font-extrabold text-navy-900">시작</span>
+          </Link>
+        </div>
+      )}
+      {showBizPlan && (
+        <div data-hide-presenting className="contents">
+          <Link
+            to={BIZPLAN_PATH}
+            data-side-bizplan
+            className="group mx-2.5 mb-1.5 flex min-h-[44px] items-center gap-2.5 rounded-xl bg-teal-300/10 px-2.5 py-1.5 ring-1 ring-inset ring-teal-300/50 transition hover:bg-teal-300/20"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-400 text-navy-900">
+              <FileText size={16} strokeWidth={2.4} />
+            </span>
+            <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[0.871rem] font-extrabold leading-tight text-teal-100">
+              {BIZPLAN_MENU_NAME}
+            </span>
+            <span className="shrink-0 rounded-full bg-teal-400 px-2 py-0.5 text-[0.78rem] font-extrabold text-navy-900">열기</span>
           </Link>
         </div>
       )}

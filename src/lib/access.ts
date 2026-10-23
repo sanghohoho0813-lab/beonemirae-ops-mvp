@@ -113,6 +113,8 @@ const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/survey-preview', roles: ['admin'] },
   //  뉴본펭귄 사전 설문 답하기 (0145 · 임시) — 대표님 · 이사님 계정. 서버도 같은 판단(biz_survey_can_answer)
   { prefix: '/newborn-survey', roles: ['admin', 'office'] },
+  //  제출 예정 사업계획서 (0146) — 대표·관리자 · 사무실. 사무실은 참여자로 등록된 계정만 서버가 열어 줍니다
+  { prefix: '/bizplan', roles: ['admin', 'office'] },
   { prefix: '/import', roles: ['admin'] },
   // 대시보드는 경영 지표가 포함되므로 현장 담당자에게는 오늘 일정이 첫 화면입니다.
   { prefix: '/demo', roles: ['admin'] },
