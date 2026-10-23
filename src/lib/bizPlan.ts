@@ -601,11 +601,11 @@ export const SECTIONS: Section[] = [
         title: '향후 계획 — (개발완료 및 제품화 시기 등 제품･서비스의 사업화 실현 계획/설비도입 및 양산착수, 판매 등의 계획/향후 매출 전망 및 수익 창출 계획 등)',
         fields: [
           l('s11.plan.commercial', '(협약내용 등 포함) — 향후 사업화 추진계획'),
-          revenueTable('s11.plan.y1', '□ 매출전망 및 산정근거 — Ⓐ 1차년도 (26.2월~27.1월)', '원본 서식의 기간 「26.2월~27.1월」은 예시입니다 — 실제 신청 접수월 다음 달부터 1년으로 맞춰야 합니다(확인 필요).'),
+          revenueTable('s11.plan.y1', '□ 매출전망 및 산정근거 — Ⓐ 1차년도', '원본 서식의 기간 「26.2월~27.1월」은 예시입니다 — 실제 신청 접수월 다음 달부터 1년으로 맞춰야 합니다(확인 필요).'),
           l('s11.plan.y1_note', 'Ⓐ 1차년도 — ★매출 예상근거를 구체적으로 제시'),
-          revenueTable('s11.plan.y2', '□ 매출전망 및 산정근거 — Ⓑ 2차년도 (27.2월~28.1월)', '원본 서식의 기간은 예시입니다 — 1차년도에 이은 다음 1년(확인 필요).'),
+          revenueTable('s11.plan.y2', '□ 매출전망 및 산정근거 — Ⓑ 2차년도', '원본 서식의 기간 「27.2월~28.1월」은 예시입니다 — 1차년도에 이은 다음 1년(확인 필요).'),
           l('s11.plan.y2_note', 'Ⓑ 2차년도 — ★매출 예상근거를 구체적으로 제시'),
-          revenueTable('s11.plan.y3', '□ 매출전망 및 산정근거 — Ⓒ 3차년도 (28.2월~29.1월)', '원본 서식의 기간은 예시입니다 — 2차년도에 이은 다음 1년(확인 필요).'),
+          revenueTable('s11.plan.y3', '□ 매출전망 및 산정근거 — Ⓒ 3차년도', '원본 서식의 기간 「28.2월~29.1월」은 예시입니다 — 2차년도에 이은 다음 1년(확인 필요).'),
           l('s11.plan.y3_note', 'Ⓒ 3차년도 — ★매출 예상근거를 구체적으로 제시'),
           {
             key: 's11.plan.sum_limit', label: '※ ★ 매출전망 요약정리 — 추정 매출액(한도산정)', kind: 'grid', unit: '백만원',
@@ -1069,6 +1069,8 @@ export interface FieldRow {
   status: FieldStatus
   basis: Basis
   rev: number
+  /** 내용 판 번호 — 내용(value)이 바뀔 때만 오릅니다 (0147). 확인 표시가 이 판에 묶입니다 */
+  content_rev?: number
   updated_at: string | null
   updated_by: string
 }
@@ -1101,6 +1103,9 @@ export interface CheckRow {
   name: string
   title: string
   at: string
+  /** 어느 판의 문장에 대한 표시인가 (0147) · 그때 문장 */
+  content_rev?: number
+  value_snapshot?: Value | null
 }
 export interface MemberRow {
   profile_id: string
@@ -1116,6 +1121,9 @@ export interface VersionMeta {
   doc_status: string
   created_by: string
   created_at: string
+  /** 제출본을 확인 항목이 남은 채 확정했을 때의 까닭 · 승인자 (0147) */
+  override_reason?: string
+  approved_by?: string
 }
 export interface DocRow {
   id: string
@@ -1125,7 +1133,19 @@ export interface DocRow {
   updated_at: string | null
   updated_by: string
 }
+/** 제출 전 점검 규칙 — 서버(bizplan_rules)가 정합니다 */
+export interface PlanRules {
+  required: string[]
+  recommended: string[]
+  finance: string[]
+  plan: string[]
+  annex: string[]
+  by_hand: string[]
+}
 export interface OpenData {
+  /** 서버 판 — 147 이면 확인 표시 판 번호 · 제출 전 점검이 있습니다 */
+  api?: number
+  rules?: PlanRules
   me: { id: string; name: string; title: string; role: 'editor' | 'reviewer' }
   can_manage: boolean
   locked_keys: string[]
@@ -1168,7 +1188,52 @@ export interface CheckLogRow {
   mark: CheckMark | null
   note: string
   at: string
+  content_rev?: number
+  value_snapshot?: Value | null
 }
+
+/** 제출 전 점검 (0147 · bizplan_preflight) */
+export interface PreflightItem {
+  level: 'block' | 'warn' | 'info'
+  code: string
+  key: string | null
+  msg: string
+}
+export interface Preflight {
+  at: string
+  submit_month: string
+  blocks: number
+  warns: number
+  items: PreflightItem[]
+}
+export const PREFLIGHT_LABEL: Record<string, string> = {
+  open_request: '처리 전 수정요청',
+  required_blank: '필수 칸 누락',
+  funding_mismatch: '자금소요(A) ≠ 조달(B)',
+  funding_guarantee: '보증신청 금액 확인',
+  funds_annex_mismatch: '별첨 소요자금 합계 불일치',
+  revenue_mismatch: '매출 숫자 불일치',
+  period_mismatch: '작성기간 불일치',
+  stale_confirm: '변경 뒤 재확인 필요',
+  finance_unconfirmed: '최종 확인 전 재무 · 인원 숫자',
+  plan_unconfirmed: '최종 확인 전 중요 사업계획',
+  status_check: '「확인 필요」 상태',
+  basis_unverified: '근거 미확인',
+  estimate_as_fact: '추정 · 계획인데 실적처럼 읽힘',
+  placeholder: '미정 · 추후 · 예시 등이 남음',
+  recommended_blank: '해당 시 작성 칸이 비어 있음',
+  annex_blank: '별첨 대상 여부',
+  by_hand: '제출 직전 직접 기입',
+}
+
+// ── 확인 표시가 지금 문장에 대한 것인가 (0147) ─────────────────────────────────
+/** 변경 전 문장에 대한 표시 — 내용이 바뀐 뒤 다시 확인하지 않음 */
+export function isStaleCheck(c: CheckRow, f: FieldRow | undefined): boolean {
+  if (c.content_rev == null || f?.content_rev == null) return false
+  return c.content_rev < f.content_rev
+}
+export const currentChecks = (checks: CheckRow[], f: FieldRow | undefined) => checks.filter((c) => !isStaleCheck(c, f))
+export const staleChecks = (checks: CheckRow[], f: FieldRow | undefined) => checks.filter((c) => isStaleCheck(c, f))
 export interface HistoryData {
   revisions: RevisionRow[]
   request_log: RequestLogRow[]
@@ -1190,12 +1255,15 @@ export interface Summary {
   notWritten: number
   openRequests: number
   progress: number
+  /** 내용이 바뀐 뒤 다시 확인받지 않은 항목 수 */
+  restale: number
 }
 /** 칸이 비어 있는가 — 상태가 「확인 필요」여도 내용이 없으면 미작성입니다 */
 export const isUnwritten = (fields: Map<string, FieldRow>, key: string) => isBlank(fields.get(key)?.value)
 
-export function summarize(fields: Map<string, FieldRow>, requests: RequestRow[]): Summary {
+export function summarize(fields: Map<string, FieldRow>, requests: RequestRow[], checks: CheckRow[] = []): Summary {
   const total = EDITABLE_REFS.length
+  const staleKeys = new Set(checks.filter((c) => isStaleCheck(c, fields.get(c.key))).map((c) => c.key))
   let written = 0
   let final = 0
   let needCheck = 0
@@ -1208,7 +1276,7 @@ export function summarize(fields: Map<string, FieldRow>, requests: RequestRow[])
     if (st === '수정 요청 있음') requested++
   }
   const openRequests = requests.filter((q) => OPEN_REQ.includes(q.status)).length
-  return { total, written, final, needCheck, requested, notWritten: total - written, openRequests, progress: total ? Math.round((written / total) * 100) : 0 }
+  return { total, written, final, needCheck, requested, notWritten: total - written, openRequests, progress: total ? Math.round((written / total) * 100) : 0, restale: staleKeys.size }
 }
 
 /** 한 사람이 「동의」 · 다른 사람이 「수정 의견」처럼 갈리면 의견 조율 필요 */
@@ -1217,11 +1285,13 @@ export function needsAlignment(checks: CheckRow[]): boolean {
   return checks.length >= 2 && marks.has('동의') && (marks.has('수정 의견 있음') || marks.has('자료 확인 필요'))
 }
 
-export type Filter = '전체' | '확인 필요' | '수정 요청 있음' | '미작성' | '최종 확인 완료' | '의견 조율 필요'
-export const FILTERS: Filter[] = ['전체', '확인 필요', '수정 요청 있음', '미작성', '최종 확인 완료', '의견 조율 필요']
-export function matchesFilter(f: Filter, st: FieldStatus, openReq: number, checks: CheckRow[], blank: boolean): boolean {
+export type Filter = '전체' | '확인 필요' | '재확인 필요' | '수정 요청 있음' | '미작성' | '최종 확인 완료' | '의견 조율 필요'
+export const FILTERS: Filter[] = ['전체', '확인 필요', '재확인 필요', '수정 요청 있음', '미작성', '최종 확인 완료', '의견 조율 필요']
+/** checks 는 지금 문장에 대한 표시만, stale 은 변경 전 문장에 대한 표시 수 */
+export function matchesFilter(f: Filter, st: FieldStatus, openReq: number, checks: CheckRow[], blank: boolean, stale = 0): boolean {
   if (f === '전체') return true
   if (f === '확인 필요') return st === '확인 필요'
+  if (f === '재확인 필요') return stale > 0
   if (f === '수정 요청 있음') return st === '수정 요청 있음' || openReq > 0
   if (f === '미작성') return blank
   if (f === '최종 확인 완료') return st === '최종 확인 완료'

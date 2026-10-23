@@ -12,7 +12,7 @@
 //  ─────────────────────────────────────────────────────────────────────────
 import * as F from './perf_fixtures.mjs'
 
-export const BASE = 'http://localhost:4173'
+export const BASE = process.env.BASE_URL ?? 'http://localhost:4173'
 
 /** 역할별 로그인 계정 — 시늉본 프로필을 역할만 바꿔 씁니다 */
 export function profileFor(role) {

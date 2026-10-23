@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { History, Loader2, MessageSquarePlus, PenLine } from 'lucide-react'
 import {
-  CHECK_MARKS, FIELD_BY_KEY, OPEN_REQ, isEditable,
+  CHECK_MARKS, FIELD_BY_KEY, OPEN_REQ, isEditable, isStaleCheck,
   type CheckMark, type HistoryData, type RequestRow,
 } from '../../lib/bizPlan'
 import { BizPlanError, history, setCheck, updateRequest } from '../../lib/bizPlanApi'
-import { BasisLine, ChecksLine, DiffView, Pill, REQ_TONE, StatusBadge, usePlan, when, who } from './parts'
+import { BasisLine, ChecksLine, DiffView, Pill, REQ_TONE, StatusBadge, ValueView, usePlan, when, who } from './parts'
+import { SurveyLink } from './SurveyLink'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 항목 하나의 검토 칸 — 확인 표시 · 수정요청 · 기록 (0146)
@@ -34,6 +35,18 @@ export function FieldPanel({ fieldKey }: { fieldKey: string }) {
         <BasisLine basis={row?.basis} />
       </div>
 
+      {/*  0147 — 확인 표시는 이 문장(판)에 붙습니다. 폰 ③ 단계에서도 무엇에 동의하는지 보이게 */}
+      {isEditable(ref.def) && (
+        <details open data-panel-value={row?.content_rev ?? 0} className="rounded-xl bg-navy-50/60 px-3 py-2">
+          <summary className="min-h-[36px] cursor-pointer list-none py-1 text-[0.9rem] font-bold text-navy-500">
+            지금 내용{row?.content_rev ? ` · 판 ${row.content_rev}` : ''} — 확인 표시는 이 내용에 붙습니다
+          </summary>
+          <div className="max-h-72 overflow-y-auto pb-1">
+            <ValueView def={ref.def} value={row?.value} />
+          </div>
+        </details>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <button type="button" data-panel-request className="btn-primary min-h-[44px] flex-1" onClick={() => openRequest(fieldKey)}>
           <MessageSquarePlus size={17} /> 수정 요청
@@ -46,7 +59,7 @@ export function FieldPanel({ fieldKey }: { fieldKey: string }) {
       </div>
 
       <MyCheck fieldKey={fieldKey} />
-      <ChecksLine checks={checks} />
+      <ChecksLine checks={checks} field={row} />
 
       <section className="space-y-2">
         <h3 className="text-[1.02rem] font-extrabold text-navy-900">수정요청 {reqs.length > 0 ? `${reqs.length}건` : ''}</h3>
@@ -56,6 +69,8 @@ export function FieldPanel({ fieldKey }: { fieldKey: string }) {
         ))}
       </section>
 
+      <SurveyLink fieldKey={fieldKey} />
+
       <FieldHistory fieldKey={fieldKey} />
     </div>
   )
@@ -63,37 +78,53 @@ export function FieldPanel({ fieldKey }: { fieldKey: string }) {
 
 // ── 내 확인 표시 ────────────────────────────────────────────────────────────────
 export function MyCheck({ fieldKey }: { fieldKey: string }) {
-  const { data, checksByKey, reload, notify } = usePlan()
+  const { data, fields, checksByKey, reload, notify } = usePlan()
+  const row = fields.get(fieldKey)
+  const ref = FIELD_BY_KEY.get(fieldKey)
   const mine = (checksByKey.get(fieldKey) ?? []).find((c) => c.profile_id === data.me.id)
+  //  0147 — 내 표시가 변경 전 문장에 대한 것이면, 지금 문장에는 아직 아무 표시도 안 한 것입니다
+  const stale = !!mine && isStaleCheck(mine, row)
   const [busy, setBusy] = useState<CheckMark | 'clear' | null>(null)
 
   async function pick(m: CheckMark) {
-    const next = mine?.mark === m ? null : m
+    const next = mine?.mark === m && !stale ? null : m
     setBusy(next ?? 'clear')
     try {
-      await setCheck(fieldKey, next)
+      //  지금 화면에 보이는 문장의 판 번호를 함께 — 그사이 바뀌었으면 서버가 거절합니다
+      await setCheck(fieldKey, next, (data.api ?? 0) >= 147 ? row?.content_rev ?? 0 : null)
       await reload()
-      notify(next ? `「${next}」로 표시했습니다 · 누가 언제 확인했는지 남습니다.` : '내 표시를 지웠습니다 (기록은 남습니다).')
+      notify(next ? `「${next}」로 표시했습니다 · 지금 문장(판 ${row?.content_rev ?? 0})에 대한 표시로 남습니다.` : '내 표시를 지웠습니다 (기록은 남습니다).')
     } catch (e) {
-      notify(e instanceof BizPlanError ? e.message : '표시하지 못했습니다.')
+      if (e instanceof BizPlanError && e.kind === 'conflict') {
+        await reload()
+        notify('그사이 담당이 이 문장을 고쳤습니다 — 새 문장을 확인한 뒤 다시 눌러 주세요.')
+      } else notify(e instanceof BizPlanError ? e.message : '표시하지 못했습니다.')
     } finally {
       setBusy(null)
     }
   }
   return (
-    <div data-my-check={mine?.mark ?? ''}>
+    <div data-my-check={stale ? '' : mine?.mark ?? ''} data-my-check-stale={stale || undefined}>
       <p className="mb-1 text-[0.9rem] font-bold text-navy-500">내 확인 · {who(data.me.name, data.me.title)}</p>
+      {stale && mine && ref && (
+        <div data-my-recheck className="mb-2 space-y-1.5 rounded-xl bg-amber-50 px-3 py-2.5 ring-1 ring-amber-200">
+          <p className="break-keep text-[0.95rem] font-bold text-amber-900">
+            {when(mine.at)}에 <b>변경 전 문장</b>에 「{mine.mark}」로 표시하셨습니다. 그 뒤 내용이 바뀌었으니 지금 문장을 보고 다시 표시해 주세요.
+          </p>
+          <DiffView def={ref.def} before={mine.value_snapshot ?? null} after={row?.value ?? null} labels={['내가 표시한 문장', '지금 문장']} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-1.5">
         {CHECK_MARKS.map((m) => (
           <button
             key={m}
             type="button"
             data-check-pick={m}
-            aria-pressed={mine?.mark === m}
+            aria-pressed={!stale && mine?.mark === m}
             disabled={busy != null}
             onClick={() => void pick(m)}
             className={`flex min-h-[44px] items-center justify-center gap-1 break-keep rounded-xl px-2 text-[0.95rem] font-bold transition ${
-              mine?.mark === m ? (m === '동의' ? 'bg-teal-600 text-white' : 'bg-navy-900 text-white') : 'bg-navy-50 text-navy-700'
+              !stale && mine?.mark === m ? (m === '동의' ? 'bg-teal-600 text-white' : 'bg-navy-900 text-white') : 'bg-navy-50 text-navy-700'
             }`}
           >
             {busy === m ? <Loader2 size={15} className="animate-spin" /> : null}
@@ -270,9 +301,13 @@ function FieldHistory({ fieldKey }: { fieldKey: string }) {
         <div className="space-y-1">
           <p className="text-[0.9rem] font-bold text-navy-500">확인 표시 기록</p>
           {data.check_log.map((c) => (
-            <p key={c.id} className="text-[0.9rem] text-navy-600">
-              {c.name} · {c.mark ?? '표시 지움'} · {when(c.at)}
-            </p>
+            <details key={c.id} data-check-log-row={c.content_rev ?? ''} className="rounded-lg bg-navy-50/60 px-2.5 py-1">
+              <summary className="min-h-[36px] cursor-pointer list-none py-1.5 text-[0.9rem] text-navy-700">
+                {c.name} · {c.mark ?? '표시 지움'} · {when(c.at)}
+                {c.content_rev != null && <span className="ml-1 font-bold text-navy-500">· 판 {c.content_rev} 문장에 대해</span>}
+              </summary>
+              {c.value_snapshot != null && <ValueView def={ref.def} value={c.value_snapshot} compact />}
+            </details>
           ))}
         </div>
       )}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Loader2, Minus, Plus } from 'lucide-react'
 import { Modal } from '../Modal'
 import {
-  BASIS_KINDS, FIELD_BY_KEY, FIELD_STATUSES, emptyValue, plainText,
+  BASIS_KINDS, FIELD_BY_KEY, FIELD_STATUSES, emptyValue, isStaleCheck, plainText,
   type Basis, type FieldDef, type FieldRow, type FieldStatus, type GridValue, type TableRow, type Value,
 } from '../../lib/bizPlan'
 import { BizPlanError, saveField } from '../../lib/bizPlanApi'
@@ -19,7 +19,7 @@ import { DiffView, StatusBadge, usePlan, when } from './parts'
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function FieldEditor({ fieldKey, requestId, suggestion, onClose }: { fieldKey: string; requestId?: string; suggestion?: string; onClose: () => void }) {
-  const { fields, reload, notify, requestsByKey } = usePlan()
+  const { fields, reload, notify, requestsByKey, checksByKey } = usePlan()
   const ref = FIELD_BY_KEY.get(fieldKey)
   const row = fields.get(fieldKey)
   const def = ref?.def
@@ -46,6 +46,13 @@ export function FieldEditor({ fieldKey, requestId, suggestion, onClose }: { fiel
 
   const before = row?.value ?? (def ? emptyValue(def) : '')
   const changed = useMemo(() => def && plainText(def, before) !== plainText(def, value), [def, before, value])
+  //  지금 문장에 대한 확인 표시 — 내용을 고쳐 저장하면 「재확인 필요」가 됩니다
+  const liveChecks = (checksByKey.get(fieldKey) ?? []).filter((c) => !isStaleCheck(c, row))
+  const staleAfter = liveChecks.length
+  const staleNames = liveChecks.map((c) => `${c.name} ${c.mark}`).join(' · ')
+  useEffect(() => {
+    if (changed && status === '최종 확인 완료') setStatus('수정 반영 완료')
+  }, [changed, status])
 
   if (!ref || !def) return null
 
@@ -69,7 +76,8 @@ export function FieldEditor({ fieldKey, requestId, suggestion, onClose }: { fiel
         return
       }
       await reload()
-      notify(res.unchanged ? '바뀐 것이 없어 그대로 두었습니다.' : requestId ? '저장했습니다 · 수정요청은 「반영 완료」로 닫혔습니다.' : '저장했습니다 · 기록이 남았습니다.')
+      const re = res.stale_checks ? ` 확인 표시 ${res.stale_checks}개는 「재확인 필요」가 되었습니다.` : ''
+      notify((res.unchanged ? '바뀐 것이 없어 그대로 두었습니다.' : requestId ? '저장했습니다 · 수정요청은 「반영 완료」로 닫혔습니다.' : '저장했습니다 · 기록이 남았습니다.') + re)
       onClose()
     } catch (e) {
       setError(e instanceof BizPlanError ? e.message : '저장하지 못했습니다. 적던 내용은 그대로 있습니다.')
@@ -170,12 +178,21 @@ export function FieldEditor({ fieldKey, requestId, suggestion, onClose }: { fiel
         <fieldset>
           <legend className="field-label">검토 상태</legend>
           <div className="flex flex-wrap gap-1.5">
-            {FIELD_STATUSES.map((s) => (
-              <button key={s} type="button" data-edit-status={s} aria-pressed={status === s} onClick={() => setStatus(s)} className={`rounded-full ${status === s ? 'ring-2 ring-navy-900 ring-offset-1' : 'opacity-70'}`}>
-                <StatusBadge status={s} />
-              </button>
-            ))}
+            {FIELD_STATUSES.map((s) => {
+              //  0147 — 내용을 고치면서 「최종 확인 완료」로 둘 수 없습니다(서버도 「수정 반영 완료」로 바꿈)
+              const off = s === '최종 확인 완료' && !!changed
+              return (
+                <button key={s} type="button" data-edit-status={s} aria-pressed={status === s} disabled={off} onClick={() => setStatus(s)} className={`rounded-full ${status === s ? 'ring-2 ring-navy-900 ring-offset-1' : 'opacity-70'} disabled:opacity-30`}>
+                  <StatusBadge status={s} />
+                </button>
+              )
+            })}
           </div>
+          {changed && staleAfter > 0 && (
+            <p data-edit-stale-warn className="mt-1.5 break-keep rounded-lg bg-amber-50 px-3 py-2 text-[0.92rem] font-bold text-amber-900 ring-1 ring-amber-200">
+              이 문장에 붙은 확인 표시 {staleAfter}개({staleNames})는 저장하면 「변경 전 문장에 대한 표시」로 남고, 지금 문장은 「재확인 필요」가 됩니다.
+            </p>
+          )}
           <p className="mt-1.5 break-keep text-[0.88rem] text-navy-500">「초안 입력 완료」와 「최종 확인 완료」는 다릅니다 — 최종 확인은 대표님 · 이사님 확인이 끝난 뒤에.</p>
         </fieldset>
 

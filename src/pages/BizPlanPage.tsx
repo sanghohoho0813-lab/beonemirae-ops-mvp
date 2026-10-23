@@ -36,6 +36,7 @@ export function BizPlanPage() {
   const tabParam = params.get('tab') as Tab | null
   const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : 'doc'
   const focus = params.get('f')
+  const filterParam = params.get('filter')
 
   const exit = () => {
     if (location.key !== 'default') navigate(-1)
@@ -66,14 +67,29 @@ export function BizPlanPage() {
 
   return (
     <BizPlanProvider onOpenField={openField} fallback={(s, retry) => <Fallback s={s} retry={retry} onExit={exit} />}>
-      <Screen tab={tab} setTab={setTab} focus={focus} openField={openField} onExit={exit} />
+      <Screen
+        tab={tab}
+        setTab={setTab}
+        focus={focus}
+        openField={openField}
+        onExit={exit}
+        filter={filterParam}
+        onFilter={(f) => {
+          const p = new URLSearchParams(params)
+          p.delete('tab')
+          p.delete('f')
+          if (f) p.set('filter', f)
+          else p.delete('filter')
+          setParams(p, { replace: true })
+        }}
+      />
     </BizPlanProvider>
   )
 }
 
-function Screen({ tab, setTab, focus, openField, onExit }: { tab: Tab; setTab: (t: Tab) => void; focus: string | null; openField: (k: string | null) => void; onExit: () => void }) {
+function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { tab: Tab; setTab: (t: Tab) => void; focus: string | null; openField: (k: string | null) => void; onExit: () => void; filter: string | null; onFilter: (f: string | null) => void }) {
   const { data, fields, isEditor } = usePlan()
-  const sum = useMemo(() => summarize(fields, data.requests), [fields, data.requests])
+  const sum = useMemo(() => summarize(fields, data.requests, data.checks), [fields, data.requests, data.checks])
   const openReq = data.requests.filter((r) => OPEN_REQ.includes(r.status)).length
   const latest = useMemo(() => {
     let at = data.doc.updated_at ?? ''
@@ -166,6 +182,17 @@ function Screen({ tab, setTab, focus, openField, onExit }: { tab: Tab; setTab: (
             <Kpi label="미확인" n={sum.needCheck} hint="확인 필요 · 출처·기준일 대조" tone="amber" hook="check" />
             <Kpi label="미처리 요청" n={openReq} hint="수정요청 접수 · 검토 중" tone="orange" hook="open" onClick={() => setTab('inbox')} />
           </div>
+          {sum.restale > 0 && (
+            <button
+              type="button"
+              data-sum-recheck={sum.restale}
+              onClick={() => onFilter('재확인 필요')}
+              className="flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-left text-[0.95rem] font-bold text-amber-900 ring-1 ring-amber-200"
+            >
+              <span className="min-w-0 flex-1 break-keep">재확인 필요 {sum.restale}항목 — 동의한 뒤 문장이 바뀌었습니다</span>
+              <span className="shrink-0 text-[0.88rem]">보기 ›</span>
+            </button>
+          )}
           {latest.at && (
             <p data-sum-latest className="text-[0.85rem] text-navy-500 sm:text-[0.9rem]">
               최종 수정 · {latest.by} {when(latest.at)}
@@ -190,7 +217,7 @@ function Screen({ tab, setTab, focus, openField, onExit }: { tab: Tab; setTab: (
           ))}
         </div>
 
-        {tab === 'doc' && <DocView focus={focus} onFocus={openField} />}
+        {tab === 'doc' && <DocView focus={focus} onFocus={openField} initialFilter={filter} />}
         {tab === 'inbox' && <RequestInbox onGo={(k) => openField(k)} />}
         {tab === 'versions' && <VersionsTab onGo={(k) => openField(k)} />}
         {tab === 'export' && <ExportTab onGo={(k) => openField(k)} />}

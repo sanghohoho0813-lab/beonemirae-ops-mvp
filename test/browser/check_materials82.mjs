@@ -66,7 +66,7 @@ const cards = (p) => p.locator('[data-supply-line]').count()
   //  ⚠ 제일 중요한 줄입니다. 「몇 건 중 몇 건」이 안 적혀 있으면 자른 것이
   //    아니라 **없어진 것**으로 보입니다.
   ok(/전체 [\d,]+건 중 [\d,]+건/.test(cnt), '**「전체 몇 건 중 몇 건」이라고 적는다**', cnt)
-  ok(/전체 1,408건/.test(cnt), '전체 건수가 실제 건수와 같다', cnt)
+  ok(cnt.includes(`전체 ${F.materials.length.toLocaleString('en-US')}건`), '전체 건수가 실제 건수와 같다', `${cnt} · 시늉본 ${F.materials.length}건`)
   await ctx.close()
 }
 
@@ -106,7 +106,7 @@ const cards = (p) => p.locator('[data-supply-line]').count()
   //  되돌릴 수 있어야 합니다.
   await sel.selectOption('')
   await p.waitForTimeout(500)
-  ok(/전체 1,408건/.test(flat(await p.locator('[data-supply-count]').innerText())), '**전체로 되돌아온다**')
+  ok(flat(await p.locator('[data-supply-count]').innerText()).includes(`전체 ${F.materials.length.toLocaleString('en-US')}건`), '**전체로 되돌아온다**')
   await ctx.close()
 }
 

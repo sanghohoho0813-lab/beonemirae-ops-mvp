@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { AlertTriangle, CheckCircle2, CircleDashed, FileClock, Lock, MessageSquareWarning, PenLine } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleDashed, FileClock, Lock, MessageSquareWarning, PenLine, RotateCcw } from 'lucide-react'
 import {
-  columnTotal, diffLines, needsAlignment, plainText,
+  columnTotal, currentChecks, diffLines, needsAlignment, plainText, staleChecks,
   type Basis, type CheckRow, type FieldDef, type FieldRow, type FieldStatus, type GridValue, type OpenData,
   type RefTable, type RequestRow, type TableRow, type Value,
 } from '../../lib/bizPlan'
@@ -192,19 +192,47 @@ export function BasisLine({ basis }: { basis: Basis | null | undefined }) {
 }
 
 // ── 확인 표시 (사람마다) ────────────────────────────────────────────────────────
-export function ChecksLine({ checks }: { checks: CheckRow[] }) {
+//  0147 — 표시는 그때 문장(판)에 묶입니다. 내용이 바뀐 뒤의 옛 표시는 지우지 않고
+//  「변경 전 문장」으로 따로 보이고, 지금 문장은 「재확인 필요」가 됩니다.
+export function ChecksLine({ checks, field }: { checks: CheckRow[]; field?: FieldRow }) {
   if (checks.length === 0) return null
+  const cur = currentChecks(checks, field)
+  const old = staleChecks(checks, field)
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {needsAlignment(checks) && (
-        <span data-align-needed className="rounded-full bg-violet-100 px-2.5 py-1 text-[0.85rem] font-extrabold text-violet-800">의견 조율 필요</span>
+    <div className="space-y-1.5">
+      {cur.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {needsAlignment(cur) && (
+            <span data-align-needed className="rounded-full bg-violet-100 px-2.5 py-1 text-[0.85rem] font-extrabold text-violet-800">의견 조율 필요</span>
+          )}
+          {cur.map((c) => (
+            <span key={c.profile_id} data-check-chip={c.mark} className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.85rem] font-bold text-navy-700 ring-1 ring-inset ring-navy-100">
+              {who(c.name, c.title)} · {c.mark} <span className="font-semibold text-navy-400">{when(c.at)}</span>
+            </span>
+          ))}
+        </div>
       )}
-      {checks.map((c) => (
-        <span key={c.profile_id} data-check-chip={c.mark} className="rounded-full bg-navy-50 px-2.5 py-1 text-[0.85rem] font-bold text-navy-700 ring-1 ring-inset ring-navy-100">
-          {who(c.name, c.title)} · {c.mark} <span className="font-semibold text-navy-400">{when(c.at)}</span>
-        </span>
-      ))}
+      {old.length > 0 && (
+        <div data-stale-checks={old.length} className="flex flex-wrap items-center gap-1.5">
+          <RecheckBadge n={old.length} />
+          {old.map((c) => (
+            <span key={c.profile_id} data-check-stale={c.mark} title="이 표시는 내용이 바뀌기 전 문장에 대한 것입니다" className="rounded-full border border-dashed border-navy-300 bg-white px-2.5 py-1 text-[0.85rem] font-bold text-navy-500">
+              <span className="line-through decoration-navy-300">{who(c.name, c.title)} · {c.mark}</span>{' '}
+              <span className="font-semibold">(변경 전 문장 · {when(c.at)})</span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
+  )
+}
+
+/** 「재확인 필요」 — 내용이 바뀐 뒤 다시 확인받지 않은 표시가 있음 */
+export function RecheckBadge({ n }: { n: number }) {
+  return (
+    <span data-recheck className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-1 text-[0.85rem] font-extrabold text-amber-900 ring-1 ring-inset ring-amber-300">
+      <RotateCcw size={13} strokeWidth={2.6} aria-hidden="true" /> 재확인 필요{n > 1 ? ` ${n}명` : ''}
+    </span>
   )
 }
 

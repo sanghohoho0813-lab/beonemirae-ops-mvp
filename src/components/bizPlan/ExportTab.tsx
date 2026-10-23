@@ -7,6 +7,7 @@ import {
 import { BizPlanError, getVersion, type VersionFull } from '../../lib/bizPlanApi'
 import { usePrintIsolate } from '../../lib/usePrintIsolate'
 import { RefTableView, ValueView, copyText, download, stamp, usePlan, when } from './parts'
+import { PreflightView, usePreflight } from './PreflightView'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 제출본 내보내기 (0146)
@@ -37,6 +38,7 @@ export function ExportTab({ onGo }: { onGo: (key: string) => void }) {
   const [withRefs, setWithRefs] = useState(false)
   const docRef = useRef<HTMLDivElement>(null)
   usePrintIsolate(docRef, true)
+  const pfState = usePreflight()
 
   const valueOf: ValueOf = useMemo(() => {
     if (source.kind === 'version') {
@@ -144,7 +146,7 @@ export function ExportTab({ onGo }: { onGo: (key: string) => void }) {
 
         <div data-export-warnings className="space-y-1.5 rounded-xl bg-amber-50/70 px-3.5 py-3 ring-1 ring-amber-200">
           <p className="flex items-center gap-1.5 text-[0.98rem] font-extrabold text-amber-900">
-            <AlertTriangle size={17} /> 제출 전 점검
+            <AlertTriangle size={17} /> 이 내보내기 요약
           </p>
           <ul className="space-y-1 text-[0.95rem] text-navy-800">
             <li data-export-warn="open">처리 전 수정요청 <b>{openReq}건</b>{openReq > 0 ? ' — 제출본 확정 전에 처리해야 합니다' : ''}</li>
@@ -169,6 +171,8 @@ export function ExportTab({ onGo }: { onGo: (key: string) => void }) {
             </details>
           )}
         </div>
+
+        {source.kind === 'work' && pfState.on && <PreflightView state={pfState} onGo={onGo} compact />}
 
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button type="button" data-export-print className="btn-primary min-h-[48px]" onClick={() => window.print()}>

@@ -66,3 +66,12 @@ video/audio/*
 private/
 *.hwpx
 *.hwp
+# 0147 — 사업계획서 원본 · 녹취 · 재무증빙 · 초안이 저장소 밖에서만 다뤄지도록 (공개 저장소)
+#   ⚠ .gitignore 는 앞으로 올리는 것만 막습니다. 이미 올라간 것은 이력에 남습니다.
+*녹취*
+*재무제표*
+*사업계획서*.docx
+*사업계획서*.pdf
+*사업계획서*.xlsx
+bizplan_seed*.sql
+bizplan_seed*.json

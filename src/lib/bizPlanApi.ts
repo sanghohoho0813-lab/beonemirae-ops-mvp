@@ -1,5 +1,5 @@
 import { supabase, isOffline } from './supabase'
-import type { Basis, CheckMark, DocStatus, FieldRow, FieldStatus, HistoryData, OpenData, ReqStatus, ReqType, RequestRow, Value } from './bizPlan'
+import type { Basis, CheckMark, DocStatus, FieldRow, FieldStatus, HistoryData, OpenData, Preflight, ReqStatus, ReqType, RequestRow, Value } from './bizPlan'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 신보 뉴본펭귄 사업계획서 — 서버 호출 (0146)
@@ -9,7 +9,8 @@ import type { Basis, CheckMark, DocStatus, FieldRow, FieldStatus, HistoryData, O
 //  단추를 숨기는 것은 편의일 뿐, 막는 것은 서버입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type BizPlanFail = 'missing' | 'denied' | 'offline' | 'invalid' | 'other'
+/** conflict — 그사이 내용이 바뀜(0147 확인 표시 · PT409) */
+export type BizPlanFail = 'missing' | 'denied' | 'offline' | 'invalid' | 'conflict' | 'other'
 
 export class BizPlanError extends Error {
   kind: BizPlanFail
@@ -19,7 +20,7 @@ export class BizPlanError extends Error {
   }
 }
 
-const MESSAGES: Record<Exclude<BizPlanFail, 'invalid'>, string> = {
+const MESSAGES: Record<Exclude<BizPlanFail, 'invalid' | 'conflict'>, string> = {
   missing: '사업계획서 기능이 아직 서버에 준비되지 않았습니다 (PROPOSAL_0146_bizplan.sql 실행 필요).',
   denied: '사업계획서는 참여자로 등록된 계정만 열 수 있습니다. 대표님(관리자)께 참여자 등록을 요청해 주세요.',
   offline: '인터넷 연결이 불안정합니다. 잠시 뒤 다시 시도해 주세요. 적던 글은 그대로 있습니다.',
@@ -33,6 +34,8 @@ function classify(e: { code?: string; message?: string } | null | undefined): Bi
   //  서버가 까닭을 한국어로 돌려주는 거절(담당만 · 참여자만) — 그 문장을 그대로 보여 줍니다
   if (code === '42501') return new BizPlanError('denied', msg || MESSAGES.denied)
   if (code === '22023') return new BizPlanError('invalid', msg || '입력 형식이 올바르지 않습니다.')
+  //  PT409 — 서버가 「그사이 내용이 바뀜」을 HTTP 409 로 알림 (0147 확인 표시)
+  if (code === 'PT409') return new BizPlanError('conflict', msg || '그사이 내용이 바뀌었습니다. 새 내용을 확인해 주세요.')
   if (isOffline(e)) return new BizPlanError('offline', MESSAGES.offline)
   return new BizPlanError('other', msg ? `${MESSAGES.other} (${msg.slice(0, 120)})` : MESSAGES.other)
 }
@@ -72,6 +75,8 @@ export interface SaveResult {
   conflict?: boolean
   unchanged?: boolean
   revision?: number
+  /** 0147 — 이 저장으로 「변경 전 문장」이 된 확인 표시 수 */
+  stale_checks?: number
   field: FieldRow
 }
 export const saveField = (p: {
@@ -99,8 +104,15 @@ export const createRequest = (p: { key: string; label: string; type: ReqType; bo
 export const updateRequest = (id: string, status: Exclude<ReqStatus, '접수'>, note: string) =>
   call<RequestRow>('bizplan_request_update', { p_id: id, p_status: status, p_note: note })
 
-export const setCheck = (key: string, mark: CheckMark | null, note = '') =>
-  call<{ ok: boolean; at: string }>('bizplan_check', { p_key: key, p_mark: mark, p_note: note })
+/**
+ *  확인 표시 — **내가 본 문장의 판 번호**를 함께 보냅니다(0147). 그사이 담당이 고쳤으면 서버가
+ *  거절(conflict)하고, 화면이 새 내용을 다시 읽습니다. 보지 않은 문장에 동의가 붙지 않게.
+ *  서버가 0146(판 번호 전)이면 예전 모양으로 부릅니다.
+ */
+export const setCheck = (key: string, mark: CheckMark | null, contentRev: number | null, note = '') =>
+  contentRev == null
+    ? call<{ ok: boolean; at: string }>('bizplan_check', { p_key: key, p_mark: mark, p_note: note })
+    : call<{ ok: boolean; at: string; content_rev: number }>('bizplan_check', { p_key: key, p_mark: mark, p_note: note, p_content_rev: contentRev })
 
 export const setDocStatus = (status: Exclude<DocStatus, '제출본 확정'>, note: string) =>
   call<{ ok: boolean }>('bizplan_doc_set', { p_status: status, p_note: note })
@@ -121,6 +133,23 @@ export interface VersionFull {
 export const getVersion = (id: number) => call<VersionFull>('bizplan_version_get', { p_id: id })
 
 export const history = (key: string | null) => call<HistoryData>('bizplan_history', { p_key: key })
+
+/** 제출 전 점검 (0147) — 참여자 누구나 볼 수 있음 */
+export const preflight = () => call<Preflight>('bizplan_preflight', {})
+/** 제출본 확정 — 점검을 거쳐서만. 확인 항목이 남으면 까닭(10자 이상)이 있어야 서버가 받습니다 */
+export const submitPlan = (label: string, note: string, reason: string) =>
+  call<{ ok: boolean; id: number; label: string }>('bizplan_submit', { p_label: label, p_note: note, p_reason: reason })
+
+export interface SurveySheet {
+  respondent: 'ceo' | 'director'
+  answers: Record<string, unknown>
+  status: 'draft' | 'submitted'
+  updated_at: string | null
+  submitted_at: string | null
+  edited_by: string
+}
+/** 관련 설문 응답 (읽기만 · 참여자만). 설문 표가 없으면 null */
+export const surveySheets = () => call<SurveySheet[] | null>('bizplan_survey', {})
 
 export interface MemberInfo {
   profile_id: string

@@ -5,7 +5,8 @@ import {
   DOC_STATUSES, FIELD_BY_KEY, OPEN_REQ, SECTIONS, isEditable, nextLabel, plainText,
   type DocStatus, type HistoryData,
 } from '../../lib/bizPlan'
-import { BizPlanError, createVersion, getVersion, history, setDocStatus, type VersionFull } from '../../lib/bizPlanApi'
+import { BizPlanError, createVersion, getVersion, history, setDocStatus, submitPlan, type VersionFull } from '../../lib/bizPlanApi'
+import { PreflightView, usePreflight } from './PreflightView'
 import { DiffView, Pill, usePlan, when, who } from './parts'
 import { PlanDocument } from './ExportTab'
 
@@ -24,7 +25,7 @@ export function VersionsTab({ onGo }: { onGo: (key: string) => void }) {
   return (
     <div className="space-y-4" data-bizplan-versions>
       <DocStatusCard />
-      {isEditor && <SaveVersion />}
+      {isEditor && <SaveVersion onGo={onGo} />}
       <section className="space-y-2">
         <h3 className="text-[1.05rem] font-extrabold text-navy-900">저장한 버전 {data.versions.length}개</h3>
         {data.versions.length === 0 && <p className="text-[0.95rem] text-navy-400">아직 저장한 버전이 없습니다.</p>}
@@ -101,28 +102,39 @@ function DocStatusCard() {
   )
 }
 
-function SaveVersion() {
+function SaveVersion({ onGo }: { onGo: (key: string) => void }) {
   const { data, fields, reload, notify } = usePlan()
   const [submission, setSubmission] = useState(false)
   const [note, setNote] = useState('')
+  const [ack, setAck] = useState(false)
+  const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const pfState = usePreflight()
+  const v2 = pfState.on
+  const pf = pfState.pf
   const label = nextLabel(data.versions, submission)
   const openReq = data.requests.filter((r) => OPEN_REQ.includes(r.status)).length
   const editable = SECTIONS.flatMap((s) => s.groups.flatMap((g) => g.fields)).filter(isEditable)
   const notFinal = editable.filter((d) => fields.get(d.key)?.status !== '최종 확인 완료').length
+  //  0147 — 제출본은 점검을 거쳐서만: 차단 0 · 확인 항목이 있으면 예외 승인(확인 + 까닭 10자 이상)
+  const needAck = v2 && !!pf && pf.warns > 0
+  const blocked = submission && (v2 ? !pf || pf.blocks > 0 || (needAck && (!ack || reason.trim().length < 10)) : openReq > 0)
 
   async function save() {
     setBusy(true)
     setErr(null)
     try {
-      const r = await createVersion(label, note.trim(), submission)
+      const r = submission && v2 ? await submitPlan(label, note.trim(), needAck ? reason.trim() : '') : await createVersion(label, note.trim(), submission)
       await reload()
       notify(submission ? `${r.label} 제출본으로 확정했습니다 · 이후 고치면 새 버전이 됩니다.` : `${r.label} 버전을 저장했습니다.`)
       setNote('')
+      setReason('')
+      setAck(false)
       setSubmission(false)
     } catch (e) {
       setErr(e instanceof BizPlanError ? e.message : '저장하지 못했습니다.')
+      void pfState.load()
     } finally {
       setBusy(false)
     }
@@ -138,16 +150,45 @@ function SaveVersion() {
           제출본으로 확정 — 문서가 「제출본 확정」이 되고, 이 버전은 다시 고칠 수 없습니다(이후 수정은 새 버전).
         </span>
       </label>
-      {submission && (
+      {submission && !v2 && (
         <ul data-version-warn className="space-y-1 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[0.95rem] text-amber-900 ring-1 ring-amber-200">
           <li>처리 전 수정요청 <b>{openReq}건</b>{openReq > 0 ? ' — 먼저 처리해야 확정됩니다(서버가 막습니다)' : ''}</li>
           <li>최종 확인 전 항목 <b>{notFinal}개</b>{notFinal > 0 ? ' — 그대로 확정할 수는 있지만, 대표님 · 이사님 확인을 먼저 받는 것이 좋습니다' : ''}</li>
         </ul>
       )}
+      {submission && v2 && (
+        <div className="space-y-2" data-submit-check>
+          <PreflightView state={pfState} onGo={onGo} />
+          {pf && pf.blocks > 0 && (
+            <p data-submit-blocked className="break-keep rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.95rem] font-bold text-rose-800 ring-1 ring-rose-200">
+              차단 항목 {pf.blocks}개를 먼저 고쳐야 제출본으로 확정할 수 있습니다 (예외 승인으로도 넘길 수 없음).
+            </p>
+          )}
+          {pf && pf.blocks === 0 && needAck && (
+            <div data-submit-override className="space-y-2 rounded-xl bg-amber-50 px-3.5 py-3 ring-1 ring-amber-200">
+              <label className="flex min-h-[44px] items-start gap-2.5">
+                <input type="checkbox" data-submit-ack className="mt-0.5 h-5 w-5 shrink-0 accent-navy-900" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+                <span className="break-keep text-[0.98rem] font-bold text-amber-900">
+                  위 확인 항목 {pf.warns}개를 검토했고, 이 상태로 제출본을 확정합니다 (예외 승인).
+                </span>
+              </label>
+              <textarea
+                data-submit-reason
+                className="field-input w-full resize-y"
+                rows={3}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="확인한 내용과 예외로 확정하는 까닭 (10자 이상) — 예: 재확인 남은 2항목은 대표님 구두 확인, 별첨은 이번 보증 대상 아님"
+              />
+              <p className="text-[0.85rem] text-amber-900">이 까닭 · 점검 결과 · 승인자({data.me.name})가 제출본 버전에 함께 남습니다.</p>
+            </div>
+          )}
+        </div>
+      )}
       <input className="field-input w-full" data-version-note value={note} onChange={(e) => setNote(e.target.value)} placeholder={submission ? '예: 신용보증기금 스타트업지점 제출본' : '예: 대표님 1차 검토 반영'} />
       {err && <p data-version-error className="break-keep text-[0.95rem] font-bold text-rose-600">{err}</p>}
-      <button type="button" data-version-save className="btn-primary min-h-[48px] w-full sm:w-auto" disabled={busy || (submission && openReq > 0)} onClick={() => void save()}>
-        {busy ? <Loader2 size={16} className="animate-spin" /> : submission ? <Lock size={16} /> : <Save size={16} />} {label} {submission ? '제출본으로 확정' : '저장'}
+      <button type="button" data-version-save className="btn-primary min-h-[48px] w-full sm:w-auto" disabled={busy || blocked} onClick={() => void save()}>
+        {busy ? <Loader2 size={16} className="animate-spin" /> : submission ? <Lock size={16} /> : <Save size={16} />} {label} {submission ? (needAck ? '예외 승인하고 제출본으로 확정' : '제출본으로 확정') : '저장'}
       </button>
     </section>
   )
@@ -187,6 +228,11 @@ function VersionRow({ id }: { id: number }) {
         <span className="text-[0.9rem] text-navy-500">{v.created_by} · {when(v.created_at)}</span>
       </div>
       {v.note && <p className="break-keep text-[0.95rem] text-navy-700">{v.note}</p>}
+      {v.override_reason && (
+        <p data-version-override className="break-keep rounded-lg bg-amber-50 px-3 py-2 text-[0.92rem] text-amber-900">
+          <b>예외 승인</b> · {v.approved_by} — {v.override_reason}
+        </p>
+      )}
       <div className="flex flex-wrap gap-1.5">
         <button type="button" data-version-open={v.label} disabled={busy} onClick={() => void open('doc')} className="min-h-[40px] rounded-full bg-navy-50 px-3.5 text-[0.92rem] font-bold text-navy-700">
           {busy && <Loader2 size={14} className="mr-1 inline animate-spin" />}미리 보기

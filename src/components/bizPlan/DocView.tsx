@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Info, Lock, MessageSquarePlus, PenLine, X } from 'lucide-react'
 import {
-  FIELD_BY_KEY, FILTERS, OPEN_REQ, SECTIONS, groupTitle, isBlank, isEditable, matchesFilter, shortTitle,
+  FIELD_BY_KEY, FILTERS, OPEN_REQ, SECTIONS, currentChecks, groupTitle, isBlank, isEditable, matchesFilter, shortTitle, staleChecks,
   type FieldDef, type Filter, type Section,
 } from '../../lib/bizPlan'
 import { FieldPanel } from './FieldPanel'
-import { BasisLine, ChecksLine, Pill, RefTableView, STATUS_STYLE, StatusBadge, ValueView, usePlan } from './parts'
+import { BasisLine, ChecksLine, Pill, RecheckBadge, RefTableView, STATUS_STYLE, StatusBadge, ValueView, usePlan } from './parts'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 문서 보기 — PC 3칸 (목차 | 본문 | 검토 칸) · 폰 3단계 (목차 → 본문 → 수정요청) · 0146
@@ -16,6 +16,7 @@ import { BasisLine, ChecksLine, Pill, RefTableView, STATUS_STYLE, StatusBadge, V
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Step = 'toc' | 'body' | 'panel'
+const wideNow = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
 
 function useWide(q = '(min-width: 1024px)') {
   const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches)
@@ -29,20 +30,31 @@ function useWide(q = '(min-width: 1024px)') {
   return wide
 }
 
-export function DocView({ focus, onFocus }: { focus: string | null; onFocus: (key: string | null) => void }) {
+export function DocView({ focus, onFocus, initialFilter }: { focus: string | null; onFocus: (key: string | null) => void; initialFilter?: string | null }) {
   const { data, fields, requestsByKey, checksByKey } = usePlan()
   const wide = useWide()
-  const [filter, setFilter] = useState<Filter>('전체')
+  const [filter, setFilter] = useState<Filter>(FILTERS.includes(initialFilter as Filter) ? (initialFilter as Filter) : '전체')
+  useEffect(() => {
+    if (initialFilter && FILTERS.includes(initialFilter as Filter)) {
+      setFilter(initialFilter as Filter)
+      if (!wideNow()) setStep('body')
+    }
+  }, [initialFilter])
   const [step, setStep] = useState<Step>(focus ? 'body' : 'toc')
   const [active, setActive] = useState<string>(SECTIONS[0].id)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   const openCount = (k: string) => (requestsByKey.get(k) ?? []).filter((r) => OPEN_REQ.includes(r.status)).length
+  //  0147 — 의견 조율은 지금 문장에 대한 표시끼리만, 재확인은 변경 전 문장에 대한 표시 수
+  const match = (f: Filter, d: FieldDef) => {
+    const row = fields.get(d.key)
+    const cs = checksByKey.get(d.key) ?? []
+    return matchesFilter(f, row?.status ?? '작성 전', openCount(d.key), currentChecks(cs, row), isBlank(row?.value), staleChecks(cs, row).length)
+  }
   const visibleField = (d: FieldDef) => {
     if (filter === '전체') return true
-    const st = fields.get(d.key)?.status ?? '작성 전'
-    const ok = matchesFilter(filter, st, openCount(d.key), checksByKey.get(d.key) ?? [], isBlank(fields.get(d.key)?.value))
+    const ok = match(filter, d)
     //  고정 문구 · 직접 기입 칸은 「작성 전」으로 세지 않습니다 — 요청 · 의견만 거릅니다
     return isEditable(d) ? ok : (filter === '수정 요청 있음' || filter === '의견 조율 필요') && ok
   }
@@ -53,9 +65,7 @@ export function DocView({ focus, onFocus }: { focus: string | null; onFocus: (ke
       for (const g of s.groups)
         for (const d of g.fields) {
           if (!isEditable(d)) continue
-          const st = fields.get(d.key)?.status ?? '작성 전'
-          const blank = isBlank(fields.get(d.key)?.value)
-          for (const f of FILTERS) if (matchesFilter(f, st, openCount(d.key), checksByKey.get(d.key) ?? [], blank)) c[f]++
+          for (const f of FILTERS) if (match(f, d)) c[f]++
         }
     return c
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -258,7 +268,7 @@ function PanelEmpty() {
 
 // ── 목차 ─────────────────────────────────────────────────────────────────────
 function Toc({ active, onPick, filter, visibleField }: { active: string; onPick: (id: string) => void; filter: Filter; visibleField: (d: FieldDef) => boolean }) {
-  const { fields, requestsByKey } = usePlan()
+  const { fields, requestsByKey, checksByKey } = usePlan()
   const navRef = useRef<HTMLElement>(null)
   //  PC — 목차 칸 안에서 지금 절이 보이게 (창 전체는 움직이지 않음)
   useEffect(() => {
@@ -286,6 +296,7 @@ function Toc({ active, onPick, filter, visibleField }: { active: string; onPick:
                 const final = st.filter((x) => x === '최종 확인 완료').length
                 const need = st.filter((x) => x === '확인 필요').length
                 const req = s.groups.flatMap((g) => g.fields).reduce((n, d) => n + (requestsByKey.get(d.key) ?? []).filter((r) => OPEN_REQ.includes(r.status)).length, 0)
+                const re = defs.filter((d) => staleChecks(checksByKey.get(d.key) ?? [], fields.get(d.key)).length > 0).length
                 const hits = filter === '전체' ? null : s.groups.flatMap((g) => g.fields).filter(visibleField).length
                 const allFinal = defs.length > 0 && final === defs.length
                 return (
@@ -310,6 +321,7 @@ function Toc({ active, onPick, filter, visibleField }: { active: string; onPick:
                           )}
                           {need > 0 && <span className={active === s.id ? 'text-amber-200' : 'text-amber-700'}>확인 {need}</span>}
                           {req > 0 && <span className={active === s.id ? 'text-orange-200' : 'text-orange-700'}>요청 {req}</span>}
+                          {re > 0 && <span data-toc-recheck={re} className={active === s.id ? 'text-amber-200' : 'text-amber-800'}>재확인 {re}</span>}
                           {hits != null && <span>· 맞는 항목 {hits}</span>}
                         </span>
                       </span>
@@ -389,26 +401,37 @@ function Guide({ lines }: { lines: string[] }) {
 
 // ── 칸 하나 ───────────────────────────────────────────────────────────────────
 function FieldCard({ d, selected, onPick }: { d: FieldDef; selected: boolean; onPick: () => void }) {
-  const { fields, requestsByKey, checksByKey, isEditor, openRequest, openEditor } = usePlan()
+  const { data, fields, requestsByKey, checksByKey, isEditor, openRequest, openEditor } = usePlan()
   const row = fields.get(d.key)
   const status = row?.status ?? '작성 전'
   const open = (requestsByKey.get(d.key) ?? []).filter((r) => OPEN_REQ.includes(r.status)).length
   const checks = checksByKey.get(d.key) ?? []
+  const stale = staleChecks(checks, row).length
   const editable = isEditable(d)
   const [hint, setHint] = useState(false)
+  const tier = data.rules?.required.includes(d.key) ? '필수' : data.rules?.recommended.includes(d.key) ? '해당 시' : null
 
   return (
     <article
       data-field-card={d.key}
       data-field-status={editable ? status : d.kind}
+      data-field-recheck={stale || undefined}
       className={`scroll-mt-36 rounded-2xl border px-3.5 py-3 transition ${editable ? STATUS_STYLE[status].card : 'border-navy-100 bg-white'} ${selected ? 'ring-2 ring-teal-400' : ''}`}
     >
       <div className="flex items-start gap-2">
         <button type="button" data-field-open={d.key} onClick={onPick} className="min-h-[40px] min-w-0 flex-1 text-left">
           <span className="break-keep text-[1.02rem] font-extrabold leading-snug text-navy-900">{d.label}</span>
           {d.unit && <span className="ml-1 text-[0.88rem] font-bold text-navy-400">({d.unit})</span>}
+          {tier && (
+            <span data-field-tier={tier} className={`ml-1.5 inline-block rounded-md px-1.5 py-0.5 align-middle text-[0.75rem] font-extrabold ${tier === '필수' ? 'bg-navy-900 text-white' : 'bg-navy-50 text-navy-500'}`}>
+              {tier}
+            </span>
+          )}
         </button>
-        {editable ? <StatusBadge status={status} /> : d.kind === 'offline' ? <Pill><Lock size={13} className="mr-1" />직접 기입</Pill> : <Pill>원본 문구</Pill>}
+        <span className="flex shrink-0 flex-col items-end gap-1">
+          {editable ? <StatusBadge status={status} /> : d.kind === 'offline' ? <Pill><Lock size={13} className="mr-1" />직접 기입</Pill> : <Pill>원본 문구</Pill>}
+          {stale > 0 && <RecheckBadge n={stale} />}
+        </span>
       </div>
       {d.hint && d.kind !== 'offline' && (
         <button type="button" onClick={() => setHint((v) => !v)} className="mb-1 text-[0.85rem] font-bold text-navy-400 underline-offset-2 hover:underline">
@@ -419,7 +442,7 @@ function FieldCard({ d, selected, onPick }: { d: FieldDef; selected: boolean; on
         <ValueView def={d} value={row?.value} />
       </div>
       {row?.basis && <div className="mt-2"><BasisLine basis={row.basis} /></div>}
-      {checks.length > 0 && <div className="mt-2"><ChecksLine checks={checks} /></div>}
+      {checks.length > 0 && <div className="mt-2"><ChecksLine checks={checks} field={row} /></div>}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         {open > 0 && (
           <button type="button" onClick={onPick} className="min-h-[40px] rounded-full bg-orange-100 px-3 text-[0.9rem] font-extrabold text-orange-800" data-field-open-req={open}>

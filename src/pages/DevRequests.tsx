@@ -69,8 +69,9 @@ export function DevRequests() {
           [
             //  줄이 넘치면 「★ 뉴본펭귄 / 사전 설문」으로 — 이름 중간(「사전 / 설문」)에서 끊기지 않게
             ['survey', `★\u00a0${SURVEY_MENU_NAME.replace(/ (?=[^ ]+$)/, '\u00a0')}`],
-            ['bizplan', '사업계획서 수정요청'],
             ['feedback', '사용자 피드백'],
+            //  0146 — 기존 두 칸 순서는 그대로 두고 맨 뒤에 붙입니다
+            ['bizplan', '사업계획서 수정요청'],
           ] as const
         ).filter(([k]) => (k === 'survey' ? BIZ_SURVEY_ENABLED : k === 'bizplan' ? showPlan : true)).map(([k, label]) => (
           <button
