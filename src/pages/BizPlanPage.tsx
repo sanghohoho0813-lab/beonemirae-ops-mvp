@@ -1,9 +1,10 @@
-import { useCallback, useMemo, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Loader2, RotateCw } from 'lucide-react'
 import { BrandLogo } from '../components/BrandLogo'
 import { BizPlanProvider, type LoadState } from '../components/bizPlan/Provider'
 import { DocView } from '../components/bizPlan/DocView'
+import { ReviewHome } from '../components/bizPlan/ReviewHome'
 import { RequestInbox } from '../components/bizPlan/RequestInbox'
 import { VersionsTab } from '../components/bizPlan/VersionsTab'
 import { ExportTab } from '../components/bizPlan/ExportTab'
@@ -11,7 +12,7 @@ import { MembersTab } from '../components/bizPlan/MembersTab'
 import { StrategyTab } from '../components/bizPlan/strategy/StrategyTab'
 import { usePlan, when } from '../components/bizPlan/parts'
 import {
-  BIZPLAN_DOC_TITLE, BIZPLAN_ENABLED, BIZPLAN_MENU_NAME, BIZPLAN_NAME, BIZPLAN_SUB, DOC_STATUSES, OPEN_REQ, summarize,
+  BIZPLAN_DOC_TITLE, BIZPLAN_ENABLED, BIZPLAN_MENU_NAME, BIZPLAN_NAME, BIZPLAN_SUB, DOC_STATUSES, OPEN_REQ, REVIEW_KEYS, summarize,
 } from '../lib/bizPlan'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,49 +22,74 @@ import {
 //  담당 한 분이 쓰고, 대표님 · 이사님이 읽고 확인 표시 · 수정요청을 남깁니다.
 //  **요청은 문서를 바꾸지 않습니다.** 담당이 보고 반영(또는 보류 · 반려 + 까닭)합니다.
 //
-//   탭: 문서 · 사업화전략(0148) · 요청함 · 기록·버전 · 내보내기 · 참여자(관리할 수 있는 분만)
-//   주소: ?tab=strategy|inbox|versions|export|members · ?f=항목키 (그 항목을 엶) · ?tab=strategy&sec=…
+//   탭: 확인·결정 · 사업화전략(0148) · 요청함 · 사업계획서 전문 · 기록·버전 · 내보내기 · 참여자(관리할 수 있는 분만)
+//   주소: ?tab=review|doc|strategy|inbox|versions|export|members · ?f=항목키 (그 항목을 엶) · ?tab=strategy&sec=…&at=…
+//   탭을 적지 않으면 — 항목(f)을 가리키면 전문, 아니면 대표님 · 이사님(검토)은 「확인 · 결정」, 담당은 전문.
+//   「확인 · 결정」은 대표님 · 이사님이 고르고 확인하실 것(사업화전략 결정 · 자금소요 및 조달계획)만 모읍니다.
 //
 //  ⚠ 여는 것 · 고치는 것은 **서버가** 막습니다(bizplan_require). 화면은 따라갈 뿐입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = 'doc' | 'strategy' | 'inbox' | 'versions' | 'export' | 'members'
-const TABS: Tab[] = ['doc', 'strategy', 'inbox', 'versions', 'export', 'members']
+type Tab = 'review' | 'doc' | 'strategy' | 'inbox' | 'versions' | 'export' | 'members'
+const TABS: Tab[] = ['review', 'doc', 'strategy', 'inbox', 'versions', 'export', 'members']
+const resolveTab = (p: URLSearchParams, isEditor: boolean): Tab => {
+  const t = p.get('tab') as Tab | null
+  if (t && TABS.includes(t)) return t
+  return p.get('f') || isEditor ? 'doc' : 'review'
+}
 
 export function BizPlanPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [params, setParams] = useSearchParams()
-  const tabParam = params.get('tab') as Tab | null
-  const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : 'doc'
   const focus = params.get('f')
+  //  담당인지 — 화면(Screen)이 서버 자료를 받은 뒤 알려 줍니다. 탭 주소를 짧게 쓰는 데만 씁니다
+  const editorRef = useRef(false)
   const filterParam = params.get('filter')
 
   const exit = () => {
     if (location.key !== 'default') navigate(-1)
     else navigate('/', { replace: true })
   }
-  const setTab = useCallback(
-    (t: Tab) => {
-      const p = new URLSearchParams(params)
-      if (t === 'doc') p.delete('tab')
-      else p.set('tab', t)
-      if (t !== 'strategy') p.delete('sec')
+  //  주소에 탭을 적되, 적지 않아도 같은 탭이면 뺍니다
+  const write = useCallback(
+    (p: URLSearchParams, t: Tab) => {
+      p.delete('tab')
+      if (resolveTab(p, editorRef.current) !== t) p.set('tab', t)
       setParams(p, { replace: true })
+    },
+    [setParams],
+  )
+  const setTab = useCallback(
+    (t: Tab, extra?: Record<string, string>, fresh?: boolean) => {
+      const p = new URLSearchParams(params)
+      if (fresh) p.delete('f')
+      if (t !== 'strategy') {
+        p.delete('sec')
+        p.delete('at')
+      }
+      for (const [k, v] of Object.entries(extra ?? {})) p.set(k, v)
+      //  「확인 · 결정」에는 자금 칸만 있습니다 — 다른 칸을 가리키던 표시는 내려놓음
+      const f = p.get('f')
+      if (t === 'review' && f && !REVIEW_KEYS.has(f)) p.delete('f')
+      write(p, t)
       window.scrollTo({ top: 0 })
     },
-    [params, setParams],
+    [params, write],
   )
+  //  항목 열기 — 「확인 · 결정」에서 자금 칸을 누르면 그 자리에서, 나머지는 전문에서
   const openField = useCallback(
     (key: string | null) => {
       const p = new URLSearchParams(params)
-      p.delete('tab')
+      const cur = resolveTab(p, editorRef.current)
       p.delete('sec')
+      p.delete('at')
       if (key) p.set('f', key)
       else p.delete('f')
-      setParams(p, { replace: true })
+      const here = !key || REVIEW_KEYS.has(key)
+      write(p, here && (cur === 'review' || (cur !== 'doc' && !editorRef.current)) ? 'review' : 'doc')
     },
-    [params, setParams],
+    [params, write],
   )
 
   if (!BIZPLAN_ENABLED) return <Notice title="지금은 열지 않습니다" body="사업계획서 공동 검토 기간이 끝났습니다." onExit={exit} />
@@ -71,7 +97,8 @@ export function BizPlanPage() {
   return (
     <BizPlanProvider onOpenField={openField} fallback={(s, retry) => <Fallback s={s} retry={retry} onExit={exit} />}>
       <Screen
-        tab={tab}
+        params={params}
+        editorRef={editorRef}
         setTab={setTab}
         focus={focus}
         openField={openField}
@@ -79,19 +106,25 @@ export function BizPlanPage() {
         filter={filterParam}
         onFilter={(f) => {
           const p = new URLSearchParams(params)
-          p.delete('tab')
           p.delete('f')
+          p.delete('sec')
+          p.delete('at')
           if (f) p.set('filter', f)
           else p.delete('filter')
-          setParams(p, { replace: true })
+          write(p, 'doc')
         }}
       />
     </BizPlanProvider>
   )
 }
 
-function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { tab: Tab; setTab: (t: Tab) => void; focus: string | null; openField: (k: string | null) => void; onExit: () => void; filter: string | null; onFilter: (f: string | null) => void }) {
+function Screen({ params, editorRef, setTab, focus, openField, onExit, filter, onFilter }: {
+  params: URLSearchParams; editorRef: { current: boolean }; setTab: (t: Tab, extra?: Record<string, string>, fresh?: boolean) => void
+  focus: string | null; openField: (k: string | null) => void; onExit: () => void; filter: string | null; onFilter: (f: string | null) => void
+}) {
   const { data, fields, isEditor } = usePlan()
+  editorRef.current = isEditor
+  const tab = resolveTab(params, isEditor)
   const sum = useMemo(() => summarize(fields, data.requests, data.checks), [fields, data.requests, data.checks])
   const openReq = data.requests.filter((r) => OPEN_REQ.includes(r.status)).length
   const latest = useMemo(() => {
@@ -105,10 +138,12 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
     return { at, by }
   }, [data])
 
+  //  대표님 · 이사님이 고르실 것이 맨 앞 · 사업계획서 전문은 뒤로 (필요할 때만 엶)
   const tabs: [Tab, ReactNode][] = [
-    ['doc', '문서'],
+    ['review', '확인·결정'],
     ['strategy', '사업화전략'],
     ['inbox', <>요청함{openReq > 0 && <span data-tab-badge className="ml-1 rounded-full bg-orange-500 px-1.5 text-[0.8rem] text-white">{openReq}</span>}</>],
+    ['doc', '사업계획서 전문'],
     ['versions', '기록·버전'],
     ['export', '내보내기'],
   ]
@@ -144,7 +179,7 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5">
             <div className="min-w-0">
               <h1 className="break-keep text-[1.12rem] font-black leading-snug text-navy-900 sm:text-[1.45rem]">{BIZPLAN_DOC_TITLE}</h1>
-              <p className="break-keep text-[0.85rem] font-semibold text-navy-500 sm:text-[0.92rem]">{BIZPLAN_SUB}</p>
+              <p className={`break-keep text-[0.85rem] font-semibold text-navy-500 sm:text-[0.92rem] ${isEditor ? '' : 'hidden sm:block'}`}>{BIZPLAN_SUB}</p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span data-doc-status={data.doc.status} className="rounded-full bg-navy-900 px-3 py-1 text-[0.88rem] font-extrabold text-white sm:py-1.5 sm:text-[0.92rem]">
@@ -155,8 +190,8 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
             </div>
           </div>
 
-          {/*  문서 단계 — 지금 어디인지 (폰은 위 글자 하나로) */}
-          <ol className="hidden grid-cols-5 gap-1 sm:grid" aria-label="문서 단계">
+          {/*  문서 단계 — 지금 어디인지 (폰은 위 글자 하나로) · 대표님 · 이사님 화면은 간단히(진행률만) */}
+          {isEditor && <ol className="hidden grid-cols-5 gap-1 sm:grid" aria-label="문서 단계">
             {DOC_STATUSES.map((s, i) => {
               const at = DOC_STATUSES.indexOf(data.doc.status)
               return (
@@ -165,7 +200,7 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
                 </li>
               )
             })}
-          </ol>
+          </ol>}
 
           <div>
             <div className="mb-1 flex items-baseline justify-between gap-2">
@@ -180,12 +215,12 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+          {isEditor && <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
             <Kpi label="검토 완료" n={sum.final} hint="최종 확인 완료" tone="navy" hook="final" />
             <Kpi label="수정 필요" n={sum.requested} hint="수정 요청 있음" tone="orange" hook="requested" />
             <Kpi label="미확인" n={sum.needCheck} hint="확인 필요 · 출처·기준일 대조" tone="amber" hook="check" />
             <Kpi label="미처리 요청" n={openReq} hint="수정요청 접수 · 검토 중" tone="orange" hook="open" onClick={() => setTab('inbox')} />
-          </div>
+          </div>}
           {sum.restale > 0 && (
             <button
               type="button"
@@ -198,7 +233,7 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
             </button>
           )}
           {latest.at && (
-            <p data-sum-latest className="text-[0.85rem] text-navy-500 sm:text-[0.9rem]">
+            <p data-sum-latest className={`text-[0.85rem] text-navy-500 sm:text-[0.9rem] ${isEditor ? '' : 'hidden sm:block'}`}>
               최종 수정 · {latest.by} {when(latest.at)}
             </p>
           )}
@@ -221,6 +256,14 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
           ))}
         </div>
 
+        {tab === 'review' && (
+          <ReviewHome
+            focus={focus}
+            onFocus={openField}
+            onDecide={(key) => setTab('strategy', key ? { sec: 'decisions', at: `d-${key}` } : { sec: 'decisions' })}
+            onFullDoc={() => setTab('doc', undefined, true)}
+          />
+        )}
         {tab === 'doc' && <DocView focus={focus} onFocus={openField} initialFilter={filter} />}
         {tab === 'strategy' && <StrategyTab />}
         {tab === 'inbox' && <RequestInbox onGo={(k) => openField(k)} />}

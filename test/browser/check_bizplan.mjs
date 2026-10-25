@@ -252,8 +252,16 @@ S.members.admin = 'editor'
   const { ctx, p } = await openStaff(S, '/bizplan', { role: 'office' })
   ok((await p.getAttribute('[data-bizplan-page]', 'data-bizplan-role')) === 'reviewer', '2 이사님 = 검토')
   ok((await p.textContent('[data-sum-written]')) === '4', '2 작성 칸 수 — 내용 있는 칸만 (빈 「확인 필요」 칸은 미작성)')
-  ok((await p.getAttribute('[data-step="toc"]', 'aria-selected')) === 'true', '2 폰은 ① 목차부터')
-  ok((await p.locator('[data-toc]').count()) === 21, '2 목차 21개 (원본 순서 · 별첨 · 참고 포함)')
+  //  대표님 · 이사님은 「확인 · 결정」부터 — 사업계획서 전문은 뒤 탭 (대표님 요청)
+  ok((await p.getAttribute('[data-bizplan-tab="review"]', 'aria-selected')) === 'true' && (await p.locator('[data-review-home]').count()) === 1, '2 검토는 「확인 · 결정」 화면부터')
+  ok((await p.locator('[data-bizplan-tab]').evaluateAll((es) => es.map((e) => e.dataset.bizplanTab).join(','))) === 'review,strategy,inbox,doc,versions,export', '2 탭 순서 — 확인·결정 · 사업화전략 · 요청함 · 사업계획서 전문 · 기록 · 내보내기')
+  ok((await p.locator('[data-kpi]').count()) === 0 && (await p.locator('[data-sum-progress]').count()) === 1, '2 검토 화면 머리는 간단히 — 진행률만 (네 칸 숫자는 담당 화면)')
+  await p.click('[data-bizplan-tab="doc"]'); await p.waitForTimeout(400)
+  ok(/[?&]tab=doc\b/.test(p.url()), '2 전문 탭 — 주소에 남아 새로 고쳐도 그대로', p.url())
+  ok((await p.getAttribute('[data-step="toc"]', 'aria-selected')) === 'true', '2 폰 전문은 ① 목차부터')
+  //  표지 · 확약(동의 · 확약 문구)과 겹치는 참고사항(ref1)은 목차 · 본문에서 뺌 (대표님 요청) — 21 − 2
+  ok((await p.locator('[data-toc]').count()) === 19 && (await p.locator('[data-toc="cover"], [data-toc="ref1"]').count()) === 0 && (await p.locator('[data-toc="ref2"]').count()) === 1,
+    '2 목차 19개 — 표지 · 확약 · 겹치는 참고사항은 뺌 (기술역량평가 작성요령은 남김)')
   const m0 = await measure(p, '[data-bizplan-page]')
   ok(!m0.overflow, '2 폰 — 가로 밀림 없음')
   ok(m0.small.length === 0, '2 폰 — 손가락 단추 크기', m0.small.join(','))
@@ -302,6 +310,8 @@ S.members.admin = 'editor'
   ok(S.calls.some((c) => c.fn === 'bizplan_save_field' && c.a.p_request_id === id), '3 저장이 요청과 이어짐')
   //  충돌 — 창을 연 사이 다른 창이 저장
   await p.click('[data-bizplan-tab="doc"]'); await p.waitForTimeout(300)
+  await p.click('[data-toc="s1"]'); await p.waitForTimeout(300)
+  ok((await p.getAttribute('[data-section="s1"]', 'data-section-open')) === 'y', '3 목차에서 장을 누르면 펼쳐짐')
   await p.click('[data-card-edit="s1.industry"]'); await p.waitForTimeout(300)
   S.fields['s1.industry'] = { ...S.fields['s1.industry'], value: '다른 창 내용', rev: S.fields['s1.industry'].rev + 1, updated_by: '이사' }
   await p.fill('[data-edit-value]', '이 창 내용')
@@ -318,6 +328,7 @@ S.members.admin = 'editor'
   ok(((await p.textContent('[data-edit-error]')) ?? '').includes('주민등록번호'), '3 주민번호 — 거절 문구')
   await p.keyboard.press('Escape'); await p.waitForTimeout(300)
   //  직접 기입 칸은 편집 단추 없음
+  await p.click('[data-toc="s2"]'); await p.waitForTimeout(300)
   ok((await p.locator('[data-card-edit="s2.ceo_rrn"]').count()) === 0 && (await p.locator('[data-field-card="s2.ceo_rrn"] [data-offline-field]').count()) === 1, '3 주민번호 칸 — 저장 안 함 · 직접 기입')
   await ctx.close()
 }
@@ -354,6 +365,84 @@ S.members.admin = 'editor'
   await p.click('[data-check-pick="동의"]'); await p.waitForTimeout(800)
   ok(S.checks.some((x) => x.key === 's1.company' && x.name === '이사' && x.content_rev === S.fields['s1.company'].content_rev), '3b 새 문장을 본 뒤 동의 — 그 판에 대해')
   await ctx.close()
+}
+
+// ═══ 3c. 문서 정리 — 장 접기 · 대표님 · 이사님은 자금 위주 · 표지 · 확약 숨김 ════════════
+{
+  const S2 = makeServer()
+  S2.members.office = 'reviewer'
+  S2.fields['s9.funding'] = { key: 's9.funding', value: { own: '10', loan: '20' }, status: '확인 필요', basis: {}, rev: 1, content_rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' }
+  S2.fields['cover.company'] = { key: 'cover.company', value: '시험용 회사', status: '확인 필요', basis: {}, rev: 1, content_rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' }
+  S2.members.admin = 'editor'
+  S2.fields['s10.bank'] = { key: 's10.bank', value: '시험은행', status: '초안 입력 완료', basis: {}, rev: 1, content_rev: 1, updated_at: '2026-10-23T01:00:00Z', updated_by: '검사' }
+  const { ctx, p } = await openStaff(S2, '/bizplan', { role: 'office' })
+  //  첫 화면 「확인 · 결정」 — 고르실 것(사업화전략) · 자금 장 두 개만, 목차 · 거르기 없이
+  ok((await p.locator('[data-review-decisions]').count()) === 1 && (await p.locator('[data-review-decide]').count()) === 1, '3c 확인·결정 ① 사업화전략 결정으로 가는 단추')
+  ok((await p.locator('[data-review-decisions-fail]').count()) === 1, '3c 결정 현황을 못 받으면 그렇다고 (지어낸 숫자 없음)')
+  ok((await p.locator('[data-section]').evaluateAll((es) => es.map((e) => e.dataset.section).join(','))) === 's9,a2', '3c 확인·결정 ② 자금 장 두 개(9번 · 별첨 1차년도 소요자금)만')
+  ok((await p.locator('[data-section][data-section-open="n"]').count()) === 0 && (await p.locator('[data-section-toggle]:not([disabled])').count()) === 0, '3c 자금 장은 늘 펼친 채 (접기 없음)')
+  ok((await p.locator('[data-bizplan-toc], [data-bizplan-filters], [data-bizplan-steps]').count()) === 0, '3c 목차 · 거르기 · 단계 띠 없음 — 간단히')
+  ok((await p.getAttribute('[data-review-money-mine]', 'data-review-money-mine')) === '0', '3c 내 확인 0칸부터')
+  const m0 = await measure(p, '[data-bizplan-page]')
+  ok(!m0.overflow && m0.small.length === 0, '3c 확인·결정 폰 — 가로 밀림 · 작은 단추 없음', m0.small.join(','))
+  await shot(p, 'bizplan_phone_review')
+  await p.click('[data-card-detail="s9.funding"]'); await p.waitForTimeout(400)
+  ok((await p.locator('[data-field-panel="s9.funding"]').count()) === 1 && /[?&]tab=review\b/.test(p.url()), '3c 자금 칸을 누르면 그 자리에서 검토 칸 (전문으로 넘어가지 않음)', p.url())
+  await p.click('[data-check-pick="동의"]'); await p.waitForTimeout(700)
+  ok(S2.checks.some((c) => c.key === 's9.funding' && c.mark === '동의' && c.name === '이사'), '3c 확인·결정에서 「동의」 — 기존 확인 표시 그대로')
+  await p.click('[data-panel-back]'); await p.waitForTimeout(400)
+  ok((await p.getAttribute('[data-review-money-mine]', 'data-review-money-mine')) === '1', '3c 내 확인 1칸')
+  ok(S2.fields['s9.funding'].value.own === '10', '3c 확인 표시만으로 본문은 그대로')
+  await p.click('[data-review-fulldoc]'); await p.waitForTimeout(400)
+  ok((await p.getAttribute('[data-bizplan-tab="doc"]', 'aria-selected')) === 'true', '3c 「사업계획서 전문 보기」 → 전문 탭')
+  await p.click('[data-step="body"]'); await p.waitForTimeout(400)
+  ok((await p.locator('[data-review-focus]').count()) === 1 && (await p.locator('[data-review-focus-go]').count()) === 2, '3c 이사님 — 맨 위 「정해 주시길 부탁드리는 부분」 (9번 · 별첨 소요자금)')
+  ok((await p.getAttribute('[data-section="s9"]', 'data-section-open')) === 'y' && (await p.getAttribute('[data-section="a2"]', 'data-section-open')) === 'y', '3c 자금소요 · 조달계획 장은 처음부터 펼쳐짐')
+  ok((await p.getAttribute('[data-section="s1"]', 'data-section-open')) === 'n' && (await p.locator('[data-field-card="s1.company"]').count()) === 0, '3c 나머지 장은 접혀 있음 (머리만)')
+  ok(/작성 \d+\/\d+/.test(await p.locator('[data-section="s1"] [data-section-toggle]').textContent()), '3c 접힌 머리에도 작성 칸 수')
+  ok((await p.locator('[data-section="cover"], [data-section="ref1"]').count()) === 0, '3c 표지 · 확약 · 겹치는 참고사항 — 본문에 없음')
+  ok((await p.locator('[data-field-card="s9.funding"]').count()) === 1, '3c 전문에서도 9번 자금조달계획 칸은 펼쳐져 있음')
+  await p.click('[data-section-toggle="s10"]'); await p.waitForTimeout(300)
+  ok((await p.locator('[data-field-card="s10.bank"]').count()) === 1 && (await p.locator('[data-field-card="s10.consent"], [data-field-card="s10.notice"]').count()) === 0, '3c 입금동의 서명 · 원본 안내문 칸은 전문에서도 뺌')
+  await p.click('[data-section-toggle="s10"]'); await p.waitForTimeout(300)
+  const m = await measure(p, '[data-bizplan-page]')
+  ok(!m.overflow && m.small.length === 0, '3c 폰 — 가로 밀림 · 작은 단추 없음', m.small.join(','))
+  await shot(p, 'bizplan_phone_focus')
+  await p.click('[data-section-toggle="s1"]'); await p.waitForTimeout(300)
+  ok((await p.getAttribute('[data-section="s1"]', 'data-section-open')) === 'y' && (await p.locator('[data-field-card="s1.company"]').count()) === 1, '3c 장 머리를 누르면 펼쳐짐')
+  await p.reload(); await p.waitForTimeout(1200)
+  await p.click('[data-step="body"]'); await p.waitForTimeout(400)
+  ok((await p.getAttribute('[data-section="s1"]', 'data-section-open')) === 'y', '3c 펼친 장은 이 기기에서 기억')
+  await p.click('[data-close-all]'); await p.waitForTimeout(300)
+  ok((await p.locator('[data-section][data-section-open="y"]').count()) === 0, '3c 모두 접기')
+  await p.click('[data-filter="확인 필요"]'); await p.waitForTimeout(300)
+  ok((await p.locator('[data-field-card="s1.industry"]').count()) === 1 && (await p.locator('[data-field-card="s9.funding"]').count()) === 1, '3c 거르기 중에는 맞는 칸이 있는 장이 저절로 펼쳐짐')
+  ok((await p.locator('[data-field-card="cover.company"]').count()) === 0, '3c 감춘 표지 칸은 거르기에도 안 나옴')
+  await ctx.close()
+  //  제출 전 점검 등에서 표지 칸으로 가면 — 그때만 보임
+  const o = await openStaff(S2, '/bizplan?f=cover.company', { role: 'office', w: 1440, scale: 'normal' })
+  ok((await o.p.locator('[data-section="cover"]').count()) === 1 && (await o.p.locator('[data-field-card="cover.company"]').count()) === 1, '3c 표지 칸으로 바로 가면 그 장만 보임 (자료는 그대로)')
+  ok((await o.p.locator('[data-review-focus]').count()) === 1, '3c PC 이사님도 안내')
+  await o.p.click('[data-bizplan-tab="export"]'); await o.p.waitForTimeout(500)
+  ok(((await o.p.textContent('[data-plan-document]')) ?? '').includes('확약'), '3c 내보내기(원본 순서)에는 표지 · 확약이 그대로')
+  await o.ctx.close()
+  //  PC 이사님 — 확인·결정은 두 칸(본문 | 검토 칸), 목차 없이
+  const r = await openStaff(S2, '/bizplan', { role: 'office', w: 1440, scale: 'normal' })
+  ok((await r.p.locator('[data-review-home]').count()) === 1 && (await r.p.locator('[data-bizplan-panel-pane]').count()) === 1 && (await r.p.locator('[data-bizplan-toc-pane]').count()) === 0, '3c PC 확인·결정 — 본문 | 검토 칸 (목차 없음)')
+  await r.p.click('[data-card-detail="a.funds"]'); await r.p.waitForTimeout(400)
+  ok((await r.p.locator('[data-bizplan-panel-pane] [data-field-panel="a.funds"]').count()) === 1, '3c PC 별첨 소요자금 칸 → 오른쪽 검토 칸')
+  const m2 = await measure(r.p, '[data-bizplan-page]')
+  ok(!m2.overflow, '3c PC 확인·결정 — 가로 밀림 없음')
+  await shot(r.p, 'bizplan_pc_review')
+  await r.p.click('[data-bizplan-tab="doc"]'); await r.p.waitForTimeout(400)
+  ok((await r.p.locator('[data-bizplan-toc-pane]').count()) === 1 && (await r.p.locator('[data-field-panel="a.funds"]').count()) === 1, '3c 전문으로 가도 고른 칸은 그대로')
+  await r.ctx.close()
+  const e = await openStaff(S2, '/bizplan', { role: 'admin', w: 1440, scale: 'normal' })
+  ok((await e.p.getAttribute('[data-bizplan-tab="doc"]', 'aria-selected')) === 'true' && (await e.p.locator('[data-kpi]').count()) === 4, '3c 담당은 전문부터 · 머리 네 칸 숫자 그대로')
+  ok((await e.p.locator('[data-review-focus]').count()) === 0, '3c 담당 화면에는 안내 띠 없음')
+  await e.p.click('[data-open-all]'); await e.p.waitForTimeout(300)
+  ok((await e.p.locator('[data-section][data-section-open="n"]').count()) === 0, '3c 모두 펼치기')
+  await e.ctx.close()
 }
 
 // ═══ 4. 거르기 · 버전 · 내보내기 ═══════════════════════════════════════════════

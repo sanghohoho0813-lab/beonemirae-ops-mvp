@@ -204,7 +204,7 @@ export function ExportTab({ onGo }: { onGo: (key: string) => void }) {
 /** 깨끗한 문서 — 원본 순서 그대로, 검토 표시 없음 */
 export function PlanDocument({ sections, valueOf, label }: { sections: Section[]; valueOf: ValueOf; label: string }) {
   return (
-    <article className="space-y-7 text-navy-900">
+    <article data-plan-document className="space-y-7 text-navy-900">
       <header className="space-y-1 border-b-2 border-navy-900 pb-3 text-center">
         <h1 className="break-keep text-[1.45rem] font-black">{BIZPLAN_DOC_TITLE}</h1>
         <p className="text-[0.95rem] font-semibold text-navy-500">{label} · {when(new Date().toISOString())} 기준</p>

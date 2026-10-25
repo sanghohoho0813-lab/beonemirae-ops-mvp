@@ -273,15 +273,33 @@ const S = makeServer()
   ok((await p.getAttribute('[data-decision="scenario"] [data-decision-state]', 'data-decision-state')) === '의견 조율 필요', '3 이사님 C ≠ 대표님 B → 의견 조율 필요')
   await p.click('[data-strategy-sec="summary"]'); await p.waitForTimeout(400)
   ok((await text(p, '[data-strategy-progress]')).includes('의견 조율 1'), '3 머리에 「의견 조율 1」')
+  //  「확인 · 결정」(대표님 · 이사님 첫 화면) — 남은 결정 · 의견 조율을 서버 결정 기록에서 셈
+  const nd = S.calls.filter((c) => c.fn === 'bizplan_decide').length
+  await p.click('[data-bizplan-tab="review"]'); await p.waitForTimeout(800)
+  ok((await p.getAttribute('[data-review-left]', 'data-review-left')) === '5' && (await p.getAttribute('[data-review-agreed]', 'data-review-agreed')) === '0', '3 확인·결정 — 이사님 남은 결정 5개 (6개 중 1개 고름) · 합의 0')
+  ok((await p.getAttribute('[data-review-split]', 'data-review-split')) === '1' && (await text(p, '[data-review-decision="scenario"]')).includes('의견 조율'), '3 확인·결정 — 「의견 조율 필요 1」 · 그 결정 단추')
+  ok((await p.locator('[data-review-decision]').count()) === 6, '3 확인·결정 — 고를 것 5 + 의견 조율 1 = 단추 6개')
+  ok(S.calls.filter((c) => c.fn === 'bizplan_decide').length === nd, '3 확인·결정 화면은 아무것도 저장하지 않음')
+  const mr = await measure(p)
+  ok(!mr.overflow && mr.small.length === 0, '3 확인·결정 폰 — 가로 밀림 · 작은 단추 없음', mr.small.join(','))
+  await shot(p, 'st_phone_review_home')
+  await p.click('[data-review-decision="funding"]'); await p.waitForTimeout(1000)
+  ok(/sec=decisions/.test(p.url()) && /at=d-funding/.test(p.url()), '3 결정 단추 → 사업화전략 ③ 그 결정으로', p.url())
+  const top = await p.evaluate(() => document.querySelector('[data-decision="funding"]').getBoundingClientRect().top)
+  ok(top >= -5 && top < 320, '3 「자금배분」 카드가 화면 위쪽에', String(Math.round(top)))
   await p.click('[data-strategy-sec="decisions"]'); await p.waitForTimeout(400)
   await decide(p, 'scenario', 'B')
   ok((await p.getAttribute('[data-decision="scenario"] [data-decision-state]', 'data-decision-state')) === '합의', '3 이사님도 B → 합의')
+  await p.click('[data-bizplan-tab="review"]'); await p.waitForTimeout(800)
+  ok((await p.getAttribute('[data-review-agreed]', 'data-review-agreed')) === '1' && (await p.locator('[data-review-split]').count()) === 0, '3 확인·결정 — 합의 1 · 의견 조율 없음')
   await ctx.close()
 }
 {
   const { ctx, p } = await open(S, 'dev', '/bizplan?tab=strategy&sec=decisions', 1440)
   ok(await p.locator('[data-decision="scenario"] [data-option="A"]').isDisabled(), '3 담당 — 안 단추가 꺼져 있음 (결정은 대표님 · 이사님)')
   ok((await p.locator('[data-decide]').count()) === 0, '3 담당 — 결정 단추 없음')
+  await p.click('[data-bizplan-tab="review"]'); await p.waitForTimeout(800)
+  ok((await p.locator('[data-review-left]').count()) === 0 && (await p.getAttribute('[data-review-agreed]', 'data-review-agreed')) === '1', '3 담당이 본 확인·결정 — 「남은 것」 없이 합의 현황만')
   await ctx.close()
 }
 

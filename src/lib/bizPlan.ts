@@ -930,6 +930,19 @@ export interface FieldRef {
   path: string
 }
 
+/**
+ *  문서 화면(목차 · 본문)에서 감추는 장 — 표지 · 확약(동의 · 확약 문구 · 작성일 · 서명)과
+ *  ref2 와 겹치는 작성 참고사항(ref1). 자료 · 제출 전 점검 · 내보내기(원본 순서)에는 그대로 있습니다.
+ *  제출 전 점검 등에서 그 칸으로 가면 그때만 보입니다.
+ */
+export const HIDDEN_IN_DOC = new Set(['cover', 'ref1'])
+export const DOC_SECTIONS: Section[] = SECTIONS.filter((s) => !HIDDEN_IN_DOC.has(s.id))
+/** 대표님 · 이사님이 정해 주실 장 — 「확인 · 결정」 탭에 모으고, 전문에서도 펼쳐 둡니다 (나머지는 접어 둠) */
+export const REVIEW_FOCUS = ['s9', 'a2']
+export const REVIEW_KEYS = new Set(SECTIONS.filter((s) => REVIEW_FOCUS.includes(s.id)).flatMap((s) => s.groups.flatMap((g) => g.fields.map((d) => d.key))))
+/** 문서 화면에서 감추는 칸 — 원본 고정 안내문 · 대표자가 원본에 직접 하는 동의 서명. 내보내기에는 그대로 있습니다 */
+export const hiddenInDoc = (d: FieldDef) => d.kind === 'notice' || d.key === 's10.consent'
+
 /** 목차 · 위치 이름용 짧은 제목 — 「10. 보증료(또는 가수금) 환급 시 입금계좌」 · 「대표자 추가 서식 ①」 */
 export function shortTitle(s: Section): string {
   if (s.id === 'cover') return '표지 · 확약'

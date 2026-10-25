@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Info, Lock, MessageSquarePlus, PenLine, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Info, Lock, MessageSquarePlus, PenLine, X } from 'lucide-react'
 import {
-  FIELD_BY_KEY, FILTERS, OPEN_REQ, SECTIONS, currentChecks, groupTitle, isBlank, isEditable, matchesFilter, shortTitle, staleChecks,
+  DOC_SECTIONS, FIELD_BY_KEY, FILTERS, OPEN_REQ, REVIEW_FOCUS, SECTIONS, currentChecks, groupTitle, hiddenInDoc, isBlank, isEditable, matchesFilter, shortTitle, staleChecks,
   type FieldDef, type Filter, type Section,
 } from '../../lib/bizPlan'
 import { FieldPanel } from './FieldPanel'
@@ -13,7 +13,31 @@ import { BasisLine, ChecksLine, Pill, RecheckBadge, RefTableView, STATUS_STYLE, 
 //  · 순서는 원본 서식 그대로입니다. 칸마다 상태(글자 + 옅은 색) · 출처 · 기준일이 보입니다.
 //  · 항목을 누르면 오른쪽(폰은 3단계)에 확인 표시 · 수정요청 · 기록이 열립니다.
 //  · 거르기 — 전체 · 확인 필요 · 수정 요청 있음 · 미작성 · 최종 확인 완료 · 의견 조율 필요
+//  · 장은 접었다 폅니다. 처음에는 대표님 · 이사님이 정해 주실 장(REVIEW_FOCUS)만 펼쳐 둡니다.
+//    거르기 중이거나 그 장의 항목으로 가면 저절로 펼쳐집니다. 펼친 장은 이 기기에만 기억합니다.
+//  · 표지 · 확약 · 겹치는 참고사항(HIDDEN_IN_DOC)과 원본 고정 안내문 · 동의 서명 칸(hiddenInDoc)은
+//    목차 · 본문에서 뺍니다 — 그 칸으로 가면 그때만 보입니다. 내보내기(원본 순서)에는 그대로 있습니다.
+//  · mode="review" — 「확인 · 결정」 탭: 자금 장(REVIEW_FOCUS)만, 늘 펼친 채로, 목차 · 거르기 없이.
 // ─────────────────────────────────────────────────────────────────────────────
+
+const OPEN_KEY = 'beonemirae-ops:bizplan-open'
+function loadOpen(): Set<string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPEN_KEY) ?? 'null')
+    if (Array.isArray(v)) return new Set(v.filter((x) => typeof x === 'string'))
+  } catch {
+    /* 저장소를 못 읽어도 기본값으로 */
+  }
+  return new Set(REVIEW_FOCUS)
+}
+function saveOpen(s: Set<string>) {
+  try {
+    localStorage.setItem(OPEN_KEY, JSON.stringify([...s]))
+  } catch {
+    /* 사생활 보호 모드 등 — 기억만 못 함 */
+  }
+}
+const inSection = (s: Section, key: string | null) => !!key && s.groups.some((g) => g.fields.some((d) => d.key === key))
 
 type Step = 'toc' | 'body' | 'panel'
 const wideNow = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
@@ -30,9 +54,23 @@ function useWide(q = '(min-width: 1024px)') {
   return wide
 }
 
-export function DocView({ focus, onFocus, initialFilter }: { focus: string | null; onFocus: (key: string | null) => void; initialFilter?: string | null }) {
-  const { data, fields, requestsByKey, checksByKey } = usePlan()
+export function DocView({ focus, onFocus, initialFilter, mode = 'doc' }: { focus: string | null; onFocus: (key: string | null) => void; initialFilter?: string | null; mode?: 'doc' | 'review' }) {
+  const { data, fields, requestsByKey, checksByKey, isEditor } = usePlan()
+  const review = mode === 'review'
   const wide = useWide()
+  const [opened, setOpened] = useState<Set<string>>(loadOpen)
+  const setOpen = (ids: string[], on: boolean) =>
+    setOpened((prev) => {
+      const n = new Set(prev)
+      for (const id of ids) {
+        if (on) n.add(id)
+        else n.delete(id)
+      }
+      saveOpen(n)
+      return n
+    })
+  //  감춘 장도 그 칸으로 가면(제출 전 점검 등) 그때만 보입니다
+  const sections = review ? SECTIONS.filter((s) => REVIEW_FOCUS.includes(s.id)) : SECTIONS.filter((s) => DOC_SECTIONS.includes(s) || inSection(s, focus))
   const [filter, setFilter] = useState<Filter>(FILTERS.includes(initialFilter as Filter) ? (initialFilter as Filter) : '전체')
   useEffect(() => {
     if (initialFilter && FILTERS.includes(initialFilter as Filter)) {
@@ -40,8 +78,8 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
       if (!wideNow()) setStep('body')
     }
   }, [initialFilter])
-  const [step, setStep] = useState<Step>(focus ? 'body' : 'toc')
-  const [active, setActive] = useState<string>(SECTIONS[0].id)
+  const [step, setStep] = useState<Step>(focus || review ? 'body' : 'toc')
+  const [active, setActive] = useState<string>(DOC_SECTIONS[0].id)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -53,6 +91,7 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
     return matchesFilter(f, row?.status ?? '작성 전', openCount(d.key), currentChecks(cs, row), isBlank(row?.value), staleChecks(cs, row).length)
   }
   const visibleField = (d: FieldDef) => {
+    if (hiddenInDoc(d) && d.key !== focus) return false
     if (filter === '전체') return true
     const ok = match(filter, d)
     //  고정 문구 · 직접 기입 칸은 「작성 전」으로 세지 않습니다 — 요청 · 의견만 거릅니다
@@ -61,7 +100,7 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
   const filterCount = useMemo(() => {
     const c = {} as Record<Filter, number>
     for (const f of FILTERS) c[f] = 0
-    for (const s of SECTIONS)
+    for (const s of DOC_SECTIONS)
       for (const g of s.groups)
         for (const d of g.fields) {
           if (!isEditable(d)) continue
@@ -115,6 +154,7 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
 
   function goSection(id: string) {
     setActive(id)
+    if (!opened.has(id)) setOpen([id], true)
     if (!wide) setStep('body')
     setTimeout(() => document.querySelector(`[data-section="${id}"]`)?.scrollIntoView({ block: 'start', behavior: wide ? 'smooth' : 'auto' }), 30)
   }
@@ -130,7 +170,10 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
     if (focus) setTimeout(() => document.querySelector(`[data-field-card="${CSS.escape(focus)}"]`)?.scrollIntoView({ block: 'center' }), 30)
   }
 
-  const shownSections = SECTIONS.filter((s) => filter === '전체' || s.groups.some((g) => g.fields.some(visibleField)))
+  const shownSections = sections.filter((s) => filter === '전체' || s.groups.some((g) => g.fields.some(visibleField)))
+  const isOpen = (s: Section) => review || opened.has(s.id) || filter !== '전체' || inSection(s, focus)
+  const allIds = DOC_SECTIONS.map((s) => s.id)
+  const focusSections = DOC_SECTIONS.filter((s) => REVIEW_FOCUS.includes(s.id))
   const empty = data.fields.length === 0
 
   const filters = (
@@ -152,7 +195,7 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
     </div>
   )
 
-  const toc = <Toc active={active} onPick={goSection} filter={filter} visibleField={visibleField} />
+  const toc = <Toc sections={sections} active={active} onPick={goSection} filter={filter} visibleField={visibleField} />
   const body = (
     <div ref={bodyRef} className="min-w-0 space-y-5" data-bizplan-body>
       {empty && (
@@ -168,8 +211,32 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
           </button>
         </p>
       )}
+      {!review && filter === '전체' && !isEditor && focusSections.length > 0 && (
+        <div data-review-focus className="space-y-2 rounded-2xl bg-teal-50 px-4 py-3 ring-1 ring-teal-200">
+          <p className="break-keep text-[1.02rem] font-extrabold text-teal-900">사업계획서 전문 — 대표님 · 이사님께 정해 주시길 부탁드리는 장</p>
+          <div className="flex flex-wrap gap-1.5">
+            {focusSections.map((s) => (
+              <button key={s.id} type="button" data-review-focus-go={s.id} onClick={() => goSection(s.id)} className="min-h-[44px] rounded-full bg-white px-3.5 text-[0.95rem] font-extrabold text-teal-800 ring-1 ring-inset ring-teal-300">
+                {shortTitle(s)}
+              </button>
+            ))}
+          </div>
+          <p className="break-keep text-[0.9rem] text-teal-800">나머지 장은 담당이 작성했고 접혀 있습니다 — 보고 싶은 장만 제목을 눌러 펼치세요.</p>
+        </div>
+      )}
+      {!review && filter === '전체' && (
+        <div className="flex flex-wrap justify-end gap-1.5">
+          <button type="button" data-open-all onClick={() => setOpen(allIds, true)} className="inline-flex min-h-[40px] items-center gap-1 rounded-full bg-white px-3 text-[0.9rem] font-bold text-navy-600 ring-1 ring-inset ring-navy-200">
+            <ChevronsUpDown size={15} /> 모두 펼치기
+          </button>
+          <button type="button" data-close-all onClick={() => setOpen(allIds, false)} className="inline-flex min-h-[40px] items-center gap-1 rounded-full bg-white px-3 text-[0.9rem] font-bold text-navy-600 ring-1 ring-inset ring-navy-200">
+            <ChevronsDownUp size={15} /> 모두 접기
+          </button>
+        </div>
+      )}
       {shownSections.map((s) => (
-        <SectionBlock key={s.id} s={s} visibleField={visibleField} focus={focus} onPick={pickField} filtered={filter !== '전체'} />
+        <SectionBlock key={s.id} s={s} visibleField={visibleField} focus={focus} onPick={pickField} filtered={filter !== '전체'}
+          open={isOpen(s)} onToggle={() => setOpen([s.id], !opened.has(s.id))} toggleable={!review && filter === '전체' && !inSection(s, focus)} />
       ))}
       {shownSections.length === 0 && <p className="rounded-2xl bg-white px-4 py-10 text-center text-[1rem] font-bold text-navy-500 ring-1 ring-navy-100">해당하는 항목이 없습니다.</p>}
     </div>
@@ -178,11 +245,13 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
   if (wide) {
     return (
       <div className="space-y-3">
-        {filters}
-        <div className="grid grid-cols-[15.5rem_minmax(0,1fr)_21rem] items-start gap-4 xl:grid-cols-[17rem_minmax(0,1fr)_25rem] 2xl:grid-cols-[18rem_minmax(0,1fr)_28rem]">
-          <aside className="sticky top-[4.4rem] max-h-[calc(100dvh-5.4rem)] overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-navy-100" data-bizplan-toc-pane>
-            {toc}
-          </aside>
+        {!review && filters}
+        <div className={`grid items-start gap-4 ${review ? 'grid-cols-[minmax(0,1fr)_23rem] xl:grid-cols-[minmax(0,1fr)_27rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]' : 'grid-cols-[15.5rem_minmax(0,1fr)_21rem] xl:grid-cols-[17rem_minmax(0,1fr)_25rem] 2xl:grid-cols-[18rem_minmax(0,1fr)_28rem]'}`}>
+          {!review && (
+            <aside className="sticky top-[4.4rem] max-h-[calc(100dvh-5.4rem)] overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-navy-100" data-bizplan-toc-pane>
+              {toc}
+            </aside>
+          )}
           {body}
           <aside className="sticky top-[4.4rem] max-h-[calc(100dvh-5.4rem)] overflow-y-auto rounded-2xl bg-white p-4 ring-1 ring-navy-100" data-bizplan-panel-pane>
             {focus && FIELD_BY_KEY.has(focus) ? (
@@ -201,10 +270,10 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
     )
   }
 
-  //  ── 폰: 3단계 ──
+  //  ── 폰: 3단계 (「확인 · 결정」은 본문 ↔ 검토 칸 두 단계, 단계 띠 없이) ──
   return (
     <div ref={rootRef} className="space-y-3">
-      <div role="tablist" aria-label="보는 단계" className="sticky top-[3.6rem] z-20 -mx-4 grid grid-cols-3 gap-1 border-b border-navy-100 bg-app/95 px-4 py-2 backdrop-blur" data-bizplan-steps>
+      {!review && <div role="tablist" aria-label="보는 단계" className="sticky top-[3.6rem] z-20 -mx-4 grid grid-cols-3 gap-1 border-b border-navy-100 bg-app/95 px-4 py-2 backdrop-blur" data-bizplan-steps>
         {(
           [
             ['toc', '① 목차'],
@@ -228,16 +297,16 @@ export function DocView({ focus, onFocus, initialFilter }: { focus: string | nul
             {lb}
           </button>
         ))}
-      </div>
-      {step === 'toc' && (
+      </div>}
+      {step === 'toc' && !review && (
         <div className="space-y-3">
           {filters}
           <div className="rounded-2xl bg-white p-2 ring-1 ring-navy-100">{toc}</div>
         </div>
       )}
-      {step === 'body' && (
+      {(step === 'body' || (step === 'toc' && review)) && (
         <div className="space-y-3">
-          {filters}
+          {!review && filters}
           {body}
         </div>
       )}
@@ -267,7 +336,7 @@ function PanelEmpty() {
 }
 
 // ── 목차 ─────────────────────────────────────────────────────────────────────
-function Toc({ active, onPick, filter, visibleField }: { active: string; onPick: (id: string) => void; filter: Filter; visibleField: (d: FieldDef) => boolean }) {
+function Toc({ sections, active, onPick, filter, visibleField }: { sections: Section[]; active: string; onPick: (id: string) => void; filter: Filter; visibleField: (d: FieldDef) => boolean }) {
   const { fields, requestsByKey, checksByKey } = usePlan()
   const navRef = useRef<HTMLElement>(null)
   //  PC — 목차 칸 안에서 지금 절이 보이게 (창 전체는 움직이지 않음)
@@ -283,7 +352,7 @@ function Toc({ active, onPick, filter, visibleField }: { active: string; onPick:
   return (
     <nav ref={navRef} aria-label="사업계획서 목차" className="space-y-2" data-bizplan-toc>
       {parts.map((p) => {
-        const ss = SECTIONS.filter((s) => s.part === p)
+        const ss = sections.filter((s) => s.part === p)
         if (ss.length === 0) return null
         return (
           <div key={p}>
@@ -339,16 +408,53 @@ function Toc({ active, onPick, filter, visibleField }: { active: string; onPick:
 }
 
 // ── 절 하나 ───────────────────────────────────────────────────────────────────
-function SectionBlock({ s, visibleField, focus, onPick, filtered }: { s: Section; visibleField: (d: FieldDef) => boolean; focus: string | null; onPick: (k: string) => void; filtered: boolean }) {
+function SectionBlock({ s, visibleField, focus, onPick, filtered, open, onToggle, toggleable }: {
+  s: Section; visibleField: (d: FieldDef) => boolean; focus: string | null; onPick: (k: string) => void; filtered: boolean
+  open: boolean; onToggle: () => void; toggleable: boolean
+}) {
+  const { fields, requestsByKey, checksByKey } = usePlan()
+  const defs = s.groups.flatMap((g) => g.fields).filter(isEditable)
+  const written = defs.filter((d) => !isBlank(fields.get(d.key)?.value)).length
+  const need = defs.filter((d) => (fields.get(d.key)?.status ?? '작성 전') === '확인 필요').length
+  const req = s.groups.flatMap((g) => g.fields).reduce((n, d) => n + (requestsByKey.get(d.key) ?? []).filter((r) => OPEN_REQ.includes(r.status)).length, 0)
+  const re = defs.filter((d) => staleChecks(checksByKey.get(d.key) ?? [], fields.get(d.key)).length > 0).length
+  const focusMark = REVIEW_FOCUS.includes(s.id)
   return (
-    <section data-section={s.id} className="scroll-mt-32 space-y-3">
-      <header className="space-y-1.5 rounded-2xl bg-navy-900 px-4 py-3 text-white">
-        <p className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-          <span className="break-keep text-[1.1rem] font-black leading-snug">{s.title}</span>
-          {s.unit && <span className="text-[0.88rem] font-bold text-navy-200">({s.unit})</span>}
-        </p>
-        {s.note && <p className="break-keep text-[0.92rem] font-semibold text-amber-200">{s.note}</p>}
+    <section data-section={s.id} data-section-open={open ? 'y' : 'n'} className="scroll-mt-32 space-y-3">
+      <header className={`rounded-2xl text-white ${focusMark ? 'bg-teal-800' : 'bg-navy-900'}`}>
+        <button
+          type="button"
+          data-section-toggle={s.id}
+          aria-expanded={open}
+          disabled={!toggleable}
+          onClick={onToggle}
+          className="flex min-h-[52px] w-full items-start gap-2 px-4 py-3 text-left disabled:cursor-default"
+        >
+          <span className="min-w-0 flex-1 space-y-1">
+            <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <span className="break-keep text-[1.1rem] font-black leading-snug">{s.title}</span>
+              {s.unit && <span className="text-[0.88rem] font-bold text-navy-200">({s.unit})</span>}
+            </span>
+            <span className="flex flex-wrap gap-x-2 text-[0.85rem] font-bold text-navy-200">
+              {focusMark && <span className="rounded-md bg-white/15 px-1.5 text-white">대표님 · 이사님 확인</span>}
+              {defs.length > 0 ? <span>작성 {written}/{defs.length}</span> : <span>읽을거리</span>}
+              {need > 0 && <span className="text-amber-200">확인 {need}</span>}
+              {req > 0 && <span className="text-orange-200">요청 {req}</span>}
+              {re > 0 && <span className="text-amber-200">재확인 {re}</span>}
+            </span>
+            {s.note && open && <span className="block break-keep text-[0.92rem] font-semibold text-amber-200">{s.note}</span>}
+          </span>
+          {toggleable && <ChevronDown size={20} className={`mt-1 shrink-0 transition ${open ? 'rotate-180' : ''}`} aria-hidden="true" />}
+        </button>
       </header>
+      {open && <SectionBody s={s} visibleField={visibleField} focus={focus} onPick={onPick} filtered={filtered} />}
+    </section>
+  )
+}
+
+function SectionBody({ s, visibleField, focus, onPick, filtered }: { s: Section; visibleField: (d: FieldDef) => boolean; focus: string | null; onPick: (k: string) => void; filtered: boolean }) {
+  return (
+    <>
       {s.groups.map((g) => {
         const defs = g.fields.filter(visibleField)
         if (defs.length === 0) return null
@@ -377,7 +483,7 @@ function SectionBlock({ s, visibleField, focus, onPick, filtered }: { s: Section
           <RefTableView t={t} />
         </div>
       ))}
-    </section>
+    </>
   )
 }
 
@@ -434,7 +540,7 @@ function FieldCard({ d, selected, onPick }: { d: FieldDef; selected: boolean; on
         </span>
       </div>
       {d.hint && d.kind !== 'offline' && (
-        <button type="button" onClick={() => setHint((v) => !v)} className="mb-1 text-[0.85rem] font-bold text-navy-400 underline-offset-2 hover:underline">
+        <button type="button" data-field-hint={d.key} onClick={() => setHint((v) => !v)} className="inline-flex min-h-[40px] items-center break-keep text-left text-[0.85rem] font-bold text-navy-400 underline-offset-2 hover:underline">
           {hint ? d.hint : '작성 안내'}
         </button>
       )}

@@ -168,17 +168,24 @@ async function open(ctx, path, me = admin) {
   wire(ctx)
   const p = await open(ctx, '/today')
 
-  ok((await p.locator(`[data-cal-book="${day(7)}"]`).count()) === 1, '앞으로 올 날에 ＋ 가 있음')
   ok((await p.locator(`[data-cal-book="${TODAY}"]`).count()) === 1,
     '**오늘도 잡을 수 있음** (아침에 온 전화)')
   ok((await p.locator(`[data-cal-book="${day(-1)}"]`).count()) === 0,
     '**지난 날에는 ＋ 가 없음** (눌리는데 안 되는 단추는 두지 않습니다)')
 
-  await p.locator(`[data-cal-book="${day(7)}"]`).dispatchEvent('click')
+  //  앞날 — 달력은 이번 달만 보여 줍니다. 달 끝 무렵이면 이번 달 안의 다음 날, 마지막 날이면 다음 달로 넘겨서
+  const AHEAD = [7, 1].map(day).find((x) => x.slice(0, 7) === MONTH) ?? day(7)
+  if (AHEAD.slice(0, 7) !== MONTH) {
+    await p.locator('[data-cal-next]').dispatchEvent('click')
+    await p.waitForTimeout(700)
+  }
+  ok((await p.locator(`[data-cal-book="${AHEAD}"]`).count()) === 1, '앞으로 올 날에 ＋ 가 있음', AHEAD)
+
+  await p.locator(`[data-cal-book="${AHEAD}"]`).dispatchEvent('click')
   await p.waitForTimeout(800)
   ok((await p.locator('[data-book-modal]').count()) === 1, '＋ 를 누르면 예약 창이 열림')
   const d = await p.locator('[data-book-date]').inputValue()
-  ok(d === day(7), '**누른 날짜가 그대로 들어가 있음**', d)
+  ok(d === AHEAD, '**누른 날짜가 그대로 들어가 있음**', d)
 
   //  거래처를 고르고 보냅니다.
   await p.locator('[data-book-client]').selectOption(CA)
@@ -186,7 +193,7 @@ async function open(ctx, path, me = admin) {
   lastBook = null
   await p.locator('[data-book-submit]').dispatchEvent('click')
   await p.waitForTimeout(1000)
-  ok(lastBook?.p_date === day(7) && lastBook?.p_client_id === CA,
+  ok(lastBook?.p_date === AHEAD && lastBook?.p_client_id === CA,
     '**고른 날짜·거래처가 그대로 서버로 감**', `${lastBook?.p_date}`)
   await ctx.close()
 }

@@ -47,6 +47,14 @@ export function StrategyTab() {
   const secParam = params.get('sec') as Section | null
   const sec: Section = secParam && SECTIONS.some(([k]) => k === secParam) ? secParam : 'summary'
 
+  //  다른 화면(「확인 · 결정」)에서 결정 하나를 눌러 왔으면 — 자료를 받은 뒤 그 자리로 (?at=d-키)
+  const at = params.get('at')
+  useEffect(() => {
+    if (!at || state.kind !== 'ready') return
+    const t = setTimeout(() => document.querySelector(`[data-anchor="${CSS.escape(at)}"]`)?.scrollIntoView({ block: 'start' }), 80)
+    return () => clearTimeout(t)
+  }, [at, state.kind])
+
   const reload = useCallback(async () => {
     if (busy.current) return
     busy.current = true
@@ -76,6 +84,7 @@ export function StrategyTab() {
     (s: Section, anchor?: string) => {
       const p = new URLSearchParams(params)
       p.set('tab', 'strategy')
+      p.delete('at')
       if (s === 'summary') p.delete('sec')
       else p.set('sec', s)
       setParams(p, { replace: true })
