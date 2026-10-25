@@ -27,6 +27,8 @@ export function FieldEditor({ fieldKey, requestId, suggestion, onClose }: { fiel
 
   const startValue = (): Value => {
     if (!def) return ''
+    //  0148 — 표 · 칸 묶음 모양의 제안(사업화전략 반영 요청)이 있으면 그 모양 그대로 펼칩니다
+    if (request?.suggested_value != null && def.kind !== 'text' && def.kind !== 'long') return clone(request.suggested_value)
     if (suggestion != null && (def.kind === 'text' || def.kind === 'long')) return suggestion
     return clone(row?.value ?? emptyValue(def))
   }
@@ -119,7 +121,7 @@ export function FieldEditor({ fieldKey, requestId, suggestion, onClose }: { fiel
               {request.requester_name} {request.requester_title} · {request.req_type} · {when(request.created_at)}
             </p>
             <p className="mt-1 whitespace-pre-wrap break-keep text-[0.98rem] text-navy-800">{request.body}</p>
-            {request.suggestion && def.kind !== 'text' && def.kind !== 'long' && (
+            {request.suggestion && def.kind !== 'text' && def.kind !== 'long' && request.suggested_value == null && (
               <p className="mt-1.5 whitespace-pre-wrap break-keep text-[0.95rem] text-navy-700">
                 <b>제안</b> · {request.suggestion}
               </p>

@@ -40,7 +40,8 @@ function classify(e: { code?: string; message?: string } | null | undefined): Bi
   return new BizPlanError('other', msg ? `${MESSAGES.other} (${msg.slice(0, 120)})` : MESSAGES.other)
 }
 
-async function call<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+/** 사업화전략(0148)도 같은 오류 분류 · 같은 서버 호출을 씁니다 */
+export async function call<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   if (!supabase) throw new BizPlanError('missing', '서버가 연결되지 않은 환경입니다. 실제 운영 주소에서 열어 주세요.')
   let res
   try {

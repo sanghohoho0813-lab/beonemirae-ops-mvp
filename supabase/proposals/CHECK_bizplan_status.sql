@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- 사업계획서(0146 · 0147) 운영 DB 상태 확인 — **읽기만** 합니다 (아무것도 바꾸지 않음)
+-- 사업계획서(0146 · 0147 · 0148) 운영 DB 상태 확인 — **읽기만** 합니다 (아무것도 바꾸지 않음)
 --
 --  Supabase SQL Editor 에 붙여 넣고 실행하면 표 한 장이 나옵니다. 0146 · 0147 · 초안을
 --  실행하기 전 · 후에 한 번씩 돌려 보시면 무엇이 들어갔는지 확인할 수 있습니다.
@@ -10,10 +10,11 @@ with t as (
   select to_regclass('public.bizplan_fields') is not null as has146,
          exists (select 1 from information_schema.columns
                   where table_schema = 'public' and table_name = 'bizplan_fields' and column_name = 'content_rev') as has147,
-         to_regclass('public.biz_survey_responses') is not null as has_survey
+         to_regclass('public.biz_survey_responses') is not null as has_survey,
+         to_regclass('public.bizplan_strategy') is not null as has148
 ),
 q as (
-  select (select has146 from t) as has146, (select has147 from t) as has147, (select has_survey from t) as has_survey
+  select (select has146 from t) as has146, (select has147 from t) as has147, (select has_survey from t) as has_survey, (select has148 from t) as has148
 )
 select 1 as "순서", '서버 판 번호 (app_schema_version)' as "항목",
        coalesce((xpath('/row/v/text()', query_to_xml('select public.app_schema_version()::text as v', false, true, '')))[1]::text, '-') as "상태"
@@ -63,4 +64,20 @@ select 11, '사전 설문 답지 (0144 · 0145)',
        case when has_survey then (xpath('/row/v/text()', query_to_xml(
          $x$select coalesce(string_agg(respondent || ' ' || status, ', '), '답지 없음') as v from public.biz_survey_responses$x$, false, true, '')))[1]::text
             else '설문 표 없음' end from q
+union all
+select 12, '사업화전략 (0148) — 자료 판 / 숫자 판',
+       case when has148 then coalesce((xpath('/row/v/text()', query_to_xml(
+         $x$select case when model = '{}'::jsonb then '표만 있음 — 초기 자료 전' else '판 ' || rev || ' / 숫자 판 ' || assump_rev || ' · ' || updated_by end as v from public.bizplan_strategy$x$,
+         false, true, '')))[1]::text, '표만 있음 — 초기 자료 전')
+            when has146 then '없음 — PROPOSAL_0148 실행 전' else '-' end from q
+union all
+select 13, '결정 (지금 숫자 판에서 고른 것 / 재확인 필요)',
+       case when has148 then (xpath('/row/v/text()', query_to_xml(
+         $x$select count(*) filter (where d.assump_rev = s.assump_rev) || ' / ' || count(*) filter (where d.assump_rev < s.assump_rev) as v
+              from public.bizplan_decisions d cross join public.bizplan_strategy s$x$, false, true, '')))[1]::text else '-' end from q
+union all
+select 14, '사업화전략에서 만든 수정요청 (처리 전 / 전체)',
+       case when has148 then (xpath('/row/v/text()', query_to_xml(
+         $x$select count(*) filter (where status in ('접수','검토 중')) || ' / ' || count(*) as v from public.bizplan_requests where source = 'strategy'$x$,
+         false, true, '')))[1]::text else '-' end from q
 order by 1;

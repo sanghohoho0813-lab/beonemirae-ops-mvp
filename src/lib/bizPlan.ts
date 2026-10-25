@@ -1094,6 +1094,9 @@ export interface RequestRow {
   updated_at: string
   /** 내가 남긴 요청인가 (서버가 판단 — 요청자 id 는 보내지 않음) */
   mine?: boolean
+  /** 0148 — 표 · 칸 묶음 모양의 제안(사업화전략 반영 요청) · 어디서 왔는지('strategy') */
+  suggested_value?: Value | null
+  source?: string
 }
 export interface CheckRow {
   key: string

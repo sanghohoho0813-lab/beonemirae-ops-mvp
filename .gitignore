@@ -75,3 +75,7 @@ private/
 *사업계획서*.xlsx
 bizplan_seed*.sql
 bizplan_seed*.json
+# 0148 — 사업화전략 초기 자료(시나리오 · 가격 · 고객 목표 · 자금배분 · 결정안 · 심사 질문)와 계산 보고서
+bizplan_strategy_seed*
+strategy_report*
+strategy_seed*.mjs

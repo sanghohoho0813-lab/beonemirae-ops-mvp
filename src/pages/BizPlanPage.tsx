@@ -8,6 +8,7 @@ import { RequestInbox } from '../components/bizPlan/RequestInbox'
 import { VersionsTab } from '../components/bizPlan/VersionsTab'
 import { ExportTab } from '../components/bizPlan/ExportTab'
 import { MembersTab } from '../components/bizPlan/MembersTab'
+import { StrategyTab } from '../components/bizPlan/strategy/StrategyTab'
 import { usePlan, when } from '../components/bizPlan/parts'
 import {
   BIZPLAN_DOC_TITLE, BIZPLAN_ENABLED, BIZPLAN_MENU_NAME, BIZPLAN_NAME, BIZPLAN_SUB, DOC_STATUSES, OPEN_REQ, summarize,
@@ -20,14 +21,14 @@ import {
 //  담당 한 분이 쓰고, 대표님 · 이사님이 읽고 확인 표시 · 수정요청을 남깁니다.
 //  **요청은 문서를 바꾸지 않습니다.** 담당이 보고 반영(또는 보류 · 반려 + 까닭)합니다.
 //
-//   탭: 문서 · 요청함 · 기록·버전 · 내보내기 · 참여자(관리할 수 있는 분만)
-//   주소: ?tab=inbox|versions|export|members · ?f=항목키 (그 항목을 엶)
+//   탭: 문서 · 사업화전략(0148) · 요청함 · 기록·버전 · 내보내기 · 참여자(관리할 수 있는 분만)
+//   주소: ?tab=strategy|inbox|versions|export|members · ?f=항목키 (그 항목을 엶) · ?tab=strategy&sec=…
 //
 //  ⚠ 여는 것 · 고치는 것은 **서버가** 막습니다(bizplan_require). 화면은 따라갈 뿐입니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = 'doc' | 'inbox' | 'versions' | 'export' | 'members'
-const TABS: Tab[] = ['doc', 'inbox', 'versions', 'export', 'members']
+type Tab = 'doc' | 'strategy' | 'inbox' | 'versions' | 'export' | 'members'
+const TABS: Tab[] = ['doc', 'strategy', 'inbox', 'versions', 'export', 'members']
 
 export function BizPlanPage() {
   const navigate = useNavigate()
@@ -47,6 +48,7 @@ export function BizPlanPage() {
       const p = new URLSearchParams(params)
       if (t === 'doc') p.delete('tab')
       else p.set('tab', t)
+      if (t !== 'strategy') p.delete('sec')
       setParams(p, { replace: true })
       window.scrollTo({ top: 0 })
     },
@@ -56,6 +58,7 @@ export function BizPlanPage() {
     (key: string | null) => {
       const p = new URLSearchParams(params)
       p.delete('tab')
+      p.delete('sec')
       if (key) p.set('f', key)
       else p.delete('f')
       setParams(p, { replace: true })
@@ -104,6 +107,7 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
 
   const tabs: [Tab, ReactNode][] = [
     ['doc', '문서'],
+    ['strategy', '사업화전략'],
     ['inbox', <>요청함{openReq > 0 && <span data-tab-badge className="ml-1 rounded-full bg-orange-500 px-1.5 text-[0.8rem] text-white">{openReq}</span>}</>],
     ['versions', '기록·버전'],
     ['export', '내보내기'],
@@ -218,6 +222,7 @@ function Screen({ tab, setTab, focus, openField, onExit, filter, onFilter }: { t
         </div>
 
         {tab === 'doc' && <DocView focus={focus} onFocus={openField} initialFilter={filter} />}
+        {tab === 'strategy' && <StrategyTab />}
         {tab === 'inbox' && <RequestInbox onGo={(k) => openField(k)} />}
         {tab === 'versions' && <VersionsTab onGo={(k) => openField(k)} />}
         {tab === 'export' && <ExportTab onGo={(k) => openField(k)} />}
