@@ -7,6 +7,7 @@ import { usePresenter } from '../context/PresenterContext'
 import { useTour } from '../context/TourContext'
 import { LOOK_STEPS, PRESENTER_STEPS, SAMPLE_MEMO, SAMPLE_REQUEST, onStepRoute, stepLabel } from '../lib/presenter'
 import { openPortalPhoneView } from './PortalViewSwitch'
+import { inPhoneFrame } from '../lib/deviceView'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 발표 안내판 (0139 → 0140 집중 화면)
@@ -55,7 +56,7 @@ export function PresenterCard() {
   const scrolledAt = useRef(0)
   const userMoved = useRef(false)
 
-  const inFrame = new URLSearchParams(search).get('frame') === '1'
+  const inFrame = new URLSearchParams(search).get('frame') === '1' || inPhoneFrame()
   const staff = role === 'admin' || role === 'office'
   const show = active && staff && !inFrame && !tour.active && pathname !== '/login'
   const step = PRESENTER_STEPS[index]

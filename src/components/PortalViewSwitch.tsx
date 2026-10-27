@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Monitor, Smartphone, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { usePcViewport, PcViewBar } from './PcViewBar'
+import { inPhoneFrame } from '../lib/deviceView'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 병원 화면 — 폰에서 PC 화면 보기 / PC 에서 폰 화면 보기 (0090)
@@ -61,10 +62,10 @@ export function openPortalPhoneView() {
   window.dispatchEvent(new CustomEvent(OPEN_PHONE))
 }
 
-/** 지금 이 화면이 「폰 틀 안」인가 */
+/** 지금 이 화면이 「폰 틀 안」인가 — 틀 안에서 메뉴를 눌러 `frame=1` 이 떨어져도 틀 안입니다 */
 export function useInPhoneFrame(): boolean {
   const { search } = useLocation()
-  return new URLSearchParams(search).get('frame') === '1'
+  return new URLSearchParams(search).get('frame') === '1' || inPhoneFrame()
 }
 
 export function PortalViewSwitch({ className = '', withButton = true }: { className?: string; withButton?: boolean }) {

@@ -11,6 +11,7 @@ import { LiveClock } from './LiveClock'
 import { PageMotion } from './motion'
 import { PortalNoticeBell } from './PortalNoticeBell'
 import { PortalViewSwitch } from './PortalViewSwitch'
+import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport } from './DeviceView'
 import { PortalMenu } from './portal/PortalMenu'
 import { BrandLogo } from './BrandLogo'
 import { portalNotices } from '../lib/portalNotices'
@@ -153,6 +154,9 @@ export function PortalLayout() {
   //  포털 4차 — 첫 화면만 머리띠가 **브랜드 파랑**입니다(흔한 생활 앱 첫 화면).
   //  다른 화면은 흰 머리띠 그대로 — 어느 화면에 있는지 헷갈리지 않게.
   const isHome = !!client && target.page === '' && !onSelectPage
+  //  화면 보기 — PC · 모바일 · PC+모바일 (DeviceView, 내부 화면과 같은 것)
+  const deviceView = useDeviceView()
+  useFrameRouteReport()
 
   //  ⚠ 알림은 저장하지 않고 지금 자료로 만듭니다 (0083).
   const notices = useMemo(
@@ -225,7 +229,7 @@ export function PortalLayout() {
     //  ⚠ 포털 4차 — 바탕을 다시 **옅은 회색(bg-app)** 으로, 그 위에 흰 둥근 카드.
     //    3차의 「흰 한 장」은 칸이 바탕에 녹아 어디까지가 한 덩어리인지 흐렸습니다.
     //    대표님이 고르신 2차 시안(흔한 생활 앱)은 회색 바탕 + 흰 카드입니다.
-    <div data-portal-app data-portal-home={isHome ? '' : undefined} className="min-h-[100dvh] bg-app">
+    <div data-portal-app data-portal-home={isHome ? '' : undefined} data-device-mode={deviceView} className={`min-h-[100dvh] bg-app ${deviceView === 'both' ? 'pr-[440px]' : ''}`}>
       {/* 상단 바 — 병원 이름이 가장 먼저 보이게 합니다 */}
       {/*  ⚠ 포털 1차 고도화 — 아이폰 「홈 화면에 추가」로 열면 상태 막대가
            투명(black-translucent)이라 머리띠가 시계·배터리 **밑으로** 들어갔습니다.
@@ -344,7 +348,9 @@ export function PortalLayout() {
           })}
           {/*  오늘 날짜 · 지금 시각 (0078) — 병원 담당자도 봅니다. 넓은 화면에서는
                메뉴 줄 오른쪽 빈자리에 둡니다(포털 2차). */}
-          <span className={`ml-auto hidden shrink-0 items-center pl-4 text-[1rem] font-bold lg:flex ${isHome ? 'text-white/85' : 'text-navy-500'}`}>
+          {/*  화면 보기 PC · 모바일 · PC+모바일 — 시계 왼쪽 */}
+          <DeviceViewToggle onBrand={isHome} className="ml-auto" />
+          <span className={`hidden shrink-0 items-center pl-4 text-[1rem] font-bold lg:flex ${isHome ? 'text-white/85' : 'text-navy-500'}`}>
             <LiveClock />
           </span>
         </nav>
@@ -485,6 +491,9 @@ export function PortalLayout() {
           )
         })}
       </nav>
+
+      {/*  모바일 · PC+모바일 — 같은 주소를 띄운 폰 틀 */}
+      <DeviceViewPanels view={deviceView} label={clientName ? `${clientName} 고객 포털` : '비원미래 고객 포털'} />
     </div>
   )
 }

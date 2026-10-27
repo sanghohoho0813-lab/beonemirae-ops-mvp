@@ -17,6 +17,8 @@ function todayStr(): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'beonemirae-ops:v3'
+/** 시연 모드 자료 자리 — 화면 보기 PC+모바일에서 다른 창(폰 틀)이 저장한 것을 알아채는 데 씁니다 */
+export const DATA_STORAGE_KEY = STORAGE_KEY
 const CLIENT_SET_KEY = 'beonemirae-ops:client-set'
 const SCHEMA_VERSION_KEY = 'beonemirae-ops:schema-version'
 const BACKUP_KEY = 'beonemirae-ops:v3:backup-before-schema2'

@@ -31,7 +31,7 @@ import type {
   VisitPurpose,
 } from '../types'
 import { EMPTY_APP_DATA } from '../types'
-import { loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
+import { DATA_STORAGE_KEY, loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
 import {
   applyCollectionCompletion,
   rollbackCollectionCompletion,
@@ -469,6 +469,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isSupabaseConfigured) saveData(data)
   }, [data])
+  //  화면 보기 PC+모바일(DeviceView) — 시연 모드에서는 PC 화면과 폰 틀이 같은 저장소를 씁니다.
+  //  한쪽이 저장하면 다른 쪽도 그 자료로 바꿉니다. 안 그러면 나중에 저장하는 쪽이 앞의 것을 덮습니다.
+  //  (같은 값이면 브라우저가 알리지 않으므로 서로 주고받기를 끝없이 하지 않습니다)
+  useEffect(() => {
+    if (isSupabaseConfigured) return
+    const on = (e: StorageEvent) => {
+      if (e.key === DATA_STORAGE_KEY && e.newValue) setData(loadData())
+    }
+    window.addEventListener('storage', on)
+    return () => window.removeEventListener('storage', on)
+  }, [])
 
   /** 서버에서 전체 운영 데이터를 다시 읽어옵니다. */
   const reload = useCallback(async () => {

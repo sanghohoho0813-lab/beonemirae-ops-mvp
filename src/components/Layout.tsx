@@ -80,6 +80,7 @@ import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSur
 import { BIZPLAN_MENU_NAME, BIZPLAN_PATH } from '../lib/bizPlan'
 import { useBizPlanMenu } from './bizPlan/useBizPlanMenu'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
+import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport } from './DeviceView'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
 //  아닌 모든 업무 화면입니다. 빠지면 그 화면에 있는 동안 아래 탭 어디에도
@@ -639,6 +640,11 @@ function Sidebar() {
             <span className="whitespace-nowrap text-[0.843rem] font-semibold">신용보증기금 방문용 영상</span>
           </button>
         )}
+        {/*  화면 보기 PC · 모바일 · PC+모바일 — 화면 폭과 상관없이 언제나 여기에 (위쪽 줄은 1366px 부터) */}
+        <div className="space-y-1 rounded-xl bg-white/5 px-2 pb-1.5 pt-1.5">
+          <p className="px-1 text-[0.8rem] font-bold text-navy-200">화면 보기</p>
+          <DeviceViewToggle variant="side" className="!bg-transparent !p-0" />
+        </div>
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => navigate('/company')}
@@ -942,9 +948,12 @@ export function Layout() {
   const guideOn = useSyncExternalStore(store.subscribe, store.get, store.get)
   //  AX 5차 — 폰 파란 띠 안 「그 화면 제목」 자리 (PhoneBand)
   const [bandSlot, setBandSlot] = useState<HTMLDivElement | null>(null)
+  //  화면 보기 — PC · 모바일 · PC+모바일 (DeviceView). 「PC+모바일」이면 오른쪽 폰 자리만큼 비웁니다
+  const deviceView = useDeviceView()
+  useFrameRouteReport()
 
   return (
-    <div className="min-h-[100dvh] bg-app">
+    <div className={`min-h-[100dvh] bg-app ${deviceView === 'both' ? 'pr-[440px]' : ''}`} data-device-mode={deviceView}>
       <div className="flex w-full">
         <Sidebar />
         <div className="min-w-0 flex-1 overflow-x-hidden">
@@ -1031,6 +1040,8 @@ export function Layout() {
                        갈라졌습니다(check_clock · check_visit_video). 접히는 줄은 앞에서부터 채워지므로
                        맨 끝에 두면 앞의 자리는 하나도 안 바뀝니다. */}
                 <PortalSwitchButton compact label="병원이 보는 화면" />
+                {/*  화면 보기 PC · 모바일 · PC+모바일 — 줄 맨 끝(앞의 자리는 그대로) */}
+                <DeviceViewToggle variant="bar" />
               </div>
             </div>
             <div className="px-4 pt-4 lg:px-[32px] lg:pt-6 2xl:px-[48px]">
@@ -1100,6 +1111,9 @@ export function Layout() {
 
       {/* PC 화면으로 보기 중일 때만 — 돌아가는 길을 항상 띄워 둡니다 */}
       {pcView && !minimal && <PcViewBar onExit={() => setPcView(false)} />}
+
+      {/*  모바일 · PC+모바일 — 같은 주소를 띄운 폰 틀 */}
+      <DeviceViewPanels view={deviceView} label="비원미래 AX" />
     </div>
   )
 }
