@@ -12,6 +12,8 @@ import * as F from './perf_fixtures.mjs'
 const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? ` — ${d}` : ''}`); if (!c) process.exitCode = 1 }
 const T = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 const day = (n) => { const d = new Date(`${T}T00:00:00`); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE') }
+//  달력은 이번 달만 그립니다 — 달 끝 무렵에 n일 뒤가 다음 달이면 이번 달 안의 다음 날(그것도 없으면 오늘)로
+const ahead = (n) => [n, 1, 0].map(day).find((d) => d.slice(0, 7) === T.slice(0, 7))
 const C1 = F.clients[0].id
 const b = await chromium.launch({ executablePath: EXEC })
 
@@ -81,7 +83,7 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
     const t = (document.querySelector('main')?.innerText ?? '')
     const strip = !!document.querySelector(sel)
     return { strip, upcoming: /앞으로 갈 곳/.test(t) }
-  }, [daySel(day(3))])
+  }, [daySel(w < 1024 ? day(3) : ahead(3))])
   ok(soon.strip, w < 1024 ? '② 날짜 줄에 사흘 뒤가 보임' : '② 달력에 사흘 뒤가 보임')
   ok(soon.upcoming, '② 「앞으로 갈 곳」이 있음')
 
@@ -115,7 +117,7 @@ for (const [label, w, h] of [['폰 390px', 390, 844], ['PC 1440px', 1440, 900]])
   }
 
   // ── ③ 본인 일정 추가 ────────────────────────────────────────────────────
-  const target = day(5)
+  const target = w < 1024 ? day(5) : ahead(5)
   await s.p.locator(daySel(target)).dispatchEvent('click')
   await s.p.waitForTimeout(700)
   const addSel = (await s.p.locator('[data-empty-add]').count()) ? '[data-empty-add]' : '[data-add-fab]'

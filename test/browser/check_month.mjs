@@ -11,6 +11,8 @@ const V3 = '00000000-0000-0000-0000-0000000000v3'
 const ok = (c, m, d = '') => { console.log(`${c ? ' OK ' : 'FAIL'} | ${m}${d ? ` — ${d}` : ''}`); if (!c) process.exitCode = 1 }
 const T = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 const day = (n) => { const d = new Date(`${T}T00:00:00`); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE') }
+//  달력은 이번 달만 그립니다 — 달 끝 무렵에 n일 뒤가 다음 달이면 이번 달 안의 다음 날(그것도 없으면 오늘)로
+const ahead = (n) => [n, 1, 0].map(day).find((d) => d.slice(0, 7) === T.slice(0, 7))
 
 const me = { id: UID, email: 'f@b.c', name: '김준기', role: 'field', font_scale: 'normal', active: true,
   approved_at: '2026-01-01T00:00:00Z', client_id: null, vehicle_id: V3, created_at: '2026-01-01T00:00:00Z' }
@@ -118,7 +120,7 @@ for (const W of [673, 768]) {
   const { ctx, p, state } = await open(390)
   await p.locator('[data-month-toggle]').dispatchEvent('click')
   await p.waitForTimeout(450)
-  const d5 = day(5)
+  const d5 = ahead(5)
   await p.locator(`[data-cal-pick="${d5}"]`).dispatchEvent('click')
   await p.waitForTimeout(600)
   ok(new RegExp(`${Number(d5.slice(8, 10))}일`).test((await p.locator('[data-day-title]').textContent()) ?? ''),
