@@ -58,6 +58,30 @@ const chromium_ = pw.chromium ?? pw.default?.chromium
 if (!chromium_) {
   throw new Error('playwright 는 찾았는데 chromium 이 없습니다 — 설치가 깨졌을 수 있습니다.')
 }
-export const chromium = chromium_
+/**
+ *  FAKE_NOW 가 있으면(날짜 경계 점검 — fake_now.mjs) 새로 여는 브라우저 창마다 시계를 그 시각으로 옮깁니다.
+ *  검사 쪽 Node 시계는 `node --import ./fake_now.mjs` 로 같은 시각입니다. 없으면 아무것도 안 바꿉니다.
+ */
+function withFakeClock(type) {
+  if (!process.env.FAKE_NOW) return type
+  const patch = (br) => {
+    const open = br.newContext.bind(br)
+    br.newContext = async (...a) => {
+      const ctx = await open(...a)
+      try { await ctx.clock.install({ time: Date.now() }) } catch { /* 이미 시계를 옮긴 검사 */ }
+      return ctx
+    }
+    br.newPage = async (o) => (await br.newContext(o)).newPage()
+    return br
+  }
+  return new Proxy(type, {
+    get(t, k) {
+      if (k === 'launch') return async (...a) => patch(await t.launch(...a))
+      const v = Reflect.get(t, k)
+      return typeof v === 'function' ? v.bind(t) : v
+    },
+  })
+}
+export const chromium = withFakeClock(chromium_)
 /** 검사들이 그대로 쓰던 이름 */
 export const EXEC = chromiumPath()
