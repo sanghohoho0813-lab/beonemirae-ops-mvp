@@ -16,13 +16,14 @@ import {
   PlayCircle,
   Star,
   FileText,
+  Building2,
   type LucideIcon,
 } from 'lucide-react'
 
 // 폐기물 적법처리 국가시스템 '올바로' (환경부/한국환경공단)
 const ALLBARO_URL = 'https://www.allbaro.or.kr/index.jsp'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
-import { canAccess } from '../lib/access'
+import { PORTAL_PREFIX, canAccess } from '../lib/access'
 import { TONE } from '../lib/tone'
 import { PortalSwitchButton } from './PortalSwitch'
 import { LiveClock } from './LiveClock'
@@ -74,13 +75,15 @@ import {
 } from '../lib/nav'
 import { PlannedPreview } from './PlannedPreview'
 import { BrandLogo } from './BrandLogo'
+import { portalPath } from '../lib/portalClient'
+import { phoneClientStore } from '../lib/deviceView'
 import { PhoneBandSlot } from './PhoneBand'
 import { icon3d } from '../lib/icons3d'
 import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
 import { BIZPLAN_MENU_NAME, BIZPLAN_PATH } from '../lib/bizPlan'
 import { useBizPlanMenu } from './bizPlan/useBizPlanMenu'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
-import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport } from './DeviceView'
+import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport, useMedia } from './DeviceView'
 
 //  폰에서 「더보기」 탭에 불이 들어와야 하는 화면들 — 하단 고정 탭 넷이
 //  아닌 모든 업무 화면입니다. 빠지면 그 화면에 있는 동안 아래 탭 어디에도
@@ -684,6 +687,62 @@ function Sidebar() {
   )
 }
 
+// ── 접힌 왼쪽 메뉴 — PC+모바일 · 1800px 아래 (PC+모바일 2차) ─────────────────────
+/**
+ *  PC+모바일이면 본문이 폰 자리(440px)만큼 좁아집니다. 1440px 노트북에서 왼쪽 메뉴(288px)까지
+ *  두면 본문이 712px 이라 카드 이름이 「다음 방…」처럼 잘렸습니다. 그래서 그때만 메뉴를 아이콘
+ *  줄(76px)로 접습니다 — 메뉴 목록 · 권한 규칙은 펼친 메뉴와 같은 것(useVisibleGroups)을 씁니다.
+ *  이름은 마우스를 올리면(title) · 화면 읽기(aria-label)로. PC 로 돌아가면 원래 메뉴입니다.
+ */
+function RailSidebar() {
+  const { configured, role } = useAuth()
+  const groups = useVisibleGroups()
+  const showBizPlan = useBizPlanMenu()
+  const showPortal = !configured || canAccess(role, PORTAL_PREFIX)
+  const lastClient = useSyncExternalStore(phoneClientStore.subscribe, phoneClientStore.get, () => '')
+  const tile = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] transition'
+  return (
+    <aside data-app-sidebar data-sidebar-rail className="side-bg sticky top-0 hidden h-[100dvh] w-[76px] shrink-0 flex-col items-center overflow-y-auto border-r border-white/[0.06] py-3 lg:flex">
+      <BrandLogo size="md" />
+      <nav aria-label="메뉴" className="mt-3 flex w-full flex-col items-center gap-1 px-2">
+        {showPortal && (
+          <Link to={portalPath(lastClient || null)} title="병원이 보는 화면" aria-label="병원이 보는 화면" data-rail-portal className={`${tile} bg-teal-600/80 text-white hover:bg-teal-600`}>
+            <Building2 size={18} strokeWidth={2.4} />
+          </Link>
+        )}
+        {showBizPlan && (
+          <Link to={BIZPLAN_PATH} title={BIZPLAN_MENU_NAME} aria-label={BIZPLAN_MENU_NAME} className={`${tile} text-teal-200 ring-1 ring-inset ring-teal-300/40 hover:bg-white/10`}>
+            <FileText size={18} strokeWidth={2.4} />
+          </Link>
+        )}
+        {groups.map((g) => (
+          <Fragment key={g.id}>
+            <span aria-hidden="true" className="my-1 h-px w-8 shrink-0 bg-white/15" />
+            {g.items.map((i) => {
+              const Icon = i.icon
+              return (
+                <NavLink
+                  key={i.to}
+                  to={i.to}
+                  end={i.to === '/'}
+                  title={`${g.title} · ${i.label}`}
+                  aria-label={i.label}
+                  className={({ isActive }) => `${tile} ${isActive ? 'bg-teal-600 text-white' : `text-white ring-1 ring-inset ${TONE[i.tone].side} hover:bg-white/10`}`}
+                >
+                  <Icon size={18} strokeWidth={2.4} />
+                </NavLink>
+              )
+            })}
+          </Fragment>
+        ))}
+      </nav>
+      <div className="mt-auto pt-3">
+        <DeviceViewToggle variant="rail" />
+      </div>
+    </aside>
+  )
+}
+
 // ── PC 제목 위 「묶음 › 화면 이름」 (AX 3차) ────────────────────────────────
 /**
  *  흔한 ERP 화면처럼 지금 어디인지 한 줄로 적습니다. 이름은 왼쪽 메뉴(lib/nav.ts)와
@@ -951,11 +1010,14 @@ export function Layout() {
   //  화면 보기 — PC · 모바일 · PC+모바일 (DeviceView). 「PC+모바일」이면 오른쪽 폰 자리만큼 비웁니다
   const deviceView = useDeviceView()
   useFrameRouteReport()
+  //  PC+모바일인데 화면이 1800px 보다 좁으면 왼쪽 메뉴를 아이콘 줄로 접습니다(RailSidebar)
+  const roomy = useMedia('(min-width: 1800px)')
+  const rail = deviceView === 'both' && !roomy
 
   return (
     <div className={`min-h-[100dvh] bg-app ${deviceView === 'both' ? 'pr-[440px]' : ''}`} data-device-mode={deviceView}>
       <div className="flex w-full">
-        <Sidebar />
+        {rail ? <RailSidebar /> : <Sidebar />}
         <div className="min-w-0 flex-1 overflow-x-hidden">
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
           <SchemaBar />
@@ -1041,7 +1103,8 @@ export function Layout() {
                        맨 끝에 두면 앞의 자리는 하나도 안 바뀝니다. */}
                 <PortalSwitchButton compact label="병원이 보는 화면" />
                 {/*  화면 보기 PC · 모바일 · PC+모바일 — 줄 맨 끝(앞의 자리는 그대로) */}
-                <DeviceViewToggle variant="bar" />
+                {/*  접힌 메뉴(아이콘 줄)에는 자기 보기 단추가 있습니다 — 여기서도 두면 이 줄이 두 줄로 꺾입니다 */}
+                {!rail && <DeviceViewToggle variant="bar" />}
               </div>
             </div>
             <div className="px-4 pt-4 lg:px-[32px] lg:pt-6 2xl:px-[48px]">
@@ -1113,7 +1176,7 @@ export function Layout() {
       {pcView && !minimal && <PcViewBar onExit={() => setPcView(false)} />}
 
       {/*  모바일 · PC+모바일 — 같은 주소를 띄운 폰 틀 */}
-      <DeviceViewPanels view={deviceView} label="비원미래 AX" />
+      <DeviceViewPanels view={deviceView} label="비원미래 AX" alt={!configured || canAccess(role, PORTAL_PREFIX) ? 'portal' : undefined} />
     </div>
   )
 }

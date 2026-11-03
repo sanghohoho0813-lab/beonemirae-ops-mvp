@@ -32,6 +32,7 @@ import type {
 } from '../types'
 import { EMPTY_APP_DATA } from '../types'
 import { DATA_STORAGE_KEY, loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
+import { DATA_CHANNEL, announceDataChanged, pairedView } from '../lib/deviceView'
 import {
   applyCollectionCompletion,
   rollbackCollectionCompletion,
@@ -564,8 +565,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const id = window.setInterval(wake, 45_000)
     document.addEventListener('visibilitychange', wake)
     window.addEventListener('focus', wake)
+    //  PC+모바일 — 다른 화면이 저장했다고 알리면 곧 새로 읽습니다(잇달아 오면 한 번만)
+    let ch: BroadcastChannel | null = null
+    let soon = 0
+    try {
+      ch = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(DATA_CHANNEL)
+      if (ch)
+        ch.onmessage = () => {
+          if (!pairedView()) return
+          window.clearTimeout(soon)
+          soon = window.setTimeout(() => void refreshQuiet(), 250)
+        }
+    } catch {
+      ch = null
+    }
     return () => {
       window.clearInterval(id)
+      window.clearTimeout(soon)
+      ch?.close()
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('focus', wake)
     }
@@ -598,6 +615,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         //    떴고, 기사님이 다시 누르면 중복 막힘에 걸렸습니다.
         setLastSavedAt(new Date().toISOString())
         pending.current = null
+        //  PC+모바일 — 나란히 띄운 다른 화면(폰 틀 ↔ PC)도 바로 새로 읽게 (deviceView.ts)
+        announceDataChanged()
         if (!quiet) {
           try {
             setData(await repo.loadAppData())

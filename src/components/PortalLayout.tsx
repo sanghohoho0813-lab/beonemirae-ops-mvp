@@ -12,6 +12,7 @@ import { PageMotion } from './motion'
 import { PortalNoticeBell } from './PortalNoticeBell'
 import { PortalViewSwitch } from './PortalViewSwitch'
 import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport } from './DeviceView'
+import { landingPath } from '../lib/access'
 import { PortalMenu } from './portal/PortalMenu'
 import { BrandLogo } from './BrandLogo'
 import { portalNotices } from '../lib/portalNotices'
@@ -493,7 +494,13 @@ export function PortalLayout() {
       </nav>
 
       {/*  모바일 · PC+모바일 — 같은 주소를 띄운 폰 틀 */}
-      <DeviceViewPanels view={deviceView} label={clientName ? `${clientName} 고객 포털` : '비원미래 고객 포털'} />
+      {/*  직원이 병원 화면을 보는 중이면 폰에 「직원 화면」도 띄울 수 있습니다(병원 계정은 같은 화면만) */}
+      <DeviceViewPanels
+        view={deviceView}
+        label={clientName ? `${clientName} 고객 포털` : '비원미래 고객 포털'}
+        alt={role && role !== 'client' ? 'staff' : undefined}
+        staffHome={landingPath(role)}
+      />
     </div>
   )
 }

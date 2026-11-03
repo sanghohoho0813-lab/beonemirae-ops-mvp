@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Columns2, Monitor, Smartphone, type LucideIcon } from 'lucide-react'
-import { FRAME_ROUTE_MSG, deviceViewStore, framePath, inPhoneFrame, plainPath, type DeviceView } from '../lib/deviceView'
+import { Columns2, Monitor, RotateCw, Smartphone, type LucideIcon } from 'lucide-react'
+import {
+  FRAME_ROUTE_MSG, clientIdOf, deviceViewStore, framePath, inPhoneFrame, phoneClientStore, phoneSourceStore, plainPath, type DeviceView, type PhoneSource,
+} from '../lib/deviceView'
+import { portalPath } from '../lib/portalClient'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 화면 보기 — PC · 모바일 · PC+모바일 (lib/deviceView.ts)
@@ -21,18 +24,19 @@ import { FRAME_ROUTE_MSG, deviceViewStore, framePath, inPhoneFrame, plainPath, t
 //   같은 주소면 아무것도 안 합니다 — 서로 끝없이 주고받지 않습니다.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function useWideScreen(): boolean {
-  const q = '(min-width: 1024px)'
-  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches)
+/** 화면 폭 조건(media query)이 지금 맞는가 — 창 크기를 바꾸면 따라 바뀝니다 */
+export function useMedia(q: string): boolean {
+  const [hit, setHit] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches)
   useEffect(() => {
     const m = window.matchMedia(q)
-    const on = () => setWide(m.matches)
+    const on = () => setHit(m.matches)
     on()
     m.addEventListener('change', on)
     return () => m.removeEventListener('change', on)
-  }, [])
-  return wide
+  }, [q])
+  return hit
 }
+const useWideScreen = () => useMedia('(min-width: 1024px)')
 
 /** 지금 보기 — 폰 · 틀 안에서는 언제나 'pc'(원래 화면) */
 export function useDeviceView(): DeviceView {
@@ -56,16 +60,20 @@ const OPTS: [DeviceView, string, LucideIcon][] = [
  *          넣으면 줄이 두 줄로 꺾여 모든 화면이 아래로 밀립니다(실측). 그래서 1366px 부터만 보이고,
  *          1720px 아래 · 「PC+모바일」(본문이 폰 자리만큼 좁아짐)에서는 그림만(이름은 풍선 · 화면 읽기용).
  *   side   내부 화면 왼쪽 메뉴 아래 — 화면 폭과 상관없이 언제나 있는 자리(1280px 화면도). 이름만, 칸을 꽉 채워.
+ *   rail   PC+모바일에서 접힌 왼쪽 메뉴(아이콘 줄) — 세로로 그림만.
  */
-export function DeviceViewToggle({ variant = 'plain', onBrand = false, className = '' }: { variant?: 'plain' | 'bar' | 'side'; onBrand?: boolean; className?: string }) {
+export function DeviceViewToggle({ variant = 'plain', onBrand = false, className = '' }: { variant?: 'plain' | 'bar' | 'side' | 'rail'; onBrand?: boolean; className?: string }) {
   const v = useDeviceView()
   if (inPhoneFrame()) return null
   const bar = variant === 'bar'
-  const side = variant === 'side'
-  const iconOnly = bar && v === 'both'
-  const labelCls = bar ? (iconOnly ? 'sr-only' : 'max-[1719px]:sr-only') : ''
-  const iconCls = side ? 'hidden' : bar && !iconOnly ? 'min-[1720px]:hidden' : ''
-  const shell = side
+  const side = variant === 'side' || variant === 'rail'
+  const rail = variant === 'rail'
+  const iconOnly = (bar && v === 'both') || rail
+  const labelCls = bar || rail ? (iconOnly ? 'sr-only' : 'max-[1719px]:sr-only') : ''
+  const iconCls = rail ? '' : side ? 'hidden' : bar && !iconOnly ? 'min-[1720px]:hidden' : ''
+  const shell = rail
+    ? 'flex flex-col bg-white/5'
+    : side
     ? 'flex w-full bg-white/5'
     : onBrand
       ? 'hidden lg:flex bg-white/15 ring-1 ring-white/30'
@@ -85,7 +93,7 @@ export function DeviceViewToggle({ variant = 'plain', onBrand = false, className
             aria-pressed={on}
             title={`${label} 화면으로 보기`}
             onClick={() => deviceViewStore.set(k)}
-            className={`flex min-h-[32px] items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] px-2.5 text-[0.899rem] font-bold transition ${side ? 'flex-1 px-1.5 text-[0.843rem]' : ''} ${tone}`}
+            className={`flex min-h-[32px] items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] px-2.5 text-[0.899rem] font-bold transition ${rail ? 'h-9 w-11' : side ? 'flex-1 px-1.5 text-[0.843rem]' : ''} ${tone}`}
           >
             <Icon className={`h-[15px] w-[15px] ${iconCls}`} strokeWidth={2.4} aria-hidden="true" />
             <span className={labelCls}>{label}</span>
@@ -109,10 +117,31 @@ export function useFrameRouteReport() {
   }, [pathname, search])
 }
 
-/** 모바일 · PC+모바일일 때의 폰 틀. 「PC」면 아무것도 그리지 않습니다 */
-export function DeviceViewPanels({ view, label }: { view: DeviceView; label: string }) {
+/**
+ * 모바일 · PC+모바일일 때의 폰 틀. 「PC」면 아무것도 그리지 않습니다.
+ *
+ *  alt — 폰에 「같은 화면」 대신 띄울 수 있는 다른 쪽 화면 (PC+모바일 2차)
+ *   portal  내부 화면 → 폰에 병원이 보는 화면. 거래처 상세를 보고 있으면 그 병원, 아니면 마지막으로 본 병원
+ *           (없으면 병원 고르는 화면). 병원 화면을 열 수 있는 계정에게만 줍니다.
+ *   staff   병원 화면(직원이 미리보기 중) → 폰에 직원 앱 첫 화면.
+ *  다른 쪽 화면은 PC 를 따라가지 않습니다. 대신 한쪽에서 저장하면 다른 쪽이 곧바로 새로 읽습니다
+ *  (DataContext · deviceView.announceDataChanged) — 병원 폰에서 보낸 요청이 PC 요청함에 바로 뜹니다.
+ */
+export function DeviceViewPanels({ view, label, alt, staffHome = '/' }: { view: DeviceView; label: string; alt?: 'portal' | 'staff'; staffHome?: string }) {
   const { pathname, search } = useLocation()
   const path = plainPath(pathname, search)
+  const stored = useSyncExternalStore(phoneSourceStore.subscribe, phoneSourceStore.get, () => 'same' as PhoneSource)
+  const source: PhoneSource = alt && stored === alt ? alt : 'same'
+  const lastClient = useSyncExternalStore(phoneClientStore.subscribe, phoneClientStore.get, () => '')
+  //  마지막으로 본 병원을 기억합니다 (거래처 상세 · 병원 화면)
+  useEffect(() => {
+    const id = clientIdOf(pathname)
+    if (id) phoneClientStore.set(id)
+  }, [pathname])
+  const target = source === 'same' ? path : source === 'portal' ? portalPath(clientIdOf(pathname) ?? (lastClient || null)) : staffHome
+  //  폰이 지금 보고 있는 주소 (틀 안 앱이 알려 줌)
+  const [phonePath, setPhonePath] = useState(target)
+  const [reloads, setReloads] = useState(0)
 
   //  「모바일」은 PC 화면 위를 덮습니다 — 뒤 화면이 같이 굴러가지 않게
   useEffect(() => {
@@ -127,30 +156,54 @@ export function DeviceViewPanels({ view, label }: { view: DeviceView; label: str
 
   if (view === 'pc') return null
 
+  const phone = (height: string) => (
+    <PhoneFrame key={`${source}:${reloads}`} path={target} follow={source === 'same'} onRoute={setPhonePath} label={label} height={height} />
+  )
+  const controls = (
+    <>
+      {alt && <SourceSwitch alt={alt} value={source} />}
+      <button
+        type="button"
+        data-device-reload
+        title="폰 화면 새로 고침"
+        aria-label="폰 화면 새로 고침"
+        onClick={() => setReloads((n) => n + 1)}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white text-navy-600 ring-1 ring-navy-200 transition hover:bg-navy-50"
+      >
+        <RotateCw size={16} strokeWidth={2.4} aria-hidden="true" />
+      </button>
+    </>
+  )
+  const note =
+    source === 'same'
+      ? '같은 화면을 따라갑니다 — PC 에서 옮기면 폰도, 폰에서 누르면 PC 도 옮겨 갑니다'
+      : source === 'portal'
+        ? '병원 담당자 휴대전화 화면 — PC 와 따로 움직이고, 한쪽에서 저장하면 다른 쪽도 바로 새로 읽습니다'
+        : '직원 휴대전화 화면 — 병원 화면과 따로 움직이고, 한쪽에서 저장하면 다른 쪽도 바로 새로 읽습니다'
+
   if (view === 'both')
     return (
       <aside
         data-device-side
+        data-phone-source={source}
         aria-label={`${label} — 모바일 화면`}
         className="fixed inset-y-0 right-0 z-[35] flex w-[440px] flex-col border-l border-navy-200 bg-[#e8ecf2]"
       >
         <div className="flex items-center gap-2 px-4 pb-1 pt-3 text-[0.86rem] font-bold text-navy-500">
           <Smartphone size={15} strokeWidth={2.4} aria-hidden="true" />
           <span className="shrink-0">모바일 390</span>
-          <span data-device-path className="min-w-0 truncate font-mono text-[0.8rem] text-navy-400">{pathname}</span>
+          <span data-device-path className="min-w-0 flex-1 truncate font-mono text-[0.8rem] text-navy-400">{source === 'same' ? pathname : phonePath.split('?')[0]}</span>
         </div>
-        <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-2">
-          <PhoneFrame path={path} label={label} height="min(860px, calc(100dvh - 92px))" />
-        </div>
-        <p className="break-keep px-4 pb-3 text-center text-[0.82rem] font-semibold leading-snug text-navy-500">
-          같은 화면을 따라갑니다 — PC 에서 옮기면 폰도, 폰에서 누르면 PC 도 옮겨 갑니다
-        </p>
+        <div className="flex items-center justify-end gap-1.5 px-4 pb-1">{controls}</div>
+        <div className="flex min-h-0 flex-1 items-center justify-center px-3 py-1">{phone('min(860px, calc(100dvh - 136px))')}</div>
+        <p className="break-keep px-4 pb-3 text-center text-[0.82rem] font-semibold leading-snug text-navy-500">{note}</p>
       </aside>
     )
 
   return (
     <div
       data-device-mobile
+      data-phone-source={source}
       role="dialog"
       aria-modal="true"
       aria-label={`${label} — 모바일 화면`}
@@ -159,29 +212,56 @@ export function DeviceViewPanels({ view, label }: { view: DeviceView; label: str
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
         <Smartphone size={20} strokeWidth={2.4} className="shrink-0 text-navy-600" aria-hidden="true" />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="break-keep text-[1.05rem] font-extrabold text-navy-900">{label} · 모바일 화면</p>
+          <p className="break-keep text-[1.05rem] font-extrabold text-navy-900">{source === 'portal' ? '병원이 보는 화면' : source === 'staff' ? '직원 앱' : label} · 모바일 화면</p>
           <p className="break-keep text-[0.9rem] font-semibold text-navy-500">
             휴대전화(폭 390)에서 이렇게 보입니다. 안에서 그대로 눌러 보실 수 있고, PC 로 돌아가면 그 화면이 이어집니다.
           </p>
         </div>
+        <div className="flex items-center gap-1.5">{controls}</div>
         <DeviceViewToggle />
       </div>
-      <div className="flex min-h-0 flex-1 items-start justify-center px-4 pb-5">
-        <PhoneFrame path={path} label={label} height="min(880px, calc(100dvh - 96px))" />
-      </div>
+      <div className="flex min-h-0 flex-1 items-start justify-center px-4 pb-5">{phone('min(880px, calc(100dvh - 96px))')}</div>
     </div>
   )
 }
 
-function PhoneFrame({ path, label, height }: { path: string; label: string; height: string }) {
+/** 폰에 띄울 화면 — 같은 화면 · 병원 화면(또는 직원 화면) */
+function SourceSwitch({ alt, value }: { alt: 'portal' | 'staff'; value: PhoneSource }) {
+  const opts: [PhoneSource, string][] = [
+    ['same', '같은 화면'],
+    [alt, alt === 'portal' ? '병원 화면' : '직원 화면'],
+  ]
+  return (
+    <div role="group" aria-label="폰에 띄울 화면" data-phone-source-toggle className="flex shrink-0 items-center gap-0.5 rounded-[11px] bg-white p-1 ring-1 ring-navy-200">
+      {opts.map(([k, lb]) => (
+        <button
+          key={k}
+          type="button"
+          data-phone-source-pick={k}
+          aria-pressed={value === k}
+          onClick={() => phoneSourceStore.set(k)}
+          className={`min-h-[30px] whitespace-nowrap rounded-[8px] px-2.5 text-[0.86rem] font-bold transition ${value === k ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'}`}
+        >
+          {lb}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function PhoneFrame({ path, follow, onRoute, label, height }: { path: string; follow: boolean; onRoute: (p: string) => void; label: string; height: string }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const navigate = useNavigate()
   //  처음 주소로 한 번만 읽습니다 — 그다음부터는 틀을 새로 읽지 않고 옮겨 갑니다
   const [src] = useState(() => framePath(path))
   const latest = useRef(path)
   latest.current = path
+  const followRef = useRef(follow)
+  followRef.current = follow
+  const routeRef = useRef(onRoute)
+  routeRef.current = onRoute
 
-  //  PC → 폰
+  //  PC → 폰 (같은 화면이면 PC 주소, 다른 쪽 화면이면 그 첫 화면 · 병원이 바뀔 때만)
   const sync = useCallback(() => {
     const w = ref.current?.contentWindow
     if (!w) return
@@ -197,13 +277,14 @@ function PhoneFrame({ path, label, height }: { path: string; label: string; heig
     sync()
   }, [path, sync])
 
-  //  폰 → PC
+  //  폰 → PC (같은 화면일 때만 따라감)
   useEffect(() => {
     const on = (e: MessageEvent) => {
       if (e.origin !== window.location.origin || e.source !== ref.current?.contentWindow) return
       const d = e.data as { type?: string; path?: unknown } | null
       if (!d || d.type !== FRAME_ROUTE_MSG || typeof d.path !== 'string' || !d.path.startsWith('/')) return
-      if (d.path !== latest.current) navigate(d.path, { replace: true })
+      routeRef.current(d.path)
+      if (followRef.current && d.path !== latest.current) navigate(d.path, { replace: true })
     }
     window.addEventListener('message', on)
     return () => window.removeEventListener('message', on)
