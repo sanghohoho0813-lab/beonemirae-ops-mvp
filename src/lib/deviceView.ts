@@ -65,6 +65,9 @@ export const deviceViewStore = memo<DeviceView>(DEVICE_VIEW_KEY, (v) => DEVICE_V
  */
 export type PhoneSource = 'same' | 'portal' | 'staff'
 export const phoneSourceStore = memo<PhoneSource>('beonemirae-ops:device-phone', (v) => ['same', 'portal', 'staff'].includes(v), 'same')
+/** 폰 폭 — 390(아이폰 · 기본) · 360(갤럭시 · 더 좁은 쪽에서 글자 · 단추가 넘치는지 확인) */
+export type PhoneWidth = '390' | '360'
+export const phoneWidthStore = memo<PhoneWidth>('beonemirae-ops:device-width', (v) => v === '390' || v === '360', '390')
 /** 폰의 병원 화면에 띄울 병원 — 마지막으로 본 병원(거래처 상세 · 병원 화면) */
 export const phoneClientStore = memo<string>('beonemirae-ops:device-client', (v) => /^[\w-]{1,80}$/.test(v), '')
 

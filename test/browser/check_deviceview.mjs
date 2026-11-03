@@ -213,6 +213,16 @@ const after = (arr, t0) => arr.filter((x) => x >= t0).length
   ok((await p.locator('[data-topbar] [data-device-view-toggle]').count()) === 0 && Math.abs(tb[0] - tb[1]) <= 4, '6 접힌 메뉴일 때 위쪽 줄은 한 줄 (보기 단추는 메뉴 쪽에)', tb.join(' / '))
   await shot(p, 'dv2_rail_1440')
 
+  //  폰 폭 360(갤럭시) — 틀만 좁아지고 안의 화면도 가로로 안 밀림
+  const frameOverflow = () => p.locator('[data-device-iframe]').evaluate((el) => { const d = el.contentWindow.document.documentElement; return d.scrollWidth - d.clientWidth })
+  await p.click('[data-phone-width="360"]'); await p.waitForTimeout(1500)
+  const w360 = Math.round((await p.locator('[data-device-iframe]').boundingBox()).width)
+  ok(w360 === 360 && (await p.locator('[data-device-side]').innerText()).includes('모바일 360'), '6 폰 폭 360 (갤럭시)', `${w360}px`)
+  ok((await frameOverflow()) <= 1, '6 360 폭에서 거래처 상세가 가로로 안 밀림', `${await frameOverflow()}px`)
+  await shot(p, 'dv2_width360')
+  await p.click('[data-phone-width="390"]'); await p.waitForTimeout(800)
+  ok(Math.round((await p.locator('[data-device-iframe]').boundingBox()).width) === 390, '6 다시 390')
+
   //  폰에 병원 화면 — 거래처 상세를 보고 있으면 그 병원
   ok((await p.locator('[data-phone-source-toggle] [data-phone-source-pick]').count()) === 2, '6 폰 위에 「같은 화면 · 병원 화면」')
   await p.click('[data-phone-source-pick="portal"]')
@@ -220,6 +230,9 @@ const after = (arr, t0) => arr.filter((x) => x >= t0).length
   const fr = p.frameLocator('[data-device-iframe]')
   const hero = (await fr.locator('[data-portal-hero] h1').innerText().catch(() => '')).replace(/\s+/g, ' ')
   ok(hero.includes(T.name), `6 폰 안이 ${T.name} 병원 화면`, hero.slice(0, 30))
+  await p.click('[data-phone-width="360"]'); await p.waitForTimeout(1200)
+  ok((await frameOverflow()) <= 1, '6 360 폭에서 병원 첫 화면도 가로로 안 밀림', `${await frameOverflow()}px`)
+  await p.click('[data-phone-width="390"]'); await p.waitForTimeout(600)
   ok((await p.getAttribute('[data-device-side]', 'data-phone-source')) === 'portal' && /\/portal\/c\//.test(await p.locator('[data-device-path]').innerText()), '6 위쪽 주소줄이 폰 주소')
   //  PC 를 옮겨도 폰은 병원 화면 그대로 (따라가지 않음)
   await p.locator('[data-app-sidebar] a[href="/today"]').first().click()

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Columns2, Monitor, RotateCw, Smartphone, type LucideIcon } from 'lucide-react'
 import {
-  FRAME_ROUTE_MSG, clientIdOf, deviceViewStore, framePath, inPhoneFrame, phoneClientStore, phoneSourceStore, plainPath, type DeviceView, type PhoneSource,
+  FRAME_ROUTE_MSG, clientIdOf, deviceViewStore, framePath, inPhoneFrame, phoneClientStore, phoneSourceStore, phoneWidthStore, plainPath,
+  type DeviceView, type PhoneSource, type PhoneWidth,
 } from '../lib/deviceView'
 import { portalPath } from '../lib/portalClient'
 
@@ -142,6 +143,7 @@ export function DeviceViewPanels({ view, label, alt, staffHome = '/' }: { view: 
   //  폰이 지금 보고 있는 주소 (틀 안 앱이 알려 줌)
   const [phonePath, setPhonePath] = useState(target)
   const [reloads, setReloads] = useState(0)
+  const width = useSyncExternalStore(phoneWidthStore.subscribe, phoneWidthStore.get, () => '390' as PhoneWidth)
 
   //  「모바일」은 PC 화면 위를 덮습니다 — 뒤 화면이 같이 굴러가지 않게
   useEffect(() => {
@@ -157,11 +159,12 @@ export function DeviceViewPanels({ view, label, alt, staffHome = '/' }: { view: 
   if (view === 'pc') return null
 
   const phone = (height: string) => (
-    <PhoneFrame key={`${source}:${reloads}`} path={target} follow={source === 'same'} onRoute={setPhonePath} label={label} height={height} />
+    <PhoneFrame key={`${source}:${reloads}`} path={target} follow={source === 'same'} onRoute={setPhonePath} label={label} height={height} width={Number(width)} />
   )
   const controls = (
     <>
       {alt && <SourceSwitch alt={alt} value={source} />}
+      <WidthSwitch value={width} />
       <button
         type="button"
         data-device-reload
@@ -191,7 +194,7 @@ export function DeviceViewPanels({ view, label, alt, staffHome = '/' }: { view: 
       >
         <div className="flex items-center gap-2 px-4 pb-1 pt-3 text-[0.86rem] font-bold text-navy-500">
           <Smartphone size={15} strokeWidth={2.4} aria-hidden="true" />
-          <span className="shrink-0">모바일 390</span>
+          <span className="shrink-0">모바일 {width}</span>
           <span data-device-path className="min-w-0 flex-1 truncate font-mono text-[0.8rem] text-navy-400">{source === 'same' ? pathname : phonePath.split('?')[0]}</span>
         </div>
         <div className="flex items-center justify-end gap-1.5 px-4 pb-1">{controls}</div>
@@ -225,6 +228,27 @@ export function DeviceViewPanels({ view, label, alt, staffHome = '/' }: { view: 
   )
 }
 
+/** 폰 폭 — 390 · 360 (틀을 다시 읽지 않고 폭만 바뀝니다 — 안의 화면은 폭이 바뀌면 그 폭으로 다시 그립니다) */
+function WidthSwitch({ value }: { value: PhoneWidth }) {
+  return (
+    <div role="group" aria-label="폰 폭" data-phone-width-toggle className="flex shrink-0 items-center gap-0.5 rounded-[11px] bg-white p-1 ring-1 ring-navy-200">
+      {(['390', '360'] as PhoneWidth[]).map((w) => (
+        <button
+          key={w}
+          type="button"
+          data-phone-width={w}
+          aria-pressed={value === w}
+          title={w === '390' ? '아이폰 폭 390' : '갤럭시 폭 360'}
+          onClick={() => phoneWidthStore.set(w)}
+          className={`min-h-[30px] whitespace-nowrap rounded-[8px] px-2 text-[0.86rem] font-bold tabular-nums transition ${value === w ? 'bg-navy-900 text-white' : 'text-navy-600 hover:bg-navy-50'}`}
+        >
+          {w}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /** 폰에 띄울 화면 — 같은 화면 · 병원 화면(또는 직원 화면) */
 function SourceSwitch({ alt, value }: { alt: 'portal' | 'staff'; value: PhoneSource }) {
   const opts: [PhoneSource, string][] = [
@@ -249,7 +273,7 @@ function SourceSwitch({ alt, value }: { alt: 'portal' | 'staff'; value: PhoneSou
   )
 }
 
-function PhoneFrame({ path, follow, onRoute, label, height }: { path: string; follow: boolean; onRoute: (p: string) => void; label: string; height: string }) {
+function PhoneFrame({ path, follow, onRoute, label, height, width = 390 }: { path: string; follow: boolean; onRoute: (p: string) => void; label: string; height: string; width?: number }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const navigate = useNavigate()
   //  처음 주소로 한 번만 읽습니다 — 그다음부터는 틀을 새로 읽지 않고 옮겨 갑니다
@@ -293,17 +317,18 @@ function PhoneFrame({ path, follow, onRoute, label, height }: { path: string; fo
   return (
     <div
       data-device-phone
-      className="relative flex w-[410px] shrink-0 rounded-[50px] bg-[#0f1115] p-[10px] shadow-[0_24px_60px_-20px_rgba(15,23,42,0.55)] ring-1 ring-black/40"
-      style={{ height }}
+      className="relative flex shrink-0 rounded-[50px] bg-[#0f1115] p-[10px] shadow-[0_24px_60px_-20px_rgba(15,23,42,0.55)] ring-1 ring-black/40"
+      style={{ height, width: width + 20 }}
     >
-      <div aria-hidden="true" className="absolute left-1/2 top-[10px] z-10 h-[22px] w-[120px] -translate-x-1/2 rounded-b-[14px] bg-[#0f1115]" />
+      <div aria-hidden="true" className="absolute left-1/2 top-[10px] z-10 h-[16px] w-[92px] -translate-x-1/2 rounded-b-[12px] bg-[#0f1115]" />
       <iframe
         ref={ref}
         data-device-iframe
         title={`${label} — 모바일 화면`}
         src={src}
         onLoad={sync}
-        className="h-full w-[390px] rounded-[40px] border-0 bg-app"
+        style={{ width }}
+        className="h-full rounded-[40px] border-0 bg-app"
       />
     </div>
   )
