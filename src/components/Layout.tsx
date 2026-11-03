@@ -82,6 +82,7 @@ import { icon3d } from '../lib/icons3d'
 import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
 import { BIZPLAN_MENU_NAME, BIZPLAN_PATH } from '../lib/bizPlan'
 import { useBizPlanMenu } from './bizPlan/useBizPlanMenu'
+import { useBizPlanTodo } from './bizPlan/useBizPlanTodo'
 import { WIDTH_CLASS, WidthToggle, loadWidth, type ContentWidth } from './WidthToggle'
 import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport, useMedia } from './DeviceView'
 
@@ -478,6 +479,8 @@ function Sidebar() {
   const showSurvey = BIZ_SURVEY_ENABLED && (!configured || canAccess(profile?.role ?? null, SURVEY_PATH))
   //  제출 예정 사업계획서 (0146) — 설문 바로 아래. 대표·관리자 · 참여자로 등록된 사무실 계정
   const showBizPlan = useBizPlanMenu()
+  //  결정할 분(대표님 · 이사님)에게 「결정 n」 — 들어가지 않아도 남은 것이 보이게
+  const bizTodo = useBizPlanTodo()
 
   return (
     /*  AX 3차 — 폭 336/392 → 288/304px. 메뉴가 한 줄이 되어 넓을 이유가 없어졌고,
@@ -551,7 +554,13 @@ function Sidebar() {
             <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[0.871rem] font-extrabold leading-tight text-teal-100">
               {BIZPLAN_MENU_NAME}
             </span>
-            <span className="shrink-0 rounded-full bg-teal-400 px-2 py-0.5 text-[0.78rem] font-extrabold text-navy-900">열기</span>
+            {bizTodo ? (
+              <span data-bizplan-todo={bizTodo.left} className="shrink-0 whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[0.78rem] font-extrabold text-navy-900">
+                {bizTodo.left > 0 ? `결정 ${bizTodo.left}` : `조율 ${bizTodo.split}`}
+              </span>
+            ) : (
+              <span className="shrink-0 rounded-full bg-teal-400 px-2 py-0.5 text-[0.78rem] font-extrabold text-navy-900">열기</span>
+            )}
           </Link>
         </div>
       )}
@@ -871,7 +880,7 @@ function MobileHeader({ onHelp, slotRef }: { onHelp: () => void; slotRef: (el: H
  */
 const tabImg = (to: string) => icon3d(`tab:${to}`) ?? icon3d(to)
 
-function NavTab({ active, icon: Icon, img, label, onClick, guideAt }: { active: boolean; icon: LucideIcon; img?: string; label: string; onClick: () => void; guideAt?: string }) {
+function NavTab({ active, icon: Icon, img, label, onClick, guideAt, dot }: { active: boolean; icon: LucideIcon; img?: string; label: string; onClick: () => void; guideAt?: string; dot?: string }) {
   return (
     <button
       onClick={onClick}
@@ -911,6 +920,15 @@ function NavTab({ active, icon: Icon, img, label, onClick, guideAt }: { active: 
       <span className={`t-tab relative z-10 whitespace-nowrap transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
+      {/*  사업계획서 「결정 n개 남음」 — 더보기 안에 있다는 표시 (화면 읽기용 글은 aria-label 에) */}
+      {dot && (
+        <>
+          <span data-nav-dot aria-hidden="true" className="absolute right-[calc(50%-1.35rem)] top-1.5 z-20 min-w-[1.1rem] rounded-full bg-amber-500 px-1 text-center text-[0.72rem] font-extrabold leading-[1.1rem] text-white">
+            {dot}
+          </span>
+          <span className="sr-only"> · 사업계획서 할 일 {dot}개</span>
+        </>
+      )}
     </button>
   )
 }
@@ -939,6 +957,8 @@ function BottomNav({
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const moreActive = moreOpen || MORE_PATHS.includes(pathname)
+  //  사업계획서 결정이 남았으면 더보기에 작은 숫자 (대표님 · 이사님은 주로 폰)
+  const bizTodo = useBizPlanTodo()
 
   return (
     <nav
@@ -963,7 +983,7 @@ function BottomNav({
             />
           )
         })}
-        <NavTab active={moreActive} icon={MoreHorizontal} img={tabImg('more')} label="더보기" onClick={onMore} />
+        <NavTab active={moreActive} icon={MoreHorizontal} img={tabImg('more')} label="더보기" onClick={onMore} dot={bizTodo ? String(bizTodo.left || bizTodo.split) : undefined} />
       </div>
     </nav>
   )

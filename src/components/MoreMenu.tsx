@@ -19,6 +19,7 @@ import { COMPANY, SYSTEM_TAGLINE, SYSTEM_WORDMARK, SYSTEM_WORDMARK_TAIL } from '
 import { BIZ_SURVEY_ENABLED, SURVEY_MENU_NAME, SURVEY_PATH } from '../lib/bizSurvey'
 import { BIZPLAN_MENU_NAME, BIZPLAN_PATH } from '../lib/bizPlan'
 import { useBizPlanMenu } from './bizPlan/useBizPlanMenu'
+import { useBizPlanTodo } from './bizPlan/useBizPlanTodo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 더보기 메뉴 — 폰에서는 이곳이 목차 전부입니다
@@ -250,6 +251,7 @@ export function MoreMenu({
   const showSurvey = BIZ_SURVEY_ENABLED && (!configured || canAccess(role, SURVEY_PATH))
   //  제출 예정 사업계획서 (0146) — 설문 바로 옆. 대표·관리자 · 참여자로 등록된 사무실 계정
   const showBizPlan = useBizPlanMenu()
+  const bizTodo = useBizPlanTodo()
   function go(to: string) {
     onNavigate?.()
     navigate(to)
@@ -347,7 +349,13 @@ export function MoreMenu({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block break-keep text-[1.08rem] font-extrabold leading-snug text-navy-900">{BIZPLAN_MENU_NAME}</span>
-              <span className="mt-0.5 block break-keep text-[0.88rem] font-semibold text-navy-600">신보 뉴본펭귄 · 함께 읽고 수정요청</span>
+              {bizTodo ? (
+                <span data-more-bizplan-todo={bizTodo.left} className="mt-1 inline-block break-keep rounded-full bg-amber-100 px-2.5 py-0.5 text-[0.88rem] font-extrabold text-amber-900 ring-1 ring-amber-300">
+                  {bizTodo.left > 0 ? `고르실 결정 ${bizTodo.left}개 남음` : `의견 조율 필요 ${bizTodo.split}개`}
+                </span>
+              ) : (
+                <span className="mt-0.5 block break-keep text-[0.88rem] font-semibold text-navy-600">신보 뉴본펭귄 · 함께 읽고 수정요청</span>
+              )}
             </span>
             <ChevronRight size={20} strokeWidth={2.6} className="shrink-0 text-teal-700" aria-hidden="true" />
           </span>

@@ -303,6 +303,44 @@ const S = makeServer()
   await ctx.close()
 }
 
+// ═══ 3b. 메뉴 알림 — 「결정 n개 남음」 (들어가지 않아도 보이게) ═══════════════════════
+//   지금: 대표님 3개(시나리오 · 기존 사업 직접 입력 · 부가 기능 추후) · 이사님 1개(시나리오) 고름 — 6개 중
+//   ⚠ 뒤 절(4~)이 쓰는 서버(S)는 건드리지 않게 결정 기록만 옮긴 따로 서버(S3)에서 봅니다.
+const S3 = makeServer()
+S3.decisions = JSON.parse(JSON.stringify(S.decisions))
+{
+  const S = S3
+  const { ctx, p } = await open(S, 'ceo', '/', 1440)
+  ok((await p.getAttribute('[data-side-bizplan] [data-bizplan-todo]', 'data-bizplan-todo')) === '3' && (await text(p, '[data-side-bizplan]')).includes('결정 3'), '3b 대표님 PC — 왼쪽 메뉴 사업계획서에 「결정 3」 (6개 중 3개 고름)')
+  const calls = S.calls.filter((c) => c.fn === 'bizplan_strategy_open').length
+  await p.locator('[data-app-sidebar] a[href="/clients"]').first().click(); await p.waitForTimeout(800)
+  ok(S.calls.filter((c) => c.fn === 'bizplan_strategy_open').length === calls, '3b 화면을 옮겨도 다시 묻지 않음 (이 탭에 3분 기억)')
+  await ctx.close()
+}
+{
+  const S = S3
+  const { ctx, p } = await open(S, 'dir', '/')
+  ok((await text(p, '[data-nav-dot]')) === '5', '3b 이사님 폰 — 아래 「더보기」에 5', await text(p, '[data-nav-dot]'))
+  await p.locator('[data-nav-tab="더보기"]').click(); await p.waitForTimeout(600)
+  ok((await text(p, '[data-more-bizplan-todo]')).includes('고르실 결정 5개 남음'), '3b 더보기 — 「고르실 결정 5개 남음」')
+  const m = await measure(p)
+  ok(!m.overflow && m.small.length === 0, '3b 폰 더보기 — 가로 밀림 · 작은 단추 없음', m.small.join(','))
+  await shot(p, 'st_phone_more_todo')
+  //  결정을 하나 더 남기고 돌아오면 숫자가 줄어듦 (기억해 둔 옛 숫자를 쓰지 않음)
+  await p.locator('[data-more-bizplan]').click(); await p.waitForTimeout(1200)
+  await p.click('[data-bizplan-tab="strategy"]'); await p.waitForTimeout(600)
+  await p.click('[data-strategy-sec="decisions"]'); await p.waitForTimeout(600)
+  await decide(p, 'legacy', 'x13')
+  await p.locator('[data-bizplan-exit]').first().click(); await p.waitForTimeout(1500)
+  ok((await text(p, '[data-nav-dot]')) === '4', '3b 결정 남기고 돌아오면 4 (바로 다시 셈)', await text(p, '[data-nav-dot]'))
+  await ctx.close()
+}
+{
+  const { ctx, p } = await open(S3, 'dev', '/', 1440)
+  ok((await p.locator('[data-side-bizplan]').count()) === 1 && (await p.locator('[data-bizplan-todo]').count()) === 0, '3b 담당 — 결정할 분이 아니라 숫자 없음 (「열기」 그대로)')
+  await ctx.close()
+}
+
 // ═══ 4. 숫자가 바뀌면 재확인 필요 · 옛 화면 결정은 거절 ═══════════════════════════════
 {
   const ceo = await open(S, 'ceo', '/bizplan?tab=strategy&sec=decisions')

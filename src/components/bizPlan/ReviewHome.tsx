@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, ChevronRight, Loader2, Scale, Wallet } from 'lucide-react'
 import { REVIEW_KEYS, FIELD_BY_KEY, isEditable, currentChecks } from '../../lib/bizPlan'
-import { resolveDecision } from '../../lib/bizStrategy'
-import { strategyOpen, type StrategyOpen } from '../../lib/bizStrategyApi'
+import { decisionTodo, strategyOpen, type StrategyOpen } from '../../lib/bizStrategyApi'
 import { DocView } from './DocView'
 import { usePlan } from './parts'
 
@@ -88,25 +87,8 @@ export function ReviewHome({ focus, onFocus, onDecide, onFullDoc }: {
 }
 
 function Decisions({ st, myId, onDecide }: { st: Load; myId: string; onDecide: (key?: string) => void }) {
-  const sum = useMemo(() => {
-    if (st.kind !== 'ready' || !st.data.strategy) return null
-    const d = st.data
-    const rev = d.strategy!.assump_rev
-    const items = d.strategy!.model.decisions.map((dec) => {
-      const res = resolveDecision(dec.key, d.decisions, d.deciders, rev)
-      const picked = d.decisions.some((r) => r.key === dec.key && r.profile_id === myId && r.assump_rev === rev && !!r.choice)
-      return { key: dec.key, no: dec.no, title: dec.title, state: res.state, picked }
-    })
-    return {
-      items,
-      isDecider: d.is_decider,
-      left: items.filter((x) => !x.picked),
-      agreed: items.filter((x) => x.state === '합의').length,
-      split: items.filter((x) => x.state === '의견 조율 필요').length,
-      //  눌러서 바로 갈 결정 — 내가 아직 안 고른 것 · 두 분 선택이 갈린 것
-      todo: items.filter((x) => (d.is_decider && !x.picked) || x.state === '의견 조율 필요'),
-    }
-  }, [st, myId])
+  //  같은 셈을 메뉴의 「결정 n개 남음」(useBizPlanTodo)도 씁니다 — bizStrategyApi.decisionTodo
+  const sum = useMemo(() => (st.kind === 'ready' ? decisionTodo(st.data, myId) : null), [st, myId])
 
   return (
     <section className="space-y-3 rounded-2xl bg-white px-4 py-3.5 ring-1 ring-navy-100" data-review-decisions>
@@ -129,10 +111,10 @@ function Decisions({ st, myId, onDecide }: { st: Load; myId: string; onDecide: (
           <div className="flex flex-wrap gap-1.5 text-[0.92rem] font-extrabold">
             {sum.isDecider && (
               <span data-review-left={sum.left.length} className={`rounded-full px-3 py-1 ${sum.left.length > 0 ? 'bg-orange-50 text-orange-800 ring-1 ring-orange-200' : 'bg-teal-50 text-teal-800'}`}>
-                {sum.left.length > 0 ? `남은 것 ${sum.left.length}개` : '모두 고르셨습니다'} · 전체 {sum.items.length}개
+                {sum.left.length > 0 ? `남은 것 ${sum.left.length}개` : '모두 고르셨습니다'} · 전체 {sum.total}개
               </span>
             )}
-            <span data-review-agreed={sum.agreed} className="rounded-full bg-navy-50 px-3 py-1 text-navy-700">합의 {sum.agreed}/{sum.items.length}</span>
+            <span data-review-agreed={sum.agreed} className="rounded-full bg-navy-50 px-3 py-1 text-navy-700">합의 {sum.agreed}/{sum.total}</span>
             {sum.split > 0 && (
               <span data-review-split={sum.split} className="rounded-full bg-amber-50 px-3 py-1 text-amber-900 ring-1 ring-amber-200">의견 조율 필요 {sum.split}</span>
             )}

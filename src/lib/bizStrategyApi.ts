@@ -1,5 +1,5 @@
 import { call } from './bizPlanApi'
-import type { Decider, DecisionRow, StrategyModel } from './bizStrategy'
+import { resolveDecision, type Decider, type DecisionRow, type DecisionState, type StrategyModel } from './bizStrategy'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 사업화전략 · 3개년 매출 검토 — 서버 호출 (0148)
@@ -70,10 +70,53 @@ export type SaveModelResult =
 export const strategySave = (model: StrategyModel, expectedRev: number, reason: string) =>
   call<SaveModelResult>('bizplan_strategy_save', { p_model: model, p_expected_rev: expectedRev, p_reason: reason })
 
-export const decide = (p: { key: string; choice: string; custom: unknown; note: string; assumpRev: number; basis: Record<string, string> }) =>
-  call<{ ok: true; agreed: boolean; decision: DecisionRow }>('bizplan_decide', {
+export const decide = async (p: { key: string; choice: string; custom: unknown; note: string; assumpRev: number; basis: Record<string, string> }) => {
+  const r = await call<{ ok: true; agreed: boolean; decision: DecisionRow }>('bizplan_decide', {
     p_key: p.key, p_choice: p.choice, p_custom: p.custom ?? null, p_note: p.note, p_assump_rev: p.assumpRev, p_basis: p.basis,
   })
+  //  메뉴의 「결정 n개 남음」이 옛 숫자로 남지 않게 (useBizPlanTodo)
+  forgetDecisionTodo()
+  return r
+}
+
+// ── 고르실 결정 — 「확인 · 결정」 화면과 메뉴 알림이 같은 셈을 씁니다 ─────────────────
+export interface DecisionTodo {
+  total: number
+  isDecider: boolean
+  /** 내가 지금 숫자로 아직 안 고른 것 */
+  left: { key: string; no: number; title: string; state: DecisionState }[]
+  agreed: number
+  split: number
+  /** 눌러서 바로 갈 결정 — 안 고른 것 · 두 분 선택이 갈린 것 */
+  todo: { key: string; no: number; title: string; state: DecisionState; picked: boolean }[]
+}
+export function decisionTodo(d: StrategyOpen | null | undefined, myId: string): DecisionTodo | null {
+  if (!d?.strategy) return null
+  const rev = d.strategy.assump_rev
+  const items = d.strategy.model.decisions.map((dec) => {
+    const res = resolveDecision(dec.key, d.decisions, d.deciders, rev)
+    const picked = d.decisions.some((r) => r.key === dec.key && r.profile_id === myId && r.assump_rev === rev && !!r.choice)
+    return { key: dec.key, no: dec.no, title: dec.title, state: res.state, picked }
+  })
+  return {
+    total: items.length,
+    isDecider: d.is_decider,
+    left: items.filter((x) => !x.picked),
+    agreed: items.filter((x) => x.state === '합의').length,
+    split: items.filter((x) => x.state === '의견 조율 필요').length,
+    todo: items.filter((x) => (d.is_decider && !x.picked) || x.state === '의견 조율 필요'),
+  }
+}
+
+/** 메뉴 알림용으로 잠깐 기억해 둔 셈 (이 탭에만 · 3분) */
+export const TODO_KEY = 'beonemirae-ops:bizplan-todo'
+export function forgetDecisionTodo() {
+  try {
+    sessionStorage.removeItem(TODO_KEY)
+  } catch {
+    /* 기억 못 해도 3분 뒤 다시 셉니다 */
+  }
+}
 
 export interface ProposeItem {
   key: string
