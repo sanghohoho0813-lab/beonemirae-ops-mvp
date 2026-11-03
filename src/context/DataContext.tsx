@@ -32,7 +32,7 @@ import type {
 } from '../types'
 import { EMPTY_APP_DATA } from '../types'
 import { DATA_STORAGE_KEY, loadData, resetData, saveData, uid, loadClientSet, saveClientSet, type ClientSetSize } from '../lib/storage'
-import { DATA_CHANNEL, announceDataChanged, pairedView } from '../lib/deviceView'
+import { DATA_CHANNEL, VIEW_ID, announceDataChanged, pairedView } from '../lib/deviceView'
 import {
   applyCollectionCompletion,
   rollbackCollectionCompletion,
@@ -571,8 +571,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       ch = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(DATA_CHANNEL)
       if (ch)
-        ch.onmessage = () => {
-          if (!pairedView()) return
+        ch.onmessage = (e: MessageEvent) => {
+          //  제가 보낸 알림은 건너뜁니다 — 저장한 쪽은 runLive 가 이미 다시 읽었습니다
+          if (!pairedView() || (e.data as { from?: string } | null)?.from === VIEW_ID) return
           window.clearTimeout(soon)
           soon = window.setTimeout(() => void refreshQuiet(), 250)
         }

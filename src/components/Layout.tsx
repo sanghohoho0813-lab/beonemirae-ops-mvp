@@ -920,7 +920,7 @@ function NavTab({ active, icon: Icon, img, label, onClick, guideAt, dot }: { act
       <span className={`t-tab relative z-10 whitespace-nowrap transition-colors ${active ? 'text-teal-700' : 'text-navy-400'}`}>
         {label}
       </span>
-      {/*  사업계획서 「결정 n개 남음」 — 더보기 안에 있다는 표시 (화면 읽기용 글은 aria-label 에) */}
+      {/*  사업계획서 「결정 n개 남음」 — 더보기 안에 있다는 표시 (화면 읽기용 글은 옆의 sr-only 에) */}
       {dot && (
         <>
           <span data-nav-dot aria-hidden="true" className="absolute right-[calc(50%-1.35rem)] top-1.5 z-20 min-w-[1.1rem] rounded-full bg-amber-500 px-1 text-center text-[0.72rem] font-extrabold leading-[1.1rem] text-white">

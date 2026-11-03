@@ -80,12 +80,14 @@ export const phoneClientStore = memo<string>('beonemirae-ops:device-client', (v)
  *    탭마다 저장할 때마다 전체를 다시 읽는 일은 없습니다.
  */
 export const DATA_CHANNEL = 'beonemirae-ops:data'
+/** 이 화면(창 · 틀) 하나의 이름 — 같은 화면 안의 다른 채널 객체도 알림을 받으므로, 제가 보낸 것은 건너뛰려고 */
+export const VIEW_ID = Math.random().toString(36).slice(2)
 export const pairedView = () => inPhoneFrame() || deviceViewStore.get() !== 'pc'
 export function announceDataChanged() {
   if (typeof BroadcastChannel === 'undefined' || !pairedView()) return
   try {
     const ch = new BroadcastChannel(DATA_CHANNEL)
-    ch.postMessage({ type: 'changed', at: Date.now() })
+    ch.postMessage({ type: 'changed', from: VIEW_ID, at: Date.now() })
     ch.close()
   } catch {
     /* 못 알려도 45초 배경 갱신이 맞춥니다 */

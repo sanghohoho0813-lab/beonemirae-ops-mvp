@@ -285,6 +285,10 @@ const after = (arr, t0) => arr.filter((x) => x >= t0).length
   const t0 = Date.now()
   await p.locator('[data-req-send]').click()
   ok(await waitFor(async () => after(reads.frame, t0) > 0, 4000), '7 PC 병원 화면에서 보낸 요청 → 직원 폰이 곧바로 새로 읽음', `${after(reads.frame, t0)}번`)
+  await p.waitForTimeout(1500)
+  const mine = reads.main.filter((x) => x >= t0)
+  const bursts = mine.filter((x, i) => i === 0 || x - mine[i - 1] > 200).length
+  ok(bursts === 1, '7 보낸 쪽(PC)은 한 번만 다시 읽음 — 제가 보낸 알림으로 또 읽지 않음', `${mine.length}건 · ${bursts}번`)
   await shot(p, 'dv2_staff_phone')
   await ctx.close()
 }
