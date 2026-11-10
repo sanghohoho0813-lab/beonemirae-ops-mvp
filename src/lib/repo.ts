@@ -36,7 +36,7 @@ import type {
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry, missingName } from './supabase'
 import type { CollectionCompletionInput } from './collection'
-import { SNAPSHOT_EXTRAS, SNAPSHOT_TABLES, buildSnapshot, extrasFailed, snapshotRowCount, snapshotSummary, type Snapshot, type SnapshotExtra, type SnapshotExtraSkipped } from './snapshot'
+import { EXTRA_ROW_TABLES, SNAPSHOT_EXTRAS, SNAPSHOT_TABLES, buildSnapshot, extrasFailed, snapshotRowCount, snapshotSummary, type Snapshot, type SnapshotExtra, type SnapshotExtraSkipped } from './snapshot'
 import { clientNameKey } from './clientName'
 import type { TaxFiling } from './taxBase'
 import { toAfterSurvey, toAiCall, toCoachMission, toDayCloseRecord, toDispatchDecision, toOpsChange, toRecoView } from './evidenceRepo'
@@ -3120,6 +3120,7 @@ export async function rawSnapshot(takenBy: string, takenAt: string): Promise<Sna
   const sb = need()
   const tables: Record<string, unknown[]> = {}
   const unreadable: { name: string; reason: string }[] = []
+  const absent: string[] = []
 
   for (const t of SNAPSHOT_TABLES) {
     try {
@@ -3147,13 +3148,19 @@ export async function rawSnapshot(takenBy: string, takenAt: string): Promise<Sna
       )
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      unreadable.push({ name: t.name, reason: msg })
+      //  나중에 더한 표(optional)가 **아예 없으면** 그 기능의 SQL 을 실행하지 않은 DB 입니다 —
+      //  담을 것이 없는 것이지 반쪽 백업이 아닙니다. 권한 오류는 그대로 「못 읽음」입니다.
+      if (t.optional && TABLE_MISSING.test(msg)) absent.push(t.name)
+      else unreadable.push({ name: t.name, reason: msg })
     }
   }
 
   const { extras, extrasSkipped } = await snapshotExtras()
-  return buildSnapshot({ tables, unreadable, schemaVersion: await schemaVersion(), takenBy, takenAt, extras, extrasSkipped })
+  return buildSnapshot({ tables, unreadable, absent, schemaVersion: await schemaVersion(), takenBy, takenAt, extras, extrasSkipped })
 }
+
+/** 「그 표가 이 DB 에 없다」 — PostgREST(PGRST205) · PostgreSQL(42P01) 의 말 */
+const TABLE_MISSING = /Could not find the table|relation "[^"]+" does not exist/i
 
 /** 서버 함수 하나의 실패를 갈라 냅니다 — 없음 · 권한 없음 · 그 밖 */
 class ExtraSkip extends Error {
@@ -3205,6 +3212,18 @@ async function snapshotExtras(): Promise<{ extras: SnapshotExtra[]; extrasSkippe
     },
     bizplan_strategy: async () => ({ via: ['bizplan_strategy_open'], data: await first('bizplan_strategy_open') }),
     biz_survey: async () => ({ via: ['biz_survey_admin_load'], data: await first('biz_survey_admin_load') }),
+  }
+  //  계정에 묶인 표 — 줄을 그대로 읽습니다 (표가 없으면 「담을 것이 없음」)
+  for (const [name, order] of Object.entries(EXTRA_ROW_TABLES)) {
+    readers[name] = async () => {
+      try {
+        const rows = await withRetry(async () => pageAll((f, to) => sb.from(name).select('*').order(order).range(f, to)))
+        return { via: [`select * from ${name}`], data: rows }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        throw new ExtraSkip(TABLE_MISSING.test(msg) ? 'missing' : /permission denied/i.test(msg) ? 'denied' : 'error', msg)
+      }
+    }
   }
   const extras: SnapshotExtra[] = []
   const extrasSkipped: SnapshotExtraSkipped[] = []

@@ -69,7 +69,19 @@ note(`만든 사람        : ${snap.takenBy || '(이름 없음)'}`)
 note(`스키마 판        : ${snap.schemaVersion ?? '(모름)'}`)
 note('')
 note('먼저 supabase/migrations/*.sql 을 순서대로 실행해 빈 스키마를 만든 뒤 이 파일을 실행하세요.')
+//  나중에 더한 표(proposals)가 스냅샷에 들어 있으면, 그 표를 만드는 파일도 먼저 실행해야 합니다.
+const needFiles = [...new Set(Object.values(snap.needs ?? {}))].sort()
+if (needFiles.length > 0) {
+  note('그다음 supabase/proposals/ 의 아래 파일을 번호 순서대로 실행하세요 (이 스냅샷에 그 표가 들어 있습니다).')
+  note('   운영 DB 에 실행했던 다른 PROPOSAL_*.sql 도 같은 순서로 함께 실행합니다 — 칸이 모자라면 아래 확인에서 멈춥니다.')
+  for (const f of needFiles) note(`   - ${f}`)
+}
 note('한 트랜잭션입니다 — 한 줄이라도 들어가지 않으면 전부 되돌아갑니다.')
+if ((snap.absent ?? []).length > 0) {
+  note('')
+  note('스냅샷을 만든 DB 에 없던 표(그 기능의 SQL 을 실행하지 않음 — 담을 것이 없었습니다):')
+  for (const a of snap.absent) note(`   - ${a.name} (${a.label})`)
+}
 if ((snap.unreadable ?? []).length > 0) {
   note('')
   note('!! 스냅샷을 만들 때 읽지 못한 표가 있었습니다. 이 표는 복구되지 않습니다:')
@@ -93,6 +105,44 @@ if ((snap.extrasSkipped ?? []).some((x) => x.reason !== 'missing')) {
 }
 out.push('')
 out.push('begin;')
+out.push('')
+//  구조 확인 — 넣기 전에, 스냅샷의 표와 칸이 대상 DB 에 **전부 있는지** 봅니다.
+//
+//   왜 필요한가. 줄을 넣을 때 DB 가 자기 표의 칸 모양대로 채우는데(jsonb_populate_record),
+//   그때 **대상에 없는 칸은 말없이 버려집니다.** 운영 DB 는 migrations 뒤에 proposals 를 여러 개
+//   실행한 상태라, migrations 만 돌린 빈 DB 에 부으면 그 뒤에 생긴 칸의 값이 조용히 사라집니다 —
+//   복구는 「성공」으로 끝나는데 자료가 빠져 있습니다. 그래서 먼저 확인하고, 모자라면 **멈춥니다.**
+const shape = snap.order.map((name) => {
+  const cols = new Set()
+  for (const r of snap.tables[name] ?? []) for (const k of Object.keys(r ?? {})) cols.add(k)
+  return { t: ident(name), cols: [...cols], needs: snap.needs?.[name] ?? '' }
+})
+out.push('-- ── 구조 확인 — 스냅샷의 표 · 칸이 이 DB 에 전부 있는가 (없으면 여기서 멈춥니다) ──')
+out.push(`do $precheck$
+declare
+  r record;
+  c text;
+  lost text := '';
+begin
+  for r in select * from jsonb_to_recordset(${q(JSON.stringify(shape))}::jsonb) as x(t text, cols jsonb, needs text)
+  loop
+    if to_regclass('public.' || quote_ident(r.t)) is null then
+      lost := lost || E'\n   표 없음: ' || r.t || case when r.needs <> '' then '  ← supabase/proposals/' || r.needs else '' end;
+    else
+      for c in select jsonb_array_elements_text(r.cols)
+      loop
+        if not exists (select 1 from information_schema.columns
+                        where table_schema = 'public' and table_name = r.t and column_name = c) then
+          lost := lost || E'\n   칸 없음: ' || r.t || '.' || c;
+        end if;
+      end loop;
+    end if;
+  end loop;
+  if lost <> '' then
+    raise exception E'복구를 시작하지 않았습니다 — 이 DB 의 구조가 스냅샷보다 옛것입니다. 아래가 없습니다:%\n   운영 DB 에 실행했던 supabase/proposals/PROPOSAL_*.sql 을 번호 순서대로 먼저 실행한 뒤 이 파일을 다시 실행하세요. 아무것도 바뀌지 않았습니다.', lost;
+  end if;
+end
+$precheck$;`)
 out.push('')
 //  트리거·외래키 검사를 잠시 멈춥니다.
 //

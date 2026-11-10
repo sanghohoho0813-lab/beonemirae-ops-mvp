@@ -13,6 +13,8 @@ import { chromium, EXEC } from './_pw.mjs'
 //    · 못 읽은 표가 있으면 조용히 빈 채로 넘어가지 않는가
 //    · 사무실 담당자에게는 열리지 않는가
 //    · (0151) 표로 못 읽는 자료(사업계획서 · 설문)의 사본을 담는가 · 못 담으면 밝히는가
+//    · (0151) 나중에 더한 표(proposals) 7개를 담는가 · 그 표가 없는 DB 에서는 「이 DB 에 없음」(못 읽음이 아님)
+//    · (0151) 계정에 묶인 표 3개는 보관용 사본으로 담는가
 //    · (0151) 받았다는 기록을 남기고 「마지막으로 받은 날」을 보여 주는가
 
 const BASE = 'http://localhost:4173'
@@ -75,7 +77,14 @@ const BIZ_HISTORY = { revisions: [{ id: 1, key: 'a.b', at: '2026-07-01T00:00:00Z
 const BIZ_STRATEGY = { api: 148, strategy: { model: { price: 1000 }, rev: 2 }, decisions: [{ key: 'd1', choice: 'A' }], decision_log: [], log: [], revisions: [] }
 const BIZ_SURVEY = { responses: [{ respondent: 'ceo', answers: { q1: '가상 답' } }], invites: [], revisions: [] }
 
-/** extras — 'ok'(다 열림) · 'missing'(기능 없음 · 기본값) · 'denied'(사업계획서 참여자가 아님) */
+//  나중에 더한 표(proposals) — 그 SQL 을 실행한 DB 에만 있습니다
+const LATER = ['item_buckets', 'office_stock_items', 'client_inquiries', 'ops_changes', 'dispatch_decisions', 'recommendation_views', 'ai_calls',
+  'day_closes', 'ax_coach_missions', 'vehicle_reservations']
+const inquiries = [{ id: 'q1', client_id: CA, topic: '자재', subject: '가상 문의', body: '박스가 모자랍니다', status: '접수', reply: '',
+  asked_by_name: '원무과', handled_by: null, handled_at: null, created_by: UID, created_at: '2026-07-20T00:00:00Z', updated_at: '2026-07-20T00:00:00Z' }]
+const dayCloses = [{ id: 'd1', profile_id: UID, profile_name: '기사', date: '2026-07-21', note: '이상 없음', summary: { done: 7 }, closed_at: '2026-07-21T09:00:00Z' }]
+
+/** extras — 'ok'(다 열림 · 나중에 더한 표도 있음) · 'missing'(그 기능들이 없는 DB · 기본값) · 'denied'(사업계획서 참여자가 아님) */
 function routes(ctx, { blockAudit = false, extras = 'missing', lastSnap = [], writes = [] } = {}) {
   ctx.route('**/auth/v1/**', (r) =>
     r.fulfill({ status: 200, contentType: 'application/json',
@@ -99,6 +108,15 @@ function routes(ctx, { blockAudit = false, extras = 'missing', lastSnap = [], wr
       if (fn === 'bizplan_strategy_open') return json(BIZ_STRATEGY)
       if (fn === 'biz_survey_admin_load') return json(BIZ_SURVEY)
       return none()
+    }
+    const table = url.split('/rest/v1/')[1]?.split('?')[0]
+    if (LATER.includes(table)) {
+      //  그 SQL 을 실행하지 않은 DB — PostgREST 는 「그런 표가 없다」고 답합니다
+      if (extras === 'missing') return r.fulfill({ status: 404, contentType: 'application/json',
+        body: JSON.stringify({ code: 'PGRST205', message: `Could not find the table 'public.${table}' in the schema cache` }) })
+      if (table === 'client_inquiries') return json(inquiries)
+      if (table === 'day_closes') return json(dayCloses)
+      return json([])
     }
     if (url.includes('/profiles')) return json(single ? profile : [profile])
     if (url.includes('/audit_logs')) {
@@ -193,7 +211,13 @@ ok(snap.tables.payment_receipts[0].source_ref === '2026-07-30|234567|가나', '�
 ok(Array.isArray(snap.order) && snap.order[0] === 'staff' && snap.order.includes('clients'), '넣는 순서가 파일에 적혀 있음 (사람·거래처가 먼저)')
 ok(snap.order.indexOf('payments') < snap.order.indexOf('payment_receipts'), '청구가 입금보다 먼저 — 외래키 순서')
 ok(snap.order.indexOf('clients') < snap.order.indexOf('schedules'), '거래처가 수거보다 먼저')
-ok(snap.order.length === 29, '표 29개 (0062 현장 의견 포함)', `${snap.order.length}개`)
+ok(snap.order.length === 36, '표 36개 (0151 — 나중에 더한 표 7개 포함)', `${snap.order.length}개`)
+ok(snap.tables.client_inquiries?.[0]?.subject === '가상 문의' && snap.tables.client_inquiries[0].created_by === UID, '(0151) 병원 문의가 줄 그대로 담김 — 지금까지 빠져 있던 표')
+ok(snap.order.indexOf('clients') < snap.order.indexOf('client_inquiries') && snap.order.indexOf('item_buckets') < snap.order.indexOf('office_stock_items'),
+  '(0151) 나중에 더한 표도 가리키는 표보다 뒤에')
+ok(snap.needs?.client_inquiries === 'PROPOSAL_0083_customer_platform.sql' && Object.keys(snap.needs ?? {}).length === 7 && snap.nullify?.client_inquiries?.includes('created_by'),
+  '(0151) 그 표를 만드는 SQL 파일 이름 · 비울 칸이 파일에 적혀 있음')
+ok(Array.isArray(snap.absent) && snap.absent.length === 0, '(0151) 이 DB 에 없는 표 없음')
 ok(snap.nullify?.clients?.includes('created_by'), '비울 칸(계정을 가리키는 칸)이 적혀 있음')
 //  0056 로 둘이 늘었습니다 — 담당 배정·사전 등록은 계정에 붙는 자료라,
 //  계정이 안 담기는 이 파일에 넣으면 되돌릴 때 없는 사람에게 배정된 거래처가
@@ -209,13 +233,17 @@ ok(Array.isArray(snap.unreadable) && snap.unreadable.length === 0, '못 읽은 �
 // ── 5. 받은 뒤 화면이 결과를 말하는가 ─────────────────────────────────────
 await p.waitForSelector('[data-snapshot-done]', { timeout: 5000 })
 const doneTxt = ((await p.textContent('[data-snapshot-done]')) ?? '').replace(/\s+/g, ' ')
-ok(/표 29개/.test(doneTxt), '표 몇 개를 받았는지', doneTxt)
+ok(/표 36개/.test(doneTxt), '표 몇 개를 받았는지', doneTxt)
 const rows = Object.values(snap.tables).reduce((n, r) => n + r.length, 0)
 ok(doneTxt.includes(String(rows)), '줄 수도 그대로', `${rows}줄`)
 
 // ── 5-2. (0151) 표로 못 읽는 자료의 사본 ──────────────────────────────────
 const ex = Object.fromEntries((snap.extras ?? []).map((x) => [x.name, x]))
-ok(Object.keys(ex).sort().join(',') === 'biz_survey,bizplan,bizplan_strategy', '사본 3가지가 담김 (사업계획서 · 전략 · 설문)', Object.keys(ex).join(','))
+ok(Object.keys(ex).sort().join(',') === 'ax_coach_missions,biz_survey,bizplan,bizplan_strategy,day_closes,vehicle_reservations',
+  '사본 6가지가 담김 (사업계획서 · 전략 · 설문 + 계정에 묶인 표 3개)', Object.keys(ex).join(','))
+ok(ex.day_closes?.data?.[0]?.profile_name === '기사' && ex.day_closes.data[0].summary?.done === 7 && /자동 복구 대상이 아님/.test(ex.day_closes.holds),
+  '계정에 묶인 표(하루 마감)는 줄 그대로 사본으로 — 자동 복구 대상이 아니라고 밝힘')
+ok(snap.tables.day_closes === undefined && !snap.order.includes('day_closes'), '계정에 묶인 표는 복구 순서에 넣지 않음 (없는 계정을 가리키게 되므로)')
 ok(ex.bizplan?.data?.open?.fields?.[0]?.value === '가상 내용 1' && ex.bizplan?.data?.history?.revisions?.length === 1,
   '사업계획서 — 현재 내용 · 기록이 서버 답 그대로')
 ok(ex.bizplan?.data?.versions?.length === 2 && ex.bizplan.data.versions.map((v) => v.id).join(',') === '7,9'
@@ -230,9 +258,9 @@ ok(/사본도 담았습니다/.test(doneTxt) && /사업계획서/.test(doneTxt),
 // ── 5-3. (0151) 받았다는 기록 · 「마지막으로 받은 날」 ────────────────────────
 const rec = writes1.find((w) => w.action === 'snapshot.download')
 ok(!!rec && rec.entity === 'snapshot', '감사기록에 「전체 스냅샷 받기」 한 줄을 남김')
-ok(rec?.after_data?.tables === 29 && rec?.after_data?.rows === rows && rec?.after_data?.unreadable?.length === 0,
+ok(rec?.after_data?.tables === 36 && rec?.after_data?.rows === rows && rec?.after_data?.unreadable?.length === 0,
   '기록에 표 수 · 줄 수 · 못 읽은 표가 그대로', `${rec?.after_data?.tables}개 · ${rec?.after_data?.rows}줄`)
-ok(/표 29개/.test(rec?.summary ?? '') && !/가나병원|1234567/.test(JSON.stringify(rec ?? {})), '기록에는 숫자만 — 자료 내용은 넣지 않음', rec?.summary)
+ok(/표 36개/.test(rec?.summary ?? '') && !/가나병원|1234567|가상 문의/.test(JSON.stringify(rec ?? {})), '기록에는 숫자만 — 자료 내용은 넣지 않음', rec?.summary)
 ok(!(snap.tables.audit_logs ?? []).some((a) => a.action === 'snapshot.download'), '그 기록은 파일을 다 읽은 뒤에 남김 (파일 안에 자기 기록 없음)')
 await p.waitForSelector('[data-snapshot-last="fresh"]', { timeout: 5000 }).catch(() => {})
 const lastTxt = ((await p.locator('[data-snapshot-last]').textContent()) ?? '').replace(/\s+/g, ' ')
@@ -262,7 +290,7 @@ ok(/1개 표를 읽지 못했습니다/.test(warn) && /audit_logs/.test(warn),
 const sk = Object.fromEntries((snap2.extrasSkipped ?? []).map((x) => [x.name, x]))
 ok(sk.bizplan?.reason === 'denied' && sk.bizplan_strategy?.reason === 'denied' && /참여자/.test(sk.bizplan?.message ?? ''),
   '권한이 없어 못 담은 사본을 파일이 까닭과 함께 적어 둠', sk.bizplan?.message)
-ok((snap2.extras ?? []).map((x) => x.name).join(',') === 'biz_survey', '열 수 있는 사본(설문)은 그대로 담김')
+ok((snap2.extras ?? []).map((x) => x.name).join(',') === 'biz_survey,day_closes,ax_coach_missions,vehicle_reservations', '열 수 있는 사본(설문 · 계정에 묶인 표)은 그대로 담김')
 ok((await p2.locator('[data-snapshot-extras-failed]').count()) === 1
    && /사업계획서/.test((await p2.locator('[data-snapshot-extras-failed]').textContent()) ?? ''), '화면도 「담지 못한 사본 — 사업계획서 …」라고 말함')
 ok(last2[0]?.after_data?.unreadable?.includes('audit_logs') && last2[0]?.after_data?.extrasFailed?.includes('bizplan'), '기록에도 반쪽이었음이 남음')
@@ -283,7 +311,11 @@ await ctx2.close()
   const cs = []
   for await (const x of (await d.createReadStream())) cs.push(x)
   const sn = JSON.parse(Buffer.concat(cs).toString('utf8'))
-  ok(sn.extras.length === 0 && sn.extrasSkipped.length === 3 && sn.extrasSkipped.every((x) => x.reason === 'missing'), '기능이 없는 DB — 사본 0 · 「없음」으로 적힘')
+  ok(sn.extras.length === 0 && sn.extrasSkipped.length === 6 && sn.extrasSkipped.every((x) => x.reason === 'missing'), '기능이 없는 DB — 사본 0 · 「없음」으로 적힘')
+  ok(sn.absent.length === 7 && sn.absent.some((a) => a.name === 'client_inquiries' && a.needs === 'PROPOSAL_0083_customer_platform.sql') && sn.unreadable.length === 0,
+    '나중에 더한 표가 없는 DB — 「이 DB 에 없음」 7개 · 「못 읽음」 0개 (반쪽 백업이 아님)', `${sn.absent.length}개`)
+  ok(sn.order.length === 29 && Object.keys(sn.needs).length === 0 && sn.tables.client_inquiries === undefined, '없는 표는 복구 순서에 넣지 않음 · 빈 배열로 위장하지 않음 (표 29개)')
+  ok(!/읽지 못했습니다/.test(((await q.textContent('body')) ?? '')), '없는 표를 「읽지 못했다」고 겁주지 않음')
   await q.waitForSelector('[data-snapshot-done]', { timeout: 5000 })
   ok((await q.locator('[data-snapshot-extras-failed]').count()) === 0 && (await q.locator('[data-snapshot-extras]').count()) === 0,
     '기능이 없는 것을 「담지 못했다」고 겁주지 않음')

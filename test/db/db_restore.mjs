@@ -156,19 +156,26 @@ execFileSync(join(ROOT, 'node_modules/.bin/esbuild'),
 const { SNAPSHOT_TABLES, buildSnapshot, snapshotRowCount, snapshotFilename } = await import(join(work, 'snapshot.mjs'))
 
 const tables = {}
+//  나중에 더한 표(optional · proposals)는 마이그레이션만 돌린 이 DB 에 없습니다 —
+//  앱과 같이 「이 DB 에 없음」으로 둡니다. 그 표들의 복구는 db_restore_optional 이 잽니다.
+const absent = []
 for (const t of SNAPSHOT_TABLES) {
+  if (t.optional && src(`select to_regclass('public.${t.name}') is null`) === 't') { absent.push(t.name); continue }
   const json = src(`select coalesce(json_agg(x order by x."${t.order}"), '[]'::json)::text
                     from (select * from public.${t.name}) x`)
   tables[t.name] = JSON.parse(json)
 }
 const snap = buildSnapshot({
-  tables, unreadable: [], schemaVersion: 48,
+  tables, unreadable: [], absent, schemaVersion: 48,
   takenBy: '관리자', takenAt: '2026-08-15T09:30:00.000Z',
 })
 const snapPath = join(work, 'snapshot.json')
 writeFileSync(snapPath, JSON.stringify(snap))
 
-ok(snap.order.length === SNAPSHOT_TABLES.length, `스냅샷이 표 ${SNAPSHOT_TABLES.length}개를 담음`, `${snap.order.length}개`)
+const CORE_TABLES = SNAPSHOT_TABLES.filter((t) => !t.optional)
+ok(snap.order.length === CORE_TABLES.length, `스냅샷이 표 ${CORE_TABLES.length}개를 담음 (마이그레이션으로 생기는 표 전부)`, `${snap.order.length}개`)
+ok(absent.length === SNAPSHOT_TABLES.length - CORE_TABLES.length && snap.absent.length === absent.length && Object.keys(snap.needs).length === 0,
+  '나중에 더한 표는 이 DB 에 없음 — 「못 읽음」이 아니라 「이 DB 에 없음」으로 적힘', `${absent.length}개`)
 ok(snapshotRowCount(snap) > 250, '스냅샷 줄 수가 실제 자료와 같은 규모', `${snapshotRowCount(snap)}줄`)
 ok(snapshotFilename(snap) === '비원미래-전체스냅샷-20260815-0930.json', '파일 이름에 날짜·시각이 들어감', snapshotFilename(snap))
 ok(snap.unreadable.length === 0 && snap.excluded.length === 5, '못 읽은 표 0 · 일부러 뺀 표 5개가 파일에 적힘',
@@ -217,7 +224,7 @@ try {
 }
 
 // ── 6. 대조 — 줄 수 · 금액 · 내용 ─────────────────────────────────────────
-for (const t of SNAPSHOT_TABLES) {
+for (const t of CORE_TABLES) {
   const a = src(`select count(*) from public.${t.name}`)
   const b = dst(`select count(*) from public.${t.name}`)
   ok(a === b, `${t.label}(${t.name}) 줄 수가 같음`, `원본 ${a} · 복구 ${b}`)
@@ -247,7 +254,7 @@ for (const [label, q] of money) {
 //  값은 같고, 이 시스템의 **돈은 전부 정수(원)** 라 영향이 없습니다.
 //  영향받는 칸은 kg·톤수·AX 기준값뿐입니다. 아래에서 실제로 확인합니다.
 const NULLED = snap.nullify
-for (const t of SNAPSHOT_TABLES) {
+for (const t of CORE_TABLES) {
   const drop = (NULLED[t.name] ?? []).map((c) => ` - '${c}'`).join('')
   const nums = src(`select coalesce(string_agg(column_name, ',' order by column_name), '')
                     from information_schema.columns

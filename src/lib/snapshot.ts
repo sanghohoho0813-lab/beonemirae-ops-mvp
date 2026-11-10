@@ -40,6 +40,14 @@ export interface SnapshotTable {
   order: string
   /** 이 표가 없으면 업무가 멈추는가 */
   core: boolean
+  /**
+   * 나중에 더한 표 — `supabase/migrations` 가 아니라 이 이름의 proposals 파일이 만듭니다.
+   *
+   *  그 SQL 을 실행한 DB 에만 있습니다. 없으면 「못 읽음」이 아니라 **「이 DB 에 없음」** 으로
+   *  적습니다(담을 것이 없는 것). 되돌릴 때는 빈 DB 에 그 파일을 먼저 실행해야 합니다 —
+   *  복구 SQL 이 맨 앞에서 확인하고, 없으면 멈춥니다.
+   */
+  optional?: string
 }
 
 /**
@@ -86,6 +94,17 @@ export const SNAPSHOT_TABLES: SnapshotTable[] = [
   //  현장 의견 (0062) — 「왜 그 주에 요일을 바꿨나」에 답할 근거입니다.
   //  수거 일정을 가리키므로 schedules 뒤에 와야 합니다.
   { name: 'schedule_feedback', label: '현장 의견', order: 'id', core: false },
+  //  ── 아래는 proposals 로 더한 표입니다 (0151 에서 스냅샷에 넣음) ──────────────────
+  //   그 전까지는 **담기지도 않고 「담기지 않는다」고 적혀 있지도 않았습니다** — 병원 문의 ·
+  //   품목별 재고 · AX 실증 근거가 백업에서 조용히 빠져 있었습니다.
+  //   가리키는 표(거래처 · 품목 구분)보다 뒤에 둡니다.
+  { name: 'item_buckets', label: '자재 품목 구분', order: 'item', core: false, optional: 'PROPOSAL_0075_supply_items.sql' },
+  { name: 'office_stock_items', label: '품목별 사무실 재고', order: 'item', core: false, optional: 'PROPOSAL_0079_stock_items.sql' },
+  { name: 'client_inquiries', label: '병원 문의', order: 'id', core: false, optional: 'PROPOSAL_0083_customer_platform.sql' },
+  { name: 'ops_changes', label: '운영 변화 기록', order: 'id', core: false, optional: 'PROPOSAL_0106_evidence.sql' },
+  { name: 'dispatch_decisions', label: '배차 결정 기록', order: 'id', core: false, optional: 'PROPOSAL_0106_evidence.sql' },
+  { name: 'recommendation_views', label: '추천 노출 기록', order: 'id', core: false, optional: 'PROPOSAL_0106_evidence.sql' },
+  { name: 'ai_calls', label: 'AI 호출 기록', order: 'id', core: false, optional: 'PROPOSAL_0106_evidence.sql' },
 ]
 
 /**
@@ -115,6 +134,12 @@ export const PROFILE_REFS: Record<string, string[]> = {
   experiment_settings: ['updated_by'],
   performance_baselines: ['updated_by'],
   schedule_feedback: ['created_by', 'handled_by'],
+  office_stock_items: ['updated_by'],
+  client_inquiries: ['handled_by', 'created_by'],
+  ops_changes: ['created_by'],
+  dispatch_decisions: ['decided_by'],
+  recommendation_views: ['viewer_id'],
+  ai_calls: ['actor_id'],
 }
 
 /**
@@ -154,10 +179,13 @@ export const SNAPSHOT_EXCLUDED: { name: string; label: string; why: string }[] =
 ]
 
 /**
- * 표로는 읽을 수 없는 자료 — **서버 함수로만 열리는 것**(사업계획서 · 설문).
+ * 복구 SQL 로는 되돌릴 수 없는 자료의 **보관용 사본** — 두 가지입니다.
  *
- *  이 표들은 누구도 직접 읽지 못하게 잠겨 있어(RLS · 권한 없음) 위의 「줄 그대로」
- *  방식으로는 담을 수 없습니다. 그래서 화면이 여는 그 함수의 답을 **통째로** 넣어 둡니다.
+ *  ① 서버 함수로만 열리는 것(사업계획서 · 설문) — 누구도 표를 직접 읽지 못하게 잠겨 있어
+ *     (RLS · 권한 없음), 화면이 여는 그 함수의 답을 **통째로** 넣어 둡니다.
+ *  ② 계정에 묶인 표(하루 마감 · AX 코치 확인 · 차량 예약) — 줄은 읽히지만 「누구의 것」인 칸이
+ *     비울 수 없는 칸입니다. 계정은 이 파일에 없으므로 그대로 부어 넣을 수 없습니다.
+ *     줄을 그대로 넣어 둡니다.
  *
  *  ⚠ 이것은 **보관용 사본**입니다. 복구 SQL 은 이 부분을 넣지 않습니다 —
  *    내용(현재 글 · 저장해 둔 판 · 결정 · 최근 기록)은 파일 안에 그대로 있어 사람이
@@ -169,11 +197,23 @@ export interface SnapshotExtraDef {
   /** 무엇이 들어 있는지 — 화면과 파일에 그대로 적습니다 */
   holds: string
 }
+/** 계정에 묶인 표 — 「누구의 것」인 칸이 비울 수 없는 칸이라, 계정이 없는 파일에서는 자동으로 되돌릴 수 없습니다 */
+const BOUND = '줄 그대로 — 계정에 묶인 자료라 자동 복구 대상이 아님 (이름은 줄 안에 남아 있음)'
 export const SNAPSHOT_EXTRAS: SnapshotExtraDef[] = [
   { name: 'bizplan', label: '사업계획서', holds: '현재 내용 · 수정요청 · 확인 표시 · 저장해 둔 판 전체 · 최근 기록 200건' },
   { name: 'bizplan_strategy', label: '사업화 전략 · 결정', holds: '현재 전략 모델 · 결정과 그 기록 · 고친 기록 목록(최근 50건)' },
   { name: 'biz_survey', label: '사업계획 설문 응답', holds: '현재 응답 · 제출 시각 목록 (링크 열쇠는 담기지 않음)' },
+  { name: 'day_closes', label: '하루 마감 기록', holds: BOUND },
+  { name: 'ax_coach_missions', label: 'AX 코치 확인 기록', holds: BOUND },
+  { name: 'vehicle_reservations', label: '차량 예약', holds: BOUND },
 ]
+
+/** 위 사본 가운데 표를 그대로 읽는 것 — 이름 = 표 이름, 값 = 정렬 칸 */
+export const EXTRA_ROW_TABLES: Record<string, string> = {
+  day_closes: 'id',
+  ax_coach_missions: 'id',
+  vehicle_reservations: 'id',
+}
 
 export interface SnapshotExtra extends SnapshotExtraDef {
   /** 부른 서버 함수 이름들 */
@@ -209,9 +249,13 @@ export interface Snapshot {
   tables: Record<string, unknown[]>
   /** 읽지 못한 표 (권한·마이그레이션 전) — 숨기지 않습니다 */
   unreadable: { name: string; reason: string }[]
+  /** 이 DB 에 없는 표 (그 기능의 SQL 을 실행하지 않음) — 담을 것이 없는 것이라 「못 읽음」과 다릅니다 */
+  absent: { name: string; label: string; needs: string }[]
+  /** 표 이름 → 그 표를 만드는 proposals 파일. 되돌릴 DB 에 먼저 실행해야 하는 것 */
+  needs: Record<string, string>
   /** 일부러 뺀 표 */
   excluded: typeof SNAPSHOT_EXCLUDED
-  /** 서버 함수로만 열리는 자료의 보관용 사본 (복구 SQL 대상 아님) */
+  /** 복구 SQL 로는 되돌릴 수 없는 자료의 보관용 사본 */
   extras: SnapshotExtra[]
   /** 담지 못한 사본과 그 까닭 */
   extrasSkipped: SnapshotExtraSkipped[]
@@ -223,6 +267,8 @@ export interface SnapshotInput {
   schemaVersion: number | null
   takenBy: string
   takenAt: string
+  /** 이 DB 에 없는 표 이름 (optional 인 것만) */
+  absent?: string[]
   extras?: SnapshotExtra[]
   extrasSkipped?: SnapshotExtraSkipped[]
 }
@@ -240,6 +286,8 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     nullify: PROFILE_REFS,
     tables: input.tables,
     unreadable: input.unreadable,
+    absent: SNAPSHOT_TABLES.filter((t) => (input.absent ?? []).includes(t.name)).map((t) => ({ name: t.name, label: t.label, needs: t.optional ?? '' })),
+    needs: Object.fromEntries(SNAPSHOT_TABLES.filter((t) => t.optional && order.includes(t.name)).map((t) => [t.name, t.optional as string])),
     excluded: SNAPSHOT_EXCLUDED,
     extras: input.extras ?? [],
     extrasSkipped: input.extrasSkipped ?? [],
