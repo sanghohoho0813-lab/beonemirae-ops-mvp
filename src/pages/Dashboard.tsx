@@ -20,6 +20,7 @@ import { DEADLINE_BANNER_ON, DeadlineBanner } from '../components/DeadlineBanner
 import { AiBriefingCard } from '../components/AiAssist'
 import { ScheduleFeedbackCard } from '../components/ScheduleFeedbackCard'
 import { SetupGapsLine } from '../components/SetupGapsCard'
+import { BackupLine } from '../components/BackupReminder'
 import { ExcelCheckLine } from '../components/ExcelCheckLine'
 import { CoachLine } from '../components/axCoach/CoachLine'
 import { UrgentRiskBanner } from '../components/UrgentRisk'
@@ -416,6 +417,11 @@ export function Dashboard() {
                채워야 할 값은 오늘 나갈 차보다 급하지 않습니다. */}
         <div data-hide-presenting className="max-lg:order-2 lg:contents">
           <SetupGapsLine />
+        </div>
+        {/*  0151 — 전체 스냅샷을 받은 지 한 달이 넘었으면 한 줄 (관리자만). 무료 서버에는 자동
+             백업이 없어, 내려받은 파일이 유일한 백업입니다. 알릴 일이 없으면 이 자리도 없습니다. */}
+        <div data-hide-presenting className="max-lg:order-5 lg:contents">
+          <BackupLine className="lg:my-2.5" />
         </div>
         {/*  0106 — 하루 한 줄: 「오늘 엑셀·카톡에 다시 적은 것이 있었나」.
              답하지 않아도 아무것도 막지 않고, 답하면 그날은 사라집니다. */}

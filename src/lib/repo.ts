@@ -36,7 +36,7 @@ import type {
 import { DEFAULT_OFFICE_STOCK, EMPTY_BASELINE, EMPTY_EXPERIMENT } from '../types'
 import { supabase, withRetry, missingName } from './supabase'
 import type { CollectionCompletionInput } from './collection'
-import { SNAPSHOT_TABLES, buildSnapshot, type Snapshot } from './snapshot'
+import { SNAPSHOT_EXTRAS, SNAPSHOT_TABLES, buildSnapshot, extrasFailed, snapshotRowCount, snapshotSummary, type Snapshot, type SnapshotExtra, type SnapshotExtraSkipped } from './snapshot'
 import { clientNameKey } from './clientName'
 import type { TaxFiling } from './taxBase'
 import { toAfterSurvey, toAiCall, toCoachMission, toDayCloseRecord, toDispatchDecision, toOpsChange, toRecoView } from './evidenceRepo'
@@ -3151,7 +3151,161 @@ export async function rawSnapshot(takenBy: string, takenAt: string): Promise<Sna
     }
   }
 
-  return buildSnapshot({ tables, unreadable, schemaVersion: await schemaVersion(), takenBy, takenAt })
+  const { extras, extrasSkipped } = await snapshotExtras()
+  return buildSnapshot({ tables, unreadable, schemaVersion: await schemaVersion(), takenBy, takenAt, extras, extrasSkipped })
+}
+
+/** 서버 함수 하나의 실패를 갈라 냅니다 — 없음 · 권한 없음 · 그 밖 */
+class ExtraSkip extends Error {
+  reason: SnapshotExtraSkipped['reason']
+  constructor(reason: SnapshotExtraSkipped['reason'], message: string) {
+    super(message)
+    this.reason = reason
+  }
+}
+
+/**
+ * 표로는 못 읽는 자료(사업계획서 · 설문)의 **보관용 사본**.
+ *
+ *  이 표들은 누구도 직접 읽지 못하게 잠겨 있어, 화면이 여는 그 서버 함수의 답을
+ *  통째로 담습니다. 읽기만 합니다 — 고치는 함수는 부르지 않습니다.
+ *
+ *  하나가 실패해도 스냅샷은 그대로 만들어집니다. 다만 **숨기지 않습니다** —
+ *  못 담은 것은 까닭과 함께 파일과 화면에 적힙니다.
+ *   · 그 기능이 이 DB 에 없음(SQL 실행 전) → missing — 담을 것이 없는 것
+ *   · 받는 계정에 권한이 없음(참여자 · 설문 관리자가 아님) → denied — 자료는 있는데 못 담은 것
+ */
+async function snapshotExtras(): Promise<{ extras: SnapshotExtra[]; extrasSkipped: SnapshotExtraSkipped[] }> {
+  const sb = need()
+  const rpc = async (fn: string, args: Record<string, unknown> = {}): Promise<unknown> =>
+    withRetry(async () => {
+      const { data, error } = await sb.rpc(fn, args)
+      if (!error) return data as unknown
+      if (error.code === 'PGRST202' || /Could not find the function/i.test(error.message)) throw new ExtraSkip('missing', error.message)
+      if (error.code === '42501') throw new ExtraSkip('denied', error.message)
+      throw new ExtraSkip('error', error.message)
+    })
+  /** 첫 함수의 답이 비어 있으면 「담을 것이 없음」 */
+  const first = async (fn: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> => {
+    const v = await rpc(fn, args)
+    if (v == null || typeof v !== 'object') throw new ExtraSkip('missing', '서버가 빈 답을 돌려주었습니다.')
+    return v as Record<string, unknown>
+  }
+  const readers: Record<string, () => Promise<{ via: string[]; data: unknown }>> = {
+    bizplan: async () => {
+      const open = await first('bizplan_open')
+      const history = await rpc('bizplan_history', { p_key: null })
+      //  저장해 둔 판 — 목록에는 내용이 없어, 판마다 내용을 따로 받습니다
+      const versions: unknown[] = []
+      const list = Array.isArray(open.versions) ? (open.versions as { id?: unknown }[]) : []
+      for (const v of list) {
+        if (typeof v?.id === 'number') versions.push(await rpc('bizplan_version_get', { p_id: v.id }))
+      }
+      return { via: ['bizplan_open', 'bizplan_history', 'bizplan_version_get'], data: { open, history, versions } }
+    },
+    bizplan_strategy: async () => ({ via: ['bizplan_strategy_open'], data: await first('bizplan_strategy_open') }),
+    biz_survey: async () => ({ via: ['biz_survey_admin_load'], data: await first('biz_survey_admin_load') }),
+  }
+  const extras: SnapshotExtra[] = []
+  const extrasSkipped: SnapshotExtraSkipped[] = []
+  for (const def of SNAPSHOT_EXTRAS) {
+    try {
+      const got = await readers[def.name]()
+      extras.push({ ...def, ...got })
+    } catch (e) {
+      const reason = e instanceof ExtraSkip ? e.reason : 'error'
+      extrasSkipped.push({ ...def, reason, message: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return { extras, extrasSkipped }
+}
+
+/** 감사기록에 남기는 이름 — 「마지막으로 전체 스냅샷을 받은 날」을 이것으로 찾습니다 */
+export const SNAPSHOT_AUDIT_ACTION = 'snapshot.download'
+
+/**
+ * 스냅샷을 받았다는 기록 한 줄.
+ *
+ *  무료 Supabase 에는 자동 백업이 없어 이 파일이 유일한 백업입니다. 언제 마지막으로
+ *  받았는지 모르면 「받아 둔 줄 알았는데 석 달 전」이 됩니다. 기록은 감사기록에 남깁니다
+ *  (새 표 · 새 SQL 없음). 실패해도 내려받기는 이미 끝났으므로 조용히 넘어갑니다.
+ */
+export async function recordSnapshot(snap: Snapshot): Promise<void> {
+  const tables = snapshotSummary(snap).length
+  const rows = snapshotRowCount(snap)
+  const failed = extrasFailed(snap)
+  try {
+    await writeAudit({
+      action: SNAPSHOT_AUDIT_ACTION,
+      entity: 'snapshot',
+      screen: '설정',
+      after: {
+        tables,
+        rows,
+        unreadable: snap.unreadable.map((u) => u.name),
+        extras: snap.extras.map((x) => x.name),
+        extrasFailed: failed.map((x) => x.name),
+      },
+      summary:
+        `전체 스냅샷 내려받음 — 표 ${tables}개 · ${rows.toLocaleString('ko-KR')}줄` +
+        (snap.unreadable.length > 0 ? ` · 못 읽은 표 ${snap.unreadable.length}개` : '') +
+        (failed.length > 0 ? ` · 못 담은 사본 ${failed.length}개` : ''),
+    })
+  } catch {
+    /* 기록을 못 남겨도 받은 파일은 온전합니다 */
+  }
+}
+
+export interface LastSnapshot {
+  at: string
+  by: string
+  /** 못 읽은 표 없이 받았는가 — 아니면 반쪽 파일입니다 */
+  complete: boolean
+}
+
+/** 마지막으로 전체 스냅샷을 받은 기록 (관리자만 읽힘 — 감사기록 권한 그대로). 없으면 null */
+export async function lastSnapshot(): Promise<LastSnapshot | null> {
+  const sb = need()
+  const { data, error } = await sb
+    .from('audit_logs')
+    .select('at, actor_name, after_data')
+    .eq('action', SNAPSHOT_AUDIT_ACTION)
+    .order('at', { ascending: false })
+    .limit(1)
+  if (error) throw new Error(error.message)
+  const r = (data ?? [])[0] as { at?: unknown; actor_name?: unknown; after_data?: unknown } | undefined
+  if (!r || typeof r.at !== 'string') return null
+  const after = (r.after_data ?? {}) as { unreadable?: unknown }
+  const unreadable = Array.isArray(after.unreadable) ? after.unreadable.length : 0
+  return { at: r.at, by: typeof r.actor_name === 'string' ? r.actor_name : '', complete: unreadable === 0 }
+}
+
+export interface Heartbeat {
+  /** 마지막 유지 신호 시각 — 아직 한 번도 없으면 null */
+  lastAt: string | null
+  firstAt: string | null
+  pings: number
+}
+
+/**
+ * 서버 유지 신호의 마지막 기록 (0151).
+ *
+ *  'missing' — 기록 함수가 아직 없습니다(PROPOSAL_0151 실행 전). 고장이 아닙니다:
+ *  신호 자체는 그 함수 없이도 DB 까지 갑니다. 기록만 안 남습니다.
+ */
+export async function heartbeatStatus(): Promise<Heartbeat | 'missing'> {
+  const sb = need()
+  const { data, error } = await sb.rpc('app_heartbeat_status')
+  if (error) {
+    if (error.code === 'PGRST202' || /Could not find the function/i.test(error.message)) return 'missing'
+    throw new Error(error.message)
+  }
+  const h = (data ?? {}) as { last_at?: unknown; first_at?: unknown; pings?: unknown }
+  return {
+    lastAt: typeof h.last_at === 'string' ? h.last_at : null,
+    firstAt: typeof h.first_at === 'string' ? h.first_at : null,
+    pings: typeof h.pings === 'number' ? h.pings : 0,
+  }
 }
 
 /**

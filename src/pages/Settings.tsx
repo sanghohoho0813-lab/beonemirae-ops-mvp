@@ -43,9 +43,11 @@ import { ThemeButton, ThemePicker } from '../components/ThemePicker'
 import { Modal } from '../components/Modal'
 import { exportData, parseImportFile } from '../lib/backup'
 import { exportTables, downloadCsv } from '../lib/exportData'
-import { downloadSnapshot, snapshotRowCount, snapshotSummary, SNAPSHOT_EXCLUDED } from '../lib/snapshot'
-import { rawSnapshot } from '../lib/repo'
+import { downloadSnapshot, extrasFailed, snapshotRowCount, snapshotSummary, SNAPSHOT_EXCLUDED, SNAPSHOT_EXTRAS } from '../lib/snapshot'
+import { rawSnapshot, recordSnapshot } from '../lib/repo'
 import { HealthCard } from '../components/HealthCard'
+import { KeepaliveCard } from '../components/KeepaliveCard'
+import { BackupLastNote, refreshLastSnapshot } from '../components/BackupReminder'
 import { ErrorLogCard } from '../components/ErrorLogCard'
 import { StaffCard } from '../components/StaffCard'
 import { OpsChangesCard } from '../components/OpsChangesCard'
@@ -411,18 +413,31 @@ export function Settings() {
   //  전체 스냅샷 — 서버의 줄을 그대로 받아 옵니다. 화면이 들고 있는 값이
   //  아니라 그때 서버에 있는 값이라, 누르는 순간 다시 읽습니다.
   const [snapping, setSnapping] = useState(false)
-  const [snapDone, setSnapDone] = useState<{ rows: number; tables: number; unreadable: number } | null>(null)
+  const [snapDone, setSnapDone] = useState<{ rows: number; tables: number; unreadable: number; extras: string[]; extrasFailed: string[] } | null>(null)
   async function takeSnapshot() {
     setSnapping(true)
     try {
       const snap = await rawSnapshot(profile?.name ?? '', new Date().toISOString())
       const rows = snapshotRowCount(snap)
       downloadSnapshot(snap)
-      setSnapDone({ rows, tables: snapshotSummary(snap).length, unreadable: snap.unreadable.length })
+      //  사본 — 자료는 있는데 권한 · 오류로 못 담은 것만 「못 담음」 (그 기능이 이 DB 에 없는 것은 담을 것이 없는 것)
+      const failed = extrasFailed(snap)
+      setSnapDone({
+        rows,
+        tables: snapshotSummary(snap).length,
+        unreadable: snap.unreadable.length,
+        extras: snap.extras.map((x) => x.label),
+        extrasFailed: failed.map((x) => x.label),
+      })
+      //  「마지막으로 받은 날」 — 감사기록에 한 줄. 첫 화면 · 이 카드의 알림이 이것을 봅니다.
+      await recordSnapshot(snap)
+      refreshLastSnapshot()
       if (snap.unreadable.length > 0) {
         //  못 읽은 표가 있으면 조용히 넘어가지 않습니다 — 반쪽 백업을
         //  온전한 백업으로 알고 있는 게 백업이 없는 것보다 위험합니다.
         flash('err', `${snap.unreadable.length}개 표를 읽지 못했습니다 (${snap.unreadable.map((u) => u.name).join(', ')}). 파일 안에 그대로 적혀 있습니다.`)
+      } else if (failed.length > 0) {
+        flash('err', `표는 모두 받았지만 사본 ${failed.length}개를 담지 못했습니다 (${failed.map((x) => x.label).join(', ')}).`)
       } else {
         flash('ok', `${rows.toLocaleString('ko-KR')}줄을 파일 하나로 받았습니다.`)
       }
@@ -807,6 +822,7 @@ export function Settings() {
           {live && role === 'admin' && (
             <PhoneFold icon={Stethoscope} title="서버 자가진단 · 최근 오류" anchor="health" tile={{ group: 'data', short: '서버 점검' }}>
               <HealthCard />
+              <KeepaliveCard />
               <ErrorLogCard />
             </PhoneFold>
           )}
@@ -814,9 +830,10 @@ export function Settings() {
           {/*
             전체 스냅샷.
 
-             Supabase 자동 백업은 **그 프로젝트 안에** 있습니다. 프로젝트가
-             사라지면(결제 중단·삭제·계정 문제) 백업도 같이 사라집니다.
-             그때 회사에 남는 것은 내려받아 둔 파일뿐입니다.
+             Supabase **무료 플랜에는 자동 백업이 없습니다**(일 단위 백업은 유료부터).
+             유료여도 백업은 **그 프로젝트 안에** 있어, 프로젝트가 사라지면
+             (결제 중단·삭제·계정 문제) 같이 사라집니다.
+             어느 쪽이든 회사에 남는 것은 내려받아 둔 파일뿐입니다.
 
              예전에 여기서 받던 파일은 화면이 쓰는 모양이라 감사기록·자재
              입출고가 아예 없었고, 되돌리는 데 쓸 수 없었습니다. 이제는 DB 의
@@ -830,7 +847,7 @@ export function Settings() {
             title={live ? '전체 스냅샷 내려받기' : '데이터 백업 · 복원'}
             desc={
               live
-                ? '되돌릴 수 있는 파일입니다. DB 의 줄을 그대로 담아 파일 하나로 받습니다.'
+                ? '되돌릴 수 있는 파일입니다. DB 의 줄을 그대로 담아 파일 하나로 받습니다. 무료 서버에는 자동 백업이 없어, 이 파일이 유일한 백업입니다.'
                 : '전체 운영 데이터를 JSON 파일로 내보내거나, 백업 파일에서 되돌릴 수 있습니다.'
             }
           >
@@ -856,14 +873,27 @@ export function Settings() {
               <p className="t-muted mt-3 break-keep text-emerald-700" data-snapshot-done>
                 표 {snapDone.tables}개 · {snapDone.rows.toLocaleString('ko-KR')}줄을 받았습니다
                 {snapDone.unreadable > 0 ? ` (못 읽은 표 ${snapDone.unreadable}개)` : ''}.
+                {snapDone.extras.length > 0 && <span data-snapshot-extras> 사본도 담았습니다 — {snapDone.extras.join(' · ')}.</span>}
+                {snapDone.extrasFailed.length > 0 && (
+                  <b className="text-rose-700" data-snapshot-extras-failed>
+                    {' '}
+                    담지 못한 사본 — {snapDone.extrasFailed.join(' · ')} (이 계정에 그 자료를 열 권한이 없거나 오류. 파일 안에 까닭이 적혀 있습니다).
+                  </b>
+                )}
               </p>
             )}
+            {live && <BackupLastNote />}
             {live ? (
               <div className="t-muted mt-3 space-y-1.5 break-keep" data-snapshot-note>
                 <p>
                   <b className="text-navy-600">이 파일에 담기지 않는 것</b> —{' '}
                   {SNAPSHOT_EXCLUDED.map((x) => x.label).join(' · ')}. 로그인 계정은 Supabase 가 따로 보관하므로,
                   되돌린 뒤 사람은 새로 초대합니다.
+                </p>
+                <p data-snapshot-extras-note>
+                  <b className="text-navy-600">함께 담는 사본</b> — {SNAPSHOT_EXTRAS.map((x) => x.label).join(' · ')}. 표로는 읽을 수 없는
+                  자료라 내용을 통째로 넣어 둡니다(보관용 — 자동 복구 대상은 아니고, 파일을 보고 다시 넣을 수 있습니다). 받는 계정이
+                  그 자료를 열 수 있을 때만 담깁니다.
                 </p>
                 <p>되돌리는 절차는 저장소의 docs/RESTORE.md 에 있습니다. 한 달에 한 번 받아 회사 밖(개인 드라이브 등)에 두시면 됩니다.</p>
               </div>
@@ -929,8 +959,8 @@ export function Settings() {
             </button>
             <p className="t-muted mt-3 break-keep">
               엑셀에서 바로 열립니다(한글 깨짐 없음). <b className="text-navy-600">이 파일로 시스템을 되돌리지는
-              못합니다</b> — 보관·검산·제출용입니다. 되돌리는 것은 Supabase 백업, 그게 안 되면 위의 전체 스냅샷으로
-              합니다.
+              못합니다</b> — 보관·검산·제출용입니다. 되돌리는 것은 위의 전체 스냅샷으로 합니다 (무료 서버에는 자동
+              백업이 없습니다 — 유료 플랜이면 Supabase 백업이 먼저입니다).
             </p>
           </SettingCard>
 

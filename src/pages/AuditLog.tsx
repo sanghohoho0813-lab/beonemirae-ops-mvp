@@ -55,6 +55,7 @@ const ACTION_LABEL: Record<string, string> = {
   'lead.stage': '영업 진행상태 변경',
   'lead.revenue': '전환 매출 기록',
   'data.import': '데이터 가져오기',
+  'snapshot.download': '전체 스냅샷 받기',
   'demo.reset': '시연 데이터 초기화',
 }
 

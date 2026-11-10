@@ -78,6 +78,19 @@ if ((snap.unreadable ?? []).length > 0) {
 note('')
 note('담기지 않은 표(복구되지 않음):')
 for (const x of snap.excluded ?? []) note(`   - ${x.name} (${x.label}) — ${x.why}`)
+//  서버 함수로만 열리는 자료(사업계획서 · 설문)의 사본 — 이 SQL 은 넣지 않습니다.
+//  그 표들은 스키마가 migrations 가 아니라 proposals 에 있고, 누가 썼는지가 계정에
+//  묶여 있어 「그대로 붓기」가 맞지 않습니다. 내용은 스냅샷 파일 안에 그대로 있습니다.
+if ((snap.extras ?? []).length > 0) {
+  note('')
+  note('보관용 사본(이 SQL 로는 복구되지 않음 — 스냅샷 파일의 extras 안에 내용이 그대로 있습니다):')
+  for (const x of snap.extras) note(`   - ${x.name} (${x.label}) — ${x.holds}`)
+}
+if ((snap.extrasSkipped ?? []).some((x) => x.reason !== 'missing')) {
+  note('')
+  note('!! 스냅샷을 만들 때 담지 못한 사본이 있었습니다(받은 계정에 권한이 없었거나 오류):')
+  for (const x of snap.extrasSkipped.filter((y) => y.reason !== 'missing')) note(`   - ${x.name} (${x.label}): ${x.message}`)
+}
 out.push('')
 out.push('begin;')
 out.push('')
