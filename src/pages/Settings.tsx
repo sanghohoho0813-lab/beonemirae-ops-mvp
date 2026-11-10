@@ -891,9 +891,9 @@ export function Settings() {
                   되돌린 뒤 사람은 새로 초대합니다.
                 </p>
                 <p data-snapshot-extras-note>
-                  <b className="text-navy-600">함께 담는 사본</b> — {SNAPSHOT_EXTRAS.map((x) => x.label).join(' · ')}. 표로는 읽을 수 없는
-                  자료라 내용을 통째로 넣어 둡니다(보관용 — 자동 복구 대상은 아니고, 파일을 보고 다시 넣을 수 있습니다). 받는 계정이
-                  그 자료를 열 수 있을 때만 담깁니다.
+                  <b className="text-navy-600">함께 담는 사본</b> — {SNAPSHOT_EXTRAS.map((x) => x.label).join(' · ')}. 계정에 묶여 있어
+                  그대로는 되돌릴 수 없는 자료라 내용을 통째로 넣어 둡니다(보관용 — 자동 복구 대상은 아니고, 파일을 보고 다시 넣을 수
+                  있습니다). 받는 계정이 그 자료를 열 수 있을 때만 담깁니다.
                 </p>
                 <p>되돌리는 절차는 저장소의 docs/RESTORE.md 에 있습니다. 한 달에 한 번 받아 회사 밖(개인 드라이브 등)에 두시면 됩니다.</p>
               </div>
