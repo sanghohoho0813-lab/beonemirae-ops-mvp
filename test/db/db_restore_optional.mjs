@@ -222,4 +222,12 @@ const short = pour(DST, sql)
 ok(!short.ok && /칸 없음: client_inquiries\.subject/.test(short.err), '대상에 칸 하나가 없어도 멈춤 — 「칸 없음: client_inquiries.subject」')
 ok(dst(`select count(*) from public.client_inquiries`) === before, '그때도 있던 줄은 그대로')
 
+//  급할 때를 위한 길 — 알고도 부어야 하면 확인을 끌 수 있고, 그때는 SQL 이 그 사실을 크게 적습니다
+const forced = execFileSync('node', [join(ROOT, 'scripts/restore-from-snapshot.mjs'), snapPath],
+  { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'], env: { ...process.env, RESTORE_SKIP_PRECHECK: '1' } })
+ok(!forced.includes('$precheck$') && /구조 확인을 껐습니다/.test(forced) && /말없이 버려집니다/.test(forced), 'RESTORE_SKIP_PRECHECK=1 — 확인을 끄되, 값이 버려진다는 것을 SQL 머리말에 적음')
+ok(/RESTORE_SKIP_PRECHECK=1/.test(short.err), '멈출 때 그 길도 함께 알려 줌')
+const forcedRun = pour(DST, forced)
+ok(forcedRun.ok && dst(`select count(*) from public.client_inquiries`) === before, '확인을 끄면 칸이 없는 DB 에도 들어감 (없는 칸의 값만 빠짐 — 줄 수는 그대로)', forcedRun.err.split('\n')[0])
+
 console.log(`\n${out.filter(Boolean).length}/${out.length} 통과`)

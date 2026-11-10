@@ -137,7 +137,7 @@ A 와 B 를 함께 켜도 됩니다(서로 다른 곳에서 부르므로 한쪽�
 | 스냅샷 파일 · 사본 · 기록 | `test/browser/check_snapshot.mjs` | 69 |
 | `app_ping` · 권한 (로컬 PostgreSQL) | `supabase/test/56_keepalive.sql` | 14 |
 | 복구 실측 (마이그레이션 표) | `test/db/db_restore.mjs` | 98 |
-| 복구 실측 (나중에 더한 표 · 구조 확인) | `test/db/db_restore_optional.mjs` | 48 |
+| 복구 실측 (나중에 더한 표 · 구조 확인) | `test/db/db_restore_optional.mjs` | 51 |
 
 ## 7. 한계 — 숨기지 않고
 

@@ -117,8 +117,18 @@ const shape = snap.order.map((name) => {
   for (const r of snap.tables[name] ?? []) for (const k of Object.keys(r ?? {})) cols.add(k)
   return { t: ident(name), cols: [...cols], needs: snap.needs?.[name] ?? '' }
 })
-out.push('-- ── 구조 확인 — 스냅샷의 표 · 칸이 이 DB 에 전부 있는가 (없으면 여기서 멈춥니다) ──')
-out.push(`do $precheck$
+//
+//   그래도 복구는 급할 때 하는 일이라, 이 확인이 길을 막아서는 안 됩니다. 칸이 없어진 것을 **알고도**
+//   부어야 할 때(예: 그 칸을 나중에 일부러 없앤 경우)는 RESTORE_SKIP_PRECHECK=1 로 끕니다.
+//   그때는 없는 칸의 값이 버려진다는 것을 SQL 머리말에 크게 적습니다.
+const SKIP_PRECHECK = process.env.RESTORE_SKIP_PRECHECK === '1'
+if (SKIP_PRECHECK) {
+  out.push('-- !! 구조 확인을 껐습니다(RESTORE_SKIP_PRECHECK=1). 이 DB 에 없는 칸의 값은 **말없이 버려집니다.**')
+  out.push('--    복구 뒤 표마다 칸이 다 들어왔는지 직접 확인하세요.')
+  out.push('')
+}
+if (!SKIP_PRECHECK) out.push('-- ── 구조 확인 — 스냅샷의 표 · 칸이 이 DB 에 전부 있는가 (없으면 여기서 멈춥니다) ──')
+if (!SKIP_PRECHECK) out.push(`do $precheck$
 declare
   r record;
   c text;
@@ -139,7 +149,7 @@ begin
     end if;
   end loop;
   if lost <> '' then
-    raise exception E'복구를 시작하지 않았습니다 — 이 DB 의 구조가 스냅샷보다 옛것입니다. 아래가 없습니다:%\n   운영 DB 에 실행했던 supabase/proposals/PROPOSAL_*.sql 을 번호 순서대로 먼저 실행한 뒤 이 파일을 다시 실행하세요. 아무것도 바뀌지 않았습니다.', lost;
+    raise exception E'복구를 시작하지 않았습니다 — 이 DB 의 구조가 스냅샷보다 옛것입니다. 아래가 없습니다:%\n   운영 DB 에 실행했던 supabase/proposals/PROPOSAL_*.sql 을 번호 순서대로 먼저 실행한 뒤 이 파일을 다시 실행하세요. 아무것도 바뀌지 않았습니다.\n   (칸이 없어진 것을 알고도 부어야 하면: RESTORE_SKIP_PRECHECK=1 node scripts/restore-from-snapshot.mjs … — 그 칸의 값은 버려집니다)', lost;
   end if;
 end
 $precheck$;`)
