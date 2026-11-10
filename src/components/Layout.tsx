@@ -29,6 +29,7 @@ import { PortalSwitchButton } from './PortalSwitch'
 import { LiveClock } from './LiveClock'
 import { ThemeButton } from './ThemePicker'
 import { SyncBar } from './SyncBar'
+import { ServerBar } from './ServerNotice'
 import { CoachPin } from './axCoach/CoachPin'
 import { useTour } from '../context/TourContext'
 import { SchemaBar } from './SchemaBar'
@@ -1041,6 +1042,8 @@ export function Layout() {
         <div className="min-w-0 flex-1 overflow-x-hidden">
           {/* 서버 통신 상태 — 저장 중 / 실패 / 재시도 (실제 운영 모드에서만 표시) */}
           <SchemaBar />
+          {/*  서버 일시정지(540) · 응답 없음 — 쓰는 중에 멈췄을 때 (ServerNotice) */}
+          <ServerBar />
           <SyncBar />
           <MobileHeader onHelp={() => setHelpOpen(true)} slotRef={setBandSlot} />
           <main className={`w-full ${pcView ? 'pb-32' : 'pb-24 lg:pb-14'}`}>

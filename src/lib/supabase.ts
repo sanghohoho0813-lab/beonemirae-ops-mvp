@@ -29,8 +29,64 @@ export const isSupabaseConfigured = Boolean(url && anonKey)
  */
 export const isDemoMode = import.meta.env.VITE_DEMO_MODE?.trim() === '1' && !isSupabaseConfigured
 
+// ── 서버 상태 — 일시정지 · 응답 없음 ────────────────────────────────────────────
+//
+//  Supabase 무료 프로젝트는 1주일 동안 사용이 없으면 **일시정지**됩니다. 그때 모든 요청이 540 으로
+//  돌아옵니다(Supabase HTTP status codes — 540 project paused). 예전에는 이것을 가리지 못해
+//    · 로그인해 둔 분에게 「계정 정보를 찾지 못했습니다 — 계정을 다시 만들어야 합니다」(틀린 안내)
+//    · 로그인 화면에 영어 원문 「Project paused」
+//  가 떴습니다. 계정도 자료도 멀쩡한데 서버만 멈춘 것이므로, 요청마다 응답 코드를 보고 따로 기억합니다.
+//
+//   paused  540 — 관리자가 대시보드에서 「Restore project」를 눌러야 풀립니다
+//   down    502 · 503 · 504 · 544 — 서버가 잠시 응답하지 못함(다시 켜지는 중 · 과부하)
+//   ok      그 밖의 정상 응답(4xx 포함 — 서버가 **답은 한** 것)
+//  ⚠ 500 하나로는 판단하지 않습니다 — DB 함수 오류도 500 으로 옵니다.
+//  ⚠ Edge Function(/functions/v1/) 의 5xx 는 그 기능 하나의 문제라 서버 상태로 보지 않습니다(540 만 봄).
+export type ServerState = 'ok' | 'paused' | 'down'
+
+export function serverStateOf(status: number, url = ''): ServerState | null {
+  if (status === 540) return 'paused'
+  if (url.includes('/functions/v1/')) return null
+  if (status === 502 || status === 503 || status === 504 || status === 544) return 'down'
+  if (status > 0 && status < 500) return 'ok'
+  return null
+}
+
+let serverState: ServerState = 'ok'
+const serverSubs = new Set<() => void>()
+export const serverStateStore = {
+  get: (): ServerState => serverState,
+  subscribe: (f: () => void) => {
+    serverSubs.add(f)
+    return () => {
+      serverSubs.delete(f)
+    }
+  },
+}
+/** 응답 하나를 보고 서버 상태를 고칩니다 (검사에서도 부릅니다) */
+export function noteServerStatus(status: number, url = '') {
+  const next = serverStateOf(status, url)
+  if (!next || next === serverState) return
+  serverState = next
+  serverSubs.forEach((f) => f())
+}
+/** 이 응답 코드는 「서버에 못 닿은 것」으로 봐야 하는가 — 계정 · 권한 문제가 아님 */
+export const isServerTrouble = (status: number | undefined | null) => status === 540 || status === 502 || status === 503 || status === 504 || status === 544
+
+const watchedFetch: typeof fetch = async (input, init) => {
+  const res = await fetch(input, init)
+  noteServerStatus(res.status, typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
+  return res
+}
+
+export const SERVER_PAUSED_MESSAGE =
+  '서버가 일시정지 상태입니다. 계정 · 자료는 그대로 있습니다. 관리자에게 「Supabase 프로젝트를 다시 켜 달라(Restore project)」고 알려 주세요.'
+export const SERVER_DOWN_MESSAGE = '서버가 잠시 응답하지 않습니다. 계정 문제가 아닙니다 — 잠시 뒤 다시 시도해 주세요.'
+
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(url!, anonKey!, {
+      //  응답 코드를 보고 서버 상태(일시정지 · 응답 없음)를 기억합니다 — 요청 자체는 그대로입니다
+      global: { fetch: watchedFetch },
       auth: {
         // 새로고침 후에도 로그인 상태가 유지되도록 세션을 저장하고 자동 갱신합니다.
         persistSession: true,
@@ -57,6 +113,10 @@ export function isOffline(e: unknown): boolean {
 /** Supabase 오류를 사용자에게 보여줄 한국어 문구로 바꿉니다. */
 export function friendlyError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e ?? '')
+  //  서버가 멈춘 것이면 다른 어떤 문구보다 먼저 그렇다고 말합니다 (영어 원문 「Project paused」 대신)
+  const status = (e as { status?: number } | null)?.status
+  if (serverState === 'paused' || status === 540 || /project (is )?paused/i.test(msg)) return SERVER_PAUSED_MESSAGE
+  if (serverState === 'down' || isServerTrouble(status)) return SERVER_DOWN_MESSAGE
   if (!msg) return '알 수 없는 오류가 발생했습니다.'
   if (/Invalid login credentials/i.test(msg)) return '이메일 또는 비밀번호가 올바르지 않습니다.'
   //  0041 부터 관리자 승인이 곧 메일 인증입니다. 이 오류가 보인다는 것은

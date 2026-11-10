@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "build:test": "VITE_SUPABASE_URL=https://test-local.supabase.co VITE_SUPABASE_ANON_KEY=test-anon-key vite build",
     "lint": "tsc --noEmit",
     "video:rec": "node video/record.mjs",
     "video:mux": "node video/mux.mjs",

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { resetSchemaCache } from '../lib/schemaGate'
-import { supabase, isSupabaseConfigured, friendlyError, isOffline } from '../lib/supabase'
+import { supabase, isSupabaseConfigured, friendlyError, isOffline, isServerTrouble } from '../lib/supabase'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 인증 / 역할
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   > => {
     if (!supabase) return { kind: 'none' }
     try {
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('profiles')
         //  칸 이름을 하나씩 적어 두면, 0056 을 아직 안 돌린 서버에서 vehicle_id
         //  하나 때문에 요청 전체가 거절되고 **아무도 로그인하지 못합니다**.
@@ -163,7 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         //  서버가 「없다」고 답한 것과 서버에 **닿지 못한** 것을 가릅니다.
         //  닿았는데 권한·스키마 문제로 거절당한 것은 로그인 문제가 맞습니다.
-        return isOffline(error) ? { kind: 'unreachable' } : { kind: 'none' }
+        //  ⚠ 서버가 일시정지(540)됐거나 잠시 응답을 못 하는 것(502~504)도 「못 닿은 것」입니다.
+        //    예전에는 이것을 「계정 정보가 없다 — 계정을 다시 만들어야 한다」로 잘못 안내했습니다.
+        return isOffline(error) || isServerTrouble(status) ? { kind: 'unreachable' } : { kind: 'none' }
       }
       if (!data) return { kind: 'none' }
       return { kind: 'ok', profile: toProfile(data as ProfileRow) }

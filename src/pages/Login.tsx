@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { COMPANY_HOURS, COMPANY_TEL, SYSTEM_TAGLINE } from '../lib/brand'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, CloudOff, Loader2, LogIn, Lock, LogOut, Mail, RotateCw, ShieldCheck, UserX } from 'lucide-react'
+import { AlertCircle, Loader2, LogIn, Lock, LogOut, Mail, RotateCw, ShieldCheck, UserX } from 'lucide-react'
+import { ServerStuckBody, useServerState } from '../components/ServerNotice'
 import { useAuth } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
@@ -18,6 +19,7 @@ import { BrandLogo } from '../components/BrandLogo'
 
 export function Login() {
   const { signIn, session, profile, loading, configured, role, sendPasswordReset, unreachable, checking, signOut, refreshProfile } = useAuth()
+  const serverState = useServerState()
   const navigate = useNavigate()   // 시연 모드 안내 버튼에서 사용
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -65,29 +67,29 @@ export function Login() {
     const who = session.user?.email ?? ''
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-navy-950 px-4 py-10">
-        <div data-login-stuck={unreachable ? 'offline' : 'no-profile'} className="w-full max-w-[30rem] rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
+        <div data-login-stuck={unreachable ? (serverState === 'ok' ? 'offline' : serverState) : 'no-profile'} className="w-full max-w-[30rem] rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
           {unreachable ? (
-            <CloudOff size={40} className="mx-auto text-navy-400" strokeWidth={1.9} />
+            //  통신 끊김 · 서버 일시정지(540) · 서버 응답 없음 — 무슨 일인지 갈라서 말합니다 (ServerNotice)
+            <ServerStuckBody
+              state={serverState}
+              offlineHint={
+                <>
+                  <b className="text-navy-900">비밀번호 문제가 아닙니다.</b> 신호가 약한 곳에서는 자료를 못
+                  불러옵니다. 잠시 뒤 아래를 눌러 주세요.
+                </>
+              }
+            />
           ) : (
-            <UserX size={40} className="mx-auto text-amber-600" strokeWidth={1.9} />
-          )}
-          <p className="t-card mt-4 break-keep text-navy-900">
-            {unreachable ? '지금 통신이 안 됩니다' : '로그인은 됐지만 계정 정보를 찾지 못했습니다'}
-          </p>
-          <p className="t-body mt-2.5 break-keep font-medium text-navy-600">
-            {unreachable ? (
-              <>
-                <b className="text-navy-900">비밀번호 문제가 아닙니다.</b> 신호가 약한 곳에서는 자료를 못
-                불러옵니다. 잠시 뒤 아래를 눌러 주세요.
-              </>
-            ) : (
-              <>
+            <>
+              <UserX size={40} className="mx-auto text-amber-600" strokeWidth={1.9} />
+              <p className="t-card mt-4 break-keep text-navy-900">로그인은 됐지만 계정 정보를 찾지 못했습니다</p>
+              <p className="t-body mt-2.5 break-keep font-medium text-navy-600">
                 <b className="text-navy-900">비밀번호는 맞습니다.</b> 그런데 이 계정({who})의 사용자 정보가
                 서버에 없어서 업무 화면을 열 수 없습니다. 관리자에게 이 문장을 그대로 알려 주세요 —
                 「사용자 관리에서 계정을 다시 만들어야 합니다」.
-              </>
-            )}
-          </p>
+              </p>
+            </>
+          )}
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <button data-login-retry onClick={() => void refreshProfile()} className="btn-primary">
               <RotateCw size={17} strokeWidth={2.4} /> 다시 시도

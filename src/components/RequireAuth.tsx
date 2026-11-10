@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Clock, CloudOff, Loader2, LogOut, RotateCw, ShieldAlert } from 'lucide-react'
+import { Clock, Loader2, LogOut, RotateCw, ShieldAlert } from 'lucide-react'
 import { useAuth, ROLE_LABEL } from '../context/AuthContext'
 import { canAccess, landingPath } from '../lib/access'
 import { isDemoMode } from '../lib/supabase'
+import { ServerStuckBody, useServerState } from './ServerNotice'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 라우트 보호
@@ -23,6 +24,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { configured, loading, session, profile, unreachable, checking, role, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const serverState = useServerState()
 
   //  시연 모드로 빌드한 것만 로그인 없이 엽니다 (VITE_DEMO_MODE=1).
   if (isDemoMode) return <>{children}</>
@@ -72,15 +74,17 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (session && !profile && unreachable) {
     return (
       <FullScreen>
-        <div data-auth-offline className="card max-w-[32rem] p-6 text-center sm:p-8">
-          <CloudOff size={40} className="mx-auto text-navy-400" strokeWidth={1.9} />
-          <p className="mt-4 break-keep text-[1.32rem] font-extrabold text-navy-900">
-            지금 통신이 안 됩니다
-          </p>
-          <p className="mt-2.5 break-keep text-[1.08rem] leading-relaxed text-navy-600">
-            <b className="text-navy-900">로그아웃된 것이 아닙니다.</b> 신호가 약한 곳(지하 보관실 등)에서는
-            자료를 못 불러옵니다. 밖으로 나오신 뒤 아래를 눌러 주세요.
-          </p>
+        <div data-auth-offline={serverState === 'ok' ? '' : serverState} className="card max-w-[32rem] p-6 text-center sm:p-8">
+          {/*  통신 끊김 · 서버 일시정지(540) · 서버 응답 없음 — 무슨 일인지 갈라서 말합니다 (ServerNotice) */}
+          <ServerStuckBody
+            state={serverState}
+            offlineHint={
+              <>
+                <b className="text-navy-900">로그아웃된 것이 아닙니다.</b> 신호가 약한 곳(지하 보관실 등)에서는
+                자료를 못 불러옵니다. 밖으로 나오신 뒤 아래를 눌러 주세요.
+              </>
+            }
+          />
           <button
             data-auth-offline-retry
             onClick={() => void refreshProfile()}

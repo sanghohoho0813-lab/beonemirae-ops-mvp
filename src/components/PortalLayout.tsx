@@ -13,6 +13,7 @@ import { PortalNoticeBell } from './PortalNoticeBell'
 import { PortalViewSwitch } from './PortalViewSwitch'
 import { DeviceViewPanels, DeviceViewToggle, useDeviceView, useFrameRouteReport } from './DeviceView'
 import { landingPath } from '../lib/access'
+import { ServerBar } from './ServerNotice'
 import { PortalMenu } from './portal/PortalMenu'
 import { BrandLogo } from './BrandLogo'
 import { portalNotices } from '../lib/portalNotices'
@@ -370,6 +371,7 @@ export function PortalLayout() {
            읽으실 수 있습니다 — 병원 화면은 그 병원 것만 보여 줍니다. */}
       {target.isPreview && <PortalPreviewBar client={client} page={target.page} />}
 
+      <ServerBar portal />
       <SyncBar />
       {/*  ── 지금 어느 병원의 무슨 화면인가 (0088 · 브리프 11) ────────────────
            ⚠ 첫 화면에는 안 답니다 — 바로 아래 머리 칸이 병원 이름을 크게
